@@ -57,9 +57,9 @@ function Protegida({ children }: { children: ReactNode }) {
 }
 
 /**
- * A casca da operação com a sessão aberta, em volta de cada tela do painel: a faixa com o nome que o `/eu` devolve, o
- * "Sair", a navegação e o aviso de inatividade. O `/eu` e a tela carregam juntos, sem um esperar o outro no Chromebook em
- * rede lenta: enquanto o `/eu` não chega a faixa fica sem nome, e se ele falhar (503) a mensagem e o "Tentar de novo"
+ * A casca da operação com a sessão aberta, em volta de cada tela do painel: a barra de topo com o nome que o `/eu`
+ * devolve, o "Sair", a navegação e o aviso de inatividade. O `/eu` e a tela carregam juntos, sem um esperar o outro no Chromebook em
+ * rede lenta: enquanto o `/eu` não chega a barra fica sem nome, e se ele falhar (503) a mensagem e o "Tentar de novo"
  * ficam no alto, com a tela embaixo no lugar.
  */
 function ComSessao({ titulo, children }: { titulo: string; children: ReactNode }) {

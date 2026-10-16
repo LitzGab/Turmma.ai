@@ -120,10 +120,10 @@ As outras asserções deste spec sobre a lateral (`:127-136`, `:240-245`, `:254`
 
 | id | arquivo:linha e nome do caso | o que afirma hoje | a regra que isso prova | oráculo novo | tarefa |
 |---|---|---|---|---|---|
-| A60 | `operacao.spec.ts:50-51` · "entra por e-mail, senha e código, chega à casca da operação e sai a um clique" | O `banner` contém "Operação Turmma" | Nenhuma tela da operação parece tela de escola | Inalterado (`tasks.md`, 15.2). A `docs/interface.md` 11.4 escreve "Equipe Turmma" na barra nova: a divergência se resolve antes da tarefa | 15.0 |
+| A60 | `operacao.spec.ts:50-51` · "entra por e-mail, senha e código, chega à casca da operação e sai a um clique" | O `banner` contém "Operação Turmma" | Nenhuma tela da operação parece tela de escola | Inalterado (`tasks.md`, 15.2). A `docs/interface.md` 11.4 dizia "Equipe Turmma" e foi corrigida na 15.0: o nome é "Operação Turmma" | 15.0 |
 | A61 | `operacao.spec.ts:93-98` · mesmo caso | "Sair", dentro do `banner`, com 44 × 44 px ou mais | Sair está à vista e tem alvo de toque (D59) | Inalterado | 15.0 confere |
 | A62 | `operacao.spec.ts:16-17` e `:99-105` · mesmo caso | Sem toque, o anel do "Sair": `{ visivel: true, estilo: 'solid', largura: '2px', cor: 'rgb(242, 162, 91)' }` | O anel de foco é visível sobre a faixa da operação | `{ visivel: true, estilo: 'solid', largura: '3px', cor: foco #146EAA }`. O anel muda na 3.0, com a faixa ainda preta, e por isso a 3.0 leva esta linha (o arquivo não está na lista dela) | 3.0 |
-| A63 | `operacao.spec.ts:106` · mesmo caso | O `header` do "Sair" tem fundo `rgb(13, 13, 13)` | Medida da pele: a faixa preta | `fundo #FFFFFF`, com borda de baixo de 2 px. O que distingue a operação passa a ser só o texto da A60 | 15.0 |
+| A63 | `operacao.spec.ts:106` · mesmo caso | O `header` do "Sair" tem fundo `rgb(13, 13, 13)` | Medida da pele: a faixa preta | `fundo #FFFFFF`, com borda de baixo de 2 px. O que distingue a operação passa a ser só o texto da A60. Os dois temas: com a sessão aberta, `operacao.spec.ts › a barra de topo é clara e tem a marca e o "Sair" à vista em Escolas e em Uso` mede o `fundo` do tema, claro e escuro; fora dela, `… na entrada, no segundo fator e no convite` mede o mesmo nos dois e passa o axe no escuro | 15.0 |
 | A64 | `operacao.spec.ts:68-70` (mesmo caso) e `:264-268` · "E3: o aviso aparece 2 min antes do fim da sessão parada, e no fim a aba vai à entrada com a mensagem" | "Entrar" com 44 px; "Continuar na sessão" e "Sair" com a mesma altura, de 44 px ou mais | Sair nunca é menor que continuar (D59) | Inalterado | 15.0 confere |
 
 ### A.7 Pedidos de nome, pedidos do titular e acesso da turma
@@ -417,7 +417,7 @@ Cada item abaixo é uma linha da parte A marcada "a definir", ou uma divergênci
 5. **O aviso de `/mfa`** (A12): continua escrito à mão ou passa à peça `Aviso`. Tarefa 14.0. **Fechado na 14.0:** continua escrito à mão, com as cores e a borda de 1 px de hoje (`pendente-cx`, `pendente`); o `casca.spec.ts` (A12) fica sem edição.
 6. **O preenchimento da barra neutra e o elemento dela** (A56, A78). Tarefa 5.0. **Fechado na 5.0:** trilho `ia-cx` e enchimento `sutil`, como hoje, no `svg rect`; só a forma muda.
 7. **A igualdade entre a linha de aprovação e o selo de estado** (A30) cruza a 6.0 e a 10.0, que correm em paralelo.
-8. **"Operação Turmma" ou "Equipe Turmma"** (A60): o `tasks.md` (15.2) e o e2e dizem a primeira; a `docs/interface.md` 11.4, a segunda. Antes da 15.0.
+8. **"Operação Turmma" ou "Equipe Turmma"** (A60): o `tasks.md` (15.2) e o e2e dizem a primeira; a `docs/interface.md` 11.4, a segunda. **Resolvido na 15.0:** fica "Operação Turmma", e a `docs/interface.md` foi corrigida.
 9. **A medida da face do botão**: 44 e 36 px no `3_task.md`, 46 e 38 px na `docs/interface.md` 9.3. Os e2e passam nos dois; o teste de unidade (U8) precisa de uma.
 10. **A posição da `Aparencia` na ordem do Tab** da lateral (A17). Tarefa 2.0. **Fechado na 2.0:** entre "Meus dados" e "Sair", uma parada só (a opção marcada do grupo de rádio); no trilho de 56 px ela não aparece, e a pessoa a alcança abrindo a lateral.
 11. **A contagem de `svg`** no avatar (A28) e na linha do seletor (A94). Tarefas 8.0 e 12.0.

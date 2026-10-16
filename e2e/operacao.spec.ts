@@ -5,7 +5,7 @@ import { criarEquipeComSenha } from './__fixtures__/sessao.ts'
 import { esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { acionar, entrarNaOperacao, esperarCasca, PRAZO_DA_ENTRADA_MS } from './__fixtures__/tela-da-operacao.ts'
-import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, corDoToken, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 const ROTA_EU_DO_OPERADOR = '**/v1/operacao/eu'
 const CHUNK_DA_OPERACAO = /\/assets\/operacao-[^/]+\.js$/
@@ -13,8 +13,9 @@ const CHUNK_DA_OPERACAO = /\/assets\/operacao-[^/]+\.js$/
 const TEXTO_DA_SESSAO_ENCERRADA = MENSAGENS_DE_ERRO.SESSAO_ENCERRADA
 const TEXTO_DO_503 = 'O Turmma está indisponível agora. Tente de novo em instantes.'
 const AVISO_DE_INATIVIDADE = 'Sua sessão vai terminar em 2 minutos por falta de uso.'
-/** O `foco` da 9.10 no claro: o anel de 3 px, o mesmo em toda peça, inclusive sobre o preto da faixa (3,55:1 contra a `noite`). */
+/** O `foco` da 9.10 no claro: o anel de 3 px, o mesmo em toda peça, inclusive sobre o `fundo` claro da barra de topo (5,3:1). */
 const FOCO = 'rgb(20, 110, 170)'
+const FUNDO_CLARO = 'rgb(255, 255, 255)'
 
 /** Minutos e segundos no formato do relógio simulado do Playwright. */
 const tempo = (minutos: number, segundos = 0): string => `00:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`
@@ -90,9 +91,9 @@ test.describe('área do operador Turmma', () => {
     expect(await violacoesGraves(page)).toEqual([])
     await semNadaGuardadoNoNavegador(page)
 
-    // O "Sair" está na faixa preta, com alvo de toque de 44 px, e o anel de foco dele é o `foco` de 3 px, o mesmo de toda
-    // peça (3,55:1 contra a `noite` no claro). Aqui na casca de verdade, e não numa faixa montada pelo teste; o escuro,
-    // onde a `noite` é clara, é de `tokens.spec.ts`.
+    // O "Sair" está à vista na barra de topo clara, sem abrir nada, com alvo de toque de 44 px, e o anel de foco dele é o
+    // `foco` de 3 px, o mesmo de toda peça, sobre o `fundo` claro. Aqui na casca de verdade, e não numa face montada pelo
+    // teste (A61, A62, A63).
     const sair = page.getByRole('banner').getByRole('button', { name: 'Sair' })
     const caixaDoSair = await sair.boundingBox()
     expect(caixaDoSair?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
@@ -104,7 +105,11 @@ test.describe('área do operador Turmma', () => {
         return { visivel: elemento.matches(':focus-visible'), estilo: estilo.outlineStyle, largura: estilo.outlineWidth, cor: estilo.outlineColor }
       })
       expect(anel).toEqual({ visivel: true, estilo: 'solid', largura: '3px', cor: FOCO })
-      expect(await sair.evaluate((elemento) => getComputedStyle(elemento.closest('header') ?? elemento).backgroundColor)).toBe('rgb(13, 13, 13)')
+      const barra = await sair.evaluate((elemento) => {
+        const estilo = getComputedStyle(elemento.closest('header') ?? elemento)
+        return { fundo: estilo.backgroundColor, bordaDeBaixo: estilo.borderBottomWidth }
+      })
+      expect(barra).toEqual({ fundo: FUNDO_CLARO, bordaDeBaixo: '2px' })
     }
 
     await acionar(page, 'Sair', hasTouch)
@@ -114,6 +119,97 @@ test.describe('área do operador Turmma', () => {
     await page.goto('/operacao')
     await expect(page).toHaveURL(/\/operacao\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('alert')).toHaveCount(0)
+  })
+
+  test('a barra de topo é clara e tem a marca à vista na entrada, no segundo fator e no convite, a 360 e a 1366 px', async ({ page }) => {
+    // Cada recarga custa a rede lenta do celular, e são doze: o prazo é o do caso do escuro de `aparencia.spec.ts`.
+    test.setTimeout(90_000)
+    const telas = [
+      { endereco: '/operacao/entrar', titulo: 'Entrar na operação' },
+      { endereco: '/operacao/mfa', titulo: 'Segundo fator' },
+      { endereco: '/operacao/convite', titulo: 'Convite para a operação' },
+    ]
+    // Fora da sessão: a mesma barra, sem "Sair" e sem navegação, no fundo do tema (A60, A63), e no escuro sem violação
+    // grave do axe: é onde o contraste da barra e do título muda de cor.
+    for (const esquema of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: esquema })
+      for (const largura of [1366, 360]) {
+        await page.setViewportSize({ width: largura, height: 800 })
+        for (const { endereco, titulo } of telas) {
+          const onde = `${endereco} a ${String(largura)} px, ${esquema}`
+          await page.goto(endereco)
+          // O título fixa a tela: um redirecionamento à entrada não passaria por "Segundo fator" nem pelo convite.
+          await expect(page.getByRole('heading', { level: 1, name: titulo }), onde).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+          const banner = page.getByRole('banner')
+          await expect(banner, onde).toContainText('Operação Turmma')
+          await expect(banner.getByRole('button', { name: 'Sair' }), onde).toHaveCount(0)
+          await expect(page.getByRole('navigation'), onde).toHaveCount(0)
+          expect(await banner.evaluate((elemento) => getComputedStyle(elemento).backgroundColor), onde).toBe(await corDoToken(page, 'fundo'))
+          expect(await larguraExcedente(page), onde).toBe(0)
+          if (esquema === 'dark') expect(await violacoesGraves(page), onde).toEqual([])
+        }
+      }
+    }
+  })
+
+  test('a barra de topo é clara e tem a marca e o "Sair" à vista em Escolas e em Uso, a 360 e a 1366 px, nos dois temas', async ({ page, hasTouch }) => {
+    const operador = await criarOperadorComSegundoFator()
+    await entrarNaOperacao(page, operador, hasTouch)
+    const navegacao = page.getByRole('navigation', { name: 'Operação' })
+
+    for (const esquema of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme: esquema })
+      for (const largura of [1366, 360]) {
+        await page.setViewportSize({ width: largura, height: 800 })
+        // A troca de tela é pelo link da navegação, e não por `goto`: sem recarga, cada medida custa um instante.
+        for (const tela of ['Escolas', 'Uso']) {
+          const onde = `${tela} a ${String(largura)} px, ${esquema}`
+          await navegacao.getByRole('link', { name: tela }).click()
+          await expect(page.getByRole('heading', { level: 1, name: tela }), onde).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
+          const banner = page.getByRole('banner')
+          await expect(banner, onde).toContainText('Operação Turmma')
+
+          // "Sair" à vista, dentro da barra, sem abrir nada (A60, A61).
+          const sair = banner.getByRole('button', { name: 'Sair' })
+          await expect(sair, onde).toBeVisible()
+          const caixa = await sair.boundingBox()
+          expect(caixa?.height ?? 0, onde).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+          expect(caixa?.width ?? 0, onde).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+
+          // A barra é `fundo` do tema (e não a face `noite` de antes, que é preta no claro e clara no escuro), com a borda
+          // de baixo de 2 px na cor `borda`, e mede 72 px no computador, contando a borda, e no mínimo 56 no celular (A63).
+          const barra = await banner.evaluate((elemento) => {
+            const estilo = getComputedStyle(elemento)
+            return { fundo: estilo.backgroundColor, bordaDeBaixo: estilo.borderBottomWidth, corDaBorda: estilo.borderBottomColor, altura: elemento.getBoundingClientRect().height }
+          })
+          expect(barra.fundo, onde).toBe(await corDoToken(page, 'fundo'))
+          expect(barra.bordaDeBaixo, onde).toBe('2px')
+          expect(barra.corDaBorda, onde).toBe(await corDoToken(page, 'borda'))
+          if (largura >= 768) expect(barra.altura, onde).toBe(72)
+          else expect(barra.altura, onde).toBeGreaterThanOrEqual(56)
+
+          // Uma tela só, sem lateral: fora do `main`, a única navegação é a "Operação" (a lista das escolas tem a dela, dentro
+          // do `main`), e os links dela têm alvo de 44 px (A63, A97).
+          await expect(page.getByRole('complementary'), onde).toHaveCount(0)
+          expect(await page.locator('nav').evaluateAll((todas) => todas.filter((nav) => nav.closest('main') === null).map((nav) => nav.getAttribute('aria-label'))), onde).toEqual(['Operação'])
+          for (const link of await navegacao.getByRole('link').all()) {
+            expect((await link.boundingBox())?.height ?? 0, onde).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+          }
+
+          // O item da tela se vê pela forma, e não só pela cor: o sublinhado de 3 px em `azul`, só no que leva o `aria-current`.
+          const aceso = navegacao.locator('[aria-current="page"]')
+          await expect(aceso, onde).toHaveCount(1)
+          await expect(aceso, onde).toHaveText(tela)
+          const sublinhado = await aceso.locator('span[aria-hidden="true"]').evaluate((elemento) => {
+            const estilo = getComputedStyle(elemento)
+            return { cor: estilo.backgroundColor, altura: estilo.height }
+          })
+          expect(sublinhado, onde).toEqual({ cor: await corDoToken(page, 'azul'), altura: '3px' })
+          await expect(navegacao.locator('span[aria-hidden="true"]'), onde).toHaveCount(1)
+          expect(await larguraExcedente(page), onde).toBe(0)
+        }
+      }
+    }
   })
 
   test('sair como um operador e entrar como outro na mesma aba, sem recarregar: nada do primeiro aparece', async ({ page, hasTouch }) => {

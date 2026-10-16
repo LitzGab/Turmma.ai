@@ -88,9 +88,9 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 14.2 As páginas de `paginas/` na moldura, sem mudar texto, ordem de campo nem resposta
   - [x] 14.3 Testes: os e2e de entrada, segundo fator, convite e página da turma, sem trocar asserção de regra; as mesmas mensagens para erro de entrada
 
-- [ ] **15.0 — A operação na pele nova**
-  - [ ] 15.1 `CascaDaOperacao` com a barra de topo clara; as páginas de entrada da operação
-  - [ ] 15.2 Testes: a marca "Operação Turmma" à vista em toda tela; "Sair" visível; o anel de foco sobre a barra; os e2e da operação
+- [x] **15.0 — A operação na pele nova**
+  - [x] 15.1 `CascaDaOperacao` com a barra de topo clara; as páginas de entrada da operação
+  - [x] 15.2 Testes: a marca "Operação Turmma" à vista em toda tela; "Sair" visível; o anel de foco sobre a barra; os e2e da operação
 
 ## Dependências e paralelismo
 

@@ -417,10 +417,10 @@ Fase posterior (D11). Nota, entrega e alerta, alimentados pelo motor de eventos 
 Não é área da escola: é a nossa. Só o operador Turmma entra, com conta própria e segundo fator
 obrigatório, e nenhuma pessoa de escola alcança estas telas.
 
-**Uma tela só, sem lateral** (D80): uma barra de topo, com a marca, "Equipe Turmma" e a conta do
+**Uma tela só, sem lateral** (D80): uma barra de topo, com a marca, "Operação Turmma" e a conta do
 operador com "Sair", e duas abas, **Escolas** e **Uso**. Uma linha fixa diz que a operação não vê
-dado de aluno nem de professor. Hoje a operação tem uma faixa preta no topo: a X1 a troca pela
-barra clara, e a X2 põe as duas abas na página.
+dado de aluno nem de professor. A X1 (15.0) trocou a faixa preta do topo pela barra clara, e a X2
+põe as duas abas na página.
 
 - **Aba Escolas**: a lista de redes e escolas, com o estado da primeira coordenação e contagens de
   turmas, alunos e professores ativos do ano em curso. Só número, nunca nome. Os estados são sete, e
@@ -434,7 +434,7 @@ barra clara, e a X2 põe as duas abas na página.
 - **Aba Uso**: por escola, no dia e no mês — o uso de infra desde já (D30), o consumo de IA
   contra o teto por aluno (D39), que a D76 previa com a A2 e o MVP não trouxe (`TODO.md`)
 
-A pele é a mesma do produto (D80), e a barra com "Equipe Turmma" é a marca de que ali é a operação,
+A pele é a mesma do produto (D80), e a barra com "Operação Turmma" é a marca de que ali é a operação,
 para ninguém confundir com a tela de uma escola. As medidas estão na seção 11.4.
 
 ---
@@ -1588,9 +1588,11 @@ A entrada, o convite, a reivindicação de nome e a verificação em duas etapas
 
 Uma tela só, sem lateral (seção 5a).
 
-- **Barra de topo** de 72 px (56 no celular), face `fundo`, borda de baixo de 2: a marca, um fio
-  vertical e "Equipe Turmma" em 17 px e 700; à direita, a conta do operador, com a `Aparencia` e o
-  **Sair**. Troca a faixa preta de hoje (X1)
+- **Barra de topo** de 72 px (56 no celular, contando a borda), face `fundo`, borda de baixo de 2:
+  a pinta e "Operação Turmma" em 17 px e 700 (sem o fio vertical do mockup: o nome já traz a marca);
+  à direita, a `Aparencia`, o nome do operador e o **Sair**, à vista. Abaixo dela, a navegação
+  "Operação" (Escolas e Uso), com o item da tela em `azul-texto`, sublinhado e `aria-current`. Troca a
+  faixa preta de antes (X1, 15.0)
 - **O corpo** é uma página de painel, com o título "Operação", a linha fixa de que a operação não vê
   dado de aluno nem de professor, e as abas **Escolas** e **Uso** (X2)
 
