@@ -208,7 +208,9 @@ fica atrás dela.
 
 **Casca pública e operação.** A pública divide a tela a partir de 1024 px (painel `papel` com a pinta, cartão do
 formulário à direita) e empilha abaixo; a da operação troca a faixa preta por barra de topo clara. Textos, ordem
-de campo e mensagens não mudam.
+de campo e mensagens não mudam. **Feita na 14.0:** o painel é um contêiner `data-painel-publico` com o `header` (a
+marca, o único `banner`) e, irmã dele, a pinta parada de 320 px, `alt=""`, só de 1024 px; o `main` é o cartão. A pinta
+grande fica fora do `banner` para o `tokens.spec` (A8) achar uma pinta só dentro dele.
 
 **Galeria.** `galeria/secoes/*.tsx`, por `import.meta.glob`, para duas tarefas não editarem o mesmo arquivo; no
 topo, a `Aparencia`. Os auxiliares comuns dos blocos moram em `galeria/Secao.tsx` e `galeria/dados.ts`, e os dos specs, em

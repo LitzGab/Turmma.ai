@@ -83,10 +83,10 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 13.3 `e2e/__fixtures__/casca.ts`: onde ficam os itens no celular (`cenarios.md`, parte B)
   - [x] 13.4 Testes: quatro itens na barra e cinco na gaveta; a 360 px nada rola de lado, com nome de escola comprido; o alvo de 44 px; o último botão da tela acima da barra; a gaveta fecha ao trocar de rota, de pessoa e de escola
 
-- [ ] **14.0 — A entrada e as páginas públicas na moldura nova**
-  - [ ] 14.1 `CascaPublica`: o painel com a pinta a partir de 1024 px, empilhado abaixo
-  - [ ] 14.2 As páginas de `paginas/` na moldura, sem mudar texto, ordem de campo nem resposta
-  - [ ] 14.3 Testes: os e2e de entrada, segundo fator, convite e página da turma, sem trocar asserção de regra; as mesmas mensagens para erro de entrada
+- [x] **14.0 — A entrada e as páginas públicas na moldura nova**
+  - [x] 14.1 `CascaPublica`: o painel com a pinta a partir de 1024 px, empilhado abaixo
+  - [x] 14.2 As páginas de `paginas/` na moldura, sem mudar texto, ordem de campo nem resposta
+  - [x] 14.3 Testes: os e2e de entrada, segundo fator, convite e página da turma, sem trocar asserção de regra; as mesmas mensagens para erro de entrada
 
 - [ ] **15.0 — A operação na pele nova**
   - [ ] 15.1 `CascaDaOperacao` com a barra de topo clara; as páginas de entrada da operação

@@ -117,7 +117,7 @@ function anelDoFoco(page: Page): Promise<{ visivel: boolean; estilo: string; lar
 
 /**
  * Caminha pelo teclado até o alvo e confere o anel dele: 3 px sólido na cor `foco` do tema, com 2 px de afastamento (9.1
- * e 10.1). O afastamento do campo (0) e o da linha de tabela (por dentro) são das tarefas que revestem essas peças.
+ * e 10.1). O campo passa o afastamento 0 (colado na borda, 10.1) e o item da barra de baixo, −3 px (por dentro).
  */
 async function tabAteOAnel(page: Page, alvo: Locator, descricao: string, maximoDeTeclas = 30, cor: string = RGB.foco, afastamento = '2px'): Promise<void> {
   for (let tecla = 0; tecla < maximoDeTeclas; tecla++) {
@@ -218,9 +218,10 @@ test.describe('pele da D72 nos componentes compartilhados', () => {
     await page.goto('/entrar')
 
     // A entrada: os dois campos e o botão primário, pelo teclado.
-    await tabAteOAnel(page, page.getByLabel('E-mail'), 'campo de e-mail')
+    // Os dois campos são a peça `Campo` desde a 14.0: o anel é colado na borda, com afastamento 0 (10.1).
+    await tabAteOAnel(page, page.getByLabel('E-mail'), 'campo de e-mail', 30, RGB.foco, '0px')
     await page.keyboard.type(emA.email)
-    await tabAteOAnel(page, page.getByLabel('Senha'), 'campo de senha')
+    await tabAteOAnel(page, page.getByLabel('Senha'), 'campo de senha', 30, RGB.foco, '0px')
     await page.keyboard.type(emA.senha)
     await tabAteOAnel(page, page.getByRole('button', { name: 'Entrar' }), 'botão Entrar')
     await page.keyboard.press('Enter')
@@ -270,9 +271,9 @@ test.describe('pele da D72 nos componentes compartilhados', () => {
   test('foco de 3 px nos componentes, no escuro: o anel é o foco do tema', async ({ page }) => {
     await page.goto('/entrar')
     await page.evaluate(() => document.documentElement.setAttribute('data-tema', 'escuro'))
-    await tabAteOAnel(page, page.getByLabel('E-mail'), 'campo de e-mail', 30, FOCO_POR_TEMA.escuro)
+    await tabAteOAnel(page, page.getByLabel('E-mail'), 'campo de e-mail', 30, FOCO_POR_TEMA.escuro, '0px')
     await page.keyboard.type('professora-sintetica@educa.invalid')
-    await tabAteOAnel(page, page.getByLabel('Senha'), 'campo de senha', 30, FOCO_POR_TEMA.escuro)
+    await tabAteOAnel(page, page.getByLabel('Senha'), 'campo de senha', 30, FOCO_POR_TEMA.escuro, '0px')
     await page.keyboard.type('senha-sintetica-do-foco')
     await tabAteOAnel(page, page.getByRole('button', { name: 'Entrar' }), 'botão Entrar', 30, FOCO_POR_TEMA.escuro)
   })
