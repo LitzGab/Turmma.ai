@@ -6,19 +6,14 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** o `RELATÓRIO` do `Implementador`, da **12.0**, retomada às 18h55 depois da `ESCALADA` da `Mesa` (o `test-engineer` reprovou 2 vezes seguidas: a folga do anel de foco sem teste nem bloco), com a ordem `.processo/ordens/12_task-r2.md` e o diagnóstico do `Arquiteto` em `.processo/ordens/diagnostico-12.md` (linha 1); a próxima é a rodada 3. Mais uma reprovação do `test-engineer` é o limite das três: parada. Antes disso: o `RELATÓRIO` do `Implementador`, da **12.0**, retomada às 17h05 (`PEDIDO de retomada`, sessão nova) depois da correção `2026-10-15-anel-do-motor-sem-has` (`dd0daf7`, só na linha 1, sem encontro próprio: vai junto no encontro da 12.0). Antes, o `RELATÓRIO` do `Implementador`, da **12.0** (porte grande: até 4 horas sem a primeira rodada),
-  na **linha 1**, 1ª tentativa, pedida em 15/10/2026 às 16h21 (a 11.0 se encontrou às 16h20: a spec está em `063f14c`,
-  e o push falhou de propósito). O quadro pediu mais uma linha para a 14.0: não abri (uma linha só, item 2 abaixo). Checkout da
-  linha: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch `spec/pele-e-casca--l1`, ambiente
-  de teste 1, com o `Implementador` e a `Mesa`. Todo pedido vai com a observação **"sem push"**: o commit da tarefa
-  fica local. Depois da 12.0 parte a 13.0 (presa nela). **Para a validação:** a 7.0 deixou ao `/validar` o caso direto de `fechadoPeloNavegador` sob
+- **Espero:** o `RELATÓRIO` do `Implementador`, da **13.0** retomada às 21h45, na **linha 1**, 1ª tentativa, depois da correção `2026-10-15-h1-da-turma-indisponivel` (`946945f` na linha, sem push; frontend-reviewer e tenancy-guardian 1ª, test-engineer 2ª). Começou às 19h30, (porte grande: até 4 horas sem a primeira rodada) pedida em 15/10/2026 às 19h30 (a 12.0 se encontrou às 19h22, a spec em `5827913`; o `Arquiteto` pôs na 13.0 o teste da gaveta com `usuarioDaSessao` em `951d4bc`, e a partida trouxe a linha até ele). A 14.0 continua sem linha (uma linha só). Linha 1: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch `spec/pele-e-casca--l1`, ambiente de teste 1, com o `Implementador` e a `Mesa`. Todo pedido vai com a observação **"sem push"**: o commit da tarefa fica local. **Para a validação:** a 7.0 deixou ao `/validar` o caso direto de `fechadoPeloNavegador` sob
   `StrictMode` ("Recomendações sem aplicar" do `7_task.md`); e os revisores da correção `quinta-fatia-do-e2e` (`71ff60f`, já na spec com a 6.0)
   deixaram ao `/validar` as recomendações recusadas na tabela de `tasks/correcoes/2026-10-13-quinta-fatia-do-e2e.md`;
   e a 8.0 deixou ao `/validar` ("Recomendações sem aplicar" do `8_task.md`): fotografar o RF10 com uma conversa do
   Tutor aberta, o botão "Abrir dado nominal de uma turma" quebrando em duas linhas a 360 px, e
   `/professor/nova-conversa` nos dois temas; e a 11.0 deixou o que está em "Recomendações sem aplicar" do `11_task.md`:
   conferir no fechamento se algo ali tem destino `TODO.md`
-- **Devo ainda:** (00) no `PEDIDO` da **13.0**, a observação: "o diagnóstico da 12.0 (`.processo/ordens/diagnostico-12.md` da linha 1) põe na 13.0 o teste da gaveta com `usuarioDaSessao`; o Arquiteto o leva ao `13_task.md`": antes da partida da 13.0, peça ao `Arquiteto` que o acrescente ao documento dela; (0) **no fechamento, levar ao `TODO.md`** a 2ª linha de "Sem aplicar" de `.processo/ordens/2026-10-15-anel-do-motor-sem-has-r2.md` da linha 1 (repetir a asserção sem `has-` depois de marcar a caixa, em `pecas-revestidas.test.tsx`); a 1ª linha é da retrospectiva (modelo do documento de correção); (1) **tudo local, por decisão do Joaquim** (13/10, 08h50: "pode ficar local"): nenhum push, de
+- **Devo ainda:** (0) **no fechamento, levar ao `TODO.md`** a 2ª linha de "Sem aplicar" de `.processo/ordens/2026-10-15-anel-do-motor-sem-has-r2.md` da linha 1 (repetir a asserção sem `has-` depois de marcar a caixa, em `pecas-revestidas.test.tsx`); a 1ª linha é da retrospectiva (modelo do documento de correção); (1) **tudo local, por decisão do Joaquim** (13/10, 08h50: "pode ficar local"): nenhum push, de
   ninguém, até ele mandar. O `linhas.ts encontro` não tem opção sem push: rodá-lo com o endereço de push trocado só
   naquele comando (`GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=remote.origin.pushurl GIT_CONFIG_VALUE_0=/dev/null/sem-push`
   na frente do `node`), e a saída esperada é "O PUSH FALHOU", que aqui é o certo: o encontro está feito. Não rodar o
@@ -29,7 +24,7 @@
   (limite de uso); (2a) a observação que o `PEDIDO` de cada tarefa leva: o da **12.0**: "quando o `Contador` ganhar a lateral, manter o chunk
   `pecas-estado`; está em 'Recomendações sem aplicar' do `6_task.md`", e mais: "a 9.0 deu ao
   `Ladrilho` o tamanho 36, que é o da lateral, e deixou os quatro ícones fora da entrada até a 12.0 ligá-los à casca
-  (484 bytes em brotli, sem chunk `lugares-*`); leia 'Divergências' do `9_task.md`"; e o da **13.0**: "o `docs/interface.md`, na
+  (484 bytes em brotli, sem chunk `lugares-*`); leia 'Divergências' do `9_task.md`"; e o da **13.0** (já enviado): "o `docs/interface.md`, na
   10.2, cita '12.0 e 13.0' para a gaveta da casca, e ela é só da 13.0; está em 'Recomendações sem aplicar' do
   `7_task.md`"; (2b) **no fechamento, levar ao `TODO.md`**, em "Marca e interface", o que a 7.0 deixou com esse
   destino e ainda não está lá: seis linhas, na tabela "Recomendações sem aplicar" do `7_task.md` e em
@@ -59,7 +54,7 @@
   "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
   `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
   conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
-- **Base:** `spec/pele-e-casca` em `063f14c` (o encontro da 11.0); a linha 1 partiu dela para a 12.0. O diário tem alterações sem commit desde o encontro da 11.0: o encontro da 12.0 as leva. Se o quadro
+- **Base:** `spec/pele-e-casca` em `5827913` (o encontro da 12.0). O diário tem alterações sem commit desde o encontro da 11.0: o encontro da 12.0 as leva. Se o quadro
   pedir mais uma linha: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub:
   push é do Joaquim
 
@@ -79,6 +74,8 @@
 | 9.0 | `db54cc6` | Sonnet 5.5 | 1 | linha 1, das 18h19 às 18h49 de 13/10; os quatro revisores (`frontend-reviewer`, `infra-guardian`, `test-engineer`, `revisor-geral`) aprovaram na 1ª rodada; 4 fotos do Implementador e 8 da Mesa; os quatro ícones pesam 484 bytes em brotli, e por isso a 9.4 não se aplicou (sem `lugares-*.svg`, `.size-limit.json` intacto); o `Ladrilho` ganhou o tamanho 36, para a lateral da 12.0; cinco divergências no `9_task.md`; sem push |
 | 10.0 | `35106af` | Sonnet 5.5 | 2 | linha 1, das 18h57 de 13/10 às 15h29 de 15/10, com o limite semanal parado das 19h31 de 13/10 às 15h de 15/10 (no meio da 1ª rodada, que a Mesa refez inteira); os quatro revisores (`frontend-reviewer`, `conformidade-reviewer`, `test-engineer`, `revisor-geral`) aprovaram na 2ª rodada; 95 mutações vermelhas; telas vistas pelo Implementador e pela Mesa (cheia e vazia, dois temas, computador e celular); recomendações sem aplicar copiadas para o `10_task.md`, linhas novas no `TODO.md`; sem push |
 | 11.0 | `761bb2b` | Sonnet 5.5 | 2 | linha 1, das 15h32 às 16h20 de 15/10; `frontend-reviewer` aprovou na 1ª rodada, `test-engineer` e `revisor-geral` aprovaram de novo na 2ª; a 1ª tentativa do portão tinha 16 mutações rodando zero testes (filtro de nome errado), corrigida pelo Implementador antes da 1ª rodada; telas vistas pelo Implementador e pela Mesa (cheia e vazia); sem push |
+| 12.0 | `772f9bc` | Sonnet 5.5 | 3 | linha 1, das 16h20 às 19h20 de 15/10; no meio, divergência de portão: o `:has(` da 10.0 no `MotorFormulario` virou a correção `2026-10-15-anel-do-motor-sem-has` (`dd0daf7`, na mesma linha); `ESCALADA` da `Mesa` na 2ª rodada (`test-engineer`: a folga do anel de foco sem teste nem bloco), diagnóstico do `Arquiteto` em `.processo/ordens/diagnostico-12.md` da linha 1, e os cinco aprovaram na 3ª; a mutação de `usuarioDaSessao` (gaveta) não tem teste que a pegue e vai para a 13.0 |
+| 13.0 | `b558854` | Sonnet 5.5 | 2 | linha 1, das 19h30 às 22h44 de 15/10; no meio, divergência de portão: o h1 "Turma" da 11.0 na turma perdida virou a correção `2026-10-15-h1-da-turma-indisponivel` (`946945f`, na mesma linha; frontend-reviewer e tenancy-guardian 1ª, test-engineer 2ª); retomada às 21h45; na 1ª rodada o `revisor-geral` e o `test-engineer` reprovaram, e os quatro (`frontend-reviewer`, `tenancy-guardian`, `test-engineer`, `revisor-geral`) aprovaram na 2ª; a Mesa viu 14 fotos; 4 itens novos no `TODO.md`; o runner de mutação só roda o projeto `chromebook` (vai à retrospectiva); **o Implementador fez push da linha**, contra o "sem push" (ver "O que falhou") |
 | PRD, Tech Spec e tarefas da X1 à X4 | `2ed7829` | Opus (as tarefas 8 a 15 da X1, 4 a 14 da X3 e 3 a 11 da X4, por agentes em Sonnet) | 4 da spec da X1 | só documento; a X2, a X3 e a X4 sem revisão de spec |
 
 ## Esperando o Joaquim
@@ -104,6 +101,11 @@ portão completo local custa de 30 a 70 minutos por vez
   ícones de cada papel fora da entrada), é tarefa nova na 9.0
 
 ## O que falhou
+- **15/10 22h44, push da linha 1 contra a decisão "tudo local"**: o `PEDIDO de retomada` da 13.0 dizia "sem push", e o
+  Implementador fez push de `spec/pele-e-casca--l1` (`b558854`) no GitHub (o 1º falhou por rede, o 2º passou). A
+  branch está lá, no repositório público. Não a apaguei: é do Joaquim decidir. A linha é worktree do térreo e
+  divide o `.git/config` com ele, por isso não troquei o endereço de push ali; daqui em diante o `PEDIDO` diz "não rode
+  `git push`; o commit fica local, por decisão do Joaquim", e não só "sem push"
 - **O limite de uso do plano estourou às 23:17 de 12/10**, com dez agentes em Opus ao mesmo tempo, e matou seis no
   meio. Voltou à 01:50. Dali em diante: poucos agentes, em Sonnet, e a implementação nesta sessão
 - **Rodadas 1 e 2 da revisão da spec: REPROVADA.** A 1ª, por seis correções (avatar sem selo, onça sem condições,
@@ -158,3 +160,4 @@ portão completo local custa de 30 a 70 minutos por vez
   portão): o Implementador perguntou se fazia dentro da 6.0 ou em correção própria. Correção própria, com
   `infra-guardian`, porque o `ci.yml` é comum às linhas e fora dos arquivos da tarefa
 - **15/10 16h40, o `:has(` da 10.0 é correção na linha 1, no meio da 12.0** (`/seguir`, passo 6, divergência de portão): o `MotorFormulario.tsx` usa `has-[:focus-visible]`, que a Tech Spec (linha 148) proíbe, e o E5 da 1.0 só o pegou na 12.0. Correção própria (`frontend-reviewer`), com o anel por `focus-within`, como a 4.0 decidiu e aceitou (o anel também no clique, `4_task.md`, tabela de revisões). Pedi ao Implementador que pausasse num ponto limpo em vez de reiniciá-lo trabalhando. Feita em `dd0daf7` (frontend-reviewer 1ª, test-engineer 2ª)
+- **15/10 21h10, o h1 da turma indisponível é correção na linha 1, no meio da 13.0** (`/seguir`, passo 6, divergência de portão): `e2e/acesso-da-turma.spec.ts:1103` espera nenhum h1 na tela "Esta turma não está disponível", e desde a 11.0 (`761bb2b`) ela tem o h1 "Turma"; é o único vermelho do portão da 13.0. O Implementador perguntou se a 13.0 ajustava; correção própria (`frontend-reviewer`, `tenancy-guardian`, porque a tela é a do "não encontrado = sem permissão"). O arquivo também é da 13.0: o commit da correção leva só o trecho dela
