@@ -1090,6 +1090,40 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       Shift+Tab o foco que o navegador rola para cima para atrás dela, o mesmo problema que a barra de baixo tinha embaixo
       (resolvido na 13.0, com `scroll-padding-bottom`). Existia antes da 13.0 e muda comportamento: correção própria
       (`/corrigir`), com e2e a 360 px que leve o foco por Shift+Tab ao meio de uma tela comprida
+- [ ] **A lista do perigo cheio é por arquivo, e o detector é textual** (`test-engineer`, 7.0 da X1): um segundo uso do
+      perigo cheio num arquivo já listado passa, e o detector não vê `classesDoBotao(opcoes)` com o objeto montado antes
+      nem a prop vinda de um spread. Contar os usos por arquivo e ler a sintaxe fecha os dois; pede mutação nova
+- [ ] **A ordem dos botões do rodapé difere entre as peças** (`frontend-reviewer`, 7.0 da X1): o formulário e a
+      `ConfirmacaoDePerigo` põem a ação primeiro; o `DialogoDeConfirmacao` e o painel, "Cancelar" primeiro. Tarefa
+      própria: mexer na ordem mexe no Tab de seis telas de área ("Divergências resolvidas" do `7_task.md`)
+- [ ] **Texto técnico na galeria** (`frontend-reviewer`, 7.0 da X1): "O Esc de dentro do menu fecha só o menu". Página
+      interna sem link do produto (`caminhos.ts`); reescrever só se a galeria virar referência para o Gabriel
+- [ ] **O botão oficial da confirmação é provado só como "não vermelho"** (`test-engineer`, 7.0 da X1):
+      `e2e/pecas-sobrepor.spec.ts:601-604`; comparar com o token do `oficial` prova a cor certa
+- [ ] **O Tab preso do login por cima não passa do fim da ordem** (`test-engineer`, 7.0 da X1):
+      `e2e/inatividade.spec.ts:112-114`; repetir o Shift+Tab a partir do foco inicial, como na confirmação. Anterior à X1
+- [ ] **`QUEM_IMPORTA_O_AVATAR` ainda deixa a `Mensagem.tsx` importar o avatar** (`revisor-geral`, 8.0 da X1): fechar só
+      na `AssinaturaIA`, com o aperto escrito na `techspec.md` 7b da X1 e na lista do teste. Muda contrato escrito: é do
+      Arquiteto, e da retrospectiva da X1
+- [ ] **A casca do selo da `AssinaturaIA`** (`revisor-geral` e `test-engineer`, 8.0 da X1): o espaço entre o nome e o
+      selo é feito duas vezes (`{' '}` e o `ml-1`; ficar com um), e o `align-middle` não tem asserção. Acabamento; a
+      tarefa que tocar a `AssinaturaIA` fecha as duas
+- [ ] **O filtro de `has-` da caixa do motor só olha o rótulo desmarcado** (`test-engineer`, correção
+      `2026-10-15-anel-do-motor-sem-has` da X1): `apps/web/src/componentes/ia/pecas-revestidas.test.tsx:150`; repetir a
+      asserção depois do clique que marca a caixa. O E5 do `casca.spec.ts` cobre o CSS inteiro na esteira; vale na
+      próxima tarefa que tocar este teste
+- [ ] **O que a 11.0 da X1 deixou para as telas de cada área** (`revisor-geral` e `frontend-reviewer`, `11_task.md`):
+      a prop `objeto` da `Tela` ficou sem efeito e ainda é passada por `Atividade`, `Aprovar`, `Ferramenta`, `Artefato`,
+      `DetalheDoPedido` e a galeria (tirar ao recompor cada uma); o campo de arquivo da `ListaDaTurma` é o nativo do
+      navegador, e o `Material` usa botão próprio (X2); `h1` seguido de `h2` quase igual em `Turmas` e em `Professores`
+      (X2 e X3); e o voltar de `Turma` e `ListaDaTurma` ainda é link sublinhado, e não linha própria de 28 px em `t-selo`
+- [ ] **Lacunas de teste que a validação da X1 deixou às tarefas da X2 e da X3** (`tasks/prd-pele-e-casca/validacao.md`,
+      rodada 1, "Menores"): o percurso de `e2e/titulo-da-tela.spec.ts` só cobre `Seções`; o `aria-current` de "Seu time"
+      sem teste; as medidas de 256/88, 56 e 68 px só com o professor, e 88 sem medida a 900 px; o "Sair" da operação sem
+      comparação com o vizinho (RF15); o hover do oficial sem comparação (RF6); as linhas "selo de IA" e "aprovado" de
+      `contraste.test.ts` presas só pela contagem; a guarda de movimento sem `@keyframes`; o Tab da galeria só nos
+      botões. E o botão "Abrir dado nominal de uma turma" quebrando em duas linhas a 360 px (X2, tarefa 4.4). Cada um
+      entra na tarefa que mexer na peça
 
 ## Comercial
 

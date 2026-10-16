@@ -291,7 +291,8 @@ o que a X4 declara. Toda tela continua com os quatro estados, com o e2e que já 
 com o que a lei pede e o mockup afrouxou (D80, item 7). O que o mockup mostra e depende de dado ou de
 fase que não existe **não é construído aqui**: fica na fase dele, que encolhe (tabela abaixo).
 
-## X1 — `pele-e-casca` [ ]
+## X1 — `pele-e-casca` [x]
+Concluída em 16/10/2026, validada em tasks/prd-pele-e-casca/validacao.md.
 **Depende de:** F3
 
 A pele e a casca do produto inteiro. Os tokens novos, no claro e no escuro, com a escolha de

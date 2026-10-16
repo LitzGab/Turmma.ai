@@ -1,5 +1,109 @@
 # Validação — pele-e-casca (X1)
 
+## Rodada 2 — 16/10/2026 (revalidação)
+
+**Escopo:** funcionalidade completa
+**Commit validado:** `56307c6`
+**Veredito: APROVADA**
+
+O que mudou desde a rodada 1 (`4c23893..56307c6`): só documento. São a correção `2026-10-16-roteiro-diz-nova-conversa`
+(`bec4415`: `docs/roteiro-da-demonstracao.md:166`, "**Nova conversa**" passa a "**Início**", com o documento da
+correção e os achados dela), esta validação (`931af03`) e o `estado.md` (`0122b32`, `56307c6`). Nenhum arquivo de
+`apps/`, `packages/`, `e2e/`, `tools/` ou `infra/` mudou. Por isso a evidência de código da rodada 1 vale para este
+commit. Mesmo assim, não a tomei por boa sem conferir: refiz por conta própria as fotos, os testes e três mutações
+diferentes das da rodada 1, como está abaixo.
+
+Contexto relido: `prd.md` (RF1 a RF24, regras, bordas), a rodada 1 inteira, o documento da correção e os achados dela
+(`tasks/correcoes/achados/2026-10-16-roteiro-diz-nova-conversa.md`), o "Agora" do `estado.md`.
+
+### 1. RF a RF
+
+| RF | Situação | Evidência nova desta rodada |
+|---|---|---|
+| RF1, RF2, RF5, RF6, RF7, RF8, RF9, RF11, RF17, RF18, RF20, RF21, RF22, RF23, RF24 | ATENDIDO | O código não mudou, e a evidência é a da rodada 1. Rodados de novo, isolados: `contraste.test.ts`, `estilos.test.ts`, `tema.test.ts`, `itens-da-lateral.test.tsx` e `BarraDeBaixo.test.tsx`, todos verdes. Fotos lidas: `escuro--coordenacao--galeria--computador-1.png` (os seis desenhos, o oficial claro e diferente de todos no escuro, o desligado sem cor de ação, o perigo cheio) e, tiradas aqui, as da entrada pública nos dois temas, a 1366 e a 360 px (`publica-entrar-{light,dark}-{computador,celular}.png`, no rascunho da sessão; a operação não foi refotografada, porque o código não mudou desde as fotos da rodada 1) |
+| RF3, RF4 | ATENDIDO | Mutação nova no RF4, na lateral (abaixo). A `lateral-recolhida.test.ts` ficou vermelha |
+| RF10 | ATENDIDO | Mutação nova: a onça importada pela lateral (abaixo). `escuro--coordenacao--coordenacao-agentes--computador-1.png`: os três avatares, cada um com o nome da função e o selo "IA" no mesmo bloco |
+| RF12 | ATENDIDO | Mutação nova: todo título só para leitor de tela. `titulo-das-telas.test.tsx` ficou vermelho em todos os estados. A foto nova `professora--professor-turmas--celular.png` mostra o `h1` "Turmas" |
+| RF13, RF15 | ATENDIDO | `e2e/casca.spec.ts` rodado nos dois projetos: verde, incluindo o laço dos três papéis (`:673`, "Sair" à vista e do tamanho do vizinho, a 1366 e a 900 px). Foto nova: `professora--professor-nova-conversa--computador.png` (lateral de 256 px, ícones ilustrados, "Sair" à vista no pé) |
+| RF14 | ATENDIDO | Fotos novas `professora--professor-turmas--celular.png` (barra de topo com o nome da escola cortado com reticências, "Sair" à vista, barra de baixo com Início, Ferramentas e Turmas, o item atual marcado) e `escuro--aluno--aluno-tutor--celular.png` |
+| RF16 | ATENDIDO | O achado maior da rodada 1 está fechado. `docs/roteiro-da-demonstracao.md:166` diz "**Início**", o mesmo rótulo de `areas/navegacao.ts` e o mesmo que o `e2e/roteiro-da-demonstracao.spec.ts:356` usa (`irPelaNavegacao(professora, 'Início', …)`). O spec do roteiro, rodado aqui de ponta a ponta nos dois projetos, ficou verde. Conferi as outras menções de "Nova conversa" em `docs/` e no `TODO.md`: são registro histórico (`mvp-rapido.md`, `decisoes.md:878`, `pendencias-dos-mockups.md`), nota da troca (`interface.md:72`, `:1519`, `:1544`) ou o desenho do **alvo** da D80 na Parte A (`interface.md:53`, o botão de abrir conversa na seção de conversas que a X3 traz, e não o item da navegação). Nenhuma é instrução que contradiga o código |
+| RF19 | ATENDIDO | Igual à rodada 1, sem mudança de código. `SeletorDeEscola.test.tsx` rodado: verde |
+
+**Contagem: 24 ATENDIDOS, 0 PARCIAIS, 0 NÃO ATENDIDOS, 0 NÃO VERIFICÁVEIS.**
+
+Provas de mutação (outras três, diferentes das da rodada 1). Em cada uma: aplicada, rodado só o teste citado,
+restaurada com `git checkout --`. A árvore terminou limpa, como começou.
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF4 | `lerRecolhida` devolvendo `true` no `catch` (`componentes/lateral-recolhida.ts:20`): com o armazenamento bloqueado, a lateral abriria recolhida | `lateral-recolhida.test.ts`: 2 de 6 ("`getItem` que lança: abre aberta, sem erro"; "o acesso a `localStorage` que lança … também é calado") |
+| RF10 | `import { CabecaOnca } from './onca/CabecaOnca'` acrescentado a `componentes/itens-da-lateral.tsx`, o que poria a onça na lateral sem função nem selo | `ia/avatar-so-nas-duas-pecas.test.ts`: "`componentes/onca/` só é importado pelo `AvatarAgente` e por arquivo da própria pasta" |
+| RF12 | `tituloSoParaLeitor ? (` trocado por `true ? (` em `componentes/Tela.tsx:68`: toda tela com o `h1` só para leitor de tela | `areas/titulo-das-telas.test.tsx`: vermelho em carregando, com erro, vazia e com dado, em cada tela |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+Sem mudança desde a rodada 1: todas as regras cumpridas, toda borda coberta ou justificada, e todo item do critério
+de pronto cumprido. A ressalva que havia, "`docs/` descreve o construído", ficou cumprida também no roteiro. O item
+"o e2e inteiro que existia continua verde" continua apoiado no portão completo local de 16/10, às 03h10, que vale no
+lugar da esteira por decisão do Joaquim. Depois dele só entrou documento.
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Borda: armazenamento bloqueado | coberta | mutação nova na lateral (RF4) |
+| Borda: nome comprido a 360 px | coberta para a escola | foto `professora--professor-turmas--celular.png` ("Colégio sintético…" com reticências dentro da barra) |
+| Pronto: "Sair" a um clique em toda tela | cumprido | `casca.spec.ts:673` (três papéis), rodado |
+| Pronto: `docs/` descreve o construído | cumprido | `roteiro-da-demonstracao.md:166` corrigido (RF16) |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run test` inteiros | não rodados: não se roda suíte inteira aqui. O portão completo local de 16/10, 03h10, cobre o código, que não mudou desde então |
+| Unidade, como evidência | `navegacao`, `itens-da-lateral`, `avatar-so-nas-duas-pecas`, `SeletorDeEscola`, `contraste`, `estilos`, `tema`, `BarraDeBaixo` e `titulo-das-telas`: 154 de 154. Depois, `lateral-recolhida`, `avatar-so-nas-duas-pecas` e `titulo-das-telas`, verdes antes de cada mutação e vermelhos com ela |
+| e2e, como evidência | `e2e/roteiro-da-demonstracao.spec.ts` e `e2e/casca.spec.ts`, nos projetos `chromebook` e `celular`: 46 de 46, nenhum instável |
+| `npm run test:infra` | não se aplica |
+| Esteira | conferida no fechamento (sem GitHub por decisão do Joaquim: vale o portão completo local) |
+| Revisões com veto registradas e aprovadas | ✅ Nas quinze tarefas e nas cinco correções, a última rodada registrada de cada revisor obrigatório é APROVADO. A correção nova tem `revisor-geral` e `test-engineer` APROVADOS na 1ª rodada. Nenhum commit desde `e278845` leva código sem `(tarefa N.0)` ou `(correção …)` |
+
+### 4. Achados
+
+**Críticos**
+- nenhum
+
+**Maiores**
+- nenhum (o da rodada 1, `docs/roteiro-da-demonstracao.md:166`, foi corrigido em `bec4415`)
+
+**Menores**
+- `bec4415` (mensagem do commit) e o `estado.md` ("2 rodadas") dizem "rodadas 1 e 2". Em
+  `tasks/correcoes/2026-10-16-roteiro-diz-nova-conversa.md:57-58` e no `achados/indice.md:281` só existe a 1ª rodada
+  dos dois revisores. Os dois aprovaram nela, e o texto que a recomendação da 1ª rodada pediu ("única instrução ao
+  apresentador") está no documento. Ou houve uma 2ª rodada que o hook não registrou, ou a mensagem errou. Correção:
+  a retrospectiva confere no `/seguir` se uma rodada pode rodar sem ser registrada. A mensagem do commit fica como
+  está.
+- A recomendação do `test-engineer` na correção (o desenho de `docs/interface.md:53`) tem destino escrito na X3, no
+  próprio documento da correção. Conferido: é o desenho do alvo da D80, não da casca da X1, e não contradiz o código.
+- Os menores da rodada 1 continuam valendo, com os destinos da seção 6 dela. Nenhum foi fechado nesta rodada, e
+  nenhum bloqueia.
+
+**Positivos**
+- A correção diz por que não há teste que reproduz (seria teste de cópia, regra 40) e põe um `grep` verificável no
+  lugar. É o jeito de corrigir documento sem inventar teste decorativo.
+
+### 5. Conclusão
+
+O único achado maior da rodada 1 foi corrigido, e a correção é só texto, aprovada pelos dois revisores. O código é o
+mesmo da rodada 1. Mesmo assim, ele foi conferido de novo aqui:
+
+- três mutações novas, no armazenamento bloqueado, na onça fora da assinatura e no título visível, todas pegas;
+- fotos novas da casca e da entrada pública, nos dois temas e nas duas larguras;
+- o e2e do roteiro e o da casca, verdes nos dois projetos.
+
+Ficam 24 RF atendidos, o critério de pronto cumprido, nenhum crítico, nenhum maior e nenhum teste vermelho:
+**APROVADA**. Os menores das duas rodadas têm destino e não seguram o fechamento. O fechamento leva ao `TODO.md` os
+itens que o `estado.md` lista: (0), (2b) e as quatro recomendações do `11_task.md`.
+
+---
+
 ## Rodada 1 — 16/10/2026
 
 **Escopo:** funcionalidade completa
