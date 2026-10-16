@@ -1,7 +1,7 @@
 import { AxeBuilder } from '@axe-core/playwright'
 import type { Page } from '@playwright/test'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { conferirAssinaturas, conferirQueAOncaNaoTemNome, conferirQueOAvatarFicaParado } from './__fixtures__/avatar.ts'
+import { avaliarAssinaturas, avaliarAvatares, avaliarSelos, conferirAssinaturas, conferirQueAOncaNaoTemNome, conferirQueOAvatarFicaParado } from './__fixtures__/avatar.ts'
 import { abrirGaleria, caixa, desenho, secao } from './__fixtures__/galeria.ts'
 import { corDoToken, IMPACTOS_QUE_REPROVAM, larguraExcedente, TAGS_WCAG } from './__fixtures__/verificacoes.ts'
 
@@ -139,3 +139,106 @@ for (const tema of TEMAS) {
     })
   })
 }
+
+/**
+ * Os verificadores do avatar, do selo e da assinatura conferem a tela inteira numa ida só ao navegador (correção
+ * `2026-10-16-galeria-da-onca-estoura-o-prazo`). Em lote, o que se perde é a prova de que cada defeito ainda é visto: aqui
+ * cada um recebe uma página montada com um defeito de cada vez, e tem de acusar exatamente aquele.
+ */
+test.describe('os verificadores do avatar, do selo e da assinatura, em lote', () => {
+  const SELO = '<span data-selo-ia><span aria-hidden="true">IA</span><span>gerado por inteligência artificial</span></span>'
+  const assinatura = (miolo: string): string => `<div data-assinatura>${miolo}</div>`
+  const CASOS_DA_ASSINATURA: ReadonlyArray<{ nome: string; html: string; falhas: string[] }> = [
+    { nome: 'a assinatura inteira não acusa nada', html: assinatura(`<span data-agente="tutor"></span><p>Tutor · sinais para o professor</p>${SELO}`), falhas: [] },
+    { nome: 'o título também é nome', html: assinatura(`<span data-agente="analista_de_desempenho_escolar"></span><h3>Analista de desempenho escolar</h3>${SELO}`), falhas: [] },
+    { nome: 'avatar fora de uma assinatura', html: `<span data-agente="tutor"></span><p>Tutor</p>${SELO}`, falhas: ['tutor #0: o avatar está fora de uma assinatura'] },
+    { nome: 'assinatura com dois avatares', html: assinatura(`<span data-agente="tutor"></span><span data-agente="tutor"></span><p>Tutor</p>${SELO}`), falhas: ['tutor: a assinatura tem mais de um avatar', 'tutor: a assinatura tem mais de um avatar'] },
+    { nome: 'sem o selo', html: assinatura('<span data-agente="tutor"></span><p>Tutor</p>'), falhas: ['tutor: sem o selo "IA", ou com dois'] },
+    { nome: 'com dois selos', html: assinatura(`<span data-agente="tutor"></span><p>Tutor</p>${SELO}${SELO}`), falhas: ['tutor: sem o selo "IA", ou com dois'] },
+    { nome: 'selo escondido', html: assinatura('<span data-agente="tutor"></span><p>Tutor</p><span data-selo-ia style="visibility:hidden">IA</span>'), falhas: ['tutor: o selo está escondido'] },
+    { nome: 'selo sem caixa', html: assinatura('<span data-agente="tutor"></span><p>Tutor</p><span data-selo-ia style="display:none">IA</span>'), falhas: ['tutor: o selo está escondido'] },
+    { nome: 'selo sem largura', html: assinatura('<span data-agente="tutor"></span><p>Tutor</p><span data-selo-ia style="display:inline-block;width:0;overflow:hidden">IA</span>'), falhas: ['tutor: o selo está escondido'] },
+    { nome: 'selo sem altura', html: assinatura('<span data-agente="tutor"></span><p>Tutor</p><span data-selo-ia style="display:inline-block;height:0;overflow:hidden">IA</span>'), falhas: ['tutor: o selo está escondido'] },
+    { nome: 'sem o nome da função', html: assinatura(`<span data-agente="tutor"></span>${SELO}`), falhas: ['tutor: a assinatura não diz o nome da função'] },
+    { nome: 'dois nomes', html: assinatura(`<span data-agente="tutor"></span><p>Tutor</p><p>Tutor</p>${SELO}`), falhas: ['tutor: a assinatura não diz o nome da função'] },
+    { nome: 'nome escondido', html: assinatura(`<span data-agente="tutor"></span><p style="visibility:hidden">Tutor</p>${SELO}`), falhas: ['tutor: o nome da função está escondido'] },
+    { nome: 'nome de outro agente', html: assinatura(`<span data-agente="tutor"></span><p>Assistente de ensino</p>${SELO}`), falhas: ['tutor: o nome é de outro agente'] },
+    { nome: 'agente que não é um dos três', html: assinatura(`<span data-agente="professora_virtual"></span><p>Professora virtual</p>${SELO}`), falhas: ['o agente "professora_virtual" não é um dos três'] },
+    {
+      nome: 'vale a assinatura mais próxima: a de fora não cobre o selo que falta na de dentro',
+      html: assinatura(`${SELO}${assinatura('<span data-agente="tutor"></span><p>Tutor</p>')}`),
+      falhas: ['tutor: sem o selo "IA", ou com dois'],
+    },
+  ]
+
+  // Um teste que percorre os casos, e não um por caso: cada caso é um `setContent` de milissegundos, e um teste por caso
+  // dobrava o número de casos da fatia do e2e na esteira (`tools/ci/esteira.test.ts`). A mensagem nomeia o caso.
+  test('acusa, um a um, cada defeito da assinatura, e nenhum onde ela está inteira', async ({ page }) => {
+    for (const caso of CASOS_DA_ASSINATURA) {
+      await page.setContent(`<body>${caso.html}</body>`)
+      expect((await avaliarAssinaturas(page)).falhas, caso.nome).toEqual(caso.falhas)
+    }
+  })
+
+  test('conta os avatares que conferiu', async ({ page }) => {
+    await page.setContent(`<body>${assinatura(`<span data-agente="tutor"></span><p>Tutor</p>${SELO}`)}${assinatura(`<span data-agente="assistente_de_ensino"></span><p>Assistente de ensino</p>${SELO}`)}</body>`)
+    expect(await avaliarAssinaturas(page)).toEqual({ total: 2, falhas: [] })
+    expect(await conferirAssinaturas(page)).toBe(2)
+  })
+
+  test('a conferência de uma página sem nenhum avatar reprova, e não passa vazia', async ({ page }) => {
+    await page.setContent('<body><p>nada aqui</p></body>')
+    expect(await avaliarAssinaturas(page)).toEqual({ total: 0, falhas: [] })
+    await expect(conferirAssinaturas(page)).rejects.toThrow(/nenhum avatar na tela/)
+  })
+
+  test('a conferência de uma tela com um defeito reprova, e não só relata', async ({ page }) => {
+    await page.setContent(`<body>${assinatura('<span data-agente="tutor"></span><p>Tutor</p>')}</body>`)
+    await expect(conferirAssinaturas(page)).rejects.toThrow(/sem o selo/)
+  })
+
+  const SELO_BOM = '<span data-selo-ia><span aria-hidden="true">IA</span><span class="sr-only">gerado por inteligência artificial</span></span>'
+  const CASOS_DO_SELO: ReadonlyArray<{ nome: string; html: string; falhas: string[] }> = [
+    { nome: 'o selo inteiro não acusa nada', html: SELO_BOM, falhas: [] },
+    { nome: 'o selo inteiro não acusa nada, com a quebra de linha dentro do texto', html: '<span data-selo-ia><span aria-hidden="true">IA</span><span>gerado por\n    inteligência artificial</span></span>', falhas: [] },
+    { nome: 'a sigla fora do aria-hidden', html: '<span data-selo-ia><span>IA</span><span>gerado por inteligência artificial</span></span>', falhas: ['selo #0: a sigla "IA" é uma só e fica escondida do leitor de tela'] },
+    { nome: 'duas siglas escondidas', html: '<span data-selo-ia><span aria-hidden="true">IA</span><span aria-hidden="true">IA</span><span>gerado por inteligência artificial</span></span>', falhas: ['selo #0: a sigla "IA" é uma só e fica escondida do leitor de tela', 'selo #0: o que a sigla quer dizer está por extenso, em texto'] },
+    { nome: 'a sigla errada', html: '<span data-selo-ia><span aria-hidden="true">AI</span><span>gerado por inteligência artificial</span></span>', falhas: ['selo #0: a sigla "IA" é uma só e fica escondida do leitor de tela', 'selo #0: o que a sigla quer dizer está por extenso, em texto'] },
+    { nome: 'o que a sigla quer dizer fora do selo', html: '<span data-selo-ia><span aria-hidden="true">IA</span></span>', falhas: ['selo #0: o que a sigla quer dizer está por extenso, em texto'] },
+    { nome: 'o texto por extenso trocado', html: '<span data-selo-ia><span aria-hidden="true">IA</span><span>gerado por IA</span></span>', falhas: ['selo #0: o que a sigla quer dizer está por extenso, em texto'] },
+    { nome: 'o selo com title', html: SELO_BOM.replace('<span data-selo-ia>', '<span data-selo-ia title="IA">'), falhas: ['selo #0: o que a sigla quer dizer não fica num title'] },
+    { nome: 'só o segundo selo defeituoso, com o número dele', html: `${SELO_BOM}${SELO_BOM.replace('<span data-selo-ia>', '<span data-selo-ia title="IA">')}`, falhas: ['selo #1: o que a sigla quer dizer não fica num title'] },
+  ]
+
+  test('acusa, um a um, cada defeito do selo, e nenhum onde ele está inteiro', async ({ page }) => {
+    for (const caso of CASOS_DO_SELO) {
+      await page.setContent(`<body>${caso.html}</body>`)
+      const relatorio = await avaliarSelos(page)
+      expect(relatorio.falhas, caso.nome).toEqual(caso.falhas)
+      expect(relatorio.total, caso.nome).toBe(caso.html.split('<span data-selo-ia').length - 1)
+    }
+  })
+
+  const AVATAR = (extra = '', miolo = '<svg width="20" height="20"></svg>'): string =>
+    `<span data-agente="tutor" style="display:inline-block;width:24px;height:24px;border-radius:9999px;${extra}">${miolo}</span>`
+  const CASOS_DO_AVATAR: ReadonlyArray<{ nome: string; html: string; falhas: string[] }> = [
+    { nome: 'o avatar inteiro não acusa nada', html: AVATAR(), falhas: [] },
+    { nome: 'avatar que não é quadrado', html: AVATAR('height:30px'), falhas: ['avatar #0: não é um quadrado à vista (24 × 30)'] },
+    { nome: 'avatar sem caixa', html: AVATAR('display:none'), falhas: ['avatar #0: não é um quadrado à vista (0 × 0)'] },
+    { nome: 'avatar de canto quadrado', html: AVATAR('border-radius:4px'), falhas: ['avatar #0: não é um círculo'] },
+    { nome: 'avatar sem a cabeça', html: AVATAR('', ''), falhas: ['avatar #0: tem de ter uma cabeça (um svg)'] },
+    { nome: 'avatar com duas cabeças', html: AVATAR('', '<svg width="10" height="10"></svg><svg width="10" height="10"></svg>'), falhas: ['avatar #0: tem de ter uma cabeça (um svg)'] },
+    { nome: 'imagem dentro do avatar', html: AVATAR('', '<svg width="20" height="20"></svg><img alt="" src="data:,">'), falhas: ['avatar #0: tem imagem dentro (D58)'] },
+    { nome: 'imagem do svg dentro do avatar', html: AVATAR('', '<svg width="20" height="20"><image href="data:,"></image></svg>'), falhas: ['avatar #0: tem imagem dentro (D58)'] },
+    { nome: 'só o segundo avatar defeituoso, com o número dele', html: `${AVATAR()}${AVATAR('border-radius:4px')}`, falhas: ['avatar #1: não é um círculo'] },
+  ]
+
+  test('acusa, um a um, cada defeito do avatar, e nenhum onde ele está inteiro', async ({ page }) => {
+    for (const caso of CASOS_DO_AVATAR) {
+      await page.setContent(`<body>${caso.html}</body>`)
+      const relatorio = await avaliarAvatares(page)
+      expect(relatorio.falhas, caso.nome).toEqual(caso.falhas)
+      expect(relatorio.total, caso.nome).toBe(caso.html.split('data-agente').length - 1)
+    }
+  })
+})

@@ -23,7 +23,18 @@ export async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
   await (hasTouch ? alvo.tap() : alvo.click())
 }
 
-export function desenho(alvo: Locator): Promise<{ fundo: string; texto: string; borda: string; peso: string; fonte: string; canto: string; enchimento: string }> {
+/** O desenho de uma peça: o que o navegador calcula da face, do texto, da borda, do canto e do respiro dela. */
+export interface Desenho {
+  fundo: string
+  texto: string
+  borda: string
+  peso: string
+  fonte: string
+  canto: string
+  enchimento: string
+}
+
+export function desenho(alvo: Locator): Promise<Desenho> {
   return alvo.evaluate((elemento) => {
     const estilo = getComputedStyle(elemento)
     return {
@@ -36,6 +47,54 @@ export function desenho(alvo: Locator): Promise<{ fundo: string; texto: string; 
       enchimento: estilo.padding,
     }
   })
+}
+
+/**
+ * O `desenho` de cada peça de `alvos`, na ordem, **numa ida só ao navegador**: percorrer dezenas de peças com um `desenho`
+ * cada passava dos 30 s do caso no runner da esteira (CPU ×4). Não espera a peça aparecer: o chamador já esperou.
+ * O corpo repete o de `desenho` porque o que vai ao navegador não enxerga o que o módulo declara.
+ */
+export function desenhos(alvos: Locator): Promise<Desenho[]> {
+  return alvos.evaluateAll((elementos) =>
+    elementos.map((elemento) => {
+      const estilo = getComputedStyle(elemento)
+      return {
+        fundo: estilo.backgroundColor,
+        texto: estilo.color,
+        borda: `${estilo.borderTopWidth} ${estilo.borderTopStyle} ${estilo.borderTopColor}`,
+        peso: estilo.fontWeight,
+        fonte: estilo.fontSize,
+        canto: estilo.borderTopLeftRadius,
+        enchimento: estilo.padding,
+      }
+    }),
+  )
+}
+
+export interface MedidaDosBlocos {
+  total: number
+  passamDaJanela: string[]
+  comRolagemPropria: string[]
+}
+
+/**
+ * Cada `[data-galeria]` cabe na janela e não rola por dentro, numa ida só: uma peça que estourasse dentro de um contêiner
+ * com rolagem passaria na conta do documento (`larguraExcedente`). Percorrer os blocos com três idas cada, somado às duas
+ * auditorias do axe, passava dos 30 s do caso no runner da esteira (CPU ×4).
+ */
+export function medirBlocosDaGaleria(page: Page): Promise<MedidaDosBlocos> {
+  const janela = page.viewportSize()?.width ?? 0
+  return page.locator('[data-galeria]').evaluateAll((blocos, largura) => {
+    const medidas = blocos.map((bloco) => {
+      const caixaDoBloco = bloco.getBoundingClientRect()
+      return { nome: bloco.getAttribute('data-galeria') ?? '', direita: caixaDoBloco.x + caixaDoBloco.width, sobra: bloco.scrollWidth - bloco.clientWidth }
+    })
+    return {
+      total: medidas.length,
+      passamDaJanela: medidas.filter((medida) => medida.direita > largura).map((medida) => medida.nome),
+      comRolagemPropria: medidas.filter((medida) => medida.sobra !== 0).map((medida) => medida.nome),
+    }
+  }, janela)
 }
 
 export async function caixa(alvo: Locator): Promise<{ x: number; y: number; width: number; height: number }> {

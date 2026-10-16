@@ -1,8 +1,8 @@
 import { AxeBuilder } from '@axe-core/playwright'
 import type { Page } from '@playwright/test'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { conferirAssinaturas } from './__fixtures__/avatar.ts'
-import { abrirGaleria, acionar, caixa, conferirQueCabeNaJanela, conferirQueOFocoNaoCaiu, desenho, secao } from './__fixtures__/galeria.ts'
+import { avaliarAvatares, avaliarSelos, conferirAssinaturas } from './__fixtures__/avatar.ts'
+import { abrirGaleria, acionar, caixa, conferirQueCabeNaJanela, conferirQueOFocoNaoCaiu, desenho, desenhos, secao } from './__fixtures__/galeria.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, corDoToken, focoVisivel, IMPACTOS_QUE_REPROVAM, larguraExcedente, TAGS_WCAG, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -40,17 +40,15 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
 
     // Um conjunto só, igual em todo o produto: todo selo "IA" da tela tem o mesmo desenho, em família `ia`. O que a sigla
     // quer dizer está em texto, para o leitor de tela, e não num `title`, que só existe no hover.
+    // Todos os selos numa ida ao navegador, e não quatro por selo: no runner da esteira (CPU ×4) o laço passava dos 30 s.
     const selos = page.locator('[data-selo-ia]')
-    expect(await selos.count()).toBeGreaterThanOrEqual(10)
-    const desenhos = new Set<string>()
-    for (const selo of await selos.all()) {
-      await expect(selo.locator('[aria-hidden="true"]')).toHaveText('IA')
-      await expect(selo).toHaveText('IAgerado por inteligência artificial')
-      await expect(selo).not.toHaveAttribute('title')
-      desenhos.add(JSON.stringify(await desenho(selo)))
-    }
-    expect([...desenhos]).toHaveLength(1)
-    expect(await desenho(selos.first())).toMatchObject({ fundo: RGB.iaFundo, texto: RGB.iaTexto })
+    const relatorioDosSelos = await avaliarSelos(page)
+    expect(relatorioDosSelos.total).toBeGreaterThanOrEqual(10)
+    expect(relatorioDosSelos.falhas).toEqual([])
+    const desenhosDosSelos = await desenhos(selos)
+    expect(desenhosDosSelos).toHaveLength(relatorioDosSelos.total)
+    expect([...new Set(desenhosDosSelos.map((d) => JSON.stringify(d)))]).toHaveLength(1)
+    expect(desenhosDosSelos[0]).toMatchObject({ fundo: RGB.iaFundo, texto: RGB.iaTexto })
 
     // Toda mensagem de IA da conversa assina: avatar, nome e selo. Nas duas variantes e no "preparando a resposta".
     const mensagensDeIa = secao(page, 'conversa')
@@ -65,13 +63,10 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     // imagem dentro (D58). Quem é o agente e a função dele está no bloco, e nunca só na cor: A28 e RF10.
     const avatares = page.locator('[data-agente]')
     for (const agente of ['assistente_de_ensino', 'tutor', 'analista_de_desempenho_escolar']) expect(await page.locator(`[data-agente="${agente}"]`).count(), agente).toBeGreaterThan(0)
-    for (const avatar of await avatares.all()) {
-      const medida = await caixa(avatar)
-      expect(medida.width).toBe(medida.height)
-      expect(Number.parseFloat((await desenho(avatar)).canto)).toBeGreaterThanOrEqual(medida.width / 2)
-      await expect(avatar.locator('svg')).toHaveCount(1)
-      await expect(avatar.locator('img, image, picture')).toHaveCount(0)
-    }
+    // Idem: todos os avatares numa ida só.
+    const relatorioDosAvatares = await avaliarAvatares(page)
+    expect(relatorioDosAvatares.total).toBeGreaterThan(0)
+    expect(relatorioDosAvatares.falhas).toEqual([])
     const [fundo, azul, laranja, anil] = await Promise.all(['fundo', 'azul', 'laranja', 'anil'].map((token) => corDoToken(page, token)))
     expect(await desenho(page.locator('[data-agente="assistente_de_ensino"]').first())).toMatchObject({ fundo, borda: `2px solid ${azul}` })
     expect(await desenho(page.locator('[data-agente="tutor"]').first())).toMatchObject({ fundo, borda: `2px solid ${laranja}` })

@@ -1,5 +1,5 @@
 import { expect, test } from './__fixtures__/perfis.ts'
-import { abrirGaleria, acionar, caixa, conferirQueCabeNaJanela, secao } from './__fixtures__/galeria.ts'
+import { abrirGaleria, acionar, conferirQueCabeNaJanela, desenho, desenhos, medirBlocosDaGaleria, secao } from './__fixtures__/galeria.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -15,17 +15,12 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
   test('nenhuma peça passa da largura da janela, com o menu aberto também, e o axe não acha violação na galeria', async ({ page, hasTouch }) => {
     await abrirGaleria(page)
     expect(await larguraExcedente(page)).toBe(0)
-    // Cada bloco da galeria cabe na janela: uma peça que estourasse dentro de um contêiner com rolagem passaria na
-    // conta do documento.
-    const largura = page.viewportSize()?.width ?? 0
-    const blocos = page.locator('[data-galeria]')
-    expect(await blocos.count()).toBeGreaterThanOrEqual(15)
-    for (const bloco of await blocos.all()) {
-      const nome = (await bloco.getAttribute('data-galeria')) ?? ''
-      const medida = await caixa(bloco)
-      expect(medida.x + medida.width, nome).toBeLessThanOrEqual(largura)
-      expect(await bloco.evaluate((elemento) => elemento.scrollWidth - elemento.clientWidth), nome).toBe(0)
-    }
+    // Cada bloco da galeria cabe na janela e não rola por dentro: uma peça que estourasse dentro de um contêiner com rolagem
+    // passaria na conta do documento.
+    const blocos = await medirBlocosDaGaleria(page)
+    expect(blocos.total).toBeGreaterThanOrEqual(15)
+    expect(blocos.passamDaJanela, 'blocos que passam da janela').toEqual([])
+    expect(blocos.comRolagemPropria, 'blocos com rolagem horizontal própria').toEqual([])
     expect(await violacoesGraves(page)).toEqual([])
 
     // O menu de ferramenta da caixa de pedido: abre, cabe na janela a 360 px, e continua sem violação.
@@ -55,5 +50,38 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(secao(page, 'painel').getByText('12 de 60 perguntas')).toBeVisible()
     await expect(secao(page, 'painel').getByText('72%')).toBeVisible()
     await expect(secao(page, 'painel').getByText('1.412')).toBeVisible()
+  })
+})
+
+/**
+ * Os dois verificadores em lote da galeria, com uma página montada com cada defeito (correção
+ * `2026-10-16-galeria-da-onca-estoura-o-prazo`): quem confere em lote tem de continuar vendo o que o laço via.
+ */
+test.describe('os verificadores em lote da galeria', () => {
+  test('medirBlocosDaGaleria acusa o bloco que passa da janela (largo, ou deslocado à direita), ainda que dentro de um contêiner com rolagem, e o que rola por dentro', async ({ page }) => {
+    await page.setContent(`<meta name="viewport" content="width=device-width"><body>
+      <div style="overflow-x:auto;width:200px"><section data-galeria="largo" style="width:2500px">x</section></div>
+      <section data-galeria="com-rolagem" style="width:100px;overflow-x:auto"><div style="width:900px">y</div></section>
+      <section data-galeria="deslocado" style="margin-left:1500px;width:100px">z</section>
+      <section data-galeria="ok">ok</section>
+    </body>`)
+    expect(await medirBlocosDaGaleria(page)).toEqual({ total: 4, passamDaJanela: ['largo', 'deslocado'], comRolagemPropria: ['com-rolagem'] })
+  })
+
+  test('medirBlocosDaGaleria deixa passar o bloco que cabe, e conta os blocos', async ({ page }) => {
+    await page.setContent('<meta name="viewport" content="width=device-width"><body><section data-galeria="a">a</section><section data-galeria="b">b</section></body>')
+    expect(await medirBlocosDaGaleria(page)).toEqual({ total: 2, passamDaJanela: [], comRolagemPropria: [] })
+  })
+
+  test('desenhos devolve o desenho de cada peça, na ordem, com os sete campos do `desenho` de uma só', async ({ page }) => {
+    // Duas peças que diferem em todos os campos: se um campo de `desenhos` for zerado, trocado de propriedade ou sair da
+    // ordem, a comparação com o `desenho` de cada peça (que é o de uma ida por peça) reprova.
+    await page.setContent(`<body>
+      <p id="a" style="background:rgb(1, 2, 3);color:rgb(4, 5, 6);border:2px solid rgb(7, 8, 9);font-weight:700;font-size:15px;border-radius:12px;padding:3px">a</p>
+      <p id="b" style="background:rgb(11, 12, 13);color:rgb(14, 15, 16);border:4px dashed rgb(17, 18, 19);font-weight:400;font-size:20px;border-radius:4px;padding:9px">b</p>
+    </body>`)
+    const [a, b] = [await desenho(page.locator('#a')), await desenho(page.locator('#b'))]
+    for (const campo of Object.keys(a) as Array<keyof typeof a>) expect(a[campo], `o campo ${String(campo)} tem de diferir entre as duas peças, ou não prova nada`).not.toBe(b[campo])
+    expect(await desenhos(page.locator('p'))).toEqual([a, b])
   })
 })
