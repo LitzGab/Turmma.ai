@@ -6,7 +6,7 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** as 15 tarefas estão concluídas (a 15.0 se encontrou às 02h03, a spec em `86153bf`, local). Pedi às 02h05 ao `Implementador`, reiniciado **no andar da spec**, o portão completo local (`node tools/processo/portao-local.ts --e2e --infra`, em segundo plano, sem alterar arquivo), no lugar da esteira. Com ele verde: `portao-local.ts conferir --completo`, o `Validador` reiniciado no andar e o prompt do passo 2 de `validar/SKILL.md`; ninguém usa o ambiente 0 enquanto ele roda. Vermelho: correção na linha 1, e o portão de novo. No fechamento: `linhas.ts fechar`, os itens (0), (2b) e o `TODO.md`. **Para a validação:** a correção do alvo de toque mudou o `violacoesGraves` do e2e (tira `pointer-events` dos elementos sticky enquanto o axe roda): conferir que isso não esconde alvo de toque real; o `scroll-padding-top` que falta já está no `TODO.md` (linha 1089). **Pergunta aberta ao Joaquim (não para nada):** a linha 1 foi ao GitHub contra o "tudo local" ("O que falhou"); apagar a branch remota `spec/pele-e-casca--l1` ou deixar. Histórico da 13.0: começou às 19h30, (porte grande: até 4 horas sem a primeira rodada) pedida em 15/10/2026 às 19h30 (a 12.0 se encontrou às 19h22, a spec em `5827913`; o `Arquiteto` pôs na 13.0 o teste da gaveta com `usuarioDaSessao` em `951d4bc`, e a partida trouxe a linha até ele). A 14.0 continua sem linha (uma linha só). Linha 1: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch `spec/pele-e-casca--l1`, ambiente de teste 1, com o `Implementador` e a `Mesa`. Todo pedido vai com a observação **"sem push"**: o commit da tarefa fica local. **Para a validação:** a 7.0 deixou ao `/validar` o caso direto de `fechadoPeloNavegador` sob
+- **Espero:** a resposta do Joaquim às duas entradas de "Esperando o Joaquim" (a ressalva da validação e a branch remota da linha 1). Validação **APROVADA COM RESSALVAS** sobre `4c23893` (Validador, 16/10 03h45; 24 de 24 RF, um maior, nenhum crítico). Parada 3: nada segue. Com "corrigir": correção de texto na linha 1, encontro sem push, e o fechamento (passo 3 de `validar/SKILL.md`, sem esteira: o portão completo local de 03h10 vale, e a correção é só documento). Com "aceitar": o aceite na linha do veredito do `validacao.md` e o fechamento. O portão completo local passou às 03h10 (5.496 testes de unidade e integração, 956 e2e, 57 infra). No fechamento: `linhas.ts fechar`, os itens (0), (2b) e o `TODO.md`. **Para a validação:** a correção do alvo de toque mudou o `violacoesGraves` do e2e (tira `pointer-events` dos elementos sticky enquanto o axe roda): conferir que isso não esconde alvo de toque real; o `scroll-padding-top` que falta já está no `TODO.md` (linha 1089). **Pergunta aberta ao Joaquim (não para nada):** a linha 1 foi ao GitHub contra o "tudo local" ("O que falhou"); apagar a branch remota `spec/pele-e-casca--l1` ou deixar. Histórico da 13.0: começou às 19h30, (porte grande: até 4 horas sem a primeira rodada) pedida em 15/10/2026 às 19h30 (a 12.0 se encontrou às 19h22, a spec em `5827913`; o `Arquiteto` pôs na 13.0 o teste da gaveta com `usuarioDaSessao` em `951d4bc`, e a partida trouxe a linha até ele). A 14.0 continua sem linha (uma linha só). Linha 1: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch `spec/pele-e-casca--l1`, ambiente de teste 1, com o `Implementador` e a `Mesa`. Todo pedido vai com a observação **"sem push"**: o commit da tarefa fica local. **Para a validação:** a 7.0 deixou ao `/validar` o caso direto de `fechadoPeloNavegador` sob
   `StrictMode` ("Recomendações sem aplicar" do `7_task.md`); e os revisores da correção `quinta-fatia-do-e2e` (`71ff60f`, já na spec com a 6.0)
   deixaram ao `/validar` as recomendações recusadas na tabela de `tasks/correcoes/2026-10-13-quinta-fatia-do-e2e.md`;
   e a 8.0 deixou ao `/validar` ("Recomendações sem aplicar" do `8_task.md`): fotografar o RF10 com uma conversa do
@@ -90,6 +90,20 @@ esteira. A branch nunca foi enviada, o repositório é público, e a pele vem do
 Opções: push a cada tarefa, com a esteira | tudo local, com o portão completo na máquina no lugar da esteira
 Recomendo: push a cada tarefa, se o que já está na branch pode ficar público: sem ele a esteira não roda, e o
 portão completo local custa de 30 a 70 minutos por vez
+
+### 16/10/2026 03h50 — X1, validação APROVADA COM RESSALVAS (parada 3)
+Decisão: o único maior, `docs/roteiro-da-demonstracao.md:166` ainda mandando clicar em "Nova conversa" (agora "Início"), corrige agora ou aceita?
+Contexto: `tasks/prd-pele-e-casca/validacao.md`, "Maiores"; 24 de 24 RF atendidos, nenhum crítico, o spec do roteiro já
+foi atualizado e o documento lido na demonstração não. Só documento: a correção não pede validação nova
+Opções: corrigir agora (correção de texto na linha 1, com `revisor-geral` e `test-engineer`) e fechar | aceitar e levar ao `TODO.md`
+Recomendo: corrigir agora: é uma palavra, e é o texto que a pessoa segue na frente da escola
+
+### 15/10/2026 22h50 — X1, push da linha 1 contra o "tudo local"
+Decisão: apagar a branch remota `spec/pele-e-casca--l1` (`b558854`, até a 13.0) ou deixar?
+Contexto: "O que falhou", 15/10 22h44. O repositório é público e a pele vem do mockup de outubro, que é privado
+(entrada de 13/10 acima); a branch está lá desde 22h44 de 15/10
+Opções: apagar (`git push origin --delete spec/pele-e-casca--l1`) | deixar
+Recomendo: apagar, pelo mesmo motivo que fez você escolher "tudo local"
 
 ### 13/10/2026 — o que é dele, e não foi feito
 - **Push** de `spec/pele-e-casca` e o **pouso** na `develop`
