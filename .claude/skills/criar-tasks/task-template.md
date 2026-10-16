@@ -109,8 +109,9 @@ teste: [caminho do teste] › [nome do caso]
 ## Recomendações sem aplicar
 
 Recomendação de revisor que não foi aplicada, com destino: `TODO.md`, a tarefa que toca o arquivo,
-ou recusada com o motivo. "Anularia as aprovações" não é motivo (`/executar-task`, passo 5). Sem
-nenhuma, escreva "nenhuma".
+ou recusada com o motivo. Destino `TODO.md` é a linha já escrita no `TODO.md`, no commit da tarefa, e
+não promessa. "Anularia as aprovações" não é motivo (`/executar-task`, passo 5). Sem nenhuma, escreva
+"nenhuma".
 
 | Revisor e rodada | Recomendação | Destino ou motivo |
 |---|---|---|

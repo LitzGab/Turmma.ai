@@ -99,7 +99,9 @@ crie nem altere arquivo no mesmo Bash que faz o `git add` e o `git commit`.
 
 ## 5. O que ninguém faz
 
-- Editar a seção "Revisões" de um documento ou qualquer coisa em `achados/`: quem escreve é o hook
+- Editar a seção "Revisões" de um documento ou qualquer coisa em `achados/`: quem escreve é o hook; nem
+  reescrever inteiro (Write) o documento que já tem a seção: ela some, e o hook volta a contar as
+  rodadas do 1 (duas correções da X1). Mude o documento com Edit
 - `--no-verify`, `--amend`, `git add -A` no índice do repositório, `git stash`. A fotografia da Mesa
   usa um índice à parte (`GIT_INDEX_FILE`), que não prepara commit nenhum
 - Push na `release` ou no `main`, e push na `develop` fora da linha do Orquestrador acima. O hook

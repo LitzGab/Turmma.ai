@@ -1,194 +1,246 @@
-import { useState } from 'react'
-import { Ban, Check, Hourglass, PauseCircle, Play, ShieldAlert } from 'lucide-react'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge-2'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { AvatarAgente, Estado, SeloIA } from '@/components/turmma/ia'
-import { NotaMockup, Tela } from '@/components/turmma/tela'
-import { LISTA_AGENTES, agente, type AgenteId } from '@/dados/agentes'
-import { COORDENADORA, hoje } from '@/dados/escola'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Ban, Check, Hourglass, Pause } from 'lucide-react'
+import { Aviso, Botao, Recolhivel, Segmentado, Selo, SeloIA, familia } from '@/components/duo'
+import { AvatarIA } from '@/components/duo/onca'
+import { AGENTES, type FuncaoId } from '@/dados/agentes'
+import { ia, usePausas } from '@/dados/ia'
+import { agora } from '@/dados/demo/nucleo'
 import { cn } from '@/lib/utils'
-import { Aviso, CANTO_DIALOGO, ListaMarcada } from './_a-pecas'
+import { DialogoMotivo } from './Denuncias'
 
-/* Agentes (11.7): um cartão por agente — agora três, um por pessoa da escola (revisão da D32, 19/09/2026). No Assistente,
-   a autonomia, a AIA e a suspensão são POR FUNÇÃO (D9, D60). Em cada um: o que faz sozinho, o que espera aprovação, o que nunca faz,
-   em português comum (D9). É a tela para apontar quando alguém pergunta "o que essa IA faz sozinha?".
-   Os de alto risco mostram o resumo da Avaliação de Impacto Algorítmico e podem ser suspensos na escola (D60). */
+/* COMO CADA IA TRABALHA (12ª rodada, polimento C1, 04/10/2026; plano 5.3; fluxo F15). Abre ao lado, em IA
+   (?ver=como, e ?ia=tutor para chegar já no Tutor); /coordenacao/agentes chega aqui.
 
-const AIA: Partial<Record<AgenteId, { versao: string; finalidade: string; riscos: string[]; salvaguardas: string[]; contestar: string }>> = {
+   Uma IA por vez, no Segmentado com o rosto da onça: FAZ SOZINHO · ESPERA UM PROFESSOR · NUNCA FAZ; as funções com o
+   selo ALTO RISCO (D9, D60); a AIA recolhida, numa VERSÃO SÓ — a mesma que o Dossiê mostra.
+   No fim, PAUSAR (perigo), com motivo: chama `ia.pausar` (fica na Auditoria). Pausado, o Aviso "Tutor pausado" e
+   REATIVAR no mesmo lugar. O efeito aparece no aluno: a onça dorme e "A escola pausou o Tutor por enquanto." (D60). */
+
+export type IdIA = 'assistente' | 'tutor' | 'analista'
+
+/** A Avaliação de Impacto Algorítmico de cada IA: UMA versão, lida aqui e no Dossiê. */
+export const AIA: Record<IdIA, {
+  versao: string; revista: string; vigente: boolean; nota?: string
+  finalidade: string; riscos: string[]; salvaguardas: string[]; contestar: string
+}> = {
+  assistente: {
+    versao: 'v3', revista: '02/09/2026', vigente: true,
+    finalidade: 'Ajudar o professor a preparar, corrigir objetivas e adaptar, com o professor aprovando antes de chegar ao aluno.',
+    riscos: ['Gabarito errado para a turma inteira', 'Aprovação virar clique reflexo', 'Dado de saúde na adaptação'],
+    salvaguardas: ['Destaca o fora da curva, que o professor abre antes', 'Registra o que foi mostrado, aberto e aprovado', 'Adaptação só com tipo de lista fechada', 'Nada sobre redação e discursiva'],
+    contestar: 'O professor recusa com motivo; o aluno usa "Isso está errado?".',
+  },
   tutor: {
-    versao: 'AIA v1.2 · revista em 02/09/2026',
+    versao: 'v3', revista: '02/09/2026', vigente: true,
     finalidade: 'Ajudar o aluno a estudar o conteúdo da turma por perguntas, com o professor acompanhando.',
-    riscos: ['Entregar resposta pronta e tirar o esforço do aluno', 'Aluno tratar o Tutor como pessoa', 'Assunto pessoal delicado aparecer na conversa'],
-    salvaguardas: ['Escopo preso ao material da turma, aplicado no servidor', 'Diz o que é quando perguntado, e que pode errar', 'Mensagem fixa revisada pela escola e sinal ao professor, sem o conteúdo', 'Pacote de 60 perguntas por dia, com o ponto de parada visível'],
-    contestar: 'O aluno vê o que o Tutor sabe do trabalho dele e pode contestar. O professor pode corrigir um sinal.',
-  },
-  corretor: {
-    versao: 'AIA v1.1 · revista em 02/09/2026',
-    finalidade: 'Corrigir objetivas e montar o diagnóstico por habilidade para o professor validar.',
-    riscos: ['Gabarito errado propagar para a turma inteira', 'Aprovação virar clique reflexo', 'Correção de discursiva por IA'],
-    salvaguardas: ['Destaca casos fora da curva, que precisam ser abertos antes de aprovar', 'Registro da validação: o que foi mostrado, o que foi aberto, quem confirmou', 'Em redação e discursiva não produz nada sobre o texto do aluno'],
-    contestar: 'O professor rejeita com justificativa; o aluno pede revisão ao professor.',
-  },
-  adaptador: {
-    versao: 'AIA v1.0 · 28/08/2026',
-    finalidade: 'Propor a versão adaptada de prova e atividade a partir do tipo de adaptação registrado.',
-    riscos: ['Guardar dado sensível de saúde', 'Baixar o que é cobrado do aluno'],
-    salvaguardas: ['Recebe só o tipo de adaptação, de lista fechada; não há campo de texto livre', 'Muda a forma, nunca o conteúdo cobrado', 'Toda versão nasce pendente e só chega ao aluno com o professor aprovando'],
-    contestar: 'Professor rejeita com justificativa; família e aluno falam com a coordenação.',
+    riscos: ['Entregar resposta pronta', 'O aluno tratar o Tutor como pessoa', 'Assunto pessoal delicado na conversa'],
+    salvaguardas: ['Preso ao material da turma', 'Diz o que é e que pode errar', 'Mensagem combinada e encaminhamento à orientação', 'Limite de 60 perguntas por dia'],
+    contestar: 'O aluno vê o que o Tutor lembra e pode dizer "Isso está errado?".',
   },
   analista: {
-    versao: 'AIA v1.0 · 28/08/2026',
-    finalidade: 'Avisar a coordenação de mudança relevante de desempenho e de consumo, em agregado.',
-    riscos: ['Virar vigilância ou ranking de professor', 'Expor aluno em risco para quem não é o professor dele'],
-    salvaguardas: ['Agregado só com dois ou mais professores no recorte', 'Nominal só com finalidade e auditoria', 'Alerta é hipótese com contexto; não recomenda decisão'],
+    versao: 'v1', revista: '04/08/2026', vigente: false,
+    nota: 'O pedido principal mudou em 15/09. A revisão fica pronta até segunda.',
+    finalidade: 'Avisar a coordenação de mudança de desempenho e de consumo, em agregado.',
+    riscos: ['Virar vigilância ou ranking de professor', 'Expor aluno a quem não é o professor dele'],
+    salvaguardas: ['Agregado só com dois ou mais professores', 'Dado com nome só com finalidade registrada', 'Alerta é hipótese, não decisão'],
     contestar: 'O professor vê primeiro o próprio indicador e pode pedir revisão (LGPD, art. 20).',
   },
 }
 
-export function Agentes() {
-  const [aia, setAia] = useState<AgenteId | null>(null)
-  const [suspender, setSuspender] = useState<AgenteId | null>(null)
-  const [suspensos, setSuspensos] = useState<AgenteId[]>([])
+export const textoAIA = (id: IdIA) => `AIA ${AIA[id].versao} · revista em ${AIA[id].revista}`
+
+/* O texto de cada IA, escrito para a COORDENAÇÃO ler: quem aprova é o professor, não ela. */
+const PARA_COORDENACAO: Record<IdIA, { paraQuem: string; esperaTitulo: string; faz: string[]; espera: string[]; nunca: string[] }> = {
+  assistente: {
+    paraQuem: 'Para o professor', esperaTitulo: 'Espera um professor',
+    faz: ['Rascunho de prova, atividade e plano, quando pedem', 'Corrige objetivas', 'Cita material e página'],
+    espera: ['As notas, antes de chegarem ao aluno', 'Toda versão adaptada'],
+    nunca: ['Nota em redação ou discursiva', 'Guardar laudo ou CID', 'Avisar fora do horário útil'],
+  },
+  tutor: {
+    paraQuem: 'Para o aluno, com o professor da turma', esperaTitulo: 'Espera um professor',
+    faz: ['Responde por perguntas, dentro do conteúdo', 'Avisa o professor onde a turma travou'],
+    espera: ['Busca em fontes: a escola libera, o professor liga'],
+    nunca: ['Entregar resposta pronta', 'Dizer que é uma pessoa', 'Aconselhar em assunto pessoal'],
+  },
+  analista: {
+    paraQuem: 'Para a coordenação', esperaTitulo: 'Espera a coordenação',
+    faz: ['Resumo de segunda, em agregado', 'Alerta quando algo muda'],
+    espera: ['Ver dados com nome, com a finalidade registrada'],
+    nunca: ['Ranking de professor', 'Falar com professor ou família', 'Recomendar decisão sobre pessoa'],
+  },
+}
+
+const NOME_FUNCAO: Partial<Record<FuncaoId, string>> = { correcao: 'a correção', adaptacao: 'a adaptação' }
+const MOTIVOS = ['Conferência com a família', 'Erro de conteúdo', 'Pedido da direção']
+
+function Bloco({ titulo, itens, icone, familia }: { titulo: string; itens: string[]; icone: ReactNode; familia: 'verde' | 'amarelo' | 'vermelho' }) {
+  const cor = { verde: 'bg-verde-claro text-verde-texto', amarelo: 'bg-amarelo-claro text-amarelo-texto', vermelho: 'bg-vermelho-claro text-vermelho-texto' }[familia]
+  return (
+    <section>
+      <h3 className="t-selo mb-2 text-sutil">{titulo}</h3>
+      <ul className="grid gap-2">
+        {itens.map((t) => (
+          <li key={t} className="flex items-start gap-2.5 text-[15px] font-medium leading-5 text-tinta">
+            <span aria-hidden className={cn('grid size-6 shrink-0 place-items-center rounded-full [&_svg]:size-3.5', cor)}>{icone}</span>
+            <span className="pt-0.5">{t}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+type PedidoPausa = { chave: string; titulo: string }
+
+/** O conteúdo do painel "Como cada IA trabalha". */
+export function ComoCadaIATrabalha({ inicial = 'assistente' }: { inicial?: IdIA }) {
+  const [id, setId] = useState<IdIA>(inicial)
+  const [pedido, setPedido] = useState<PedidoPausa | null>(null)
+  // o retorno do REATIVAR, no mesmo lugar da pausa: "Tutor reativado · 10h45" (o painel continua aberto)
+  const [reativada, setReativada] = useState<{ chave: string; titulo: string; quando: string } | null>(null)
+  const pausas = usePausas()
+  const a = AGENTES[id]
+  const aia = AIA[id]
+  const pausa = pausas[id]
+  const t = PARA_COORDENACAO[id]
+  const reativar = (chave: string) => {
+    ia.reativar(chave)
+    setReativada({ chave, titulo: tituloDaPausa(chave).replace(/pausad([oa])/, 'reativad$1'), quando: agora().hora })
+  }
+  const nota = reativada && reativada.chave.split(':')[0] === id && !pausas[reativada.chave] ? reativada : null
+  // o botão REATIVAR some com a pausa: o foco vai para a nota, e não para fora do painel
+  const refNota = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (nota) refNota.current?.focus({ preventScroll: true }) }, [nota])
 
   return (
-    <Tela titulo="Agentes"
-      descricao="Cada agente, o que faz sozinho e o que espera uma pessoa da escola. É esta tela que responde à pergunta: o que essa IA faz sozinha?">
-      <Aviso tom="info" className="mb-5">
-        A regra é a mesma para todos: <b>o agente prepara, a escola aprova</b> antes de valer — sempre que houver nota, conversa com a família ou
-        decisão sobre aluno. A única exceção é a resposta do Tutor, que acontece na hora e por isso é acompanhada pelo professor.
-      </Aviso>
+    <div className="grid gap-6">
+      <Segmentado rotulo="Qual IA" valor={id} aoMudar={(v) => setId(v as IdIA)} className="w-full"
+        opcoes={(['assistente', 'tutor', 'analista'] as IdIA[]).map((x) => ({ id: x, rotulo: AGENTES[x].curto, icone: <span className="inline-flex max-sm:hidden"><AvatarIA agente={x} tamanho={24} /></span> }))} />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {LISTA_AGENTES.map((a) => {
-          const suspenso = suspensos.includes(a.id)
-          return (
-            <article key={a.id} className={cn('flex flex-col rounded-cartao border bg-superficie p-4 lg:p-5', suspenso ? 'border-dashed border-borda-campo' : 'border-linha')}>
-              <header className="flex items-start gap-3">
-                <AvatarAgente id={a.id} tamanho={48} className={suspenso ? 'opacity-50' : undefined} />
-                <div className="min-w-0 flex-1">
-                  <h2 className="flex flex-wrap items-center gap-2 font-corpo text-base font-semibold leading-snug text-tinta">{a.nome} <SeloIA /></h2>
-                  <p className="text-[13px] text-sutil">Para: {a.paraQuem}</p>
-                </div>
-              </header>
+      <header className="flex items-center gap-3">
+        <AvatarIA agente={id} tamanho={48} className={pausa ? 'opacity-50' : undefined} />
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-2 t-cartao text-tinta">
+            {a.curto} <SeloIA tamanho="p" />
+            {a.altoRisco && <Selo familia="amarelo" tamanho="p">Alto risco</Selo>}
+            {pausa && <Selo familia="vermelho" tamanho="p">Pausado</Selo>}
+          </p>
+          <p className="t-apoio">{t.paraQuem}</p>
+        </div>
+      </header>
 
-              <p className="mt-3 rounded-controle bg-ia-cx px-3 py-2 text-sm leading-snug text-apoio">
-                <span className="rotulo mr-1.5">Autonomia</span><b className="font-semibold text-tinta">{a.autonomia}</b>
-              </p>
-              <p className="mt-3 text-sm leading-relaxed text-apoio">{a.resumo}</p>
+      {pausa && (
+        // o mesmo glifo de pausa da FaixaPausas (no Painel e em Registros): um estado, um ícone
+        <div role="status" style={familia('vermelho')} className="flex items-start gap-3 rounded-[12px] border-2 border-(--borda) bg-(--claro) px-4 py-3">
+          <span aria-hidden className="mt-px grid size-7 shrink-0 place-items-center rounded-full bg-white text-(--texto) [&_svg]:size-4"><Pause strokeWidth={3} /></span>
+          <div className="min-w-0 flex-1">
+            <p className="t-cartao text-tinta">{a.curto} pausado</p>
+            <p className="mt-0.5 text-[15px] font-medium leading-[21px] text-tinta">{pausa.motivo} · {pausa.quando}</p>
+          </div>
+          <Botao variante="secundario" tamanho="p" className="shrink-0 self-center" onClick={() => reativar(id)}>Reativar</Botao>
+        </div>
+      )}
 
-              {a.funcoes && (
-                <ul className="mt-4 grid gap-px overflow-hidden rounded-controle border border-linha bg-linha">
-                  {a.funcoes.map((f) => {
-                    const legado = ({ correcao: 'corretor', adaptacao: 'adaptador' } as Record<string, AgenteId>)[f.id]
-                    const parada = legado ? suspensos.includes(legado) : false
-                    return (
-                      <li key={f.id} className={cn('grid gap-1.5 bg-superficie px-3 py-2.5', parada && 'bg-erro-cx')}>
-                        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] font-semibold text-tinta">
-                          <f.icone className="size-4 shrink-0" /> {f.nome}
-                          {f.altoRisco && <Badge variant="pendente" size="sm">Alto risco</Badge>}
-                          {parada && <Badge variant="erro" size="sm">Suspensa</Badge>}
-                        </p>
-                        <p className="text-[13px] leading-snug text-sutil">{f.autonomia}</p>
-                        {legado && (
-                          <p className="flex flex-wrap gap-1">
-                            <Button variant="discreto" size="sm" className="h-8 px-2.5" onClick={() => setAia(legado)}>Resumo da AIA</Button>
-                            {parada
-                              ? <Button variant="discreto" size="sm" className="h-8 px-2.5" onClick={() => setSuspensos((x) => x.filter((y) => y !== legado))}><Play /> Reativar</Button>
-                              : <Button variant="perigo" size="sm" className="h-8 px-2.5" onClick={() => setSuspender(legado)}><PauseCircle /> Suspender só esta função</Button>}
-                          </p>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
+      {nota && (
+        <div ref={refNota} tabIndex={-1} role="status" style={familia('verde')} className="flex items-center gap-3 rounded-[12px] outline-none border-2 border-(--borda) bg-(--claro) px-4 py-3">
+          <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-white text-(--texto) [&_svg]:size-4"><Check strokeWidth={3.5} /></span>
+          <p className="min-w-0 flex-1 text-[15px] font-medium leading-5 text-tinta"><b className="font-bold">{nota.titulo}</b> · {nota.quando}</p>
+          <Botao variante="fantasma" tamanho="p" className="-mr-2 shrink-0" onClick={() => setReativada(null)}>Fechar</Botao>
+        </div>
+      )}
 
-              <div className="mb-5 mt-4 grid gap-4">
-                <div><p className="rotulo mb-2">Faz sozinho</p><ListaMarcada itens={a.fazSozinho} icone={<Check strokeWidth={2.4} />} cor="text-ok" /></div>
-                <div><p className="rotulo mb-2">Espera aprovação</p><ListaMarcada itens={a.esperaAprovacao} icone={<Hourglass strokeWidth={2} />} cor="text-pendente" /></div>
-                <div><p className="rotulo mb-2">Nunca faz</p><ListaMarcada itens={a.nuncaFaz} icone={<Ban strokeWidth={2} />} cor="text-erro" /></div>
-              </div>
+      <Bloco titulo="Faz sozinho" itens={t.faz} icone={<Check strokeWidth={3.5} />} familia="verde" />
+      <Bloco titulo={t.esperaTitulo} itens={t.espera} icone={<Hourglass strokeWidth={3} />} familia="amarelo" />
+      <Bloco titulo="Nunca faz" itens={t.nunca} icone={<Ban strokeWidth={3} />} familia="vermelho" />
 
-              <footer className="mt-auto flex flex-wrap items-center gap-2 border-t border-linha pt-4">
-                {suspenso
-                  ? <Estado tipo="erro">Suspenso nesta escola</Estado>
-                  : a.altoRisco ? <Badge variant="pendente"><ShieldAlert strokeWidth={2.2} /> Alto risco · AIA</Badge> : <Estado tipo="contorno">Risco comum</Estado>}
-                <span className="flex-1" />
-                {a.altoRisco && !a.funcoes && <Button variant="discreto" size="sm" onClick={() => setAia(a.id)}>Ver resumo da AIA</Button>}
-                {suspenso
-                  ? <Button variant="secundario" size="sm" onClick={() => setSuspensos((s) => s.filter((x) => x !== a.id))}><Play /> Reativar</Button>
-                  : a.altoRisco && !a.funcoes && <Button variant="perigo" size="sm" onClick={() => setSuspender(a.id)}><PauseCircle /> Suspender nesta escola</Button>}
-              </footer>
-              {suspenso && <p className="mt-3 rounded-linha bg-erro-cx px-3 py-2 text-[13px] leading-snug text-erro">Suspenso por {COORDENADORA.nome} · {hoje.curta}, {hoje.hora}. Fica registrado em auditoria.</p>}
-            </article>
-          )
-        })}
-      </div>
-
-      {/* Resumo da Avaliação de Impacto Algorítmico (D60) */}
-      <Dialog open={aia !== null} onOpenChange={(v) => { if (!v) setAia(null) }}>
-        <DialogContent className={cn(CANTO_DIALOGO, 'max-h-[88svh] max-w-xl overflow-y-auto')}>
-          {aia && AIA[aia] && (
-            <>
-              <DialogHeader className="text-left">
-                <div className="flex items-center gap-3">
-                  <AvatarAgente id={aia} tamanho={40} />
-                  <div>
-                    <DialogTitle className="font-titulo text-[20px] font-semibold tracking-[-0.02em] text-tinta">Avaliação de impacto · {agente(aia).curto}</DialogTitle>
-                    <DialogDescription className="text-sm text-sutil">{AIA[aia]!.versao}</DialogDescription>
-                  </div>
-                </div>
-              </DialogHeader>
-              <div className="grid gap-4 text-[15px] leading-relaxed text-apoio">
-                <div><p className="rotulo mb-1.5">Para que serve</p><p className="text-tinta">{AIA[aia]!.finalidade}</p></div>
-                <div><p className="rotulo mb-2">Riscos que olhamos</p><ListaMarcada itens={AIA[aia]!.riscos} icone={<ShieldAlert strokeWidth={2} />} cor="text-pendente" /></div>
-                <div><p className="rotulo mb-2">O que segura cada risco</p><ListaMarcada itens={AIA[aia]!.salvaguardas} icone={<Check strokeWidth={2.4} />} cor="text-ok" /></div>
-                <div><p className="rotulo mb-2">O que ele não deve fazer</p><ListaMarcada itens={agente(aia).nuncaFaz} icone={<Ban strokeWidth={2} />} cor="text-erro" /></div>
-                <div><p className="rotulo mb-1.5">Como contestar</p><p>{AIA[aia]!.contestar}</p></div>
-              </div>
-              <div className="flex flex-wrap justify-end gap-2 pt-1">
-                <Button variant="secundario">Baixar a AIA completa em PDF</Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Suspender é ação destrutiva: o diálogo diz o que acontece com o que o agente já produziu */}
-      <AlertDialog open={suspender !== null} onOpenChange={(v) => { if (!v) setSuspender(null) }}>
-        <AlertDialogContent className={CANTO_DIALOGO}>
-          <AlertDialogHeader className="text-left">
-            <AlertDialogTitle className="font-titulo text-[20px] font-semibold tracking-[-0.02em] text-tinta">Suspender o {suspender && agente(suspender).curto} no Colégio Aurora?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[15px] leading-relaxed text-apoio">Vale a partir de agora, para todas as turmas, até alguém da coordenação reativar.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <ul className="grid gap-2 text-[15px] leading-snug text-tinta">
-            {[
-              'Ele para de rodar e de avisar. Nada novo é gerado por ele.',
-              'O que já foi aprovado continua valendo e fica na biblioteca e na auditoria.',
-              'O que estava esperando aprovação fica guardado, sem chegar a aluno.',
-              'Professores e, se for o Tutor, alunos veem um aviso calmo de que ele está desligado.',
-            ].map((t) => <li key={t} className="flex gap-2.5"><span className="mt-2 size-1.5 shrink-0 rounded-full bg-sutil" />{t}</li>)}
+      {a.funcoes && (
+        <section>
+          <h3 className="t-selo mb-2 text-sutil">Funções</h3>
+          <ul className="overflow-hidden rounded-[16px] border-2 border-borda bg-white">
+            {a.funcoes.map((f) => {
+              const chave = `${id}:${f.id}`
+              const p = pausas[chave]
+              const nome = f.id === 'dia' ? 'Dia e semana do professor' : f.nome
+              return (
+                <li key={f.id} className="flex min-h-14 items-center gap-3 border-t-2 border-borda px-4 py-2 first:border-t-0">
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-bold leading-5 text-tinta">{nome}</span>
+                    {(f.altoRisco || p) && (
+                      <span className="mt-1 flex flex-wrap gap-1.5">
+                        {f.altoRisco && <Selo familia="amarelo" tamanho="p">Alto risco</Selo>}
+                        {p && <Selo familia="vermelho" tamanho="p">Pausada</Selo>}
+                      </span>
+                    )}
+                  </span>
+                  {f.altoRisco && !pausa && (p
+                    ? <Botao variante="secundario" tamanho="p" onClick={() => reativar(chave)}>Reativar</Botao>
+                    : <Botao variante="perigo" tamanho="p" onClick={() => setPedido({ chave, titulo: `Pausar ${NOME_FUNCAO[f.id] ?? f.nome}?` })}>Pausar</Botao>)}
+                </li>
+              )
+            })}
           </ul>
-          <AlertDialogFooter className="gap-2 sm:space-x-0">
-            <AlertDialogCancel className="mt-0">Manter ligado</AlertDialogCancel>
-            <AlertDialogAction className={buttonVariants({ variant: 'destructive' })}
-              onClick={() => { if (suspender) setSuspensos((s) => [...s, suspender]); setSuspender(null) }}>
-              Suspender o {suspender && agente(suspender).curto}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        </section>
+      )}
 
-      <NotaMockup>
-        Spec A5 (fatia do F12; a suspensão por escola é do F11 completo). D9: autonomia declarada e visível, em português comum. D17 e D58: nome
-        e avatar de função, sem rosto. D60: resumo da AIA com escopo negativo e procedimento de suspensão nos quatro agentes de alto risco.
-        D47: a exceção do Tutor dita no aviso do topo.
-      </NotaMockup>
-    </Tela>
+      <Recolhivel titulo="Avaliação de impacto (AIA)" apoio={`${aia.versao} · ${aia.vigente ? 'vigente' : 'em revisão'} · a mesma do Dossiê`}>
+        <div className="grid gap-4">
+          {aia.nota && <Aviso tom="atencao">{aia.nota}</Aviso>}
+          <p className="t-corpo text-tinta">{aia.finalidade}</p>
+          <Bloco titulo="Riscos que olhamos" itens={aia.riscos} icone={<Hourglass strokeWidth={3} />} familia="amarelo" />
+          <Bloco titulo="O que segura cada risco" itens={aia.salvaguardas} icone={<Check strokeWidth={3.5} />} familia="verde" />
+          <p className="t-apoio">{aia.contestar}</p>
+        </div>
+      </Recolhivel>
+
+      {!pausa && (
+        <Botao variante="perigo" className="justify-self-start" onClick={() => setPedido({ chave: id, titulo: `Pausar o ${a.curto}?` })}>
+          Pausar o {a.curto}
+        </Botao>
+      )}
+
+      <DialogoMotivo aberto={pedido !== null} aoMudar={(v) => { if (!v) setPedido(null) }} titulo={pedido?.titulo ?? ''}
+        frase="Vale agora, na escola inteira, até alguém reativar. O que já foi aprovado continua valendo."
+        motivos={MOTIVOS} confirmar="Pausar" variante="perigoCheio"
+        aoConfirmar={(m) => { if (pedido) ia.pausar(pedido.chave, m) }} />
+    </div>
+  )
+}
+
+/** Título de uma pausa: "Tutor pausado" ou "Correção pausada · Assistente". */
+export function tituloDaPausa(chave: string): string {
+  const [agente, funcao] = chave.split(':') as [IdIA, string | undefined]
+  const a = AGENTES[agente]
+  if (!a) return `${chave} pausado`
+  if (!funcao) return `${a.curto} pausado`
+  const f = a.funcoes?.find((x) => x.id === funcao)
+  return `${f?.nome ?? funcao} pausada · ${a.curto}`
+}
+
+/** As pausas em vigor, fora do painel: na página IA e no Painel da coordenação (ninguém esquece de reativar).
+    Uma faixa de UMA linha (44 px), igual à do encaminhamento no Painel: não empurra a grade. */
+export function FaixaPausas({ aoVer, className }: { aoVer?: (agente: IdIA) => void; className?: string }) {
+  const pausas = usePausas()
+  const chaves = Object.keys(pausas)
+  if (!chaves.length) return null
+  return (
+    <div className={cn('grid gap-2', className)}>
+      {chaves.map((chave) => {
+        const p = pausas[chave]
+        return (
+          <div key={chave} role="status" style={familia('vermelho')}
+            className="flex min-h-11 items-center gap-3 rounded-[12px] border-2 border-(--borda) bg-(--claro) py-0.5 pl-2 pr-1">
+            <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-white text-(--texto) [&_svg]:size-4"><Pause strokeWidth={3} /></span>
+            <p className="min-w-0 flex-1 truncate text-[15px] font-medium leading-5 text-tinta">
+              <b className="font-bold">{tituloDaPausa(chave)}</b>
+              <span className="text-apoio"> · {p.motivo} · {p.quando} · {p.por}</span>
+            </p>
+            {aoVer
+              ? <Botao variante="secundario" tamanho="p" onClick={() => aoVer(chave.split(':')[0] as IdIA)}>Ver</Botao>
+              : <Botao variante="secundario" tamanho="p" onClick={() => ia.reativar(chave)}>Reativar</Botao>}
+          </div>
+        )
+      })}
+    </div>
   )
 }

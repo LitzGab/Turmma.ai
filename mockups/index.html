@@ -7,7 +7,27 @@
     <link rel="preload" href="/fonts/fustat-600-latin.woff2" as="font" type="font/woff2" crossorigin />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex" />
-    <title>Turmma — mockups da interface</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>Turmma</title>
+    <script>
+      /* O tema antes do React (src/dados/tema.ts faz a mesma conta): ?tema= força nesta aba; depois a escolha guardada;
+         depois o sistema. Escreve data-tema sempre resolvido. */
+      (function () {
+        var d = document.documentElement, t = null, f = null, a = null
+        try {
+          var q = new URLSearchParams(location.search).get('tema')
+          if (q === 'escuro' || q === 'claro') sessionStorage.setItem('turmma-tema-forcado', q)
+          else if (q === 'sistema') sessionStorage.removeItem('turmma-tema-forcado')
+          f = sessionStorage.getItem('turmma-tema-forcado')
+          a = localStorage.getItem('turmma-aparencia')
+        } catch (e) {}
+        if (f === 'escuro' || f === 'claro') t = f
+        else if (a === 'escuro' || a === 'claro') t = a
+        else t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'
+        d.setAttribute('data-tema', t)
+        d.style.colorScheme = t === 'escuro' ? 'dark' : 'light'
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

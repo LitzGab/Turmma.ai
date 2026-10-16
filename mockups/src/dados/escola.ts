@@ -2,7 +2,7 @@
    Aluno não tem e-mail, foto nem data de nascimento — nem no mockup. */
 
 export const ESCOLAS = [
-  { id: 'aurora', nome: 'Colégio Aurora', curto: 'Aurora', sigla: 'A', cidade: 'Joinville · SC', rede: 'Particular', turno: 'Manhã' },
+  { id: 'aurora', nome: 'Colégio Aurora', curto: 'Aurora', sigla: 'A', cidade: 'Joinville · SC', rede: 'Estadual', turno: 'Manhã' },
   { id: 'cachoeira', nome: 'E. M. Rio Cachoeira', curto: 'Rio Cachoeira', sigla: 'RC', cidade: 'Joinville · SC', rede: 'Municipal', turno: 'Tarde' },
 ]
 export const escolaDe = (id: string) => ESCOLAS.find((e) => e.id === id) ?? ESCOLAS[0]
@@ -32,11 +32,11 @@ export const MATERIAIS = [
 
 /* Habilidades da BNCC usadas nos painéis (códigos reais da BNCC do Ensino Médio, texto resumido). */
 export const HABILIDADES = [
-  { codigo: 'EM13CNT101', nome: 'Conservação da massa e proporções', acerto: 78 },
-  { codigo: 'EM13CNT104', nome: 'Cálculo com mol e massa molar', acerto: 46 },
-  { codigo: 'EM13CNT205', nome: 'Interpretar equação balanceada', acerto: 64 },
-  { codigo: 'EM13CNT301', nome: 'Reagente limitante e excesso', acerto: 39 },
-  { codigo: 'EM13CNT302', nome: 'Rendimento de reação', acerto: 57 },
+  { codigo: 'EM13CNT101', nome: 'Conservação da massa e proporções', acerto: 78, abaixo50: 12 },
+  { codigo: 'EM13CNT104', nome: 'Cálculo com mol e massa molar', acerto: 46, abaixo50: 51 },
+  { codigo: 'EM13CNT205', nome: 'Interpretar equação balanceada', acerto: 64, abaixo50: 26 },
+  { codigo: 'EM13CNT301', nome: 'Reagente limitante e excesso', acerto: 39, abaixo50: 55 },
+  { codigo: 'EM13CNT302', nome: 'Rendimento de reação', acerto: 57, abaixo50: 34 },
 ]
 
 /* Alunos sintéticos do 2ºB — o professor da turma vê nomeado (D34); a coordenação, só agregado. */
@@ -47,3 +47,14 @@ export const ALUNOS_2B = [
 ]
 
 export const hoje = { longa: 'segunda-feira, 21 de setembro', curta: '21/09', hora: '10h42' }
+
+/** O agora da demonstração (12ª rodada): segunda-feira, 21/09/2026, 10h42. Nenhuma data do mockup passa daqui, salvo
+    prazo e validade. O relógio que anda a cada evento mora em dados/demo/nucleo.ts (`agora()`). */
+export const HOJE = {
+  data: new Date(2026, 8, 21, 10, 42),
+  dia: '21/09',
+  ano: 2026,
+  semana: 'segunda-feira',
+  hora: '10h42',
+  longa: 'segunda-feira, 21 de setembro',
+} as const

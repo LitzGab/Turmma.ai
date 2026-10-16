@@ -1,5 +1,357 @@
 # Validação — pele-e-casca (X1)
 
+## Rodada 4 — 16/10/2026 (revalidação)
+
+**Escopo:** funcionalidade completa
+**Commit validado:** `b6291e3`
+**Veredito: APROVADA**
+
+O que mudou desde a rodada 3 (`4f453d0..b6291e3`):
+
+- a correção `2026-10-16-pecas-sobrepor-estoura-o-prazo` (`b6291e3`). Ela muda só o `e2e/`:
+  `__fixtures__/perfis.ts`, `__fixtures__/galeria.ts` e `pecas-galeria.spec.ts`. Vem com o documento da correção e os
+  achados dela;
+- os registros do `estado.md` e do `TODO.md` (`6a87230`, `1efe2a9`, `f4219c6`).
+
+Nenhum arquivo de `apps/`, `packages/`, `tools/` ou `infra/` mudou: `git diff --stat 4f453d0 b6291e3 -- apps packages
+tools infra` sai vazio. O produto é o mesmo das rodadas 1 a 3, e a evidência de código delas continua valendo.
+
+O risco desta rodada é o mesmo da rodada 3: a correção mexe na **condição em que a evidência e2e roda**. `abrirGaleria`
+passa a abrir `/galeria` sem a rede do perfil, por `carregarSemRedeLenta` (`perfis.ts:93`). A CPU ×4 continua. A rede
+volta no `finally` (`perfis.ts:99`). O que precisa estar provado é o RF21: nenhum teste que prova regra ficou mais fraco,
+e o que cada caso afirma continua rodando na rede lenta.
+
+Contexto relido: `prd.md` (os RF1 a RF24), a rodada 3 inteira, o documento da correção inteiro, as linhas 290 a 294 de
+`tasks/correcoes/achados/indice.md` e o "Agora" do `estado.md`.
+
+Antes de rodar qualquer coisa, conferi o que a web de teste serve. O container `educa-teste-web-1` é deste andar, mas a
+imagem dele já não existe no Docker, porque foi substituída ou podada. Por isso comparei o código-fonte de `/repo`
+dentro do container com o deste checkout: o md5 de cada arquivo de `apps/web/src`, `apps/web/public` e
+`packages/shared/src`, com a mesma ordenação dos dois lados. Os dois são **iguais**. Os testes abaixo rodaram, então,
+contra o produto deste commit, e não contra o de um andar da X2, da X3 ou da X4.
+
+### 1. RF a RF
+
+| RF | Situação | Evidência nova desta rodada |
+|---|---|---|
+| RF1 a RF8, RF11 a RF20, RF22 a RF24 | ATENDIDO | O código e os testes deles não mudaram desde a rodada 2, que os conferiu de novo com mutações e fotos próprias |
+| RF3 | ATENDIDO | Os casos do `e2e/aparencia.spec.ts` abrem pela galeria. O caso do primeiro quadro (`:47`) recarrega **depois** de `abrirGaleria`, com o pacote de entrada preso, e roda na rede do perfil, que já voltou. Ou seja: a prova do "antes de o React montar" não ficou mais fácil. O spec inteiro foi rodado nos dois projetos e ficou verde |
+| RF9 | ATENDIDO | A medida dos blocos e o axe da galeria (`pecas-galeria.spec.ts:15`) não mudaram e continuam rodando depois da abertura, na rede do perfil. Fotos tiradas aqui, de `/galeria` servida neste commit: `professora--galeria--computador-2.png` (campos, interruptores, opções, selos de estado com texto e ícone, painel e barra, vazio com convite, nada passando da coluna) e `professora--galeria--celular-6.png` (as peças da conversa a 360 px, sem nada rolando de lado) |
+| RF10 | ATENDIDO | Em `professora--galeria--celular-6.png`, cada avatar da onça está no bloco com o nome da função ("Assistente de ensino", "Assistente · correção de objetiva", "Tutor · sinais para o professor") e o selo "IA". A amostra mostra `<b>massa molar</b>` literal: o HTML do modelo não é interpretado (`apps/web/src/galeria/secoes/ia.tsx:42`) |
+| RF21 | ATENDIDO | Nenhum caso saiu e nenhuma asserção mudou. O prazo de 30 s ficou, e só o tempo de baixar a galeria, que nenhum caso afirma, deixou de pagar a latência. Três casos novos (`pecas-galeria.spec.ts:154`, `:165` e `:178`, nos dois projetos) provam três coisas: a abertura não paga a latência; a rede do perfil volta, com latência, descida e subida, inclusive quando o carregamento lança; e o auxiliar falha alto numa página sem perfil. A mutação 1, abaixo, prova que o que o caso faz depois de abrir não fica, em silêncio, na rede livre. O orçamento de carregamento, que a galeria deixou de exercitar (recomendação do `frontend-reviewer`), não dependia dela: é o RF22, preso ao build de verdade em `apps/web/nome-dos-chunks.test.ts`. Rodado aqui: o primeiro carregamento no teto de 150 kB em brotli, as áreas fora da entrada e a galeria fora do primeiro carregamento, todos verdes |
+
+**Contagem: 24 ATENDIDOS, 0 PARCIAIS, 0 NÃO ATENDIDOS, 0 NÃO VERIFICÁVEIS.**
+
+Provas de mutação: três, todas no auxiliar novo. Cada uma foi aplicada no arquivo do `e2e/`, testada só com o caso
+citado e restaurada com `git checkout --`. A árvore terminou limpa, como começou. A mutação 2 não está entre os blocos
+do documento da correção: ela confere a afirmação dele de que uma segunda sessão do CDP não tira a limitação.
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF21 | A rede do perfil devolvida no `finally` (`perfis.ts:99-100`): o `finally` ficou vazio | `pecas-galeria.spec.ts:165`, `chromebook`: "a latência do perfil", esperado ≥ 500, recebido 17,3 ms |
+| RF21 | A rede tirada por uma sessão nova do CDP (`newCDPSession` + `Network.enable`), e não pela que aplicou o perfil | `pecas-galeria.spec.ts:154` (o pedaço mais lento levou 4045 ms, contra o teto de 500) e `:178` (1187,6 ms dentro do auxiliar), `chromebook` |
+| RF21 | `abrirGaleria` sem `carregarSemRedeLenta` (`galeria.ts:21`), no projeto `celular`, que o runner de mutação do portão não roda | `pecas-galeria.spec.ts:154`, `celular`: o pedaço mais lento levou 4417,8 ms |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+Não mudaram desde a rodada 2: todas as regras cumpridas, toda borda coberta ou justificada, e o critério de pronto
+cumprido. Esta rodada acrescenta:
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regra 50, item 1: teste com limitação de rede e de CPU | cumprida | As interações, o axe e as medidas da galeria continuam na rede do perfil, como mostra a mutação 1. A CPU ×4 vale também durante a abertura. O perfil de cada projeto não mudou (`tools/ci/playwright.test.ts`, rodado: verde) |
+| Pronto: o e2e inteiro que existia continua verde nos dois projetos | cumprido pelo documento da correção, que registra 278 de 278 nos dez specs que chamam `abrirGaleria` e 180 de 180 em `--repeat-each 3` nos três mais lentos. Não rodado aqui, porque a suíte inteira não se roda nesta etapa. A esteira de `b6291e3` fica com o Orquestrador | RF21 |
+| Pronto: o teto de casos por fatia do e2e | cumprido | `tools/ci/esteira.test.ts`, rodado: verde. A correção cortou de seis para três os casos novos para caber |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run test`, `npm run test:e2e` inteiros | não rodados: a suíte inteira não se roda nesta etapa |
+| e2e, como evidência | `e2e/pecas-galeria.spec.ts`, `e2e/pecas-sobrepor.spec.ts` e `e2e/aparencia.spec.ts`, com `--workers 2` (os da esteira), nos projetos `chromebook` e `celular`: **58 de 58**, nenhum instável. O `pecas-sobrepor.spec.ts:556`, que estourou na esteira `38914509279` com 32,1 e 32,3 s, levou 8,2 a 8,4 s nos dois projetos e nos dois temas. O `:172` levou 7,4 a 7,5 s. O caso mais lento foi o `aparencia.spec.ts:147` (RF24), com 12,5 s, contra o prazo de 30 |
+| Unidade, como evidência | `tools/ci/esteira.test.ts`, `tools/ci/playwright.test.ts` e `apps/web/nome-dos-chunks.test.ts`: 43 de 43 |
+| `npm run test:infra` | não se aplica |
+| Esteira | conferida no fechamento |
+| Revisões com veto registradas e aprovadas | ✅ A correção tem os três revisores do pedido (`test-engineer`, `revisor-geral` e `frontend-reviewer`). Os três aprovaram na 1ª rodada (12h33 a 12h35), e o `test-engineer` e o `revisor-geral` aprovaram de novo na 2ª (12h41), depois das recomendações aplicadas (`achados/indice.md:290-294`, e a seção "Revisões" do documento). O commit `b6291e3` leva `(correção …)`. Os outros três commits desde `4f453d0` mexem só em `estado.md`, `TODO.md` e `validacao.md` |
+
+### 4. Achados
+
+**Críticos**
+- nenhum
+
+**Maiores**
+- nenhum
+
+**Menores**
+- `e2e/__fixtures__/perfis.ts:93`: `carregarSemRedeLenta` é exportado para qualquer spec. Nada impede que um spec de tela
+  da escola o use para "destravar" um prazo, e aí a regra 50, item 1, deixaria de ser testada sem ninguém ver. O comentário
+  diz que é só para a primeira carga que o caso não afirma, mas comentário não é guarda. Correção: um teste de arquitetura
+  que aceite só `e2e/__fixtures__/galeria.ts` e `e2e/pecas-galeria.spec.ts` como importadores, ou registrar isso no
+  `TODO.md`.
+- `e2e/pecas-galeria.spec.ts:168`: o `perfil?.rede.downloadBytesPorSegundo ?? 1` deixa a asserção do mínimo de descida
+  passar sem medir nada se faltar o perfil. Hoje esse caminho não é alcançado, porque `tempoMinimoDoPerfil` lança duas
+  linhas abaixo. Os dois revisores de teste viram isso, a recomendação foi recusada com motivo, e o destino dela é o
+  próprio documento. Fica registrado aqui para não se perder. Correção: ler o perfil uma vez no começo do caso e falhar
+  alto.
+- O runner de mutação do portão roda só o projeto `chromebook` (já registrado na rodada da 13.0 e levado à
+  retrospectiva). A mutação 3 desta rodada mostra que a abertura da galeria também é provada no `celular`, mas só porque
+  ela foi rodada aqui, à mão.
+
+**Positivos**
+- Diagnosticar o estouro de tempo com uma tabela por condição (sem limitação, só CPU, só rede, as duas) antes de
+  escolher a correção. Ela mostrou que o custo era de rede e de abertura, e não de asserção, e evitou aumentar o prazo
+  de 30 s.
+
+### 5. Conclusão
+
+A correção não muda o produto nem o que os casos afirmam. Ela tira a latência do perfil só da abertura da galeria, que é
+uma página do build de teste que nenhum caso mede, e devolve a rede lenta antes da primeira asserção. Conferi isso de
+quatro jeitos:
+
+- o código-fonte servido é o deste commit;
+- os três specs que mais dependem da galeria, rodados nos dois projetos com os 2 trabalhadores da esteira: 58 de 58,
+  com o caso que estourou caindo de 32 s para 8 s;
+- três mutações no auxiliar, todas vermelhas, uma delas no `celular` e outra fora dos blocos do documento;
+- o orçamento de carregamento, que a galeria deixou de exercitar, continua preso ao build de verdade (RF22).
+
+São 24 RF atendidos, o critério de pronto cumprido, nenhum crítico, nenhum maior e nenhum teste vermelho entre os
+rodados: **APROVADA**. Os menores não seguram o pouso.
+
+### 6. Pendências herdadas
+
+- O primeiro menor (a guarda de quem importa `carregarSemRedeLenta`): para o `TODO.md`, no fechamento, pelo Orquestrador.
+- O runner de mutação só no `chromebook`, a numeração das rodadas quando a seção "Revisões" some, e o `tools/ci/e2e.ts`
+  que não repassa `--repeat-each` nem `--workers`: retrospectiva da X1.
+- As pendências das rodadas 1 a 3 seguem com os destinos delas. As duas linhas do `TODO.md` da rodada 3 já estão lá
+  (`TODO.md:1128-1131`).
+
+---
+
+
+## Rodada 3 — 16/10/2026 (revalidação)
+
+**Escopo:** funcionalidade completa
+**Commit validado:** `4f453d0`
+**Veredito: APROVADA**
+
+O que mudou desde a rodada 2 (`c624ad6..4f453d0`):
+
+- o merge da `develop` (`256b4a2`), que traz só a entrada da F18 no `ROADMAP.md`. O bloco da X1 não muda e continua `[x]`;
+- a correção `2026-10-16-galeria-da-onca-estoura-o-prazo` (`9d46058`). Ela muda só o `e2e/`: `__fixtures__/avatar.ts`,
+  `__fixtures__/galeria.ts`, `pecas-galeria.spec.ts`, `pecas-ia.spec.ts` e `pecas-marca-onca.spec.ts`;
+- os registros do `estado.md` (`9a07009`, `09e72ac`, `4f453d0`).
+
+Nenhum arquivo de `apps/`, `packages/`, `tools/` ou `infra/` mudou (`git diff --stat c624ad6 4f453d0 -- apps packages
+tools infra` sai vazio). O produto é, então, o mesmo das rodadas 1 e 2, e a evidência de código delas continua
+valendo. O risco desta rodada está em outro lugar: a correção reescreveu a **evidência e2e** do RF9 e do RF10. O
+ponto a provar é o do RF21: ela não enfraqueceu nenhum teste que prova regra.
+
+Contexto relido: `prd.md`, as rodadas 1 e 2, o documento da correção inteiro, as duas rodadas dela em
+`tasks/correcoes/achados/2026-10-16-galeria-da-onca-estoura-o-prazo.md` e as linhas 282 a 289 do `achados/indice.md`.
+
+### 1. RF a RF
+
+| RF | Situação | Evidência nova desta rodada |
+|---|---|---|
+| RF1 a RF8, RF11 a RF20, RF22 a RF24 | ATENDIDO | O código e os testes deles não mudaram desde a rodada 2, que os conferiu de novo com mutações e fotos próprias |
+| RF9 | ATENDIDO | O axe da galeria (`pecas-galeria.spec.ts:15`, `pecas-ia.spec.ts:443`, `pecas-marca-onca.spec.ts:131`) ficou intacto. A medida dos blocos agora se faz numa ida só (`medirBlocosDaGaleria`, `galeria.ts:84`), com as duas regras de antes: a borda direita do bloco dentro da janela, e `scrollWidth − clientWidth = 0`. Os três arquivos foram rodados aqui, nos dois projetos: verdes |
+| RF10 | ATENDIDO | Conferi, regra por regra, `avaliarAssinaturas` (`avatar.ts:34`) contra o laço removido. O ancestral `[data-assinatura]` mais próximo (`parentElement.closest` faz o mesmo que `ancestor::…[1]`); um avatar por bloco; um selo, à vista; um nome em `p`, `h2` ou `h3`, à vista e do mesmo agente. "À vista" tem largura, altura e não está em `visibility: hidden`, a mesma definição do `toBeVisible`. `avaliarSelos` e `avaliarAvatares` fazem o que os laços do `pecas-ia.spec.ts:30` faziam, e o do avatar ficou mais estrito (exige largura maior que 0). A contagem exata da seção, `AVATARES_DA_SECAO = 15` (`pecas-marca-onca.spec.ts:86`), segura uma leitura feita antes de a seção montar. Mutações abaixo. Fotos tiradas aqui: `professora--galeria--computador-7.png` e `professora--galeria--celular-9.png` mostram os 12 avatares em quatro tamanhos e os 3 das mensagens, cada um com o nome da função e o selo "IA" no mesmo bloco. A 360 px, o selo do Analista desce para a linha de baixo, dentro do bloco. No computador, "Aprovar 32 correções" aparece em grafite e diferente de todos os outros botões (RF6) |
+| RF21 | ATENDIDO | Nenhum caso saiu e nenhuma asserção ficou mais fraca. Os três specs passam de 52 para 66 execuções (7 casos novos de verificador, nos dois projetos), sem `.skip`, `.only` nem `.fixme`. Os pisos `≥ 10` selos e `≥ 15` blocos ficaram. O prazo de 30 s também ficou: não houve aumento de timeout. A única regra perdida é o `display:none` de bloco, que o `caixa()` antigo reprovava. Ela não prova regra de largura e vai como menor |
+
+**Contagem: 24 ATENDIDOS, 0 PARCIAIS, 0 NÃO ATENDIDOS, 0 NÃO VERIFICÁVEIS.**
+
+Provas de mutação: três, todas sobre o verificador novo. O produto é servido por uma imagem já construída
+(`educa-teste-web`, sem volume montado). Por isso, em vez de alterar o código-fonte, pus o defeito **na galeria real
+servida**, pelo DOM, e conferi que o verificador em lote o acusa. Elas foram rodadas num spec temporário,
+`e2e/zz-validador-temporario.spec.ts`, no projeto `chromebook`. O spec foi apagado em seguida, e a árvore terminou
+limpa, como começou.
+
+| RF | Defeito posto na galeria real | O que reprovou |
+|---|---|---|
+| RF10 | O `[data-selo-ia]` tirado da primeira assinatura da seção `marca-onca` (antes disso, `avaliarAssinaturas` da página inteira não acusava nada, em 30 avatares) | `conferirAssinaturas(secao('marca-onca'))` lançou `/sem o selo/`; o relatório trouxe só `assistente_de_ensino: sem o selo "IA", ou com dois` |
+| RF10, RF11 | `title` no 4º selo e `border-radius: 0` no 6º avatar | `avaliarSelos`: `['selo #3: o que a sigla quer dizer não fica num title']`; `avaliarAvatares`: `['avatar #5: não é um círculo']`, exatamente o defeito posto, e só ele |
+| RF9 | O bloco `marca-onca` alargado para 4000 px. Antes, li os totais logo depois de `abrirGaleria` e de novo 3 s depois: `[30, 31, 33]` avatares, selos e blocos nas duas leituras | `medirBlocosDaGaleria(...).passamDaJanela` contém `marca-onca`. Ler uma vez só, sem esperar, não perde peça que monte depois |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+Não mudaram desde a rodada 2: todas as regras cumpridas, toda borda coberta ou justificada, e o critério de pronto
+cumprido. Esta rodada acrescenta dois pontos:
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regra: o agente nunca se passa por pessoa (D58) | cumprida | A regra "nenhuma `img`, `image` ou `picture` dentro do avatar" continua em lote (`avatar.ts:103`), com caso na tabela (`pecas-marca-onca.spec.ts:228-229`). O `conformidade-reviewer` aprovou a correção |
+| Pronto: o e2e inteiro que existia continua verde nos dois projetos | cumprido pelo documento da correção, que registra 974 de 974 na árvore de `9d46058`; não rodado aqui, porque a suíte inteira não se roda nesta etapa. A esteira de `9d46058` fica com o Orquestrador | RF21 |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run test`, `npm run test:e2e` inteiros | não rodados: a suíte inteira não se roda nesta etapa |
+| e2e, como evidência | `e2e/pecas-galeria.spec.ts`, `e2e/pecas-ia.spec.ts` e `e2e/pecas-marca-onca.spec.ts`, com `--workers 2` (os da esteira), nos projetos `chromebook` e `celular`: **66 de 66**, nenhum instável. O caso mais lento levou 14,3 s (`pecas-ia:443`, celular), contra o prazo de 30. Os quatro casos que estouraram na esteira `38896156999` levaram 6,9 a 13,9 s. O spec temporário das mutações: 3 de 3 |
+| Unidade, como evidência | `tools/ci/esteira.test.ts`: 11 de 11. Com os casos novos, o teto da fatia do e2e continua cabendo |
+| `npm run test:infra` | não se aplica |
+| Esteira | conferida no fechamento |
+| Revisões com veto registradas e aprovadas | ✅ A correção tem os quatro revisores obrigatórios (`test-engineer`, `revisor-geral`, `frontend-reviewer`, `conformidade-reviewer`). Na primeira passada, das 10h54 às 10h55, o `test-engineer` reprovou. Na segunda, das 11h14 às 11h14:38, os quatro aprovaram (`achados/indice.md:282-289`). O commit `9d46058` leva `(correção …)`, e nenhum commit desde `c624ad6` leva código sem essa marca |
+
+### 4. Achados
+
+**Críticos**
+- nenhum
+
+**Maiores**
+- nenhum
+
+**Menores**
+- `tasks/correcoes/2026-10-16-galeria-da-onca-estoura-o-prazo.md`, "Recomendações sem aplicar": duas recomendações
+  têm o `TODO.md` como destino, e nenhuma está lá (`grep` por `medirBlocosDaGaleria`, `display:none`, `semCaixa`,
+  `borderBottom` e `desenhos` não acha nada). São elas:
+  - o `test-engineer` (1ª): `medirBlocosDaGaleria` deixa passar bloco com `display:none`;
+  - o `test-engineer` (2ª): o teste de `desenhos` usa os atalhos `border:` e `border-radius:`, e por isso ler
+    `borderBottom*` no lugar de `borderTop*` não seria pego.
+
+  Correção: o fechamento escreve as duas linhas no `TODO.md`, junto dos itens que o `estado.md` já manda levar.
+- `tasks/correcoes/achados/indice.md:282-289`: o hook numerou como "1ª" as duas passadas da correção. A seção
+  "Revisões" do documento sumiu na primeira passada, e o contador recomeçou. Por isso a tabela do documento mostra só
+  a segunda, e a mensagem de `9d46058` diz "APROVADO (1ª rodada)" para o `test-engineer`, que reprovou antes. O texto
+  do commit explica, e o histórico está inteiro nos achados. É a mesma classe do menor da rodada 2. Correção: levar à
+  retrospectiva por que a seção pode sumir e por que a numeração depende dela.
+- `e2e/pecas-ia.spec.ts:46`: com a leitura de uma ida só, o piso de selos (`≥ 10`) é a única contagem que segura uma
+  leitura antecipada fora da seção da onça. Hoje há 31, e a mutação 3 mostrou que nada monta depois. Correção: a
+  recomendação já registrada (`expect.poll` em volta de `avaliar…`), se aparecer intermitência.
+- O documento da correção (seção "Causa") diz "mais de 40 [avatares] na página inteira". Na galeria servida contei
+  30 avatares e 31 selos. Texto, sem efeito sobre a correção.
+
+**Positivos**
+- Para cada verificador em lote, uma tabela de páginas montadas, cada uma com um defeito, percorrida por um teste
+  só. Provou que o lote vê o que o laço via, sem dobrar os casos da fatia do e2e.
+
+### 5. Conclusão
+
+A correção só troca a forma de conferir. Em vez de uma ida ao navegador por asserção, faz uma ida por verificador, e
+as regras continuam as mesmas. Conferi isso de três jeitos:
+
+- linha a linha, contra o laço removido;
+- rodando os três specs nos dois projetos, com os 2 trabalhadores da esteira (66 de 66, todos bem abaixo dos 30 s);
+- pondo três defeitos na galeria real servida, todos acusados pelo verificador novo.
+
+O produto não mudou desde a rodada 2. Ficam 24 RF atendidos, o critério de pronto cumprido, nenhum crítico, nenhum
+maior e nenhum teste vermelho entre os rodados: **APROVADA**. Os menores não seguram o fechamento. O primeiro, as duas
+linhas do `TODO.md`, é feito no próprio fechamento.
+
+### 6. Pendências herdadas
+
+- As duas linhas do `TODO.md` do primeiro menor: no fechamento, pelo Orquestrador.
+- A numeração das rodadas quando a seção "Revisões" some, e o `tools/ci/e2e.ts` que não repassa `--repeat-each` nem
+  `--workers`: retrospectiva da X1.
+- As pendências das rodadas 1 e 2 seguem com os destinos delas.
+
+---
+
+
+## Rodada 2 — 16/10/2026 (revalidação)
+
+**Escopo:** funcionalidade completa
+**Commit validado:** `56307c6`
+**Veredito: APROVADA**
+
+O que mudou desde a rodada 1 (`4c23893..56307c6`): só documento. São a correção `2026-10-16-roteiro-diz-nova-conversa`
+(`bec4415`: `docs/roteiro-da-demonstracao.md:166`, "**Nova conversa**" passa a "**Início**", com o documento da
+correção e os achados dela), esta validação (`931af03`) e o `estado.md` (`0122b32`, `56307c6`). Nenhum arquivo de
+`apps/`, `packages/`, `e2e/`, `tools/` ou `infra/` mudou. Por isso a evidência de código da rodada 1 vale para este
+commit. Mesmo assim, não a tomei por boa sem conferir: refiz por conta própria as fotos, os testes e três mutações
+diferentes das da rodada 1, como está abaixo.
+
+Contexto relido: `prd.md` (RF1 a RF24, regras, bordas), a rodada 1 inteira, o documento da correção e os achados dela
+(`tasks/correcoes/achados/2026-10-16-roteiro-diz-nova-conversa.md`), o "Agora" do `estado.md`.
+
+### 1. RF a RF
+
+| RF | Situação | Evidência nova desta rodada |
+|---|---|---|
+| RF1, RF2, RF5, RF6, RF7, RF8, RF9, RF11, RF17, RF18, RF20, RF21, RF22, RF23, RF24 | ATENDIDO | O código não mudou, e a evidência é a da rodada 1. Rodados de novo, isolados: `contraste.test.ts`, `estilos.test.ts`, `tema.test.ts`, `itens-da-lateral.test.tsx` e `BarraDeBaixo.test.tsx`, todos verdes. Fotos lidas: `escuro--coordenacao--galeria--computador-1.png` (os seis desenhos, o oficial claro e diferente de todos no escuro, o desligado sem cor de ação, o perigo cheio) e, tiradas aqui, as da entrada pública nos dois temas, a 1366 e a 360 px (`publica-entrar-{light,dark}-{computador,celular}.png`, no rascunho da sessão; a operação não foi refotografada, porque o código não mudou desde as fotos da rodada 1) |
+| RF3, RF4 | ATENDIDO | Mutação nova no RF4, na lateral (abaixo). A `lateral-recolhida.test.ts` ficou vermelha |
+| RF10 | ATENDIDO | Mutação nova: a onça importada pela lateral (abaixo). `escuro--coordenacao--coordenacao-agentes--computador-1.png`: os três avatares, cada um com o nome da função e o selo "IA" no mesmo bloco |
+| RF12 | ATENDIDO | Mutação nova: todo título só para leitor de tela. `titulo-das-telas.test.tsx` ficou vermelho em todos os estados. A foto nova `professora--professor-turmas--celular.png` mostra o `h1` "Turmas" |
+| RF13, RF15 | ATENDIDO | `e2e/casca.spec.ts` rodado nos dois projetos: verde, incluindo o laço dos três papéis (`:673`, "Sair" à vista e do tamanho do vizinho, a 1366 e a 900 px). Foto nova: `professora--professor-nova-conversa--computador.png` (lateral de 256 px, ícones ilustrados, "Sair" à vista no pé) |
+| RF14 | ATENDIDO | Fotos novas `professora--professor-turmas--celular.png` (barra de topo com o nome da escola cortado com reticências, "Sair" à vista, barra de baixo com Início, Ferramentas e Turmas, o item atual marcado) e `escuro--aluno--aluno-tutor--celular.png` |
+| RF16 | ATENDIDO | O achado maior da rodada 1 está fechado. `docs/roteiro-da-demonstracao.md:166` diz "**Início**", o mesmo rótulo de `areas/navegacao.ts` e o mesmo que o `e2e/roteiro-da-demonstracao.spec.ts:356` usa (`irPelaNavegacao(professora, 'Início', …)`). O spec do roteiro, rodado aqui de ponta a ponta nos dois projetos, ficou verde. Conferi as outras menções de "Nova conversa" em `docs/` e no `TODO.md`: são registro histórico (`mvp-rapido.md`, `decisoes.md:878`, `pendencias-dos-mockups.md`), nota da troca (`interface.md:72`, `:1519`, `:1544`) ou o desenho do **alvo** da D80 na Parte A (`interface.md:53`, o botão de abrir conversa na seção de conversas que a X3 traz, e não o item da navegação). Nenhuma é instrução que contradiga o código |
+| RF19 | ATENDIDO | Igual à rodada 1, sem mudança de código. `SeletorDeEscola.test.tsx` rodado: verde |
+
+**Contagem: 24 ATENDIDOS, 0 PARCIAIS, 0 NÃO ATENDIDOS, 0 NÃO VERIFICÁVEIS.**
+
+Provas de mutação (outras três, diferentes das da rodada 1). Em cada uma: aplicada, rodado só o teste citado,
+restaurada com `git checkout --`. A árvore terminou limpa, como começou.
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF4 | `lerRecolhida` devolvendo `true` no `catch` (`componentes/lateral-recolhida.ts:20`): com o armazenamento bloqueado, a lateral abriria recolhida | `lateral-recolhida.test.ts`: 2 de 6 ("`getItem` que lança: abre aberta, sem erro"; "o acesso a `localStorage` que lança … também é calado") |
+| RF10 | `import { CabecaOnca } from './onca/CabecaOnca'` acrescentado a `componentes/itens-da-lateral.tsx`, o que poria a onça na lateral sem função nem selo | `ia/avatar-so-nas-duas-pecas.test.ts`: "`componentes/onca/` só é importado pelo `AvatarAgente` e por arquivo da própria pasta" |
+| RF12 | `tituloSoParaLeitor ? (` trocado por `true ? (` em `componentes/Tela.tsx:68`: toda tela com o `h1` só para leitor de tela | `areas/titulo-das-telas.test.tsx`: vermelho em carregando, com erro, vazia e com dado, em cada tela |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+Sem mudança desde a rodada 1: todas as regras cumpridas, toda borda coberta ou justificada, e todo item do critério
+de pronto cumprido. A ressalva que havia, "`docs/` descreve o construído", ficou cumprida também no roteiro. O item
+"o e2e inteiro que existia continua verde" continua apoiado no portão completo local de 16/10, às 03h10, que vale no
+lugar da esteira por decisão do Joaquim. Depois dele só entrou documento.
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Borda: armazenamento bloqueado | coberta | mutação nova na lateral (RF4) |
+| Borda: nome comprido a 360 px | coberta para a escola | foto `professora--professor-turmas--celular.png` ("Colégio sintético…" com reticências dentro da barra) |
+| Pronto: "Sair" a um clique em toda tela | cumprido | `casca.spec.ts:673` (três papéis), rodado |
+| Pronto: `docs/` descreve o construído | cumprido | `roteiro-da-demonstracao.md:166` corrigido (RF16) |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run test` inteiros | não rodados: não se roda suíte inteira aqui. O portão completo local de 16/10, 03h10, cobre o código, que não mudou desde então |
+| Unidade, como evidência | `navegacao`, `itens-da-lateral`, `avatar-so-nas-duas-pecas`, `SeletorDeEscola`, `contraste`, `estilos`, `tema`, `BarraDeBaixo` e `titulo-das-telas`: 154 de 154. Depois, `lateral-recolhida`, `avatar-so-nas-duas-pecas` e `titulo-das-telas`, verdes antes de cada mutação e vermelhos com ela |
+| e2e, como evidência | `e2e/roteiro-da-demonstracao.spec.ts` e `e2e/casca.spec.ts`, nos projetos `chromebook` e `celular`: 46 de 46, nenhum instável |
+| `npm run test:infra` | não se aplica |
+| Esteira | conferida no fechamento (sem GitHub por decisão do Joaquim: vale o portão completo local) |
+| Revisões com veto registradas e aprovadas | ✅ Nas quinze tarefas e nas cinco correções, a última rodada registrada de cada revisor obrigatório é APROVADO. A correção nova tem `revisor-geral` e `test-engineer` APROVADOS na 1ª rodada. Nenhum commit desde `e278845` leva código sem `(tarefa N.0)` ou `(correção …)` |
+
+### 4. Achados
+
+**Críticos**
+- nenhum
+
+**Maiores**
+- nenhum (o da rodada 1, `docs/roteiro-da-demonstracao.md:166`, foi corrigido em `bec4415`)
+
+**Menores**
+- `bec4415` (mensagem do commit) e o `estado.md` ("2 rodadas") dizem "rodadas 1 e 2". Em
+  `tasks/correcoes/2026-10-16-roteiro-diz-nova-conversa.md:57-58` e no `achados/indice.md:281` só existe a 1ª rodada
+  dos dois revisores. Os dois aprovaram nela, e o texto que a recomendação da 1ª rodada pediu ("única instrução ao
+  apresentador") está no documento. Ou houve uma 2ª rodada que o hook não registrou, ou a mensagem errou. Correção:
+  a retrospectiva confere no `/seguir` se uma rodada pode rodar sem ser registrada. A mensagem do commit fica como
+  está.
+- A recomendação do `test-engineer` na correção (o desenho de `docs/interface.md:53`) tem destino escrito na X3, no
+  próprio documento da correção. Conferido: é o desenho do alvo da D80, não da casca da X1, e não contradiz o código.
+- Os menores da rodada 1 continuam valendo, com os destinos da seção 6 dela. Nenhum foi fechado nesta rodada, e
+  nenhum bloqueia.
+
+**Positivos**
+- A correção diz por que não há teste que reproduz (seria teste de cópia, regra 40) e põe um `grep` verificável no
+  lugar. É o jeito de corrigir documento sem inventar teste decorativo.
+
+### 5. Conclusão
+
+O único achado maior da rodada 1 foi corrigido, e a correção é só texto, aprovada pelos dois revisores. O código é o
+mesmo da rodada 1. Mesmo assim, ele foi conferido de novo aqui:
+
+- três mutações novas, no armazenamento bloqueado, na onça fora da assinatura e no título visível, todas pegas;
+- fotos novas da casca e da entrada pública, nos dois temas e nas duas larguras;
+- o e2e do roteiro e o da casca, verdes nos dois projetos.
+
+Ficam 24 RF atendidos, o critério de pronto cumprido, nenhum crítico, nenhum maior e nenhum teste vermelho:
+**APROVADA**. Os menores das duas rodadas têm destino e não seguram o fechamento. O fechamento leva ao `TODO.md` os
+itens que o `estado.md` lista: (0), (2b) e as quatro recomendações do `11_task.md`.
+
+---
+
 ## Rodada 1 — 16/10/2026
 
 **Escopo:** funcionalidade completa

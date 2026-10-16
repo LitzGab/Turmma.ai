@@ -27,17 +27,17 @@ const FORMATOS: Record<FormatoArquivo, { sigla: string; etiqueta: string; esquel
   xls: { sigla: "xls", etiqueta: "bg-sutil text-white", esqueleto: "planilha" },
   xlsx: { sigla: "xlsx", etiqueta: "bg-sutil text-white", esqueleto: "planilha" },
   csv: { sigla: "csv", etiqueta: "bg-sutil text-white", esqueleto: "planilha" },
-  ppt: { sigla: "ppt", etiqueta: "bg-caramelo text-tinta", esqueleto: "slide" },
-  pptx: { sigla: "pptx", etiqueta: "bg-caramelo text-tinta", esqueleto: "slide" },
+  ppt: { sigla: "ppt", etiqueta: "bg-caramelo text-sobre-cor", esqueleto: "slide" },
+  pptx: { sigla: "pptx", etiqueta: "bg-caramelo text-sobre-cor", esqueleto: "slide" },
   png: { sigla: "png", etiqueta: "bg-inativo text-white", esqueleto: "imagem" },
   jpg: { sigla: "jpg", etiqueta: "bg-inativo text-white", esqueleto: "imagem" },
   jpeg: { sigla: "jpg", etiqueta: "bg-inativo text-white", esqueleto: "imagem" },
   img: { sigla: "img", etiqueta: "bg-inativo text-white", esqueleto: "imagem" },
   prova: { sigla: "prova", etiqueta: "bg-tinta text-white", esqueleto: "questoes" },
   lista: { sigla: "lista", etiqueta: "bg-apoio text-white", esqueleto: "questoes" },
-  plano: { sigla: "plano", etiqueta: "bg-caramelo text-tinta", esqueleto: "passos" },
+  plano: { sigla: "plano", etiqueta: "bg-caramelo text-sobre-cor", esqueleto: "passos" },
   rubrica: { sigla: "rubrica", etiqueta: "bg-sutil text-white", esqueleto: "tabela" },
-  slides: { sigla: "slides", etiqueta: "bg-caramelo text-tinta", esqueleto: "slide" },
+  slides: { sigla: "slides", etiqueta: "bg-caramelo text-sobre-cor", esqueleto: "slide" },
   material: { sigla: "texto", etiqueta: "bg-apoio text-white", esqueleto: "texto" },
   adaptada: { sigla: "adaptada", etiqueta: "bg-tinta text-white", esqueleto: "questoes" },
 };
@@ -81,7 +81,7 @@ const ESQUELETOS: Record<Esqueleto, ReactNode> = {
   tabela: (
     <div className="space-y-1">
       <L w="w-1/2" forte />
-      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[2px] bg-tinta/15 p-px">{Array.from({ length: 9 }, (_, i) => <div key={i} className={cn("h-1.5", i < 3 ? "bg-[#FBD9C3]" : "bg-white")} />)}</div>
+      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[2px] bg-tinta/15 p-px">{Array.from({ length: 9 }, (_, i) => <div key={i} className={cn("h-1.5", i < 3 ? "bg-marca-cx-forte" : "bg-white")} />)}</div>
     </div>
   ),
   slide: (
@@ -132,7 +132,7 @@ export function FileCard({ formatFile, tamanho = "md", className }: { formatFile
       <div className="relative z-[1] [filter:drop-shadow(0_0_0.6px_rgba(0,0,0,.45))_drop-shadow(0_1.5px_2px_rgba(0,0,0,.08))]">
         <div className={cn("relative overflow-hidden bg-white", t.folha)} style={{ clipPath: `polygon(0 0, calc(100% - ${d}px) 0, 100% ${d}px, 100% 100%, 0 100%)` }}>
           <div className={t.escala}>{ESQUELETOS[f.esqueleto]}</div>
-          <span className="absolute right-0 top-0 bg-[#D9D9D9]" style={{ width: d, height: d, clipPath: "polygon(0 0, 100% 100%, 0 100%)", borderBottomLeftRadius: 3 }} />
+          <span className="absolute right-0 top-0 bg-borda-campo" style={{ width: d, height: d, clipPath: "polygon(0 0, 100% 100%, 0 100%)", borderBottomLeftRadius: 3 }} />
         </div>
       </div>
     </div>

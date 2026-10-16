@@ -1,54 +1,30 @@
 import {
-  BookOpen, CalendarRange, ClipboardCheck, ClipboardList, FileInput, FileText, FlaskConical, LifeBuoy, Milestone,
-  Network, NotebookPen, PenLine, Presentation, Quote, SearchCheck, SlidersHorizontal, Target, type LucideIcon,
+  BookOpen, ClipboardCheck, ClipboardList, FileText, NotebookPen, PenLine, Presentation, SlidersHorizontal, Target, type LucideIcon,
 } from 'lucide-react'
 
-/* O CATÁLOGO DE FERRAMENTAS, como dado (20/09/2026).
+/* O CATÁLOGO DE FERRAMENTAS, como dado (20/09/2026; 12ª rodada, 04/10/2026).
 
-   A regra que o Gabriel deu para separar as 77 ferramentas da Teachy:
-   · É FERRAMENTA a ação específica que entrega um OUTPUT PRÓPRIO — um plano completo, uma apresentação, um mapa
-     mental, uma prova: coisa com formato, que fica guardada na biblioteca, sai em arquivo e pode ser aplicada.
-   · NÃO É ferramenta o que o chat já responde: e-mail, ideia de atividade, resumo de um texto, exemplo do dia a
-     dia, pergunta sobre um PDF. Isso mora em `SO_PEDIR`, e a tela mostra como "é só pedir ao Assistente".
-   A separação inteira, ferramenta por ferramenta, está em ~/Code/Turmma/pesquisa/ferramenta-ou-chat.md.
+   É FERRAMENTA a ação que entrega um OUTPUT PRÓPRIO (uma prova, um plano, uma apresentação): coisa com formato, que
+   fica em Criados e pode ir para a turma. O resto o Assistente responde na conversa (`SO_PEDIR`).
 
-   A página, o menu da caixa de pedido e o formulário leem DAQUI: uma ferramenta nova é uma entrada nesta lista,
-   não uma tela nova — o mesmo desenho do motor de formulário da Teachy (mapa, seção 1).
-
-   SÉTIMA RODADA (20/09/2026, à noite): os campos foram conferidos, um a um, contra o mapa da Teachy
-   (~/Code/Turmma/pesquisa/teachy-mapa-de-ferramentas.md). O que mudou:
-   · Prova, Adaptação e Redação deixaram de ter formulário escrito à mão: têm `campos` como as outras, e o motor
-     (`components/turmma/ferramentas`) desenha. `especial` continua dizendo que a TELA tem algo próprio (o cartão da
-     conversa, as abas de lote e correção), não que o formulário é outro. Correção de objetiva segue sem formulário:
-     é aprovação com registro (D33, D56), e abre a fila.
-   · O motor ganhou o que faltava, sempre dentro dos tipos que já existiam: campo condicional (`quando`), campo que
-     desce para "Mais opções" (`avancado`), grupo forçado (`grupo`), texto opcional, chips de múltipla escolha, chips
-     obrigatório SEM padrão (a declaração da D5 é ato da professora), "Outro" com número ou com texto, cartões de
-     múltipla escolha, cartão "outro" que abre um texto curto, cartão desabilitado, material com intervalo de
-     capítulos, habilidades em modo pré-requisito, arquivo com a declaração de origem embutida. Tipo novo, um só:
-     `artefato`, o seletor de item da biblioteca (Adaptação e Redação).
-   · Os campos de texto NASCEM VAZIOS: `exemplo` é o placeholder (um pedido-modelo, nunca "digite aqui") e `valor` é o
-     que o botão "Preencher exemplo" escreve. Estático e de graça — o exemplo gerado por IA da Teachy não entra.
-   · `extras` diz quais extras transversais a ferramenta aceita: anexar arquivo (sempre com a pergunta "de quem é
-     este material", D5) e buscar na web (desligada, vale só para aquela geração, e o que vier sai rotulado, D68).
-   · `amostra` dá uma linha de texto de verdade para cada item de `vem`: é o que a folha "Como vai sair" mostra
-     embaixo de cada cabeçalho quando a prévia não tem um item para ele. Sem barrinha de esqueleto.
-   REVISÃO (20/09/2026, de madrugada), de novo contra o mapa da Teachy, procurando o que tinha ficado de fora sem
-   motivo. Entrou: na Prova, "Completar lacunas" e "Ordenar" (a Teachy conta seis tipos, e a nossa Atividade já
-   contava); no Planejamento do período e no Projeto, "Anexar arquivo" (o plano de ensino, o edital da feira); no
-   Plano de recuperação, "Outro assunto" para o que não está no diagnóstico e "Outro" no tempo (na Teachy é texto
-   livre: "5 dias"); na Diagnóstica, "Outro" no número de questões, "Dificuldade" e "Anexar arquivo".
-   O que ficou de fora de propósito: disciplina e ano (a turma já diz), idioma (só em turma de língua), qualquer
-   texto livre sobre aluno (D35, D57, D66), a IA lendo redação (D55), banco de questões de professores (D5),
-   FUVEST/UNICAMP (D21), imagem e áudio, e o custo em créditos no botão (D40). */
+   12ª RODADA (decisão do dono, plano de polimento 5.2): o catálogo fica com NOVE — Prova, Atividade e lista, Plano de
+   aula, Material didático, Apresentação, Adaptação, Correção de objetiva, Redação e discursiva e Simulado ENEM.
+   Das oito que tinham entrado na sétima rodada:
+   · JUNTARAM: Planejamento do período → Plano de aula (sequência e bimestre são opções do "O que você quer");
+     Plano de recuperação → Atividade ("Para fazer: Recuperação"); Mapa mental → Material didático (um tipo);
+     Avaliação diagnóstica → Prova ("Não vale nota"); Proposta de redação → Redação e discursiva (o tema da redação);
+   · SAÍRAM: Plano de projeto e Roteiro de experimento (viram pedido na conversa); "Importar prova" sai do catálogo.
+   A página, o cartão da conversa e a janela "Mais" leem DAQUI: uma ferramenta é uma entrada nesta lista, não uma tela.
+   Os campos de texto nascem vazios: `exemplo` é o placeholder e `valor` é o que a conversa preenche quando o pedido
+   não diz o tema. Nenhum campo recebe texto sobre aluno (D35, D57, D66), e a IA não lê redação (D55). */
 
 export type CategoriaId = 'planejar' | 'preparar' | 'avaliar' | 'corrigir'
 export type Ladrilho = 'pessego' | 'cinza' | 'preto' | 'laranja'
 
 export const CATEGORIAS: { id: CategoriaId; nome: string; apoio: string; ladrilho: Ladrilho }[] = [
-  { id: 'planejar', nome: 'Planejar', apoio: 'A aula, a sequência e o bimestre, nas datas do seu calendário', ladrilho: 'pessego' },
+  { id: 'planejar', nome: 'Planejar', apoio: 'A aula, a sequência e o bimestre', ladrilho: 'pessego' },
   { id: 'preparar', nome: 'Preparar a aula', apoio: 'O que você leva para a sala, feito do material da escola', ladrilho: 'cinza' },
-  { id: 'avaliar', nome: 'Avaliar', apoio: 'Prova, lista, simulado e proposta, com a página de cada questão', ladrilho: 'preto' },
+  { id: 'avaliar', nome: 'Avaliar', apoio: 'Prova, lista e simulado, com a página de cada questão', ladrilho: 'preto' },
   { id: 'corrigir', nome: 'Corrigir', apoio: 'A objetiva o Assistente corrige e você aprova; a discursiva é sua', ladrilho: 'laranja' },
 ]
 
@@ -146,9 +122,9 @@ export type Ferramenta = {
 /* O que a turma já carrega, e por isso o formulário não pergunta: disciplina, ano, tamanho, adaptações registradas.
    No produto vem do cadastro da turma; aqui é só o que falta em `dados/escola`. */
 export const TURMA_CARREGA: Record<string, { adaptacoes: number; material: string; diagnostico: boolean }> = {
-  '2b': { adaptacoes: 2, material: 'q2', diagnostico: true },
-  '2a': { adaptacoes: 1, material: 'q2', diagnostico: true },
-  '1c': { adaptacoes: 0, material: 'q2', diagnostico: true },
+  '2b': { adaptacoes: 3, material: 'q2', diagnostico: true },
+  '2a': { adaptacoes: 0, material: 'q2', diagnostico: true },
+  '1c': { adaptacoes: 1, material: 'q2', diagnostico: true },
   '9a': { adaptacoes: 0, material: 'c9', diagnostico: false },
 }
 
@@ -172,13 +148,13 @@ export const PREREQUISITOS = [
 export const TIPOS_ADAPTACAO: OpcaoCartao[] = [
   { id: 'fonte', nome: 'Fonte ampliada', detalhe: 'Corpo 18, mais espaço entre linhas, uma questão por bloco' },
   { id: 'direto', nome: 'Enunciado direto', detalhe: 'Frases curtas, uma instrução por vez, sem negação dupla' },
-  { id: 'tempo', nome: 'Tempo adicional', detalhe: 'Indica +50% de tempo no cabeçalho e no calendário' },
+  { id: 'tempo', nome: 'Tempo adicional', detalhe: 'Indica +50% de tempo no cabeçalho da prova' },
   { id: 'escrita', nome: 'Resposta escrita no lugar da oral', detalhe: 'Troca apresentações e respostas faladas por escritas' },
   { id: 'visual', nome: 'Apoio visual no enunciado', detalhe: 'Esquema ou tabela junto do texto, quando o material tem' },
   { id: 'menos', nome: 'Menos itens por página', detalhe: 'Mesmo conteúdo cobrado, dividido em mais páginas' },
 ]
 /** O que a coordenação registrou para o 2ºB: vem marcado, com a etiqueta. */
-export const ADAPTACOES_REGISTRADAS = ['fonte', 'tempo']
+export const ADAPTACOES_REGISTRADAS = ['fonte', 'direto', 'tempo']
 
 const DETALHES = (exemplo: string): CampoDef => ({ tipo: 'longo', rotulo: 'Detalhes', exemplo, opcional: true, avancado: true })
 const BNCC: CampoDef = { tipo: 'habilidades', rotulo: 'Habilidades da BNCC', modo: 'bncc', opcional: true, avancado: true }
@@ -187,20 +163,22 @@ export const CATALOGO: Ferramenta[] = [
   /* ── Planejar ─────────────────────────────────────────────────────────────────────────────── */
   {
     id: 'plano', nome: 'Plano de aula', categoria: 'planejar', icon: NotebookPen,
-    curta: 'Uma aula ou a sequência inteira', texto: 'Uma aula ou a sequência didática inteira: etapas com tempo, habilidades da BNCC e o que levar.',
-    promessa: 'O plano sai nas datas do seu calendário, com o capítulo e a página de cada etapa.',
+    curta: 'Uma aula, a sequência ou o bimestre', texto: 'Uma aula, a sequência didática ou o bimestre inteiro: etapas com tempo, habilidades da BNCC e o que levar.',
+    promessa: 'O plano sai nas datas da grade da turma, com o capítulo e a página de cada etapa.',
     saida: ['PDF'], fonte: 'Material da escola, com a página', exemplo: 'Plano de duas aulas sobre reagente limitante, com prática em dupla',
-    busca: 'sequência didática plano de aula eja roteiro de aula', verbo: 'Gerar plano',
+    busca: 'sequência didática plano de aula eja roteiro de aula planejamento bimestral período', verbo: 'Gerar plano',
     campos: [
       { tipo: 'cartoes', id: 'modo', grupo: 'oque', rotulo: 'O que você quer', padrao: 'aula', opcoes: [
         { id: 'aula', nome: 'Plano de aula', detalhe: 'Uma ou duas aulas, etapa por etapa, com o tempo de cada parte' },
-        { id: 'sequencia', nome: 'Sequência didática', detalhe: 'Várias aulas encadeadas, já nas datas da turma no calendário' },
+        { id: 'sequencia', nome: 'Sequência didática', detalhe: 'Várias aulas encadeadas, nas datas da turma' },
+        { id: 'bimestre', nome: 'Bimestre', detalhe: 'O que dar em cada aula até o fim do bimestre' },
       ] },
       { tipo: 'turma' }, { tipo: 'material' },
       { tipo: 'texto', rotulo: 'Tema', valor: 'Reagente limitante', exemplo: 'Ex.: Reagente limitante, a partir da receita de bolo', opcional: true, dica: 'Em branco, segue o capítulo escolhido.', larga: true },
       { tipo: 'chips', rotulo: 'Aulas', opcoes: ['1', '2'], padrao: '2', quando: { campo: 'modo', igual: 'aula' } },
       { tipo: 'chips', rotulo: 'Aulas', opcoes: ['3', '4', '6', '8'], padrao: '4', personalizado: 'numero', outro: 'Quantas?', quando: { campo: 'modo', igual: 'sequencia' } },
-      { tipo: 'chips', rotulo: 'Duração de cada aula', opcoes: ['45 min', '50 min', '100 min'], padrao: '50 min', personalizado: 'numero', outro: 'Minutos', dica: 'Veio do seu calendário.' },
+      { tipo: 'chips', rotulo: 'Até', opcoes: ['Próximas 2 semanas', 'Fim do bimestre'], padrao: 'Fim do bimestre', quando: { campo: 'modo', igual: 'bimestre' } },
+      { tipo: 'chips', rotulo: 'Duração de cada aula', opcoes: ['45 min', '50 min', '100 min'], padrao: '50 min', personalizado: 'numero', outro: 'Minutos', dica: 'Veio da grade da turma.' },
       { tipo: 'cartoes', rotulo: 'Como a aula anda', padrao: 'dialogada', opcoes: [
         { id: 'dialogada', nome: 'Expositiva dialogada', detalhe: 'Você conduz e a turma participa com perguntas' },
         { id: 'ativa', nome: 'Aprendizagem ativa', detalhe: 'A turma resolve em dupla ou grupo; você circula' },
@@ -217,97 +195,6 @@ export const CATALOGO: Ferramenta[] = [
       { rotulo: 'Aula 1 · 22/09', texto: 'Abertura com a receita de bolo (10 min); proporção em mol (15 min); três exemplos resolvidos na lousa (25 min).', pagina: 150, em: 1 },
       { rotulo: 'Aula 2 · 24/09', texto: 'Prática em dupla: quatro problemas com reagente em excesso (35 min); fechamento com rendimento (15 min).', pagina: 151, em: 1 },
       { rotulo: 'Para casa', texto: 'Exercícios 4 a 9 do capítulo.', pagina: 153, em: 5 },
-    ] },
-  },
-  {
-    id: 'periodo', nome: 'Planejamento do período', categoria: 'planejar', icon: CalendarRange,
-    curta: 'O que dar em cada aula do bimestre', texto: 'O que dar em cada aula das próximas semanas ou do bimestre, direto no seu calendário.',
-    promessa: 'O Assistente distribui os capítulos pelas aulas que já existem no calendário. Você revisa antes de salvar.',
-    saida: ['PDF', 'XLSX'], fonte: 'Material da escola e o seu calendário', exemplo: 'Distribui o capítulo 7 pelas aulas do 2ºB até o fim do bimestre',
-    busca: 'planejamento de calendário anual bimestral semanal cronograma planejamento', verbo: 'Montar planejamento',
-    campos: [
-      { tipo: 'aviso', topo: true, texto: 'Os dias, os horários e os feriados vêm do calendário da escola. Aqui você decide o que dar em cada aula.' },
-      { tipo: 'turma' }, { tipo: 'material', varios: true },
-      { tipo: 'cartoes', rotulo: 'Para qual período', padrao: 'bimestre', dica: 'As datas e o número de aulas vieram do calendário da escola.', opcoes: [
-        { id: 'semanas', nome: 'Próximas 2 semanas', detalhe: '22/09 a 02/10 · 8 aulas do 2ºB' },
-        { id: 'bimestre', nome: 'Até o fim do bimestre', detalhe: '22/09 a 27/11 · 38 aulas do 2ºB' },
-        { id: 'proximo', nome: 'Próximo bimestre', detalhe: 'A escola ainda não publicou o calendário', desabilitado: true },
-      ] },
-      { tipo: 'chave', id: 'distribuir', rotulo: 'Deixar o Assistente distribuir os capítulos', detalhe: 'Usa a ordem do material e o número de aulas. Você revisa tudo antes de salvar.', ligada: true },
-      { tipo: 'longo', grupo: 'como', rotulo: 'O que dar, na ordem', quando: { campo: 'distribuir', igual: 'nao' },
-        valor: 'Cap. 7 estequiometria até 16/10; cap. 8 soluções em novembro; cap. 9 termoquímica só a introdução.',
-        exemplo: 'Cap. 7 estequiometria até 16/10; cap. 8 soluções em novembro; cap. 9 termoquímica só a introdução.' },
-      { tipo: 'chave', rotulo: 'Reservar uma aula de revisão antes de cada avaliação', ligada: true },
-      DETALHES('Quero fechar estequiometria antes da prova de 01/10 e deixar soluções para novembro.'),
-    ],
-    extras: ['anexo'],
-    vem: ['Uma linha por aula do calendário', 'Capítulo e páginas de cada aula', 'Avaliações e entregas já marcadas', 'Aulas de revisão', 'Feriados respeitados'],
-    amostra: [null, 'Cap. 7, p. 150 a 153, nas quatro primeiras aulas; o cap. 8 começa em 06/10.', 'Prova do capítulo 7 em 01/10; entrega da lista em 25/09.', '29/09 e 24/11: revisão antes de cada avaliação.', '12/10 e 02/11 ficam sem aula.'],
-    previa: { titulo: 'Planejamento · 2ºB · até o fim do bimestre', resumo: '38 aulas, do capítulo 7 ao 9. Nada foi salvo no calendário ainda.', itens: [
-      { rotulo: '22/09 · ter', texto: 'Reagente limitante: a ideia, com a receita de bolo.', pagina: 150, em: 0 },
-      { rotulo: '24/09 · qui', texto: 'Reagente em excesso: prática em dupla.', pagina: 151, em: 0 },
-      { rotulo: '25/09 · sex', texto: 'Rendimento de reação: teórico e real.', pagina: 152, em: 0 },
-      { rotulo: '29/09 · ter', texto: 'Revisão do capítulo 7 antes da prova.', pagina: 153, em: 0 },
-    ] },
-  },
-  {
-    id: 'projeto', nome: 'Projeto', categoria: 'planejar', icon: Milestone,
-    curta: 'Etapas, entregas e rubrica do produto', texto: 'Projeto de semanas: pergunta norteadora, etapas com data, papéis no grupo e a rubrica do produto final.',
-    promessa: 'Do tema ao produto final, com as entregas parciais nas datas do calendário.',
-    saida: ['PDF'], fonte: 'Material da escola, com a página', exemplo: 'Um projeto de um mês sobre descarte de resíduos químicos, terminando na feira de ciências',
-    busca: 'projeto interdisciplinar feira de ciências abp aprendizagem baseada em projetos', verbo: 'Gerar projeto',
-    campos: [
-      { tipo: 'turma', padrao: '9a' }, { tipo: 'material' },
-      { tipo: 'longo', rotulo: 'O projeto que você quer', valor: 'Cada grupo investiga um resíduo químico do dia a dia da escola e propõe um descarte correto, terminando na feira de ciências.',
-        exemplo: 'Cada grupo investiga um resíduo químico da escola (pilha, óleo de cozinha, reagente vencido), descobre para onde ele vai hoje e propõe um descarte correto. Termina com estande na feira de ciências.' },
-      { tipo: 'chips', rotulo: 'Duração', opcoes: ['2 semanas', '1 mês', '1 bimestre'], padrao: '1 mês' },
-      { tipo: 'chips', rotulo: 'Termina em', opcoes: ['Feira de ciências · 23/10', 'Fim do bimestre · 27/11', 'Sem data marcada'], padrao: 'Feira de ciências · 23/10', dica: 'Veio do calendário da escola.', larga: true },
-      { tipo: 'chips', rotulo: 'Como a turma trabalha', opcoes: ['Individual', 'Duplas', 'Grupos de 4 a 5'], padrao: 'Grupos de 4 a 5' },
-      { tipo: 'chips', rotulo: 'Produto final', opcoes: ['Estande', 'Relatório', 'Vídeo', 'Protótipo', 'A turma escolhe'], padrao: 'Estande', personalizado: 'texto', outro: 'Qual produto?', larga: true },
-      { tipo: 'chave', rotulo: 'Com rubrica para o produto final', detalhe: 'Critérios e níveis, feitos antes de a turma começar.', ligada: true },
-      { tipo: 'texto', rotulo: 'Outras disciplinas no projeto', valor: 'Biologia e Geografia', exemplo: 'Ex.: Biologia e Geografia', opcional: true, avancado: true, larga: true },
-      BNCC,
-    ],
-    extras: ['anexo', 'web'],
-    vem: ['Pergunta norteadora', 'Etapas com as datas do calendário', 'Papéis dentro do grupo', 'Entregas parciais', 'Rubrica do produto final', 'Habilidades da BNCC'],
-    amostra: ['Para onde vai o resíduo químico que a nossa escola produz?', null, 'Quem pesquisa, quem registra, quem monta o estande e quem apresenta.', 'Ficha do resíduo em 02/10; proposta de descarte em 09/10.', 'Quatro critérios, três níveis: investigação, proposta, estande e fala.', 'EF09CI13 e EF09CI02, do capítulo 3.'],
-    previa: { titulo: 'Projeto · resíduos químicos da escola · 9ºA', resumo: 'Quatro semanas, grupos de 4 a 5, estande na feira de 23/10.', itens: [
-      { rotulo: 'Semana 1', texto: 'Pergunta norteadora e escolha do resíduo de cada grupo; leitura do capítulo.', pagina: 88, em: 1 },
-      { rotulo: 'Semana 2', texto: 'Investigação: de onde vem, para onde vai, qual o risco. Entrega parcial: ficha do resíduo.', pagina: 91, em: 1 },
-      { rotulo: 'Semana 3', texto: 'Proposta de descarte e montagem do estande.', pagina: 94, em: 1 },
-      { rotulo: 'Semana 4', texto: 'Feira de ciências e avaliação do produto pela rubrica.', em: 1 },
-    ] },
-  },
-  {
-    id: 'recuperacao', nome: 'Plano de recuperação', categoria: 'planejar', icon: LifeBuoy,
-    curta: 'Das habilidades em que a turma travou', texto: 'Parte do diagnóstico da turma: retoma as habilidades com mais erro, com exercícios graduados e uma checagem no fim.',
-    promessa: 'O plano é da turma e das habilidades. Aqui não existe campo para descrever um aluno.',
-    saida: ['PDF'], fonte: 'Diagnóstico da turma e material da escola', exemplo: 'Plano de duas semanas para recuperar reagente limitante e cálculo com mol no 2ºB',
-    busca: 'recuperação reforço recuperação paralela retomada', verbo: 'Gerar plano de recuperação',
-    campos: [
-      { tipo: 'turma' }, { tipo: 'material' },
-      { tipo: 'habilidades', rotulo: 'Habilidades para recuperar', modo: 'diagnostico' },
-      { tipo: 'texto', rotulo: 'Ou escreva o assunto', valor: 'Conversão entre grama e mol', exemplo: 'Ex.: Conversão entre grama e mol', opcional: true, larga: true,
-        dica: 'Esta turma ainda não tem avaliação corrigida: o plano parte do assunto.', quando: { campo: 'turma', igual: '9a' } },
-      { tipo: 'texto', rotulo: 'Outro assunto', valor: 'Balanceamento de equações', exemplo: 'Ex.: Balanceamento de equações, do capítulo 6', opcional: true, larga: true,
-        dica: 'Para retomar o que não caiu na prova e por isso não está na lista.', quando: { campo: 'turma', diferente: '9a' } },
-      { tipo: 'chips', rotulo: 'Onde a turma mais erra', opcoes: ['Ver pela correção', 'No conceito', 'Na conta', 'Na leitura do enunciado'], padrao: 'Ver pela correção', dica: 'É sobre a turma, não sobre um aluno.', larga: true },
-      { tipo: 'chips', rotulo: 'Em quanto tempo', opcoes: ['1 semana', '2 semanas', '3 semanas', '1 mês'], padrao: '2 semanas', personalizado: 'texto', outro: 'Ex.: 5 dias', larga: true },
-      { tipo: 'cartoes', rotulo: 'Onde acontece', padrao: 'os-dois', opcoes: [
-        { id: 'comeco', nome: 'No começo de cada aula', detalhe: '15 min por encontro, sem parar o capítulo' },
-        { id: 'inteiras', nome: 'Em aulas inteiras', detalhe: 'Usa aulas do seu calendário' },
-        { id: 'casa', nome: 'Para casa', detalhe: 'Uma lista curta por dia' },
-        { id: 'os-dois', nome: 'Em aula e para casa', detalhe: 'Retomada em sala, prática em casa' },
-      ] },
-      { tipo: 'chips', rotulo: 'Checagem no fim', opcoes: ['5 questões objetivas', '10 questões objetivas', 'Sem checagem'], padrao: '5 questões objetivas', larga: true },
-      { tipo: 'chave', rotulo: 'Avisar o Tutor do que a turma está recuperando', detalhe: 'Ele passa a puxar esses assuntos quando o aluno abrir uma sessão.', ligada: true, avancado: true },
-    ],
-    vem: ['Retomada do conceito, por habilidade', 'Exercícios do fácil ao difícil', 'Checagem curta no fim', 'O que o Tutor passa a reforçar'],
-    amostra: [null, 'Seis exercícios por habilidade: dois diretos, dois com tabela e dois contextualizados.', null, 'Reagente limitante e conversão entre grama e mol, nas sessões de quem abrir o Tutor.'],
-    previa: { titulo: 'Plano de recuperação · 2ºB · duas habilidades', resumo: 'Duas semanas, em aula e para casa. Base: a correção da prova de 18/09.', itens: [
-      { rotulo: 'EM13CNT301', texto: 'Reagente limitante: retomada com a receita de bolo e seis exercícios graduados.', pagina: 150, em: 0 },
-      { rotulo: 'EM13CNT104', texto: 'Cálculo com mol e massa molar: tabela de conversão e oito exercícios.', pagina: 145, em: 0 },
-      { rotulo: 'Checagem', texto: 'Cinco questões objetivas no dia 02/10, corrigidas pelo Assistente e aprovadas por você.', em: 2 },
     ] },
   },
 
@@ -344,15 +231,16 @@ export const CATALOGO: Ferramenta[] = [
   },
   {
     id: 'material', nome: 'Material didático', categoria: 'preparar', icon: BookOpen,
-    curta: 'Resumo, texto de apoio, revisão', texto: 'Resumo, texto de apoio ou folha de revisão, do capítulo que você escolher e no tamanho que pedir.',
+    curta: 'Resumo, texto de apoio, revisão, mapa', texto: 'Resumo, texto de apoio, folha de revisão ou mapa mental, do capítulo que você escolher.',
     promessa: 'Texto para a turma estudar, escrito a partir do capítulo e com a página citada.',
     saida: ['PDF'], fonte: 'Material da escola, com a página', exemplo: 'Um resumo de uma página sobre balanceamento para revisão',
-    busca: 'resumo texto de apoio revisão capítulo apostila folha de estudo', verbo: 'Gerar material',
+    busca: 'resumo texto de apoio revisão capítulo apostila folha de estudo mapa mental mapa conceitual', verbo: 'Gerar material',
     campos: [
       { tipo: 'cartoes', id: 'tipo', grupo: 'oque', rotulo: 'Tipo de material', padrao: 'resumo', opcoes: [
         { id: 'resumo', nome: 'Resumo', detalhe: 'As ideias do capítulo em ordem, para estudar antes da prova' },
         { id: 'apoio', nome: 'Texto de apoio', detalhe: 'Um texto corrido para ler em aula e discutir' },
         { id: 'revisao', nome: 'Folha de revisão', detalhe: 'Conceito, exemplo resolvido e exercício, lado a lado' },
+        { id: 'mapa', nome: 'Mapa mental', detalhe: 'O capítulo em ramos, para projetar ou imprimir' },
       ] },
       { tipo: 'turma' }, { tipo: 'material' },
       { tipo: 'texto', rotulo: 'Tema', valor: 'Balanceamento de equações', exemplo: 'Ex.: Balanceamento por tentativas, a partir da reação do vinagre', larga: true },
@@ -373,84 +261,26 @@ export const CATALOGO: Ferramenta[] = [
     ] },
   },
   {
-    id: 'mapa', nome: 'Mapa mental', categoria: 'preparar', icon: Network,
-    curta: 'O capítulo em ramos, para projetar', texto: 'O capítulo em ramos: conceito no centro, ideias ligadas e a página do material em cada ramo.',
-    promessa: 'Um mapa para projetar na aula ou imprimir, com a página de onde saiu cada ramo.',
-    saida: ['PDF'], fonte: 'Material da escola, com a página', exemplo: 'Mapa mental do capítulo de estequiometria para projetar na revisão',
-    busca: 'mapa mental mapa conceitual esquema organizador gráfico', verbo: 'Gerar mapa mental',
-    campos: [
-      { tipo: 'cartoes', grupo: 'oque', rotulo: 'Tipo de mapa', padrao: 'padrao', opcoes: [
-        { id: 'padrao', nome: 'Padrão', detalhe: 'Palavras-chave em ramos, bom para projetar' },
-        { id: 'texto', nome: 'Com frases', detalhe: 'Cada ramo explica a ideia em uma linha' },
-        { id: 'niveis', nome: 'Em níveis', detalhe: 'Hierarquia de cima para baixo, bom para imprimir' },
-      ] },
-      { tipo: 'turma' }, { tipo: 'material' },
-      { tipo: 'texto', rotulo: 'Assunto', valor: 'Estequiometria', exemplo: 'Ex.: Estequiometria, do mol ao rendimento', larga: true },
-      { tipo: 'chips', rotulo: 'Profundidade', opcoes: ['2 níveis', '3 níveis'], padrao: '2 níveis' },
-      { tipo: 'chips', rotulo: 'Ramos principais', opcoes: ['O Assistente decide', '4', '5', '6'], padrao: 'O Assistente decide', dica: 'Até seis ramos cabem bem no projetor.' },
-      { tipo: 'chave', rotulo: 'Também uma versão com ramos em branco', detalhe: 'Para a turma completar na revisão.', ligada: false },
-      DETALHES('Quero um ramo só para os erros mais comuns da turma.'),
-    ],
-    extras: ['anexo', 'web'],
-    vem: ['Conceito central e ramos', 'A página do material em cada ramo', 'Versão para projetar', 'Versão em preto e branco para imprimir'],
-    amostra: [null, 'Cada ramo leva a página de onde saiu: p. 131, 142, 145, 150 e 152.', 'Em paisagem, com letra grande e fundo branco.', 'A mesma hierarquia, sem cor, em uma página A4.'],
-    previa: { titulo: 'Mapa mental · estequiometria · 2ºB', resumo: 'Cinco ramos em dois níveis, do capítulo 7.', itens: [
-      { rotulo: 'Ramo 1', texto: 'Lei de Lavoisier: a massa se conserva.', pagina: 131, em: 0 },
-      { rotulo: 'Ramo 2', texto: 'Mol e massa molar: a ponte entre grama e quantidade.', pagina: 145, em: 0 },
-      { rotulo: 'Ramo 3', texto: 'Proporção: os coeficientes da equação balanceada.', pagina: 142, em: 0 },
-      { rotulo: 'Ramo 4', texto: 'Reagente limitante: o que acaba primeiro manda na conta.', pagina: 150, em: 0 },
-      { rotulo: 'Ramo 5', texto: 'Rendimento: teórico e real.', pagina: 152, em: 0 },
-    ] },
-  },
-  {
-    id: 'experimento', nome: 'Roteiro de experimento', categoria: 'preparar', icon: FlaskConical,
-    curta: 'Passo a passo, com segurança e descarte', texto: 'Prática com o que você tem à mão: materiais, passo a passo, segurança e descarte, e as perguntas do relatório.',
-    promessa: 'Todo roteiro traz a seção de segurança. Confira antes de levar à turma.',
-    saida: ['PDF'], fonte: 'Material da escola, com a página', exemplo: 'Um experimento simples de conservação da massa com vinagre e bicarbonato',
-    busca: 'experimento científico laboratório prática aula prática', verbo: 'Gerar roteiro',
-    campos: [
-      { tipo: 'turma', padrao: '1c' }, { tipo: 'material' },
-      { tipo: 'texto', rotulo: 'Assunto', valor: 'Conservação da massa', exemplo: 'Ex.: Conservação da massa numa reação que solta gás', larga: true },
-      { tipo: 'longo', grupo: 'oque', rotulo: 'O que você tem à mão', valor: 'Vinagre, bicarbonato, garrafa PET, balão e uma balança de cozinha.', exemplo: 'Vinagre, bicarbonato, garrafa PET, balão e uma balança de cozinha.', opcional: true },
-      { tipo: 'cartoes', id: 'onde', rotulo: 'Onde vai ser', padrao: 'sala', opcoes: [
-        { id: 'sala', nome: 'Sala de aula', detalhe: 'Sem fogo, sem ácido, sem vidraria' },
-        { id: 'laboratorio', nome: 'Laboratório', detalhe: 'Vidraria e reagentes, com óculos e avental' },
-        { id: 'demonstracao', nome: 'Demonstração sua', detalhe: 'Só você manipula; pode ter aquecimento' },
-      ] },
-      { tipo: 'chips', rotulo: 'Como a turma se divide', opcoes: ['Duplas', 'Grupos de 4', 'Grupos de 6'], padrao: 'Grupos de 4', dica: 'Define as quantidades de material.', quando: { campo: 'onde', diferente: 'demonstracao' } },
-      { tipo: 'chips', rotulo: 'Tempo', opcoes: ['20 min', '50 min', '100 min'], padrao: '50 min', dica: 'Veio do seu calendário.' },
-      BNCC,
-      DETALHES('Quero que cada grupo escreva a hipótese antes e compare a massa com a garrafa aberta e fechada.'),
-    ],
-    extras: ['anexo', 'web'],
-    vem: ['Objetivo e hipótese', 'Materiais e quantidades', 'Passo a passo', 'Segurança e descarte', 'Perguntas para o relatório'],
-    amostra: ['Verificar se a massa se conserva numa reação que solta gás. Cada grupo escreve a hipótese antes de começar.', null, null, null, null],
-    previa: { titulo: 'Roteiro · conservação da massa · 1ºC', resumo: '50 minutos, em sala, grupos de quatro. Materiais de cozinha.', itens: [
-      { rotulo: 'Materiais', texto: 'Garrafa PET de 500 mL, balão, 50 mL de vinagre, 5 g de bicarbonato, balança de cozinha.', em: 1 },
-      { rotulo: 'Passo a passo', texto: 'Pesar o sistema fechado antes e depois da reação; repetir com a garrafa aberta e comparar.', pagina: 131, em: 2 },
-      { rotulo: 'Segurança', texto: 'Óculos de proteção; não apontar a garrafa para o rosto; o resíduo vai para a pia com água corrente.', em: 3 },
-      { rotulo: 'Relatório', texto: 'Por que a massa "sumiu" com a garrafa aberta? O que isso diz sobre a lei de Lavoisier?', pagina: 132, em: 4 },
-    ] },
-  },
-  {
     id: 'adaptacao', nome: 'Adaptação', categoria: 'preparar', icon: SlidersHorizontal, especial: 'adaptacao', pendente: true,
-    curta: 'Você escolhe o tipo de adaptação', texto: 'A mesma prova, atividade ou material em outra forma. Você escolhe o tipo de adaptação; o conteúdo cobrado não muda.',
-    promessa: 'Você escolhe o tipo de adaptação. O sistema não pede nem guarda diagnóstico, e a versão nasce esperando você.',
+    curta: 'Você escolhe o tipo de adaptação', texto: 'O conteúdo cobrado não muda: a mesma prova, atividade ou material em outra forma.',
+    promessa: 'Você escolhe o tipo de adaptação. O sistema não pede nem guarda diagnóstico, e a versão nasce para aprovar.',
     saida: ['PDF'], fonte: 'O artefato que você escolher', exemplo: 'Adapta a lista de mol para fonte ampliada e enunciado direto',
     busca: 'adaptar material avaliações adaptadas acessibilidade inclusão nível de texto fonte ampliada', verbo: 'Gerar versão adaptada',
-    /* D35 e D67: nenhum campo de texto. O formulário recebe o TIPO de adaptação, nunca a condição de um aluno. */
+    /* D35 e D67: nenhum campo de texto. O formulário recebe o TIPO de adaptação, nunca a condição de um aluno.
+       Desde a 13ª rodada a Adaptação abre a janela Adaptar (turmma/adaptar.tsx: o quê · que adaptação · para quem);
+       estes campos ficam para o `FormAdaptacao` e para o endereço antigo. */
     campos: [
       { tipo: 'turma' },
-      { tipo: 'artefato', id: 'origem', rotulo: 'O que adaptar', de: ['prova', 'atividade', 'diagnostica', 'material', 'proposta'], padrao: 'Prova de estequiometria · 2ºB', dica: 'Vem da sua biblioteca. O padrão é o último que você gerou para a turma.' },
+      { tipo: 'artefato', id: 'origem', rotulo: 'O que adaptar', de: ['prova', 'atividade', 'material'], padrao: 'Prova de estequiometria · 2ºB', dica: 'Vem de Criados. O padrão é o último que você gerou para a turma.' },
       { tipo: 'arquivo', rotulo: 'Ou envie um arquivo de fora', dica: 'PDF ou Word (.docx), até 30 MB.', opcional: true, declaracao: true },
       { tipo: 'cartoes', id: 'tipos', rotulo: 'Tipo de adaptação', multiplo: true, padroes: ADAPTACOES_REGISTRADAS,
         opcoes: TIPOS_ADAPTACAO.map((t) => (ADAPTACOES_REGISTRADAS.includes(t.id) ? { ...t, etiqueta: 'da coordenação' } : t)),
         dica: 'Vêm marcadas as que a coordenação registrou para a turma. A adaptação muda a forma, nunca o que é cobrado, e o sistema não pede nem guarda diagnóstico.' },
     ],
-    vem: ['As mesmas questões, em outra forma', 'Cabeçalho com o tipo de adaptação', 'Fica pendente até você aprovar'],
+    vem: ['As mesmas questões, em outra forma', 'Cabeçalho com o tipo de adaptação', 'Fica Para aprovar até você aprovar'],
     amostra: [null, null, 'Nada chega ao aluno antes da sua aprovação.'],
     previa: { titulo: 'Versão adaptada · Prova de estequiometria · 2ºB', resumo: 'Mesmas dez questões, outra forma.', itens: [
-      { rotulo: 'Cabeçalho', texto: 'Versão adaptada: fonte ampliada e tempo adicional (+50%).', em: 1 },
+      { rotulo: 'Cabeçalho', texto: 'Versão adaptada: fonte ampliada e enunciado direto.', em: 1 },
       { rotulo: 'Questão 1', texto: 'Queimam-se 24 g de carbono. Qual é a massa de CO₂ formada?', pagina: 142, em: 0 },
       { rotulo: 'Questão 3', texto: 'Há 54 g de Al e 71 g de Cl₂. Qual reagente acaba primeiro?', pagina: 151, em: 0 },
     ] },
@@ -462,7 +292,7 @@ export const CATALOGO: Ferramenta[] = [
     curta: 'Gabarito, versões e página citada', texto: 'Questões do material da escola, com gabarito, versões embaralhadas e a página de onde saiu cada questão.',
     promessa: 'Questões do material da escola, com gabarito e a página de cada uma.',
     saida: ['PDF'], fonte: 'Material da escola, com a página', exemplo: 'Monta uma prova de estequiometria pro 2ºB, dez questões',
-    busca: 'prova avaliação teste bimestral saeb questões objetivas', verbo: 'Gerar prova',
+    busca: 'prova avaliação teste bimestral saeb questões objetivas diagnóstica sondagem', verbo: 'Gerar prova',
     campos: [
       { tipo: 'turma' }, { tipo: 'material' },
       { tipo: 'texto', id: 'tema', rotulo: 'Tema', valor: 'Estequiometria', exemplo: 'Ex.: Estequiometria, do balanceamento ao rendimento', larga: true },
@@ -472,6 +302,7 @@ export const CATALOGO: Ferramenta[] = [
       ] },
       { tipo: 'chips', rotulo: 'Dificuldade', opcoes: ['Fácil', 'Média', 'Difícil', 'Misturada'], padrao: 'Misturada', dica: 'Misturada: 3 fáceis, 5 médias e 2 difíceis.' },
       { tipo: 'chips', rotulo: 'Versões', opcoes: ['1', '2', '3', '4'], padrao: '1', dica: 'Mesmas questões, ordem e alternativas embaralhadas.' },
+      { tipo: 'chave', id: 'diagnostica', rotulo: 'Não vale nota (diagnóstica)', detalhe: 'Sonda o que a turma já sabe antes do capítulo.', ligada: false, avancado: true },
       /* desceu para "Mais opções" quando os tipos de questão passaram de quatro para seis: assim a Prova continua cabendo na janela sem rolar */
       { tipo: 'chave', rotulo: 'Com gabarito comentado', ligada: true, avancado: true },
       { tipo: 'chips', rotulo: 'Estilo das questões', opcoes: ['Do material', 'ENEM', 'Vestibular', 'SAEB'], padrao: 'Do material', avancado: true, larga: true },
@@ -492,16 +323,16 @@ export const CATALOGO: Ferramenta[] = [
     curta: 'Exercícios ligados à turma', texto: 'Exercícios do fácil ao difícil, com o tipo de questão que você escolher e gabarito comentado.',
     promessa: 'Exercícios do capítulo, na ordem e nos tipos que você escolher, com gabarito comentado.',
     saida: ['PDF'], fonte: 'Material da escola, com a página', exemplo: 'Uma lista de oito exercícios de mol e massa molar, do fácil ao difícil',
-    busca: 'lista de exercícios atividade folha de exercícios questões tarefa dever de casa taxonomia de bloom', verbo: 'Gerar atividade',
+    busca: 'lista de exercícios atividade folha de exercícios questões tarefa dever de casa recuperação reforço revisão', verbo: 'Gerar atividade',
     campos: [
       { tipo: 'turma' }, { tipo: 'material' },
       { tipo: 'texto', rotulo: 'Tema', valor: 'Mol e massa molar', exemplo: 'Ex.: Mol e massa molar, da conversão ao número de moléculas', larga: true },
       { tipo: 'contadores', rotulo: 'Tipo de questão', dica: 'O total é o número de exercícios da lista.', itens: [
-        { nome: 'Objetiva', valor: 5 }, { nome: 'Discursiva curta', valor: 2 }, { nome: 'Verdadeiro ou falso', valor: 1 },
+        { nome: 'Objetiva', valor: 8 }, { nome: 'Discursiva curta', valor: 0 }, { nome: 'Verdadeiro ou falso', valor: 0 },
         { nome: 'Relacionar colunas', valor: 0 }, { nome: 'Completar lacunas', valor: 0 }, { nome: 'Ordenar', valor: 0 },
       ] },
       { tipo: 'chips', rotulo: 'Dificuldade', opcoes: ['Do fácil ao difícil', 'Misturada', 'Só fácil', 'Só média', 'Só difícil'], padrao: 'Do fácil ao difícil', larga: true },
-      { tipo: 'chips', rotulo: 'Para fazer', opcoes: ['Em aula', 'Para casa', 'Revisão para a prova'], padrao: 'Para casa', dica: 'Para casa, vai junto um exemplo resolvido.', larga: true },
+      { tipo: 'chips', rotulo: 'Para fazer', opcoes: ['Em aula', 'Para casa', 'Revisão para a prova', 'Recuperação'], padrao: 'Para casa', dica: 'Para casa, vai junto um exemplo resolvido.', larga: true },
       { tipo: 'chave', rotulo: 'Com gabarito comentado', ligada: true },
       BNCC,
       DETALHES('A turma confunde massa molar com massa atômica: prática curta, um passo por vez, com a tabela periódica ao lado.'),
@@ -516,145 +347,60 @@ export const CATALOGO: Ferramenta[] = [
     ] },
   },
   {
-    id: 'diagnostica', nome: 'Avaliação diagnóstica', categoria: 'avaliar', icon: SearchCheck,
-    curta: 'O que a turma já sabe antes do capítulo', texto: 'Sondagem curta antes de começar um assunto: cada questão mira um pré-requisito, e o resultado sai por habilidade.',
-    promessa: 'Questões que sondam pré-requisito. Depois de aplicada, o resultado aparece por habilidade em Minhas turmas.',
-    saida: ['PDF'], fonte: 'Material da escola, com a página', exemplo: 'Uma diagnóstica de oito questões sobre o que o 1ºC precisa saber antes de estequiometria',
-    busca: 'avaliação diagnóstica sondagem pré-teste nivelamento', verbo: 'Gerar diagnóstica',
-    campos: [
-      { tipo: 'turma', padrao: '1c' }, { tipo: 'material', dica: 'As questões podem sair de capítulos e de anos anteriores do material da escola.' },
-      { tipo: 'texto', rotulo: 'O que você vai começar a ensinar', valor: 'Estequiometria', exemplo: 'Ex.: Estequiometria (começo em 06/10)', larga: true },
-      { tipo: 'habilidades', grupo: 'como', rotulo: 'Pré-requisitos para sondar', modo: 'prerequisito', opcional: true },
-      { tipo: 'chips', rotulo: 'Questões', opcoes: ['6', '8', '10', '12'], padrao: '8', personalizado: 'numero', outro: 'Quantas?', dica: 'Pelo menos duas por pré-requisito, para o resultado por habilidade valer.' },
-      { tipo: 'cartoes', rotulo: 'Tipo de questão', padrao: 'objetiva', opcoes: [
-        { id: 'objetiva', nome: 'Só objetiva', detalhe: 'O Assistente corrige e você aprova o diagnóstico' },
-        { id: 'mista', nome: 'Objetiva e discursiva curta', detalhe: 'A discursiva é você quem corrige: a IA não corrige texto de aluno' },
-      ] },
-      { tipo: 'chips', rotulo: 'Dificuldade', opcoes: ['Fácil', 'Média', 'Misturada'], padrao: 'Fácil', avancado: true, dica: 'Sondagem mede o que veio antes: o padrão é fácil.' },
-      DETALHES('Quero sondar proporção, leitura de equação química e uso da tabela periódica. Nada de mol ainda.'),
-    ],
-    extras: ['anexo'],
-    vem: ['Questões por pré-requisito', 'O que cada questão sonda', 'Gabarito', 'Depois de aplicada: resultado por habilidade'],
-    amostra: [null, 'Questões 1 e 2: proporção. Questões 3 e 4: leitura de equação.', 'Oito respostas, cada uma com a justificativa em uma linha.', 'Em Minhas turmas, o acerto do 1ºC em cada pré-requisito.'],
-    previa: { titulo: 'Diagnóstica · antes de estequiometria · 1ºC', resumo: 'Oito questões objetivas, quatro pré-requisitos.', itens: [
-      { rotulo: 'Proporção', texto: 'Se 2 ovos fazem 12 biscoitos, quantos ovos para 30 biscoitos?', pagina: 12, em: 0 },
-      { rotulo: 'Equação', texto: 'Qual das equações abaixo está balanceada?', pagina: 138, em: 0 },
-      { rotulo: 'Tabela periódica', texto: 'Qual é a massa atômica aproximada do oxigênio?', pagina: 44, em: 0 },
-    ] },
-  },
-  {
     id: 'simulado', nome: 'Simulado ENEM', categoria: 'avaliar', icon: Target,
-    curta: 'Do banco público de questões', texto: 'Questões oficiais do ENEM, por assunto e por habilidade, com o ano e o número de cada uma.',
-    promessa: 'Só questões de provas oficiais do ENEM, com o ano, o número e o gabarito oficial.',
-    saida: ['PDF'], fonte: 'Banco público do ENEM', exemplo: 'Simulado de 15 questões de Química do ENEM sobre cálculo estequiométrico',
+    curta: 'No formato do ENEM', texto: 'Questões no formato do ENEM, por assunto e por habilidade da matriz, com gabarito e cartão-resposta.',
+    promessa: 'Questões no formato do ENEM, por área e assunto, com gabarito e cartão-resposta.',
+    saida: ['PDF'], fonte: 'Matriz de referência do ENEM', exemplo: 'Simulado de 15 questões de Química do ENEM sobre cálculo estequiométrico',
     busca: 'simulado enem vestibular questões de prática provas anteriores', verbo: 'Montar simulado',
     campos: [
-      { tipo: 'cartoes', id: 'modo', grupo: 'oque', rotulo: 'Que simulado', padrao: 'assunto', opcoes: [
-        { id: 'assunto', nome: 'Por assunto', detalhe: 'Você escolhe o tema e o número de questões' },
-        { id: 'caderno', nome: 'Caderno da área', detalhe: '45 questões, na proporção da prova oficial' },
-      ] },
       { tipo: 'turma' },
-      { tipo: 'chips', id: 'area', grupo: 'oque', rotulo: 'Área', opcoes: ['Ciências da Natureza', 'Matemática', 'Linguagens', 'Ciências Humanas'], padrao: 'Ciências da Natureza', larga: true },
-      { tipo: 'chips', grupo: 'oque', rotulo: 'Disciplinas', opcoes: ['Química', 'Física', 'Biologia'], multiplo: true, padroes: ['Química'], dica: 'Veio da turma. Sem marcar as outras, não entra questão de Física nem de Biologia.', larga: true, quando: { campo: 'area', igual: 'Ciências da Natureza' } },
-      { tipo: 'texto', rotulo: 'Assunto', valor: 'Cálculo estequiométrico', exemplo: 'Ex.: Cálculo estequiométrico', opcional: true, dica: 'Em branco, vale a disciplina inteira.', larga: true, quando: { campo: 'modo', igual: 'assunto' } },
-      { tipo: 'chips', rotulo: 'Questões', opcoes: ['10', '15', '30', '45'], padrao: '15', personalizado: 'numero', outro: 'Quantas?', quando: { campo: 'modo', igual: 'assunto' } },
-      { tipo: 'chips', rotulo: 'Anos das provas', opcoes: ['2019 a 2025', '2015 a 2025', 'Desde 2009'], padrao: '2019 a 2025', larga: true },
+      { tipo: 'texto', rotulo: 'Assunto', valor: 'Cálculo estequiométrico', exemplo: 'Ex.: Cálculo estequiométrico', opcional: true, dica: 'Ciências da Natureza, pela disciplina da turma. Em branco, vale a disciplina inteira.', larga: true },
+      { tipo: 'chips', id: 'questoes', rotulo: 'Questões', opcoes: ['5', '10', '15'], padrao: '15' },
       { tipo: 'chave', rotulo: 'Com cartão-resposta para imprimir', ligada: true },
     ],
-    vem: ['Questões oficiais, com ano e número', 'Gabarito oficial', 'Habilidade da matriz do ENEM', 'Cartão-resposta'],
-    amostra: [null, 'O do INEP, questão a questão.', 'H17, H24 e H25, de Ciências da Natureza.', 'Folha de marcar com quinze linhas, para imprimir.'],
-    previa: { titulo: 'Simulado ENEM · cálculo estequiométrico · 2ºB', resumo: 'Quinze questões do banco público, com o ano e o número de cada uma.', itens: [
-      { texto: 'ENEM 2022, questão 117 — produção de ferro-gusa e massa de CO₂ emitida.', em: 0 },
-      { texto: 'ENEM 2019, questão 103 — pureza de reagente e rendimento.', em: 0 },
-      { texto: 'ENEM 2021, questão 124 — combustão do etanol e proporção em mol.', em: 0 },
-    ] },
-  },
-  {
-    id: 'proposta', nome: 'Proposta de redação', categoria: 'avaliar', icon: Quote,
-    curta: 'Tema, textos motivadores e rubrica', texto: 'Tema, comando e textos motivadores do material da escola, com a rubrica por competência já pronta.',
-    promessa: 'A proposta sai com a rubrica antes de qualquer aluno escrever. A correção é sua: a IA não corrige redação.',
-    saida: ['PDF'], fonte: 'Material da escola, com a página', exemplo: 'Proposta de redação sobre descarte de resíduos químicos nas cidades, modelo ENEM',
-    busca: 'proposta de redação tema de redação textos motivadores dissertação', verbo: 'Gerar proposta',
-    campos: [
-      { tipo: 'turma', padrao: '2a' }, { tipo: 'material' },
-      { tipo: 'longo', rotulo: 'Tema ou recorte', valor: 'O descarte de resíduos químicos nas cidades brasileiras',
-        exemplo: 'O descarte de pilhas e reagentes vencidos nas cidades: de quem é a responsabilidade? Quero que usem o que viram no capítulo de metais pesados.' },
-      { tipo: 'arquivo', rotulo: 'Já tem uma proposta pronta?', dica: 'PDF ou Word (.docx). Ela vira uma proposta editável, com a rubrica. Foto ainda não entra.', opcional: true, declaracao: true },
-      { tipo: 'cartoes', rotulo: 'Gênero', padrao: 'enem', dica: 'A rubrica segue o gênero: não existe um campo de rubrica para preencher.',
-        personalizado: { nome: 'Outro gênero', detalhe: 'Carta aberta, resenha, crônica, conto: escreva qual', exemplo: 'Ex.: Carta aberta ao prefeito' }, opcoes: [
-        { id: 'enem', nome: 'Dissertativo-argumentativo', detalhe: 'No modelo do ENEM; a rubrica sai com as cinco competências' },
-        { id: 'opiniao', nome: 'Artigo de opinião', detalhe: 'Tese, argumentos e um leitor definido' },
-        { id: 'relatorio', nome: 'Relatório científico', detalhe: 'Objetivo, método, resultado e conclusão' },
-      ] },
-      { tipo: 'chips', rotulo: 'Tamanho do texto', opcoes: ['Até 30 linhas (ENEM)', '15 a 20 linhas', 'Uma página'], padrao: 'Até 30 linhas (ENEM)', dica: 'Entra no comando e define a folha de redação.', larga: true },
-      { tipo: 'chave', id: 'motivadores', rotulo: 'Incluir textos motivadores', detalhe: 'Só do material da escola ou de fonte aberta, com a referência.', ligada: true },
-      { tipo: 'chips', rotulo: 'Quantos textos motivadores', opcoes: ['2', '3', '4'], padrao: '2', quando: { campo: 'motivadores', igual: 'sim' } },
-      { tipo: 'chave', rotulo: 'Com folha de redação para imprimir', ligada: true },
-    ],
-    extras: ['web'],
-    vem: ['Tema e comando', 'Textos motivadores, com a fonte', 'Rubrica por competência', 'Folha de redação'],
-    amostra: [null, null, null, 'Trinta linhas numeradas, com o cabeçalho da escola.'],
-    previa: { titulo: 'Proposta de redação · resíduos químicos · 2ºA', resumo: 'Dissertativo-argumentativo, dois textos motivadores, rubrica de cinco competências.', itens: [
-      { rotulo: 'Comando', texto: 'A partir dos textos e do que você estudou, escreva sobre os caminhos para o descarte correto de resíduos químicos nas cidades.', em: 0 },
-      { rotulo: 'Texto 1', texto: 'Trecho sobre metais pesados em pilhas e baterias.', pagina: 188, em: 1 },
-      { rotulo: 'Texto 2', texto: 'Tabela de tempo de decomposição e risco de contaminação.', pagina: 190, em: 1 },
-      { rotulo: 'Rubrica', texto: 'Cinco competências, quatro níveis cada. Rascunho seu: edite antes de aplicar.', em: 2 },
-    ] },
-  },
-  {
-    id: 'importar', nome: 'Importar prova', categoria: 'avaliar', icon: FileInput,
-    curta: 'Seu PDF ou Word vira prova editável', texto: 'A prova que você já tem em PDF ou Word vira prova editável: questão a questão, com gabarito e habilidade.',
-    promessa: 'O arquivo vira uma prova editável na biblioteca. O original fica guardado junto.',
-    saida: ['PDF'], fonte: 'O arquivo que você enviar', exemplo: 'Importa a prova que eu anexei e liga cada questão a uma habilidade',
-    busca: 'importar prova pdf word digitalizar prova antiga', verbo: 'Importar',
-    campos: [
-      { tipo: 'aviso', topo: true, texto: 'Envie a prova em branco. Arquivo com nome ou resposta de aluno não entra.' },
-      { tipo: 'turma', padrao: '1c' },
-      /* D5: a declaração de origem é ato da professora — nasce sem nenhuma opção marcada. */
-      { tipo: 'arquivo', rotulo: 'Arquivo da prova', dica: 'PDF ou Word (.docx), até 30 MB.', declaracao: true, amostra: 'prova-modelos-2025.pdf' },
-      { tipo: 'chave', rotulo: 'Ligar cada questão a uma habilidade da BNCC', ligada: true },
-      { tipo: 'chave', rotulo: 'Reconhecer o gabarito, se vier no arquivo', ligada: true },
-      { tipo: 'arquivo', rotulo: 'Gabarito, se estiver em outro arquivo', dica: 'PDF ou Word (.docx).', opcional: true, avancado: true },
-    ],
-    vem: ['Prova editável, questão a questão', 'Gabarito reconhecido', 'Habilidade sugerida por questão', 'O arquivo original, guardado junto'],
-    amostra: [null, 'Oito das dez respostas vieram do arquivo.', 'Questão 1: EM13CNT201, modelos atômicos. Você confirma.', 'prova-modelos-2025.pdf fica ao lado da versão editável.'],
-    previa: { titulo: 'Prova importada · modelos atômicos · 1ºC', resumo: 'Dez questões reconhecidas em "prova-modelos-2025.pdf". Duas precisam da sua revisão.', itens: [
-      { rotulo: 'Questão 1', texto: 'Reconhecida: objetiva, cinco alternativas, gabarito C.', em: 0 },
-      { rotulo: 'Questão 4', texto: 'Tem imagem: confira se o esquema do átomo de Bohr veio inteiro.', em: 0 },
-      { rotulo: 'Questão 9', texto: 'Gabarito não encontrado no arquivo: marque a resposta certa.', em: 0 },
+    vem: ['Questões no formato do ENEM', 'Gabarito comentado', 'Habilidade da matriz do ENEM', 'Cartão-resposta'],
+    amostra: [null, 'Questão a questão, com a resolução.', 'H17, H24 e H25, de Ciências da Natureza.', 'Folha de marcar com uma linha por questão, para imprimir.'],
+    previa: { titulo: 'Simulado ENEM · cálculo estequiométrico · 2ºB', resumo: 'Quinze questões de Ciências da Natureza, no formato do ENEM.', itens: [
+      { texto: 'Produção de ferro-gusa e massa de CO₂ emitida.', em: 0 },
+      { texto: 'Pureza de reagente e rendimento.', em: 0 },
+      { texto: 'Combustão do etanol e proporção em mol.', em: 0 },
     ] },
   },
 
   /* ── Corrigir ─────────────────────────────────────────────────────────────────────────────── */
   {
     id: 'correcao', nome: 'Correção de objetiva', categoria: 'corrigir', icon: ClipboardCheck, pendente: true,
-    curta: 'Diagnóstico por habilidade', texto: 'O Assistente corrige a objetiva e monta o diagnóstico por habilidade. Só chega ao aluno depois que você aprova.',
+    curta: 'Diagnóstico por habilidade', texto: 'Só chega ao aluno depois que você aprova. O Assistente corrige e mostra o acerto por habilidade.',
     promessa: 'Correção e diagnóstico por habilidade. Nada chega ao aluno antes de você aprovar.',
     saida: ['PDF', 'XLSX'], fonte: 'As respostas da turma', exemplo: 'Corrige a prova objetiva do 2ºB e me mostra onde a turma travou',
-    busca: 'corretor correção automática gabarito cartão-resposta provas em papel', verbo: 'Revisar', para: '/professor/aprovar', acao: 'Revisar o lote do 2ºB',
-    /* Sem formulário por desenho: não é "preencher e gerar", é aprovação com registro (D33, D56). */
+    busca: 'corretor correção automática gabarito cartão-resposta provas em papel', verbo: 'Revisar', para: '/professor/ferramentas?corrigir=1', acao: 'Escolher a prova',
+    /* Sem formulário por desenho: não é "preencher e gerar", é escolher a prova que a turma entregou e aprovar as
+       notas, com registro (D33, D56). A objetiva se corrige sozinha quando a turma entrega. */
     campos: [], vem: [], previa: { titulo: '', resumo: '', itens: [] },
   },
   {
     id: 'redacao', nome: 'Redação e discursiva', categoria: 'corrigir', icon: FileText, especial: 'redacao',
-    curta: 'Rubrica e lote. A IA não corrige', texto: 'Rubrica antes da aplicação, lote organizado e correção cega. Quem corrige e escreve a devolutiva é você.',
+    curta: 'Rubrica e lote. A IA não corrige', texto: 'A IA não corrige: quem dá a nota é você. Rubrica antes da prova, lote anônimo e correção cega.',
     promessa: 'Rubrica antes da aplicação, lote organizado e correção cega. A IA não corrige nem dá nota.',
     saida: ['PDF'], fonte: 'O enunciado e o material da escola', exemplo: 'Rubrica para a questão discursiva sobre a lei de Lavoisier',
-    busca: 'corretor de redação rubrica discursiva correção cega critérios', verbo: 'Gerar rubrica',
+    busca: 'corretor de redação rubrica discursiva correção cega critérios proposta de redação tema', verbo: 'Gerar rubrica',
     /* D55: tudo aqui é sobre a resposta ESPERADA, antes da aplicação. Nenhum campo recebe texto de aluno. */
     campos: [
       { tipo: 'cartoes', id: 'para', grupo: 'oque', rotulo: 'Rubrica para', padrao: 'discursiva', opcoes: [
         { id: 'discursiva', nome: 'Questão discursiva', detalhe: 'Critérios tirados do enunciado e do capítulo' },
-        { id: 'redacao', nome: 'Redação', detalhe: 'Critérios por competência, do gênero da proposta' },
+        { id: 'redacao', nome: 'Redação', detalhe: 'Proposta, textos motivadores e critérios por competência' },
       ] },
       { tipo: 'turma', padrao: '1c' }, { tipo: 'material' },
       { tipo: 'longo', id: 'enunciado', rotulo: 'Enunciado da questão', quando: { campo: 'para', igual: 'discursiva' },
         valor: 'Explique a lei de Lavoisier e mostre, com um exemplo de reação, por que ela vale em sistema fechado.',
         exemplo: 'Cole o enunciado. Ex.: Explique a lei de Lavoisier e mostre, com um exemplo, por que ela vale em sistema fechado.' },
-      { tipo: 'artefato', id: 'proposta', rotulo: 'Proposta', de: ['proposta'], dica: 'A proposta já sai com a rubrica por competência. Aqui você ajusta os níveis.', quando: { campo: 'para', igual: 'redacao' } },
+      { tipo: 'longo', id: 'tema', rotulo: 'Tema da redação', quando: { campo: 'para', igual: 'redacao' },
+        valor: 'Caminhos para o descarte correto de resíduos químicos nas cidades brasileiras',
+        exemplo: 'Ex.: Caminhos para o descarte correto de resíduos químicos nas cidades brasileiras' },
+      { tipo: 'chave', rotulo: 'Com textos motivadores', detalhe: 'Do material da escola, com a página.', ligada: true, quando: { campo: 'para', igual: 'redacao' } },
       { tipo: 'longo', grupo: 'oque', rotulo: 'O que você cobra', opcional: true, dica: 'É sobre a resposta esperada, antes de aplicar. Nunca sobre o texto de um aluno.',
         valor: 'Enunciar a lei com as próprias palavras, dar um exemplo com as massas e explicar o sistema fechado. Ortografia não entra.',
-        exemplo: 'Enunciar a lei com as próprias palavras, dar um exemplo com as massas e explicar o sistema fechado. Ortografia não entra.' },
+        exemplo: 'Ex.: o que conta mais e o que não entra na nota.' },
       { tipo: 'chips', id: 'criterios', rotulo: 'Critérios', opcoes: ['3', '4', '5'], padrao: '4', quando: { campo: 'para', igual: 'discursiva' } },
       { tipo: 'chips', id: 'niveis', rotulo: 'Níveis por critério', opcoes: ['3', '4'], padrao: '3' },
     ],
@@ -672,20 +418,61 @@ export const ferramenta = (id: string | undefined) => CATALOGO.find((f) => f.id 
 export const categoria = (id: CategoriaId) => CATEGORIAS.find((c) => c.id === id)!
 export const rotaDa = (f: Ferramenta) => f.para ?? `/professor/ferramentas/${f.id}`
 
+/* A ferramenta não é lugar (13ª rodada, 04/10/2026). Escolher uma (atalho da caixa ou "Mais") abre a CONVERSA nova
+   com o cartão dela já preenchido. Três têm outro caminho:
+   · Adaptação: a janela Adaptar em 3 passos, no Início (`/professor?adaptar=1&turma=`), que escolhe de Criados ou de
+     um anexo, o tipo de adaptação e para quem;
+   · Correção de objetiva: "Que prova corrigir?", ao lado da página Ferramentas (`/professor/ferramentas?corrigir=1`,
+     14ª rodada; antes a janela Mais), com os lotes que esperam o professor; escolher um leva às notas
+     (/professor/aprovar/<id>);
+   · Redação e discursiva: a página de 3 passos (D55). */
+export const ROTA_PROPRIA: Record<string, string> = { redacao: '/professor/ferramentas/redacao', correcao: '/professor/ferramentas?corrigir=1', adaptacao: '/professor?adaptar=1' }
+
+/** Para onde vai quem escolhe a ferramenta: a rota própria (com a turma), ou a conversa nova com o cartão para a turma. */
+export const destinoDa = (id: string, turmaId: string) => {
+  const propria = ROTA_PROPRIA[id]
+  if (propria) return id === 'correcao' || !turmaId ? propria : `${propria}${propria.includes('?') ? '&' : '?'}turma=${encodeURIComponent(turmaId)}`
+  return `/professor/conversa/nova?ferramenta=${encodeURIComponent(id)}${turmaId ? `&turma=${encodeURIComponent(turmaId)}` : ''}`
+}
+
+/** Os documentos antigos de ferramentas que juntaram com outra passam a ser do tipo de agora. */
+export const TIPO_DE_AGORA: Record<string, string> = { periodo: 'plano', recuperacao: 'atividade', mapa: 'material', diagnostica: 'prova', proposta: 'redacao' }
+export const tipoDeAgora = (de: string) => TIPO_DE_AGORA[de] ?? de
+
+/** Os endereços antigos de ferramentas (/professor/ferramentas/:id): os ids e os nomes por extenso que juntaram com
+    outra vão para ela; o que saiu (Importar prova, Projeto, Roteiro de experimento) não tem para onde ir. */
+const APELIDOS: Record<string, string> = {
+  'mapa-mental': 'mapa', planejamento: 'periodo', 'planejamento-do-periodo': 'periodo', 'plano-de-recuperacao': 'recuperacao',
+  'plano-recuperacao': 'recuperacao', 'avaliacao-diagnostica': 'diagnostica', 'proposta-de-redacao': 'proposta', 'proposta-redacao': 'proposta',
+  'plano-de-aula': 'plano', 'material-didatico': 'material', 'atividade-e-lista': 'atividade', lista: 'atividade', 'correcao-de-objetiva': 'correcao',
+  'simulado-enem': 'simulado', 'redacao-e-discursiva': 'redacao',
+}
+/** A ferramenta de agora para um id de endereço (antigo ou não), e se ela abre como mapa mental. Sem ferramenta: undefined. */
+export function ferramentaDoEndereco(id: string | null | undefined): { id: string; mapa: boolean } | undefined {
+  if (!id) return undefined
+  const antigo = APELIDOS[id] ?? id
+  const agora = tipoDeAgora(antigo)
+  return ferramenta(agora) ? { id: agora, mapa: antigo === 'mapa' } : undefined
+}
+
+/** O que vai para a turma (e por isso passa por "Aprovar e enviar"). Plano e rubrica são só do professor. */
+export const VAI_PARA_TURMA = ['prova', 'atividade', 'material', 'apresentacao', 'simulado', 'adaptacao']
+
 /* O QUE NÃO É FERRAMENTA: o Assistente responde na conversa. Na Teachy cada item destes é uma ferramenta com
    formulário; aqui é um pedido. A tela mostra a lista para a professora que vem de lá não ficar procurando o botão.
-   O que ela quiser guardar, salva da conversa para a biblioteca. */
+   O que ela quiser guardar, salva da conversa para a biblioteca. Os pedidos não falam de uma disciplina: valem para
+   a turma escolhida em Ferramentas (que vai junto para a caixa), e os que terminam em "sobre " pedem o tema. */
 export const SO_PEDIR: { nome: string; pedido: string; busca: string }[] = [
-  { nome: 'Ideias de atividade e dinâmica', pedido: 'Me dá três ideias de atividade em grupo sobre reagente limitante, de 20 minutos cada', busca: 'ideias de atividades dinâmicas jogos educativos brincadeiras' },
-  { nome: 'Exemplos do dia a dia', pedido: 'Exemplos do cotidiano para explicar mol a uma turma de 2º ano', busca: 'exemplos contextualizados tornar relevante transposição didática' },
+  { nome: 'Ideias de atividade e dinâmica', pedido: 'Me dá três ideias de atividade em grupo, de 20 minutos cada, sobre ', busca: 'ideias de atividades dinâmicas jogos educativos brincadeiras' },
+  { nome: 'Exemplos do dia a dia', pedido: 'Exemplos do dia a dia para explicar à turma ', busca: 'exemplos contextualizados tornar relevante transposição didática' },
   { nome: 'Questões sobre um texto ou PDF', pedido: 'Faz cinco questões de interpretação sobre o texto que vou anexar', busca: 'questões sobre um texto vídeo pdf interpretação' },
-  { nome: 'Resumir um texto', pedido: 'Resume em dez linhas, para o 9ºA, o texto que vou anexar', busca: 'resumo de texto resumo de vídeo resumir' },
+  { nome: 'Resumir um texto', pedido: 'Resume em dez linhas, para a turma, o texto que vou anexar', busca: 'resumo de texto resumo de vídeo resumir' },
   { nome: 'Reescrever em linguagem mais direta', pedido: 'Reescreve este enunciado em frases curtas, uma instrução por vez: ', busca: 'reescritor de texto adaptador de nível simplificar' },
-  { nome: 'Perguntas por nível de dificuldade', pedido: 'Seis perguntas sobre a lei de Lavoisier, da lembrança à avaliação', busca: 'taxonomia de bloom perguntas quem sou eu flashcards' },
-  { nome: 'Explicar uma habilidade da BNCC', pedido: 'O que a habilidade EM13CNT101 pede, em palavras simples, e como ela aparece no capítulo 7?', busca: 'bncc descomplicada habilidade competência' },
-  { nome: 'Tabela de dados para a aula', pedido: 'Monta uma tabela com a massa molar dos vinte primeiros elementos', busca: 'tabela de apoio dados planilha' },
-  { nome: 'Recado para as famílias', pedido: 'Escreve um recado curto para as famílias do 2ºB avisando a prova de 25/09 e o que estudar', busca: 'e-mail email escolar comunicado bilhete recado pais responsáveis' },
+  { nome: 'Perguntas por nível de dificuldade', pedido: 'Seis perguntas, da lembrança à avaliação, sobre ', busca: 'taxonomia de bloom perguntas quem sou eu flashcards' },
+  { nome: 'Explicar uma habilidade da BNCC', pedido: 'O que pede, em palavras simples, a habilidade da BNCC ', busca: 'bncc descomplicada habilidade competência' },
+  { nome: 'Tabela de dados para a aula', pedido: 'Monta uma tabela de apoio para a aula com ', busca: 'tabela de apoio dados planilha' },
+  { nome: 'Recado para as famílias', pedido: 'Escreve um recado curto para as famílias da turma avisando a próxima prova e o que estudar', busca: 'e-mail email escolar comunicado bilhete recado pais responsáveis' },
   { nome: 'Responder um e-mail', pedido: 'Me ajuda a responder este e-mail da coordenação: ', busca: 'resposta de e-mail email responder' },
-  { nome: 'Ideias para data ou evento da escola', pedido: 'Ideias de Química para a semana do meio ambiente, com o 9ºA', busca: 'datas comemorativas confraternizações evento feira' },
-  { nome: 'Tirar uma dúvida de conteúdo', pedido: 'Qual o jeito mais simples de explicar por que o reagente em excesso sobra?', busca: 'chatbot lara dúvida pergunta conversa' },
+  { nome: 'Ideias para data ou evento da escola', pedido: 'Ideias para a turma participar da semana do meio ambiente, ligadas à minha disciplina', busca: 'datas comemorativas confraternizações evento feira' },
+  { nome: 'Tirar uma dúvida de conteúdo', pedido: 'Qual o jeito mais simples de explicar ', busca: 'chatbot lara dúvida pergunta conversa' },
 ]

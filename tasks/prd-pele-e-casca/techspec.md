@@ -1,7 +1,7 @@
 # Tech Spec — Pele e casca
 
 **PRD:** `tasks/prd-pele-e-casca/prd.md`
-**Status:** revisada pelos guardiões em 13/10/2026 (rodada 4, `revisao-spec.md`) e aprovada por delegação do Joaquim; ele revê ao ler
+**Status:** implementada em 16/10/2026 (revisada pelos guardiões em 13/10/2026, rodada 4, `revisao-spec.md`, e aprovada por delegação do Joaquim; ele revê ao ler)
 **Tamanho:** acima do teto de 2.000 palavras, com aceite por delegação do Joaquim (12/10/2026). Motivo: a revisão
 dos guardiões exigiu por escrito as condições da onça (7b), a lista fechada do navegador (7), o que mora na entrada
 (7c) e a estratégia de testes (10). As tabelas longas ficaram no `docs/interface.md` e em `cenarios.md`

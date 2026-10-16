@@ -55,8 +55,8 @@ export const FUNCOES_ASSISTENTE: Funcao[] = [
 export const funcao = (id: FuncaoId) => FUNCOES_ASSISTENTE.find((f) => f.id === id)!
 
 const ASSISTENTE: Agente = {
-  id: 'assistente', nome: 'Assistente de ensino', curto: 'Assistente',
-  ladrilho: '#0D0D0D', corIcone: '#FFFFFF', icone: MessagesSquare,
+  id: 'assistente', nome: 'Assistente', curto: 'Assistente',
+  ladrilho: 'var(--color-grafite)', corIcone: 'var(--color-white)', icone: MessagesSquare,
   paraQuem: 'Professor',
   autonomia: 'prepara e avisa; o que vale só com você',
   resumo: 'É o agente do professor. Conversa e abre as ferramentas quando você pede; e, por conta própria, corrige as objetivas, prepara a versão adaptada e abre o seu dia. Tudo a partir do material da escola, com a página citada.',
@@ -71,7 +71,7 @@ export const AGENTES: Record<AgenteId, Agente> = {
   assistente: ASSISTENTE,
   tutor: {
     id: 'tutor', nome: 'Tutor', curto: 'Tutor',
-    ladrilho: '#E8732E', corIcone: '#0D0D0D', icone: MessageCircleQuestion,
+    ladrilho: 'var(--color-laranja)', corIcone: 'var(--color-sobre-cor)', icone: MessageCircleQuestion,
     paraQuem: 'Aluno, e o professor da turma',
     autonomia: 'conversa com o aluno e avisa você; sempre supervisionado',
     resumo: 'É o agente do aluno. Conduz por perguntas, nunca entrega a resposta pronta, cita a página. Avisa o professor o que viu no uso.',
@@ -81,15 +81,15 @@ export const AGENTES: Record<AgenteId, Agente> = {
     nuncaFaz: ['Entregar resposta pronta', 'Dizer que é uma pessoa ou simular afeto', 'Inferir emoção, humor ou atenção', 'Aconselhar em assunto pessoal delicado'],
   },
   analista: {
-    id: 'analista', nome: 'Analista de desempenho escolar', curto: 'Analista',
-    ladrilho: '#F0F0F0', corIcone: '#0D0D0D', icone: ChartColumn,
-    paraQuem: 'Coordenação',
+    id: 'analista', nome: 'Analista', curto: 'Analista',
+    ladrilho: 'var(--color-fundo-suave)', corIcone: 'var(--color-tinta)', icone: ChartColumn,
+    paraQuem: 'Coordenação e secretaria',
     autonomia: 'faz e avisa; sempre em agregado',
     resumo: 'É o agente da coordenação. Resumo de segunda de manhã e alerta na hora, por série e disciplina. Alerta é hipótese, nunca veredito.',
     altoRisco: true,
-    fazSozinho: ['Resumo semanal em agregado', 'Alerta quando um indicador passa do limiar'],
+    fazSozinho: ['Resumo semanal em agregado', 'Alerta quando um indicador passa do limiar', 'Responder perguntas sobre os números, com a fonte, em agregado'],
     esperaAprovacao: ['Abrir dado nominal: só você, com registro em auditoria'],
-    nuncaFaz: ['Ranquear professor ou medir adoção nominal', 'Contatar professor ou família', 'Recomendar decisão sobre professor ou aluno'],
+    nuncaFaz: ['Ranquear professor ou medir adoção nominal', 'Contatar professor ou família', 'Recomendar decisão sobre professor ou aluno', 'Mostrar nome de aluno à secretaria'],
   },
   // legado: a mesma identidade do Assistente, dizendo qual função dele está falando
   corretor: { ...ASSISTENTE, id: 'corretor', nome: 'Assistente · correção de objetiva' },

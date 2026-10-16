@@ -1,178 +1,311 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, FileDown, KeyRound } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Progress } from '@/components/ui/progress'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AvatarAgente, Estado, SeloIA } from '@/components/turmma/ia'
-import { BarraRotulada, Cartao, NotaMockup, NumeroPainel, Tela } from '@/components/turmma/tela'
-import { agente, type AgenteId } from '@/dados/agentes'
+import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Lock } from 'lucide-react'
+import { Botao, Busca, Carimbo, Secao, Segmentado, Selo } from '@/components/duo'
+import { AssinaturaIA } from '@/components/turmma/ia'
+import { PainelLado } from '@/components/turmma/painel-lado'
+import { useParametro } from '@/components/turmma/tela'
 import { HABILIDADES } from '@/dados/escola'
-import { Aviso, DialogoNominal, RegistroAuditoria, TabelaLista, type Coluna } from './_a-pecas'
+import { calcular } from '@/dados/consulta'
+import { CELULAS_ESCOLA, SERIES_ESCOLA, VOCABULARIO_ESCOLA } from '@/dados/numeros-escola'
+import { useAgora } from '@/dados/demo/nucleo'
+import { useRegistrosIADaDemo, type RegistroIA } from '@/dados/ia'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
+import { ComoCadaIATrabalha, FaixaPausas } from './Agentes'
+import { MES } from './Analista'
+import { FraseSemRanking, TabelaGrade, type ColunaGrade } from './_estrutura-pecas'
 
-/* Governança de IA (11.7) — a tela que fecha a venda e a que a coordenação abre na reunião.
-   Quatro números, a consulta "o que a IA gerou e quem aprovou" (regra 70, item 6) e o uso em AGREGADO.
-   Nenhuma coluna, filtro ou ordenação por professor (D45, D64). */
+/* A ABA IA DE REGISTROS (/coordenacao/registros, a primeira aba; 14ª rodada, 05/10/2026; plano ux-composicao, 1.4;
+   fluxos F2, F3, F10, F12, F15 e F40). Antes era a página IA (/coordenacao/ia, que chega aqui). A tela que fecha a
+   venda: o que a IA gerou e quem aprovou (regra 70).
+   · Na ponta direita da linha das abas (ResumoDoMes): "Gerou 412 · Aprovadas 389 · Esperando 23" e COMO CADA IA
+     TRABALHA (?ver=como, e ?ia=tutor para chegar já no Tutor), o painel com o pausar. Abaixo de 1280 px os números
+     descem para o topo da aba; abaixo de 768, o botão também. A linha do mês é a casa única do número.
+   · A Tabela "O que a IA gerou e quem aprovou": as linhas da demonstração (`useRegistrosIADaDemo`) entram NO TOPO e
+     substituem a linha "para aprovar" do mesmo documento. Um filtro de estado e a busca. "Aprovado por" é o registro
+     da aprovação, não indicador de uso: não existe filtro nem ordem por professor (D45, D64).
+   · A linha abre ao lado (?item=): o que foi gerado, o que foi mostrado, o que foi aberto, quem aprovou e quando (D56).
+   · VER POR SÉRIE abre ao lado (?serie=1, ou ?serie=<série> já acesa), sempre em agregado e com grupo mínimo (D45). */
+
+type Estado = 'espera' | 'aprovado' | 'recusado' | 'rascunho'
 
 type Registro = {
-  id: string; quando: string; agente: AgenteId; oQue: string; turma: string
-  estado: 'aprovado' | 'esperando' | 'rejeitado' | 'rascunho'; por?: string
+  id: string; quando: string; oQue: string; detalhe: string; turma: string; estado: Estado
+  por?: string; motivo?: string; novo?: boolean
+  /** a ordem do evento da demonstração (minutos desde o começo): AGORA só nos últimos minutos */
+  ordem?: number
+  /** a linha estática some quando a demonstração já decidiu o mesmo documento */
+  trocadaPor?: (r: RegistroIA) => boolean
 }
 
-// "Aprovado por" é o registro da validação humana — o nome de quem aprovou é o que a regra 70 exige.
-// Não é indicador de uso: a tabela não agrupa, não filtra e não ordena por pessoa.
 const REGISTROS: Registro[] = [
-  { id: 'r1', quando: '21/09 · 09h50', agente: 'corretor', oQue: 'Diagnóstico de 30 provas de estequiometria', turma: '2ºB', estado: 'esperando' },
-  { id: 'r2', quando: '21/09 · 09h12', agente: 'adaptador', oQue: 'Versão adaptada · fonte ampliada', turma: '2ºB', estado: 'aprovado', por: 'Camila Souza · 10h42' },
-  { id: 'r3', quando: '21/09 · 08h40', agente: 'assistente', oQue: 'Prova de estequiometria, 10 questões', turma: '2ºB', estado: 'rascunho' },
-  { id: 'r4', quando: '18/09 · 16h05', agente: 'corretor', oQue: 'Diagnóstico da lista de reações químicas', turma: '9ºA', estado: 'aprovado', por: 'Rafael Antunes · 18/09, 17h20' },
-  { id: 'r5', quando: '18/09 · 14h31', agente: 'adaptador', oQue: 'Versão adaptada · enunciado direto', turma: '1ºC', estado: 'rejeitado', por: 'Marta Figueiredo · 18/09, 15h02' },
-  { id: 'r6', quando: '18/09 · 11h18', agente: 'assistente', oQue: 'Plano de duas aulas · reagente limitante', turma: '2ºA', estado: 'rascunho' },
-  { id: 'r7', quando: '17/09 · 10h02', agente: 'corretor', oQue: 'Diagnóstico do simulado de Ciências', turma: '9ºA', estado: 'esperando' },
-  { id: 'r8', quando: '17/09 · 08h15', agente: 'planejador', oQue: 'Abertura do dia para 14 professores', turma: 'todas', estado: 'rascunho' },
+  { id: 'g1', quando: '21/09, 10h38', oQue: 'Versão adaptada', detalhe: 'prova de estequiometria', turma: '2ºB', estado: 'espera',
+    trocadaPor: (r) => r.oQue === 'Versão adaptada' && r.turma === '2ºB' && r.estado !== 'espera' },
+  { id: 'g2', quando: '21/09, 9h50', oQue: 'Correção', detalhe: '26 provas de mol e massa molar', turma: '2ºB', estado: 'espera',
+    // o mesmo lote (a prova de mol do 2ºB), seja qual for o número: aprovado, a linha troca em vez de somar uma geração
+    trocadaPor: (r) => r.oQue === 'Correção' && r.turma === '2ºB' && r.detalhe.includes('provas de mol e massa molar') },
+  { id: 'g4', quando: '18/09, 16h05', oQue: 'Correção', detalhe: 'lista de cinemática', turma: '2ºB', estado: 'aprovado', por: 'Rafael Antunes' },
+  { id: 'g5', quando: '18/09, 14h31', oQue: 'Versão adaptada', detalhe: 'texto de interpretação', turma: '8ºC', estado: 'recusado', por: 'Paulo Ribeiro', motivo: 'O enunciado direto mudou o que a questão cobrava.' },
+  { id: 'g6', quando: '18/09, 11h18', oQue: 'Plano de aula', detalhe: 'reagente limitante', turma: '2ºA', estado: 'rascunho' },
+  { id: 'g7', quando: '18/09, 11h02', oQue: 'Atividade', detalhe: 'lista de mol e massa molar', turma: '2ºA', estado: 'aprovado', por: 'Camila Souza' },
+  { id: 'g8', quando: '17/09, 10h02', oQue: 'Correção', detalhe: 'simulado de Ciências', turma: '9ºA', estado: 'espera' },
+  { id: 'g9', quando: '16/09, 14h20', oQue: 'Correção', detalhe: 'atividade de vetores', turma: '2ºB', estado: 'aprovado', por: 'Rafael Antunes' },
+  { id: 'g10', quando: '15/09, 9h40', oQue: 'Prova', detalhe: 'ligações químicas', turma: '1ºC', estado: 'aprovado', por: 'Camila Souza' },
+  { id: 'g11', quando: '14/09, 16h12', oQue: 'Versão adaptada', detalhe: 'lista de equações', turma: '2ºB', estado: 'aprovado', por: 'Camila Souza' },
+  { id: 'g12', quando: '11/09, 8h55', oQue: 'Atividade', detalhe: 'leitura do capítulo 4', turma: '8ºC', estado: 'aprovado', por: 'Paulo Ribeiro' },
 ]
 
-const ROTULO_ESTADO = {
-  aprovado: <Estado tipo="ok">Aprovado</Estado>,
-  esperando: <Estado tipo="pendente">Esperando</Estado>,
-  rejeitado: <Estado tipo="erro">Rejeitado</Estado>,
-  rascunho: <Estado tipo="contorno">Rascunho do professor</Estado>,
+const ESTADO: Record<Estado, { rotulo: string; familia: 'amarelo' | 'verde' | 'vermelho' | 'neutro' }> = {
+  espera: { rotulo: 'Para aprovar', familia: 'amarelo' },
+  aprovado: { rotulo: 'Aprovado', familia: 'verde' },
+  recusado: { rotulo: 'Recusado', familia: 'vermelho' },
+  rascunho: { rotulo: 'Rascunho', familia: 'neutro' },
 }
 
-const COLUNAS: Coluna<Registro>[] = [
-  { titulo: 'Quando', celula: (r) => <span className="whitespace-nowrap tabular-nums">{r.quando}</span> },
-  { titulo: 'Agente', celula: (r) => (
-    <span className="inline-flex items-center gap-2"><AvatarAgente id={r.agente} tamanho={24} /><span className="font-medium text-tinta">{agente(r.agente).curto}</span></span>
-  ) },
-  { titulo: 'O quê', principal: true, celula: (r) => <span className="text-tinta">{r.oQue}</span> },
-  { titulo: 'Turma', celula: (r) => r.turma },
-  { titulo: 'Estado', celula: (r) => ROTULO_ESTADO[r.estado] },
-  { titulo: 'Aprovado por', celula: (r) => r.por
-    ? <span className={r.estado === 'rejeitado' ? 'text-erro' : 'font-medium text-ok'}>{r.por}</span>
-    : <span className="text-sutil">{r.estado === 'esperando' ? 'esperando o professor da turma' : 'não chegou a aluno'}</span> },
+const FILTROS = [
+  { id: 'todos', rotulo: 'Todos' },
+  { id: 'espera', rotulo: 'Para aprovar' },
+  { id: 'aprovado', rotulo: 'Aprovados' },
+  { id: 'recusado', rotulo: 'Recusados' },
 ]
 
-// Uso em agregado, por série e disciplina. O recorte só aparece com dois ou mais professores (D45 revista).
-const USO = [
-  { serie: '2º ano EM', disciplina: 'Química', valor: 84, professores: 3 },
-  { serie: '1º ano EM', disciplina: 'Matemática', valor: 71, professores: 4 },
-  { serie: '9º ano EF', disciplina: 'Ciências', valor: 62, professores: 2 },
-  { serie: '8º ano EF', disciplina: 'Língua Portuguesa', valor: 48, professores: 3 },
-  { serie: '6º ano EF', disciplina: 'História', valor: 27, professores: 2 },
-]
+/* Ver por série: sempre em agregado. Recorte com um professor só fica fechado (grupo mínimo, D45). Nenhuma média
+   (regra dos painéis de gestão, 06/10/2026): ao lado do que a IA gerou, QUANTOS ALUNOS ficaram abaixo de 50% de
+   acerto em alguma disciplina nas provas aprovadas, a mesma conta do Analista (CELULAS_ESCOLA). */
+const abaixo50Da = (serie: string) => {
+  const id = SERIES_ESCOLA.find((x) => x.nome === serie)?.id
+  return id ? calcular(CELULAS_ESCOLA, { metrica: 'abaixo50', filtros: { serie: [id] }, mes: 'setembro' }, VOCABULARIO_ESCOLA, 1).valor : null
+}
+const POR_SERIE = [
+  { serie: '6º ano EF', gerado: 41, professores: 4 },
+  { serie: '7º ano EF', gerado: 38, professores: 4 },
+  { serie: '8º ano EF', gerado: 52, professores: 5 },
+  { serie: '9º ano EF', gerado: 63, professores: 5 },
+  { serie: '1º ano EM', gerado: 71, professores: 6 },
+  { serie: '2º ano EM', gerado: 112, professores: 5 },
+  { serie: '3º ano EM', gerado: 35, professores: 1 },
+].map((s) => ({ ...s, abaixo50: s.professores < 2 ? null : abaixo50Da(s.serie) }))
 
-const DESEMPENHO_SERIE = [
-  { serie: '6º ano EF', valor: 72 }, { serie: '7º ano EF', valor: 69 }, { serie: '8º ano EF', valor: 66 },
-  { serie: '9º ano EF', valor: 63 }, { serie: '1º ano EM', valor: 61 }, { serie: '2º ano EM', valor: 58 },
-]
+/** As habilidades de Química do 2º ano EM, da que tem mais alunos abaixo de 50% para a que tem menos. */
+const HABILIDADES_POR_CONTAGEM = [...HABILIDADES].sort((a, b) => b.abaixo50 - a.abaixo50)
+
+/** Os números do mês: a base de setembro mais o que a demonstração gerou e aprovou (os mesmos eventos da Tabela).
+    IA, Dossiê e Exportar leem daqui, para o número ser um só. */
+export function useMesIA() {
+  const demo = useRegistrosIADaDemo()
+  return useMemo(() => {
+    let { gerou, aprovadas, esperam } = MES
+    const usadas = new Set<string>()
+    for (const r of [...demo].reverse()) {
+      const troca = REGISTROS.find((s) => s.estado === 'espera' && !usadas.has(s.id) && s.trocadaPor?.(r))
+      if (troca) {
+        usadas.add(troca.id)
+        esperam -= 1
+      } else {
+        gerou += 1
+        if (r.estado === 'espera') esperam += 1
+      }
+      if (r.estado === 'aprovado') aprovadas += 1
+    }
+    return { gerou, aprovadas, esperam: Math.max(0, esperam) }
+  }, [demo])
+}
+
+const daDemo = (r: RegistroIA): Registro => ({ id: r.id, quando: r.quando, oQue: r.oQue, detalhe: r.detalhe, turma: r.turma, estado: r.estado, por: r.por === '—' ? undefined : r.por, novo: true, ordem: r.ordem })
+
+/** "Agora" vale só para o evento mais recente, e só se aconteceu nos últimos 5 minutos do relógio da demonstração; o resto do dia é "Hoje". */
+const MINUTOS_DE_AGORA = 5
+
+function PainelRegistro({ r, aoFechar }: { r: Registro | undefined; aoFechar: () => void }) {
+  const correcao = r?.oQue === 'Correção'
+  return (
+    <PainelLado aberto={!!r} aoFechar={aoFechar} titulo={r ? `${r.oQue} · ${r.turma}` : ''}>
+      {r && (
+        <div className="grid gap-6">
+          <div className="grid gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Selo familia={ESTADO[r.estado].familia}>{ESTADO[r.estado].rotulo}</Selo>
+              <span className="t-apoio">gerado em {r.quando}</span>
+            </div>
+            <p className="t-cartao text-tinta">{r.oQue} · {r.detalhe}</p>
+          </div>
+
+          <section>
+            <h3 className="t-selo mb-2 text-sutil">O que foi gerado</h3>
+            <AssinaturaIA id="assistente" />
+            <p className="t-apoio mt-1.5">Do material da turma, com a página em cada questão.</p>
+          </section>
+
+          <section>
+            <h3 className="t-selo mb-2 text-sutil">O que foi mostrado</h3>
+            <p className="t-corpo text-tinta">{correcao ? 'As notas, a turma e os destaques no topo.' : 'O documento inteiro, antes de enviar.'}</p>
+          </section>
+
+          {r.estado === 'aprovado' && (
+            <>
+              <section>
+                <h3 className="t-selo mb-2 text-sutil">O que foi aberto</h3>
+                <p className="t-corpo text-tinta">{correcao ? 'Todos os destaques, um a um.' : 'Todas as páginas.'}</p>
+              </section>
+              <section>
+                <h3 className="t-selo mb-2 text-sutil">Quem aprovou</h3>
+                <Carimbo por={r.por ?? '—'} quando={r.quando} />
+                <p className="t-apoio mt-1.5">Só depois disso chegou aos alunos.</p>
+              </section>
+            </>
+          )}
+          {r.estado === 'recusado' && (
+            <section>
+              <h3 className="t-selo mb-2 text-sutil">Quem recusou</h3>
+              <p className="t-corpo text-tinta">{r.por} · {r.quando}</p>
+              {r.motivo && <p className="t-apoio mt-1">“{r.motivo}”</p>}
+              <p className="t-apoio mt-1">Não chegou a nenhum aluno.</p>
+            </section>
+          )}
+          {r.estado === 'espera' && <p className="t-corpo text-apoio">Espera o professor da turma. Até lá, nada chega aos alunos.</p>}
+          {r.estado === 'rascunho' && <p className="t-corpo text-apoio">Rascunho do professor. Não foi enviado.</p>}
+
+          <p className="t-apoio flex items-start gap-1.5"><Lock aria-hidden className="mt-0.5 size-4 shrink-0" strokeWidth={2.5} /> O nome de cada aluno fica com o professor da turma.</p>
+        </div>
+      )}
+    </PainelLado>
+  )
+}
+
+
+/** Ver por série, ao lado: sempre em agregado; o recorte com um professor só fica fechado (D45). */
+function PainelPorSerie({ serie, aoFechar }: { serie: string | null; aoFechar: () => void }) {
+  const acesa = serie && serie !== '1' ? serie : null
+  return (
+    <PainelLado aberto={!!serie} aoFechar={aoFechar} titulo="Por série" largura={520}>
+      <div className="grid gap-6">
+        <p className="t-apoio flex items-start gap-1.5"><Lock aria-hidden className="mt-0.5 size-4 shrink-0" strokeWidth={2.5} /> Sempre em agregado e em contagem de alunos, sem média: quantos ficaram abaixo de 50% de acerto na prova de alguma disciplina; embaixo, em cada habilidade (um aluno pode ir bem na prova e travar numa habilidade). Com um professor só, o recorte fica fechado.</p>
+        <ul className="overflow-hidden rounded-[16px] border-2 border-borda bg-white">
+          {POR_SERIE.map((s) => (
+            <li key={s.serie} className={cn('flex min-h-14 flex-wrap items-center justify-between gap-x-3 gap-y-0.5 border-t-2 border-borda px-4 py-2 first:border-t-0',
+              acesa === s.serie && 'bg-azul-claro')}>
+              <span className="t-cartao shrink-0 text-tinta">{s.serie}</span>
+              {s.professores < 2
+                ? <Selo icone={<Lock strokeWidth={2.5} />} title="Com um professor só, o recorte fica fechado.">Fechado</Selo>
+                : <span className="text-[15px] font-medium tabular-nums text-apoio"><b className="font-bold text-tinta">{s.gerado}</b> gerados · <b className="font-bold text-tinta">{s.abaixo50}</b> abaixo de 50% na prova</span>}
+            </li>
+          ))}
+        </ul>
+        {(!acesa || acesa === '2º ano EM') && (
+          <section>
+            <h3 className="t-selo mb-2 text-sutil">2º ano EM · Química · abaixo de 50% na habilidade</h3>
+            <ul className="overflow-hidden rounded-[16px] border-2 border-borda bg-white">
+              {HABILIDADES_POR_CONTAGEM.map((h) => (
+                <li key={h.codigo} className="grid h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t-2 border-borda px-4 text-[15px] font-medium first:border-t-0">
+                  <span className="truncate text-tinta">{h.nome}</span>
+                  <span className="tabular-nums text-apoio"><b className="font-bold text-tinta">{h.abaixo50}</b> de 126</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+    </PainelLado>
+  )
+}
+
+/** Os 3 números do mês, em texto: "Gerou 412 · Aprovadas 389 · Esperando 23". */
+function NumerosDoMes({ className }: { className?: string }) {
+  const mes = useMesIA()
+  const n = (rotulo: string, valor: number) => <span className="whitespace-nowrap">{rotulo} <b className="font-bold tabular-nums text-tinta">{valor}</b></span>
+  return (
+    <p className={cn('t-apoio flex flex-wrap items-center gap-x-2', className)} aria-label={`Setembro: a IA gerou ${mes.gerou}, ${mes.aprovadas} aprovadas, ${mes.esperam} esperando o professor`}>
+      {n('Gerou', mes.gerou)}<span aria-hidden>·</span>{n('Aprovadas', mes.aprovadas)}<span aria-hidden>·</span>{n('Esperando', mes.esperam)}
+    </p>
+  )
+}
+
+/** A ponta direita da linha das abas, na aba IA: os números do mês e COMO CADA IA TRABALHA (a partir de 768 px). */
+export function ResumoDoMes() {
+  const [, setVer] = useParametro('ver')
+  return (
+    <div className="hidden items-center gap-5 md:flex">
+      <NumerosDoMes className="hidden xl:flex" />
+      <Botao variante="secundario" tamanho="p" onClick={() => setVer('como')}>Como cada IA trabalha</Botao>
+    </div>
+  )
+}
+
+const ESTADOS_TABELA = FILTROS
 
 export function Governanca() {
+  const demo = useRegistrosIADaDemo()
+  const mes = useMesIA()
+  const relogio = useAgora()
   const [filtro, setFiltro] = useState('todos')
-  const [dialogo, setDialogo] = useState(false)
-  const [finalidade, setFinalidade] = useState<string | null>(null)
-  const linhas = REGISTROS.filter((r) => filtro === 'todos' || r.estado === filtro)
+  const [busca, setBusca] = useState('')
+  const [item, setItem] = useParametro('item')
+  const [ver, setVer] = useParametro('ver')
+  const [iaInicial] = useParametro('ia')
+  const [serie, setSerie] = useParametro('serie')
+  const [, setParams] = useSearchParams()
+  const fecharComo = () => setParams((p) => { const n = new URLSearchParams(p); n.delete('ver'); n.delete('ia'); return n }, { replace: true })
+
+  const todos = useMemo(() => [
+    ...demo.map(daDemo),
+    ...REGISTROS.filter((s) => !s.trocadaPor || !demo.some(s.trocadaPor)),
+  ], [demo])
+  const termo = busca.trim().toLowerCase()
+  const linhas = todos.filter((r) => (filtro === 'todos' || r.estado === filtro)
+    && (!termo || `${r.oQue} ${r.detalhe} ${r.turma}`.toLowerCase().includes(termo)))
+  const aberto = todos.find((r) => r.id === item)
+
+  const selo = (r: Registro) => <Selo familia={ESTADO[r.estado].familia} tamanho="p">{ESTADO[r.estado].rotulo}</Selo>
+  const quem = (r: Registro) => (r.estado === 'recusado' ? `Recusou: ${r.por}` : r.estado === 'aprovado' ? r.por ?? '—' : '—')
+  const colunas: ColunaGrade<Registro>[] = [
+    { titulo: 'O quê', largura: 'minmax(0,3fr)', celula: (r) => (
+      <span className="flex min-w-0 items-center gap-2">
+        <span className="truncate"><b className="font-bold">{r.oQue}</b> · {r.detalhe}</span>
+        {r.novo && (r.id === demo[0]?.id && relogio.ordem - (r.ordem ?? 0) <= MINUTOS_DE_AGORA
+          ? <Selo familia="azul" tamanho="p">Agora</Selo>
+          : <Selo tamanho="p">Hoje</Selo>)}
+      </span>
+    ) },
+    { titulo: 'Turma', largura: 'minmax(56px,.5fr)', celula: (r) => <span className="text-apoio">{r.turma}</span> },
+    { titulo: 'Aprovado por', largura: 'minmax(0,1.3fr)', celula: (r) => <span className={cn('truncate', r.por ? 'text-apoio' : 'text-sutil')}>{quem(r)}</span> },
+    { titulo: 'Quando', largura: 'minmax(0,1fr)', celula: (r) => <span className="truncate tabular-nums text-apoio">{r.quando}</span> },
+    { titulo: 'Estado', largura: '132px', alinhar: 'fim', celula: selo },
+  ]
 
   return (
-    <Tela titulo="Governança de IA · setembro"
-      descricao="O que a IA gerou, quem aprovou e quanto custou. Nada daqui chega a aluno, nota ou família sem uma pessoa da escola confirmar."
-      acoes={
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="secundario"><FileDown /> Exportar relatório</Button></DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="rounded-controle">
-            {['Relatório de uso em PDF', 'Registros em CSV', 'Registros em JSON'].map((o) => <DropdownMenuItem key={o} className="h-10 rounded-linha">{o}</DropdownMenuItem>)}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      }>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <NumeroPainel rotulo="Gerado por IA" valor="412" apoio="provas, atividades, planos, diagnósticos e adaptações" />
-        <NumeroPainel rotulo="Aprovado por gente" valor="389" apoio={<span className="font-medium text-ok">94% do que foi gerado</span>} />
-        <NumeroPainel rotulo="Esperando" valor="23" apoio={<span className="font-medium text-pendente">aguardam o professor da turma</span>} />
-        <div className="rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
-          <p className="rotulo">Consumo do mês</p>
-          <p className="numero-painel mt-3 text-tinta">61%</p>
-          <Progress value={61} className="mt-3 h-2 rounded-full bg-ia-cx [&>div]:bg-noite" aria-label="61% do orçamento de IA usado" />
-          <p className="mt-2 text-sm text-sutil">do orçamento de IA · dia 21 de 30</p>
-        </div>
+    <div className="flex min-h-0 flex-1 flex-col gap-4 max-md:overflow-y-auto">
+      <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 xl:hidden">
+        <NumerosDoMes className="max-md:basis-full" />
+        <Botao variante="secundario" tamanho="p" className="md:hidden" onClick={() => setVer('como')}>Como cada IA trabalha</Botao>
+        <Botao variante="secundario" tamanho="p" className="sm:hidden" onClick={() => setSerie('1')}>Por série</Botao>
       </div>
 
-      <Cartao className="mt-4" titulo={<span className="inline-flex items-center gap-2">O que a IA gerou e quem aprovou <SeloIA /></span>}
-        acao={
+      <FaixaPausas className="shrink-0" />
+
+      <Secao titulo="O que a IA gerou e quem aprovou" className="flex min-h-0 flex-1 flex-col max-md:flex-none"
+        acao={<Botao variante="fantasma" tamanho="p" className="-mr-3 max-sm:hidden" onClick={() => setSerie('1')}>Ver por série</Botao>}>
+        <div className="mb-3 flex shrink-0 flex-wrap items-center gap-3">
+          <Segmentado rotulo="Estado" valor={filtro} aoMudar={setFiltro} opcoes={ESTADOS_TABELA} className="max-sm:hidden" />
           <Select value={filtro} onValueChange={setFiltro}>
-            <SelectTrigger aria-label="Filtrar por estado" className="h-10 w-[190px] rounded-controle border-borda-campo bg-superficie text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent className="rounded-controle">
-              <SelectItem value="todos" className="rounded-linha">Todos os estados</SelectItem>
-              <SelectItem value="esperando" className="rounded-linha">Esperando</SelectItem>
-              <SelectItem value="aprovado" className="rounded-linha">Aprovado</SelectItem>
-              <SelectItem value="rejeitado" className="rounded-linha">Rejeitado</SelectItem>
-              <SelectItem value="rascunho" className="rounded-linha">Rascunho do professor</SelectItem>
-            </SelectContent>
+            <SelectTrigger aria-label="Estado" className="w-full sm:hidden"><SelectValue /></SelectTrigger>
+            <SelectContent>{ESTADOS_TABELA.map((f) => <SelectItem key={f.id} value={f.id}>{f.rotulo}</SelectItem>)}</SelectContent>
           </Select>
-        }>
-        <TabelaLista colunas={COLUNAS} linhas={linhas} chave={(r) => r.id} rotuloVazio="Nenhum registro neste estado em setembro." />
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-linha pt-4">
-          <p className="text-sm text-sutil">Mostrando {linhas.length} de 412. Filtra por estado, agente, turma e período. Não existe filtro nem ordenação por professor.</p>
-          <Button variant="discreto" size="sm" asChild><Link to="/coordenacao/auditoria">Abrir na Auditoria <ArrowRight /></Link></Button>
+          <Busca valor={busca} aoMudar={setBusca} rotulo="Buscar documento ou turma" className="sm:w-72" />
         </div>
-      </Cartao>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Cartao titulo="Uso por série e disciplina">
-          <div className="grid gap-4">
-            {USO.map((u) => <BarraRotulada key={u.serie + u.disciplina} rotulo={`${u.serie} · ${u.disciplina}`} detalhe={`${u.professores} professores no recorte`} valor={u.valor} sufixo="" tom="noite" />)}
-          </div>
-          <p className="mt-4 text-sm leading-relaxed text-sutil">Artefatos gerados no mês, em agregado. Recorte com um professor só não aparece aqui: conta como nominal.</p>
-        </Cartao>
+        <TabelaGrade rotulo="O que a IA gerou e quem aprovou" colunas={colunas} grupos={[{ id: 'todos', linhas }]} chave={(r) => r.id}
+          aoAbrir={(r) => setItem(r.id)} ativa={item} altura={56} vazio="Nada com esse estado ou essa busca."
+          celular={(r) => ({ titulo: `${r.oQue} · ${r.detalhe}`, apoio: `${r.quando} · ${r.turma}${r.por ? ` · ${r.por}` : ''}`, fim: selo(r) })} />
+        <p className="t-apoio flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-1 pt-2.5"><span>Mostrando {linhas.length} dos {mes.gerou} de setembro.</span><FraseSemRanking /></p>
+      </Secao>
 
-        <Cartao titulo="Desempenho por série" acao={<span className="text-sm text-sutil">acerto médio em objetivas</span>}>
-          <div className="grid gap-4">
-            {DESEMPENHO_SERIE.map((d) => <BarraRotulada key={d.serie} rotulo={d.serie} valor={d.valor} tom="neutro" />)}
-          </div>
-        </Cartao>
-      </div>
+      <PainelRegistro r={aberto} aoFechar={() => setItem(null)} />
+      <PainelPorSerie serie={serie} aoFechar={() => setSerie(null)} />
 
-      <Cartao className="mt-4" titulo="2º ano EM · Química · acerto por habilidade" acao={<span className="text-sm text-sutil">2ºA e 2ºB juntos</span>}>
-        <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
-          {HABILIDADES.map((h) => <BarraRotulada key={h.codigo} rotulo={h.nome} detalhe={h.codigo} valor={h.acerto} tom={h.acerto < 50 ? 'caramelo' : 'neutro'} />)}
-        </div>
-      </Cartao>
-
-      <section aria-labelledby="alertas" className="mt-8">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="alertas" className="font-corpo text-base font-semibold text-tinta">Alertas em agregado</h2>
-          <Button variant="discreto" size="sm" asChild><Link to="/coordenacao/analista">Ver o resumo do Analista <ArrowRight /></Link></Button>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-3">
-          <Aviso tom="pendente" titulo="Habilidade em queda · 2º ano EM">Reagente limitante caiu de 52% para 39% em três semanas. É hipótese: coincide com a troca de capítulo.</Aviso>
-          <Aviso tom="pendente" titulo="Entregas faltando · 1ºC">5 alunos com três entregas faltando. Os nomes chegam ao professor da turma; aqui aparece a contagem.</Aviso>
-          <Aviso tom="info" titulo="Consumo dentro do previsto">61% do orçamento no dia 21. No ritmo atual, o mês fecha perto de 88%.</Aviso>
-        </div>
-      </section>
-
-      <section aria-labelledby="nominal" className="mt-8 rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 max-w-[68ch]">
-            <h2 id="nominal" className="font-corpo text-base font-semibold text-tinta">Dado nominal</h2>
-            <p className="mt-1 text-[15px] leading-relaxed text-apoio">
-              Esta tela é toda em agregado. Ver o indicador das turmas de um professor, ou o nome de um aluno em risco, é uma decisão à parte:
-              pede a finalidade e fica em auditoria. Não existe ranking, lista de adoção nem alerta de quem não usa.
-            </p>
-          </div>
-          <Button variant="oficial" onClick={() => setDialogo(true)}><KeyRound /> Abrir dado nominal…</Button>
-        </div>
-        {finalidade && <RegistroAuditoria finalidade={finalidade} className="mt-4" />}
-      </section>
-
-      <DialogoNominal aberto={dialogo} aoMudar={setDialogo} oQue="o indicador das turmas de um professor do 2º ano EM, ou o nome dos alunos de um alerta"
-        aoConfirmar={(f) => { setFinalidade(f); setDialogo(false) }} />
-
-      <NotaMockup>
-        Spec A5 (fatia do F12). Regra 70, item 6: a consulta "o que a IA gerou, quem aprovou e quando". D45 e D64: sem coluna, filtro ou
-        ordenação por professor; o nominal abre por botão <i>oficial</i> com finalidade e auditoria. D14 e D39: consumo contra o orçamento.
-        D46: o que se aprova no MVP é diagnóstico, não nota. Gráfico de série no tempo fica para o F12 completo; aqui vive de barra.
-      </NotaMockup>
-    </Tela>
+      <PainelLado aberto={ver === 'como'} aoFechar={fecharComo} titulo="Como cada IA trabalha" largura={520} className="[&>header_button:focus-visible]:-outline-offset-3">
+        <ComoCadaIATrabalha key={iaInicial ?? 'assistente'} inicial={iaInicial === 'tutor' || iaInicial === 'analista' ? iaInicial : 'assistente'} />
+      </PainelLado>
+    </div>
   )
 }

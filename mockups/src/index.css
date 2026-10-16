@@ -64,10 +64,10 @@
   --color-destructive: #B42318;      --color-destructive-foreground: #FFFFFF;
   --color-border: #E8E8E8;           --color-input: #D9D9D9;
   --color-ring: #0D0D0D;
-  --color-sidebar: #F9F9F9;          --color-sidebar-foreground: #0D0D0D;
+  --color-sidebar: #FFFFFF;          --color-sidebar-foreground: #0D0D0D;
   --color-sidebar-primary: #0D0D0D;  --color-sidebar-primary-foreground: #FFFFFF;
   --color-sidebar-accent: #ECECEC;   --color-sidebar-accent-foreground: #0D0D0D;
-  --color-sidebar-border: #EDEDED;   --color-sidebar-ring: #0D0D0D;
+  --color-sidebar-border: #E5E5E5;   --color-sidebar-ring: #0D0D0D;
 
   /* A família Agent Elements usa `neutral-*`: aqui é a rampa cinza do próprio ChatGPT. */
   --color-neutral-50: #F9F9F9;   --color-neutral-100: #F4F4F4;
@@ -83,21 +83,26 @@
   --font-titulo: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
   --font-sans: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
   --font-marca: "Fustat", ui-sans-serif, system-ui, sans-serif;
-  --font-teachy-corpo: "Inter", ui-sans-serif, -apple-system, system-ui, "Segoe UI", sans-serif;
-  --font-teachy: "Quicksand", ui-sans-serif, -apple-system, system-ui, "Segoe UI", sans-serif;
+  /* Décima rodada (04/10/2026), R13 "uma pele só": a Quicksand e a Inter da oitava rodada saem, e as duas
+     variáveis passam a apontar para a fonte do sistema. Para voltar, troque estas 2 linhas pelas comentadas:
+     --font-teachy-corpo: "Inter", ui-sans-serif, -apple-system, system-ui, "Segoe UI", sans-serif;
+     --font-teachy: "Quicksand", ui-sans-serif, -apple-system, system-ui, "Segoe UI", sans-serif; */
+  --font-teachy-corpo: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
+  --font-teachy: ui-sans-serif, -apple-system, system-ui, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
 
   /* canto: 10 item de menu · 12 campo · 16 cartão e menu · 28 caixa de pedido. Botão é pílula. */
   --radius-linha: 10px;  --radius-controle: 12px;
-  --radius-cartao: 16px; --radius-caixa: 28px;
+  --radius-cartao: 16px; --radius-caixa: 16px;   /* 11ª rodada: era 28 */
   --radius-sm: 8px;  --radius-md: 12px;  --radius-lg: 12px;  --radius-xl: 16px;
 
   /* sombra: a da caixa de pedido do ChatGPT, e uma para o que flutua */
-  --shadow-caixa: 0 0 0 1px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.04), 0 4px 80px 8px rgba(0,0,0,.024);
-  --shadow-flutua: 0 0 0 1px rgba(0,0,0,.05), 0 8px 28px -6px rgba(0,0,0,.16);
+  /* 11ª rodada (Duolingo): nenhuma sombra com desfoque. O que flutua tem borda de 2 px e degrau sólido de 4 px. */
+  --shadow-caixa: 0 0 0 2px var(--color-borda);
+  --shadow-flutua: 0 0 0 2px var(--color-borda), 0 4px 0 0 var(--color-borda);
   --shadow-xs: 0 1px 2px rgba(0,0,0,.04);
   --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
-  --shadow-md: 0 0 0 1px rgba(0,0,0,.05), 0 8px 28px -6px rgba(0,0,0,.16);
-  --shadow-lg: 0 0 0 1px rgba(0,0,0,.05), 0 8px 28px -6px rgba(0,0,0,.16);
+  --shadow-md: 0 0 0 2px var(--color-borda), 0 4px 0 0 var(--color-borda);
+  --shadow-lg: 0 0 0 2px var(--color-borda), 0 4px 0 0 var(--color-borda);
 
   --ease-estado: cubic-bezier(.2,0,0,1);
   --ease-entrada: cubic-bezier(.22,1,.36,1);
@@ -106,7 +111,126 @@
   --animate-palavra: palavra 520ms cubic-bezier(.22,1,.36,1) both;
   --animate-passada: passada 1400ms cubic-bezier(.2,0,0,1) 600ms 1 both;
   --animate-pulso: pulso 1600ms ease-in-out infinite;
+
+  /* ── 11ª RODADA (04/10/2026): sistema Turmma × Duolingo ────────────────────────────────────────────────────
+     pesquisa/duolingo/sistema-turmma-duolingo.md, seção 2.7. Somado: nenhum token antigo sai. */
+  --radius-botao: 12px;  --radius-selo: 8px;
+  --ease-quique: cubic-bezier(.35,1.8,.35,.83);
+  --animate-salta: salta 600ms ease-in-out both;
+  --animate-sobe: sobe 200ms cubic-bezier(.35,1.8,.35,.83) both;
 }
+
+/* As cores das 10 famílias em `@theme static`: o Tailwind 4 só emite a variável de um token que alguma classe usa, e as
+   peças leem estas por `familia(f)` (style inline: var(--color-roxo-claro)…), que ele não enxerga. Static = sempre emitidas. */
+@theme static {
+  /* neutros novos */
+  --color-fundo-suave: #F7F7F7;  --color-borda: #E5E5E5;  --color-borda-forte: #D7D7D7;  --color-apagado: #AFAFAF;
+  --color-grafite: #333333;      --color-grafite-degrau: #0D0D0D;
+  /* as 10 famílias: face · degrau · claro · borda · texto (tabela 2.1.2) */
+  --color-laranja: #E8732E;  --color-laranja-degrau: #BA5C25;  --color-laranja-claro: #FDEBDD;  --color-laranja-borda: #F5C0A1;  --color-laranja-texto: #A85220;
+  --color-azul: #1C9BEF;     --color-azul-degrau: #167CBF;     --color-azul-claro: #DFF1FD;     --color-azul-borda: #99D2F8;     --color-azul-texto: #146EAA;
+  --color-verde: #2FBF5B;    --color-verde-degrau: #269949;    --color-verde-claro: #E2F6E8;    --color-verde-borda: #A1E2B5;    --color-verde-texto: #1F7C3B;
+  --color-amarelo: #FFC31F;  --color-amarelo-degrau: #E0A000;  --color-amarelo-claro: #FFF7E0;  --color-amarelo-borda: #FFE49A;  --color-amarelo-texto: #8C6B11;
+  --color-vermelho: #F2545B; --color-vermelho-degrau: #C24349; --color-vermelho-claro: #FDE7E8; --color-vermelho-borda: #F9B2B5; --color-vermelho-texto: #B84045;
+  --color-roxo: #A56EF5;     --color-roxo-degrau: #8458C4;     --color-roxo-claro: #F2EBFE;     --color-roxo-borda: #D6BEFA;     --color-roxo-texto: #7D54BA;
+  --color-turquesa: #1DBFAE; --color-turquesa-degrau: #17998B; --color-turquesa-claro: #DFF6F4; --color-turquesa-borda: #99E2DB; --color-turquesa-texto: #137A6F;
+  --color-anil: #6A85F7;     --color-anil-degrau: #556AC6;     --color-anil-claro: #EAEEFE;     --color-anil-borda: #BCC8FB;     --color-anil-texto: #5165BC;
+  --color-lima: #9ACD2E;     --color-lima-degrau: #7FB01C;     --color-lima-claro: #F1F8E2;     --color-lima-borda: #D2E8A1;     --color-lima-texto: #59771B;
+  --color-rosa: #F57CB5;     --color-rosa-degrau: #C46391;     --color-rosa-claro: #FEEDF5;     --color-rosa-borda: #FAC4DE;     --color-rosa-texto: #A25277;
+
+  /* 14ª rodada (05/10/2026), os tokens do modo escuro (plano ux-composicao, 2.2). Valores CLAROS aqui; os escuros no
+     bloco :root[data-tema="escuro"] abaixo. `sobre-cor` é o texto sobre face colorida (botão laranja, contador,
+     iniciais): no escuro o texto comum fica claro, e este continua escuro. */
+  --color-sobre-cor: #0D0D0D;
+  --color-campo: #FFFFFF;        /* fundo do campo de texto e da caixa do chat */
+  --color-mesa: #F7F7F7;         /* o fundo atrás da folha do documento */
+  --color-veu: rgba(0,0,0,.35);  /* o véu de diálogo e painel */
+  --color-icone-papel: #EFEFEF;  --color-icone-linha: #D7D7D7;
+  --color-onca-chao: rgba(175,175,175,.3);
+  /* a capa do slide: escura nos dois temas (não inverte como a tinta) */
+  --color-capa: #131F24; --color-capa-borda: #131F24; --color-capa-texto: #FFFFFF;
+}
+
+/* ── O MODO ESCURO (14ª rodada; plano ux-composicao, seção 2) ────────────────────────────────────────────────────
+   Os tons medidos no Duolingo (snow #131F24, polar #202F36, swan #37464F, hare #52656D, wolf #DCE6EC, eel #F1F7FB)
+   e as 10 famílias clareadas no mesmo sistema. FORA de camada: vence o @layer theme do Tailwind. Nenhuma tela usa
+   `dark:` (a variante continua desligada): quem usa token vira sozinho. */
+:root[data-tema="escuro"] {
+  color-scheme: dark;
+  /* superfícies (snow) */
+  --color-white: #131F24; --color-fundo: #131F24; --color-superficie: #131F24; --color-lateral: #131F24;
+  --color-background: #131F24; --color-card: #131F24; --color-popover: #131F24; --color-sidebar: #131F24;
+  /* polar */
+  --color-fundo-suave: #202F36; --color-realce: #202F36; --color-realce-suave: #202F36; --color-creme: #202F36; --color-papel: #202F36;
+  --color-secondary: #202F36; --color-muted: #202F36; --color-accent: #202F36; --color-sidebar-accent: #202F36;
+  --color-info-cx: #202F36; --color-ia-cx: #202F36;
+  /* swan, hare */
+  --color-borda: #37464F; --color-linha: #37464F; --color-borda-campo: #37464F; --color-border: #37464F; --color-input: #37464F;
+  --color-sidebar-border: #37464F;
+  --color-borda-forte: #52656D; --color-apagado: #52656D; --color-inativo: #52656D;
+  /* texto */
+  --color-sutil: #8FA3AD; --color-muted-foreground: #8FA3AD;
+  --color-apoio: #DCE6EC; --color-ia: #DCE6EC; --color-noite-alto: #DCE6EC;
+  --color-tinta: #F1F7FB; --color-foreground: #F1F7FB; --color-info: #F1F7FB; --color-noite: #F1F7FB; --color-primary: #F1F7FB;
+  --color-rank-2: #F1F7FB; --color-noite-baixo: #FFFFFF;
+  --color-card-foreground: #F1F7FB; --color-popover-foreground: #F1F7FB; --color-secondary-foreground: #F1F7FB;
+  --color-accent-foreground: #F1F7FB; --color-sidebar-foreground: #F1F7FB; --color-sidebar-primary: #F1F7FB;
+  --color-sidebar-accent-foreground: #F1F7FB; --color-ring: #F1F7FB; --color-sidebar-ring: #F1F7FB;
+  --color-primary-foreground: #131F24; --color-sidebar-primary-foreground: #131F24; --color-destructive-foreground: #131F24;
+  /* o oficial (grafite) inverte: face clara, texto escuro (o text-white dele vira #131F24) */
+  --color-grafite: #F1F7FB; --color-grafite-degrau: #8FA3AD;
+  /* rampa neutra das peças Agent Elements, invertida */
+  --color-neutral-50: #131F24; --color-neutral-100: #202F36; --color-neutral-200: #37464F; --color-neutral-300: #485A62;
+  --color-neutral-400: #52656D; --color-neutral-500: #8FA3AD; --color-neutral-600: #DCE6EC; --color-neutral-700: #E5EDF2;
+  --color-neutral-800: #EEF4F8; --color-neutral-900: #F1F7FB; --color-neutral-950: #FFFFFF;
+  /* estados */
+  --color-pendente-cx: #352C26; --color-pendente: #EF9D6D;
+  --color-ok-cx: #17392D; --color-ok: #6DD28C;
+  --color-erro-cx: #37272D; --color-erro: #F6878C; --color-destructive: #F6878C; --color-red-500: #F6878C;
+  --color-marca-cx: #352C26; --color-marca-cx-forte: #734528;
+  --color-caramelo: #EB8447; --color-caramelo-claro: #EF9D6D; --color-caramelo-fundo: #BA5C25; --color-caramelo-texto: #EF9D6D;
+  --color-caramelo-noite: #F2A25B;
+  --color-rank-1: #EB8447; --color-rank-3: #8FA3AD;
+  /* as 10 famílias: face · degrau · claro · borda · texto */
+  --color-laranja: #EB8447;  --color-laranja-degrau: #BA5C25;  --color-laranja-claro: #352C26;  --color-laranja-borda: #734528;  --color-laranja-texto: #EF9D6D;
+  --color-azul: #37A7F1;     --color-azul-degrau: #167CBF;     --color-azul-claro: #143344;     --color-azul-borda: #17577F;     --color-azul-texto: #60B9F4;
+  --color-verde: #48C76F;    --color-verde-degrau: #269949;    --color-verde-claro: #17392D;    --color-verde-borda: #20673D;    --color-verde-texto: #6DD28C;
+  --color-amarelo: #FFC31F;  --color-amarelo-degrau: #E0A000;  --color-amarelo-claro: #393923;  --color-amarelo-borda: #7D6922;  --color-amarelo-texto: #FFD562;
+  --color-vermelho: #F4696F; --color-vermelho-degrau: #C24349; --color-vermelho-claro: #37272D; --color-vermelho-borda: #77373D; --color-vermelho-texto: #F6878C;
+  --color-roxo: #B07FF6;     --color-roxo-degrau: #8458C4;     --color-roxo-claro: #2A2C45;     --color-roxo-borda: #554382;     --color-roxo-texto: #C09AF8;
+  --color-turquesa: #38C7B8; --color-turquesa-degrau: #17998B; --color-turquesa-claro: #15393A; --color-turquesa-borda: #186762; --color-turquesa-texto: #61D2C6;
+  --color-anil: #7C94F8;     --color-anil-degrau: #556AC6;     --color-anil-claro: #212F46;     --color-anil-borda: #3A4D83;     --color-anil-texto: #97AAF9;
+  --color-lima: #9ACD2E;     --color-lima-degrau: #7FB01C;     --color-lima-claro: #293B26;     --color-lima-borda: #506D28;     --color-lima-texto: #B8DC6D;
+  --color-rosa: #F68CBE;     --color-rosa-degrau: #C46391;     --color-rosa-claro: #372E3B;     --color-rosa-borda: #794965;     --color-rosa-texto: #F8A3CB;
+  /* tokens novos */
+  --color-sobre-cor: #131F24; --color-campo: #202F36; --color-mesa: #0E181C; --color-veu: rgba(0,0,0,.6);
+  --color-icone-papel: #37464F; --color-icone-linha: #52656D; --color-onca-chao: rgba(0,0,0,.35);
+  --color-capa: #202F36; --color-capa-borda: #52656D; --color-capa-texto: #F1F7FB;
+}
+:root[data-tema="escuro"] ::selection { background: #734528; color: #F1F7FB; }
+
+/* A CASCA (décima rodada, 04/10/2026): a altura das barras do celular, para as telas descontarem.
+   A partir de 768 px não há barra (a lateral fica ao lado); abaixo, a barra do topo tem 56 px e a de baixo 68 px
+   mais a área segura do aparelho. Quem ocupa a janela usa `.altura-tela`; quem só precisa de no mínimo a janela,
+   `.min-altura-tela`. Fora da casca (prova, aula ao vivo) as variáveis valem 0 e a conta dá a janela inteira. */
+.casca { --barra-topo: 0px; --barra-baixo: 0px; --reserva-sino: 0px; }
+@media (max-width: 767.98px) {
+  .casca { --barra-topo: 56px; --barra-baixo: calc(68px + env(safe-area-inset-bottom, 0px)); }
+}
+/* 14ª rodada: o canto do sino. No professor e na coordenação (data-sino), a partir de 768 px, o cabeçalho de página e
+   a barra da conversa guardam 56 px à direita para o sino, que a Casca desenha por cima. */
+@media (min-width: 768px) {
+  .casca[data-sino] { --reserva-sino: 56px; }
+}
+@utility altura-tela { height: calc(100svh / var(--zoom, 1) - var(--barra-topo, 0px) - var(--barra-baixo, 0px)); }
+@utility min-altura-tela { min-height: calc(100svh / var(--zoom, 1) - var(--barra-topo, 0px) - var(--barra-baixo, 0px)); }
+
+/* LETRA GRANDE: o tamanho do texto do aluno põe `zoom` no html (dados/preferencias.ts) e escreve o mesmo número em
+   `--zoom`. O zoom aumenta também as unidades da janela; sem dividir, a casca fica 10% ou 20% mais alta que a janela
+   e a página rola. As peças que ocupam a janela inteira dividem pela mesma conta. */
+.h-svh { height: calc(100svh / var(--zoom, 1)); }
+.min-h-svh { min-height: calc(100svh / var(--zoom, 1)); }
+.max-h-svh { max-height: calc(100svh / var(--zoom, 1)); }
 
 :root {
   --t-estado: 150ms; --t-gesto: 260ms; --t-entrada: 420ms;
@@ -120,6 +244,19 @@
 @keyframes passada { from { transform: translateX(-120%); } to { transform: translateX(220%); } }
 @keyframes pulso   { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
 @keyframes cursor  { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+/* 15ª rodada: o "Pensando…" da conversa com IA pulsa enquanto espera (laço que mostra trabalho acontecendo) */
+.brilho-pensando { animation: pulso 1.4s ease-in-out infinite; }
+
+/* 11ª rodada: os tempos do sistema Duolingo (seção 2.6) */
+:root { --dur-toque: 100ms; --dur-estado: 150ms; --dur-padrao: 300ms; --dur-barra: 400ms; --dur-salto: 600ms;
+  --curva-quique: cubic-bezier(.35,1.8,.35,.83); }
+@keyframes salta { 0% { opacity: 0; transform: scale(.01) } 67% { opacity: 1; transform: scale(1.1) } 100% { opacity: 1; transform: scale(1) } }
+@keyframes sobe  { from { transform: translateY(100%) } to { transform: none } }
+@keyframes pulsa { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.05) } }
+/* as pintas da Comemoracao: saem do centro em leque e somem */
+@keyframes pinta-voa { 0% { opacity: 0; transform: translate(0, 0) scale(.4) rotate(0deg) }
+  15% { opacity: 1 }
+  100% { opacity: 0; transform: translate(var(--dx, 0px), var(--dy, 0px)) scale(1) rotate(var(--giro, 0deg)) } }
 
 @layer base {
   * { border-color: var(--color-linha); }
@@ -132,7 +269,7 @@
   button:disabled { cursor: not-allowed; }
   ::selection { background: #FBD9C3; color: var(--color-tinta); }
 
-  :focus-visible { outline: 2px solid var(--color-noite); outline-offset: 2px; }
+  :focus-visible { outline: 3px solid var(--color-azul-texto); outline-offset: 2px; }
   .sobre-noite :focus-visible { outline-color: var(--color-caramelo-noite); }
   textarea:focus-visible, input:focus-visible { outline-offset: 0; }
 
@@ -150,5 +287,35 @@
   .numero-painel { font-family: var(--font-titulo); font-weight: 600; font-size: 28px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
   /* Rótulo de grupo: cinza, pequeno, SEM caixa-alta — como "Recentes" na lateral do ChatGPT */
   .rotulo { font-size: 13px; font-weight: 500; line-height: 1.2; letter-spacing: 0; text-transform: none; color: var(--color-sutil); }
+  /* ── 11ª rodada: a tipografia do sistema Duolingo (tabela 2.2). Fonte do sistema; 500 no corpo, 700 no resto. */
+  .t-titulo   { font-size: 24px; line-height: 30px; font-weight: 700; letter-spacing: -.01em; }
+  .t-secao    { font-size: 20px; line-height: 26px; font-weight: 700; }
+  .t-balao    { font-size: 20px; line-height: 26px; font-weight: 500; }
+  .t-cartao   { font-size: 17px; line-height: 22px; font-weight: 700; }
+  .t-corpo    { font-size: 17px; line-height: 25px; font-weight: 500; }
+  .t-apoio    { font-size: 15px; line-height: 20px; font-weight: 500; color: var(--color-sutil); }
+  .t-rotulo   { font-size: 15px; line-height: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .t-selo     { font-size: 13px; line-height: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .t-numero   { font-size: 28px; line-height: 32px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .t-numero-g { font-size: 36px; line-height: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* O DEGRAU (seção 3.1): a peça é a caixa externa; o degrau é um ::before PARADO na cor --lado, que começa
+     --altura-degrau abaixo do topo; a face (.face) fica em cima e desce ao apertar. O layout não mexe. */
+  .degrau { position: relative; isolation: isolate; padding-bottom: var(--altura-degrau, 4px);
+    border-radius: var(--radius-botao); background: none; border: 0; -webkit-tap-highlight-color: transparent; }
+  .degrau::before { content: ""; position: absolute; inset: var(--altura-degrau, 4px) 0 0; border-radius: inherit;
+    background: var(--lado); z-index: -1; }
+  .degrau > .face { display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: inherit;
+    background: var(--face); transition: transform var(--dur-toque, 100ms) linear, filter 150ms ease-out, background-color 150ms ease-out; }
+  .degrau:hover > .face { filter: brightness(1.06); }
+  /* --afunda: quanto a face desce; o padrão é o degrau inteiro (o cartão clicável desce só 2 e deixa 2 de degrau) */
+  .degrau:active > .face, .degrau[data-apertado] > .face { transform: translateY(var(--afunda, var(--altura-degrau, 4px))); }
+  .degrau:disabled, .degrau[aria-disabled="true"] { cursor: not-allowed; }
+  .degrau:disabled::before, .degrau[aria-disabled="true"]::before { display: none; }
+  .degrau:disabled > .face, .degrau[aria-disabled="true"] > .face { background: var(--color-borda); color: var(--color-apagado);
+    border-color: var(--color-borda); filter: none; transform: none; }
+  /* a peça branca (secundário, cartão clicável): o hover troca a face por fundo-suave em vez de brilho */
+  .degrau.degrau-branco:hover > .face { filter: none; background: var(--color-fundo-suave); }
+
   .cursor-texto { display: inline-block; width: 2px; height: 1.05em; transform: translateY(3px); background: var(--color-tinta); animation: cursor 1s steps(1) infinite; }
 }

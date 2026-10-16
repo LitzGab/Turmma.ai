@@ -1,109 +1,352 @@
-import { EventManager, type Evento } from '@/components/ui/event-manager'
-import { NotaMockup, TelaCheia } from '@/components/turmma/tela'
-import { TURMAS } from '@/dados/escola'
+import { useMemo, useState, type CSSProperties } from 'react'
+import { Link } from 'react-router-dom'
+import { Check, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Botao, BotaoIcone, EstadoVazio, LadrilhoIcone, Linha, MenuMais, Selo, familia as estiloFamilia, materiaDe } from '@/components/duo'
+import { Icone } from '@/components/duo/icones'
+import { Onca } from '@/components/duo/onca'
+import { PainelLado } from '@/components/turmma/painel-lado'
+import { useParametro } from '@/components/turmma/tela'
+import { useAgora } from '@/dados/demo/nucleo'
+import { ESCOLAS } from '@/dados/escola'
+import { definirEscolaAtiva, useEscolaAtiva } from '@/dados/escola-ativa'
+import { useEnvios } from '@/dados/envios'
+import { DURACAO_AULA, horaDosMinutos, minutosDaHora, useSemana, type AulaDaSemana, type DiaDaSemana } from '@/dados/grade'
+import { useProfessorAtual } from '@/dados/sessao'
+import { cn } from '@/lib/utils'
 
-/* Calendário do professor (F8), montado sobre o template vaib215/event-manager do 21st.dev (escolha do Gabriel,
-   19/09/2026) e redesenhado em 20/09/2026 sobre o calendário da Teachy: mês (uma linha por evento), semana (uma coluna
-   por dia, com as aulas como cartões empilhados) e dia (os mesmos cartões e o painel "Falta preencher"), com busca e
-   filtros por turma e por tipo.
-   Deriva da estrutura da escola: a coordenação importa grade e calendário, e o professor só preenche O QUE VAI DAR
-   em cada aula — ele não monta a grade (regra 60, item 8). Por isso aqui não se cria nem se arrasta evento. */
+/* A SEMANA (dentro de Turmas, /professor/turmas?ver=semana) — 14ª rodada (05/10/2026; plano ux-composicao 1.3 e 5.2).
 
-/** O "agora" do mockup: segunda-feira, 21 de setembro de 2026, 10h42 (o mesmo de dados/escola). */
-const HOJE = new Date(2026, 8, 21, 10, 42)
+   Uma GRADE DE HORÁRIO, como a da escola: de 7h30 a 12h (de manhã) ou de 13h30 a 17h30 (à tarde, na outra escola).
+   · Cinco colunas iguais, de segunda a sexta; cada aula fica na altura da hora em que começa e tem a altura da
+     duração (50 min), então as aulas da mesma hora ficam alinhadas na horizontal. As linhas da esquerda marcam o
+     começo de cada aula da escola e o intervalo.
+   · Hoje aceso (o cabeçalho do dia em azul, a coluna em fundo suave e a linha do agora); a aula de agora com a borda
+     azul e o selo AGORA.
+   · Clicar abre a aula ao lado: o que vou dar, o material ligado e PREPARAR (a conversa nova, com a turma e o tema);
+     a aula de agora traz COMEÇAR AULA.
+   · No cabeçalho da página: o seletor da escola (quem dá aula em duas; o seletor do app inteiro, regra 10). Na linha
+     das abas: ‹ "21 a 25 de setembro" › e HOJE (?semana=-1|1; só uma semana para cada lado).
+   · A prova enviada "na próxima aula" põe o selo AVALIAÇÃO na aula em que abre (dados/envios.ts); a aula em branco,
+     o selo FALTA PREENCHER (neutro: lembra, não cobra; D59).
+   · No celular: os cinco dias em botões e a grade de um dia só.
+   Ninguém cria nem arrasta aula: a grade vem da escola (regra 60, item 8). Uma fonte só: `useSemana` (dados/grade.ts). */
 
-type Aula = [hora: string, turma: string, escola?: string]
+const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+const SEGUNDA = new Date(2026, 8, 21)
+const dois = (n: number) => String(n).padStart(2, '0')
 
-/* A grade da semana, como a coordenação importou. Índice 0 = segunda. */
-const GRADE: Aula[][] = [
-  [['7:30', '1ºC'], ['8:20', '2ºA'], ['10:30', '2ºB'], ['14:10', '9ºA', 'Rio Cachoeira']],
-  [['7:30', '2ºB'], ['9:10', '1ºC'], ['10:30', '2ºA']],
-  [['8:20', '2ºA'], ['14:10', '9ºA', 'Rio Cachoeira'], ['15:00', '9ºA', 'Rio Cachoeira']],
-  [['7:30', '1ºC'], ['10:30', '2ºB']],
-  [['7:30', '2ºA'], ['9:10', '2ºB'], ['10:30', '1ºC']],
-]
-
-/* O que a professora já preencheu: "AAAA-M-D hora turma" → conteúdo. O que não está aqui ainda está em branco. */
-const CONTEUDO: Record<string, string> = {
-  '14 7:30 1ºC': 'Evolução dos modelos atômicos', '14 8:20 2ºA': 'Mol e massa molar: exercícios', '14 10:30 2ºB': 'Proporção em massa',
-  '15 7:30 2ºB': 'Cálculos com massa molar', '15 9:10 1ºC': 'Número atômico e de massa', '15 10:30 2ºA': 'Lista de mol em sala',
-  '16 8:20 2ºA': 'Revisão de mol', '16 14:10 9ºA': 'Transformações químicas', '17 7:30 1ºC': 'Isótopos', '17 10:30 2ºB': 'Revisão para a prova',
-  '18 7:30 2ºA': 'Entrega da lista de mol', '18 10:30 1ºC': 'Exercícios de distribuição',
-  '21 7:30 1ºC': 'Modelos atômicos: de Dalton a Bohr', '21 8:20 2ºA': 'Correção da lista de mol', '21 10:30 2ºB': 'Revisão de estequiometria',
-  '22 7:30 2ºB': 'Reagente limitante · aula 1 do plano', '22 9:10 1ºC': 'Distribuição eletrônica',
-  '23 8:20 2ºA': 'Reagente limitante', '23 14:10 9ºA': 'Reações químicas do dia a dia',
-  '24 10:30 2ºB': 'Reagente limitante · aula 2 do plano', '25 7:30 2ºA': 'Rendimento de reação', '25 10:30 1ºC': 'Tabela periódica: famílias',
+/** "21 a 25 de setembro"; atravessando o mês, "28 de setembro a 2 de outubro". Curto: "21 a 25/09". */
+function rotuloDaSemana(deslocamento: number, curto = false) {
+  const ini = new Date(SEGUNDA.getFullYear(), SEGUNDA.getMonth(), SEGUNDA.getDate() + deslocamento * 7)
+  const fim = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate() + 4)
+  if (curto) return `${ini.getDate()}/${dois(ini.getMonth() + 1)} a ${fim.getDate()}/${dois(fim.getMonth() + 1)}`
+  return ini.getMonth() === fim.getMonth()
+    ? `${ini.getDate()} a ${fim.getDate()} de ${MESES[fim.getMonth()]}`
+    : `${ini.getDate()} de ${MESES[ini.getMonth()]} a ${fim.getDate()} de ${MESES[fim.getMonth()]}`
 }
 
-/* O que já foi dado antes de 14/09 (agosto e começo de setembro), turma por turma, na ordem em que as aulas aconteceram. */
-const SEGUNDO_ANO = ['Equações químicas', 'Balanceamento por tentativa', 'Exercícios de balanceamento', 'Massa atômica', 'Massa molecular', 'Conceito de mol',
-  'Constante de Avogadro', 'Massa molar', 'Exercícios de mol', 'Volume molar', 'Fórmula percentual', 'Fórmula mínima e molecular']
-const JA_DADO: Record<string, string[]> = {
-  '1ºC': ['Matéria, corpo e objeto', 'Estados físicos da matéria', 'Mudanças de estado', 'Curvas de aquecimento', 'Substâncias puras e misturas', 'Misturas homogêneas e heterogêneas',
-    'Separação de misturas: filtração', 'Separação de misturas: destilação', 'Fenômenos físicos e químicos', 'Lei de Lavoisier', 'Lei de Proust', 'Exercícios de leis ponderais'],
-  '2ºA': SEGUNDO_ANO, '2ºB': SEGUNDO_ANO,
-  '9ºA': ['Propriedades da matéria', 'Densidade: prática', 'Estados físicos e partículas', 'Mudanças de estado', 'Misturas do dia a dia', 'Separação de misturas',
-    'Átomos e elementos', 'Tabela periódica: primeiro contato', 'Substâncias simples e compostas', 'Evidências de transformação', 'Exercícios de revisão', 'Correção dos exercícios'],
+/* A semana passada (14 a 18 de setembro), como a professora preencheu: o que deu em cada aula e a prova de mol do
+   2ºB, na sexta. "dia hora turma" → conteúdo, no formato da grade. */
+const PASSADA: Record<string, string> = {
+  '0 7h30 1c': 'Número atômico e de massa', '0 8h20 2a': 'Mol e massa molar', '0 10h30 2b': 'Exercícios de massa molar', '0 14h10 9a': 'Feira de ciências: 2ª etapa',
+  '1 7h30 2b': 'Revisão para a prova de mol', '1 9h10 1c': 'Isótopos', '1 10h30 2a': 'Exercícios de mol',
+  '2 8h20 2a': 'Lista de mol', '2 14h10 9a': 'Reações do dia a dia', '2 15h00 9a': 'Atividade de reações',
+  '3 7h30 1c': 'Camadas do modelo de Bohr', '3 10h30 2b': 'Correção de exercícios de mol',
+  '4 7h30 2a': 'Proporção nas reações', '4 9h10 2b': 'Prova de mol e massa molar', '4 10h30 1c': 'Modelo de Bohr: exercícios',
 }
+const AVALIACAO_PASSADA: Record<string, string> = { '4 9h10 2b': 'Prova de mol e massa molar' }
 
-/* Feriados do semestre ("mês-dia", mês a partir de 0): sem aula nas duas escolas. */
-const FERIADOS: Record<string, string> = { '8-7': 'Independência', '9-12': 'Nossa Senhora Aparecida', '10-2': 'Finados', '10-20': 'Consciência Negra' }
+/** Só uma semana para cada lado: a passada (com o que foi dado) e a próxima (por preencher). */
+const LIMITE = 1
 
-const em = (dia: number, hm = '0:00', mes = 8) => { const [h, m] = hm.split(':').map(Number); return new Date(2026, mes, dia, h, m) }
-const mais = (d: Date, min: number) => new Date(d.getTime() + min * 60000)
-
-function montar(): Evento[] {
-  const lista: Evento[] = []
-  // A grade é semanal e vale o semestre inteiro: de 03/08 (volta do recesso) a 11/12, menos os feriados.
-  // Antes de 14/09 a professora já registrou o que deu; de 14/09 em diante vale o CONTEUDO; o resto está em branco.
-  const dadas: Record<string, number> = { '2ºB': 1 } // o 2ºB anda duas aulas à frente do 2ºA
-  const registro = new Date(2026, 8, 14)
-  for (let s = 0; s < 19; s++) for (let d = 0; d < 5; d++) {
-    const dia = new Date(2026, 7, 3 + s * 7 + d)
-    const setembro = dia.getMonth() === 8
-    if (FERIADOS[`${dia.getMonth()}-${dia.getDate()}`]) continue
-    for (const [hm, turma, escola] of GRADE[d]) {
-      if (setembro && dia.getDate() === 18 && hm === '9:10') continue // nesse horário foi a prova
-      const inicio = em(dia.getDate(), hm, dia.getMonth())
-      const t = TURMAS.find((x) => x.nome === turma)!
-      const antes = dia < registro ? JA_DADO[turma]?.[(dadas[turma] = (dadas[turma] ?? -1) + 1) % 12] : undefined
-      lista.push({
-        id: `aula-${dia.getMonth()}-${dia.getDate()}-${hm}`, tipo: 'aula', titulo: `${turma} · ${t.disciplina}`, turma, escola,
-        inicio, fim: mais(inicio, 50), descricao: antes ?? (setembro ? CONTEUDO[`${dia.getDate()} ${hm} ${turma}`] : undefined),
-        agora: setembro && dia.getDate() === 21 && hm === '10:30',
-      })
+/** Outra semana: a mesma grade, nas datas dela, sem o agora. A passada traz o que foi dado; a próxima, em branco. */
+function deslocar(dias: DiaDaSemana[], deslocamento: number): DiaDaSemana[] {
+  if (deslocamento === 0) return dias
+  return dias.map((d) => {
+    const data = new Date(SEGUNDA.getFullYear(), SEGUNDA.getMonth(), SEGUNDA.getDate() + deslocamento * 7 + d.indice)
+    const dm = `${dois(data.getDate())}/${dois(data.getMonth() + 1)}`
+    return {
+      ...d, data: dm, hoje: false,
+      aulas: d.aulas.map((a) => {
+        const chave = `${d.indice} ${a.hora} ${a.turmaId}`
+        const passada = deslocamento < 0
+        return { ...a, id: `${a.id}+${deslocamento}`, data: dm, agora: false, material: null,
+          conteudo: passada ? PASSADA[chave] ?? null : null, avaliacao: passada ? AVALIACAO_PASSADA[chave] ?? null : null }
+      }),
     }
-  }
-  const dia = (id: string, d: number, e: Omit<Evento, 'id' | 'inicio' | 'fim' | 'diaInteiro'>, mes = 8): Evento => ({ id, inicio: em(d, '0:00', mes), fim: em(d, '23:59', mes), diaInteiro: true, ...e })
-  for (const [quando, nome] of Object.entries(FERIADOS)) {
-    const [m, d] = quando.split('-').map(Number)
-    lista.push(dia(`feriado-${quando}`, d, { tipo: 'recado', titulo: `Feriado · ${nome}`, descricao: 'Sem aula nas duas escolas.' }, m))
-  }
-  lista.push(
-    { id: 'prova-18', tipo: 'avaliacao', titulo: 'Prova de estequiometria', turma: '2ºB', inicio: em(18, '9:10'), fim: mais(em(18, '9:10'), 50), descricao: 'Aplicada. O Assistente corrigiu as 30 provas entregues e espera você abrir os 5 destaques.', para: '/professor/aprovar', acao: 'Revisar a correção' },
-    dia('semana', 21, { tipo: 'time', titulo: 'Assistente abriu a semana', descricao: '14 aulas, 1 avaliação e 2 entregas. Sexta tem conselho de classe.', para: '/professor/time/assistente', acao: 'Abrir no Assistente' }),
-    dia('atraso', 21, { tipo: 'entrega', atraso: true, turma: '2ºA', titulo: 'Lista de mol · 2ºA', descricao: '4 alunos não entregaram a lista de mol e massa molar.', para: '/professor/turmas/2a', acao: 'Ver quem falta' }),
-    dia('corrigiu', 21, { tipo: 'time', titulo: 'Correção do 2ºB esperando você', descricao: '30 provas corrigidas. Abra os 5 destaques antes de aprovar.', para: '/professor/aprovar', acao: 'Revisar os destaques' }),
-    dia('prazo', 23, { tipo: 'entrega', turma: '2ºB', titulo: 'Atividade de estequiometria · 2ºB', descricao: 'Prazo de entrega da atividade atribuída na semana passada.', para: '/professor/turmas/2b', acao: 'Ver na turma' }),
-    { id: 'prova-24', tipo: 'avaliacao', titulo: 'Prova de estequiometria · 2ª chamada', turma: '2ºB', inicio: em(24, '8:20'), fim: mais(em(24, '8:20'), 50), descricao: 'Dez questões, com gabarito e a página de cada uma. A versão adaptada espera a sua aprovação.', para: '/professor/biblioteca/prova-estequiometria', acao: 'Abrir a prova' },
-    dia('adaptada', 24, { tipo: 'time', titulo: 'Versão adaptada esperando você', descricao: 'Fonte ampliada e enunciado direto. Só chega aos alunos depois que você aprovar.', para: '/professor/time/assistente', acao: 'Ver e aprovar' }),
-    { id: 'conselho', tipo: 'recado', titulo: 'Conselho de classe', inicio: em(25, '13:30'), fim: em(25, '16:00'), descricao: 'Sem aula à tarde no Colégio Aurora.' },
-    dia('bimestre', 30, { tipo: 'recado', titulo: 'Fim do 3º bimestre', descricao: 'Último dia para fechar o diagnóstico do bimestre.' }),
-  )
-  return lista
+  })
 }
 
-const EVENTOS = montar()
+/** A semana escolhida (?semana=-1 | 1), presa ao endereço para o cabeçalho e a grade lerem a mesma. */
+function useDeslocamento() {
+  const [valor, setValor] = useParametro('semana')
+  const n = Math.max(-LIMITE, Math.min(LIMITE, Number(valor) || 0))
+  return [n, (d: number) => setValor(d === 0 ? null : String(Math.max(-LIMITE, Math.min(LIMITE, d))))] as const
+}
 
-export function Calendario() {
+/* ── O turno: o pedaço do dia que a grade mostra ─────────────────────────────────────────────────────────── */
+
+type Turno = { nome: 'manhã' | 'tarde'; inicio: number; fim: number }
+const MANHA: Turno = { nome: 'manhã', inicio: 7 * 60 + 30, fim: 12 * 60 }
+const TARDE: Turno = { nome: 'tarde', inicio: 13 * 60 + 30, fim: 17 * 60 + 30 }
+const turnoDaEscola = (escolaId: string): Turno => (ESCOLAS.find((e) => e.id === escolaId)?.turno === 'Tarde' ? TARDE : MANHA)
+
+/** As marcas da esquerda: o começo de cada aula da escola, o fim da última e o intervalo (vão de 20 min ou mais). */
+function marcasDo(dias: DiaDaSemana[], turno: Turno) {
+  const inicios = [...new Set(dias.flatMap((d) => d.aulas.map((a) => minutosDaHora(a.hora))))].sort((a, b) => a - b)
+  const marcas = new Set<number>(inicios)
+  const intervalos: { de: number; ate: number }[] = []
+  inicios.forEach((m, i) => {
+    const fim = m + DURACAO_AULA
+    const prox = inicios[i + 1]
+    if (prox === undefined) { if (fim <= turno.fim) marcas.add(fim); return }
+    if (prox - fim >= 20) { intervalos.push({ de: fim, ate: prox }); marcas.add(fim) }
+  })
+  if (!inicios.length) for (let m = Math.ceil(turno.inicio / 60) * 60; m <= turno.fim; m += 60) marcas.add(m)
+  return { marcas: [...marcas].filter((m) => m >= turno.inicio && m <= turno.fim).sort((a, b) => a - b), intervalos }
+}
+
+/* ── No cabeçalho: a escola e a semana ───────────────────────────────────────────────────────────────────── */
+
+/** O seletor da escola (só para quem dá aula em duas): "Colégio Aurora · manhã ▾". Troca a escola do app inteiro. */
+export function EscolaDaSemana() {
+  const prof = useProfessorAtual()
+  const escola = useEscolaAtiva()
+  const minhas = ESCOLAS.filter((e) => prof.escolas.includes(e.id))
+  if (minhas.length < 2) return null
+  const gatilho = (
+    <button type="button" aria-label={`Escola: ${escola.nome}. Trocar`}
+      className="inline-flex h-10 max-w-full items-center gap-2 rounded-[12px] border-2 border-borda bg-white pl-3 pr-2 text-[15px] font-bold text-tinta transition-colors duration-150 hover:bg-fundo-suave data-[state=open]:bg-fundo-suave">
+      <span className="truncate">{escola.curto}</span>
+      <span className="font-medium text-sutil max-sm:hidden">· {turnoDaEscola(escola.id).nome}</span>
+      <ChevronDown aria-hidden className="size-4 shrink-0 text-sutil" strokeWidth={2.5} />
+    </button>
+  )
   return (
-    <TelaCheia titulo="Calendário">
-      <EventManager eventos={EVENTOS} hoje={HOJE} turmas={TURMAS.map((t) => t.nome)} />
-      <NotaMockup>
-        F8, fora do MVP de apresentação, com o lugar reservado na lateral. Montado sobre o template vaib215/event-manager (21st.dev), no desenho do calendário da Teachy: três visões (mês, semana, dia), busca e filtros.
-        Regra 60, item 8: a grade deriva da estrutura importada pela coordenação, então saíram do template o "novo evento" e o arrastar; clicar numa aula abre só o campo "O que vou dar".
-        As duas escolas da professora aparecem juntas, com a etiqueta na aula da outra escola. Feriado e conselho de classe entram como recado da escola.
-      </NotaMockup>
-    </TelaCheia>
+    <MenuMais alinhar="end" gatilho={gatilho}
+      itens={minhas.map((e) => ({
+        rotulo: `${e.nome} · ${turnoDaEscola(e.id).nome}`,
+        icone: e.id === escola.id ? <Check strokeWidth={3} /> : <span className="size-[18px]" />,
+        aoEscolher: () => { if (e.id !== escola.id) definirEscolaAtiva(e.id) },
+      }))} />
+  )
+}
+
+/** ‹ "21 a 25 de setembro" › e HOJE, na ponta direita da linha das abas. */
+export function NavegarSemana() {
+  const [desl, setDesl] = useDeslocamento()
+  return (
+    <div className="flex items-center gap-1">
+      {desl !== 0 && <Botao variante="fantasma" tamanho="p" onClick={() => setDesl(0)} className="max-sm:hidden">Hoje</Botao>}
+      <BotaoIcone rotulo="Semana anterior" disabled={desl <= -LIMITE} onClick={() => setDesl(desl - 1)}><ChevronLeft strokeWidth={2.5} /></BotaoIcone>
+      <span className="min-w-0 whitespace-nowrap text-center text-[15px] font-bold tabular-nums text-tinta sm:min-w-[188px]" aria-live="polite">
+        <span className="max-sm:hidden">{rotuloDaSemana(desl)}</span><span className="px-1 text-[13px] sm:hidden">{rotuloDaSemana(desl, true)}</span>
+      </span>
+      <BotaoIcone rotulo="Próxima semana" disabled={desl >= LIMITE} onClick={() => setDesl(desl + 1)}><ChevronRight strokeWidth={2.5} /></BotaoIcone>
+    </div>
+  )
+}
+
+/* ── A grade ─────────────────────────────────────────────────────────────────────────────────────────────── */
+
+export function SemanaDoProfessor() {
+  const prof = useProfessorAtual()
+  const escola = useEscolaAtiva()
+  const [deslocamento] = useDeslocamento()
+  const [aberta, setAberta] = useParametro('aula')
+  const base = useSemana(prof.id, escola.id)
+  const envios = useEnvios()
+  const { ordem } = useAgora()
+  const [diaCelular, setDiaCelular] = useState(0)
+
+  // a prova enviada "na próxima aula" abre numa aula desta semana: ela ganha o selo AVALIAÇÃO
+  const semana = useMemo(() => {
+    const marcadas = base.map((d) => ({
+      ...d,
+      aulas: d.aulas.map((a) => {
+        const prova = envios.find((e) => e.quando === 'proxima' && e.turmaId === a.turmaId && e.abre?.rotulo === `${a.nomeDia}, ${a.hora}`)
+        return prova ? { ...a, avaliacao: prova.titulo } : a
+      }),
+    }))
+    return deslocar(marcadas, deslocamento)
+  }, [base, envios, deslocamento])
+
+  const turno = turnoDaEscola(escola.id)
+  const { marcas, intervalos } = useMemo(() => marcasDo(semana, turno), [semana, turno])
+  const temAula = semana.some((d) => d.aulas.length > 0)
+  const aula = semana.flatMap((d) => d.aulas).find((a) => a.id === aberta)
+  const futura = deslocamento >= 0
+  // o minuto de agora (o relógio da demonstração), para a linha do agora na coluna de hoje
+  const agoraMin = 10 * 60 + 42 + ordem
+
+  if (!temAula) {
+    return (
+      <div className="grid min-h-0 flex-1 grid-rows-[1fr_auto_2fr]">
+        <span aria-hidden />
+        <EstadoVazio ilustracao={<Onca pose="dormindo" tamanho={96} />} titulo="Sem aulas nesta semana" />
+        <span aria-hidden />
+      </div>
+    )
+  }
+
+  const grade = (dias: DiaDaSemana[]) => (
+    <Grade dias={dias} turno={turno} marcas={marcas} intervalos={intervalos} futura={futura}
+      agoraMin={deslocamento === 0 ? agoraMin : null} aoAbrir={(a) => setAberta(a.id)} />
+  )
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* computador: as cinco colunas */}
+      <div className="hidden min-h-0 flex-1 flex-col md:flex">{grade(semana)}</div>
+
+      {/* celular: os dias em botões e a grade de um dia */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 md:hidden">
+        <div role="group" aria-label="Dia da semana" className="grid shrink-0 grid-cols-5 gap-1.5">
+          {semana.map((d) => {
+            const ativo = d.indice === diaCelular
+            return (
+              <button key={d.indice} type="button" aria-pressed={ativo} onClick={() => setDiaCelular(d.indice)}
+                className={cn('flex h-14 flex-col items-center justify-center rounded-[12px] border-2 transition-colors duration-150',
+                  ativo ? 'border-azul-borda bg-azul-claro text-azul-texto' : 'border-borda bg-white text-apoio hover:bg-fundo-suave')}>
+                <span className="t-selo">{d.curto}</span>
+                <span className={cn('text-[15px] font-bold tabular-nums', d.hoje && !ativo && 'text-azul-texto')}>{d.data.slice(0, 2)}</span>
+              </button>
+            )
+          })}
+        </div>
+        <div className="flex min-h-[420px] flex-1 flex-col">{grade(semana.filter((d) => d.indice === diaCelular))}</div>
+      </div>
+
+      <PainelLado aberto={!!aula} aoFechar={() => setAberta(null)} titulo={aula ? `${aula.turma} · ${aula.materia}` : ''}
+        descricao="A aula: o que vou dar e o material ligado."
+        rodape={aula && (aula.agora ? (
+          <Botao asChild variante="primario" tamanho="m"><Link to={`/professor/turmas/${aula.turmaId}/aula`}>Começar aula</Link></Botao>
+        ) : futura ? (
+          <Botao asChild variante="primario" tamanho="m">
+            <Link to={`/professor/conversa/nova?turma=${aula.turmaId}${aula.conteudo ? `&pedido=${encodeURIComponent(aula.conteudo)}` : ''}`}>Preparar</Link>
+          </Botao>
+        ) : undefined)}>
+        {aula && <DetalheAula a={aula} passada={!futura} />}
+      </PainelLado>
+    </div>
+  )
+}
+
+/** A grade de horário: a régua de horas à esquerda (56 px) e uma coluna por dia, as aulas posicionadas pela hora. */
+function Grade({ dias, turno, marcas, intervalos, futura, agoraMin, aoAbrir }: {
+  dias: DiaDaSemana[]
+  turno: Turno
+  marcas: number[]
+  intervalos: { de: number; ate: number }[]
+  futura: boolean
+  agoraMin: number | null
+  aoAbrir: (a: AulaDaSemana) => void
+}) {
+  // a grade vai da primeira marca à última (o começo da primeira aula e o fim da última): sem faixa vazia embaixo
+  const ini = marcas.length ? Math.min(marcas[0], turno.inicio) : turno.inicio
+  const fim = marcas.length ? marcas[marcas.length - 1] : turno.fim
+  const total = fim - ini
+  const pos = (m: number) => `${((m - ini) / total) * 100}%`
+  const alt = (min: number) => `${(min / total) * 100}%`
+  const colunas = `56px repeat(${dias.length}, minmax(0, 1fr))`
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* os dias */}
+      <div className="grid shrink-0 gap-x-2 pb-2 max-md:hidden" style={{ gridTemplateColumns: colunas }}>
+        <span aria-hidden />
+        {dias.map((d) => (
+          <p key={d.indice} className={cn('flex h-9 items-center gap-2 rounded-[10px] px-3', d.hoje ? 'bg-azul-claro text-azul-texto' : 'text-sutil')}>
+            <span className="t-selo">{d.curto}</span>
+            <span className="text-[15px] font-bold tabular-nums">{d.data}</span>
+            {d.hoje && <span className="t-selo ml-auto">Hoje</span>}
+          </p>
+        ))}
+      </div>
+
+      {/* as horas e as aulas */}
+      <div className="relative grid min-h-0 flex-1 gap-x-2 rounded-[16px] border-2 border-borda bg-white py-3 pr-2" style={{ gridTemplateColumns: colunas }}>
+        {/* a régua: as linhas atravessam a grade inteira */}
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 inset-y-3">
+          {intervalos.map((i) => (
+            <div key={i.de} className="absolute inset-x-0 flex items-center justify-center bg-fundo-suave" style={{ top: pos(i.de), height: alt(i.ate - i.de) }}>
+              <span className="t-selo text-sutil">Intervalo</span>
+            </div>
+          ))}
+          {marcas.map((m) => (
+            <div key={m} className="absolute inset-x-0 flex items-center" style={{ top: pos(m) }}>
+              <span className="w-14 -translate-y-1/2 pr-2 text-right text-[13px] font-bold tabular-nums leading-none text-sutil">{horaDosMinutos(m)}</span>
+              <span className="h-0 flex-1 border-t-2 border-dashed border-borda" />
+            </div>
+          ))}
+        </div>
+        <span aria-hidden />
+        {dias.map((d) => (
+          <section key={d.indice} aria-label={`${d.nome}, ${d.data}`} className={cn('relative min-h-0 rounded-[10px]', d.hoje && 'bg-azul-claro/40')}>
+            {d.aulas.map((a) => {
+              const comeco = minutosDaHora(a.hora)
+              return (
+                <CartaoAula key={a.id} a={a} futura={futura} aoAbrir={() => aoAbrir(a)}
+                  style={{ top: `calc(${pos(comeco)} + 2px)`, height: `calc(${alt(DURACAO_AULA)} - 4px)` }} />
+              )
+            })}
+            {d.hoje && agoraMin !== null && !d.aulas.some((a) => a.agora) && agoraMin >= ini && agoraMin <= fim && (
+              <span aria-hidden className="pointer-events-none absolute inset-x-0 z-[2] flex items-center" style={{ top: pos(agoraMin) }}>
+                <span className="-ml-1 size-2.5 -translate-y-px rounded-full bg-azul" /><span className="h-0.5 flex-1 bg-azul" />
+              </span>
+            )}
+            {d.aulas.length === 0 && <p className="t-apoio absolute inset-x-0 top-2 text-center">Sem aula</p>}
+          </section>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CartaoAula({ a, futura, aoAbrir, style }: { a: AulaDaSemana; futura: boolean; aoAbrir: () => void; style: CSSProperties }) {
+  const f = materiaDe(a.materia)?.familia ?? 'azul'
+  return (
+    <button type="button" onClick={aoAbrir} style={{ ...estiloFamilia(f), ...style }}
+      aria-label={`${a.nomeDia}, ${a.hora}: ${a.turma}. ${a.conteudo ?? 'Falta preencher'}${a.agora ? '. Agora' : ''}`}
+      className={cn('absolute inset-x-0 z-[1] flex flex-col items-stretch gap-0.5 overflow-hidden rounded-[12px] border-2 bg-(--claro) px-2.5 py-1.5 text-left transition-[filter] duration-150 hover:brightness-[.97]',
+        a.agora ? 'border-azul shadow-[0_3px_0_0_var(--color-azul-degrau)]' : 'border-(--borda)')}>
+      <span className="flex min-w-0 items-center gap-1.5">
+        <span className="shrink-0 text-[15px] font-bold leading-5 text-tinta">{a.turma}</span>
+        <span className="truncate text-[13px] font-bold tabular-nums leading-5 text-sutil">{a.hora}</span>
+        {a.agora && <Selo familia="azul" tamanho="p" className="ml-auto">Agora</Selo>}
+        {!a.agora && a.avaliacao && <Selo familia="vermelho" tamanho="p" className="ml-auto">Avaliação</Selo>}
+      </span>
+      {a.conteudo
+        ? <span className="line-clamp-2 text-[14px] font-medium leading-[18px] text-apoio">{a.conteudo}</span>
+        : futura && <Selo tamanho="p" className="self-start">Falta preencher</Selo>}
+    </button>
+  )
+}
+
+function DetalheAula({ a, passada }: { a: AulaDaSemana; passada: boolean }) {
+  const materia = materiaDe(a.materia)
+  return (
+    <div className="grid min-w-0 gap-6">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
+        {materia && <LadrilhoIcone familia={materia.familia} tamanho={44} icone={<Icone id={materia.icone} familia={materia.familia} />} />}
+        <p className="t-cartao min-w-0 flex-1 text-tinta first-letter:uppercase">{a.nomeDia}, {a.data} · {a.hora}</p>
+        {a.agora && <Selo familia="azul">Agora</Selo>}
+      </div>
+      <section className="min-w-0">
+        <h3 className="t-selo mb-2 text-sutil">{passada ? 'O que foi dado' : 'O que vou dar'}</h3>
+        {a.conteudo
+          ? <p className="t-corpo break-words text-tinta">{a.conteudo}</p>
+          : <p className="t-corpo text-sutil">Ainda em branco</p>}
+        {a.avaliacao && <Selo familia="vermelho" className="mt-3 max-w-full">Avaliação</Selo>}
+      </section>
+      {a.material && (
+        <section className="min-w-0">
+          <h3 className="t-selo mb-2 text-sutil">Material ligado</h3>
+          <div className="overflow-hidden rounded-[16px] border-2 border-borda">
+            <Linha para={a.material.para} chevron titulo={a.material.nome}
+              inicio={<LadrilhoIcone familia="amarelo" tamanho={40} icone={<Icone id="criados" />} />} />
+          </div>
+        </section>
+      )}
+    </div>
   )
 }

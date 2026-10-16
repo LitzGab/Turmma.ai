@@ -1,183 +1,180 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { Armchair, ArrowDown, ArrowUp, ArrowUpDown, Eye, Heart, Minus, MoreVertical, NotebookText, Sparkles, TrendingDown, TrendingUp, UserPlus } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { itemT, menuT } from '@/components/turmma/painel'
-import { AvatarT, BotaoT, botaoT, CabecalhoAba, Periodo, tabelaT } from '@/components/turmma/teachy'
-import { alunosDa, type Aluno } from '@/dados/alunos'
-import { adaptacaoDe, statusDe, tendenciaDe, virgula, type StatusAluno } from '@/dados/turmas-resumo'
+import { useMemo, useState } from 'react'
+import type React from 'react'
+import { ArrowUpDown, ChevronDown, ChevronRight, UserPlus } from 'lucide-react'
+import { Avatar, Botao, Busca, MenuMais, Segmentado, Selo } from '@/components/duo'
+import { useParametro } from '@/components/turmma/tela'
+import { naoComecouDa } from '@/dados/alunos'
+import { useAlunosDaTurma, usePedidos, type AlunoDaTurma } from '@/dados/acesso'
+import { useAdaptacoes } from '@/dados/escola-estado'
+import { comVirgula } from '@/dados/turma-atividades'
 import { cn } from '@/lib/utils'
-import { ConvidarAlunos } from './ConvidarAlunos'
-import { SalaTurma } from './Sala'
+import { limpa } from '../_busca'
+import { ConvidarAlunos, ConviteNaTela, useEntraramNa } from './ConvidarAlunos'
+import { BoletimTurma, exportarNotas, useBoletim } from './Notas'
+import { FichaDoAluno, PontoSituacao, situacaoDoNome } from './Sala'
 
-/* ABA "ALUNOS" DA TURMA ABERTA — CÓPIA da aba "Alunos" da Teachy (oitava rodada, 20/09/2026: "eu quero um ctrl c e
-   ctrl v da Teachy"). O cabeçalho grande ("Alunos" 20/700 + a linha de apoio), à direita o seletor de período e o
-   primário "Adicionar" — é DELE que sai o convite (ConvidarAlunos.tsx), como o "Adicionar alunos" da Teachy; o botão de
-   convite saiu da barra da turma. Embaixo, as subabas sublinhadas "Alunos" | "Sala":
-   · "Alunos": a tabela da Teachy — caixa de seleção · Aluno ⇅ · Média ⇅ · Tendência · Status · Ações — com linha de
-     56 px, ordenável por nome e por média. "Detalhes" abre a ficha do aluno na subaba Sala; "Adaptação" (em laranja)
-     só aparece para quem tem adaptação registrada (dois alunos do 2ºB); "⋮" guarda o resto.
-   · "Sala": a sala de carteiras que o Gabriel aprovou (Sala.tsx), num quadro de 600 px de altura.
-   O endereço guarda a subaba: `?aba=alunos` é a tabela, `?aba=sala` é a sala (o endereço antigo da aba "Sala" continua
-   abrindo, e `&aluno=<id>` abre a ficha daquele aluno).
-   Tudo aqui é TRABALHO do aluno: média das atividades aprovadas, a evolução dela, entrega. O status é sempre um fato
-   ("Em dia" · "Entrega faltando" · "Abaixo de 6"); nunca atenção, humor ou jeito do aluno (D57, D66).
-   Contrato das abas (novo): bloco de altura natural dentro da coluna da turma; quem rola é o documento. */
+/* ABA "ALUNOS" DA TURMA (14ª rodada, 05/10/2026; plano ux-composicao 5.2). Um grupo de alunos, dois jeitos de ver
+   (Lista | Notas, ?ver=; R3).
+   · Uma linha de ferramentas: o segmentado, a busca, a ordem (só na Lista: Nome · Média · Quem ainda não começou) e, à
+     direita, "3 pediram para entrar ›" (abre o painel da fila, ?item=pedidos-<turma>), "26 de 32 entraram",
+     CONVIDAR ALUNOS (o botão cheio enquanto falta alguém entrar; depois, no ⋯) e o ⋯ com Exportar notas.
+   · LISTA: uma tabela de colunas proporcionais (Aluno 40% · Situação 25% · Entregas 15% · Média 10% · ›), linhas de
+     56 px, o cabeçalho preso e a lista rolando por dentro. A situação é um fato do trabalho (`Ponto` e uma palavra);
+     a média só soma nota APROVADA; o selo ADAPTAÇÃO é o que a coordenação registrou (useAdaptacoes). A linha abre a
+     ficha ao lado (?aluno=). A 375: linhas de 56 (avatar · nome · o ponto da situação · a média à direita), sem
+     blocos de rótulo e valor.
+   · NOTAS: o boletim (Notas.tsx), com a coluna não aprovada travada e fora da média.
+   Os nomes vêm de `useAlunosDaTurma`: a 3ºA mostra a lista que a coordenação gravou, e quem o professor aprova passa de
+   "Pediu para entrar" a "Em dia" na hora. A aba cabe na janela (R10). */
 
-type Ordem = { por: 'nome' | 'media'; sentido: 1 | -1 }
+type Ordem = 'nome' | 'media' | 'naocomecou'
+const ORDENS: { id: Ordem; nome: string }[] = [{ id: 'nome', nome: 'Nome' }, { id: 'media', nome: 'Média' }, { id: 'naocomecou', nome: 'Quem ainda não começou' }]
 
-const STATUS: Record<StatusAluno, { nome: string; classe: string }> = {
-  'em-dia': { nome: 'Em dia', classe: 'bg-ok-cx text-ok' },
-  entrega: { nome: 'Entrega faltando', classe: 'bg-pendente-cx text-pendente' },
-  abaixo: { nome: 'Abaixo de 6', classe: 'bg-erro-cx text-erro' },
-}
+type LinhaAluno = { n: AlunoDaTurma; numero: number; media: number | null; naoComecou: boolean; adaptacao: boolean }
 
-const NA_ORDEM: Record<string, string> = { nome1: 'em ordem de chamada', 'nome-1': 'de Z a A', media1: 'da menor média para a maior', 'media-1': 'da maior média para a menor' }
+export function AlunosTurma({ turmaId }: { turmaId: string }) {
+  const [verParam, setVer] = useParametro('ver', 'lista')
+  const ver = verParam === 'notas' ? 'notas' : 'lista'
+  const [convidar, setConvidar] = useParametro('convidar')
+  const [aluno, setAluno] = useParametro('aluno')
+  const [, setItem] = useParametro('item')
+  const [busca, setBusca] = useState('')
+  const [ordem, setOrdem] = useState<Ordem>('nome')
 
-function Tendencia({ a }: { a: Aluno }) {
-  const t = tendenciaDe(a)
-  if (t.sentido === 'sem') return <span className="text-inativo" title="Menos de duas notas: ainda não dá para dizer">-</span>
-  const delta = `${t.delta > 0 ? '+' : t.delta < 0 ? '−' : ''}${virgula(Math.abs(t.delta))}`
-  if (t.sentido === 'sobe') return <span className="inline-flex items-center gap-1.5 text-ok" title="As notas mais recentes estão acima das primeiras"><TrendingUp aria-hidden className="size-4" strokeWidth={2} /><span className="text-tinta">{delta}</span><span className="sr-only">subindo</span></span>
-  if (t.sentido === 'desce') return <span className="inline-flex items-center gap-1.5 text-erro" title="As notas mais recentes estão abaixo das primeiras"><TrendingDown aria-hidden className="size-4" strokeWidth={2} /><span className="text-tinta">{delta}</span><span className="sr-only">caindo</span></span>
-  return <span className="inline-flex items-center gap-1.5 text-inativo" title="As notas mais recentes estão no nível das primeiras"><Minus aria-hidden className="size-4" strokeWidth={2} /><span className="text-sutil">estável</span></span>
-}
+  const lista = useAlunosDaTurma(turmaId)
+  const pedidos = usePedidos(turmaId)
+  const adaptacoes = useAdaptacoes(turmaId)
+  const { colunas, mediaDe } = useBoletim(turmaId)
+  const { entraram, total } = useEntraramNa(turmaId)
+  const faltaEntrar = entraram < total
 
-function Ordenar({ rotulo, ativo, sentido, aoClicar }: { rotulo: string; ativo: boolean; sentido: 1 | -1; aoClicar: () => void }) {
-  const Icone = !ativo ? ArrowUpDown : sentido === 1 ? ArrowUp : ArrowDown
+  const linhas = useMemo<LinhaAluno[]>(() => {
+    const nc = new Set(naoComecouDa(turmaId).ids)
+    const comAdaptacao = new Set(adaptacoes.map((a) => a.aluno))
+    const q = limpa(busca.trim())
+    const l = lista.map((n, i) => ({
+      n, numero: i + 1, media: mediaDe(n.nome),
+      naoComecou: n.situacao !== 'na-turma' || (!!n.aluno && nc.has(n.aluno.id)), adaptacao: comAdaptacao.has(n.nome),
+    })).filter((x) => !q || limpa(x.n.nome).includes(q))
+    if (ordem === 'media') return [...l].sort((x, y) => (x.media === null ? 1 : 0) - (y.media === null ? 1 : 0) || (x.media ?? 0) - (y.media ?? 0) || x.numero - y.numero)
+    if (ordem === 'naocomecou') return [...l].sort((x, y) => Number(y.naoComecou) - Number(x.naoComecou) || x.numero - y.numero)
+    return l
+  }, [lista, adaptacoes, mediaDe, busca, ordem, turmaId])
+
+  if (lista.length === 0) return <ConviteNaTela turmaId={turmaId} />
+
+  const maisItens = [
+    ...(!faltaEntrar ? [{ rotulo: 'Convidar alunos', aoEscolher: () => setConvidar('1') }] : []),
+    { rotulo: 'Exportar notas', aoEscolher: () => exportarNotas(turmaId, colunas, lista.map((n) => n.nome)) },
+  ]
+  const atual = ORDENS.find((o) => o.id === ordem)!
+
   return (
-    <button type="button" onClick={aoClicar} aria-label={`Ordenar por ${rotulo.toLowerCase()}`} className="-mx-1.5 inline-flex items-center gap-1.5 rounded-[6px] px-1.5 font-teachy font-bold transition-colors duration-150 hover:bg-realce">
-      {rotulo}<Icone aria-hidden className={cn('size-3.5', ativo ? 'text-tinta' : 'text-inativo')} strokeWidth={2} />
-    </button>
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <Segmentado rotulo="Ver os alunos em" valor={ver} aoMudar={(v) => setVer(v === 'lista' ? null : v)}
+          opcoes={[{ id: 'lista', rotulo: 'Lista' }, { id: 'notas', rotulo: 'Notas' }]} />
+        <Busca valor={busca} aoMudar={setBusca} rotulo="Buscar aluno" className="max-sm:order-last max-sm:w-full sm:w-56" />
+        {ver === 'lista' && (
+          <MenuMais rotulo="Ordenar" alinhar="start" itens={ORDENS.map((o) => ({ rotulo: o.nome, aoEscolher: () => setOrdem(o.id) }))}
+            gatilho={(
+              <button type="button" aria-label={`Ordem: ${atual.nome}`}
+                className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-[12px] border-2 border-borda bg-white px-3 text-[15px] font-bold text-apoio transition-colors duration-150 hover:bg-fundo-suave hover:text-tinta data-[state=open]:bg-fundo-suave">
+                <ArrowUpDown aria-hidden className="size-4" strokeWidth={2.5} />
+                <span className="max-w-[200px] truncate max-lg:hidden">{atual.nome}</span>
+                <ChevronDown aria-hidden className="size-4" strokeWidth={2.5} />
+              </button>
+            )} />
+        )}
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          {pedidos.length > 0 && (
+            <button type="button" onClick={() => setItem(`pedidos-${turmaId}`)}
+              className="inline-flex h-10 items-center gap-1.5 rounded-[10px] px-2 text-[15px] font-bold text-tinta transition-colors duration-150 hover:bg-fundo-suave">
+              <span aria-hidden className="size-2.5 rounded-full bg-amarelo" />
+              {pedidos.length} {pedidos.length === 1 ? 'pediu' : 'pediram'} para entrar
+              <ChevronRight aria-hidden className="size-5 text-apagado" strokeWidth={2.5} />
+            </button>
+          )}
+          <span className="t-apoio whitespace-nowrap max-md:hidden">{entraram} de {total} entraram</span>
+          {faltaEntrar && <Botao tamanho="m" onClick={() => setConvidar('1')} icone={<UserPlus strokeWidth={2.5} />} aria-label="Convidar alunos"><span className="max-xl:sr-only">Convidar alunos</span></Botao>}
+          <MenuMais rotulo="Mais da aba Alunos" itens={maisItens} />
+        </div>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col">
+        {ver === 'lista'
+          ? <TabelaAlunos linhas={linhas} ativa={aluno} aoAbrir={(id) => setAluno(id)} />
+          : <BoletimTurma key={turmaId} turmaId={turmaId} busca={busca} />}
+      </div>
+
+      <FichaDoAluno turmaId={turmaId} alunoId={aluno} aoFechar={() => setAluno(null)} />
+      <ConvidarAlunos turmaId={turmaId} aberto={convidar === '1'} aoMudar={(v) => setConvidar(v ? '1' : null)} />
+    </div>
   )
 }
 
-const subaba = (ativa: boolean) => cn('-mb-px inline-flex h-10 items-center border-b-2 px-1 text-[14px] leading-6 transition-colors duration-150',
-  ativa ? 'border-caramelo font-teachy font-bold text-tinta' : 'border-transparent text-apoio hover:text-tinta')
-const caixa = 'size-4 cursor-pointer rounded-[4px] accent-tinta'
-
-export function AlunosTurma({ turmaId }: { turmaId: string }) {
-  const [params, setParams] = useSearchParams()
-  const naSala = params.get('aba') === 'sala'
-  // as quatro atividades corrigidas cabem em qualquer uma das janelas: o período fica guardado, a média não muda
-  const [periodo, setPeriodo] = useState('2026')
-  const [ordem, setOrdem] = useState<Ordem>({ por: 'nome', sentido: 1 })
-  const [marcados, setMarcados] = useState<Set<string>>(new Set())
-  const [convite, setConvite] = useState(false)
-
-  // A sala é tela de trabalho: ao abrir a subaba, o documento sobe até a linha das subabas, e o quadro de 600 px
-  // aparece INTEIRO na janela de 780 (com o cabeçalho da aba em cima, os últimos 40 px ficavam para fora).
-  // Espera um quadro: a turma, que é o pai, volta o documento ao alto quando a aba muda, e isso roda depois daqui.
-  const subabas = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!naSala) return
-    const q = requestAnimationFrame(() => subabas.current?.scrollIntoView({ block: 'start' }))
-    return () => cancelAnimationFrame(q)
-  }, [naSala])
-
-  const alunos = alunosDa(turmaId)
-  const linhas = useMemo(() => {
-    const l = alunos.map((a) => ({ a, media: a.media }))
-    return l.sort((x, y) => {
-      if (ordem.por === 'nome') return x.a.nome.localeCompare(y.a.nome, 'pt-BR') * ordem.sentido
-      // sem nota vai sempre para o fim, em qualquer sentido; no empate vale a ordem de chamada
-      if (x.media === null || y.media === null) return (x.media === null ? 1 : 0) - (y.media === null ? 1 : 0) || x.a.numero - y.a.numero
-      return (x.media - y.media) * ordem.sentido || x.a.numero - y.a.numero
-    })
-  }, [alunos, ordem])
-
-  const ordenarPor = (por: Ordem['por']) => setOrdem((o) => (o.por === por ? { por, sentido: o.sentido === 1 ? -1 : 1 } : { por, sentido: 1 }))
-  const marcar = (id: string) => setMarcados((m) => { const n = new Set(m); if (n.has(id)) n.delete(id); else n.add(id); return n })
-  const todos = marcados.size === alunos.length
-  const abrir = (sub: 'alunos' | 'sala', aluno?: string) => setParams(aluno ? { aba: sub, aluno } : { aba: sub }, { replace: true })
-
+/** A lista em colunas proporcionais (computador) e em linhas de 56 px (celular). A linha inteira abre a ficha. */
+function TabelaAlunos({ linhas, ativa, aoAbrir }: { linhas: LinhaAluno[]; ativa: string | null; aoAbrir: (id: string) => void }) {
+  const teclar = (e: React.KeyboardEvent, id: string) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); aoAbrir(id) } }
   return (
-    <div>
-      <CabecalhoAba grande titulo="Alunos" apoio="Acompanhe seus alunos, obtenha insights e veja a sala">
-        <Periodo valor={periodo} aoMudar={setPeriodo} />
-        <BotaoT tamanho="m" onClick={() => setConvite(true)}><UserPlus aria-hidden strokeWidth={2} /> Adicionar</BotaoT>
-      </CabecalhoAba>
-
-      <div ref={subabas} className="flex min-h-10 scroll-mt-2 flex-wrap items-end justify-between gap-x-6 border-b border-linha">
-        <div role="tablist" aria-label="Alunos ou sala" className="flex gap-6">
-          <button type="button" role="tab" aria-selected={!naSala} onClick={() => abrir('alunos')} className={subaba(!naSala)}>Alunos</button>
-          <button type="button" role="tab" aria-selected={naSala} onClick={() => abrir('sala')} className={subaba(naSala)}>Sala</button>
-        </div>
-        {!naSala && (
-          <div className="flex h-10 items-center gap-2 text-[12px] leading-4 text-sutil">
-            {marcados.size === 0 ? <span>{alunos.length} alunos · {NA_ORDEM[`${ordem.por}${ordem.sentido}`]}</span> : (
-              <>
-                <span className="mr-1 font-medium text-tinta">{marcados.size} {marcados.size === 1 ? 'selecionado' : 'selecionados'}</span>
-                <Link to="/professor/ferramentas/atividade" className={botaoT('contorno', 'p')}>Pedir reforço</Link>
-                <BotaoT variante="texto" tamanho="p" onClick={() => setMarcados(new Set())}>Limpar</BotaoT>
-              </>
-            )}
-          </div>
-        )}
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-[16px] border-2 border-borda bg-white">
+      <div className="hidden min-h-0 overflow-y-auto overscroll-contain md:block">
+        <table aria-label="Alunos da turma" className="w-full table-fixed border-collapse text-left">
+          <colgroup><col className="w-[40%]" /><col className="w-[25%]" /><col className="w-[15%]" /><col className="w-[10%]" /><col className="w-[10%]" /></colgroup>
+          <thead className="sticky top-0 z-[1] bg-white shadow-[inset_0_-2px_0_var(--color-borda)]">
+            <tr>
+              <th scope="col" className="t-selo h-11 px-4 align-middle text-sutil">Aluno</th>
+              <th scope="col" className="t-selo h-11 px-4 align-middle text-sutil">Situação</th>
+              <th scope="col" className="t-selo h-11 px-4 align-middle text-sutil">Entregas</th>
+              <th scope="col" className="t-selo h-11 px-4 text-right align-middle text-sutil">Média</th>
+              <th aria-hidden />
+            </tr>
+          </thead>
+          <tbody>
+            {linhas.map((l) => {
+              const s = situacaoDoNome(l.n, l.media)
+              const e = l.n.aluno?.entregas
+              const aberta = ativa === l.n.id
+              return (
+                <tr key={l.n.id} tabIndex={0} onClick={() => aoAbrir(l.n.id)} onKeyDown={(ev) => teclar(ev, l.n.id)} aria-selected={aberta}
+                  className={cn('h-14 cursor-pointer border-t-2 border-borda text-[15px] font-medium text-tinta transition-colors duration-150 first:border-t-0 hover:bg-fundo-suave focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-azul-texto',
+                    aberta && 'bg-azul-claro hover:bg-azul-claro')}>
+                  <td className="px-4">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <Avatar nome={l.n.nome} tamanho={32} />
+                      <span className="truncate font-bold">{l.n.nome}</span>
+                      {l.adaptacao && <Selo familia="roxo" tamanho="p" title="Adaptação registrada pela coordenação">Adaptação</Selo>}
+                    </span>
+                  </td>
+                  <td className="px-4"><span className="flex min-w-0 items-center gap-2 text-apoio"><PontoSituacao s={s} /><span className="truncate">{s.rotulo}</span></span></td>
+                  <td className="px-4 tabular-nums text-apoio">{e && l.n.situacao === 'na-turma' ? `${e.feitas} de ${e.total}` : <span className="text-sutil">—</span>}</td>
+                  <td className="px-4 text-right">{l.media === null ? <span className="text-sutil">—</span> : <span className="font-bold tabular-nums">{comVirgula(l.media)}</span>}</td>
+                  <td className="pr-4 text-right"><ChevronRight aria-hidden strokeWidth={2.5} className="ml-auto size-5 text-apagado" /></td>
+                </tr>
+              )
+            })}
+            {linhas.length === 0 && <tr><td colSpan={5} className="t-apoio h-16 px-4">Nenhum aluno com esse nome.</td></tr>}
+          </tbody>
+        </table>
       </div>
 
-      {naSala ? <div className="pt-6"><SalaTurma key={turmaId} turmaId={turmaId} /></div> : (
-        <div className={cn(tabelaT.caixa, 'mt-6 overflow-x-auto')}>
-          <table className={cn(tabelaT.tabela, 'min-w-[860px]')}>
-            <thead className={tabelaT.cabeca}>
-              <tr>
-                <th scope="col" className={cn(tabelaT.th, 'w-12 pr-0')}>
-                  <input type="checkbox" className={cn(caixa, 'block')} aria-label="Selecionar todos os alunos" checked={todos} onChange={() => setMarcados(todos ? new Set() : new Set(alunos.map((a) => a.id)))} />
-                </th>
-                <th scope="col" className={tabelaT.th} aria-sort={ordem.por === 'nome' ? (ordem.sentido === 1 ? 'ascending' : 'descending') : 'none'}>
-                  <Ordenar rotulo="Aluno" ativo={ordem.por === 'nome'} sentido={ordem.sentido} aoClicar={() => ordenarPor('nome')} />
-                </th>
-                <th scope="col" className={cn(tabelaT.th, 'w-[120px]')} aria-sort={ordem.por === 'media' ? (ordem.sentido === 1 ? 'ascending' : 'descending') : 'none'}>
-                  <Ordenar rotulo="Média" ativo={ordem.por === 'media'} sentido={ordem.sentido} aoClicar={() => ordenarPor('media')} />
-                </th>
-                <th scope="col" className={cn(tabelaT.th, 'w-[140px]')}>Tendência</th>
-                <th scope="col" className={cn(tabelaT.th, 'w-[180px]')}>Status</th>
-                <th scope="col" className={cn(tabelaT.th, 'w-[290px]')}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {linhas.map(({ a, media }) => {
-                const s = STATUS[statusDe(a)]
-                const adaptacao = adaptacaoDe(a.id)
-                return (
-                  <tr key={a.id} className={cn(tabelaT.tr, 'h-14', marcados.has(a.id) && 'bg-[#FAFAFA]')}>
-                    <td className={cn(tabelaT.td, 'pr-0')}><input type="checkbox" className={cn(caixa, 'block')} aria-label={`Selecionar ${a.nome}`} checked={marcados.has(a.id)} onChange={() => marcar(a.id)} /></td>
-                    <td className={tabelaT.td}>
-                      <span className="flex min-w-0 items-center gap-2.5"><AvatarT nome={a.nome} /><span className="truncate">{a.nome}</span></span>
-                    </td>
-                    <td className={cn(tabelaT.td, 'font-semibold')}>{media === null ? <span className="font-normal text-inativo">-</span> : virgula(media)}</td>
-                    <td className={tabelaT.td}><Tendencia a={a} /></td>
-                    <td className={tabelaT.td}><span className={cn('inline-flex h-6 items-center whitespace-nowrap rounded-[4px] px-2 text-[12px] font-medium leading-4', s.classe)}>{s.nome}</span></td>
-                    <td className={cn(tabelaT.td, 'py-0')}>
-                      <span className="flex items-center gap-2">
-                        <BotaoT variante="contorno" tamanho="p" onClick={() => abrir('sala', a.id)} aria-label={`Detalhes de ${a.nome}`}><Eye aria-hidden strokeWidth={2} /> Detalhes</BotaoT>
-                        {adaptacao && (
-                          <Link to="/professor/ferramentas/adaptacao" title={`Adaptação registrada: ${adaptacao}`} aria-label={`Adaptação de ${a.nome}: ${adaptacao}`}
-                            className={botaoT('contorno', 'p', 'border-caramelo text-caramelo-texto hover:bg-marca-cx')}><Heart aria-hidden strokeWidth={2} /> Adaptação</Link>
-                        )}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button type="button" aria-label={`Mais ações para ${a.nome}`} className="ml-auto grid size-7 shrink-0 place-items-center rounded-[8px] text-sutil outline-none transition-colors duration-150 hover:bg-realce-suave hover:text-tinta data-[state=open]:bg-realce-suave">
-                              <MoreVertical aria-hidden className="size-4" strokeWidth={2} />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className={cn(menuT, 'w-60')}>
-                            <DropdownMenuItem className={itemT} onSelect={() => abrir('sala', a.id)}><Armchair aria-hidden strokeWidth={1.75} /> Ver na sala</DropdownMenuItem>
-                            <DropdownMenuItem className={itemT} onSelect={() => setParams({ aba: 'notas' }, { replace: true })}><NotebookText aria-hidden strokeWidth={1.75} /> Ver as notas da turma</DropdownMenuItem>
-                            <DropdownMenuItem className={itemT} asChild><Link to="/professor/ferramentas/atividade"><Sparkles aria-hidden strokeWidth={1.75} /> Pedir atividade de reforço</Link></DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </span>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <ConvidarAlunos turmaId={turmaId} aberto={convite} aoMudar={setConvite} />
+      <ul aria-label="Alunos da turma" className="min-h-0 overflow-y-auto overscroll-contain md:hidden">
+        {linhas.map((l) => {
+          const s = situacaoDoNome(l.n, l.media)
+          return (
+            <li key={l.n.id} className="border-t-2 border-borda first:border-t-0">
+              <button type="button" onClick={() => aoAbrir(l.n.id)} aria-label={`${l.n.nome}: ${s.rotulo}${l.media !== null ? `, média ${comVirgula(l.media)}` : ''}`}
+                className={cn('flex h-14 w-full min-w-0 items-center gap-3 px-4 text-left hover:bg-fundo-suave', ativa === l.n.id && 'bg-azul-claro')}>
+                <Avatar nome={l.n.nome} tamanho={32} />
+                <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-tinta">{l.n.nome}</span>
+                <PontoSituacao s={s} />
+                <span className="w-9 shrink-0 text-right text-[15px] font-bold tabular-nums text-tinta">{l.media === null ? <span className="text-sutil">—</span> : comVirgula(l.media)}</span>
+              </button>
+            </li>
+          )
+        })}
+        {linhas.length === 0 && <li className="t-apoio px-4 py-5">Nenhum aluno com esse nome.</li>}
+      </ul>
     </div>
   )
 }

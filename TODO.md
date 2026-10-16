@@ -875,6 +875,20 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       `apps/api/src/operacao/sessao.service.ts`). Unificar os dois da API no mesmo formato (`revisor-geral` da 4.0 da A1).
       A 14.0 fez a parte do convite de professor; o refresh é da API de sessão, fora de uma tarefa de tela. Destino:
       correção própria
+- [ ] **(X1, retrospectiva) Código de processo que a X1 pediu** (`tasks/prd-pele-e-casca/retro.md`, M1 a M3). Correção
+      própria, com teste e revisão; mexe em `tools/processo/` e `tools/ci/`:
+      (a) **o portão da tarefa mede a duração do e2e que roda**: caso alterado que passa de 15 s na máquina fica vermelho,
+      porque o runner leva perto do dobro e o prazo é 30 s. Na X1, os casos que caíram na esteira levavam de 19 a 29 s aqui,
+      e custaram duas correções e duas rodadas de validação depois da validação aprovada;
+      (b) **o hook conta as rodadas pelo `achados/`**, e não pelas linhas da seção "Revisões" (`tools/processo/revisoes.ts`,
+      `acrescentarRevisao`): a seção sumiu duas vezes na X1 e a contagem recomeçou do 1;
+      (c) `tools/ci/e2e.ts` repassa `--repeat-each` e `--workers` ao Playwright (hoje viram filtro e o e2e inteiro roda);
+      `tools/processo/linhas.ts conferir` aceita a correção feita na branch da spec (hoje para no primeiro `(tarefa N.0)`);
+      e `tools/processo/mutacoes.ts` roda o caso de e2e no projeto que ele declara, e não sempre no `chromebook`, para a
+      cláusula que só vale no celular se provar
+- [ ] **A vitrine não fotografa troca do Tutor do aluno** (validação da X1, rodada 1): ela não digita, e a escola
+      sintética não tem troca do Tutor, então o balão com a assinatura não sai em foto. Destino: antes da X4, que mexe
+      na tela do Tutor do aluno
 
 ## Regulação educacional
 
@@ -1046,7 +1060,7 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       (`docs/interface.md` 10.2)
 - [ ] **Texto de exemplo do `Campo` de linha única truncado a 360 px** (`frontend-reviewer`, 10.0 da X1): o placeholder
       "Tema" do `MotorFormulario` é cortado no `celular`; o `Campo` não mede o exemplo como a `CaixaPedido` faz. Peça
-      de `componentes/`, fora da 10.0; rever no `/retro` da X1
+      de `componentes/`, fora da 10.0. Destino (retrospectiva da X1): a tarefa da X3 que usar o `Campo`
 - [ ] **A demonstração `data-tabela-estreita` da galeria mostra a tabela em modo largo** (`frontend-reviewer`, 10.0 da
       X1): a 280 px (`apps/web/src/galeria/secoes/superficies.tsx`) corta "AGENTE E FUNÇÃO". Peça de outra tarefa
 - [ ] **`violacoesDasSecoes` repete o `violacoesGraves`** (`test-engineer`, 10.0 da X1): `e2e/pecas-ia.spec.ts` tem um
@@ -1060,7 +1074,8 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] **A caixa desligada no tema escuro não se distingue pelo fundo** (`frontend-reviewer`, 10.0 da X1): `fundo-suave`
       e `campo` têm o mesmo valor no escuro (`apps/web/src/estilos.css`), e o campo desligado da `CaixaPedido` só se
       diferencia pelo texto `apoio`. Dar um sinal que não dependa do fundo; o `Campo` desligado tem o mesmo par de tokens
-      (`docs/interface.md` 10.2). Muda peça que a 6.0 revestiu: levar ao `/retro` da X1
+      (`docs/interface.md` 10.2). Muda peça que a 6.0 revestiu. Destino (retrospectiva da X1): correção própria, com o
+      `frontend-reviewer`, antes da X4, que é onde a caixa desligada entra numa tela (o Tutor do aluno)
 - [ ] **Teste do desfazer da `CaixaPedido`** (`test-engineer` e `revisor-geral`, 10.0 da X1): em
       `CaixaPedido.test.tsx › apagar o pedido não escreve no campo`, o teste redefine `value` por cima do rastreador do
       React, então a regra de verdade é a do Ctrl+Z do e2e (`e2e/pecas-ia.spec.ts`); dizer isso num comentário, e trocar
@@ -1090,6 +1105,47 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       Shift+Tab o foco que o navegador rola para cima para atrás dela, o mesmo problema que a barra de baixo tinha embaixo
       (resolvido na 13.0, com `scroll-padding-bottom`). Existia antes da 13.0 e muda comportamento: correção própria
       (`/corrigir`), com e2e a 360 px que leve o foco por Shift+Tab ao meio de uma tela comprida
+- [ ] **A lista do perigo cheio é por arquivo, e o detector é textual** (`test-engineer`, 7.0 da X1): um segundo uso do
+      perigo cheio num arquivo já listado passa, e o detector não vê `classesDoBotao(opcoes)` com o objeto montado antes
+      nem a prop vinda de um spread. Contar os usos por arquivo e ler a sintaxe fecha os dois; pede mutação nova
+- [ ] **A ordem dos botões do rodapé difere entre as peças** (`frontend-reviewer`, 7.0 da X1): o formulário e a
+      `ConfirmacaoDePerigo` põem a ação primeiro; o `DialogoDeConfirmacao` e o painel, "Cancelar" primeiro. Tarefa
+      própria: mexer na ordem mexe no Tab de seis telas de área ("Divergências resolvidas" do `7_task.md`)
+- [ ] **Texto técnico na galeria** (`frontend-reviewer`, 7.0 da X1): "O Esc de dentro do menu fecha só o menu". Página
+      interna sem link do produto (`caminhos.ts`); reescrever só se a galeria virar referência para o Gabriel
+- [ ] **O botão oficial da confirmação é provado só como "não vermelho"** (`test-engineer`, 7.0 da X1):
+      `e2e/pecas-sobrepor.spec.ts:601-604`; comparar com o token do `oficial` prova a cor certa
+- [ ] **O Tab preso do login por cima não passa do fim da ordem** (`test-engineer`, 7.0 da X1):
+      `e2e/inatividade.spec.ts:112-114`; repetir o Shift+Tab a partir do foco inicial, como na confirmação. Anterior à X1
+- [ ] **`QUEM_IMPORTA_O_AVATAR` ainda deixa a `Mensagem.tsx` importar o avatar** (`revisor-geral`, 8.0 da X1): fechar só
+      na `AssinaturaIA`, com o aperto escrito na `techspec.md` 7b da X1 e na lista do teste. Muda contrato escrito: é do
+      Arquiteto. Destino (retrospectiva da X1): correção própria, com o `conformidade-reviewer`; aperta a guarda e não
+      muda desenho, e o aperto se escreve no `docs/interface.md`, porque a Tech Spec da X1 está fechada
+- [ ] **A casca do selo da `AssinaturaIA`** (`revisor-geral` e `test-engineer`, 8.0 da X1): o espaço entre o nome e o
+      selo é feito duas vezes (`{' '}` e o `ml-1`; ficar com um), e o `align-middle` não tem asserção. Acabamento; a
+      tarefa que tocar a `AssinaturaIA` fecha as duas
+- [ ] **O filtro de `has-` da caixa do motor só olha o rótulo desmarcado** (`test-engineer`, correção
+      `2026-10-15-anel-do-motor-sem-has` da X1): `apps/web/src/componentes/ia/pecas-revestidas.test.tsx:150`; repetir a
+      asserção depois do clique que marca a caixa. O E5 do `casca.spec.ts` cobre o CSS inteiro na esteira; vale na
+      próxima tarefa que tocar este teste
+- [ ] **O que a 11.0 da X1 deixou para as telas de cada área** (`revisor-geral` e `frontend-reviewer`, `11_task.md`):
+      a prop `objeto` da `Tela` ficou sem efeito e ainda é passada por `Atividade`, `Aprovar`, `Ferramenta`, `Artefato`,
+      `DetalheDoPedido` e a galeria (tirar ao recompor cada uma); o campo de arquivo da `ListaDaTurma` é o nativo do
+      navegador, e o `Material` usa botão próprio (X2); `h1` seguido de `h2` quase igual em `Turmas` e em `Professores`
+      (X2 e X3); e o voltar de `Turma` e `ListaDaTurma` ainda é link sublinhado, e não linha própria de 28 px em `t-selo`
+- [ ] **Lacunas de teste que a validação da X1 deixou às tarefas da X2 e da X3** (`tasks/prd-pele-e-casca/validacao.md`,
+      rodada 1, "Menores"): o percurso de `e2e/titulo-da-tela.spec.ts` só cobre `Seções`; o `aria-current` de "Seu time"
+      sem teste; as medidas de 256/88, 56 e 68 px só com o professor, e 88 sem medida a 900 px; o "Sair" da operação sem
+      comparação com o vizinho (RF15); o hover do oficial sem comparação (RF6); as linhas "selo de IA" e "aprovado" de
+      `contraste.test.ts` presas só pela contagem; a guarda de movimento sem `@keyframes`; o Tab da galeria só nos
+      botões. E o botão "Abrir dado nominal de uma turma" quebrando em duas linhas a 360 px (X2, tarefa 4.4). Cada um
+      entra na tarefa que mexer na peça
+- [ ] **O que o `test-engineer` deixou da correção da galeria da onça** (`tasks/correcoes/2026-10-16-galeria-da-onca-estoura-o-prazo.md`,
+      "Recomendações"; validação da X1, rodada 3, "Menores"): (a) `medirBlocosDaGaleria` (`e2e/__fixtures__/galeria.ts`)
+      deixa passar bloco com `display:none`, que o `caixa()` antigo reprovava: acrescentar a lista `semCaixa`, o que muda
+      o contrato de `MedidaDosBlocos` e os `toEqual` dos testes; (b) o teste de `desenhos` monta borda e canto com
+      atalhos (`border:`, `border-radius:`) que pintam os quatro lados iguais, e `desenhos` lendo `borderBottom*` no lugar
+      de `borderTop*` não seria pego: dar um lado diferente dos outros. Os dois entram na próxima tarefa que tocar a galeria
 
 ## Comercial
 
@@ -1132,9 +1188,11 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] **(D80) A onça como avatar de agente conversacional para menor:** levar ao advogado, com o parecer do ECA
       Digital (Decreto 12.880, arts. 10 e 11). As condições que a spec fixa estão na D80, item 3; as poses e a
       comemoração da X4 dependem do mesmo parecer (Joaquim)
-- [ ] **(D80) Trazer o mockup de outubro para `mockups/`:** ele mora no repositório privado `Prototipo_Turmma`, do
-      Gabriel, e a pasta `mockups/` daqui é a versão de setembro. Este repositório é público: decidir se entra, e
-      conferir antes a licença das peças coladas do 21st.dev (P20) (Gabriel e Joaquim)
+- [x] ~~**(D80) Trazer o mockup de outubro para `mockups/`**~~ — decidido pelo Joaquim em 16/10/2026 ("sobre o
+      mockup pode trazer para o projeto aqui"): `mockups/` é agora a cópia de `Prototipo_Turmma` em `a95568d`, com a
+      mesma cerca da versão de setembro, sem `node_modules`, e três linhas reescritas para o gitleaks
+      (`mockups/README.md`). O mockup não cola peça nova do 21st.dev; a conferência da licença (P20, item da seção
+      "Marca e interface") continua aberta, antes de qualquer peça entrar no código
 - [ ] **(D80, revisão das specs X2 a X4) O que os guardiões mandaram para fora das specs:** (a) a tela Material relê a
       cada 1,5 s enquanto houver material `processando`, e a ingestão pode esperar horas na fila de lote: rever o
       intervalo (`api/material.ts`; `infra-guardian`, X2); (b) `orcamento.consultar` e `usoDeHoje` contam as trocas do

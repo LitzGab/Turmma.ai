@@ -1,0 +1,40 @@
+import puppeteer from 'puppeteer-core'
+const b = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
+const p = await b.newPage(); await p.setViewport({ width: 1440, height: 780 })
+const erros=[]; p.on('console', m=>{ if(m.type()==='error') erros.push(m.text().slice(0,200)) }); p.on('pageerror', e=>erros.push(String(e)))
+const sh = (n)=>p.screenshot({ path: `/Users/gabriel/Code/Turmma/mockups/scripts/shots/polimento/revisao-R/${n}.png` })
+const d = (ms)=>new Promise(r=>setTimeout(r,ms))
+const clica = async (t) => { const ok = await p.evaluate((t)=>{ const els=[...document.querySelectorAll('button,a,[role=tab],[role=menuitem],label')].filter(e=>e.offsetParent!==null); const el=els.reverse().find(e=>(e.textContent||'').trim().toLowerCase().includes(t.toLowerCase())); if(!el) return false; el.click(); return true }, t); await d(400); if(!ok) console.log('NAO ACHOU', t) }
+const digita = async (label, v) => { const id = await p.evaluate((l)=>{ const lab=[...document.querySelectorAll('label')].find(x=>x.textContent.trim().startsWith(l)); return lab?.htmlFor }, label); await p.type('#'+CSS.escape ? '#'+id : '#'+id, v); await d(150) }
+await p.goto('http://127.0.0.1:5190/operacao', { waitUntil: 'networkidle0' }); await p.evaluate(()=>localStorage.clear()); await p.reload({ waitUntil: 'networkidle0' })
+await clica('Nova escola'); 
+const ids = await p.evaluate(()=>[...document.querySelectorAll('[role=dialog] label')].map(l=>[l.textContent.trim(), l.htmlFor]))
+console.log(ids)
+const id1 = ids.find(x=>x[0].startsWith('Nome da escola'))[1]
+await p.type(`[id="${id1}"]`, 'E. M. Pirabeiraba'); await d(200)
+await clica('Escolher'); await clica('Secretaria Municipal'); await sh('f8-a-nova')
+console.log('link', await p.$eval('#escola-link', e=>e.value))
+await clica('Criar escola'); await d(400); await sh('f8-b-criada')
+console.log('texto pós criar', await p.evaluate(()=>{ const r=[...document.querySelectorAll('tr,li,[role=row]')].find(x=>x.textContent.includes('Pirabeiraba')); return r?.textContent }))
+// convidar
+await p.evaluate(()=>{ const r=[...document.querySelectorAll('tr')].find(x=>x.textContent.includes('Pirabeiraba')); const bt=[...r.querySelectorAll('button')].find(b=>/convidar/i.test(b.textContent)); bt?.click() }); await d(500)
+await sh('f8-c-convidar')
+const id2 = await p.evaluate(()=>[...document.querySelectorAll('[role=dialog] label')].find(l=>l.textContent.includes('E-mail'))?.htmlFor)
+await p.type(`[id="${id2}"]`, 'coordenacao@pirabeiraba.example'); await clica('Gerar convite'); await sh('f8-d-link')
+await clica('Fechar'); await d(300); await sh('f8-e-fechar-sem-copiar')
+await clica('Voltar ao link'); await clica('Copiar link'); await clica('Fechar'); await d(300); await sh('f8-f-aberto')
+console.log('linha', await p.evaluate(()=>[...document.querySelectorAll('tr')].find(x=>x.textContent.includes('Pirabeiraba'))?.textContent))
+await p.goto('http://127.0.0.1:5190/rede', { waitUntil: 'networkidle0' }); await d(400); await sh('f8-g-rede')
+console.log('rede', await p.evaluate(()=>document.body.innerText.slice(0,1500)))
+// F10
+await clica('Como protegemos'); await sh('f10-a-protecao'); console.log(await p.evaluate(()=>document.querySelector('[role=dialog]')?.innerText))
+await p.keyboard.press('Escape'); await d(300)
+await p.evaluate(()=>{ const b=[...document.querySelectorAll('button')].find(b=>/como contamos/i.test(b.getAttribute('aria-label')||b.textContent)); b?.click() }); await d(400); await sh('f10-b-contamos')
+console.log('pop', await p.evaluate(()=>[...document.querySelectorAll('[popover],[role=tooltip],[role=dialog]')].map(x=>x.innerText).join('|')))
+await p.keyboard.press('Escape'); await d(300)
+const cdp = await p.target().createCDPSession(); await cdp.send('Browser.setDownloadBehavior', { behavior:'allow', downloadPath: '/private/tmp/claude-501/-Users-gabriel-Code-Turmma/f8a83c77-136c-4bae-a87b-bbfa13893ead/scratchpad/revR' }).catch(e=>console.log(e.message))
+await clica('Exportar relatório'); await sh('f10-c-exportar'); console.log(await p.evaluate(()=>document.querySelector('[role=dialog]')?.innerText))
+await clica('Baixar'); await d(800); await sh('f10-d-baixado')
+console.log('eventos', await p.evaluate(()=>Object.keys(localStorage).map(k=>k+':'+localStorage.getItem(k).slice(0,300)).filter(s=>/export/i.test(s))))
+console.log('ERROS', erros)
+await b.close()

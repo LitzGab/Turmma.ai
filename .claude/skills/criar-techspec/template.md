@@ -87,6 +87,8 @@ Custo estimado por professor/mês ou por aluno/mês. Onde ficam os prompts.
 
 Telas, estados, componentes reaproveitados. Como fica em Chromebook fraco, com throttling de rede e de CPU, e no celular a partir de 360 px, com toque e rede móvel (D51).
 
+Medida, token e estado de uma peça moram num lugar só, o `docs/interface.md`; aqui e no `cenarios.md` cite a seção, sem repetir o número. Na X1 a mesma regra estava na Tech Spec, no `cenarios.md`, no `docs/interface.md` e no `mockup.md`, e cada decisão de tarefa tinha de chegar aos quatro.
+
 ## 10. Testes
 
 | Camada | O que será testado |

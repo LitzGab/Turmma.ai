@@ -1,250 +1,378 @@
-import { useMemo, useState, type ReactNode } from 'react'
-import {
-  Bell, Check, GraduationCap, IdCard, KeyRound, Laptop, Lock, MessageCircleQuestion, ScrollText, Search, Settings, Smartphone,
-  Sparkles, X, type LucideIcon,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
-import { AGENTES } from '@/dados/agentes'
-import { ESCOLAS, TURMAS } from '@/dados/escola'
+import { useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Check, ChevronLeft, IdCard, KeyRound, Laptop, Lock, ScrollText, Settings, Smartphone, Sparkles, Bell, X, type LucideIcon } from 'lucide-react'
+import { Botao, Carimbo, CampoSenha, CampoTexto, Dialogo, DialogoConfirmar, Interruptor, Linha, Segmentado, Selo } from '@/components/duo'
+import { MeuUso } from '@/areas/professor/abas-turma/MeuUso'
+import { ajustesTurma, useAjustesTurma } from '@/areas/professor/abas-turma/UsoTutor'
+import { preferencias, usePreferencias, type PapelTexto, type Preferencias, type TamanhoTexto as Tamanho } from '@/dados/preferencias'
+import { ESCOLAS } from '@/dados/escola'
+import { useProfessoresDaEscola } from '@/dados/escola-estado'
+import { useProfessorAtual } from '@/dados/sessao'
+import { useTurmasDoProfessor } from '@/dados/turmas-professora'
+import { aparencia, useAparencia, useTemaForcado, type Aparencia as TipoAparencia } from '@/dados/tema'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { cn } from '@/lib/utils'
 import type { Papel } from './Casca'
 
-/* CONFIGURAÇÕES, no modelo do ChatGPT (pedido do Gabriel, 20/09/2026): um diálogo com a lista de seções à esquerda
-   (busca em cima) e, à direita, linhas de "rótulo · controle" separadas por fio.
-   O que entra saiu das decisões, não de uma lista genérica de preferências:
-   · Geral — aparência, tamanho do texto, idioma, e o que já vem escolhido (escola e turma, para quem tem duas escolas);
-   · Notificações — o que avisa e como. O HORÁRIO não é configurável: aviso só no horário útil da escola (D59);
-   · Assistente — instruções e padrões das ferramentas. Nunca texto sobre aluno (D35, D66). Busca na web não tem
-     chave aqui: liga por conversa (D68);
-   · Tutor nas turmas — o que é da escola aparece só para leitura (uso fora da sala, D19); o professor liga a busca em
-     fontes aprovadas por turma e com prazo, se a escola liberou (D68);
-   · Perfil e vínculos — o vínculo é criado pela escola; o professor só confirma (regra 60, item 8a);
-   · Privacidade e dados — quem vê o quê, quem abriu o dado nominal (D45), exportar tudo em formato aberto (D63),
-     pedir revisão de indicador (LGPD, art. 20);
-   · Segurança e acesso — conta da escola ou senha (D48), duas etapas, aparelhos conectados;
-   · Como a IA funciona aqui — o que cada agente faz sozinho, onde o dado é processado (D62), canal de denúncia (D61).
-   O que NÃO existe, de propósito: plano, faturamento, crédito e consumo — o cliente é a escola, e o professor não vê
-   consumo (D2, D40). */
+/* CONFIGURAÇÕES (12ª rodada, 04/10/2026; plano de polimento 5.2; auditoria do professor 2.16). Um `Dialogo` grande com o
+   índice em `Linha` à esquerda; no celular, o índice primeiro e a seção depois, com ‹ para voltar. A casca abre com
+   `?config=<seção>`; os ids não mudam (geral · notificacoes · assistente · tutor · perfil · privacidade · seguranca ·
+   ia). Uma seção que o papel não tem cai na primeira.
+   · PROFESSOR: Geral (tamanho do texto; escola ao abrir, só com 2 escolas) · Assistente (padrões e Preparar a semana) ·
+     Perfil e vínculos · Privacidade e dados, com o MEU USO dentro (D45, D64) · Segurança (senha, duas etapas opcional,
+     aparelhos) · Como a IA funciona. SAÍRAM Idioma, "Turma que já vem na caixa", Notificações (o silenciar mora na
+     turma), Tutor nas turmas e a seção solta "Personalizar".
+   · ALUNO (Ajustes): Aparência, Tamanho do texto e Trocar a senha (8 ou mais).
+   · 14ª rodada: Aparência (Sistema · Claro · Escuro) no topo de Geral de todos; a SECRETARIA (rede) só com ela.
+   · COORDENAÇÃO (Minha conta): Geral · Notificações · Perfil · Segurança (duas etapas obrigatórias, sem link para um
+     interruptor travado). "Como a IA funciona" mora em IA › Como cada IA trabalha.
+   Peças duo; nenhum título com descrição. 13ª rodada: o tamanho do texto (por papel), os padrões da prova, a escola ao
+   abrir e os avisos da coordenação vêm de `dados/preferencias.ts` (os mesmos que a introdução configura; recarregar não
+   apaga); "Preparar a semana" lê e grava `ajustesTurma`, o mesmo do ⋯ da turma. Só "Duas etapas" fica na memória da
+   página. */
 
 type SecaoId = 'geral' | 'notificacoes' | 'assistente' | 'tutor' | 'perfil' | 'privacidade' | 'seguranca' | 'ia'
+type Secao = { id: SecaoId; nome: string; icone: LucideIcon }
 
-const SECOES: { id: SecaoId; nome: string; icone: LucideIcon; papeis: Papel[]; termos: string }[] = [
-  { id: 'geral', nome: 'Geral', icone: Settings, papeis: ['professor', 'aluno', 'coordenacao'], termos: 'aparência tema texto idioma escola turma' },
-  { id: 'notificacoes', nome: 'Notificações', icone: Bell, papeis: ['professor', 'coordenacao'], termos: 'aviso e-mail horário sinais correção' },
-  { id: 'assistente', nome: 'Assistente', icone: Sparkles, papeis: ['professor'], termos: 'personalização instruções prova padrão exportar semana web' },
-  { id: 'tutor', nome: 'Tutor nas turmas', icone: MessageCircleQuestion, papeis: ['professor'], termos: 'busca fontes fora da sala avaliação' },
-  { id: 'perfil', nome: 'Perfil e vínculos', icone: IdCard, papeis: ['professor', 'coordenacao'], termos: 'nome e-mail escolas turmas vínculo' },
-  { id: 'privacidade', nome: 'Privacidade e dados', icone: Lock, papeis: ['professor', 'coordenacao'], termos: 'exportar apagar histórico auditoria revisão lgpd' },
-  { id: 'seguranca', nome: 'Segurança e acesso', icone: KeyRound, papeis: ['professor', 'aluno', 'coordenacao'], termos: 'senha duas etapas mfa aparelhos sair google' },
-  { id: 'ia', nome: 'Como a IA funciona aqui', icone: ScrollText, papeis: ['professor', 'aluno', 'coordenacao'], termos: 'agentes autonomia modelo brasil denúncia erro' },
-]
+const DO_PAPEL: Record<Papel, Secao[]> = {
+  professor: [
+    { id: 'geral', nome: 'Geral', icone: Settings },
+    { id: 'assistente', nome: 'Assistente', icone: Sparkles },
+    { id: 'perfil', nome: 'Perfil e vínculos', icone: IdCard },
+    { id: 'privacidade', nome: 'Privacidade e dados', icone: Lock },
+    { id: 'seguranca', nome: 'Segurança', icone: KeyRound },
+    { id: 'ia', nome: 'Como a IA funciona', icone: ScrollText },
+  ],
+  coordenacao: [
+    { id: 'geral', nome: 'Geral', icone: Settings },
+    { id: 'notificacoes', nome: 'Notificações', icone: Bell },
+    { id: 'perfil', nome: 'Perfil', icone: IdCard },
+    { id: 'seguranca', nome: 'Segurança', icone: KeyRound },
+  ],
+  aluno: [{ id: 'geral', nome: 'Ajustes', icone: Settings }],
+  rede: [{ id: 'geral', nome: 'Geral', icone: Settings }],
+} as Record<Papel, Secao[]>
 
-/** Uma linha: o que é, uma frase de apoio se precisar, e o controle à direita. */
-function Linha({ rotulo, apoio, children, empilha = false }: { rotulo: ReactNode; apoio?: ReactNode; children?: ReactNode; empilha?: boolean }) {
+/* ── O que fica na memória da página: só "Duas etapas" (o resto mora em dados/preferencias.ts) ──────────── */
+
+let duasEtapas = false
+const ouvintes = new Set<() => void>()
+const mudarDuasEtapas = (v: boolean) => { duasEtapas = v; ouvintes.forEach((f) => f()) }
+const useDuasEtapas = () => useSyncExternalStore((f) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }, () => duasEtapas)
+
+/* ── Peças locais ────────────────────────────────────────────────────────────────────────────────────────── */
+
+/** Uma linha de ajuste: o nome à esquerda, o controle à direita (empilha no celular). */
+function Ajuste({ rotulo, children, empilha }: { rotulo: ReactNode; children?: ReactNode; empilha?: boolean }) {
   return (
-    <div className={cn('flex gap-x-6 gap-y-2 border-b border-linha py-3.5 last:border-0', empilha ? 'flex-col' : 'items-center justify-between')}>
-      <div className="min-w-0">
-        <p className="text-sm text-tinta">{rotulo}</p>
-        {apoio && <p className="mt-0.5 max-w-[60ch] text-[13px] leading-snug text-sutil">{apoio}</p>}
-      </div>
-      {children && <div className={cn('shrink-0', empilha && 'w-full')}>{children}</div>}
+    <div className={cn('flex min-h-16 gap-x-6 gap-y-2 border-t-2 border-borda py-3 first:border-t-0', empilha ? 'flex-col justify-center' : 'flex-wrap items-center justify-between')}>
+      <span className="text-[17px] font-bold leading-[22px] text-tinta">{rotulo}</span>
+      {children && <div className={cn('flex min-w-0 items-center gap-2', empilha && 'w-full')}>{children}</div>}
     </div>
   )
 }
 
-function Opcao({ valor, opcoes }: { valor: string; opcoes: string[] }) {
-  const [v, setV] = useState(valor)
+const Grupo = ({ children }: { children: ReactNode }) => <h3 className="t-selo pb-1 pt-6 text-sutil first:pt-0">{children}</h3>
+const Valor = ({ children }: { children: ReactNode }) => <span className="text-[15px] font-medium text-apoio">{children}</span>
+
+/** 14ª rodada: a Aparência (Sistema · Claro · Escuro), no topo de Geral, para todos os papéis. Guardada no navegador,
+    fora da demonstração (dados/tema.ts): RECOMEÇAR não apaga. */
+function Aparencia() {
+  const a = useAparencia()
+  const forcado = useTemaForcado()
   return (
-    <Select value={v} onValueChange={setV}>
-      <SelectTrigger className="h-9 w-auto gap-1.5 rounded-linha border-0 bg-transparent px-2.5 text-sm font-medium text-tinta shadow-none hover:bg-realce-suave focus:ring-0"><SelectValue /></SelectTrigger>
-      <SelectContent align="end" className="rounded-cartao border-0 p-1 shadow-flutua">
-        {opcoes.map((o) => <SelectItem key={o} value={o} disabled={o.includes('em breve')} className="h-9 rounded-linha text-sm">{o}</SelectItem>)}
-      </SelectContent>
-    </Select>
+    <Ajuste rotulo={forcado
+      ? <span className="grid">Aparência<span className="text-[13px] font-medium leading-4 text-sutil">Nesta aba: {forcado === 'escuro' ? 'Escuro' : 'Claro'}</span></span>
+      : 'Aparência'}>
+      <Segmentado rotulo="Aparência" valor={forcado ?? a} aoMudar={(v) => aparencia.mudar(v as TipoAparencia)}
+        opcoes={[{ id: 'sistema', rotulo: 'Sistema' }, { id: 'claro', rotulo: 'Claro' }, { id: 'escuro', rotulo: 'Escuro' }]} />
+    </Ajuste>
   )
 }
 
-function Chave({ ligada = false, fixa = false }: { ligada?: boolean; fixa?: boolean }) {
-  const [v, setV] = useState(ligada)
-  return <Switch checked={v} onCheckedChange={setV} disabled={fixa} className="data-[state=checked]:bg-tinta data-[state=unchecked]:bg-borda-campo" />
+function TamanhoTexto({ papel }: { papel: PapelTexto }) {
+  const p = usePreferencias()
+  return (
+    <Ajuste rotulo="Tamanho do texto">
+      <Segmentado rotulo="Tamanho do texto" valor={p.texto[papel]} aoMudar={(v) => preferencias.mudar({ texto: { [papel]: v as Tamanho } })}
+        opcoes={[{ id: 'padrao', rotulo: 'Padrão' }, { id: 'grande', rotulo: 'Grande' }, { id: 'maior', rotulo: 'Maior' }]} />
+    </Ajuste>
+  )
 }
 
-const Fixo = ({ children }: { children: ReactNode }) => <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-realce-suave px-2.5 text-xs font-medium text-apoio"><Lock className="size-3" strokeWidth={2.2} />{children}</span>
-const Grupo = ({ children }: { children: ReactNode }) => <p className="rotulo pb-1 pt-5 first:pt-1">{children}</p>
-const Nota = ({ children }: { children: ReactNode }) => <p className="my-2 rounded-controle bg-realce-suave px-3.5 py-2.5 text-[13px] leading-snug text-apoio">{children}</p>
+/** Trocar a senha ali mesmo: a de agora e a nova (8 ou mais). */
+function TrocarSenha() {
+  const [aberto, setAberto] = useState(false)
+  const [feito, setFeito] = useState(false)
+  const [atual, setAtual] = useState('')
+  const [nova, setNova] = useState('')
+  if (feito) return <Ajuste rotulo="Senha"><Carimbo verbo="Senha trocada" por="" /></Ajuste>
+  if (!aberto) return <Ajuste rotulo="Senha"><Botao variante="secundario" tamanho="m" onClick={() => setAberto(true)}>Trocar a senha</Botao></Ajuste>
+  const curta = nova.length > 0 && nova.length < 8
+  return (
+    <Ajuste rotulo="Trocar a senha" empilha>
+      <form className="grid w-full max-w-sm gap-3" onSubmit={(e) => { e.preventDefault(); if (atual && nova.length >= 8) setFeito(true) }}>
+        <CampoSenha rotulo="Senha de agora" valor={atual} aoMudar={setAtual} autoFocus />
+        <CampoSenha rotulo="Senha nova" valor={nova} aoMudar={setNova} autoComplete="new-password" dica="8 ou mais letras ou números." erro={curta ? 'Faltam letras: 8 ou mais.' : undefined} />
+        <div className="flex gap-2">
+          <Botao type="submit" tamanho="m" disabled={!atual || nova.length < 8}>Trocar a senha</Botao>
+          <Botao variante="fantasma" tamanho="m" onClick={() => setAberto(false)}>Cancelar</Botao>
+        </div>
+      </form>
+    </Ajuste>
+  )
+}
+
+function Aparelhos({ papel }: { papel: Papel }) {
+  const [celular, setCelular] = useState(true)
+  const [saindo, setSaindo] = useState(false)
+  return (
+    <>
+      <Grupo>Aparelhos</Grupo>
+      <div className="[&>*]:px-0">
+        <Linha inicio={<Laptop aria-hidden className="size-6 text-sutil" strokeWidth={2.5} />} titulo={papel === 'professor' ? 'Computador da sala 12' : 'Computador da coordenação'}
+          abaixo="Agora" fim={<Selo familia="verde" tamanho="p">Este aparelho</Selo>} />
+        {celular && <Linha inicio={<Smartphone aria-hidden className="size-6 text-sutil" strokeWidth={2.5} />} titulo="Celular" abaixo="Ontem, 19h12"
+          fim={<Botao variante="secundario" tamanho="p" onClick={() => setCelular(false)}>Sair</Botao>} />}
+      </div>
+      {celular
+        ? <Botao variante="secundario" tamanho="m" className="mt-2" onClick={() => setSaindo(true)}>Sair de todos</Botao>
+        : <Carimbo verbo="Só este aparelho continua conectado" por="" className="mt-2" />}
+      <DialogoConfirmar aberto={saindo} aoMudar={setSaindo} titulo="Sair de todos os aparelhos?" frase="Este aparelho continua conectado."
+        confirmar={{ rotulo: 'Sair de todos', aoConfirmar: () => setCelular(false) }} />
+    </>
+  )
+}
+
+/* ── As seções ───────────────────────────────────────────────────────────────────────────────────────────── */
+
+function GeralProfessor() {
+  const prof = useProfessorAtual()
+  const p = usePreferencias()
+  return (
+    <>
+      <Aparencia />
+      <TamanhoTexto papel="professor" />
+      {prof.escolas.length > 1 && (
+        <Ajuste rotulo="Escola ao abrir">
+          <Segmentado rotulo="Escola ao abrir" valor={p.escolaAoAbrir} aoMudar={(v) => preferencias.mudar({ escolaAoAbrir: v as Preferencias['escolaAoAbrir'] })}
+            opcoes={[{ id: 'ultima', rotulo: 'A última' }, ...prof.escolas.map((id) => ({ id, rotulo: id === 'aurora' ? 'Aurora' : 'Rio Cachoeira' }))]} />
+        </Ajuste>
+      )}
+    </>
+  )
+}
+
+/** "Preparar a semana" de uma turma: o mesmo ajuste do ⋯ da turma (ajustesTurma). */
+function SemanaDaTurma({ id, nome, disciplina }: { id: string; nome: string; disciplina: string }) {
+  const a = useAjustesTurma(id)
+  return (
+    <Ajuste rotulo={`${nome} · ${disciplina}`}>
+      <Interruptor rotulo={`Preparar a semana do ${nome}`} ligado={a.semana} aoMudar={(v) => ajustesTurma.mudar(id, 'semana', v)} />
+    </Ajuste>
+  )
+}
+
+function Assistente() {
+  const p = usePreferencias()
+  const turmas = useTurmasDoProfessor()
+  return (
+    <>
+      <Grupo>Padrões das ferramentas</Grupo>
+      <Ajuste rotulo="Questões por prova">
+        <Segmentado rotulo="Questões por prova" valor={String(p.prova.questoes)}
+          aoMudar={(v) => preferencias.mudar({ prova: { questoes: Number(v) as Preferencias['prova']['questoes'] } })}
+          opcoes={['5', '10', '15', '20'].map((n) => ({ id: n, rotulo: n }))} />
+      </Ajuste>
+      <Ajuste rotulo="Alternativas">
+        <Segmentado rotulo="Alternativas por questão" valor={String(p.prova.alternativas)}
+          aoMudar={(v) => preferencias.mudar({ prova: { alternativas: Number(v) as Preferencias['prova']['alternativas'] } })}
+          opcoes={[{ id: '4', rotulo: 'a até d' }, { id: '5', rotulo: 'a até e' }]} />
+      </Ajuste>
+      <Ajuste rotulo="Sempre com gabarito"><Interruptor rotulo="Sempre com gabarito" ligado={p.prova.gabarito} aoMudar={(v) => preferencias.mudar({ prova: { gabarito: v } })} /></Ajuste>
+      <Grupo>Preparar a semana, toda segunda</Grupo>
+      {turmas.length === 0 && <p className="t-apoio">Nenhuma turma ainda.</p>}
+      {turmas.map((t) => <SemanaDaTurma key={t.id} id={t.id} nome={t.nome} disciplina={t.disciplina} />)}
+    </>
+  )
+}
+
+function PerfilProfessor() {
+  const prof = useProfessorAtual()
+  const profs = useProfessoresDaEscola()
+  const turmas = useTurmasDoProfessor()
+  const email = profs.find((x) => x.id === prof.profId)?.email ?? `${prof.primeiro.toLowerCase()}@colegioaurora.example`
+  const [avisando, setAvisando] = useState(false)
+  const [texto, setTexto] = useState('')
+  const [avisado, setAvisado] = useState(false)
+  const escolas = ESCOLAS.filter((e) => turmas.some((t) => t.escolaId === e.id))
+  return (
+    <>
+      <Ajuste rotulo="Nome"><Valor>{prof.nome}</Valor></Ajuste>
+      <Ajuste rotulo="E-mail"><Valor>{email}</Valor></Ajuste>
+      <Grupo>Escolas e turmas</Grupo>
+      <div className="[&>*]:px-0">
+        {escolas.length === 0 && <Linha titulo="Nenhuma turma ainda" />}
+        {escolas.map((e) => {
+          const dela = turmas.filter((t) => t.escolaId === e.id)
+          return <Linha key={e.id} titulo={e.nome} abaixo={`${dela.map((t) => t.nome).join(', ')} · ${dela[0]?.disciplina ?? ''}`} fim={<Selo familia="verde" tamanho="p">Confirmado</Selo>} />
+        })}
+      </div>
+      {avisado
+        ? <Carimbo verbo="Aviso enviado" por="à coordenação" className="mt-3" />
+        : <Botao variante="secundario" tamanho="m" className="mt-3" onClick={() => setAvisando(true)}>Avisar a coordenação</Botao>}
+      <Dialogo aberto={avisando} aoMudar={setAvisando} titulo="O que está errado?" largura={460}
+        rodape={<Botao disabled={!texto.trim()} onClick={() => { setAvisado(true); setAvisando(false) }}>Enviar</Botao>}>
+        <CampoTexto rotulo="Escola, turma ou disciplina" rotuloOculto valor={texto} aoMudar={setTexto} linhas={3} placeholder="Ex.: não dou mais aula no 1ºC" />
+      </Dialogo>
+    </>
+  )
+}
+
+function SegurancaProfessor() {
+  const ligado = useDuasEtapas()
+  return (
+    <>
+      <Ajuste rotulo="Como você entra"><Valor>E-mail e senha</Valor></Ajuste>
+      <TrocarSenha />
+      <Ajuste rotulo="Duas etapas"><Interruptor rotulo="Verificação em duas etapas" ligado={ligado} aoMudar={mudarDuasEtapas} /></Ajuste>
+      <Aparelhos papel="professor" />
+    </>
+  )
+}
+
+const DO_ASSISTENTE: [string, boolean, string[]][] = [
+  ['Faz sozinho', true, ['Rascunha prova, atividade e plano', 'Corrige questão objetiva', 'Avisa o que espera você']],
+  ['Espera você aprovar', true, ['Nota', 'Envio para a turma', 'Versão adaptada']],
+  ['Nunca faz', false, ['Dar nota sem você', 'Falar com a família', 'Decidir sobre um aluno', 'Corrigir redação']],
+]
+
+function ComoIA() {
+  return (
+    <>
+      <p className="rounded-[12px] bg-fundo-suave px-4 py-3 text-[15px] font-bold leading-5 text-tinta">A IA prepara e avisa. Você aprova. Ela pode errar.</p>
+      {DO_ASSISTENTE.map(([titulo, sim, itens]) => (
+        <div key={titulo}>
+          <Grupo>{titulo}</Grupo>
+          <ul className="grid gap-2">
+            {itens.map((i) => (
+              <li key={i} className="flex items-center gap-2.5 text-[15px] font-medium text-tinta">
+                {sim ? <Check aria-hidden className="size-5 shrink-0 text-verde-texto" strokeWidth={3} /> : <X aria-hidden className="size-5 shrink-0 text-vermelho-texto" strokeWidth={3} />}{i}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      <Grupo>Seus dados</Grupo>
+      <Ajuste rotulo="Onde é processado"><Selo familia="neutro">Planejado: Brasil</Selo></Ajuste>
+      <Ajuste rotulo="Treina algum modelo?"><Selo familia="verde">Não</Selo></Ajuste>
+    </>
+  )
+}
+
+function NotificacoesCoordenacao() {
+  const p = usePreferencias().coordenacao
+  return (
+    <>
+      <p className="mb-2 rounded-[12px] bg-roxo-claro px-4 py-3 text-[15px] font-bold leading-5 text-roxo-texto">Fora do horário, só chega risco à vida, e só para quem tem a atribuição.</p>
+      <Ajuste rotulo="Resumo de segunda"><Interruptor rotulo="Resumo de segunda de manhã" ligado={p.resumo} aoMudar={(v) => preferencias.mudar({ coordenacao: { resumo: v } })} /></Ajuste>
+      <Ajuste rotulo="Alerta do Analista"><Interruptor rotulo="Alerta do Analista" ligado={p.alerta} aoMudar={(v) => preferencias.mudar({ coordenacao: { alerta: v } })} /></Ajuste>
+    </>
+  )
+}
+
+function PerfilCoordenacao() {
+  return (
+    <>
+      <Ajuste rotulo="Nome"><Valor>Helena Martins</Valor></Ajuste>
+      <Ajuste rotulo="Função"><Valor>Coordenação pedagógica</Valor></Ajuste>
+      <Ajuste rotulo="Escola"><Valor>{ESCOLAS[0].nome}</Valor></Ajuste>
+      <Ajuste rotulo="E-mail"><Valor>helena.martins@colegioaurora.example</Valor></Ajuste>
+    </>
+  )
+}
+
+function SegurancaCoordenacao() {
+  return (
+    <>
+      <Ajuste rotulo="Como você entra"><Valor>E-mail e senha</Valor></Ajuste>
+      <TrocarSenha />
+      <Ajuste rotulo="Duas etapas"><Valor>Obrigatório para a coordenação.</Valor></Ajuste>
+      <Aparelhos papel="coordenacao" />
+    </>
+  )
+}
 
 function Conteudo({ secao, papel }: { secao: SecaoId; papel: Papel }) {
-  const prof = papel === 'professor'
+  if (papel === 'aluno') return <><Aparencia /><TamanhoTexto papel="aluno" /><TrocarSenha /></>
+  if (papel === 'rede') return <Aparencia />
+  if (papel === 'coordenacao') {
+    if (secao === 'notificacoes') return <NotificacoesCoordenacao />
+    if (secao === 'perfil') return <PerfilCoordenacao />
+    if (secao === 'seguranca') return <SegurancaCoordenacao />
+    return <><Aparencia /><TamanhoTexto papel="coordenacao" /></>
+  }
   switch (secao) {
-    case 'geral': return (
-      <>
-        <Linha rotulo="Aparência" apoio="O tema escuro não existe: ficou de fora de propósito."><Fixo>Claro</Fixo></Linha>
-        <Linha rotulo="Tamanho do texto" apoio="Vale para o sistema inteiro, inclusive o que você projeta na sala."><Opcao valor="Padrão" opcoes={['Padrão', 'Grande', 'Maior']} /></Linha>
-        <Linha rotulo="Idioma"><Opcao valor="Português (Brasil)" opcoes={['Português (Brasil)']} /></Linha>
-        {prof && <Linha rotulo="Escola ao abrir" apoio="Você dá aula em duas escolas. Nada de uma aparece na outra."><Opcao valor="A última que usei" opcoes={['A última que usei', ...ESCOLAS.map((e) => e.nome)]} /></Linha>}
-        {prof && <Linha rotulo="Turma que já vem na caixa de pedido"><Opcao valor="A da aula de agora" opcoes={['A da aula de agora', 'A última que usei', ...TURMAS.map((t) => `${t.nome} · ${t.disciplina}`)]} /></Linha>}
-        {prof && <Linha rotulo="Mostrar o resumo do dia na página inicial"><Chave ligada /></Linha>}
-      </>
-    )
-    case 'notificacoes': return (
-      <>
-        <Nota><b className="font-semibold text-tinta">Aviso só chega no horário da escola</b> — das 7h às 18h, em dia letivo. Isso não se muda aqui: o produto não avisa fora de hora nem cobra uso.</Nota>
-        <Grupo>{prof ? 'Do seu Assistente' : 'Do Analista'}</Grupo>
-        {prof ? (
-          <>
-            <Linha rotulo="Correção pronta para você revisar"><Opcao valor="No sistema e por e-mail" opcoes={['No sistema e por e-mail', 'Só no sistema']} /></Linha>
-            <Linha rotulo="Versão adaptada pronta"><Opcao valor="Só no sistema" opcoes={['No sistema e por e-mail', 'Só no sistema']} /></Linha>
-            <Linha rotulo="Seu dia, de manhã" apoio="Aulas, avaliações e entregas em atraso, às 7h10."><Chave ligada /></Linha>
-            <Linha rotulo="Entrega em atraso"><Chave ligada /></Linha>
-            <Grupo>Do Tutor</Grupo>
-            <Linha rotulo="Sinais da turma" apoio="Quem travou, quem pediu resposta pronta, a dúvida que se repetiu."><Opcao valor="Na hora, durante a aula" opcoes={['Na hora, durante a aula', 'Um resumo no fim do dia']} /></Linha>
-            <Linha rotulo="Assunto delicado" apoio="Quando um aluno escreve algo que pede um adulto."><Fixo>Sempre na hora</Fixo></Linha>
-          </>
-        ) : (
-          <>
-            <Linha rotulo="Resumo de segunda de manhã"><Opcao valor="No sistema e por e-mail" opcoes={['No sistema e por e-mail', 'Só no sistema']} /></Linha>
-            <Linha rotulo="Alerta quando um indicador passa do limite"><Chave ligada /></Linha>
-            <Linha rotulo="Denúncia nova no canal da escola"><Fixo>Sempre na hora</Fixo></Linha>
-          </>
-        )}
-        <Grupo>Para onde vai o e-mail</Grupo>
-        <Linha rotulo="camila.souza@colegioaurora.example" apoio="É o e-mail do seu cadastro. Aluno não tem e-mail no sistema."><Button variant="secundario" size="sm">Trocar</Button></Linha>
-      </>
-    )
-    case 'assistente': return (
-      <>
-        <Linha empilha rotulo="Instruções para o Assistente" apoio="Vale para todas as conversas: seu jeito de montar prova, o nível de dificuldade que costuma usar, o formato que prefere.">
-          <Textarea rows={3} defaultValue="Minhas provas têm 10 questões, do cálculo direto ao problema com texto. Sempre com uma questão de interpretação de gráfico."
-            className="min-h-[84px] rounded-controle border-borda-campo bg-superficie text-sm" />
-          <p className="mt-2 flex items-start gap-1.5 text-[12.5px] leading-snug text-sutil"><Lock className="mt-px size-3.5 shrink-0" />Não escreva sobre alunos aqui. O que o Assistente sabe de um aluno vem do trabalho dele, nunca de texto livre.</p>
-        </Linha>
-        <Grupo>Padrões das ferramentas</Grupo>
-        <Linha rotulo="Questões por prova"><Opcao valor="10" opcoes={['5', '8', '10', '12', '15', '20']} /></Linha>
-        <Linha rotulo="Alternativas por questão"><Opcao valor="4 (a–d)" opcoes={['4 (a–d)', '5 (a–e), como no ENEM']} /></Linha>
-        <Linha rotulo="Sempre gerar com gabarito"><Chave ligada /></Linha>
-        <Linha rotulo="Formato ao exportar"><Opcao valor="PDF" opcoes={['PDF', 'PowerPoint (PPTX)', 'Excel (XLSX)', 'Perguntar sempre']} /></Linha>
-        <Grupo>Preparar a semana, toda segunda</Grupo>
-        {TURMAS.map((t, i) => <Linha key={t.id} rotulo={`${t.nome} · ${t.disciplina}`} apoio={i === 0 ? 'Desligado, o Assistente só gera plano quando você pede.' : undefined}><Chave ligada={i === 0} /></Linha>)}
-        <Grupo>Busca na web</Grupo>
-        <Linha rotulo="Liga por conversa, na caixa de pedido" apoio="Não existe ligar para sempre. O que vier de fora sai rotulado e não entra na base da escola."><Fixo>Desligada por padrão</Fixo></Linha>
-      </>
-    )
-    case 'tutor': return (
-      <>
-        <Nota>O Tutor é o agente dos seus alunos. Aqui você decide só o que é seu; o que é da escola aparece para leitura.</Nota>
-        {TURMAS.map((t, i) => (
-          <div key={t.id}>
-            <Grupo>{t.nome} · {t.disciplina}</Grupo>
-            <Linha rotulo="Uso fora da sala" apoio="Quem decide é a coordenação, por turma."><Fixo>{i === 3 ? 'Ligado pela escola' : 'Desligado pela escola'}</Fixo></Linha>
-            <Linha rotulo="Busca em fontes aprovadas" apoio={i === 2 ? 'A escola ainda não liberou a busca nesta turma.' : 'Só em sala, só nas fontes que a escola aprovou, e desliga sozinha no prazo.'}>
-              {i === 2 ? <Fixo>Não liberada</Fixo> : <span className="flex items-center gap-2">{i === 0 && <Opcao valor="Até sexta" opcoes={['Só hoje', 'Até sexta', 'Até o fim do bimestre']} />}<Chave ligada={i === 0} /></span>}
-            </Linha>
-            <Linha rotulo="Trava durante avaliação"><Fixo>Sempre ligada</Fixo></Linha>
-          </div>
-        ))}
-      </>
-    )
-    case 'perfil': return (
-      <>
-        <Linha rotulo="Nome" apoio="Como aparece para a escola e para os alunos."><span className="text-sm font-medium text-tinta">Camila Souza</span></Linha>
-        <Linha rotulo="Como o Assistente chama você"><Opcao valor="Camila" opcoes={['Camila', 'Professora Camila', 'Prof. Camila']} /></Linha>
-        <Grupo>Seus vínculos</Grupo>
-        <Nota>O vínculo é criado pela escola, pela grade que ela importou. Você só confirma — e sem vínculo confirmado ninguém vê aluno.</Nota>
-        {[['Colégio Aurora', '2ºB, 2ºA e 1ºC · Química', '03/02/2026'], ['E. M. Rio Cachoeira', '9ºA · Ciências', '10/02/2026']].map(([e, t, d]) => (
-          <Linha key={e} rotulo={e} apoio={t}><span className="inline-flex items-center gap-1.5 rounded-full bg-ok-cx px-2.5 py-1 text-xs font-medium text-ok"><Check className="size-3" strokeWidth={2.6} />Confirmado por você · {d}</span></Linha>
-        ))}
-        <Linha rotulo="Algum vínculo está errado?" apoio="Turma que não é sua, disciplina trocada, escola de que você já saiu."><Button variant="secundario" size="sm">Avisar a coordenação</Button></Linha>
-      </>
-    )
-    case 'privacidade': return (
-      <>
-        <Linha rotulo="Quem vê suas conversas com o Assistente" apoio="A coordenação não tem acesso, nem com auditoria."><Fixo>Só você</Fixo></Linha>
-        <Linha rotulo="Quem abriu um dado seu com nome" apoio="A coordenação vê o uso somado. Para ver o seu nome, precisa abrir com registro — e o registro aparece para você."><Button variant="secundario" size="sm">Ninguém em 2026 · ver</Button></Linha>
-        <Linha rotulo="Pedir revisão de um indicador" apoio="Se um número não representa o seu trabalho."><Button variant="secundario" size="sm">Pedir revisão</Button></Linha>
-        <Grupo>O que é seu, sai quando você quiser</Grupo>
-        <Linha rotulo="Exportar tudo que você produziu" apoio="Provas, atividades, planos e o histórico de uso, em formato aberto."><Button variant="secundario" size="sm">Exportar</Button></Linha>
-        <Linha rotulo="Apagar o histórico de conversas" apoio="O que já está salvo na biblioteca continua lá."><Button variant="perigo" size="sm">Apagar…</Button></Linha>
-        <Grupo>Da escola</Grupo>
-        <Linha rotulo="Aviso de privacidade e encarregado de dados" apoio="A escola é a responsável pelos dados; nós tratamos por ordem dela."><Button variant="discreto" size="sm">Abrir</Button></Linha>
-      </>
-    )
-    case 'seguranca': return (
-      <>
-        <Linha rotulo="Como você entra" apoio={papel === 'aluno' ? 'Escola, matrícula e senha. Aluno não tem e-mail no sistema.' : 'Guardamos só o identificador da conta, nunca a senha dela.'}>
-          {papel === 'aluno' ? <Button variant="secundario" size="sm">Trocar a senha</Button> : <span className="text-sm font-medium text-tinta">Conta Google da escola</span>}
-        </Linha>
-        {papel !== 'aluno' && <Linha rotulo="Verificação em duas etapas" apoio={papel === 'coordenacao' ? 'Obrigatória para a coordenação.' : 'Opcional para professor. Recomendada.'}>{papel === 'coordenacao' ? <Fixo>Sempre ligada</Fixo> : <Chave />}</Linha>}
-        <Grupo>Aparelhos conectados</Grupo>
-        <Linha rotulo={<span className="flex items-center gap-2"><Laptop className="size-4 text-sutil" />Computador da sala 12 · Chrome</span>} apoio="Agora · Colégio Aurora"><span className="text-xs font-medium text-ok">este aparelho</span></Linha>
-        <Linha rotulo={<span className="flex items-center gap-2"><Smartphone className="size-4 text-sutil" />Celular · Safari</span>} apoio="Ontem, 19h12"><Button variant="discreto" size="sm">Sair</Button></Linha>
-        <Linha rotulo="Sair de todos os aparelhos"><Button variant="secundario" size="sm">Sair de todos</Button></Linha>
-      </>
-    )
-    case 'ia': return (
-      <>
-        <Nota><b className="font-semibold text-tinta">A IA prepara e avisa; a escola aprova.</b> Nada vira nota, mensagem à família ou decisão sobre aluno sem uma pessoa aprovar. E a IA pode errar: confira antes de usar com a turma.</Nota>
-        <Grupo>Um agente para cada pessoa da escola</Grupo>
-        {([AGENTES.assistente, AGENTES.tutor, AGENTES.analista]).map((a) => (
-          <Linha key={a.id} rotulo={<span className="flex items-center gap-2"><a.icone className="size-4 text-sutil" />{a.nome} <span className="text-sutil">· {a.paraQuem.toLowerCase()}</span></span>} apoio={a.autonomia.charAt(0).toUpperCase() + a.autonomia.slice(1)}><Button variant="discreto" size="sm">O que faz sozinho</Button></Linha>
-        ))}
-        <Grupo>Por baixo</Grupo>
-        <Linha rotulo="Onde a conversa de aluno é processada"><Fixo>No Brasil</Fixo></Linha>
-        <Linha rotulo="Seu dado treina algum modelo?"><Fixo>Não</Fixo></Linha>
-        <Linha rotulo="Viu a IA fazer algo errado ou inadequado?" apoio="Vai para o canal da escola, com resposta e recurso."><Button variant="secundario" size="sm">Avisar</Button></Linha>
-      </>
-    )
+    case 'assistente': return <Assistente />
+    case 'perfil': return <PerfilProfessor />
+    case 'privacidade': return <MeuUso />
+    case 'seguranca': return <SegurancaProfessor />
+    case 'ia': return <ComoIA />
+    default: return <GeralProfessor />
   }
 }
 
+const TITULO: Record<string, string> = { professor: 'Configurações', coordenacao: 'Minha conta', aluno: 'Ajustes', rede: 'Configurações' }
+
 export function Configuracoes({ papel, aberta, aoFechar }: { papel: Papel; aberta: string | null; aoFechar: () => void }) {
-  const secoes = useMemo(() => SECOES.filter((s) => s.papeis.includes(papel)), [papel])
+  const secoes = DO_PAPEL[papel] ?? DO_PAPEL.professor
+  const celular = useIsMobile()
   const [atual, setAtual] = useState<SecaoId | null>(null)
-  const [busca, setBusca] = useState('')
+  const [noIndice, setNoIndice] = useState(false)
   const pedida = secoes.find((s) => s.id === aberta)?.id
   const id = atual ?? pedida ?? secoes[0].id
   const secao = secoes.find((s) => s.id === id) ?? secoes[0]
-  const q = busca.trim().toLowerCase()
-  const visiveis = secoes.filter((s) => !q || `${s.nome} ${s.termos}`.toLowerCase().includes(q))
-  const fechar = () => { aoFechar(); setAtual(null); setBusca('') }
+  const fechar = () => { aoFechar(); setAtual(null); setNoIndice(false) }
+  const titulo = TITULO[papel] ?? 'Configurações'
+
+  if (papel === 'aluno' || papel === 'rede') {
+    return (
+      <Dialogo aberto={aberta !== null} aoMudar={(v) => { if (!v) fechar() }} titulo={titulo} largura={480}>
+        <Conteudo secao="geral" papel={papel} />
+      </Dialogo>
+    )
+  }
+
+  const indice = (
+    <nav aria-label={`Seções de ${titulo.toLowerCase()}`} className="overflow-hidden rounded-[16px] border-2 border-borda">
+      {secoes.map((s) => (
+        <Linha key={s.id} onClick={() => { setAtual(s.id); setNoIndice(false) }} aria-label={s.nome}
+          className={cn(!celular && s.id === secao.id && 'bg-azul-claro hover:bg-azul-claro [&_.t-cartao]:text-azul-texto')}
+          inicio={<s.icone aria-hidden className={cn('size-6', !celular && s.id === secao.id ? 'text-azul-texto' : 'text-sutil')} strokeWidth={2.5} />}
+          titulo={s.nome} chevron={celular} />
+      ))}
+    </nav>
+  )
+  const conteudo = (
+    <section aria-label={secao.nome} className="min-w-0">
+      {celular && (
+        <Botao variante="fantasma" tamanho="p" className="-ml-3 mb-1" onClick={() => setNoIndice(true)} icone={<ChevronLeft strokeWidth={2.5} />}>{titulo}</Botao>
+      )}
+      <h2 className="t-secao pb-3 text-tinta">{secao.nome}</h2>
+      <div key={secao.id}><Conteudo secao={secao.id} papel={papel} /></div>
+    </section>
+  )
 
   return (
-    <Dialog open={aberta !== null} onOpenChange={(v) => { if (!v) fechar() }}>
-      <DialogContent className="flex h-[min(680px,calc(100svh-32px))] w-[calc(100vw-24px)] max-w-[940px] flex-col gap-0 overflow-hidden rounded-[24px] border-0 bg-superficie p-0 shadow-flutua sm:rounded-[24px] md:flex-row [&>button:last-child]:hidden">
-        <DialogTitle className="sr-only">Configurações</DialogTitle>
-        <DialogDescription className="sr-only">Preferências da sua conta na Turmma</DialogDescription>
-
-        <nav aria-label="Seções das configurações" className="flex shrink-0 flex-col gap-2 border-b border-linha bg-lateral p-2.5 md:w-[252px] md:border-b-0 md:border-r">
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={fechar} aria-label="Fechar as configurações" className="grid size-9 shrink-0 place-items-center rounded-linha text-sutil transition-colors duration-150 hover:bg-realce hover:text-tinta"><X className="size-[18px]" /></button>
+    <Dialogo aberto={aberta !== null} aoMudar={(v) => { if (!v) fechar() }} titulo={titulo} largura={920}
+      className="h-[min(700px,calc(100svh-32px))]">
+      {celular
+        ? (noIndice || (atual === null && (aberta === 'geral' || !pedida)) ? indice : conteudo)
+        : (
+          <div className="grid min-h-full grid-cols-[248px_minmax(0,1fr)] items-start gap-8">
+            <div className="sticky top-0">{indice}</div>
+            {conteudo}
           </div>
-          <label className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-inativo" />
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Pesquisar configurações" aria-label="Pesquisar configurações"
-              className="h-9 w-full rounded-full border border-borda-campo bg-superficie pl-9 pr-3 text-[13.5px] text-tinta outline-none placeholder:text-inativo focus-visible:border-tinta" />
-          </label>
-          <ul className="flex gap-0.5 overflow-x-auto md:flex-col md:overflow-visible">
-            {visiveis.map((s) => (
-              <li key={s.id} className="shrink-0">
-                <button type="button" onClick={() => setAtual(s.id)} aria-current={s.id === secao.id ? 'page' : undefined}
-                  className={cn('flex h-9 w-full items-center gap-2.5 whitespace-nowrap rounded-linha px-2.5 text-left text-sm text-tinta transition-colors duration-150 hover:bg-realce', s.id === secao.id && 'bg-realce font-medium')}>
-                  <s.icone className="size-[18px] shrink-0" strokeWidth={1.75} /> {s.nome}
-                </button>
-              </li>
-            ))}
-            {visiveis.length === 0 && <li className="px-2.5 py-2 text-[13px] text-sutil">Nada com esse nome.</li>}
-          </ul>
-          <p className="mt-auto hidden items-center gap-1.5 px-2.5 pb-1 text-xs text-inativo md:flex"><GraduationCap className="size-3.5" />Plano e cobrança são da escola.</p>
-        </nav>
-
-        <section aria-label={secao.nome} className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <h2 className="shrink-0 border-b border-linha px-5 pb-3.5 pt-5 font-corpo text-lg font-semibold leading-none text-tinta md:px-6">{secao.nome}</h2>
-          <div key={secao.id} className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-1 md:px-6"><Conteudo secao={secao.id} papel={papel} /></div>
-        </section>
-      </DialogContent>
-    </Dialog>
+        )}
+    </Dialogo>
   )
 }

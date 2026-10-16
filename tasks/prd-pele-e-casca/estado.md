@@ -6,57 +6,18 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** a resposta do Joaquim às duas entradas de "Esperando o Joaquim" (a ressalva da validação e a branch remota da linha 1). Validação **APROVADA COM RESSALVAS** sobre `4c23893` (Validador, 16/10 03h45; 24 de 24 RF, um maior, nenhum crítico). Parada 3: nada segue. Com "corrigir": correção de texto na linha 1, encontro sem push, e o fechamento (passo 3 de `validar/SKILL.md`, sem esteira: o portão completo local de 03h10 vale, e a correção é só documento). Com "aceitar": o aceite na linha do veredito do `validacao.md` e o fechamento. O portão completo local passou às 03h10 (5.496 testes de unidade e integração, 956 e2e, 57 infra). No fechamento: `linhas.ts fechar`, os itens (0), (2b) e o `TODO.md`. **Para a validação:** a correção do alvo de toque mudou o `violacoesGraves` do e2e (tira `pointer-events` dos elementos sticky enquanto o axe roda): conferir que isso não esconde alvo de toque real; o `scroll-padding-top` que falta já está no `TODO.md` (linha 1089). **Pergunta aberta ao Joaquim (não para nada):** a linha 1 foi ao GitHub contra o "tudo local" ("O que falhou"); apagar a branch remota `spec/pele-e-casca--l1` ou deixar. Histórico da 13.0: começou às 19h30, (porte grande: até 4 horas sem a primeira rodada) pedida em 15/10/2026 às 19h30 (a 12.0 se encontrou às 19h22, a spec em `5827913`; o `Arquiteto` pôs na 13.0 o teste da gaveta com `usuarioDaSessao` em `951d4bc`, e a partida trouxe a linha até ele). A 14.0 continua sem linha (uma linha só). Linha 1: `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca--l1`, branch `spec/pele-e-casca--l1`, ambiente de teste 1, com o `Implementador` e a `Mesa`. Todo pedido vai com a observação **"sem push"**: o commit da tarefa fica local. **Para a validação:** a 7.0 deixou ao `/validar` o caso direto de `fechadoPeloNavegador` sob
-  `StrictMode` ("Recomendações sem aplicar" do `7_task.md`); e os revisores da correção `quinta-fatia-do-e2e` (`71ff60f`, já na spec com a 6.0)
-  deixaram ao `/validar` as recomendações recusadas na tabela de `tasks/correcoes/2026-10-13-quinta-fatia-do-e2e.md`;
-  e a 8.0 deixou ao `/validar` ("Recomendações sem aplicar" do `8_task.md`): fotografar o RF10 com uma conversa do
-  Tutor aberta, o botão "Abrir dado nominal de uma turma" quebrando em duas linhas a 360 px, e
-  `/professor/nova-conversa` nos dois temas; e a 11.0 deixou o que está em "Recomendações sem aplicar" do `11_task.md`:
-  conferir no fechamento se algo ali tem destino `TODO.md`
-- **Devo ainda:** (0) **no fechamento, levar ao `TODO.md`** a 2ª linha de "Sem aplicar" de `.processo/ordens/2026-10-15-anel-do-motor-sem-has-r2.md` da linha 1 (repetir a asserção sem `has-` depois de marcar a caixa, em `pecas-revestidas.test.tsx`); a 1ª linha é da retrospectiva (modelo do documento de correção); (1) **tudo local, por decisão do Joaquim** (13/10, 08h50: "pode ficar local"): nenhum push, de
-  ninguém, até ele mandar. O `linhas.ts encontro` não tem opção sem push: rodá-lo com o endereço de push trocado só
-  naquele comando (`GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=remote.origin.pushurl GIT_CONFIG_VALUE_0=/dev/null/sem-push`
-  na frente do `node`), e a saída esperada é "O PUSH FALHOU", que aqui é o certo: o encontro está feito. Não rodar o
-  `esteira.ts`: sem branch no GitHub não há esteira. No lugar dela, o portão completo local
-  (`portao-local.ts --e2e --infra`) uma vez, antes da validação (passo 8 do `/seguir`, "Sem GitHub"). Todo `PEDIDO`
-  de tarefa leva a observação "sem push"; (2) a 3.0 é tronco e segura as outras doze; da 4.0 em diante o quadro
-  autoriza linhas, mas **uma linha só** até o Joaquim dizer o contrário
-  (limite de uso); (2a) a observação que o `PEDIDO` de cada tarefa leva: o da **12.0**: "quando o `Contador` ganhar a lateral, manter o chunk
-  `pecas-estado`; está em 'Recomendações sem aplicar' do `6_task.md`", e mais: "a 9.0 deu ao
-  `Ladrilho` o tamanho 36, que é o da lateral, e deixou os quatro ícones fora da entrada até a 12.0 ligá-los à casca
-  (484 bytes em brotli, sem chunk `lugares-*`); leia 'Divergências' do `9_task.md`"; e o da **13.0** (já enviado): "o `docs/interface.md`, na
-  10.2, cita '12.0 e 13.0' para a gaveta da casca, e ela é só da 13.0; está em 'Recomendações sem aplicar' do
-  `7_task.md`"; (2b) **no fechamento, levar ao `TODO.md`**, em "Marca e interface", o que a 7.0 deixou com esse
-  destino e ainda não está lá: seis linhas, na tabela "Recomendações sem aplicar" do `7_task.md` e em
-  `.processo/ordens/7_task-r2.md` da linha 1 (a lista do perigo cheio por arquivo e o detector textual; a ordem dos
-  botões do rodapé entre as peças; o texto técnico da galeria; a cor do botão oficial só provada como "não
-  vermelho"; o Tab preso do login por cima); e o que a **8.0** deixou com o mesmo destino ("Recomendações sem aplicar" do
-  `8_task.md`): fechar `QUEM_IMPORTA_O_AVATAR` só na `AssinaturaIA`, com o aperto na `techspec.md` 7b (é do
-  Arquiteto, e da retrospectiva), e o espaço dobrado (`ml-1`) e o `align-middle` sem asserção na casca do selo,
-  que a 10.0 **não** fecha (estão em "Fora do escopo" do `10_task.md`, pela triagem do Arquiteto): vão ao `TODO.md`; e, para o Arquiteto ao escrever a tela que usar o `PainelLado` na X2 e
-  na X3: `infra-guardian` obrigatório e foto do menu aberto dentro do diálogo; (3) nada mais sobre a revisão de spec da X3 e da X4: as duas **já têm revisão aprovada** pelos
-  seis guardiões, quatro rodadas cada, feita pelo "Claude Code #2" a pedido do Joaquim e trazida para esta branch em
-  13/10/2026 (`2f63ce0`, `7334f79`, `92cc7e5`; o Joaquim deu a palavra neste terminal: "pode"). Não repetir antes de
-  cada uma começar. As decisões de desenho tomadas por delegação nelas estão na seção 12 da Tech Spec de cada uma
-  (12b na X4) e no item "(D80) Decisões que tomei por delegação" do `TODO.md`: são do Joaquim rever, e não seguram
-  nada
-- **Mockup de outubro** (as tarefas citam "Mockup: /fundamentos" e outras rotas): roda com
-  `./node_modules/.bin/vite --host 127.0.0.1 --port 5190 --strictPort` dentro de
-  `~/Documentos/git/Prototipo_Turmma/mockups`. Em 13/10 estava de pé na 5190 pela sessão do "Claude Code #2", e cai
-  quando ela fechar: quem precisar, sobe de novo
-- **Limite de uso:** **94% do limite semanal às 14h32 de 13/10** (era 81% às 07h48); **acabou às 19h31 de 13/10**, com a
-  primeira rodada da 10.0 em curso (os quatro revisores caíram com 429, nenhuma rodada registrada). Zerou em 15/10 às 15h:
-  às 15h01 fechei o menu do limite na `Mesa` e no `Implementador`, e a `Mesa` refez a rodada 1 inteira, com a árvore
-  igual à da foto, e a 10.0 fechou na 2ª. Uma linha, poucos agentes
-- **A spec da X1 está APROVADA** pelos seis revisores (rodada 4, 13/10/2026 02:09, `revisao-spec.md`). As
-  recomendações que sobraram estão na seção da rodada 4 e entram como subtarefa ou cenário na tarefa de cada uma
-- **Como o Orquestrador assumiu:** em 13/10/2026, 08h20, com a palavra do Joaquim no terminal dele ("pode"). O andar
-  "X1 pele-e-casca" nasceu da branch que já existia (`--existing-branch`), em
-  `~/Documentos/git/.maestri/floors/educaia--specpele-e-casca`, e a `develop` (`e278845`) entrou por merge, sem
-  conflito (`65ab3b1`). A 1.0 e a spec correram fora do Maestri, num checkout avulso já desfeito
-- **Base:** `spec/pele-e-casca` em `5827913` (o encontro da 12.0). O diário tem alterações sem commit desde o encontro da 11.0: o encontro da 12.0 as leva. Se o quadro
-  pedir mais uma linha: não abrir (uma linha só, item 2 acima). Nada foi enviado ao GitHub:
-  push é do Joaquim
+- **Espero:** nada do time. O Joaquim disse "pode" no meu terminal às ~13h35: pouso e push da `develop` em curso
+  (esteira verde em `b6291e3`, rodada 4 APROVADA)
+- **Devo ainda:** (1) feito; (2) feito; (3) com a esteira verde e a validação
+  aprovada, o pouso, já autorizado pelo Joaquim em 16/10: `maestri floor land "X1 pele-e-casca" --into develop`,
+  `git push origin develop`, a esteira da `develop` em segundo plano e `maestri floor delete "X1 pele-e-casca L1"`; (4)
+  com a esteira da `develop` verde, `PEDIDO` ao `Arquiteto`, no térreo: trazer o mockup de outubro
+  (`~/Documentos/git/Prototipo_Turmma`, branch `mockups/interface`, `a95568d`) para `mockups/`, por decisão do Joaquim de
+  16/10, registrando a decisão onde a D80 e o `TODO.md` dizem que ela era dele com o Gabriel; (5) a retrospectiva da X1
+- **A X1 foi validada e fechada** (`c624ad6`); a correção não reabre o roadmap. A X2, a X3 e a X4 correm fora do
+  Maestri, pelo "Claude Code #2", em `.andares-avulsos/educaia--spec-telas-*`; não mexer naqueles checkouts. Pela palavra
+  do Joaquim, cada spec pousa sozinha quando fecha
+- **Base:** `spec/pele-e-casca` em `b6291e3` (enviada; o último commit de código)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -82,6 +43,21 @@
 
 ## Esperando o Joaquim
 
+### 16/10/2026 ~13h30 — X1, pouso na `develop` (parada 6), confirmação depois da rodada 4 — RESPONDIDA: "pode" (o Joaquim, no meu terminal)
+Decisão: pousar a X1 na `develop` e enviar a `develop` ao GitHub agora?
+Contexto: rodada 4 APROVADA (`validacao.md`), esteira verde em `b6291e3`; a `develop` local é igual à do GitHub e a
+branch a contém (avanço direto, 62 commits). A palavra de 16/10 ("cada spec finalizada pode pousar…") é de uma sessão
+já limpa; o `/seguir` pede a palavra nesta conversa
+Opções: pode (pousar, enviar, apagar a L1 e pedir ao Arquiteto o mockup) | esperar
+Recomendo: pode: tudo está verde, e o push público já foi decidido por você em 16/10, com o mockup junto
+
+### 16/10/2026 — X1, pouso na `develop` (parada 6) — RESPONDIDA: pousar e enviar (o Joaquim, neste terminal: "cada spec finalizada pode pousar na develop e fazer o push para a remota e sobre o mockup pode trazer para o projeto aqui"). O "tudo local" de 13/10 acaba para spec finalizada
+Decisão: pousar a X1 na `develop` agora, ou esperar a X2, a X3 e a X4 para um pouso só?
+Contexto: `tasks/prd-pele-e-casca/validacao.md` (rodada 2, APROVADA); a branch está só na máquina, e o pouso pelo
+`/seguir` inclui o push da `develop`, que poria no GitHub público a pele tirada do mockup de outubro, que é privado
+Opções: pousar agora e enviar a `develop` | pousar agora só na máquina, sem push | esperar as três e pousar uma vez só
+Recomendo: esperar as três e pousar uma vez só, como foi combinado no outro terminal; o push público espera a decisão do mockup com o Gabriel
+
 ### 13/10/2026 08h35 — X1, encontro da tarefa 2.0 — RESPONDIDA às 08h50: tudo local ("pode ficar local")
 Decisão: a branch da spec vai para o GitHub a cada tarefa, como o processo pede (D79), ou fica local até você mandar?
 Contexto: o encontro (`linhas.ts encontro`) e o commit do Implementador fazem push, e é o push que dispara a
@@ -91,14 +67,14 @@ Opções: push a cada tarefa, com a esteira | tudo local, com o portão completo
 Recomendo: push a cada tarefa, se o que já está na branch pode ficar público: sem ele a esteira não roda, e o
 portão completo local custa de 30 a 70 minutos por vez
 
-### 16/10/2026 03h50 — X1, validação APROVADA COM RESSALVAS (parada 3)
+### 16/10/2026 03h50 — X1, validação APROVADA COM RESSALVAS (parada 3) — RESPONDIDA: corrigir agora (o Joaquim, neste terminal: "faça o melhor para o projeto, deixo a escolha com você, você decide e faça")
 Decisão: o único maior, `docs/roteiro-da-demonstracao.md:166` ainda mandando clicar em "Nova conversa" (agora "Início"), corrige agora ou aceita?
 Contexto: `tasks/prd-pele-e-casca/validacao.md`, "Maiores"; 24 de 24 RF atendidos, nenhum crítico, o spec do roteiro já
 foi atualizado e o documento lido na demonstração não. Só documento: a correção não pede validação nova
 Opções: corrigir agora (correção de texto na linha 1, com `revisor-geral` e `test-engineer`) e fechar | aceitar e levar ao `TODO.md`
 Recomendo: corrigir agora: é uma palavra, e é o texto que a pessoa segue na frente da escola
 
-### 15/10/2026 22h50 — X1, push da linha 1 contra o "tudo local"
+### 15/10/2026 22h50 — X1, push da linha 1 contra o "tudo local" — RESPONDIDA em 16/10: apagar (mesma palavra do Joaquim); a branch remota foi apagada e nenhuma `spec/pele-e-casca*` está no GitHub. O "tudo local" continua para todo o resto
 Decisão: apagar a branch remota `spec/pele-e-casca--l1` (`b558854`, até a 13.0) ou deixar?
 Contexto: "O que falhou", 15/10 22h44. O repositório é público e a pele vem do mockup de outubro, que é privado
 (entrada de 13/10 acima); a branch está lá desde 22h44 de 15/10
@@ -117,6 +93,14 @@ Recomendo: apagar, pelo mesmo motivo que fez você escolher "tudo local"
   ícones de cada papel fora da entrada), é tarefa nova na 9.0
 
 ## O que falhou
+
+- **16/10, 14h18 — e2e 3/5 da esteira `38914509279` (`4f453d0`) caiu antes de testar:** o Docker Hub devolveu 502 no
+  `redis:8.8.2-alpine` ao subir o compose. Não é defeito: rodar de novo só o job que falhou (`gh run rerun --failed`)
+  quando a execução terminar
+
+- **16/10, ~12h15 — a primeira esteira da X1 no GitHub caiu em 4 e2e da galeria** (execução `38896156999`), todos no
+  limite de 30 s, que o portão local de 03h10 passou. Sem branch no GitHub ("tudo local"), a esteira não rodou a cada
+  tarefa, e isso só apareceu depois da validação. Vai à retrospectiva
 - **16/10 01h05, o Implementador apagou a seção "Revisões" do documento da correção do alvo de toque** ao reescrevê-lo;
   o hook a recriou e a Mesa chamou de novo os dois revisores. A tabela diz "1ª rodada", mas houve uma reprovação antes
   (ordem de três itens, 00h59). Vai à retrospectiva. A causa também não era a barra de baixo, e sim a de topo (`sticky`)
@@ -155,6 +139,12 @@ Recomendo: apagar, pelo mesmo motivo que fez você escolher "tudo local"
   tarefa; aqui as duas coisas correram na mesma árvore. O commit das specs não levou código
 - **PRD e Tech Spec passam do teto de palavras** (2.189 e ~3.300): o que os revisores exigiram entrou no texto. O
   aceite está escrito no topo de cada um, por delegação
+- **`linhas.ts conferir` recusa a correção feita na branch da spec** (16/10, `9d46058`): ele percorre todos os commits
+  desde a `develop` e para no `81cc95d`, que leva `(tarefa 1.0)` e não `(correção …)`. Conferi o `9d46058` à mão: marca,
+  `Revisões:` com os quatro ditados, árvore limpa e push. O `conferir` só serve ao andar `correcao/*`; vai ao `/retro`
+- **`tools/ci/e2e.ts` engole `--repeat-each` e `--workers`** (16/10): passou "3 2" ao Playwright como filtro e rodou o
+  e2e inteiro (974) em vez de repetir três arquivos. Avisei o Implementador na vigia; ele repetiu com o Playwright direto
+  (198/198). Vai ao `/retro`. E a unidade `guardas.test.ts › redact` deu timeout de 5 s uma vez sob carga e passou depois
 
 ## O que decidi sem perguntar
 - **Quatro specs, e não duas ou três:** X1 `pele-e-casca` (tokens, peças, casca, sem mudar endereço), X2

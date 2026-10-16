@@ -1,308 +1,47 @@
-import { useRef, useState, type ReactNode } from 'react'
-import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, Eraser, EyeOff, FileDown, FolderOpen, PencilLine, RotateCcw, SlidersHorizontal, Sparkles, TextCursorInput } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { GenericTool } from '@/components/ui/generic-tool'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
-import { Fontes } from '@/components/turmma/conversa'
-import { AVISO_ADAPTACAO, AVISO_PADRAO, Campo, MotorFormulario, chaveDe, visivel, type MotorHandle, type Valores } from '@/components/turmma/ferramentas'
-import { AssinaturaIA, ChipFonte, Estado } from '@/components/turmma/ia'
-import { LadrilhoFerramenta } from '@/components/turmma/icones-ferramenta'
-import { NotaMockup, TelaCheia } from '@/components/turmma/tela'
+import { useState } from 'react'
+import type * as React from 'react'
+import { Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { ShieldCheck } from 'lucide-react'
+import { Botao, CabecalhoPagina, CampoTexto, Pagina, Passos, Segmentado, Selo } from '@/components/duo'
+import { AvatarIA } from '@/components/duo/onca'
+import { MotorFormulario, chaveDe, type Valores } from '@/components/turmma/ferramentas'
+import { AssinaturaIA, ChipPagina } from '@/components/turmma/ia'
+import { useTurmaDaSessao } from '@/components/turmma/pedido'
+import { ferramenta, ferramentaDoEndereco, type CampoDef } from '@/dados/ferramentas'
 import { MATERIAIS, turmaDe } from '@/dados/escola'
-import { CAPITULOS, ferramenta, type Ferramenta } from '@/dados/ferramentas'
 import { cn } from '@/lib/utils'
-import { abaGatilho, abasLista } from './_pecas'
 
-/* A TELA DE UMA FERRAMENTA (1.2). Sétima rodada, 20/09/2026 — o Gabriel, vendo o Mapa mental preenchido: "nosso
-   formulário está ficando muito feio ao ser preenchido direto pela ferramenta, precisa melhorar para ficar mais
-   bonito e confirmar que tem todas as infos necessárias com base na Teachy".
-
-   A tela lê a ferramenta de `dados/ferramentas`; quem desenha os campos é o motor de `components/turmma/ferramentas`
-   (o MESMO do cartão da conversa, D18). Aqui mora só a moldura, igual para as 16 ferramentas que têm formulário —
-   Prova, Adaptação e Redação inclusive:
-   · cabeçalho do objeto: o ladrilho da ferramenta, o nome e a promessa numa linha; à direita, "Preencher exemplo"
-     (escreve nos campos de texto o exemplo do catálogo; é estático) e "← Ferramentas". O chip de categoria saiu;
-   · a tela ocupa a janela (1440 × 780) e NÃO rola: o formulário é um cartão com o miolo rolando por dentro e o
-     rodapé fixo (o aviso à esquerda, o botão com o verbo da ferramenta à direita). Abaixo de 1280 px vira uma
-     coluna e a página rola normalmente;
-   · a coluna da direita é UMA peça com cara de documento: a folha "Como vai sair" — o título da prévia, as seções
-     do que vem no resultado como cabeçalhos, com texto de verdade embaixo e a página citada em chip —, depois os
-     formatos e a fonte, e por último, discreto, o mesmo pedido pela conversa. Saíram o ladrilho gigante em degradê
-     e as três caixas empilhadas;
-   · "gerando" e "pronto" continuam: o formulário vira uma linha com o que foi pedido, e o resultado é um cartão com
-     a mesma anatomia (topo, miolo que rola, rodapé com as ações). Entraram "Gerar outra versão", "Mais curto / Mais
-     longo" onde o tamanho é texto, e, na coluna da direita, as passagens para outra ferramenta com a turma e o
-     tema já preenchidos (os modificadores da Teachy que valem aqui; "adaptar para alunos" virou "Gerar versão
-     adaptada", pela lista fechada de tipos);
-   · Redação e discursiva (D55) usa a mesma moldura, com as três abas embaixo do cabeçalho. A rubrica agora respeita
-     o número de critérios e de níveis escolhido, inclusive na aba Corrigir, e dá para editar antes de aplicar. */
-
-type Fase = 'formulario' | 'gerando' | 'pronto'
-
-/* ─── A moldura ──────────────────────────────────────────────────────────────────────────────── */
-
-function Moldura({ f, acoes, children }: { f: Ferramenta; acoes?: ReactNode; children: ReactNode }) {
-  return (
-    <TelaCheia titulo={f.nome} className="h-auto pb-8 md:h-auto xl:h-svh xl:pb-4">
-      <div className="mx-auto flex min-h-0 w-full max-w-[1240px] flex-1 flex-col">
-        <header className="mb-4 flex flex-wrap items-center gap-x-3.5 gap-y-3">
-          <LadrilhoFerramenta id={f.id} tamanho="sm" />
-          <div aria-hidden className="min-w-0 flex-1 basis-60">
-            <p className="font-titulo text-[20px] font-semibold leading-tight tracking-[-0.015em] text-tinta">{f.nome}</p>
-            <p className="mt-1 text-[13.5px] leading-snug text-sutil xl:truncate">{f.promessa}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-1">
-            {acoes}
-            <Button variant="discreto" size="sm" asChild><Link to="/professor/ferramentas"><ArrowLeft /> Ferramentas</Link></Button>
-          </div>
-        </header>
-        {children}
-      </div>
-    </TelaCheia>
-  )
-}
-
-/** Formulário (ou resultado) à esquerda, a folha à direita. A altura é a da janela; quem rola é o miolo de cada cartão. */
-function DuasColunas({ children, lado }: { children: ReactNode; lado: ReactNode }) {
-  return (
-    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)] items-start gap-4 xl:grid-cols-[minmax(0,1fr)_328px] xl:grid-rows-[minmax(0,1fr)]">
-      <div className="flex min-h-0 min-w-0 flex-col gap-3 xl:max-h-full">{children}</div>
-      {lado}
-    </div>
-  )
-}
-
-const cartaoTela = 'flex min-h-0 min-w-0 flex-col overflow-hidden rounded-cartao border border-linha bg-superficie'
-
-function CartaoRolavel({ topo, rodape, children, className }: { topo?: ReactNode; rodape?: ReactNode; children: ReactNode; className?: string }) {
-  return (
-    <section className={cn(cartaoTela, 'animate-entra', className)}>
-      {topo && <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-linha px-4 py-3 lg:px-5">{topo}</div>}
-      <div className="@container relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 lg:px-5">{children}</div>
-      {rodape && <div className="flex shrink-0 flex-wrap items-center gap-1 border-t border-linha px-4 py-3 lg:px-5">{rodape}</div>}
-    </section>
-  )
-}
-
-/** "Química 2, cap. 7", ou "Química 2, cap. 7 ao cap. 9" quando o formulário pede um intervalo de capítulos. */
-function materialDoPedido(f: Ferramenta, valores?: Valores) {
-  const campo = f.campos.find((c) => c.tipo === 'material')
-  const material = MATERIAIS.find((m) => m.id === valores?.material)
-  if (!campo || !material) return ''
-  const nome = material.titulo.split(' — ')[0]
-  if (campo.tipo !== 'material' || !campo.varios) return `${nome}, ${material.capitulo.split(' · ')[0]}`
-  const cap = (ponta: 'de' | 'ate') => (CAPITULOS[material.id]?.[Number(valores?.[`material:${ponta}`] ?? 0)] ?? '').split(' · ')[0]
-  return cap('de') === cap('ate') ? `${nome}, ${cap('de')}` : `${nome}, ${cap('de')} ao ${cap('ate')}`
-}
-
-/** O formulário recolhido numa linha, enquanto gera e depois de pronto. */
-function Pedido({ f, valores, aoEditar }: { f: Ferramenta; valores?: Valores; aoEditar?: () => void }) {
-  const Icone = f.icon
-  /* campo condicional que estava escondido não conta o pedido, mesmo que o "Preencher exemplo" tenha escrito nele */
-  const aVista = f.campos.map((c, i) => ({ c, k: chaveDe(c, i) })).filter(({ c }) => !valores || visivel(c, valores))
-  const digitado = aVista.map(({ c, k }) => ((c.tipo === 'texto' || c.tipo === 'longo') && !c.avancado ? String(valores?.[k] ?? '') : '')).find((t) => t.trim())
-  /* o que foi escolhido da biblioteca e os cartões de múltipla escolha (os tipos de adaptação) também contam o pedido */
-  const escolhido = aVista.flatMap(({ c, k }) => {
-    const v = valores?.[k]
-    if (c.tipo === 'artefato' && typeof v === 'string') return [v]
-    if (c.tipo === 'cartoes' && c.multiplo && Array.isArray(v)) return [c.opcoes.filter((o) => (v as string[]).includes(o.id)).map((o) => o.nome).join(' + ')]
-    return []
-  })
-  const turma = valores?.turma && !escolhido.some((e) => e.includes(turmaDe(String(valores.turma)).nome)) && turmaDe(String(valores.turma)).nome
-  const partes = [turma, materialDoPedido(f, valores), ...escolhido, digitado].filter(Boolean)
-  return (
-    <div className="flex shrink-0 items-center gap-2 rounded-cartao border border-linha bg-superficie px-4 py-2.5 text-[14px] text-apoio lg:px-5">
-      <Icone className="size-4 shrink-0 text-sutil" strokeWidth={1.75} />
-      <p className="min-w-0 flex-1 truncate"><b className="font-semibold text-tinta">{f.nome}</b>{partes.map((p) => ` · ${p}`)}</p>
-      {aoEditar && <button type="button" onClick={aoEditar} className="inline-flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-tinta underline-offset-4 hover:underline"><SlidersHorizontal className="size-3.5" strokeWidth={1.75} /> Editar os campos</button>}
-    </div>
-  )
-}
-
-/* ─── A folha: como vai sair ─────────────────────────────────────────────────────────────────── */
-
-/** O mapa mental sai desenhado: é o único resultado que não é texto. */
-function MapaDesenhado({ itens, className }: { itens: { texto: string; pagina?: number }[]; className?: string }) {
-  const pos = [[92, 44], [92, 150], [92, 256], [548, 84], [548, 216]]
-  return (
-    <svg viewBox="0 0 640 300" role="img" aria-label="Mapa mental de estequiometria, com cinco ramos" className={cn('w-full rounded-controle bg-lateral', className)}>
-      {pos.map(([x, y], i) => <path key={i} d={`M320 150C${x < 320 ? 230 : 410} 150 ${x < 320 ? 250 : 390} ${y} ${x < 320 ? x + 84 : x - 84} ${y}`} stroke="#0D0D0D" strokeOpacity=".25" strokeWidth="2" fill="none" />)}
-      <rect x="236" y="124" width="168" height="52" rx="26" fill="#E8732E" /><text x="320" y="156" textAnchor="middle" fontSize="17" fontWeight="600" fill="#fff">Estequiometria</text>
-      {pos.map(([x, y], i) => {
-        const [nome] = (itens[i]?.texto ?? '').split(':')
-        const escuro = i % 2 === 0
-        return (
-          <g key={i}>
-            <rect x={x - 84} y={y - 22} width="168" height="44" rx="22" fill={escuro ? '#0D0D0D' : '#fff'} stroke={escuro ? 'none' : '#D9D9D9'} />
-            <text x={x} y={y - 1} textAnchor="middle" fontSize="12.5" fontWeight="600" fill={escuro ? '#fff' : '#0D0D0D'}>{nome.length > 24 ? `${nome.slice(0, 23)}…` : nome}</text>
-            <text x={x} y={y + 14} textAnchor="middle" fontSize="10.5" fill={escuro ? '#ffffff99' : '#5D5D5D'}>p. {itens[i]?.pagina}</text>
-          </g>
-        )
-      })}
-    </svg>
-  )
-}
-
-const PASSAGENS: Record<string, { rotulo: string; para: string }[]> = {
-  plano: [{ rotulo: 'Gerar a apresentação desta aula', para: 'apresentacao' }, { rotulo: 'Fazer uma lista disso', para: 'atividade' }, { rotulo: 'Gerar resumo para a turma', para: 'material' }],
-  apresentacao: [{ rotulo: 'Fazer uma lista disso', para: 'atividade' }, { rotulo: 'Gerar resumo para a turma', para: 'material' }],
-  material: [{ rotulo: 'Fazer uma lista disso', para: 'atividade' }, { rotulo: 'Gerar versão adaptada', para: 'adaptacao' }],
-  mapa: [{ rotulo: 'Fazer uma lista disso', para: 'atividade' }, { rotulo: 'Gerar resumo para a turma', para: 'material' }],
-  experimento: [{ rotulo: 'Fazer uma lista disso', para: 'atividade' }],
-  prova: [{ rotulo: 'Gerar versão adaptada', para: 'adaptacao' }],
-  atividade: [{ rotulo: 'Gerar versão adaptada', para: 'adaptacao' }],
-  diagnostica: [{ rotulo: 'Gerar versão adaptada', para: 'adaptacao' }],
-  proposta: [{ rotulo: 'Gerar versão adaptada', para: 'adaptacao' }, { rotulo: 'Preparar a rubrica e o lote', para: 'redacao' }],
-  periodo: [{ rotulo: 'Gerar o plano da próxima aula', para: 'plano' }],
-  projeto: [{ rotulo: 'Gerar o plano da primeira aula', para: 'plano' }],
-  recuperacao: [{ rotulo: 'Fazer uma lista disso', para: 'atividade' }],
-  simulado: [{ rotulo: 'Gerar versão adaptada', para: 'adaptacao' }],
-  importar: [{ rotulo: 'Gerar versão adaptada', para: 'adaptacao' }],
-}
-
-/** A coluna da direita, uma peça só: a folha em miniatura, os formatos e a fonte, e o mesmo pedido pela conversa. */
-function ComoVaiSair({ f, fase, valores }: { f: Ferramenta; fase: Fase; valores?: Valores }) {
-  const navegar = useNavigate()
-  const secoes = f.vem.map((nome, i) => ({ nome, itens: f.previa.itens.filter((q) => q.em === i), amostra: f.amostra?.[i] ?? null }))
-  const passagens = fase === 'pronto' ? PASSAGENS[f.id] ?? [] : []
-  const digitado = f.campos.map((c, i) => (c.tipo === 'texto' && !c.avancado ? String(valores?.[c.id ?? `c${i}`] ?? '') : '')).find((t) => t.trim())
-  return (
-    <aside aria-label="Como vai sair" className={cn(cartaoTela, 'bg-lateral xl:max-h-full')}>
-      <div className="flex h-10 shrink-0 items-center justify-between gap-2 px-4">
-        <h2 className="rotulo">{fase === 'pronto' ? 'Como saiu' : 'Como vai sair'}</h2>
-        {f.pendente && <Estado tipo="pendente" size="sm">Nasce esperando você</Estado>}
-      </div>
-      <div className="relative max-h-[448px] min-h-0 flex-1 overflow-hidden px-4">
-        <div aria-hidden className="rounded-t-[6px] bg-white px-5 pb-12 pt-3.5 shadow-[0_0_0_1px_rgba(0,0,0,.06),0_1px_3px_rgba(0,0,0,.05)]">
-          <p className="flex items-center justify-between gap-3 border-b border-linha pb-1.5 text-[9.5px] leading-none text-inativo"><span>Colégio Aurora</span><span>{f.nome}</span></p>
-          <p className="mt-2.5 text-[13px] font-semibold leading-snug text-tinta">{f.previa.titulo}</p>
-          <p className="mt-0.5 text-[10.5px] leading-snug text-sutil">{f.previa.resumo}</p>
-          {f.id === 'mapa' && <MapaDesenhado itens={f.previa.itens} className="mt-2.5 rounded-[6px]" />}
-          {secoes.map((s, i) => (
-            <section key={s.nome} className="mt-2.5">
-              <h3 className="flex items-baseline gap-1.5 font-corpo text-[10.5px] font-semibold leading-snug text-tinta"><span className="w-2.5 shrink-0 font-medium text-inativo">{i + 1}</span>{s.nome}</h3>
-              <div className="mt-0.5 grid gap-0.5 pl-4 text-[10.5px] leading-[1.45] text-apoio">
-                {s.itens.slice(0, f.id === 'mapa' ? 2 : 3).map((q) => (
-                  <p key={q.texto} className="line-clamp-2">{q.rotulo && !s.nome.toLowerCase().includes(q.rotulo.toLowerCase()) && <b className="font-semibold text-tinta">{q.rotulo}. </b>}{q.texto}
-                    {q.pagina && <span className="ml-1 inline-flex h-[14px] items-center rounded-[4px] bg-realce-suave px-1 align-[1px] text-[9px] font-medium leading-none text-sutil">p. {q.pagina}</span>}</p>
-                ))}
-                {s.itens.length === 0 && s.amostra && <p className="line-clamp-2">{s.amostra}</p>}
-              </div>
-            </section>
-          ))}
-        </div>
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-lateral to-transparent" />
-      </div>
-      <dl className="grid shrink-0 gap-1 border-t border-linha px-4 py-2.5 text-[12.5px] leading-snug">
-        <div className="flex gap-2"><dt className="w-12 shrink-0 text-sutil">Sai em</dt><dd className="min-w-0 font-medium text-tinta">{[...f.saida, 'Impressão'].join(' · ')}</dd></div>
-        <div className="flex gap-2"><dt className="w-12 shrink-0 text-sutil">Fonte</dt><dd className="min-w-0 font-medium text-tinta">{f.fonte}</dd></div>
-      </dl>
-      {passagens.length > 0 ? (
-        <div className="shrink-0 border-t border-linha px-4 py-3">
-          <p className="text-[12px] leading-none text-sutil">Continuar daqui</p>
-          <ul className="mt-1.5 grid">
-            {passagens.map((p) => (
-              <li key={p.rotulo}><button type="button" onClick={() => navegar(`/professor/ferramentas/${p.para}`, { state: { turma: valores?.turma, tema: digitado, origem: f.previa.titulo } })}
-                className="group flex h-8 w-full items-center justify-between gap-2 text-left text-[13px] font-medium text-tinta">{p.rotulo} <ArrowRight className="size-3.5 text-inativo transition-transform duration-150 group-hover:translate-x-0.5 group-hover:text-tinta" /></button></li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <div className="shrink-0 border-t border-linha px-4 py-3">
-          <p className="text-[12px] leading-none text-sutil">Prefere pedir na conversa?</p>
-          <p className="mt-1.5 text-[13px] leading-snug text-tinta">“{f.exemplo}”</p>
-          <button type="button" onClick={() => navegar('/professor', { state: { pedido: f.exemplo, ferramenta: f.id } })}
-            className="group mt-1.5 inline-flex items-center gap-1 text-[12.5px] font-medium text-tinta underline-offset-4 hover:underline">
-            Pedir na conversa <ArrowRight className="size-3.5 transition-transform duration-150 group-hover:translate-x-0.5" />
-          </button>
-        </div>
-      )}
-    </aside>
-  )
-}
-
-/* ─── O resultado ────────────────────────────────────────────────────────────────────────────── */
-
-const COM_TAMANHO = ['material', 'plano', 'proposta', 'experimento', 'apresentacao']
-/** O pedido livre da Teachy vira conversa: uma linha no fim do resultado abre o chat com o artefato no contexto. */
-const AJUSTE: Record<string, string> = {
-  planejar: 'passa a prática em dupla para a primeira aula', preparar: 'deixa o segundo bloco em linguagem mais simples',
-  avaliar: 'troca a questão 3 por uma com tabela', corrigir: 'junta os critérios 1 e 2',
-}
-
-function Resultado({ f, aoGerarOutra }: { f: Ferramenta; aoGerarOutra: () => void }) {
-  const navegar = useNavigate()
-  const p = f.previa
-  const emLinhas = p.itens.some((q) => q.rotulo)
-  const comPagina = p.itens.filter((q) => q.pagina)
-  const origem = (q: { pagina?: number }) => q.pagina
-    ? <ChipFonte pagina={q.pagina} />
-    : f.id === 'simulado' ? <span className="mx-0.5 inline-flex h-[22px] items-center rounded-[6px] bg-ia-cx px-1.5 align-middle text-xs font-medium text-ia">banco público do ENEM</span> : null
-  return (
-    <CartaoRolavel
-      topo={<>
-        <AssinaturaIA id={f.id === 'adaptacao' ? 'adaptador' : 'assistente'} />
-        {f.pendente ? <Estado tipo="pendente">Esperando você</Estado> : <Estado tipo="ok">Salvo na biblioteca</Estado>}
-      </>}
-      rodape={<>
-        <Button variant="secundario" size="sm" asChild><Link to="/professor/biblioteca/prova-estequiometria"><FolderOpen /> Abrir na biblioteca</Link></Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button variant="discreto" size="sm"><FileDown /> Exportar</Button></DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="rounded-controle">
-            {[...f.saida.map((s) => `Exportar em ${{ PDF: 'PDF', PPTX: 'PowerPoint (PPTX)', XLSX: 'Excel (XLSX)' }[s] ?? s}`), 'Imprimir'].map((o) => <DropdownMenuItem key={o} className="h-10 rounded-linha">{o}</DropdownMenuItem>)}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button variant="discreto" size="sm" onClick={aoGerarOutra}><RotateCcw /> Gerar outra versão</Button>
-        {COM_TAMANHO.includes(f.id) && <><Button variant="discreto" size="sm" onClick={aoGerarOutra}>Mais curto</Button><Button variant="discreto" size="sm" onClick={aoGerarOutra}>Mais longo</Button></>}
-      </>}>
-      <h2 className="font-corpo text-lg font-semibold leading-snug text-tinta">{p.titulo}</h2>
-      <p className="mt-0.5 text-[14.5px] leading-snug text-sutil">{f.id === 'adaptacao' ? 'Mesmas dez questões, outra forma. Nasce pendente: só chega ao aluno depois que você aprovar.' : p.resumo}</p>
-      {f.id === 'mapa' && <MapaDesenhado itens={p.itens} className="mt-4" />}
-      {emLinhas ? (
-        <dl className="mt-4 grid gap-px overflow-hidden rounded-controle border border-linha bg-linha">
-          {p.itens.map((q) => (
-            <div key={q.texto} className="grid gap-x-4 gap-y-0.5 bg-superficie px-3.5 py-2.5 @[560px]:grid-cols-[112px_minmax(0,1fr)]">
-              <dt className="text-[13px] font-semibold text-tinta">{q.rotulo}</dt>
-              <dd className="text-[15px] leading-[1.55] text-tinta">{q.texto} {origem(q)}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : (
-        <ol className="mt-4 grid list-decimal gap-3 pl-6 text-[15.5px] leading-[1.6] text-tinta marker:font-semibold marker:text-sutil">
-          {p.itens.map((q) => <li key={q.texto} className="pl-1">{q.texto} {origem(q)}</li>)}
-        </ol>
-      )}
-      {comPagina.length > 0 && <Fontes itens={comPagina.filter((q, i) => comPagina.findIndex((x) => x.pagina === q.pagina) === i).map((q) => ({ tipo: 'material' as const, titulo: 'Química 2 — Material próprio do Colégio Aurora', pagina: q.pagina! }))} />}
-      <button type="button" onClick={() => navegar('/professor', { state: { pedido: `Sobre “${p.titulo}”: `, ferramenta: f.id } })}
-        className="group mt-4 flex h-10 w-full items-center gap-2.5 rounded-full border border-linha bg-lateral px-4 text-left text-[13.5px] text-sutil transition-colors duration-150 hover:border-borda-campo hover:text-tinta">
-        <PencilLine className="size-4 shrink-0" strokeWidth={1.75} /> <span className="min-w-0 flex-1 truncate">Peça um ajuste na conversa: “{f.id === 'adaptacao' ? 'põe uma questão por página' : AJUSTE[f.categoria]}”</span> <ArrowRight className="size-3.5 shrink-0" />
-      </button>
-    </CartaoRolavel>
-  )
-}
-
-/* ─── Redação e discursiva (D55) ─────────────────────────────────────────────────────────────
-   A ferramenta gera RUBRICA e critérios ANTES da aplicação, organiza o lote e apoia a correção cega.
-   A IA não corrige, não avalia, não dá nota nem conceito, não pré-corrige e não escreve devolutiva.
-   Nenhum campo desta tela é preenchido por IA a partir do texto de um aluno. */
+/* REDAÇÃO E DISCURSIVA (/professor/ferramentas/redacao), 12ª rodada (04/10/2026; plano de polimento, 5.2).
+   É a única ferramenta com página própria: as outras abrem como cartão na conversa, e /professor/ferramentas/:id
+   redireciona para /professor/conversa/nova?ferramenta=:id.
+   · 14ª rodada (05/10/2026; plano ux-composicao 5.2): o cabeçalho padrão (‹ Ferramentas), os Passos 1 RUBRICA ·
+     2 LOTE ANÔNIMO · 3 CORRIGIR à direita dele e a frase da D55 embaixo; o botão cheio de cada passo na barra presa
+     embaixo. A rubrica é uma tabela (critério | um nível por coluna). Duas colunas SÓ na correção: a questão e a
+     rubrica | o texto do aluno, sem nome. Nenhum nível vem marcado: a IA não pré-marca nota de discursiva (regra
+     nossa; o Geekie faz, nós não).
+   · A linha da D55: a IA prepara a rubrica ANTES. Ela não lê, não corrige e não dá nota a texto de aluno. Nenhum
+     campo desta tela é preenchido por IA a partir do texto de um aluno; a devolutiva começa vazia e é do professor.
+   · O enunciado já vem pela turma (13ª rodada): no 2ºB e no 2ºA, a discursiva de reagente limitante; no 1ºC e no 9ºA,
+     a de Lavoisier. "O que você cobra", os critérios da rubrica e os 3 textos do lote seguem o mesmo conjunto. Trocar
+     de turma troca o enunciado que não foi editado. `?turma=1c&atividade=lavoisier` continua abrindo a atividade
+     discursiva de Lavoisier (é para cá que a atividade da turma manda). Saiu "Preencher exemplo". */
 
 type Criterio = { nome: string; niveis: string[] }
 
 /* Cada critério tem quatro níveis escritos; com três níveis saem o primeiro, o segundo e o último. */
-const CRITERIOS: Criterio[] = [
+const CRITERIOS_LAVOISIER: Criterio[] = [
   { nome: 'Enuncia a lei de Lavoisier', niveis: ['Não enuncia', 'Enuncia com imprecisão', 'Enuncia corretamente, com as palavras do livro', 'Enuncia corretamente, com as próprias palavras'] },
   { nome: 'Relaciona com um exemplo de reação', niveis: ['Sem exemplo', 'Exemplo sem as massas', 'Exemplo com as massas, sem fechar a conta', 'Exemplo com as massas de reagentes e produtos'] },
   { nome: 'Explica o sistema fechado', niveis: ['Não menciona', 'Menciona sem explicar', 'Explica o sistema fechado, sem comparar com o aberto', 'Explica por que a massa parece mudar em sistema aberto'] },
   { nome: 'Clareza e organização do texto', niveis: ['Ideias soltas', 'Ordem compreensível', 'Texto encadeado, sem conclusão', 'Texto encadeado, com conclusão'] },
   { nome: 'Usa a linguagem da Química', niveis: ['Não usa os termos', 'Usa os termos com erro', 'Usa reagente, produto e massa corretamente', 'Usa os termos e escreve a equação'] },
+]
+const CRITERIOS_LIMITANTE: Criterio[] = [
+  { nome: 'Define o reagente limitante', niveis: ['Não define', 'Confunde com o reagente em excesso', 'Define como o que acaba primeiro', 'Define como o que acaba primeiro e para a reação'] },
+  { nome: 'Liga o limitante à massa de produto', niveis: ['Não liga', 'Diz que influencia, sem explicar', 'Diz que a massa de produto sai do limitante', 'Explica que a proporção do limitante fixa a massa máxima de produto'] },
+  { nome: 'Dá um exemplo com números', niveis: ['Sem exemplo', 'Exemplo sem as massas', 'Exemplo com as massas, sem achar o limitante', 'Exemplo com as massas, o limitante e o excesso'] },
+  { nome: 'Usa a proporção da equação', niveis: ['Não usa a equação', 'Cita a equação sem a proporção', 'Usa a proporção em mol, com erro de conta', 'Usa a proporção em mol corretamente'] },
+  { nome: 'Clareza e linguagem da Química', niveis: ['Ideias soltas', 'Ordem compreensível, termos com erro', 'Texto encadeado, com reagente, produto e excesso', 'Texto encadeado, com os termos e a equação balanceada'] },
 ]
 const COMPETENCIAS: Criterio[] = [
   { nome: 'Domínio da escrita formal', niveis: ['Muitos desvios, que atrapalham a leitura', 'Desvios frequentes', 'Poucos desvios', 'Escrita formal, com desvios raros'] },
@@ -311,207 +50,276 @@ const COMPETENCIAS: Criterio[] = [
   { nome: 'Coesão', niveis: ['Frases sem ligação', 'Ligação repetitiva', 'Ligação adequada, com falhas', 'Ligação variada entre frases e parágrafos'] },
   { nome: 'Proposta de intervenção', niveis: ['Sem proposta', 'Proposta vaga', 'Proposta com ação e agente', 'Proposta detalhada: ação, agente, meio e efeito'] },
 ]
-const montarRubrica = (para: string, criterios: number, niveis: number): Criterio[] =>
-  (para === 'redacao' ? COMPETENCIAS : CRITERIOS.slice(0, criterios)).map((c) => ({ nome: c.nome, niveis: niveis === 4 ? c.niveis : [c.niveis[0], c.niveis[1], c.niveis[3]] }))
+const montarRubrica = (para: string, criterios: number, niveis: number, conjunto: Conjunto): Criterio[] =>
+  (para === 'redacao' ? COMPETENCIAS : conjunto.criterios.slice(0, criterios)).map((c) => ({ nome: c.nome, niveis: niveis === 4 ? c.niveis : [c.niveis[0], c.niveis[1], c.niveis[3]] }))
 
-function Rubrica({ criterios, compacta = false, editando = false, aoMudar }: { criterios: Criterio[]; compacta?: boolean; editando?: boolean; aoMudar?: (c: Criterio[]) => void }) {
+/** A rubrica em tabela (o modelo do Geekie e do Plurall): o critério na primeira coluna (180 px) e um nível por
+    coluna, com o nome do nível no cabeçalho. A 375, um cartão por critério, com os níveis um embaixo do outro. */
+function Rubrica({ criterios, editando = false, aoMudar }: { criterios: Criterio[]; editando?: boolean; aoMudar?: (c: Criterio[]) => void }) {
   const muda = (i: number, novo: Criterio) => aoMudar?.(criterios.map((c, j) => (j === i ? novo : c)))
+  const nNiveis = criterios[0]?.niveis.length ?? 3
+  const colunas = { gridTemplateColumns: `180px repeat(${nNiveis}, minmax(0, 1fr))` }
   return (
-    <div className="grid gap-2">
-      {criterios.map((c, i) => (
-        <div key={i} className="rounded-controle border border-linha bg-superficie p-3">
-          {editando
-            ? <Input value={c.nome} onChange={(e) => muda(i, { ...c, nome: e.target.value })} aria-label={`Critério ${i + 1}`} className="h-9 rounded-linha border-borda-campo text-[14px] font-semibold" />
-            : <p className="text-[14px] font-semibold leading-snug text-tinta"><span className="mr-1.5 font-medium text-inativo">{i + 1}</span>{c.nome}</p>}
-          <ol className={cn('mt-2 grid gap-1.5', !compacta && (c.niveis.length === 4 ? '@[560px]:grid-cols-4' : '@[560px]:grid-cols-3'))}>
+    <div className="overflow-hidden rounded-[16px] border-2 border-borda">
+      <div role="row" className="grid bg-fundo-suave max-md:hidden" style={colunas}>
+        <span role="columnheader" className="t-selo px-4 py-2.5 text-sutil">Critério</span>
+        {Array.from({ length: nNiveis }, (_, j) => (
+          <span key={j} role="columnheader" className="t-selo border-l-2 border-borda px-4 py-2.5 text-sutil">Nível {j + 1}</span>
+        ))}
+      </div>
+      <div role="rowgroup">
+        {criterios.map((c, i) => (
+          <div key={i} role="row" className="grid border-t-2 border-borda max-md:grid-cols-1 max-md:first:border-t-0 md:[grid-template-columns:var(--colunas)]"
+            style={{ '--colunas': colunas.gridTemplateColumns } as React.CSSProperties}>
+            <div role="rowheader" className="px-4 py-3">
+              {editando
+                ? <CampoTexto rotulo={`Critério ${i + 1}`} rotuloOculto valor={c.nome} aoMudar={(x) => muda(i, { ...c, nome: x })} />
+                : <p className="text-[15px] font-bold leading-5 text-tinta"><span className="mr-1.5 text-sutil tabular-nums">{i + 1}.</span>{c.nome}</p>}
+            </div>
             {c.niveis.map((n, j) => (
-              <li key={j} className="rounded-linha bg-realce-suave px-2.5 py-1.5 text-[12.5px] leading-snug text-apoio">
-                <b className="block text-[11.5px] font-semibold text-tinta">Nível {j + 1}</b>
+              <div key={j} role="cell" className="px-4 py-3 text-[15px] font-medium leading-5 text-apoio md:border-l-2 md:border-borda max-md:pt-0">
+                <b className="t-selo mb-0.5 block text-sutil md:hidden">Nível {j + 1}</b>
                 {editando
-                  ? <Textarea rows={2} value={n} onChange={(e) => muda(i, { ...c, niveis: c.niveis.map((x, k) => (k === j ? e.target.value : x)) })} aria-label={`Critério ${i + 1}, nível ${j + 1}`} className="mt-1 min-h-0 rounded-[8px] border-borda-campo bg-superficie px-2 py-1 text-[12.5px] leading-snug" />
+                  ? <textarea rows={3} value={n} aria-label={`Critério ${i + 1}, nível ${j + 1}`} onChange={(e) => muda(i, { ...c, niveis: c.niveis.map((x, k) => (k === j ? e.target.value : x)) })}
+                      className="w-full resize-none rounded-[8px] border-2 border-borda bg-campo px-2 py-1 text-[15px] text-tinta outline-none focus:border-azul-borda" />
                   : n}
-              </li>
+              </div>
             ))}
-          </ol>
-        </div>
-      ))}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
-const AVISO_REDACAO = 'A IA prepara a rubrica antes da aplicação. Ela não lê, não corrige e não dá nota a texto de aluno.'
+/** Os textos do lote, na ordem embaralhada. O nome só aparece depois de salvar a devolutiva. */
+const TEXTOS_LAVOISIER = [
+  { autor: 'Helena Prado', x: 'A lei de Lavoisier diz que na natureza nada se cria e nada se perde, tudo se transforma. Isso quer dizer que a massa do começo é igual a massa do final. Quando a gente queima papel parece que some, mas é porque a fumaça foi embora. Se fosse num pote fechado o peso ia ser o mesmo.' },
+  { autor: 'Rafael Costa', x: 'Lavoisier mostrou que a massa dos reagentes é igual à massa dos produtos. Por exemplo, 4 g de hidrogênio com 32 g de oxigênio formam 36 g de água. No palito de fósforo parece que a massa diminui, mas os gases saíram para o ar.' },
+  { autor: 'Bianca Moreira', x: 'Nada se cria, nada se perde. A massa não muda numa reação. Quando o ferro enferruja ele fica mais pesado porque pegou oxigênio do ar, então a massa total é a mesma se contar o oxigênio.' },
+]
+const TEXTOS_LIMITANTE = [
+  { autor: 'Lucas Ferreira', x: 'O reagente limitante é o que acaba primeiro. Quando ele acaba a reação para, então a quantidade de produto depende dele. Tipo uma receita: se tenho 2 ovos e a receita pede 1 ovo por bolo, só faço 2 bolos, mesmo tendo muita farinha.' },
+  { autor: 'Mariana Lopes', x: 'Na reação 2 H₂ + O₂ → 2 H₂O, se tenho 4 g de H₂ e 40 g de O₂, o hidrogênio dá 2 mol e precisa de 1 mol de O₂, que é 32 g. Sobram 8 g de oxigênio. O H₂ é o limitante e forma 36 g de água, não mais.' },
+  { autor: 'Pedro Henrique', x: 'O limitante é o reagente que tem menos massa, por isso ele define o produto. O outro fica sobrando e não reage. A massa do produto é a soma das massas que reagiram.' },
+]
 
-function Redacao({ f }: { f: Ferramenta }) {
-  const [aba, setAba] = useState('rubrica')
-  const [fase, setFase] = useState<Fase>('formulario')
-  const [valores, setValores] = useState<Valores>()
-  const [rubrica, setRubrica] = useState<Criterio[] | null>(null)
-  const [editando, setEditando] = useState(false)
-  const [comExemplo, setComExemplo] = useState(false)
-  const [salva, setSalva] = useState(false)
-  const motor = useRef<MotorHandle>(null)
-  const gerar = (v: Valores) => {
-    setValores(v); setFase('gerando'); setEditando(false)
-    window.setTimeout(() => { setRubrica(montarRubrica(String(v.para), Number(v.criterios), Number(v.niveis))); setFase('pronto') }, 1500)
-  }
-  const emUso = rubrica ?? montarRubrica('discursiva', 4, 3)
+/* O CONJUNTO de cada turma: o enunciado da discursiva, o que se cobra, os critérios e os textos do lote. A IA prepara
+   tudo isso ANTES da aplicação; os textos são sintéticos e quem corrige é o professor (D55). */
+type Conjunto = { enunciado: string; cobra: string; criterios: Criterio[]; textos: { autor: string; x: string }[]; pagina: number }
+const LAVOISIER: Conjunto = {
+  enunciado: 'Explique a lei de Lavoisier e mostre, com um exemplo de reação, por que ela vale em sistema fechado.',
+  cobra: 'Enunciar a lei com as próprias palavras, dar um exemplo com as massas e explicar o sistema fechado. Ortografia não entra.',
+  criterios: CRITERIOS_LAVOISIER, textos: TEXTOS_LAVOISIER, pagina: 141,
+}
+const LIMITANTE: Conjunto = {
+  enunciado: 'Explique por que o reagente limitante define a massa de produto, com um exemplo.',
+  cobra: 'Definir o reagente limitante, ligar a ele a massa de produto e dar um exemplo com as massas e a proporção da equação. Ortografia não entra.',
+  criterios: CRITERIOS_LIMITANTE, textos: TEXTOS_LIMITANTE, pagina: 151,
+}
+/** O conjunto da turma: 2ºB e 2ºA estão em reagente limitante; o 1ºC e o 9ºA, em Lavoisier. */
+const conjuntoDa = (turmaId: string) => (turmaId === '2b' || turmaId === '2a' ? LIMITANTE : LAVOISIER)
 
+const D55 = 'A IA prepara a rubrica antes. Ela não lê, não corrige e não dá nota a texto de aluno.'
+
+const indiceDe = (campos: CampoDef[], f: (c: CampoDef) => boolean) => campos.findIndex(f)
+
+/** A escolha do nível de UM critério, com o descritor da rubrica em cada opção (quem corrige não precisa voltar ao
+    passo 1). Nada vem marcado. Lado a lado a partir de 640; a 375, um embaixo do outro. */
+function EscolherNivel({ criterio, valor, aoMudar }: { criterio: Criterio; valor: string | null; aoMudar: (id: string) => void }) {
   return (
-    <Moldura f={f} acoes={aba === 'rubrica' && fase === 'formulario' && (
-      <Button variant="discreto" size="sm" onClick={() => { if (comExemplo) motor.current?.limpar(); else motor.current?.preencherExemplo(); setComExemplo(!comExemplo) }}>
-        {comExemplo ? <><Eraser /> Limpar</> : <><TextCursorInput /> Preencher exemplo</>}
-      </Button>
-    )}>
-      <Tabs value={aba} onValueChange={setAba} className="flex min-h-0 flex-1 flex-col">
-        <TabsList className={cn(abasLista, 'mb-3 shrink-0 self-start')}>
-          <TabsTrigger value="rubrica" className={abaGatilho}>1. Rubrica</TabsTrigger>
-          <TabsTrigger value="lote" className={abaGatilho}>2. Lote</TabsTrigger>
-          <TabsTrigger value="corrigir" className={abaGatilho}>3. Corrigir</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="rubrica" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-          <DuasColunas lado={<ComoVaiSair f={f} fase={fase} valores={valores} />}>
-            {fase === 'formulario' ? (
-              <section className={cartaoTela}>
-                <MotorFormulario ref={motor} variante="tela" campos={f.campos} extras={f.extras} verbo={rubrica ? 'Gerar outra rubrica' : f.verbo} aviso={AVISO_REDACAO} iniciais={valores} aoGerar={gerar} />
-              </section>
-            ) : <Pedido f={f} valores={valores} aoEditar={fase === 'pronto' ? () => setFase('formulario') : undefined} />}
-            {fase === 'gerando' && <section className={cn(cartaoTela, 'px-4 py-4 lg:px-5')}><GenericTool icon={Sparkles} title="Montando a rubrica…" subtitle="a partir do enunciado e do material" isPending className="[&_*]:!text-[15px]" /></section>}
-            {fase === 'pronto' && rubrica && (
-              <CartaoRolavel
-                topo={<><AssinaturaIA id="assistente" /><Estado tipo="contorno">Rascunho seu: edite antes de aplicar</Estado>
-                  <Button variant={editando ? 'oficial' : 'secundario'} size="sm" className="ml-auto" onClick={() => setEditando(!editando)}>{editando ? <><Check /> Concluir edição</> : <><PencilLine /> Editar rubrica</>}</Button></>}
-                rodape={<>
-                  <p className="min-w-0 flex-1 basis-56 text-[12.5px] leading-snug text-sutil">Base: Química 2, conservação da massa <ChipFonte pagina={131} />. Feita do enunciado, antes de qualquer aluno responder.</p>
-                  <Button variant="secundario" size="sm" onClick={() => setAba('lote')}>Ir para o lote <ArrowRight /></Button>
-                </>}>
-                <Rubrica criterios={rubrica} editando={editando} aoMudar={setRubrica} />
-              </CartaoRolavel>
-            )}
-          </DuasColunas>
-        </TabsContent>
-
-        <TabsContent value="lote" className="mt-0 flex min-h-0 flex-1 flex-col data-[state=inactive]:hidden">
-          <CartaoRolavel className="xl:max-h-full"
-            topo={<><h2 className="font-corpo text-[15px] font-semibold text-tinta">Lote · discursiva sobre Lavoisier · 1ºC</h2><Estado tipo="info" className="ml-auto">Correção cega ligada</Estado></>}
-            rodape={<><p className="min-w-0 flex-1 basis-56 text-[12.5px] leading-snug text-sutil">O Assistente não leu os textos para avaliar: só conferiu as entregas, tirou os nomes e embaralhou a ordem.</p><Button variant="secundario" size="sm" onClick={() => setAba('corrigir')}>Continuar no Texto 07 <ArrowRight /></Button></>}>
-            <div className="grid gap-3 @[560px]:grid-cols-3">
-              {[['Entregues', '31 de 34'], ['Faltaram à avaliação', '3'], ['Corrigidas por você', '6 de 31']].map(([r, v]) => (
-                <div key={r} className="rounded-controle bg-realce-suave p-3"><p className="rotulo">{r}</p><p className="numero-painel mt-2.5 text-tinta">{v}</p></div>
-              ))}
-            </div>
-            <p className="mt-4 flex items-start gap-2 text-[14.5px] leading-snug text-apoio">
-              <EyeOff className="mt-0.5 size-4 shrink-0 text-sutil" /> Você corrige "Texto 07", e o nome só volta depois que salvar.
-            </p>
-            <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-1.5 @[560px]:grid-cols-2 @[900px]:grid-cols-4">
-              {Array.from({ length: 31 }, (_, i) => `Texto ${String(i + 1).padStart(2, '0')}`).map((t, i) => (
-                <li key={t} className="flex h-10 items-center justify-between rounded-controle border border-linha px-3 text-[14.5px] text-tinta">
-                  {t} {i < 6 ? <Estado tipo="ok" size="sm">Corrigido por você</Estado> : <Estado tipo="contorno" size="sm">A corrigir</Estado>}
-                </li>
-              ))}
-            </ul>
-          </CartaoRolavel>
-        </TabsContent>
-
-        <TabsContent value="corrigir" className="mt-0 min-h-0 flex-1 overflow-y-auto overscroll-contain data-[state=inactive]:hidden">
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-            <div className="grid content-start gap-3">
-              <section className="rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
-                <div className="mb-3 flex items-center justify-between gap-3"><h2 className="font-corpo text-[15px] font-semibold text-tinta">Texto 07</h2><Estado tipo="info" size="sm">Sem nome: correção cega</Estado></div>
-                <p className="text-[15.5px] leading-[1.7] text-tinta">
-                  A lei de Lavoisier diz que na natureza nada se cria e nada se perde, tudo se transforma. Isso quer dizer que a massa do começo é igual a massa do final. Quando a gente queima papel parece que some, mas é porque a fumaça foi embora. Se fosse num pote fechado o peso ia ser o mesmo.
-                </p>
-              </section>
-              <section className="rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
-                <h2 className="mb-3 font-corpo text-[15px] font-semibold text-tinta">Sua correção</h2>
-                <div className="grid gap-3.5">
-                  {emUso.map((c, i) => (
-                    <fieldset key={c.nome}>
-                      <legend className="mb-1.5 text-[12.5px] font-medium text-sutil">{i + 1}. {c.nome}</legend>
-                      <RadioGroup className={cn('gap-1.5', c.niveis.length === 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3')}>
-                        {c.niveis.map((_, n) => (
-                          <Label key={n} className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-controle border-[1.5px] border-linha text-[14px] font-normal text-tinta transition-colors duration-150 hover:border-borda-campo hover:bg-lateral has-[[data-state=checked]]:border-tinta has-[[data-state=checked]]:font-semibold">
-                            <RadioGroupItem value={String(n + 1)} className="border-borda-campo text-noite" /> Nível {n + 1}
-                          </Label>
-                        ))}
-                      </RadioGroup>
-                    </fieldset>
-                  ))}
-                  <Campo rotulo="Sua devolutiva para o aluno" dica="Este campo começa vazio e continua seu: a IA não escreve nem sugere devolutiva de discursiva.">
-                    {(i) => <Textarea id={i} rows={3} placeholder="Escreva aqui o que o aluno acertou e o que falta." className="min-h-0 rounded-controle border-borda-campo bg-superficie text-[15px] placeholder:text-inativo" />}
-                  </Campo>
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    {salva ? <p className="inline-flex items-center gap-1.5 text-sm font-medium text-ok"><Check className="size-4" /> Salvo. Era o texto de Helena Prado.</p> : <span className="text-[12.5px] text-sutil">O nome aparece depois de salvar.</span>}
-                    <Button onClick={() => setSalva(true)}>Salvar devolutiva</Button>
-                  </div>
-                </div>
-              </section>
-            </div>
-            <div className="grid content-start gap-2.5">
-              <p className="rotulo flex h-6 items-center">Rubrica ao lado{!rubrica && <span className="ml-1.5 font-normal text-inativo">· a última que você gerou</span>}</p>
-              <Rubrica criterios={emUso} compacta />
-            </div>
-          </div>
-        </TabsContent>
-      </Tabs>
-      <NotaMockup>
-        F6/F7, fora do MVP. D55: nada é gerado por IA sobre o texto do aluno — nem nota, nem conceito, nem rascunho de devolutiva. A rubrica nasce do enunciado, antes da aplicação.
-        O Assistente só organiza o lote e esconde os nomes. Quando a nota oficial existir (D46, F17), o campo de nota entra aqui, vazio, do professor.
-      </NotaMockup>
-    </Moldura>
+    <div role="radiogroup" aria-label={criterio.nome} className="grid gap-2 sm:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]"
+      style={{ '--n': criterio.niveis.length } as React.CSSProperties}>
+      {criterio.niveis.map((d, j) => {
+        const id = String(j + 1)
+        const sel = valor === id
+        return (
+          <button key={id} type="button" role="radio" aria-checked={sel} onClick={() => aoMudar(id)}
+            className={cn('flex flex-col items-start gap-0.5 rounded-[12px] border-2 px-3 py-2 text-left transition-colors duration-150 outline-none focus-visible:border-azul-borda',
+              sel ? 'border-azul-borda bg-azul-claro' : 'border-borda bg-white hover:bg-fundo-suave')}>
+            <span className={cn('t-selo', sel ? 'text-azul-texto' : 'text-sutil')}>Nível {id}</span>
+            <span className={cn('text-[14px] font-medium leading-[18px]', sel ? 'text-azul-texto' : 'text-apoio')}>{d}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
-/* ─── A tela ─────────────────────────────────────────────────────────────────────────────────── */
+function Redacao() {
+  const f = ferramenta('redacao')!
+  const [params] = useSearchParams()
+  const daSessao = useTurmaDaSessao()
+  const turmaPedida = params.get('turma') || daSessao || '1c'
+  /* a atividade de Lavoisier (o link da aba Atividades) vale em qualquer turma; sem ela, o conjunto é o da turma */
+  const lavoisier = params.get('atividade') === 'lavoisier'
+  /* A escolha (discursiva ou redação) fica no topo do cartão, num Segmentado; o motor recebe os outros campos, no
+     cartão compacto da Prova: turma e enunciado (ou tema) à vista, o resto em "Mais opções", fechado. */
+  const [para, setPara] = useState<'discursiva' | 'redacao'>('discursiva')
+  const campos = f.campos.filter((c) => c.id !== 'para')
+  const ie = indiceDe(campos, (c) => c.id === 'enunciado')
+  const ic = indiceDe(campos, (c) => 'rotulo' in c && c.rotulo === 'O que você cobra')
+  /* o enunciado e o que se cobra, pela turma: trocar de turma troca os que não foram editados */
+  const porTurma = (turmaId: string): Valores => {
+    const cj = lavoisier ? LAVOISIER : conjuntoDa(turmaId)
+    const v: Valores = {}
+    if (ie >= 0) v[chaveDe(campos[ie], ie)] = cj.enunciado
+    if (ic >= 0) v[chaveDe(campos[ic], ic)] = cj.cobra
+    return v
+  }
+  const iniciais: Valores = { turma: turmaPedida, para, ...porTurma(turmaPedida) }
 
-function TelaFerramenta({ f }: { f: Ferramenta }) {
-  const chegou = useLocation().state as { turma?: string; tema?: string; origem?: string } | null
-  const [fase, setFase] = useState<Fase>('formulario')
-  const [comExemplo, setComExemplo] = useState(false)
-  /* Quem vem de outra ferramenta ("Fazer uma lista disso") já traz a turma e o tema: é o mesmo contrato (D18). */
-  const [valores, setValores] = useState<Valores | undefined>(() => {
-    if (!chegou) return undefined
-    const i = f.campos.findIndex((c) => c.tipo === 'texto' && !c.avancado)
-    const k = i >= 0 ? f.campos[i].id ?? `c${i}` : null
-    return { ...(chegou.turma ? { turma: chegou.turma } : {}), ...(k && chegou.tema ? { [k]: chegou.tema } : {}), ...(f.id === 'adaptacao' && chegou.origem ? { origem: chegou.origem } : {}) }
-  })
-  const motor = useRef<MotorHandle>(null)
+  const [passo, setPasso] = useState(0)
+  const [fase, setFase] = useState<'formulario' | 'gerando' | 'pronto'>('formulario')
+  const [valores, setValores] = useState<Valores>()
+  const [rubrica, setRubrica] = useState<Criterio[] | null>(null)
+  const [editando, setEditando] = useState(false)
+  const [niveis, setNiveis] = useState<Record<number, string>>({})
+  const [devolutiva, setDevolutiva] = useState('')
+  const [salva, setSalva] = useState(false)
+  /* quantos textos já foram corrigidos antes do atual: o lote começa do zero, logo depois de criar a rubrica */
+  const [feitos, setFeitos] = useState(0)
+  const conjunto = lavoisier ? LAVOISIER : conjuntoDa(String(valores?.turma ?? turmaPedida))
+  const TEXTOS = conjunto.textos
+  const emUso = rubrica ?? montarRubrica('discursiva', 4, 3, conjunto)
 
-  const gerar = (v?: Valores) => { if (v) setValores(v); setFase('gerando'); window.setTimeout(() => setFase('pronto'), 1600) }
-  const material = MATERIAIS.find((m) => m.id === valores?.material) ?? MATERIAIS[0]
-  const lendo = f.id === 'importar' ? 'lendo prova-modelos-2025.pdf' : f.id === 'simulado' ? 'buscando no banco público do ENEM'
-    : f.id === 'adaptacao' ? 'mesmo conteúdo, outra forma' : `lendo ${materialDoPedido(f, valores) || `${material.titulo.split(' — ')[0]}, ${material.capitulo.split(' · ')[0]}`}`
-  const temExemplo = f.campos.some((c) => c.tipo === 'texto' || c.tipo === 'longo' || (c.tipo === 'arquivo' && !!c.amostra))
+  /* o lote tem o tamanho da turma escolhida: quem não entregou não entra (não é falta: chamada não é daqui) */
+  const turmaEscolhida = turmaDe(String(valores?.turma ?? turmaPedida))
+  const naoEntregaram = Math.min(2, turmaEscolhida.alunos)
+  const entregues = turmaEscolhida.alunos - naoEntregaram
+  const atual = Math.min(feitos + 1, TEXTOS.length)
+  const corrigidos = feitos + (salva ? 1 : 0)
+  const texto = TEXTOS[atual - 1]
+  const nomeTexto = (n: number) => `Texto ${String(n).padStart(2, '0')}`
+  const proximo = salva && atual < TEXTOS.length && corrigidos < entregues
+  const irAoProximo = () => { setFeitos(corrigidos); setSalva(false); setNiveis({}); setDevolutiva(''); setPasso(2) }
+  /* a base da rubrica é o material da turma (o que está marcado no formulário) */
+  const chaveMaterial = (() => { const i = campos.findIndex((c) => c.tipo === 'material'); return i >= 0 ? chaveDe(campos[i], i) : '' })()
+  const material = MATERIAIS.find((m) => m.id === String(valores?.[chaveMaterial] ?? ''))
+  const base = (material?.titulo ?? 'Química 2').split(' — ')[0]
+
+  const gerar = (v: Valores) => {
+    setValores(v); setFase('gerando'); setEditando(false)
+    const cj = lavoisier ? LAVOISIER : conjuntoDa(String(v.turma ?? turmaPedida))
+    window.setTimeout(() => { setRubrica(montarRubrica(String(v.para), Number(v.criterios ?? 4), Number(v.niveis ?? 3), cj)); setFase('pronto') }, 1500)
+  }
+  const todosNiveis = emUso.every((_, i) => niveis[i])
+
+  const turmaNome = turmaEscolhida.nome
+
+  /* a barra presa embaixo: o botão cheio de cada passo */
+  const rodape = passo === 0 && fase === 'pronto' && rubrica ? (
+    <>
+      <Botao variante="secundario" tamanho="m" className="mr-auto" onClick={() => setFase('formulario')}>Mudar os campos</Botao>
+      <Botao variante="secundario" tamanho="m" onClick={() => setEditando(!editando)}>{editando ? 'Concluir edição' : 'Editar'}</Botao>
+      <Botao variante="primario" tamanho="m" onClick={() => { setEditando(false); setPasso(1) }}>Usar esta rubrica</Botao>
+    </>
+  ) : passo === 1 ? (
+    <>
+      <p className="t-apoio mr-auto min-w-0">Você corrigiu <b className="font-bold text-tinta">{corrigidos} de {entregues}</b>. {naoEntregaram === 1 ? '1 aluno não entregou' : `${naoEntregaram} alunos não entregaram`}.</p>
+      {proximo
+        ? <Botao variante="primario" tamanho="m" onClick={irAoProximo}>Corrigir o {nomeTexto(atual + 1)}</Botao>
+        : !salva && <Botao variante="primario" tamanho="m" onClick={() => setPasso(2)}>Corrigir o {nomeTexto(atual)}</Botao>}
+    </>
+  ) : passo === 2 ? (
+    <>
+      {salva
+        ? <p className="t-apoio mr-auto min-w-0 font-bold text-verde-texto">Salvo. Era o texto de {texto.autor}.</p>
+        : <p className="t-apoio mr-auto min-w-0">{todosNiveis ? 'O nome aparece depois de salvar.' : `Marque o nível dos ${emUso.length} critérios.`}</p>}
+      {!salva && <Botao variante="oficial" tamanho="m" disabled={!todosNiveis} onClick={() => setSalva(true)}>Salvar devolutiva</Botao>}
+      {proximo && <Botao variante="primario" tamanho="m" onClick={irAoProximo}>Corrigir o {nomeTexto(atual + 1)}</Botao>}
+    </>
+  ) : undefined
 
   return (
-    <Moldura f={f} acoes={fase === 'formulario' && temExemplo && (
-      <Button variant="discreto" size="sm" onClick={() => { if (comExemplo) motor.current?.limpar(); else motor.current?.preencherExemplo(); setComExemplo(!comExemplo) }}>
-        {comExemplo ? <><Eraser /> Limpar</> : <><TextCursorInput /> Preencher exemplo</>}
-      </Button>
-    )}>
-      <DuasColunas lado={<ComoVaiSair f={f} fase={fase} valores={valores} />}>
-        {fase === 'formulario' ? (
-          <section className={cartaoTela}>
-            <MotorFormulario ref={motor} variante="tela" campos={f.campos} extras={f.extras} verbo={f.verbo} iniciais={valores}
-              aviso={f.id === 'adaptacao' ? AVISO_ADAPTACAO : AVISO_PADRAO} aoGerar={gerar} />
-          </section>
-        ) : <Pedido f={f} valores={valores} aoEditar={fase === 'pronto' ? () => setFase('formulario') : undefined} />}
-        {fase === 'gerando' && <section className={cn(cartaoTela, 'px-4 py-4 lg:px-5')}><GenericTool icon={Sparkles} title={`Gerando ${f.nome.toLowerCase()}…`} subtitle={lendo} isPending className="[&_*]:!text-[15px]" /></section>}
-        {fase === 'pronto' && <Resultado f={f} aoGerarOutra={() => gerar()} />}
-      </DuasColunas>
-      <NotaMockup>
-        {['prova', 'atividade', 'plano', 'adaptacao'].includes(f.id) ? 'A2 (MVP de apresentação)' : 'F7, depois do MVP'}. D18: este formulário e o cartão dentro da conversa são o mesmo contrato e o mesmo caso de uso.
-        {f.id === 'adaptacao' && ' D35 e D67: lista fechada de tipos, nenhum campo de texto livre sobre o aluno, e a versão adaptada nasce pendente.'}
-        {f.id === 'simulado' && ' D21: as questões vêm do banco público de provas oficiais do ENEM.'}
-        {f.id === 'recuperacao' && ' D57 e D66: o plano é da turma e da habilidade; não há campo em que caiba a descrição de um aluno.'}
-      </NotaMockup>
-    </Moldura>
+    <Pagina tipo="leitura" rodape={rodape}
+      cabecalho={(
+        <CabecalhoPagina voltar={{ para: '/professor/ferramentas', rotulo: 'Ferramentas' }} titulo="Redação e discursiva"
+          complemento={passo > 0 ? `${turmaNome} · ${entregues} textos` : undefined}
+          acoes={<Passos passos={['Rubrica', 'Lote anônimo', 'Corrigir']} atual={passo} aoIr={setPasso} className="w-[380px] max-md:w-[calc(100vw-32px)]" />}
+          linha={<span className="flex items-center gap-2"><ShieldCheck aria-hidden className="size-5 shrink-0 text-verde-texto" strokeWidth={2.5} />{D55}</span>} />
+      )}>
+      {passo === 0 && fase === 'formulario' && (
+        <section className="w-full rounded-[16px] border-2 border-borda bg-white p-4 md:p-5">
+          <div className="mb-3 grid justify-items-start gap-3">
+            <AssinaturaIA id="assistente" />
+            <Segmentado rotulo="Rubrica para" valor={para} aoMudar={(x) => { setPara(x as 'discursiva' | 'redacao'); setValores(undefined) }}
+              opcoes={[{ id: 'discursiva', rotulo: 'Discursiva' }, { id: 'redacao', rotulo: 'Redação' }]} className="w-full sm:w-[320px]" />
+          </div>
+          <MotorFormulario key={para} compacto campos={campos} extras={f.extras} verbo={rubrica ? 'Gerar outra rubrica' : f.verbo}
+            aviso="Do enunciado e do capítulo, antes de qualquer aluno responder." iniciais={valores ? { ...valores, para } : iniciais} porTurma={porTurma} aoGerar={(v) => gerar({ ...v, para })} />
+        </section>
+      )}
+      {passo === 0 && fase === 'gerando' && (
+        <div role="status" className="flex items-center gap-3 pt-2"><AvatarIA agente="assistente" tamanho={40} pensando /><span className="t-corpo text-sutil">Montando a rubrica…</span></div>
+      )}
+      {passo === 0 && fase === 'pronto' && rubrica && (
+        <div className="grid content-start gap-4">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <AssinaturaIA id="assistente" />
+            <span className="t-apoio">Base: {base} <ChipPagina pagina={conjunto.pagina} /></span>
+          </div>
+          <div className="rounded-[12px] bg-fundo-suave px-4 py-3">
+            <p className="t-selo mb-1 text-sutil">A questão</p>
+            <p className="t-corpo text-tinta">{valores?.[chaveDe(campos[ie], ie)] ? String(valores[chaveDe(campos[ie], ie)]) : conjunto.enunciado}</p>
+          </div>
+          <Rubrica criterios={rubrica} editando={editando} aoMudar={setRubrica} />
+          <p className="t-apoio">Quem corrige e escreve a devolutiva é você.</p>
+        </div>
+      )}
+
+      {passo === 1 && (
+        <div className="grid content-start gap-4">
+          <p className="t-corpo text-apoio">Sem nome e em ordem embaralhada. O Assistente só conferiu as entregas.</p>
+          <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+            {Array.from({ length: entregues }, (_, i) => nomeTexto(i + 1)).map((t, i) => (
+              <li key={t} className="flex h-14 items-center justify-between gap-2 rounded-[12px] border-2 border-borda px-3 text-[15px] font-bold text-tinta">
+                {t} {i < corrigidos ? <Selo familia="verde" tamanho="p">Corrigido</Selo> : <span className="text-[14px] font-medium text-sutil">A corrigir</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {passo === 2 && (
+        /* duas colunas só aqui: a questão e a rubrica | o texto do aluno, sem nome. A 375, a ordem é a de quem
+           corrige: a questão, o texto do aluno, os critérios e a devolutiva. */
+        <div className="grid content-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+          <div className="rounded-[12px] bg-fundo-suave px-4 py-3 lg:col-start-1 lg:row-start-1">
+            <p className="t-selo mb-1 text-sutil">A questão</p>
+            <p className="t-corpo text-tinta">{conjunto.enunciado}</p>
+          </div>
+          <div className="grid content-start gap-4 self-start lg:sticky lg:top-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            <div className="rounded-[16px] border-2 border-borda bg-white p-4 md:p-5">
+              <div className="mb-3 flex items-center gap-2"><h2 className="t-cartao text-tinta">{nomeTexto(atual)}</h2><Selo>Sem nome</Selo></div>
+              <p className="max-w-[68ch] text-[17px] font-medium leading-[1.6] text-tinta">{texto.x}</p>
+            </div>
+            <CampoTexto rotulo="Sua devolutiva" valor={devolutiva} aoMudar={setDevolutiva} linhas={4} placeholder="O que o aluno acertou e o que falta." className="max-lg:hidden" />
+          </div>
+          <div className="grid content-start gap-4 lg:col-start-1 lg:row-start-2">
+            <p className="t-apoio">A rubrica, critério por critério. Nenhum nível vem marcado: a nota é sua.</p>
+            {emUso.map((c, i) => (
+              <div key={c.nome} className="grid gap-2">
+                <p className="text-[15px] font-bold leading-5 text-tinta"><span className="mr-1.5 text-sutil tabular-nums">{i + 1}.</span>{c.nome}</p>
+                <EscolherNivel criterio={c} valor={niveis[i] ?? null} aoMudar={(x) => setNiveis((n) => ({ ...n, [i]: x }))} />
+              </div>
+            ))}
+            <CampoTexto rotulo="Sua devolutiva" valor={devolutiva} aoMudar={setDevolutiva} linhas={4} placeholder="O que o aluno acertou e o que falta." className="lg:hidden" />
+          </div>
+        </div>
+      )}
+    </Pagina>
   )
 }
 
 export function FerramentaForm() {
-  const { id = 'prova' } = useParams()
-  const f = ferramenta(id) ?? ferramenta('prova')!
-  if (f.para) return <Navigate to={f.para} replace />
-  return f.especial === 'redacao' ? <Redacao key={f.id} f={f} /> : <TelaFerramenta key={f.id} f={f} />
+  const { id = 'redacao' } = useParams()
+  const [params] = useSearchParams()
+  if (id === 'redacao') return <Redacao />
+  const turma = params.get('turma')
+  /* endereço antigo: o que juntou vai para a ferramenta de agora; o que saiu abre a página Ferramentas */
+  const achou = ferramentaDoEndereco(id)
+  if (!achou) return <Navigate to="/professor/ferramentas" replace />
+  if (achou.id === 'redacao') return <Navigate to={`/professor/ferramentas/redacao${params.toString() ? `?${params}` : ''}`} replace />
+  return <Navigate to={`/professor/conversa/nova?ferramenta=${encodeURIComponent(achou.mapa ? 'mapa' : achou.id)}${turma ? `&turma=${encodeURIComponent(turma)}` : ''}`} replace />
 }

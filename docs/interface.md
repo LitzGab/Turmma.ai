@@ -481,10 +481,9 @@ para ninguém confundir com a tela de uma escola. As medidas estão na seção 1
 - **Parecer de trade dress.** A pele toma uma técnica conhecida (ilustração chapada, botão com
   degrau, mascote). A marca, a mascote, as cores, os ícones e a fonte são nossos, e o verde não é a
   cor principal; ainda assim o parecer entra junto do registro no INPI (D80; `TODO.md`)
-- **Trazer o mockup de outubro para `mockups/`.** Ele mora num repositório privado do Gabriel
-  (`Prototipo_Turmma`, commit `a95568d`); a pasta daqui continua na versão de setembro até os dois
-  decidirem. Até lá a fonte de valores é esta Parte B e o inventário em
-  `tasks/prd-pele-e-casca/mockup.md`. Nada de lá é copiado para o `apps/web`
+- **O mockup de outubro está em `mockups/`** desde 16/10/2026 (cópia de `Prototipo_Turmma` em
+  `a95568d`, D80). A fonte de valores continua sendo esta Parte B e o inventário em
+  `tasks/prd-pele-e-casca/mockup.md`; o mockup é para ver. Nada de lá é copiado para o `apps/web`
 - **A comemoração na entrega e a onça "acolhendo"** dependem do parecer do `conformidade-reviewer`,
   na X4: a primeira por encostar em recompensa (D59), a segunda por pôr expressão de preocupação no
   lugar onde o Tutor encaminha um assunto delicado (D58; regra 70, item 4a). Sem parecer, a entrega
