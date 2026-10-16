@@ -1,5 +1,133 @@
 # Validação — pele-e-casca (X1)
 
+## Rodada 4 — 16/10/2026 (revalidação)
+
+**Escopo:** funcionalidade completa
+**Commit validado:** `b6291e3`
+**Veredito: APROVADA**
+
+O que mudou desde a rodada 3 (`4f453d0..b6291e3`):
+
+- a correção `2026-10-16-pecas-sobrepor-estoura-o-prazo` (`b6291e3`). Ela muda só o `e2e/`:
+  `__fixtures__/perfis.ts`, `__fixtures__/galeria.ts` e `pecas-galeria.spec.ts`. Vem com o documento da correção e os
+  achados dela;
+- os registros do `estado.md` e do `TODO.md` (`6a87230`, `1efe2a9`, `f4219c6`).
+
+Nenhum arquivo de `apps/`, `packages/`, `tools/` ou `infra/` mudou: `git diff --stat 4f453d0 b6291e3 -- apps packages
+tools infra` sai vazio. O produto é o mesmo das rodadas 1 a 3, e a evidência de código delas continua valendo.
+
+O risco desta rodada é o mesmo da rodada 3: a correção mexe na **condição em que a evidência e2e roda**. `abrirGaleria`
+passa a abrir `/galeria` sem a rede do perfil, por `carregarSemRedeLenta` (`perfis.ts:93`). A CPU ×4 continua. A rede
+volta no `finally` (`perfis.ts:99`). O que precisa estar provado é o RF21: nenhum teste que prova regra ficou mais fraco,
+e o que cada caso afirma continua rodando na rede lenta.
+
+Contexto relido: `prd.md` (os RF1 a RF24), a rodada 3 inteira, o documento da correção inteiro, as linhas 290 a 294 de
+`tasks/correcoes/achados/indice.md` e o "Agora" do `estado.md`.
+
+Antes de rodar qualquer coisa, conferi o que a web de teste serve. O container `educa-teste-web-1` é deste andar, mas a
+imagem dele já não existe no Docker, porque foi substituída ou podada. Por isso comparei o código-fonte de `/repo`
+dentro do container com o deste checkout: o md5 de cada arquivo de `apps/web/src`, `apps/web/public` e
+`packages/shared/src`, com a mesma ordenação dos dois lados. Os dois são **iguais**. Os testes abaixo rodaram, então,
+contra o produto deste commit, e não contra o de um andar da X2, da X3 ou da X4.
+
+### 1. RF a RF
+
+| RF | Situação | Evidência nova desta rodada |
+|---|---|---|
+| RF1 a RF8, RF11 a RF20, RF22 a RF24 | ATENDIDO | O código e os testes deles não mudaram desde a rodada 2, que os conferiu de novo com mutações e fotos próprias |
+| RF3 | ATENDIDO | Os casos do `e2e/aparencia.spec.ts` abrem pela galeria. O caso do primeiro quadro (`:47`) recarrega **depois** de `abrirGaleria`, com o pacote de entrada preso, e roda na rede do perfil, que já voltou. Ou seja: a prova do "antes de o React montar" não ficou mais fácil. O spec inteiro foi rodado nos dois projetos e ficou verde |
+| RF9 | ATENDIDO | A medida dos blocos e o axe da galeria (`pecas-galeria.spec.ts:15`) não mudaram e continuam rodando depois da abertura, na rede do perfil. Fotos tiradas aqui, de `/galeria` servida neste commit: `professora--galeria--computador-2.png` (campos, interruptores, opções, selos de estado com texto e ícone, painel e barra, vazio com convite, nada passando da coluna) e `professora--galeria--celular-6.png` (as peças da conversa a 360 px, sem nada rolando de lado) |
+| RF10 | ATENDIDO | Em `professora--galeria--celular-6.png`, cada avatar da onça está no bloco com o nome da função ("Assistente de ensino", "Assistente · correção de objetiva", "Tutor · sinais para o professor") e o selo "IA". A amostra mostra `<b>massa molar</b>` literal: o HTML do modelo não é interpretado (`apps/web/src/galeria/secoes/ia.tsx:42`) |
+| RF21 | ATENDIDO | Nenhum caso saiu e nenhuma asserção mudou. O prazo de 30 s ficou, e só o tempo de baixar a galeria, que nenhum caso afirma, deixou de pagar a latência. Três casos novos (`pecas-galeria.spec.ts:154`, `:165` e `:178`, nos dois projetos) provam três coisas: a abertura não paga a latência; a rede do perfil volta, com latência, descida e subida, inclusive quando o carregamento lança; e o auxiliar falha alto numa página sem perfil. A mutação 1, abaixo, prova que o que o caso faz depois de abrir não fica, em silêncio, na rede livre. O orçamento de carregamento, que a galeria deixou de exercitar (recomendação do `frontend-reviewer`), não dependia dela: é o RF22, preso ao build de verdade em `apps/web/nome-dos-chunks.test.ts`. Rodado aqui: o primeiro carregamento no teto de 150 kB em brotli, as áreas fora da entrada e a galeria fora do primeiro carregamento, todos verdes |
+
+**Contagem: 24 ATENDIDOS, 0 PARCIAIS, 0 NÃO ATENDIDOS, 0 NÃO VERIFICÁVEIS.**
+
+Provas de mutação: três, todas no auxiliar novo. Cada uma foi aplicada no arquivo do `e2e/`, testada só com o caso
+citado e restaurada com `git checkout --`. A árvore terminou limpa, como começou. A mutação 2 não está entre os blocos
+do documento da correção: ela confere a afirmação dele de que uma segunda sessão do CDP não tira a limitação.
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF21 | A rede do perfil devolvida no `finally` (`perfis.ts:99-100`): o `finally` ficou vazio | `pecas-galeria.spec.ts:165`, `chromebook`: "a latência do perfil", esperado ≥ 500, recebido 17,3 ms |
+| RF21 | A rede tirada por uma sessão nova do CDP (`newCDPSession` + `Network.enable`), e não pela que aplicou o perfil | `pecas-galeria.spec.ts:154` (o pedaço mais lento levou 4045 ms, contra o teto de 500) e `:178` (1187,6 ms dentro do auxiliar), `chromebook` |
+| RF21 | `abrirGaleria` sem `carregarSemRedeLenta` (`galeria.ts:21`), no projeto `celular`, que o runner de mutação do portão não roda | `pecas-galeria.spec.ts:154`, `celular`: o pedaço mais lento levou 4417,8 ms |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+Não mudaram desde a rodada 2: todas as regras cumpridas, toda borda coberta ou justificada, e o critério de pronto
+cumprido. Esta rodada acrescenta:
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regra 50, item 1: teste com limitação de rede e de CPU | cumprida | As interações, o axe e as medidas da galeria continuam na rede do perfil, como mostra a mutação 1. A CPU ×4 vale também durante a abertura. O perfil de cada projeto não mudou (`tools/ci/playwright.test.ts`, rodado: verde) |
+| Pronto: o e2e inteiro que existia continua verde nos dois projetos | cumprido pelo documento da correção, que registra 278 de 278 nos dez specs que chamam `abrirGaleria` e 180 de 180 em `--repeat-each 3` nos três mais lentos. Não rodado aqui, porque a suíte inteira não se roda nesta etapa. A esteira de `b6291e3` fica com o Orquestrador | RF21 |
+| Pronto: o teto de casos por fatia do e2e | cumprido | `tools/ci/esteira.test.ts`, rodado: verde. A correção cortou de seis para três os casos novos para caber |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run test`, `npm run test:e2e` inteiros | não rodados: a suíte inteira não se roda nesta etapa |
+| e2e, como evidência | `e2e/pecas-galeria.spec.ts`, `e2e/pecas-sobrepor.spec.ts` e `e2e/aparencia.spec.ts`, com `--workers 2` (os da esteira), nos projetos `chromebook` e `celular`: **58 de 58**, nenhum instável. O `pecas-sobrepor.spec.ts:556`, que estourou na esteira `38914509279` com 32,1 e 32,3 s, levou 8,2 a 8,4 s nos dois projetos e nos dois temas. O `:172` levou 7,4 a 7,5 s. O caso mais lento foi o `aparencia.spec.ts:147` (RF24), com 12,5 s, contra o prazo de 30 |
+| Unidade, como evidência | `tools/ci/esteira.test.ts`, `tools/ci/playwright.test.ts` e `apps/web/nome-dos-chunks.test.ts`: 43 de 43 |
+| `npm run test:infra` | não se aplica |
+| Esteira | conferida no fechamento |
+| Revisões com veto registradas e aprovadas | ✅ A correção tem os três revisores do pedido (`test-engineer`, `revisor-geral` e `frontend-reviewer`). Os três aprovaram na 1ª rodada (12h33 a 12h35), e o `test-engineer` e o `revisor-geral` aprovaram de novo na 2ª (12h41), depois das recomendações aplicadas (`achados/indice.md:290-294`, e a seção "Revisões" do documento). O commit `b6291e3` leva `(correção …)`. Os outros três commits desde `4f453d0` mexem só em `estado.md`, `TODO.md` e `validacao.md` |
+
+### 4. Achados
+
+**Críticos**
+- nenhum
+
+**Maiores**
+- nenhum
+
+**Menores**
+- `e2e/__fixtures__/perfis.ts:93`: `carregarSemRedeLenta` é exportado para qualquer spec. Nada impede que um spec de tela
+  da escola o use para "destravar" um prazo, e aí a regra 50, item 1, deixaria de ser testada sem ninguém ver. O comentário
+  diz que é só para a primeira carga que o caso não afirma, mas comentário não é guarda. Correção: um teste de arquitetura
+  que aceite só `e2e/__fixtures__/galeria.ts` e `e2e/pecas-galeria.spec.ts` como importadores, ou registrar isso no
+  `TODO.md`.
+- `e2e/pecas-galeria.spec.ts:168`: o `perfil?.rede.downloadBytesPorSegundo ?? 1` deixa a asserção do mínimo de descida
+  passar sem medir nada se faltar o perfil. Hoje esse caminho não é alcançado, porque `tempoMinimoDoPerfil` lança duas
+  linhas abaixo. Os dois revisores de teste viram isso, a recomendação foi recusada com motivo, e o destino dela é o
+  próprio documento. Fica registrado aqui para não se perder. Correção: ler o perfil uma vez no começo do caso e falhar
+  alto.
+- O runner de mutação do portão roda só o projeto `chromebook` (já registrado na rodada da 13.0 e levado à
+  retrospectiva). A mutação 3 desta rodada mostra que a abertura da galeria também é provada no `celular`, mas só porque
+  ela foi rodada aqui, à mão.
+
+**Positivos**
+- Diagnosticar o estouro de tempo com uma tabela por condição (sem limitação, só CPU, só rede, as duas) antes de
+  escolher a correção. Ela mostrou que o custo era de rede e de abertura, e não de asserção, e evitou aumentar o prazo
+  de 30 s.
+
+### 5. Conclusão
+
+A correção não muda o produto nem o que os casos afirmam. Ela tira a latência do perfil só da abertura da galeria, que é
+uma página do build de teste que nenhum caso mede, e devolve a rede lenta antes da primeira asserção. Conferi isso de
+quatro jeitos:
+
+- o código-fonte servido é o deste commit;
+- os três specs que mais dependem da galeria, rodados nos dois projetos com os 2 trabalhadores da esteira: 58 de 58,
+  com o caso que estourou caindo de 32 s para 8 s;
+- três mutações no auxiliar, todas vermelhas, uma delas no `celular` e outra fora dos blocos do documento;
+- o orçamento de carregamento, que a galeria deixou de exercitar, continua preso ao build de verdade (RF22).
+
+São 24 RF atendidos, o critério de pronto cumprido, nenhum crítico, nenhum maior e nenhum teste vermelho entre os
+rodados: **APROVADA**. Os menores não seguram o pouso.
+
+### 6. Pendências herdadas
+
+- O primeiro menor (a guarda de quem importa `carregarSemRedeLenta`): para o `TODO.md`, no fechamento, pelo Orquestrador.
+- O runner de mutação só no `chromebook`, a numeração das rodadas quando a seção "Revisões" some, e o `tools/ci/e2e.ts`
+  que não repassa `--repeat-each` nem `--workers`: retrospectiva da X1.
+- As pendências das rodadas 1 a 3 seguem com os destinos delas. As duas linhas do `TODO.md` da rodada 3 já estão lá
+  (`TODO.md:1128-1131`).
+
+---
+
+
 ## Rodada 3 — 16/10/2026 (revalidação)
 
 **Escopo:** funcionalidade completa

@@ -6,13 +6,10 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** duas coisas, em paralelo, sobre `b6291e3` (a correção `2026-10-16-pecas-sobrepor-estoura-o-prazo`,
-  `SUCESSO`, conferida por mim às 12h35: marca, `Revisões:` com os três revisores aprovados, árvore limpa, branch igual à
-  do GitHub): (a) a esteira `38926199536`, que acompanho com `gh run watch` em segundo plano (sessão limpa: rode
-  `esteira.ts --fechamento` de novo); (b) o `/seguir RELATÓRIO de Validador` da **rodada 4**, pedida às 12h37 ao
-  `Validador` reiniciado no andar (Opus, `@validador`, conferido). Enquanto ele valida, ninguém usa o ambiente de teste 0
-- **Devo ainda:** (1) feito; (2) com as duas
-  verdes, commit de documento do `validacao.md`; (3) com a esteira verde e a validação
+- **Espero:** só a esteira `38926199536` sobre `b6291e3`, que acompanho com `gh run watch` em segundo plano (sessão
+  limpa: rode `esteira.ts --fechamento` de novo). A **rodada 4** da validação chegou **APROVADA** às ~13h (24 de 24 RF,
+  nenhum crítico nem maior) e foi registrada no commit "Registra a revalidação de pele-e-casca (APROVADA, rodada 4)"
+- **Devo ainda:** (1) feito; (2) feito; (3) com a esteira verde e a validação
   aprovada, o pouso, já autorizado pelo Joaquim em 16/10: `maestri floor land "X1 pele-e-casca" --into develop`,
   `git push origin develop`, a esteira da `develop` em segundo plano e `maestri floor delete "X1 pele-e-casca L1"`; (4)
   com a esteira da `develop` verde, `PEDIDO` ao `Arquiteto`, no térreo: trazer o mockup de outubro
