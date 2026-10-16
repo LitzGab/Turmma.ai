@@ -6,20 +6,18 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** a palavra do Joaquim sobre o **pouso** da X1 (parada 6; entrada de 16/10 abaixo, em "Esperando o Joaquim").
-  Nenhuma tarefa corre: a vigia está desligada
-- **Devo ainda:** com a palavra dele, o pouso pelo passo 8 do `/seguir` (a `develop` do GitHub andou? `git fetch` antes),
-  e depois `maestri floor delete "X1 pele-e-casca L1"`; depois do pouso e da esteira da `develop` verde, a
-  retrospectiva da X1 pelo `Arquiteto`, no térreo. Os itens (0), (2b) e as quatro recomendações do `11_task.md` já foram
-  ao `TODO.md`, em "Marca e interface", no fechamento. **Tudo local** continua (13/10, 08h50): nenhum push sem ele mandar
-- **A X1 está validada e fechada:** rodada 2 da validação APROVADA sobre `56307c6` (24 de 24 RF, nenhum crítico nem
-  maior); `[x]` no `ROADMAP.md`, `techspec.md` implementada em 16/10/2026, `linhas.ts fechar` rodado (sem push). A
-  esteira não rodou (sem branch no GitHub): vale o portão completo local de 16/10, 03h10, e depois dele só entrou
-  documento
-- **A X2, a X3 e a X4** saíram de `931af03` (o fechamento da rodada 1 desta branch) e correm fora do Maestri, pelo
-  terminal "Claude Code #2", em `.andares-avulsos/educaia--spec-telas-*`, para entrar em cadeia sobre a
-  `spec/pele-e-casca` num pouso só. Não mexer naqueles checkouts
-- **Base:** `spec/pele-e-casca` no commit de fechamento de 16/10 (o que vem depois de `56307c6`)
+- **Espero:** a esteira `38896156999` na `spec/pele-e-casca` (o push do merge da `develop`, `ee1d824`, só `ROADMAP.md`; é a
+  primeira esteira desta spec no GitHub). Verde: o pouso, já autorizado pelo Joaquim em 16/10 (abaixo)
+- **Devo ainda:** (1) o pouso pelo passo 8 do `/seguir`: `maestri floor land "X1 pele-e-casca" --into develop`,
+  `git push origin develop` e a esteira da `develop` em segundo plano; (2) `maestri floor delete "X1 pele-e-casca L1"`;
+  (3) com a esteira da `develop` verde, `PEDIDO` ao `Arquiteto`, no térreo: trazer o mockup de outubro
+  (`~/Documentos/git/Prototipo_Turmma`, branch `mockups/interface`, `a95568d`) para `mockups/`, por decisão do Joaquim de
+  16/10, registrando a decisão onde a D80 e o `TODO.md` dizem que ela era dele com o Gabriel; (4) depois, a
+  retrospectiva da X1. Vermelha: correção na branch da spec e validação de novo (passo 8)
+- **A X1 está validada e fechada** (`c624ad6`). A X2, a X3 e a X4 correm fora do Maestri, pelo "Claude Code #2", em
+  `.andares-avulsos/educaia--spec-telas-*`; não mexer naqueles checkouts. Pela palavra do Joaquim, cada spec pousa
+  sozinha quando fecha
+- **Base:** `spec/pele-e-casca` no merge da `develop` sobre `c624ad6`
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -45,7 +43,7 @@
 
 ## Esperando o Joaquim
 
-### 16/10/2026 — X1, pouso na `develop` (parada 6)
+### 16/10/2026 — X1, pouso na `develop` (parada 6) — RESPONDIDA: pousar e enviar (o Joaquim, neste terminal: "cada spec finalizada pode pousar na develop e fazer o push para a remota e sobre o mockup pode trazer para o projeto aqui"). O "tudo local" de 13/10 acaba para spec finalizada
 Decisão: pousar a X1 na `develop` agora, ou esperar a X2, a X3 e a X4 para um pouso só?
 Contexto: `tasks/prd-pele-e-casca/validacao.md` (rodada 2, APROVADA); a branch está só na máquina, e o pouso pelo
 `/seguir` inclui o push da `develop`, que poria no GitHub público a pele tirada do mockup de outubro, que é privado
