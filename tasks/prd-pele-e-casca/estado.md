@@ -6,18 +6,24 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** a esteira `38896156999` na `spec/pele-e-casca` (o push do merge da `develop`, `ee1d824`, só `ROADMAP.md`; é a
-  primeira esteira desta spec no GitHub). Verde: o pouso, já autorizado pelo Joaquim em 16/10 (abaixo)
-- **Devo ainda:** (1) o pouso pelo passo 8 do `/seguir`: `maestri floor land "X1 pele-e-casca" --into develop`,
-  `git push origin develop` e a esteira da `develop` em segundo plano; (2) `maestri floor delete "X1 pele-e-casca L1"`;
-  (3) com a esteira da `develop` verde, `PEDIDO` ao `Arquiteto`, no térreo: trazer o mockup de outubro
+- **Espero:** o `/seguir RELATÓRIO de Implementador` da correção `2026-10-16-galeria-da-onca-estoura-o-prazo` (1ª tentativa,
+  pedida em 16/10 depois das 12h20), **no andar da spec** (ambiente de teste 0; os ambientes 1 a 3 são da X2 à X4 do
+  "Claude Code #2"), com o `Implementador` e a `Mesa` reiniciados aqui. Motivo: a esteira `38896156999`, a primeira desta
+  spec no GitHub (push do merge da `develop`, `256b4a2`), caiu em 4 e2e, todos no limite de 30 s, nos dois projetos:
+  `pecas-ia.spec.ts:30`, `pecas-marca-onca.spec.ts:84` (claro e escuro) e `pecas-galeria.spec.ts:15`. O portão local de
+  03h10 os passou. Guardiões ditados: `test-engineer`, `revisor-geral`, `frontend-reviewer`, `conformidade-reviewer`
+- **Devo ainda:** (1) com o relatório: `linhas.ts conferir` (marca, `Revisões:`, árvore limpa e push; o push está
+  liberado), e ler a esteira do commit da correção; (2) **validar de novo** (Validador reiniciado, rodada 3 no topo do
+  `validacao.md`), porque a correção muda código que o Validador não viu; (3) com a esteira verde e a validação
+  aprovada, o pouso, já autorizado pelo Joaquim em 16/10: `maestri floor land "X1 pele-e-casca" --into develop`,
+  `git push origin develop`, a esteira da `develop` em segundo plano e `maestri floor delete "X1 pele-e-casca L1"`; (4)
+  com a esteira da `develop` verde, `PEDIDO` ao `Arquiteto`, no térreo: trazer o mockup de outubro
   (`~/Documentos/git/Prototipo_Turmma`, branch `mockups/interface`, `a95568d`) para `mockups/`, por decisão do Joaquim de
-  16/10, registrando a decisão onde a D80 e o `TODO.md` dizem que ela era dele com o Gabriel; (4) depois, a
-  retrospectiva da X1. Vermelha: correção na branch da spec e validação de novo (passo 8)
-- **A X1 está validada e fechada** (`c624ad6`). A X2, a X3 e a X4 correm fora do Maestri, pelo "Claude Code #2", em
-  `.andares-avulsos/educaia--spec-telas-*`; não mexer naqueles checkouts. Pela palavra do Joaquim, cada spec pousa
-  sozinha quando fecha
-- **Base:** `spec/pele-e-casca` no merge da `develop` sobre `c624ad6`
+  16/10, registrando a decisão onde a D80 e o `TODO.md` dizem que ela era dele com o Gabriel; (5) a retrospectiva da X1
+- **A X1 foi validada e fechada** (`c624ad6`); a correção não reabre o roadmap. A X2, a X3 e a X4 correm fora do
+  Maestri, pelo "Claude Code #2", em `.andares-avulsos/educaia--spec-telas-*`; não mexer naqueles checkouts. Pela palavra
+  do Joaquim, cada spec pousa sozinha quando fecha
+- **Base:** `spec/pele-e-casca` em `9a07009` (enviada até `256b4a2`)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -85,6 +91,10 @@ Recomendo: apagar, pelo mesmo motivo que fez você escolher "tudo local"
   ícones de cada papel fora da entrada), é tarefa nova na 9.0
 
 ## O que falhou
+
+- **16/10, ~12h15 — a primeira esteira da X1 no GitHub caiu em 4 e2e da galeria** (execução `38896156999`), todos no
+  limite de 30 s, que o portão local de 03h10 passou. Sem branch no GitHub ("tudo local"), a esteira não rodou a cada
+  tarefa, e isso só apareceu depois da validação. Vai à retrospectiva
 - **16/10 01h05, o Implementador apagou a seção "Revisões" do documento da correção do alvo de toque** ao reescrevê-lo;
   o hook a recriou e a Mesa chamou de novo os dois revisores. A tabela diz "1ª rodada", mas houve uma reprovação antes
   (ordem de três itens, 00h59). Vai à retrospectiva. A causa também não era a barra de baixo, e sim a de topo (`sticky`)
