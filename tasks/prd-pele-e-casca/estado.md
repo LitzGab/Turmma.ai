@@ -6,9 +6,8 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** o "pode" do Joaquim no meu terminal para o pouso (parada 6, entrada de 16/10 ~13h30 em "Esperando o
-  Joaquim"). A esteira `38926199536` ficou **verde** em `b6291e3` e a rodada 4 da validação, **APROVADA**: tudo pronto.
-  A autorização de 16/10 está só no diário, de uma sessão anterior, e o passo 2 do `/seguir` diz que ela não vale sozinha
+- **Espero:** nada do time. O Joaquim disse "pode" no meu terminal às ~13h35: pouso e push da `develop` em curso
+  (esteira verde em `b6291e3`, rodada 4 APROVADA)
 - **Devo ainda:** (1) feito; (2) feito; (3) com a esteira verde e a validação
   aprovada, o pouso, já autorizado pelo Joaquim em 16/10: `maestri floor land "X1 pele-e-casca" --into develop`,
   `git push origin develop`, a esteira da `develop` em segundo plano e `maestri floor delete "X1 pele-e-casca L1"`; (4)
@@ -44,7 +43,7 @@
 
 ## Esperando o Joaquim
 
-### 16/10/2026 ~13h30 — X1, pouso na `develop` (parada 6), confirmação depois da rodada 4
+### 16/10/2026 ~13h30 — X1, pouso na `develop` (parada 6), confirmação depois da rodada 4 — RESPONDIDA: "pode" (o Joaquim, no meu terminal)
 Decisão: pousar a X1 na `develop` e enviar a `develop` ao GitHub agora?
 Contexto: rodada 4 APROVADA (`validacao.md`), esteira verde em `b6291e3`; a `develop` local é igual à do GitHub e a
 branch a contém (avanço direto, 62 commits). A palavra de 16/10 ("cada spec finalizada pode pousar…") é de uma sessão
