@@ -62,7 +62,7 @@ function Protegida({ children }: { children: ReactNode }) {
  * rede lenta: enquanto o `/eu` não chega a barra fica sem nome, e se ele falhar (503) a mensagem e o "Tentar de novo"
  * ficam no alto, com a tela embaixo no lugar.
  */
-function ComSessao({ titulo, children }: { titulo: string; children: ReactNode }) {
+function ComSessao({ children }: { children: ReactNode }) {
   const eu = useQuery(consultaEuDoOperador)
   const [saindo, definirSaindo] = useState(false)
   const { avisoVisivel, continuar } = useInatividadeDaOperacao(true)
@@ -82,7 +82,7 @@ function ComSessao({ titulo, children }: { titulo: string; children: ReactNode }
   const aviso: AvisoDaSessao = { visivel: avisoVisivel, continuar, sair, registrarDialogo }
   return (
     <ContextoDoAviso value={aviso}>
-      <CascaDaOperacao titulo={titulo} nome={eu.data?.nome} aoSair={sair} saindo={saindo}>
+      <CascaDaOperacao nome={eu.data?.nome} aoSair={sair} saindo={saindo}>
         {eu.isError && <ErroDaOperacao erro={eu.error} aoTentarDeNovo={() => void eu.refetch()} tentando={eu.isFetching} />}
         {children}
         {avisoVisivel && dialogosAbertos === 0 && <AvisoDeInatividade aoContinuar={continuar} aoSair={sair} />}
@@ -102,14 +102,14 @@ export default function RotasDaOperacao() {
         <Route path={ROTAS_DA_OPERACAO.configurarMfa} component={ConfigurarMfa} />
         <Route path={ROTAS_DA_OPERACAO.uso}>
           <Protegida>
-            <ComSessao titulo="Uso">
+            <ComSessao>
               <Uso />
             </ComSessao>
           </Protegida>
         </Route>
         <Route path={ROTAS_DA_OPERACAO.inicio}>
           <Protegida>
-            <ComSessao titulo="Escolas">
+            <ComSessao>
               <Escolas />
             </ComSessao>
           </Protegida>

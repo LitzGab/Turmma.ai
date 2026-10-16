@@ -5,7 +5,7 @@ import { TEXTO_DO_ESTADO } from '../apps/web/src/operacao/estados-da-escola.ts'
 import { codigoDoOperador, criarOperadorComSegundoFator as criarOperador, encerrarSessoesDoOperador, removerOperador, type OperadorDeTeste } from './__fixtures__/operacao.ts'
 import { criarRedeDoPainel, escolasComOEndereco, nomeDeRedeQueVemPrimeiro, redesComONome, removerPainel, semearPainel, type PainelSemeado } from './__fixtures__/painel.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { acionar, entrarNaOperacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/tela-da-operacao.ts'
+import { acionar, conferirAListaQueRola, conferirQueCadaNumeroFicaEmUmaLinha, entrarNaOperacao, PRAZO_DA_ENTRADA_MS, trocarAPrimeiraDaResposta } from './__fixtures__/tela-da-operacao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -56,11 +56,9 @@ function respostaDaLista(page: Page, pagina: number, ordem: 'nome' | 'uso') {
   })
 }
 
-/** Os nomes das escolas na tela, na ordem: as linhas da tabela no Chromebook, os cartões no celular. */
+/** Os nomes das escolas na tela, na ordem: as linhas da tabela no Chromebook, os cartões no celular (uma só estrutura está no documento). */
 async function nomesNaTela(page: Page): Promise<string[]> {
-  const tabela = page.getByRole('table')
-  if (await tabela.isVisible()) return tabela.locator('tbody th > span:first-child').allTextContents()
-  return page.getByRole('main').getByRole('listitem').getByRole('heading').allTextContents()
+  return page.locator('[data-nome-da-escola]').allTextContents()
 }
 
 /** A linha (Chromebook) ou o cartão (celular) daquela escola, o que estiver à vista. */
@@ -194,6 +192,36 @@ test.describe('Escolas, Nova rede e Nova escola (A0b, tarefa 6.0)', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
+  test('RF23: no Chromebook a página não rola e a lista rola por dentro, pelo teclado; no celular a página rola e nada rola de lado', async ({ page, hasTouch }) => {
+    test.slow()
+    await novoPainel()
+    const operador = await novoOperador()
+    await entrarNaOperacao(page, operador, hasTouch)
+    await expect.poll(() => nomesNaTela(page), { timeout: PRAZO_DA_ENTRADA_MS }).not.toEqual([])
+    if (hasTouch) {
+      expect(await larguraExcedente(page)).toBe(0)
+      return
+    }
+    await conferirAListaQueRola(page, 'Lista de escolas', 'Páginas da lista')
+  })
+
+  test('14.4: o uso de uma escola com números grandes fica inteiro na linha, a 360 e a 1366 px', async ({ page, hasTouch }) => {
+    test.slow()
+    await novoPainel()
+    const operador = await novoOperador()
+    await trocarAPrimeiraDaResposta(page, ROTA_DAS_ESCOLAS, (escola) => ({ ...escola, turmas: 1234, professores: 12_345, alunos: 1_234_567 }))
+    await entrarNaOperacao(page, operador, hasTouch)
+    const numeros = ['1.234 turmas', '12.345 professores', '1.234.567 alunos']
+    await conferirQueCadaNumeroFicaEmUmaLinha(page, numeros)
+    expect(await larguraExcedente(page)).toBe(0)
+    // A tabela mais estreita que há, a 768 px (abaixo dela é a lista de cartões): a coluna do uso aperta, e o número ainda não quebra.
+    if (!hasTouch) {
+      await page.setViewportSize({ width: 768, height: 800 })
+      await conferirQueCadaNumeroFicaEmUmaLinha(page, numeros)
+      expect(await larguraExcedente(page)).toBe(0)
+    }
+  })
+
   test('W7: carregando, vazio que convida, erro com "Tentar de novo" e com dado; e o Nova escola sem rede', async ({ page, hasTouch }) => {
     test.slow()
     const operador = await novoOperador()
@@ -216,7 +244,9 @@ test.describe('Escolas, Nova rede e Nova escola (A0b, tarefa 6.0)', () => {
     soltar()
     await expect(page.getByRole('main')).toContainText('Nenhuma escola ainda.', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('main')).toContainText('Comece criando a rede.')
-    await expect(page.getByRole('main').getByRole('button', { name: 'Nova rede' })).toHaveCount(2)
+    // Um só "Nova rede" e um só botão cheio (o "Nova escola"): o vazio não repete o convite como um segundo primário.
+    await expect(page.getByRole('main').getByRole('button', { name: 'Nova rede' })).toHaveCount(1)
+    await expect(page.getByRole('main').locator('button.bg-laranja')).toHaveText(['Nova escola'])
     await expect(page.getByRole('navigation', { name: 'Páginas da lista' })).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])

@@ -3,7 +3,7 @@ import type { OrdemDoPainel, RespostaUsoDoPainel } from '../packages/shared/src/
 import { criarOperadorComSegundoFator as criarOperador, removerOperador, type OperadorDeTeste } from './__fixtures__/operacao.ts'
 import { criarRedeDoPainel, definirUsoDaEscolaSemeada, escolasComOEndereco, nomeQueVemPrimeiro, removerPainel, semearPainel, type PainelSemeado } from './__fixtures__/painel.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { acionar, entrarNaOperacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/tela-da-operacao.ts'
+import { acionar, conferirAListaQueRola, conferirQueCadaNumeroFicaEmUmaLinha, entrarNaOperacao, PRAZO_DA_ENTRADA_MS, trocarAPrimeiraDaResposta } from './__fixtures__/tela-da-operacao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -187,6 +187,40 @@ test.describe('Uso (A0b, tarefa 8.0)', () => {
     await expect(page.getByRole('button', { name: 'Anterior' })).toBeDisabled()
   })
 
+  test('14.4: as medidas de uma escola com números grandes ficam inteiras na linha, a 360 e a 1366 px', async ({ page, hasTouch }) => {
+    test.slow()
+    await novoPainel()
+    const operador = await novoOperador()
+    const grande = { requisicoes: 1_234_567_890, jobs: 1_234_567, bytesStorage: 123_456_789_012 }
+    await trocarAPrimeiraDaResposta(page, ROTA_DO_USO, (escola) => ({ ...escola, dia: grande, mes: grande }))
+    await entrarNaOperacao(page, operador, hasTouch)
+    await irPelaNavegacao(page, 'Uso', hasTouch)
+    // Dia e mês trazem o mesmo número: dois trechos de cada, ou uma linha de cartão para cada.
+    const numeros = ['1.234.567.890', '1.234.567', '115 GB']
+    await conferirQueCadaNumeroFicaEmUmaLinha(page, numeros)
+    expect(await larguraExcedente(page)).toBe(0)
+    // A tabela mais estreita que há, a 768 px (abaixo dela é a lista de cartões): as colunas apertam, e o número ainda não quebra.
+    if (!hasTouch) {
+      await page.setViewportSize({ width: 768, height: 800 })
+      await conferirQueCadaNumeroFicaEmUmaLinha(page, numeros)
+      expect(await larguraExcedente(page)).toBe(0)
+    }
+  })
+
+  test('RF23: no Chromebook a página não rola e a lista rola por dentro, pelo teclado; no celular a página rola e nada rola de lado', async ({ page, hasTouch }) => {
+    test.slow()
+    await novoPainel()
+    const operador = await novoOperador()
+    await entrarNaOperacao(page, operador, hasTouch)
+    await irPelaNavegacao(page, 'Uso', hasTouch)
+    await expect.poll(() => nomesNaTela(page), { timeout: PRAZO_DA_ENTRADA_MS }).not.toEqual([])
+    if (hasTouch) {
+      expect(await larguraExcedente(page)).toBe(0)
+      return
+    }
+    await conferirAListaQueRola(page, 'Uso por escola', 'Páginas do uso')
+  })
+
   test('sem sessão, o endereço do Uso leva à entrada da operação, sem mostrar uso nenhum', async ({ page }) => {
     let pedidosDoUso = 0
     page.on('request', (pedido) => {
@@ -222,7 +256,7 @@ test.describe('Uso (A0b, tarefa 8.0)', () => {
     soltar()
     await expect(page.getByRole('main')).toContainText('Nenhuma escola ainda.', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('main')).toContainText('O uso de cada escola aparece aqui assim que ela é criada.')
-    const paraEscolas = page.getByRole('main').getByRole('link', { name: 'Ir para Escolas' })
+    const paraEscolas = page.getByRole('main').getByRole('button', { name: 'Ir para Escolas' })
     await expect(paraEscolas).toBeVisible()
     const caixa = await paraEscolas.boundingBox()
     expect(caixa?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
@@ -230,7 +264,7 @@ test.describe('Uso (A0b, tarefa 8.0)', () => {
     await expect(page.getByRole('table')).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
-    // O link leva a Escolas, onde a escola se cria.
+    // O botão do vazio (a peça `EstadoVazio`) leva a Escolas, onde a escola se cria.
     if (hasTouch) await paraEscolas.tap()
     else await paraEscolas.click()
     await expect(page).toHaveURL(/\/operacao$/)

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useSearch } from 'wouter'
 import { Botao } from '../../componentes/Botao'
 import { EstadoCarregando, EstadoVazio } from '../../componentes/estado'
-import { formatarNumero, formatarQuantidade } from '../../formatar'
+import { Estado } from '../../componentes/SeloDeEstado'
+import { Tabela } from '../../componentes/Tabela'
+import { formatarQuantidade } from '../../formatar'
 import { acoesDoConvite, ROTULO_DA_ACAO, type AcaoDoConvite } from '../acoes-do-convite'
 import { buscaDaConsulta, consultaDasEscolas, lerConsultaDaTela, paginasDoTotal } from '../api/painel'
 import { INICIO_DA_OPERACAO } from '../caminhos'
@@ -13,16 +15,17 @@ import { ErroDaOperacao } from '../componentes/CascaDaOperacao'
 import { ConfirmarConvite } from '../componentes/ConfirmarConvite'
 import { GerarConvite, RefazerConvite } from '../componentes/DialogoDoConvite'
 import { PaginasDaLista, SeletorDeOrdem, VazioAlemDaUltima } from '../componentes/NavegacaoDaLista'
+import { RegiaoDaLista } from '../componentes/RegiaoDaLista'
 import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
-import { CLASSES_DO_TOM, TEXTO_DO_ESTADO, TOM_DO_ESTADO } from '../estados-da-escola'
+import { TEXTO_DO_ESTADO, TOM_DO_ESTADO } from '../estados-da-escola'
 import { TEXTO_DA_LISTA_VAZIA } from '../textos'
 import { useTituloDaPagina } from '../titulo'
 import { NovaEscola } from './NovaEscola'
 import { NovaRede } from './NovaRede'
 
-/** O estado da coordenação em texto, com a cor de reforço da família dele (regra 50, item 11). */
-function Estado({ escola }: { escola: EscolaDoPainel }) {
-  return <span className={`inline-block rounded-lg px-2 py-0.5 text-sm font-medium ${CLASSES_DO_TOM[TOM_DO_ESTADO[escola.estado]]}`}>{TEXTO_DO_ESTADO[escola.estado]}</span>
+/** O estado da coordenação em texto, com o ícone e a cor de reforço da família dele (regra 50, item 11). */
+function EstadoDaCoordenacao({ escola }: { escola: EscolaDoPainel }) {
+  return <Estado familia={TOM_DO_ESTADO[escola.estado]}>{TEXTO_DO_ESTADO[escola.estado]}</Estado>
 }
 
 /** O resto do nome acessível de cada ação, depois do rótulo visível: o botão diz de que escola é (WCAG 2.5.3). */
@@ -85,85 +88,39 @@ function AcoesDoConvite({ escola, aoAcionar, focarNaEscola }: { escola: EscolaDo
   )
 }
 
-/** Computador: a tabela, com a escola como cabeçalho da linha. Abaixo de 640 px ela some e ficam os cartões. */
-function Tabela({ escolas, ...linha }: { escolas: readonly EscolaDoPainel[] } & AcoesDaLinha) {
+/** O uso da escola em uma linha: as três contagens do ano em curso, cada uma inteira na linha (nunca "612" numa e "alunos" na outra). */
+function UsoDaEscola({ escola }: { escola: EscolaDoPainel }) {
+  if (escola.turmas === 0) return <span className="text-sutil">Sem turma ainda</span>
   return (
-    <table className="hidden w-full table-fixed border-collapse text-sm sm:table">
-      <caption className="sr-only">Escolas, com a rede, o estado da coordenação e as contagens do ano letivo em curso</caption>
-      <thead>
-        <tr className="border-b border-linha text-left text-sutil">
-          <th scope="col" className="w-[30%] py-2 pr-3 font-medium">
-            Escola
-          </th>
-          <th scope="col" className="w-[18%] py-2 pr-3 font-medium">
-            Rede
-          </th>
-          <th scope="col" className="w-[25%] py-2 pr-3 font-medium">
-            Coordenação
-          </th>
-          <th scope="col" className="py-2 pr-3 text-right font-medium">
-            Turmas
-          </th>
-          <th scope="col" className="py-2 pr-3 text-right font-medium">
-            Professores
-          </th>
-          <th scope="col" className="py-2 text-right font-medium">
-            Alunos
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {escolas.map((escola) => (
-          <tr key={escola.id} className="border-b border-linha align-top">
-            <th scope="row" className="py-3 pr-3 text-left font-normal">
-              <span className="block font-medium wrap-anywhere text-tinta">{escola.nome}</span>
-              <span className="block text-sutil wrap-anywhere">/e/{escola.slug}</span>
-            </th>
-            <td className="py-3 pr-3 wrap-anywhere">{escola.rede.nome}</td>
-            <td className="py-3 pr-3">
-              <Estado escola={escola} />
-              <AcoesDoConvite escola={escola} {...linha} />
-            </td>
-            <td className="py-3 pr-3 text-right tabular-nums">{formatarNumero(escola.turmas)}</td>
-            <td className="py-3 pr-3 text-right tabular-nums">{formatarNumero(escola.professores)}</td>
-            <td className="py-3 text-right tabular-nums">{formatarNumero(escola.alunos)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <span className="tabular-nums">
+      <span className="whitespace-nowrap">{formatarQuantidade(escola.turmas, 'turma', 'turmas')}</span>
+      {' · '}
+      <span className="whitespace-nowrap">{formatarQuantidade(escola.professores, 'professor', 'professores')}</span>
+      {' · '}
+      <span className="whitespace-nowrap">{formatarQuantidade(escola.alunos, 'aluno', 'alunos')}</span>
+    </span>
   )
 }
 
-/** Celular: um cartão por escola, com as três contagens lado a lado, sem rolagem horizontal a 360 px. */
-function Cartoes({ escolas, ...linha }: { escolas: readonly EscolaDoPainel[] } & AcoesDaLinha) {
+/** A coluna da coordenação: o estado em texto e as ações do convite que ele permite. */
+function CoordenacaoDaEscola({ escola, aoAcionar, focarNaEscola }: { escola: EscolaDoPainel } & AcoesDaLinha) {
   return (
-    <ul className="flex flex-col gap-3 sm:hidden">
-      {escolas.map((escola) => (
-        <li key={escola.id} className="rounded-cartao border border-linha bg-superficie p-4">
-          <h2 className="font-semibold wrap-anywhere">{escola.nome}</h2>
-          <p className="text-sm text-sutil wrap-anywhere">/e/{escola.slug}</p>
-          <p className="mt-1 text-sm text-apoio wrap-anywhere">Rede: {escola.rede.nome}</p>
-          <p className="mt-2">
-            <Estado escola={escola} />
-          </p>
-          <AcoesDoConvite escola={escola} {...linha} />
-          <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
-            <div className="min-w-0">
-              <dt className="text-sutil">Turmas</dt>
-              <dd className="font-medium tabular-nums">{formatarNumero(escola.turmas)}</dd>
-            </div>
-            <div className="min-w-0">
-              <dt className="text-sutil">Professores</dt>
-              <dd className="font-medium tabular-nums">{formatarNumero(escola.professores)}</dd>
-            </div>
-            <div className="min-w-0">
-              <dt className="text-sutil">Alunos</dt>
-              <dd className="font-medium tabular-nums">{formatarNumero(escola.alunos)}</dd>
-            </div>
-          </dl>
-        </li>
-      ))}
-    </ul>
+    <>
+      <EstadoDaCoordenacao escola={escola} />
+      <AcoesDoConvite escola={escola} aoAcionar={aoAcionar} focarNaEscola={focarNaEscola} />
+    </>
+  )
+}
+
+/** A coluna da escola: o nome e o endereço dela. O nome leva `data-nome-da-escola`: é por ele que o roteiro lê a ordem, na tabela e na lista do celular. */
+function IdentidadeDaEscola({ escola }: { escola: EscolaDoPainel }) {
+  return (
+    <>
+      <span data-nome-da-escola="" className="block font-bold wrap-anywhere">
+        {escola.nome}
+      </span>
+      <span className="block font-normal text-sutil wrap-anywhere">/e/{escola.slug}</span>
+    </>
   )
 }
 
@@ -232,17 +189,31 @@ export function Escolas() {
       ) : escolas.isError && dados === undefined ? (
         <ErroDaOperacao erro={escolas.error} aoTentarDeNovo={() => void escolas.refetch()} tentando={escolas.isFetching} />
       ) : dados === undefined || dados.total === 0 ? (
-        <EstadoVazio titulo={TEXTO_DA_LISTA_VAZIA.titulo} descricao={TEXTO_DA_LISTA_VAZIA.descricao} acao={{ rotulo: 'Nova rede', aoAcionar: () => dialogo.abrir('rede') }} />
+        // Sem ação no vazio: o "Nova rede" do topo é o convite, e a tela fica com um só deles e um só botão cheio.
+        <EstadoVazio titulo={TEXTO_DA_LISTA_VAZIA.titulo} descricao={TEXTO_DA_LISTA_VAZIA.descricao} />
       ) : dados.itens.length === 0 ? (
         <VazioAlemDaUltima paginas={paginas} aoIrParaAPrimeira={() => irPara({ pagina: 1, ordem: consulta.ordem })} />
       ) : (
-        <section aria-label="Lista de escolas" aria-busy={trocando} className="flex flex-col gap-4">
+        <RegiaoDaLista
+          rotulo="Lista de escolas"
+          ocupada={trocando}
+          pe={<PaginasDaLista rotulo="Páginas da lista" pagina={consulta.pagina} paginas={paginas} trocando={trocando} aoIr={(pagina) => irPara({ pagina, ordem: consulta.ordem })} />}
+        >
           {escolas.isError && <ErroDaOperacao erro={escolas.error} aoTentarDeNovo={() => void escolas.refetch()} tentando={escolas.isFetching} />}
           <p className="text-sm text-sutil">{formatarQuantidade(dados.total, 'escola', 'escolas')}</p>
-          <Tabela escolas={dados.itens} aoAcionar={dialogo.abrir} focarNaEscola={focarNaEscola} />
-          <Cartoes escolas={dados.itens} aoAcionar={dialogo.abrir} focarNaEscola={focarNaEscola} />
-          <PaginasDaLista rotulo="Páginas da lista" pagina={consulta.pagina} paginas={paginas} trocando={trocando} aoIr={(pagina) => irPara({ pagina, ordem: consulta.ordem })} />
-        </section>
+          {/* As quatro colunas (RF21; mockup 12.1): a coordenação aparece pelo estado, nunca por nome ou e-mail (D76). */}
+          <Tabela
+            rotulo="Escolas, com a rede, o estado da coordenação e as contagens do ano letivo em curso"
+            colunas={[
+              { chave: 'escola', titulo: 'Escola', celula: (escola) => <IdentidadeDaEscola escola={escola} /> },
+              { chave: 'rede', titulo: 'Rede', celula: (escola) => <span className="wrap-anywhere">{escola.rede.nome}</span> },
+              { chave: 'coordenacao', titulo: 'Coordenação', celula: (escola) => <CoordenacaoDaEscola escola={escola} aoAcionar={dialogo.abrir} focarNaEscola={focarNaEscola} /> },
+              { chave: 'uso', titulo: 'Uso', celula: (escola) => <UsoDaEscola escola={escola} /> },
+            ]}
+            linhas={dados.itens}
+            chaveDaLinha={(escola) => escola.id}
+          />
+        </RegiaoDaLista>
       )}
 
       {aberta?.tipo === 'rede' && (

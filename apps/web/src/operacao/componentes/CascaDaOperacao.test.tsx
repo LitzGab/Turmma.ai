@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { escolherAparencia } from '../../tema'
+import { TEXTO_DA_OPERACAO_SEM_DADO_DE_PESSOA } from '../textos'
 import { CascaDaOperacao, CascaPublicaDaOperacao } from './CascaDaOperacao'
 
 /**
@@ -28,7 +29,7 @@ afterEach(() => {
 describe('a barra de topo da operação', () => {
   it('com a sessão aberta, a barra leva a Aparência, com o nome só para o leitor de tela, e o "Sair"', () => {
     render(
-      <CascaDaOperacao titulo="Escolas" nome="Operador Exemplo" aoSair={() => undefined} saindo={false}>
+      <CascaDaOperacao nome="Operador Exemplo" aoSair={() => undefined} saindo={false}>
         <p>conteúdo</p>
       </CascaDaOperacao>,
     )
@@ -49,7 +50,7 @@ describe('a barra de topo da operação', () => {
   it('o banner diz "Operação Turmma" com o nome de quem entrou, e o "Sair" está dentro dele', () => {
     render(
       <Dentro caminho="/operacao">
-        <CascaDaOperacao titulo="Escolas" nome="Operador Exemplo" aoSair={() => undefined} saindo={false}>
+        <CascaDaOperacao nome="Operador Exemplo" aoSair={() => undefined} saindo={false}>
           <p>conteúdo</p>
         </CascaDaOperacao>
       </Dentro>,
@@ -67,7 +68,7 @@ describe('a barra de topo da operação', () => {
     const aoSair = vi.fn()
     const { rerender } = render(
       <Dentro caminho="/operacao">
-        <CascaDaOperacao titulo="Escolas" aoSair={aoSair} saindo={false}>
+        <CascaDaOperacao aoSair={aoSair} saindo={false}>
           <p>conteúdo</p>
         </CascaDaOperacao>
       </Dentro>,
@@ -79,7 +80,7 @@ describe('a barra de topo da operação', () => {
 
     rerender(
       <Dentro caminho="/operacao">
-        <CascaDaOperacao titulo="Escolas" aoSair={aoSair} saindo>
+        <CascaDaOperacao aoSair={aoSair} saindo>
           <p>conteúdo</p>
         </CascaDaOperacao>
       </Dentro>,
@@ -96,7 +97,7 @@ describe('a barra de topo da operação', () => {
     ] as const) {
       const { unmount } = render(
         <Dentro caminho={caminho}>
-          <CascaDaOperacao titulo="Tela" aoSair={() => undefined} saindo={false}>
+          <CascaDaOperacao aoSair={() => undefined} saindo={false}>
             <p>conteúdo</p>
           </CascaDaOperacao>
         </Dentro>,
@@ -107,6 +108,32 @@ describe('a barra de topo da operação', () => {
       expect(within(navegacao).getByRole('link', { name: apagado }).getAttribute('aria-current')).toBeNull()
       unmount()
     }
+  })
+})
+
+describe('a página da operação (X2, 14.0)', () => {
+  it('o título é "Operação", com a frase fixa embaixo e a navegação das abas dentro do main, antes da tela', () => {
+    render(
+      <Dentro caminho="/operacao">
+        <CascaDaOperacao aoSair={() => undefined} saindo={false}>
+          <p>a lista</p>
+        </CascaDaOperacao>
+      </Dentro>,
+    )
+    const principal = screen.getByRole('main')
+    expect(within(principal).getByRole('heading', { level: 1, name: 'Operação' })).toBeTruthy()
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(within(principal).getByText(TEXTO_DA_OPERACAO_SEM_DADO_DE_PESSOA)).toBeTruthy()
+    const navegacao = within(principal).getByRole('navigation', { name: 'Operação' })
+    // A ordem de leitura: título, abas e, por fim, a tela.
+    const titulo = within(principal).getByRole('heading', { level: 1 })
+    const tela = within(principal).getByText('a lista')
+    expect(titulo.compareDocumentPosition(navegacao) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(navegacao.compareDocumentPosition(tela) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('a frase fixa diz que a operação não vê aluno nem professor, com as três coisas que não vê', () => {
+    expect(TEXTO_DA_OPERACAO_SEM_DADO_DE_PESSOA).toBe('A operação não vê dado de aluno nem de professor: nem nome, nem nota, nem conversa.')
   })
 })
 

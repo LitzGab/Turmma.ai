@@ -1006,6 +1006,10 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
         `turnosParaATarefa` já filtra (`tutor.repository.ts:349`); é código do Tutor (`infra-guardian` e
         `conformidade-reviewer`) e muda o número que o professor vê (D8)
       (dono: Joaquim)
+- [ ] O que a coluna Uso da tela Escolas da operação mostra no vínculo do ano novo antes de a turma ser importada: hoje, com
+      `turmas: 0`, ela diz "Sem turma ainda" e esconde a contagem de professores (e a de alunos), mesmo que haja professor com
+      vínculo. Decidir o texto (só "Sem turma ainda", ou a contagem que existir) e declarar a intenção num teste
+      (`test-engineer` na 14.0 da X2) (dono: Joaquim e Gabriel)
 - [x] ~~Definir teto de uso do tutor por aluno e orçamento de tokens~~ — D38, D39, D41
 - [x] ~~Decidir o modelo de cobrança~~ — por aluno, uso incluso, sem crédito (D40)
 - [x] ~~Decidir se o aluno acessa de casa desde o início~~ — escola decide por turma (D19)

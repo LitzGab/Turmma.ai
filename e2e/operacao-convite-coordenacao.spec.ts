@@ -250,14 +250,15 @@ test.describe('O convite da coordenação pelo painel (A0b, tarefa 7.0)', () => 
     await tocar(coordenadora.getByRole('main'), 'Definir a senha e continuar', hasTouch)
     await expect(coordenadora.getByRole('heading', { name: 'Configurar o segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 
-    // A lista, recarregada, mostra a escola Ativa, com as três contagens do ano (zero: nada foi importado ainda), e sem ação.
+    // A lista, recarregada, mostra a escola Ativa e, sem turma (nada foi importado ainda), "Sem turma ainda" no lugar das
+    // três contagens, e sem ação.
     const recarregada = proximaLista(page)
     await page.reload()
     const lista = (await (await recarregada).json()) as RespostaEscolasDoPainel
     const naLista = lista.itens.find((escola) => escola.id === escolaId)
     expect(naLista).toMatchObject({ estado: 'ativa', turmas: 0, professores: 0, alunos: 0 })
     await expect(item).toContainText('Ativa', { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(item.getByText('0', { exact: true })).toHaveCount(3)
+    await expect(item.getByText('Sem turma ainda')).toBeVisible()
     await expect(item.getByRole('button')).toHaveCount(0)
   })
 
