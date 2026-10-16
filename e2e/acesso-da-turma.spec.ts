@@ -53,6 +53,8 @@ const LETRA_GRANDE_PX = 36
 /** O texto do perigo na seção (`--color-vermelho-texto`, #b84045) e a face do perigo cheio, só dentro da confirmação (`--color-vermelho`, #f2545b). */
 const COR_DO_PERIGO = 'rgb(184, 64, 69)'
 const COR_DO_PERIGO_CHEIO = 'rgb(242, 84, 91)'
+/** A série da turma que `criarProfessoraComTurma` cria: a linha de apoio do título com a turma lida, e que sai com a turma perdida. */
+const SERIE_DA_TURMA = '7º ano do Ensino Fundamental'
 
 /** A leitura e o gerar (`GET` e `POST /v1/turmas/:id/acesso`), o revogar, e a turma aberta (`GET /v1/turmas/:id`). */
 const ehOAcesso = (url: URL) => /^\/v1\/turmas\/[^/]+\/acesso$/.test(url.pathname)
@@ -301,7 +303,7 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     await expect(page).toHaveURL(new RegExp(`/professor/turmas/${turma.turmaId}$`))
     await expect(page).toHaveTitle(`Turma ${turma.turmaNome} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('heading', { level: 1, name: `Turma ${turma.turmaNome}` })).toBeVisible()
-    await expect(principal(page)).toContainText('7º ano do Ensino Fundamental')
+    await expect(principal(page)).toContainText(SERIE_DA_TURMA)
     // A turma abre na Visão Geral (A3); o acesso dos alunos está na aba "Alunos".
     await expect(page.getByRole('tab')).toHaveText(['Visão Geral', 'Alunos'])
     await abrirAbaAlunos(page, hasTouch)
@@ -1102,7 +1104,11 @@ test.describe('recomeço da tela do acesso', () => {
     await expect(principal(page).getByRole('status').filter({ hasText: 'Esta turma não está disponível' })).toHaveText(TEXTO_DA_TURMA_INDISPONIVEL, {
       timeout: PRAZO_DA_ENTRADA_MS,
     })
-    await expect(principal(page).getByRole('heading', { level: 1 })).toHaveCount(0)
+    // A tela continua com o título da 11.0, mas só "Turma": sem o nome nem a série da turma que saiu.
+    await expect(principal(page).getByRole('heading', { level: 1 })).toHaveCount(1)
+    await expect(principal(page).getByRole('heading', { level: 1 })).toHaveText('Turma')
+    await expect(page.locator('body')).not.toContainText(turma.turmaNome)
+    await expect(principal(page)).not.toContainText(SERIE_DA_TURMA)
     await expect(principal(page).getByRole('heading', { name: 'Acesso dos alunos' })).toHaveCount(0)
     await expect(dialogosAbertos(page)).toHaveCount(0)
     // O título da aba deixa de dizer a turma, e o foco, que estava no diálogo, vem para o aviso, e não cai no `body`.
