@@ -1,5 +1,125 @@
 # Validação — pele-e-casca (X1)
 
+## Rodada 3 — 16/10/2026 (revalidação)
+
+**Escopo:** funcionalidade completa
+**Commit validado:** `4f453d0`
+**Veredito: APROVADA**
+
+O que mudou desde a rodada 2 (`c624ad6..4f453d0`):
+
+- o merge da `develop` (`256b4a2`), que traz só a entrada da F18 no `ROADMAP.md`. O bloco da X1 não muda e continua `[x]`;
+- a correção `2026-10-16-galeria-da-onca-estoura-o-prazo` (`9d46058`). Ela muda só o `e2e/`: `__fixtures__/avatar.ts`,
+  `__fixtures__/galeria.ts`, `pecas-galeria.spec.ts`, `pecas-ia.spec.ts` e `pecas-marca-onca.spec.ts`;
+- os registros do `estado.md` (`9a07009`, `09e72ac`, `4f453d0`).
+
+Nenhum arquivo de `apps/`, `packages/`, `tools/` ou `infra/` mudou (`git diff --stat c624ad6 4f453d0 -- apps packages
+tools infra` sai vazio). O produto é, então, o mesmo das rodadas 1 e 2, e a evidência de código delas continua
+valendo. O risco desta rodada está em outro lugar: a correção reescreveu a **evidência e2e** do RF9 e do RF10. O
+ponto a provar é o do RF21: ela não enfraqueceu nenhum teste que prova regra.
+
+Contexto relido: `prd.md`, as rodadas 1 e 2, o documento da correção inteiro, as duas rodadas dela em
+`tasks/correcoes/achados/2026-10-16-galeria-da-onca-estoura-o-prazo.md` e as linhas 282 a 289 do `achados/indice.md`.
+
+### 1. RF a RF
+
+| RF | Situação | Evidência nova desta rodada |
+|---|---|---|
+| RF1 a RF8, RF11 a RF20, RF22 a RF24 | ATENDIDO | O código e os testes deles não mudaram desde a rodada 2, que os conferiu de novo com mutações e fotos próprias |
+| RF9 | ATENDIDO | O axe da galeria (`pecas-galeria.spec.ts:15`, `pecas-ia.spec.ts:443`, `pecas-marca-onca.spec.ts:131`) ficou intacto. A medida dos blocos agora se faz numa ida só (`medirBlocosDaGaleria`, `galeria.ts:84`), com as duas regras de antes: a borda direita do bloco dentro da janela, e `scrollWidth − clientWidth = 0`. Os três arquivos foram rodados aqui, nos dois projetos: verdes |
+| RF10 | ATENDIDO | Conferi, regra por regra, `avaliarAssinaturas` (`avatar.ts:34`) contra o laço removido. O ancestral `[data-assinatura]` mais próximo (`parentElement.closest` faz o mesmo que `ancestor::…[1]`); um avatar por bloco; um selo, à vista; um nome em `p`, `h2` ou `h3`, à vista e do mesmo agente. "À vista" tem largura, altura e não está em `visibility: hidden`, a mesma definição do `toBeVisible`. `avaliarSelos` e `avaliarAvatares` fazem o que os laços do `pecas-ia.spec.ts:30` faziam, e o do avatar ficou mais estrito (exige largura maior que 0). A contagem exata da seção, `AVATARES_DA_SECAO = 15` (`pecas-marca-onca.spec.ts:86`), segura uma leitura feita antes de a seção montar. Mutações abaixo. Fotos tiradas aqui: `professora--galeria--computador-7.png` e `professora--galeria--celular-9.png` mostram os 12 avatares em quatro tamanhos e os 3 das mensagens, cada um com o nome da função e o selo "IA" no mesmo bloco. A 360 px, o selo do Analista desce para a linha de baixo, dentro do bloco. No computador, "Aprovar 32 correções" aparece em grafite e diferente de todos os outros botões (RF6) |
+| RF21 | ATENDIDO | Nenhum caso saiu e nenhuma asserção ficou mais fraca. Os três specs passam de 52 para 66 execuções (7 casos novos de verificador, nos dois projetos), sem `.skip`, `.only` nem `.fixme`. Os pisos `≥ 10` selos e `≥ 15` blocos ficaram. O prazo de 30 s também ficou: não houve aumento de timeout. A única regra perdida é o `display:none` de bloco, que o `caixa()` antigo reprovava. Ela não prova regra de largura e vai como menor |
+
+**Contagem: 24 ATENDIDOS, 0 PARCIAIS, 0 NÃO ATENDIDOS, 0 NÃO VERIFICÁVEIS.**
+
+Provas de mutação: três, todas sobre o verificador novo. O produto é servido por uma imagem já construída
+(`educa-teste-web`, sem volume montado). Por isso, em vez de alterar o código-fonte, pus o defeito **na galeria real
+servida**, pelo DOM, e conferi que o verificador em lote o acusa. Elas foram rodadas num spec temporário,
+`e2e/zz-validador-temporario.spec.ts`, no projeto `chromebook`. O spec foi apagado em seguida, e a árvore terminou
+limpa, como começou.
+
+| RF | Defeito posto na galeria real | O que reprovou |
+|---|---|---|
+| RF10 | O `[data-selo-ia]` tirado da primeira assinatura da seção `marca-onca` (antes disso, `avaliarAssinaturas` da página inteira não acusava nada, em 30 avatares) | `conferirAssinaturas(secao('marca-onca'))` lançou `/sem o selo/`; o relatório trouxe só `assistente_de_ensino: sem o selo "IA", ou com dois` |
+| RF10, RF11 | `title` no 4º selo e `border-radius: 0` no 6º avatar | `avaliarSelos`: `['selo #3: o que a sigla quer dizer não fica num title']`; `avaliarAvatares`: `['avatar #5: não é um círculo']`, exatamente o defeito posto, e só ele |
+| RF9 | O bloco `marca-onca` alargado para 4000 px. Antes, li os totais logo depois de `abrirGaleria` e de novo 3 s depois: `[30, 31, 33]` avatares, selos e blocos nas duas leituras | `medirBlocosDaGaleria(...).passamDaJanela` contém `marca-onca`. Ler uma vez só, sem esperar, não perde peça que monte depois |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+Não mudaram desde a rodada 2: todas as regras cumpridas, toda borda coberta ou justificada, e o critério de pronto
+cumprido. Esta rodada acrescenta dois pontos:
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regra: o agente nunca se passa por pessoa (D58) | cumprida | A regra "nenhuma `img`, `image` ou `picture` dentro do avatar" continua em lote (`avatar.ts:103`), com caso na tabela (`pecas-marca-onca.spec.ts:228-229`). O `conformidade-reviewer` aprovou a correção |
+| Pronto: o e2e inteiro que existia continua verde nos dois projetos | cumprido pelo documento da correção, que registra 974 de 974 na árvore de `9d46058`; não rodado aqui, porque a suíte inteira não se roda nesta etapa. A esteira de `9d46058` fica com o Orquestrador | RF21 |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint`, `npm run test`, `npm run test:e2e` inteiros | não rodados: a suíte inteira não se roda nesta etapa |
+| e2e, como evidência | `e2e/pecas-galeria.spec.ts`, `e2e/pecas-ia.spec.ts` e `e2e/pecas-marca-onca.spec.ts`, com `--workers 2` (os da esteira), nos projetos `chromebook` e `celular`: **66 de 66**, nenhum instável. O caso mais lento levou 14,3 s (`pecas-ia:443`, celular), contra o prazo de 30. Os quatro casos que estouraram na esteira `38896156999` levaram 6,9 a 13,9 s. O spec temporário das mutações: 3 de 3 |
+| Unidade, como evidência | `tools/ci/esteira.test.ts`: 11 de 11. Com os casos novos, o teto da fatia do e2e continua cabendo |
+| `npm run test:infra` | não se aplica |
+| Esteira | conferida no fechamento |
+| Revisões com veto registradas e aprovadas | ✅ A correção tem os quatro revisores obrigatórios (`test-engineer`, `revisor-geral`, `frontend-reviewer`, `conformidade-reviewer`). Na primeira passada, das 10h54 às 10h55, o `test-engineer` reprovou. Na segunda, das 11h14 às 11h14:38, os quatro aprovaram (`achados/indice.md:282-289`). O commit `9d46058` leva `(correção …)`, e nenhum commit desde `c624ad6` leva código sem essa marca |
+
+### 4. Achados
+
+**Críticos**
+- nenhum
+
+**Maiores**
+- nenhum
+
+**Menores**
+- `tasks/correcoes/2026-10-16-galeria-da-onca-estoura-o-prazo.md`, "Recomendações sem aplicar": duas recomendações
+  têm o `TODO.md` como destino, e nenhuma está lá (`grep` por `medirBlocosDaGaleria`, `display:none`, `semCaixa`,
+  `borderBottom` e `desenhos` não acha nada). São elas:
+  - o `test-engineer` (1ª): `medirBlocosDaGaleria` deixa passar bloco com `display:none`;
+  - o `test-engineer` (2ª): o teste de `desenhos` usa os atalhos `border:` e `border-radius:`, e por isso ler
+    `borderBottom*` no lugar de `borderTop*` não seria pego.
+
+  Correção: o fechamento escreve as duas linhas no `TODO.md`, junto dos itens que o `estado.md` já manda levar.
+- `tasks/correcoes/achados/indice.md:282-289`: o hook numerou como "1ª" as duas passadas da correção. A seção
+  "Revisões" do documento sumiu na primeira passada, e o contador recomeçou. Por isso a tabela do documento mostra só
+  a segunda, e a mensagem de `9d46058` diz "APROVADO (1ª rodada)" para o `test-engineer`, que reprovou antes. O texto
+  do commit explica, e o histórico está inteiro nos achados. É a mesma classe do menor da rodada 2. Correção: levar à
+  retrospectiva por que a seção pode sumir e por que a numeração depende dela.
+- `e2e/pecas-ia.spec.ts:46`: com a leitura de uma ida só, o piso de selos (`≥ 10`) é a única contagem que segura uma
+  leitura antecipada fora da seção da onça. Hoje há 31, e a mutação 3 mostrou que nada monta depois. Correção: a
+  recomendação já registrada (`expect.poll` em volta de `avaliar…`), se aparecer intermitência.
+- O documento da correção (seção "Causa") diz "mais de 40 [avatares] na página inteira". Na galeria servida contei
+  30 avatares e 31 selos. Texto, sem efeito sobre a correção.
+
+**Positivos**
+- Para cada verificador em lote, uma tabela de páginas montadas, cada uma com um defeito, percorrida por um teste
+  só. Provou que o lote vê o que o laço via, sem dobrar os casos da fatia do e2e.
+
+### 5. Conclusão
+
+A correção só troca a forma de conferir. Em vez de uma ida ao navegador por asserção, faz uma ida por verificador, e
+as regras continuam as mesmas. Conferi isso de três jeitos:
+
+- linha a linha, contra o laço removido;
+- rodando os três specs nos dois projetos, com os 2 trabalhadores da esteira (66 de 66, todos bem abaixo dos 30 s);
+- pondo três defeitos na galeria real servida, todos acusados pelo verificador novo.
+
+O produto não mudou desde a rodada 2. Ficam 24 RF atendidos, o critério de pronto cumprido, nenhum crítico, nenhum
+maior e nenhum teste vermelho entre os rodados: **APROVADA**. Os menores não seguram o fechamento. O primeiro, as duas
+linhas do `TODO.md`, é feito no próprio fechamento.
+
+### 6. Pendências herdadas
+
+- As duas linhas do `TODO.md` do primeiro menor: no fechamento, pelo Orquestrador.
+- A numeração das rodadas quando a seção "Revisões" some, e o `tools/ci/e2e.ts` que não repassa `--repeat-each` nem
+  `--workers`: retrospectiva da X1.
+- As pendências das rodadas 1 e 2 seguem com os destinos delas.
+
+---
+
+
 ## Rodada 2 — 16/10/2026 (revalidação)
 
 **Escopo:** funcionalidade completa

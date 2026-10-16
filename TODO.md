@@ -1124,6 +1124,12 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       `contraste.test.ts` presas só pela contagem; a guarda de movimento sem `@keyframes`; o Tab da galeria só nos
       botões. E o botão "Abrir dado nominal de uma turma" quebrando em duas linhas a 360 px (X2, tarefa 4.4). Cada um
       entra na tarefa que mexer na peça
+- [ ] **O que o `test-engineer` deixou da correção da galeria da onça** (`tasks/correcoes/2026-10-16-galeria-da-onca-estoura-o-prazo.md`,
+      "Recomendações"; validação da X1, rodada 3, "Menores"): (a) `medirBlocosDaGaleria` (`e2e/__fixtures__/galeria.ts`)
+      deixa passar bloco com `display:none`, que o `caixa()` antigo reprovava: acrescentar a lista `semCaixa`, o que muda
+      o contrato de `MedidaDosBlocos` e os `toEqual` dos testes; (b) o teste de `desenhos` monta borda e canto com
+      atalhos (`border:`, `border-radius:`) que pintam os quatro lados iguais, e `desenhos` lendo `borderBottom*` no lugar
+      de `borderTop*` não seria pego: dar um lado diferente dos outros. Os dois entram na próxima tarefa que tocar a galeria
 
 ## Comercial
 

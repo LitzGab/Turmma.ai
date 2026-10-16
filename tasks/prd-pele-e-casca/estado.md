@@ -6,13 +6,11 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** o `/seguir RELATÓRIO de Validador` da **rodada 3** (revalidação sobre `9d46058`, pedida em 16/10 ~11h10,
-  Validador reiniciado no andar; ambiente de teste 0 é dele enquanto valida), e a esteira de `9d46058` no GitHub, que
-  corre em paralelo. A correção `2026-10-16-galeria-da-onca-estoura-o-prazo` chegou em `9d46058` (SUCESSO, 4 revisores
-  aprovados na 1ª rodada do documento, enviada); a esteira vermelha anterior era a `38896156999`, em `256b4a2`
-- **Devo ainda:** (1) ler o veredito da rodada 3 e a esteira de `9d46058` (`esteira.ts --fechamento`); (2) com as duas
-  verdes, `linhas.ts fechar` não precisa de novo (a X1 já está fechada em `c624ad6`): só o commit de documento do
-  `validacao.md`; (3) com a esteira verde e a validação
+- **Espero:** a esteira de `4f453d0` (execução `38914509279`, rodando em 16/10 à tarde; `esteira.ts --fechamento`). A
+  rodada 3 da validação chegou: **APROVADA** sobre `4f453d0`, 24 de 24 RF; o `validacao.md` e os dois itens do `TODO.md`
+  que ela pedia foram registrados no commit de documento seguinte
+- **Devo ainda:** (1) com a esteira verde no último commit que alterou código (`9d46058`, coberto pela de `4f453d0`);
+  vermelha: correção na linha 1 e revalidação; (3) com a esteira verde e a validação
   aprovada, o pouso, já autorizado pelo Joaquim em 16/10: `maestri floor land "X1 pele-e-casca" --into develop`,
   `git push origin develop`, a esteira da `develop` em segundo plano e `maestri floor delete "X1 pele-e-casca L1"`; (4)
   com a esteira da `develop` verde, `PEDIDO` ao `Arquiteto`, no térreo: trazer o mockup de outubro
