@@ -1,19 +1,16 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero:** linha 1, `Implementador`: o `/seguir RELATÓRIO` da tarefa 2.0, retomada às ~16h40 depois da correção
-  `2026-10-16-sexta-fatia-do-e2e` (`9d9985f`, na linha, sem encontro próprio), com a `Mesa` reiniciada; falta o portão
-  da tarefa e a rodada. Desde ~17h15 em fila; o portão da 14.0 acabou, e a linha 1 roda o seu --repeat-each sem carga.
-  **DIVERGÊNCIA de desenho na 2.0** (~17h50), sobre a r1 da `Mesa` (ordem `.processo/ordens/2_task-r1.md`, itens 1 e
-  14): o Implementador quer a opção (b), uma leva só, e a techspec §12 (3ª premissa) e §7c atualizadas. Triagem
-  pedida ao `Arquiteto`, reiniciado no checkout da linha 1 (ele commita lá; não mexe na linha 118 da techspec, que a
-  linha 2 alterou). Decidido (b) às ~18h05, sem mudar desenho nem aceite: techspec §7c e §12 em `8e45a1d` na linha
-  1; a decisão foi ao `Implementador` como observação. Espero o `RELATÓRIO` da 2.0 depois da rodada 2.
+- **Espero:** linha 1, `Implementador` (reiniciado com a `Mesa` às ~19h20): o `RELATÓRIO` da **correção**
+  `2026-10-16-tentar-de-novo-da-estrutura-no-celular` (esteira vermelha 38966083912 em `b95722d`:
+  `e2e/estrutura.spec.ts:294`, só no celular, o "Tentar de novo" do main não aparece; provável da 1.0;
+  `frontend-reviewer`). Depois do encontro dela, a **3.0** parte na linha 1 (o quadro já a mostrava).
   Linha 2, `Implementador 2` (reiniciado com a `Mesa 2` às ~18h20): o `RELATÓRIO` da **correção**
   `2026-10-16-aba-das-empresas-depois-de-recarregar` (esteira vermelha 38944717887 em `e30b9ca`:
   `e2e/privacidade.spec.ts:298`, a aba "Empresas que recebem dados" some depois do reload, nos dois projetos; vem da
-  1.0; `frontend-reviewer`). Partida feita. Ao receber: `linhas.ts encontro 2`, depois `esteira.ts`. Nenhuma tarefa
-  parte antes de a 2.0 se encontrar (todas presas nela)
+  1.0; `frontend-reviewer`). Partida feita. Ao receber: `linhas.ts encontro 2`, depois `esteira.ts`. As duas
+  correções podem ter a mesma causa (o sino da 1.0); cada uma foi avisada da outra. Com as duas encontradas, a 3.0
+  parte, e o resto (4.0 a 12.0) se solta dela
 - **A conferir na esteira de `b95722d`:** a unidade deve passar com a sexta fatia; o W6 do Uso (14.0) falha no
   chromebook com banco acumulado de outras execuções (regra 40 pede que passe nos três ambientes): se cair na
   esteira, é correção
@@ -26,12 +23,18 @@
 |---|---|---|---|---|
 | 1.0 | `694f9d4` | Sonnet | 3+ | conduzida fora do Maestri pelo "Claude Code #2" (`conduzir.mjs`), em 16/10 de manhã; a X2 foi parada às 09h40 e retomada às ~14h15 |
 | 14.0 | `d289c98` | Sonnet | 3 | linha 2, 15h07–18h15; escalada do `test-engineer` (r1, r2) com diagnóstico do Arquiteto (faltavam mutações declaradas), aprovada na r3; cherry-pick da sexta fatia (`c2965ac`); a Mesa não fotografou a operação (a vitrine não a cobre): **a validação refotografa** `/operacao` e `/operacao/uso`; linha nova no `TODO.md` (coluna Uso com turmas 0) |
+| 2.0 | `229da54` | Sonnet | 2 | linha 1, 15h06–19h15; DIVERGÊNCIA de portão (sexta fatia, `9d9985f`), de carga (fila entre linhas) e de desenho (opção (b), techspec em `8e45a1d`); `revisor-geral` e `test-engineer` reprovaram na r1. Para a retro: `tools/ci/e2e.ts --repeat-each` roda a suíte inteira (33 min), use `npx playwright test`; e2e a 2 workers estoura 30 s na entrada compartilhada com carga 9+; o Painel lê a chave do resumo com observador simples (TODO da r2) |
 
 ## Esperando o Joaquim
 ## O que falhou
 - 16/10 18h00–18h38: a correção da linha 2 ficou 37 min parada num laço de espera que nunca saía: `pgrep -f` sem
   colchete acha a própria linha do `zsh -c`. Ao mandar uma linha esperar a outra, escreva o padrão já com colchete
   (`[p]ortao-local.ts`); a linha 1 tinha caído no mesmo erro às 17h15 e se corrigiu sozinha
+- 16/10 ~19h00–19h38: impasse entre as linhas. O colchete não basta: o laço da linha 2 tinha, na própria linha de
+  comando, o caminho da `--l1` e depois "playwright" (no comando que vinha após o laço), e casava consigo; o da linha
+  1 esperava esse laço. Desfeito mandando a linha 2 rodar sem laço. Lição: **só uma linha espera, a outra roda
+  direto**; ou o padrão casa só com o processo do Playwright (`node_modules/.bin/[p]laywright`), nunca com texto que o
+  próprio laço carrega. Fila entre linhas devia ser trava de arquivo no `tools/processo/`, não `pgrep` (para a retro)
 ## O que decidi sem perguntar
 - 16/10 ~14h15: juntei a `develop` (`2029703`) na `spec/telas-da-coordenacao` antes da 2.0, para a X2 partir da X1
   pousada e com os ajustes da retrospectiva; merge sem conflito
