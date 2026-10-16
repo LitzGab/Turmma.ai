@@ -15,9 +15,48 @@ export interface ViolacaoGrave {
   alvos: string[]
 }
 
-/** Violações `serious` e `critical` do axe na página como está agora. Lista vazia é a única que passa. */
+/**
+ * Faz as barras presas por `position: sticky` (a de topo da casca no celular e a barra presa de ação) deixarem de contar
+ * como obstáculo para o `target-size` do axe, e devolve o que desfaz. O axe tira do alvo a área que um elemento
+ * sobreposto cobre e ignora o que tem `pointer-events: none`; a barra de topo cobre o pedaço de um controle que passa por
+ * baixo dela, e com um vizinho ao lado o mesmo botão passava ou reprovava conforme o ponto onde a rolagem parou (o que a
+ * 13.0 mudou ao reservar o pé da página). Que o último controle termina acima da barra de baixo é provado por medida, em
+ * `casca-no-celular.spec.ts`, e não pela rolagem em que a auditoria calhou de pegar a página. O desfazer devolve o valor e
+ * a prioridade que o elemento tinha em linha, ou tira a propriedade quando não tinha nenhum.
+ */
+async function tirarAsBarrasPresasDoCaminho(page: Page): Promise<() => Promise<void>> {
+  await page.evaluate(() => {
+    const presas: Array<{ elemento: HTMLElement; valor: string; prioridade: string }> = []
+    for (const elemento of document.body.querySelectorAll<HTMLElement>('*')) {
+      if (getComputedStyle(elemento).position !== 'sticky') continue
+      presas.push({ elemento, valor: elemento.style.getPropertyValue('pointer-events'), prioridade: elemento.style.getPropertyPriority('pointer-events') })
+      elemento.style.setProperty('pointer-events', 'none', 'important')
+    }
+    Object.assign(window, { barrasPresasDaAuditoria: presas })
+  })
+  return () =>
+    page.evaluate(() => {
+      const presas = (window as unknown as { barrasPresasDaAuditoria?: Array<{ elemento: HTMLElement; valor: string; prioridade: string }> }).barrasPresasDaAuditoria ?? []
+      for (const { elemento, valor, prioridade } of presas) {
+        if (valor === '') elemento.style.removeProperty('pointer-events')
+        else elemento.style.setProperty('pointer-events', valor, prioridade)
+      }
+      Reflect.deleteProperty(window, 'barrasPresasDaAuditoria')
+    })
+}
+
+/**
+ * Violações `serious` e `critical` do axe na página como está agora, sem que uma barra presa por `sticky` cubra um alvo no
+ * meio da rolagem. Lista vazia é a única que passa.
+ */
 export async function violacoesGraves(page: Page): Promise<ViolacaoGrave[]> {
-  const resultado = await new AxeBuilder({ page }).withTags([...TAGS_WCAG]).analyze()
+  const desfazer = await tirarAsBarrasPresasDoCaminho(page)
+  let resultado
+  try {
+    resultado = await new AxeBuilder({ page }).withTags([...TAGS_WCAG]).analyze()
+  } finally {
+    await desfazer()
+  }
   return resultado.violations
     .filter((violacao) => (IMPACTOS_QUE_REPROVAM as readonly string[]).includes(violacao.impact ?? ''))
     .map((violacao) => ({

@@ -289,4 +289,54 @@ test.describe('a casca da escola no celular', () => {
     // laterais da janela, e o anel por fora seria cortado (`docs/interface.md` 10.1; `cenarios.md` A5, no celular).
     expect(anelDoItem, 'o Tab chegou à barra de baixo').toEqual({ visivel: true, largura: '3px', afastamento: '-3px' })
   })
+
+  /**
+   * A auditoria de alvo de toque (`violacoesGraves`) não depende de onde a rolagem parou. O axe tira do alvo a área que um
+   * elemento sobreposto cobre, e a barra de topo, presa por `sticky`, cobre o pedaço de um controle que passa por baixo
+   * dela; com um vizinho ao lado e só 8 px à vista, o botão de 28 px reprova o `target-size`, embora nada esteja errado com
+   * ele, que a pessoa rola para a vista. Foi isso que deixou o W6 e o A2 vermelhos no celular (correção
+   * `2026-10-16-alvo-de-toque-sob-a-barra-de-baixo`: a causa era a barra de topo, e não a de baixo). Que o último controle
+   * termina acima da barra de baixo é provado nos testes de cima, por medida. Os controles são da própria prova (três
+   * botões de 28 px, lado a lado), postos na tela comprida: a rolagem é a que o teste manda, e não a que a tela calhou de ter.
+   */
+  test('o controle cortado pela barra de topo no meio da rolagem não reprova a auditoria de alvo de toque, e a auditoria devolve as barras como estavam', async ({ page, hasTouch }) => {
+    test.slow()
+    await entrarNaTelaComprida(page, hasTouch)
+    // Uma fileira de controles pequenos antes do 3º artefato.
+    await page.evaluate(() => {
+      const linha = document.createElement('li')
+      linha.setAttribute('data-sonda', '')
+      linha.style.cssText = 'display:flex;gap:4px;height:28px'
+      for (const rotulo of ['a', 'b', 'c']) {
+        const botao = document.createElement('button')
+        botao.type = 'button'
+        botao.textContent = rotulo
+        botao.style.cssText = 'min-width:28px;min-height:28px;border:2px solid currentColor;border-radius:6px'
+        linha.append(botao)
+      }
+      document.querySelectorAll<HTMLElement>('[data-artefato]')[2]?.closest('li')?.before(linha)
+      // Duas barras presas com o que a auditoria tem de devolver: a de topo com um `pointer-events` em linha, e uma sem nenhum.
+      document.querySelector<HTMLElement>('header')?.style.setProperty('pointer-events', 'auto', 'important')
+      const semValor = document.createElement('div')
+      semValor.setAttribute('data-presa-sem-valor', '')
+      semValor.style.cssText = 'position:sticky;top:0;height:0'
+      document.querySelector('main')?.append(semValor)
+    })
+
+    // Rola até a base da fileira ficar 8 px abaixo da barra de topo: só esses 8 px estão à vista, o resto está por baixo dela.
+    const fileira = await page.locator('[data-sonda]').evaluate((linha, aVer) => {
+      window.scrollBy(0, linha.getBoundingClientRect().bottom - (aVer.topo + aVer.vista))
+      const caixa = linha.getBoundingClientRect()
+      return { topo: caixa.top, base: caixa.bottom }
+    }, { topo: ALTURA_DO_TOPO_PX, vista: 8 })
+    expect(fileira.base, 'a fileira termina 8 px abaixo da barra de topo').toBeCloseTo(ALTURA_DO_TOPO_PX + 8, 0)
+    expect(fileira.topo, 'e começa por baixo dela').toBeLessThan(ALTURA_DO_TOPO_PX - 8)
+    expect(await violacoesGraves(page), 'cortada pela barra de topo').toEqual([])
+
+    // A auditoria devolve as barras como estavam: a que tinha valor em linha, com a prioridade, e a que não tinha, sem nenhum;
+    // e nada fica marcado na página.
+    expect(await page.getByRole('banner').evaluate((topo) => [topo.style.getPropertyValue('pointer-events'), topo.style.getPropertyPriority('pointer-events')])).toEqual(['auto', 'important'])
+    expect(await page.locator('[data-presa-sem-valor]').evaluate((presa) => [presa.style.getPropertyValue('pointer-events'), getComputedStyle(presa).pointerEvents])).toEqual(['', 'auto'])
+    expect(await page.evaluate(() => 'barrasPresasDaAuditoria' in window)).toBe(false)
+  })
 })
