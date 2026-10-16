@@ -1,96 +1,87 @@
-import { Link } from 'react-router-dom'
-import { LogOut, Shield } from 'lucide-react'
-import { Marca } from '@/components/marca/Pinta'
-import { Estado, LinhaAprovacao } from '@/components/turmma/ia'
-import { NotaMockup } from '@/components/turmma/tela'
+import { useNavigate, Link } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
+import { BarraApp, CabecalhoPagina, Cartao, LadrilhoIcone, Linha, MenuMais, materiaDe } from '@/components/duo'
+import { Icone } from '@/components/duo/icones'
+import { SeloEstado } from '@/areas/aluno/_pecas'
+import { useTarefasDoAluno, type TarefaViva } from '@/dados/avaliacoes'
 import { ALUNO, ESCOLAS } from '@/dados/escola'
 
-/* Área da família (seção 5): FASE POSTERIOR (D11). Nota, entrega e alerta, alimentados pelo motor de eventos do F13.
-   Pensada primeiro para o celular: uma coluna de até 480 px. Nada que a IA produziu chega à família sem
-   aprovação humana registrada (regra 70) — por isso cada item mostra quem aprovou. */
+/* A FAMÍLIA (/familia), 12ª rodada: uma passada leve na pele Duolingo. FORA da demonstração (D80: sem conta do
+   responsável até o parecer do art. 24 do ECA Digital); só aparece no Mapa, recolhida em "Depois".
+   Dois blocos: ENTREGAS (o atraso no topo, uma vez só) e NOTAS ("Aprovada por" em cinza). Lê as tarefas do Lucas do
+   estado da demonstração: a nota que a professora aprova aparece aqui. Nada da IA chega à família sem um professor
+   (regra 70). O responsável vê só o próprio filho (regra 60, item 11).
+   14ª rodada: Leitura 880, o título "Lucas · 2ºB" na coluna (a barra leva a escola); no escuro, tudo por token. */
 
-const ALERTAS = [
-  { titulo: 'Entrega em atraso', texto: 'Lista de mol e massa molar, de Química. Venceu em 18/09. Ainda dá para entregar até 25/09.', por: 'Camila Souza', quando: '19/09, 9h30' },
-]
+const ORDEM: Record<TarefaViva['estadoVivo'], number> = { atrasada: 0, aberta: 1, 'pra-fazer': 2, 'abre-em': 3, entregue: 4, corrigida: 5 }
 
-const NOTAS = [
-  { disciplina: 'Química', avaliacao: 'Prova de estequiometria', valor: '7,5', por: 'Camila Souza', quando: '21/09, 10h42' },
-  { disciplina: 'Matemática', avaliacao: 'Avaliação de funções', valor: '8,0', por: 'Paulo Reis', quando: '16/09, 15h10' },
-]
+function IconeMateria({ t }: { t: TarefaViva }) {
+  const m = materiaDe(t.materia)
+  return <LadrilhoIcone familia={m?.familia ?? 'azul'} tamanho={40} icone={<Icone id={m?.icone ?? 'lista'} />} />
+}
 
-const ENTREGAS: { nome: string; disciplina: string; tipo: 'ok' | 'pendente' | 'info'; estado: string }[] = [
-  { nome: 'Lista de mol e massa molar', disciplina: 'Química', tipo: 'pendente', estado: 'Em atraso' },
-  { nome: 'Atividade de reagente limitante', disciplina: 'Química', tipo: 'ok', estado: 'Entregue em 17/09' },
-  { nome: 'Resenha do capítulo 4', disciplina: 'Português', tipo: 'info', estado: 'Para 25/09' },
-]
+/* O mesmo selo que o aluno vê (AINDA DÁ neutro, A PROFESSORA ESTÁ VENDO, CORRIGIDA): um glossário só, nada de
+   vermelho que soe como cobrança. */
+const SeloEntrega = ({ t }: { t: TarefaViva }) => <SeloEstado t={t} />
 
 export function Familia() {
+  const navegar = useNavigate()
+  const tarefas = useTarefasDoAluno('lucas')
+  const entregas = tarefas.filter((t) => t.estadoVivo !== 'corrigida').sort((a, b) => ORDEM[a.estadoVivo] - ORDEM[b.estadoVivo])
+  const notas = tarefas.filter((t) => t.estadoVivo === 'corrigida')
+  const devolutiva = (t: TarefaViva) => t.resultado?.recado ?? t.devolutiva
+  /* "Aprovada por" uma vez só, no cabeçalho, quando é a mesma pessoa em todas as notas */
+  const quem = [...new Set(notas.map((t) => devolutiva(t)?.aprovadoPor).filter(Boolean))]
+  const umaSo = quem.length === 1 ? quem[0] : undefined
+
   return (
-    <div className="min-h-svh bg-fundo">
-      <div className="mx-auto w-full max-w-[480px] px-4 pb-12 pt-4">
-        <header className="flex h-12 items-center"><Marca className="text-[18px]" /></header>
+    <div className="flex h-svh min-h-0 flex-col bg-white text-tinta">
+      <BarraApp
+        contexto={<span className="min-w-0 truncate text-[17px] font-bold">{ESCOLAS[0].nome}</span>}
+        acoes={<MenuMais rotulo="Sua conta" itens={[{ rotulo: 'Sair', icone: <LogOut />, aoEscolher: () => navegar('/entrar') }]} />}
+      />
 
-        <section className="mt-5">
-          <h1 className="titulo-tela text-tinta">Olá, Renata.</h1>
-          <p className="mt-1 text-[15px] text-sutil">Você acompanha <b className="font-semibold text-apoio">{ALUNO.nome}</b> · {ALUNO.turma} · {ESCOLAS[0].nome}</p>
-        </section>
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto grid w-full max-w-[880px] gap-5 px-4 pb-6 pt-3 md:box-content md:px-8 md:pt-4">
+          {/* o título na coluna, não na barra (14ª rodada): quem a família acompanha */}
+          <CabecalhoPagina titulo={`${ALUNO.primeiro} · ${ALUNO.turma}`} complemento={ESCOLAS[0].nome} />
 
-        <section aria-labelledby="f-alertas" className="mt-7">
-          <h2 id="f-alertas" className="rotulo mb-2.5">Avisos da escola</h2>
-          <ul className="grid gap-2.5">
-            {ALERTAS.map((a) => (
-              <li key={a.titulo} className="rounded-cartao border border-linha bg-superficie p-4">
-                <Estado tipo="pendente">{a.titulo}</Estado>
-                <p className="mt-2.5 text-base leading-snug text-tinta">{a.texto}</p>
-                <LinhaAprovacao verbo="Enviado por" por={a.por} quando={a.quando} className="mt-3" />
-              </li>
-            ))}
-          </ul>
-        </section>
+          <section aria-labelledby="f-entregas" className="grid gap-3">
+            <h2 id="f-entregas" className="t-secao">Entregas</h2>
+            <Cartao semRespiro classeCaixa="overflow-hidden">
+              {entregas.map((t) => (
+                <Linha key={t.id} inicio={<IconeMateria t={t} />} titulo={t.titulo}
+                  abaixo={<>{t.materia}<span className="sm:hidden"><SeloEntrega t={t} /></span></>}
+                  fim={<span className="max-sm:hidden"><SeloEntrega t={t} /></span>} />
+              ))}
+            </Cartao>
+          </section>
 
-        <section aria-labelledby="f-notas" className="mt-7">
-          <h2 id="f-notas" className="rotulo mb-2.5">Notas</h2>
-          <ul className="grid gap-2.5">
-            {NOTAS.map((n) => (
-              <li key={n.avaliacao} className="rounded-cartao border border-linha bg-superficie p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <p className="min-w-0 text-base leading-snug text-tinta"><b className="font-semibold">{n.disciplina}</b><span className="block text-[15px] text-sutil">{n.avaliacao}</span></p>
-                  <p className="numero-painel shrink-0 text-tinta">{n.valor}</p>
-                </div>
-                <LinhaAprovacao verbo="Lançada por" por={n.por} quando={n.quando} className="mt-3" />
-              </li>
-            ))}
-          </ul>
-        </section>
+          <section aria-labelledby="f-notas" className="grid gap-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <h2 id="f-notas" className="t-secao">Notas</h2>
+              {umaSo && <span className="t-apoio">{`Aprovadas por ${umaSo}`}</span>}
+            </div>
+            <Cartao semRespiro classeCaixa="overflow-hidden">
+              {notas.map((t) => {
+                const acertos = t.resultado?.acertos ?? t.acertos ?? 0
+                const total = t.resultado?.total ?? t.total ?? t.questoes
+                const dev = devolutiva(t)
+                return (
+                  <Linha key={t.id} inicio={<IconeMateria t={t} />} titulo={t.titulo}
+                    abaixo={dev ? (umaSo ? `${t.materia} · ${dev.quando}` : `Aprovada por ${dev.aprovadoPor} · ${dev.quando}`) : t.materia}
+                    fim={<span className="text-[19px] font-bold tabular-nums">{`${acertos} de ${total}`}</span>} />
+                )
+              })}
+            </Cartao>
+          </section>
 
-        <section aria-labelledby="f-entregas" className="mt-7">
-          <h2 id="f-entregas" className="rotulo mb-2.5">Entregas</h2>
-          <ul className="rounded-cartao border border-linha bg-superficie px-4">
-            {ENTREGAS.map((e) => (
-              <li key={e.nome} className="flex min-h-[60px] items-center justify-between gap-3 border-t border-linha py-3 first:border-0">
-                <p className="min-w-0 text-[15px] leading-snug text-tinta">{e.nome}<span className="block text-[13px] text-sutil">{e.disciplina}</span></p>
-                <Estado tipo={e.tipo} className="shrink-0">{e.estado}</Estado>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <p className="mt-7 rounded-cartao bg-info-cx p-4 text-sm leading-relaxed text-info">
-          Tudo que aparece aqui passou por um professor. A IA da escola prepara o trabalho, mas não lança nota e não fala com a família.
-        </p>
-
-        {/* Privacidade e Sair com o mesmo tamanho: sair nunca é mais difícil que entrar (D59). */}
-        <nav aria-label="Conta" className="mt-5 grid grid-cols-2 gap-2">
-          <a href="#privacidade" className="flex h-11 items-center justify-center gap-2 rounded-controle border border-borda-campo bg-superficie text-[15px] font-semibold text-tinta transition-colors duration-150 hover:bg-realce"><Shield className="size-[18px]" /> Privacidade</a>
-          <Link to="/entrar" className="flex h-11 items-center justify-center gap-2 rounded-controle border border-borda-campo bg-superficie text-[15px] font-semibold text-tinta transition-colors duration-150 hover:bg-realce"><LogOut className="size-[18px]" /> Sair</Link>
-        </nav>
-
-        <NotaMockup>
-          Fase posterior (D11): a área da família não está no alvo atual nem no MVP de apresentação. O motor de eventos entra no F13 e a nota oficial no F17;
-          o portal e o WhatsApp vêm depois. Aplica regra 70 item 3 (nada da IA chega à família sem aprovação humana registrada), D7 e regra 60 item 11
-          (o responsável vê só o próprio filho). Se o art. 24 do ECA Digital exigir conta de responsável vinculada, esta área sobe de fase — decisão em aberto.
-        </NotaMockup>
-      </div>
+          <p className="t-apoio">
+            Tudo aqui passou por um professor. A IA não lança nota e não fala com a família.{' '}
+            <Link to="/e/colegio-aurora/dados" className="font-bold text-azul-texto underline-offset-4 hover:underline">Privacidade</Link>
+          </p>
+        </div>
+      </main>
     </div>
   )
 }

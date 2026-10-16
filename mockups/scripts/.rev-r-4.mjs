@@ -1,0 +1,15 @@
+import puppeteer from 'puppeteer-core'
+const b = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true })
+const p = await b.newPage(); await p.setViewport({ width: 1440, height: 780 })
+const erros=[]; p.on('pageerror', e=>erros.push(String(e)))
+await p.goto('http://127.0.0.1:5190/operacao', { waitUntil: 'networkidle0' }); await p.evaluate(()=>localStorage.clear()); await p.reload({ waitUntil: 'networkidle0' })
+const r = await p.evaluate(async ()=>{ const m = await import('/src/dados/rede.ts'); const id = m.operacao.criarEscola({ nome:'E. M. Pirabeiraba', slug:'pirabeiraba', redeId: m.REDES[1].id }); return m.operacao.convidarCoordenacao(id,'c@p.example') })
+console.log(r)
+await p.goto('http://127.0.0.1:5190'+r.link, { waitUntil: 'networkidle0' }); await new Promise(r=>setTimeout(r,500))
+await p.screenshot({ path: '/Users/gabriel/Code/Turmma/mockups/scripts/shots/polimento/revisao-R/convite-aceitar.png' })
+console.log((await p.evaluate(()=>document.body.innerText)).slice(0,600))
+// revoke created and check rede
+await p.goto('http://127.0.0.1:5190/rede', { waitUntil: 'networkidle0' })
+await p.evaluate(async ()=>{ const m = await import('/src/dados/rede.ts'); m.operacao.revogarConvite('pirabeiraba') }); await new Promise(r=>setTimeout(r,400))
+console.log((await p.evaluate(()=>document.body.innerText)).match(/Pirabeiraba\n[^\n]*/)?.[0])
+console.log(erros); await b.close()

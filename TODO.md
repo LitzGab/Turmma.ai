@@ -1172,9 +1172,11 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] **(D80) A onça como avatar de agente conversacional para menor:** levar ao advogado, com o parecer do ECA
       Digital (Decreto 12.880, arts. 10 e 11). As condições que a spec fixa estão na D80, item 3; as poses e a
       comemoração da X4 dependem do mesmo parecer (Joaquim)
-- [ ] **(D80) Trazer o mockup de outubro para `mockups/`:** ele mora no repositório privado `Prototipo_Turmma`, do
-      Gabriel, e a pasta `mockups/` daqui é a versão de setembro. Este repositório é público: decidir se entra, e
-      conferir antes a licença das peças coladas do 21st.dev (P20) (Gabriel e Joaquim)
+- [x] ~~**(D80) Trazer o mockup de outubro para `mockups/`**~~ — decidido pelo Joaquim em 16/10/2026 ("sobre o
+      mockup pode trazer para o projeto aqui"): `mockups/` é agora a cópia de `Prototipo_Turmma` em `a95568d`, com a
+      mesma cerca da versão de setembro, sem `node_modules`, e três linhas reescritas para o gitleaks
+      (`mockups/README.md`). O mockup não cola peça nova do 21st.dev; a conferência da licença (P20, item da seção
+      "Marca e interface") continua aberta, antes de qualquer peça entrar no código
 - [ ] **(D80, revisão das specs X2 a X4) O que os guardiões mandaram para fora das specs:** (a) a tela Material relê a
       cada 1,5 s enquanto houver material `processando`, e a ingestão pode esperar horas na fila de lote: rever o
       intervalo (`api/material.ts`; `infra-guardian`, X2); (b) `orcamento.consultar` e `usoDeHoje` contam as trocas do

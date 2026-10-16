@@ -145,7 +145,7 @@ export function NotaSistema({ icone, children, className }: { icone?: React.Reac
 export function AvatarIniciais({ iniciais, tamanho = 32, className }: { iniciais: string; tamanho?: number; className?: string }) {
   return (
     <Avatar aria-hidden className={className} style={{ width: tamanho, height: tamanho }}>
-      <AvatarFallback className="bg-caramelo text-[11.5px] font-semibold text-tinta">{iniciais}</AvatarFallback>
+      <AvatarFallback className="bg-caramelo text-[11.5px] font-semibold text-sobre-cor">{iniciais}</AvatarFallback>
     </Avatar>
   )
 }
@@ -271,7 +271,7 @@ export const CampoResposta = React.forwardRef<HTMLInputElement, {
         autoComplete="off" enterKeyHint="send"
         className="h-full min-w-0 flex-1 border-0 bg-transparent text-base text-tinta outline-none placeholder:text-sutil focus-visible:outline-none md:text-[15px]" />
       <button type="submit" aria-label="Enviar" disabled={!pronto}
-        className={cn("grid size-8 shrink-0 place-items-center rounded-full transition-colors duration-150", pronto ? "bg-caramelo text-tinta hover:bg-caramelo-claro" : "bg-realce text-inativo")}>
+        className={cn("grid size-8 shrink-0 place-items-center rounded-full transition-colors duration-150", pronto ? "bg-caramelo text-sobre-cor hover:bg-caramelo-claro" : "bg-realce text-inativo")}>
         <ArrowUp aria-hidden className="size-[17px]" strokeWidth={2.2} />
       </button>
     </form>

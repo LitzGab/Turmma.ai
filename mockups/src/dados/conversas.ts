@@ -1,4 +1,6 @@
-import { useSyncExternalStore } from 'react'
+import { useMemo } from 'react'
+import { criarFatia, recomecarDemonstracao } from './demo/nucleo'
+import { fatiaSessao } from './demo/sessao-base'
 import type { FormatoArquivo } from '@/components/ui/file-card-collections'
 
 /* CONVERSAS E PROJETOS DO PROFESSOR — o que faz o histórico da lateral ser REAL (pedido do Gabriel, 20/09/2026):
@@ -31,6 +33,8 @@ export type Conversa = {
   ferramenta: string
   turmaId: string
   projetoId?: string
+  /** de quem é a conversa (o professor da sessão: 'camila', 'marcos'…). Só ele vê. */
+  professorId?: string
   em: number
   /** conversa antiga já terminada: o que o Assistente respondeu, e o que ficou salvo na biblioteca */
   resposta?: string
@@ -75,31 +79,16 @@ const CONVERSAS_INICIAIS: Conversa[] = [
 
 type Estado = { projetos: Projeto[]; conversas: Conversa[] }
 
-const CHAVE = 'turmma-mockup-conversas-v1'
-const inicial = (): Estado => ({ projetos: PROJETOS_INICIAIS, conversas: CONVERSAS_INICIAIS })
+/* 12ª rodada (04/10/2026): Projetos SAIU (decisão do dono); as conversas moram numa fatia do estado da demonstração
+   (dados/demo/nucleo.ts), cada uma com o professor dono. `projetos` continua no tipo e vem sempre vazio. */
+const fatia = criarFatia<Conversa[]>('conversas', CONVERSAS_INICIAIS.map((c) => ({ ...c, projetoId: undefined, professorId: 'camila' })))
+void PROJETOS_INICIAIS
 
-function carregar(): Estado {
-  try {
-    const bruto = window.localStorage.getItem(CHAVE)
-    if (!bruto) return inicial()
-    const lido = JSON.parse(bruto) as Estado
-    return Array.isArray(lido.projetos) && Array.isArray(lido.conversas) ? lido : inicial()
-  } catch { return inicial() }
-}
-
-let estado: Estado = typeof window === 'undefined' ? inicial() : carregar()
-const ouvintes = new Set<() => void>()
-
-function mudar(proximo: Estado) {
-  estado = proximo
-  try { window.localStorage.setItem(CHAVE, JSON.stringify(estado)) } catch { /* modo privado: fica só na memória */ }
-  ouvintes.forEach((f) => f())
-}
-
-const assinar = (f: () => void) => { ouvintes.add(f); return () => { ouvintes.delete(f) } }
-
+/** As conversas do professor da sessão (sem projetos). */
 export function useAcervo(): Estado {
-  return useSyncExternalStore(assinar, () => estado, () => estado)
+  const lista = fatia.useValor()
+  const { professorId } = fatiaSessao.useValor()
+  return useMemo(() => ({ projetos: [], conversas: lista.filter((c) => (c.professorId ?? 'camila') === professorId) }), [lista, professorId])
 }
 
 const novoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
@@ -114,33 +103,28 @@ export function tituloDe(pedido: string) {
 export const acervo = {
   criarConversa(dados: { pedido: string; ferramenta: string; turmaId: string; projetoId?: string; anexos?: string[] }): Conversa {
     // cada conversa nova cai um minuto depois da anterior, para a ordem do histórico ficar certa
-    const em = Math.max(AGORA, ...estado.conversas.map((c) => c.em)) + 60_000
-    const conversa: Conversa = { id: novoId(), titulo: tituloDe(dados.pedido), em, ...dados }
-    mudar({ ...estado, conversas: [conversa, ...estado.conversas] })
+    const em = Math.max(AGORA, ...fatia.ler().map((c) => c.em)) + 60_000
+    const conversa: Conversa = { id: novoId(), titulo: tituloDe(dados.pedido), em, ...dados, projetoId: undefined, professorId: fatiaSessao.ler().professorId }
+    fatia.mudar((l) => [conversa, ...l])
     return conversa
   },
   renomearConversa(id: string, titulo: string) {
     const limpo = titulo.trim()
-    if (limpo) mudar({ ...estado, conversas: estado.conversas.map((c) => (c.id === id ? { ...c, titulo: limpo } : c)) })
+    if (limpo) fatia.mudar((l) => l.map((c) => (c.id === id ? { ...c, titulo: limpo } : c)))
   },
-  moverConversa(id: string, projetoId?: string) {
-    mudar({ ...estado, conversas: estado.conversas.map((c) => (c.id === id ? { ...c, projetoId } : c)) })
-  },
+  /** Projetos saíram: mover para um projeto não faz nada. */
+  moverConversa(id: string, projetoId?: string) { void id; void projetoId },
   apagarConversa(id: string) {
-    mudar({ ...estado, conversas: estado.conversas.filter((c) => c.id !== id) })
+    fatia.mudar((l) => l.filter((c) => c.id !== id))
   },
+  /** Projetos saíram: nada é criado (continua para não quebrar quem ainda chama). */
   criarProjeto(nome: string, turmaId: string): Projeto {
-    const projeto: Projeto = { id: novoId(), nome: nome.trim(), resumo: '', turmaId, instrucoes: '', arquivos: [], fixado: false, criadoEm: Math.max(AGORA, ...estado.projetos.map((p) => p.criadoEm)) + 1 }
-    mudar({ ...estado, projetos: [projeto, ...estado.projetos] })
-    return projeto
+    return { id: 'sem-projeto', nome: nome.trim(), resumo: '', turmaId, instrucoes: '', arquivos: [], fixado: false, criadoEm: AGORA }
   },
-  alternarFixado(id: string) {
-    mudar({ ...estado, projetos: estado.projetos.map((p) => (p.id === id ? { ...p, fixado: !p.fixado } : p)) })
-  },
-  salvarInstrucoes(id: string, instrucoes: string) {
-    mudar({ ...estado, projetos: estado.projetos.map((p) => (p.id === id ? { ...p, instrucoes } : p)) })
-  },
-  recomecar() { mudar(inicial()) },
+  alternarFixado(id: string) { void id },
+  salvarInstrucoes(id: string, instrucoes: string) { void id; void instrucoes },
+  /** Volta tudo ao começo (a demonstração inteira). */
+  recomecar() { recomecarDemonstracao() },
 }
 
 /** "Hoje", "Ontem", "7 dias anteriores", "Setembro" — como o histórico do ChatGPT. */

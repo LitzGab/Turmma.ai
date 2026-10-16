@@ -1300,3 +1300,11 @@ se toma é a técnica (ilustração chapada, botão com degrau), e não a marca 
 cores, os ícones e a fonte são nossos, e o verde não é a cor principal. O parecer sobre isso entra
 junto do registro no INPI (`TODO.md`). O mockup de outubro mora num repositório privado do Gabriel;
 a pasta `mockups/` daqui continua na versão de setembro até os dois decidirem trazê-lo.
+*Em 16/10/2026 o Joaquim decidiu trazê-lo* ("sobre o mockup pode trazer para o projeto aqui", junto da
+palavra de que cada spec finalizada pousa e vai para o GitHub): a pasta `mockups/` passou à versão de
+outubro, cópia fiel de `a95568d`, com a mesma cerca da de setembro (fora do build, do lint e dos testes
+da raiz, não é workspace, e nada dela entra no `apps/web` nem nos `packages/`). Ficaram de fora o
+`node_modules` e nada mais; três linhas que o gitleaks lia como chave foram reescritas sem mudar a tela
+(`mockups/README.md`). A licença do 21st.dev (P20) não trava a cópia: o mockup de outubro não cola peça
+nova do catálogo (as que ele usa já estão na pasta pública desde 23/09/2026, e o botão com degrau só cita
+as referências), e a conferência continua valendo antes de qualquer peça entrar no código (`TODO.md`).

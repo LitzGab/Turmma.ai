@@ -1,106 +1,165 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Marca, Pinta } from '@/components/marca/Pinta'
-import { NotaMockup } from '@/components/turmma/tela'
+import { useId, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { CircleAlert, Search } from 'lucide-react'
+import { Aviso, Botao, CampoSenha, CampoTexto, CLASSE_CAMPO, CLASSE_FLUTUA } from '@/components/duo'
+import { useParametro } from '@/components/turmma/tela'
+import { useProfessoresDaEscola } from '@/dados/escola-estado'
+import { sessao } from '@/dados/sessao'
+import { cn } from '@/lib/utils'
+import {
+  CascaPublica, ESCOLAS_PUBLICAS, Titulo, Voltar, classeDoLink, semAcento, useTituloDaAba, type EscolaPublica,
+} from '@/areas/publico/_casca'
 
-/* Entrada (11.8): tela dividida. À esquerda, a "logo branca" do Gabriel — a pinta laranja sobre o papel
-   quase branco, e mais nada. À direita, o formulário no desenho da entrada do ChatGPT: campos e botões em pílula.
-   Não existe "Cadastre-se": o cliente é a instituição (D2). Um `primario` só: "Entrar". */
+/* A ENTRADA (/entrar), como o Google: uma caixa, "Qual é a sua escola?". O autocompletar ignora acento e pontuação
+   ("colegio" acha o Colégio Aurora; "rio cach" acha a E. M. Rio Cachoeira) e leva a /e/<escola>, onde o aluno entra.
+   Embaixo, "Sou da equipe da escola" troca a caixa por e-mail e senha (?quem=equipe). O E-MAIL DECIDE O PAPEL:
+   · camila.souza@…, ou o e-mail de um professor que aceitou o convite na demonstração → /professor;
+   · helena.martins@… (coordenação), secretaria@educacao.joinville… (rede) e equipe@turmma… (operação) passam
+     antes pelo segundo fator (/entrar/verificacao?para=…).
+   "Esqueci a senha" responde sempre igual, tenha ou não conta (D78; regra 20, item 6). Não existe "Cadastre-se":
+   quem dá o acesso é a escola (D2). Saiu "Entrar com a conta da escola", que pulava o segundo fator. */
 
-const campo = 'h-12 rounded-full border-borda-campo bg-superficie px-5 text-base'
+export function Entrada() {
+  // Quem vem do aceite de um convite pode chegar com um aviso: abre direto em e-mail e senha.
+  const aviso = (useLocation().state as { aviso?: string } | null)?.aviso
+  const [quem, setQuem] = useParametro('quem')
+  const equipe = quem === 'equipe' || !!aviso
+  useTituloDaAba('Entrar · Turmma')
 
-function CampoEntrada({ id, rotulo, ...props }: { id: string; rotulo: string } & React.ComponentProps<typeof Input>) {
   return (
-    <div className="grid gap-1.5">
-      <Label htmlFor={id} className="pl-1 text-[13px] font-medium text-sutil">{rotulo}</Label>
-      <Input id={id} className={campo} {...props} />
+    <CascaPublica>
+      {equipe
+        ? <EntradaDaEquipe aviso={aviso} aoVoltar={() => setQuem(null)} />
+        : <QualEscola aoEquipe={() => setQuem('equipe')} />}
+    </CascaPublica>
+  )
+}
+
+/* ── O aluno: qual é a sua escola? ─────────────────────────────────────────────────────────────────────── */
+
+function QualEscola({ aoEquipe }: { aoEquipe: () => void }) {
+  const navegar = useNavigate()
+  const id = useId()
+  const [texto, setTexto] = useState('')
+  const [ativa, setAtiva] = useState(0)
+  const [aberta, setAberta] = useState(false)
+  const [erro, setErro] = useState('')
+
+  const achadas = useMemo(() => {
+    const t = semAcento(texto)
+    if (!t) return []
+    return ESCOLAS_PUBLICAS.filter((e) => semAcento(`${e.nome} ${e.cidade}`).includes(t))
+  }, [texto])
+  const mostrar = aberta && achadas.length > 0
+
+  const ir = (e: EscolaPublica) => navegar(`/e/${e.slug}`)
+  const enviar = (ev: React.FormEvent) => {
+    ev.preventDefault()
+    const escolhida = achadas[ativa] ?? achadas[0]
+    if (escolhida) ir(escolhida)
+    else setErro(texto.trim() ? 'Não achamos essa escola. Confira o nome com o professor.' : 'Digite o nome da sua escola.')
+  }
+  const teclas = (ev: React.KeyboardEvent) => {
+    if (!achadas.length) return
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); setAberta(true); setAtiva((a) => (a + 1) % achadas.length) }
+    if (ev.key === 'ArrowUp') { ev.preventDefault(); setAtiva((a) => (a - 1 + achadas.length) % achadas.length) }
+    if (ev.key === 'Escape') setAberta(false)
+  }
+
+  return (
+    <div className="animate-entra">
+      <Titulo titulo="Qual é a sua escola?" />
+      <form className="mt-7 grid gap-5" onSubmit={enviar} noValidate>
+        <div className="relative">
+          <label htmlFor={`${id}-campo`} className="sr-only">Nome da escola</label>
+          <Search aria-hidden strokeWidth={2.5} className="pointer-events-none absolute left-3.5 top-6 size-5 -translate-y-1/2 text-sutil" />
+          <input id={`${id}-campo`}
+            role="combobox" aria-expanded={mostrar} aria-controls={`${id}-lista`} aria-autocomplete="list"
+            aria-activedescendant={mostrar ? `${id}-${ativa}` : undefined} aria-invalid={!!erro || undefined}
+            aria-describedby={erro ? `${id}-erro` : undefined}
+            value={texto} placeholder="Comece a digitar o nome" autoFocus autoComplete="off" spellCheck={false}
+            onChange={(e) => { setTexto(e.target.value); setAtiva(0); setAberta(true); setErro('') }}
+            onFocus={() => setAberta(true)} onBlur={() => window.setTimeout(() => setAberta(false), 120)} onKeyDown={teclas}
+            className={cn(CLASSE_CAMPO, 'h-12 pl-11')} />
+          {mostrar && (
+            <ul id={`${id}-lista`} role="listbox" aria-label="Escolas"
+              className={cn(CLASSE_FLUTUA, 'absolute inset-x-0 top-[56px] z-20 grid gap-0.5 p-1.5')}>
+              {achadas.map((e, i) => (
+                <li key={e.slug} id={`${id}-${i}`} role="option" aria-selected={i === ativa}
+                  onMouseDown={(ev) => { ev.preventDefault(); ir(e) }} onMouseEnter={() => setAtiva(i)}
+                  className={cn('flex cursor-pointer items-baseline justify-between gap-3 rounded-[12px] px-3.5 py-3', i === ativa && 'bg-azul-claro')}>
+                  <span className="t-cartao min-w-0 truncate">{e.nome}</span>
+                  <span className="t-apoio shrink-0">{e.cidade}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {erro && (
+            <p id={`${id}-erro`} role="alert" className="mt-1.5 flex items-start gap-1.5 text-[15px] font-bold leading-5 text-vermelho-texto">
+              <CircleAlert aria-hidden className="mt-px size-[18px] shrink-0" strokeWidth={2.5} /> {erro}
+            </p>
+          )}
+        </div>
+        <Botao type="submit" largura="cheia">Continuar</Botao>
+      </form>
+      <p className="t-apoio mt-7">
+        <button type="button" onClick={aoEquipe} className={classeDoLink}>Sou da equipe da escola</button>
+      </p>
     </div>
   )
 }
 
-export function Entrada() {
+/* ── A equipe: e-mail e senha ──────────────────────────────────────────────────────────────────────────── */
+
+/** Para onde vai cada e-mail. `null`: não é de ninguém (a resposta não diz se o e-mail existe). */
+function destinoDoEmail(email: string, professores: ReturnType<typeof useProfessoresDaEscola>): { para: string; professor?: string } | null {
+  const e = email.trim().toLowerCase()
+  if (e.startsWith('camila.souza@')) return { para: '/professor?como=camila', professor: 'camila' }
+  if (e.startsWith('helena.martins@')) return { para: '/entrar/verificacao?para=/coordenacao' }
+  if (e.startsWith('secretaria@educacao.joinville')) return { para: '/entrar/verificacao?para=/rede' }
+  if (e.startsWith('equipe@turmma')) return { para: '/entrar/verificacao?para=/operacao' }
+  const p = professores.find((x) => x.email?.toLowerCase() === e && x.sessaoId && x.estado === 'ativo')
+  if (p?.sessaoId) return { para: `/professor?como=${p.sessaoId}`, professor: p.sessaoId }
+  return null
+}
+
+function EntradaDaEquipe({ aviso, aoVoltar }: { aviso?: string; aoVoltar: () => void }) {
   const navegar = useNavigate()
-  const [quem, setQuem] = useState<'professor' | 'coordenacao'>('professor')
+  const professores = useProfessoresDaEscola()
+  const [email, setEmail] = useState('camila.souza@colegioaurora.example')
+  const [senha, setSenha] = useState('demonstracao')
+  const [erro, setErro] = useState('')
+  const [esqueci, setEsqueci] = useState(false)
+
+  const entrar = (e: React.FormEvent) => {
+    e.preventDefault()
+    setEsqueci(false)
+    const destino = senha ? destinoDoEmail(email, professores) : null
+    if (!destino) { setSenha(''); setErro('E-mail ou senha incorretos.'); return }
+    if (destino.professor) sessao.entrarComoProfessor(destino.professor)
+    navegar(destino.para)
+  }
 
   return (
-    <div className="grid min-h-svh md:grid-cols-2">
-      {/* Esquerda: metade da tela; abaixo de 768 px vira faixa de 96 px */}
-      <aside className="relative flex h-24 items-center bg-papel px-6 md:h-auto md:flex-col md:items-stretch md:justify-between md:p-10">
-        <Marca className="text-[22px]" />
-        <div className="hidden flex-1 flex-col items-center justify-center gap-10 md:flex">
-          <Pinta className="h-[clamp(180px,22vw,300px)] w-[clamp(180px,22vw,300px)] text-caramelo" rotulo="Turmma" />
-          <p className="text-[15px] tracking-[0.12em] text-inativo">#aiforschools</p>
-        </div>
-        <p className="hidden text-center text-[13px] text-inativo md:block">Colégio Aurora · Joinville, SC · escola de demonstração com dado sintético</p>
-      </aside>
+    <div className="animate-entra">
+      <Voltar aoVoltar={aoVoltar}>Sou aluno</Voltar>
+      <Titulo titulo="Entrar na Turmma" />
+      {aviso && <Aviso tom="certo" className="mt-5">{aviso}</Aviso>}
 
-      <main className="flex items-center justify-center bg-fundo px-4 py-10 md:px-10">
-        <div className="w-full max-w-[420px]">
-          <h1 className="text-[28px] font-normal leading-tight tracking-[-0.01em] text-tinta">Entrar na Turmma</h1>
-          <p className="mt-1.5 text-base text-sutil">Use o acesso que a sua escola te deu.</p>
+      <form className="mt-6 grid gap-4" onSubmit={entrar} noValidate>
+        <CampoTexto rotulo="E-mail" type="email" inputMode="email" autoComplete="username" valor={email}
+          aoMudar={(v) => { setEmail(v); setErro(''); setEsqueci(false) }} />
+        <CampoSenha rotulo="Senha" valor={senha} erro={erro}
+          aoMudar={(v) => { setSenha(v); setErro('') }} />
+        <Botao type="submit" largura="cheia">Entrar</Botao>
+      </form>
 
-          <Tabs defaultValue="aluno" className="mt-7">
-            <TabsList className="grid h-11 w-full grid-cols-2 rounded-full bg-realce-suave p-1">
-              <TabsTrigger value="aluno" className="h-9 rounded-full text-sm font-medium text-sutil data-[state=active]:bg-superficie data-[state=active]:text-tinta data-[state=active]:shadow-sm">Sou aluno</TabsTrigger>
-              <TabsTrigger value="equipe" className="h-9 rounded-full text-sm font-medium text-sutil data-[state=active]:bg-superficie data-[state=active]:text-tinta data-[state=active]:shadow-sm">Sou da escola</TabsTrigger>
-            </TabsList>
-
-            {/* Aluno: conta da escola, quando existe, ou escola + matrícula + senha (D48). Aluno não tem e-mail aqui. */}
-            <TabsContent value="aluno" className="mt-6">
-              <Card className="border-0 bg-transparent shadow-none">
-                <CardContent className="grid gap-5 p-0">
-                  <div className="grid gap-2.5">
-                    <p className="pl-1 text-[13px] font-medium text-sutil">Entrar com a conta da escola</p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <Button variant="secundario" className="h-12" onClick={() => navegar('/aluno')}><img src="/marca/google.svg" alt="" className="size-[18px]" /> Google</Button>
-                      <Button variant="secundario" className="h-12" onClick={() => navegar('/aluno')}><img src="/marca/microsoft.svg" alt="" className="size-[18px]" /> Microsoft</Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-sutil"><span className="h-px flex-1 bg-linha" />ou com a sua matrícula<span className="h-px flex-1 bg-linha" /></div>
-                  <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); navegar('/aluno') }}>
-                    <CampoEntrada id="escola" rotulo="Escola" defaultValue="Colégio Aurora" autoComplete="organization" />
-                    <CampoEntrada id="matricula" rotulo="Matrícula" defaultValue="2026-0412" inputMode="numeric" autoComplete="username" />
-                    <CampoEntrada id="senha-aluno" rotulo="Senha" type="password" defaultValue="demonstracao" autoComplete="current-password" />
-                    <Button type="submit" className="h-12 w-full">Entrar</Button>
-                  </form>
-                  <p className="text-[15px] leading-snug text-sutil">Esqueceu a senha? Fale com seu professor. Ele consegue liberar uma nova para você.</p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Professor e coordenação: convite da escola; a coordenação passa pelo segundo fator (F1). */}
-            <TabsContent value="equipe" className="mt-6">
-              <Card className="border-0 bg-transparent shadow-none">
-                <CardContent className="grid gap-5 p-0">
-                  <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); navegar(quem === 'professor' ? '/professor' : '/entrar/verificacao') }}>
-                    <CampoEntrada id="email" rotulo="E-mail" type="email" inputMode="email" autoComplete="username"
-                      key={quem} defaultValue={quem === 'professor' ? 'camila.souza@colegioaurora.example' : 'helena.martins@colegioaurora.example'} />
-                    <CampoEntrada id="senha" rotulo="Senha" type="password" defaultValue="demonstracao" autoComplete="current-password" />
-                    <Button type="submit" className="h-12 w-full">Entrar</Button>
-                  </form>
-                  <p className="text-sm leading-snug text-sutil">Não existe cadastro aberto. Quem te dá acesso é a coordenação da sua escola, por convite.</p>
-                </CardContent>
-              </Card>
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-sutil">
-                Entrar como
-                <Button variant={quem === 'professor' ? 'secundario' : 'discreto'} size="sm" onClick={() => setQuem('professor')}>Professora Camila</Button>
-                <Button variant={quem === 'coordenacao' ? 'secundario' : 'discreto'} size="sm" onClick={() => setQuem('coordenacao')}>Coordenadora Helena</Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <p className="mt-8 text-sm text-sutil">
-            <a href="#" className="text-tinta underline underline-offset-4 hover:text-sutil">Privacidade</a> ·{' '}
-            <a href="#" className="text-tinta underline underline-offset-4 hover:text-sutil">Como a IA funciona aqui</a>
-          </p>
-          <NotaMockup>A1 · Entrada (11.8). Sem "Cadastre-se" (D2); aluno entra pela conta da escola ou por escola + matrícula + senha (D48); coordenação passa pelo segundo fator (F1). O painel da esquerda é a "logo branca": pinta laranja sobre o papel.</NotaMockup>
-        </div>
-      </main>
+      <div className="mt-5 grid gap-3">
+        {esqueci
+          ? <Aviso tom="info">Se o e-mail estiver cadastrado, enviamos um link.</Aviso>
+          : <p className="t-apoio"><button type="button" onClick={() => { setEsqueci(true); setErro('') }} className={classeDoLink}>Esqueci a senha</button></p>}
+        <p className="t-apoio">Não tem acesso? Peça um convite à coordenação.</p>
+      </div>
     </div>
   )
 }

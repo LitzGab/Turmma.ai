@@ -36,8 +36,8 @@ export function Folder({ tom = 'laranja', escala = 1, aberta = false, children, 
           {/* o fundo da pasta, com a aba à esquerda */}
           <div className={cn("relative h-full w-full origin-top rounded-2xl rounded-tl-none bg-[var(--pasta-fundo)] after:absolute after:bottom-[99%] after:left-0 after:h-4 after:w-20 after:rounded-t-2xl after:bg-[var(--pasta-fundo)] after:content-[''] before:absolute before:-top-[15px] before:left-[75.5px] before:h-4 before:w-4 before:bg-[var(--pasta-fundo)] before:content-[''] before:[clip-path:polygon(0_35%,0%_100%,50%_100%)] group-hover/pasta:shadow-[0_20px_40px_rgba(0,0,0,.18)] group-data-[aberta=true]/pasta:shadow-[0_20px_40px_rgba(0,0,0,.18)]", SOLTA)} />
           {/* as três folhas */}
-          <div className={cn('absolute inset-1 origin-bottom select-none rounded-2xl bg-[#CFCFCF]', SOLTA, FOLHA_1)} />
-          <div className={cn('absolute inset-1 origin-bottom rounded-2xl bg-[#E4E4E4]', SOLTA, FOLHA_2)} />
+          <div className={cn('absolute inset-1 origin-bottom select-none rounded-2xl bg-borda-forte', SOLTA, FOLHA_1)} />
+          <div className={cn('absolute inset-1 origin-bottom rounded-2xl bg-borda', SOLTA, FOLHA_2)} />
           <div className={cn('absolute inset-1 origin-bottom overflow-hidden rounded-2xl bg-white p-5', SOLTA, FOLHA_3)}>
             {children ?? (
               <div className="space-y-2.5">

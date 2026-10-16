@@ -12,6 +12,8 @@ import { resumoDa } from './turmas-resumo'
    · (oitava rodada, a aba "Uso de IA" no desenho da Teachy) entram a SÉRIE de conversas por dia, por assunto, e o
      HISTÓRICO: o que o aluno fez no Tutor (tirou dúvida de um assunto, pediu resposta pronta, revisou) e quando.
      Continua sendo fato registrado: nem duração, nem o texto da conversa, nem leitura de como o aluno estava.
+   · (décima rodada, 04/10/2026) o HISTÓRICO com nome, ação e horário de cada aluno SAIU da tela (D57, D66, D69): o
+     painel "O que o Tutor viu esta semana" só mostra agregado. `historicoTutorDa` continua exportado, fora do caminho.
    O "agora" é segunda, 21/09/2026, 10h42. */
 
 export const comVirgula = (n: number, casas = 1) => n.toFixed(casas).replace('.', ',')
@@ -55,7 +57,7 @@ export type AtividadeTurma = {
   acao: { rotulo: string; para: string }
 }
 
-const ABRIR = '/professor/biblioteca/prova-estequiometria'
+const ABRIR = '/professor/criados/prova-estequiometria'
 const ordemDe = (data: string) => Number(data.slice(3)) * 100 + Number(data.slice(0, 2))
 
 /* A nota não é só o acerto: soma o que a professora considera na atividade (ver `alunos.ts`). Descontando esses 11
@@ -64,22 +66,29 @@ const ACIMA_DO_ACERTO = 11
 
 /* Na ordem de `aluno.notas`. */
 const CORRIGIDAS: { curto: string; tipo: TipoAtividade; detalhe: string; aprovadaEm: string }[] = [
-  { curto: 'Balanceamento', tipo: 'atividade', detalhe: '6 exercícios', aprovadaEm: '31/08' },
-  { curto: 'Proporção · lista 1', tipo: 'lista', detalhe: '10 exercícios', aprovadaEm: '08/09' },
+  { curto: 'Balanceamento', tipo: 'atividade', detalhe: '8 exercícios', aprovadaEm: '31/08' },
+  { curto: 'Proporção · lista 1', tipo: 'lista', detalhe: '8 exercícios', aprovadaEm: '08/09' },
   { curto: 'Mol e massa molar', tipo: 'lista', detalhe: '8 exercícios', aprovadaEm: '18/09' },
-  { curto: 'Prova', tipo: 'prova', detalhe: '10 questões', aprovadaEm: '19/09' },
+  { curto: 'Prova de mol', tipo: 'prova', detalhe: '10 questões', aprovadaEm: '19/09' },
 ]
 
-type Extra = Pick<AtividadeTurma, 'nome' | 'tipo' | 'detalhe' | 'data' | 'estado' | 'nota'> & { id: string; curto?: string; habilidade?: AtividadeTurma['habilidade'] }
+type Extra = Pick<AtividadeTurma, 'nome' | 'tipo' | 'detalhe' | 'data' | 'estado' | 'nota'> & {
+  id: string; curto?: string; habilidade?: AtividadeTurma['habilidade']
+  /** o selo, quando o do estado não serve (a aberta com o prazo já passado ainda aceita entrega) */
+  selo?: string
+}
 
 const EXTRAS: Record<string, Extra[]> = {
   '2b': [
-    { id: 'segunda-chamada', nome: 'Prova de estequiometria · 2ª chamada', tipo: 'prova', detalhe: '10 questões', data: '24/09', estado: 'agendada',
-      nota: 'Para quem não fez a prova de 18/09. A versão adaptada, com fonte ampliada, espera a sua aprovação.', habilidade: { nome: 'Reagente limitante', pagina: 151 } },
-    { id: 'estequiometria', nome: 'Atividade de estequiometria', tipo: 'atividade', detalhe: '6 exercícios', data: '23/09', estado: 'aberta',
-      nota: 'Atribuída em 16/09. Os alunos entregam até quarta, 23/09, às 23h59.', habilidade: { nome: 'Mol e massa molar', pagina: 145 } },
-    { id: 'rascunho', nome: 'Lista de reagente limitante', tipo: 'lista', detalhe: '8 exercícios', data: '19/09', estado: 'rascunho',
-      nota: 'Ainda não foi atribuída: os alunos só veem depois que você definir o prazo e atribuir.', habilidade: { nome: 'Reagente limitante', pagina: 151 } },
+    // 12ª rodada: a prova de HOJE, o documento da conversa das 10h38. Só chega aos alunos quando a Camila aprova
+    // (dados/envios.ts); a versão adaptada, com fonte ampliada, também espera a aprovação dela.
+    { id: 'prova-estequiometria', nome: 'Prova de estequiometria', tipo: 'prova', detalhe: '10 questões', data: '21/09', estado: 'rascunho',
+      nota: 'Só você vê. Chega ao 2ºB quando você aprovar.', habilidade: { nome: 'Reagente limitante', pagina: 151 } },
+    { id: 'estequiometria', nome: 'Lista de estequiometria', tipo: 'lista', detalhe: '8 questões', data: '24/09', estado: 'aberta',
+      nota: 'Atribuída em 16/09. Os alunos entregam até quinta, 24/09, às 23h59.', habilidade: { nome: 'Mol e massa molar', pagina: 145 } },
+    // a mesma lista que o aluno vê em Pra fazer ("era para 17/09 · ainda dá", dados/tarefas-aluno.ts, id 'reagente')
+    { id: 'reagente', nome: 'Lista de reagente limitante', tipo: 'lista', detalhe: '8 exercícios', data: '17/09', estado: 'aberta', selo: 'Ainda aceita entrega',
+      nota: 'Atribuída em 14/09, com prazo até 17/09. Quem não entregou ainda pode entregar.', habilidade: { nome: 'Reagente limitante', pagina: 151 } },
   ],
   '2a': [
     { id: 'limitante', nome: 'Atividade de reagente limitante', tipo: 'atividade', detalhe: '6 exercícios', data: '25/09', estado: 'aberta',
@@ -107,15 +116,20 @@ const EXTRAS: Record<string, Extra[]> = {
   ],
 }
 
+/* Décima rodada (04/10/2026): o estado numa palavra, com o glossário do blueprint. "Para aprovar" é o único em
+   laranja na tela; "Corrigida" quer dizer corrigida E aprovada (a nota já conta). */
+const DIAS_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado']
+/** "23/09" → "quarta" (o ano do mockup é 2026). */
+export const diaDaSemana = (data: string) => DIAS_SEMANA[new Date(2026, Number(data.slice(3)) - 1, Number(data.slice(0, 2))).getDay()]
 const SELO: Record<EstadoAtividade, (data: string) => string> = {
-  esperando: () => 'Esperando você', aprovada: () => 'Corrigida e aprovada', corrigir: () => 'Sem correção',
-  aberta: (d) => `Aberta até ${d}`, agendada: () => 'Agendada', rascunho: () => 'Rascunho',
+  esperando: () => 'Para aprovar', aprovada: () => 'Corrigida', corrigir: () => 'Para corrigir',
+  aberta: (d) => `Aberta até ${diaDaSemana(d)}`, agendada: (d) => `Agendada para ${diaDaSemana(d)}`, rascunho: () => 'Rascunho',
 }
 const ACAO: Record<EstadoAtividade, AtividadeTurma['acao']> = {
-  esperando: { rotulo: 'Revisar a correção', para: '/professor/aprovar' },
+  esperando: { rotulo: 'Aprovar as notas', para: '/professor/aprovar/prova-2b' },
   aprovada: { rotulo: 'Abrir', para: ABRIR }, aberta: { rotulo: 'Abrir', para: ABRIR }, agendada: { rotulo: 'Abrir', para: ABRIR },
   corrigir: { rotulo: 'Corrigir', para: '/professor/ferramentas/correcao' },
-  rascunho: { rotulo: 'Continuar', para: '/professor/ferramentas/atividade' },
+  rascunho: { rotulo: 'Continuar', para: '/professor/conversa/nova?ferramenta=atividade' },
 }
 const ROTULO_DATA: Record<EstadoAtividade, string> = { esperando: 'Aplicada', aprovada: 'Aplicada', corrigir: 'Aplicada', aberta: 'Prazo', agendada: 'Agendada', rascunho: 'Editado' }
 
@@ -158,7 +172,7 @@ function montarAtividades(turmaId: string): AtividadeTurma[] {
     lista.push({
       id: `${turmaId}-${e.id}`, nome: e.nome, curto: e.curto ?? e.nome, tipo: e.tipo, detalhe: e.detalhe, data: e.data,
       rotuloData: e.estado === 'corrigir' && e.tipo !== 'prova' ? 'Entregue' : ROTULO_DATA[e.estado],
-      estado: e.estado, selo: SELO[e.estado](e.data), indiceNota: null,
+      estado: e.estado, selo: e.selo ?? SELO[e.estado](e.data), indiceNota: null,
       entregas: e.estado === 'aberta' || e.estado === 'corrigir' ? { feitas: total - quem.length, total } : null,
       acerto: null, media: null, habilidade: e.habilidade ?? null, nota: e.nota, quem,
       rotuloQuem: e.estado === 'aberta' ? 'Ainda não entregou' : e.estado === 'agendada' ? 'Quem vai fazer' : 'Não fez',

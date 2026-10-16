@@ -11,6 +11,13 @@ import type { FuncaoId } from './agentes'
 
 export type TipoSinalMsg = 'travou' | 'pronta' | 'repetiu' | 'atencao'
 
+/** A MENSAGEM COMBINADA com a escola para assunto delicado (D36), como o aluno a lê no Tutor, e a linha do 188 que
+    vem com ela. É um texto só: o trecho que a orientação e o professor abrem (registro de auditoria, Lei 13.819 — lei;
+    D78) tem de ser igual ao que o aluno viu. Quem guarda o trecho e quem desenha a fala leem DAQUI. */
+export const FALA_TUTOR_ASSUNTO_DELICADO = 'Obrigado por contar. Sou um programa e não posso ajudar nisso. Fale hoje com um professor ou com a orientação da escola.'
+export const LINHA_188 = 'Se for urgente, ligue 188 (CVV). É de graça, a qualquer hora.'
+export const TRECHO_TUTOR_ASSUNTO_DELICADO = `${FALA_TUTOR_ASSUNTO_DELICADO} ${LINHA_188}`
+
 /** A linha de registro embaixo da resposta da professora: "Aprovado por Camila Souza · 21/09, 10h58". */
 /** `ok` (verde) é SÓ para aprovação; "visto", "aviso enviado" e "contestação registrada" são `neutro` (cinza). */
 export type Registro = { verbo: string; tom: 'ok' | 'erro' | 'neutro'; quando?: string }
@@ -139,7 +146,7 @@ export const MENSAGENS_TUTOR: MensagemTime[] = [
   { id: 'travou', dia: 'Hoje · 2ºB', hora: '10h15', de: 'agente', sinal: { tipo: 'travou', detalhe: '8 alunos' }, fonte: 145,
     texto: 'Oito alunos travaram no mesmo passo: converter massa em mol antes de usar a proporção da equação.',
     anexo: { tipo: 'alunos', nomes: ['Ana Beatriz', 'Bruno Tavares', 'Caio Mendes', 'Eduarda Lima', 'Heitor Alves', 'Larissa Melo', 'Nicolas Dias', 'Pedro Henrique'] },
-    nota: 'Como cheguei a isto: errou o mesmo passo duas vezes ou mais na atividade de hoje. É um sinal para você olhar, não uma conclusão sobre o aluno.',
+    nota: 'Errou o mesmo passo 2 vezes hoje. É sinal, não conclusão.',
     contestavel: true,
     acoes: [
       { id: 'reforco', rotulo: 'Pedir uma atividade de reforço', variante: 'secundario', para: '/professor/ferramentas/atividade' },
@@ -196,5 +203,5 @@ export const REPLICA_REJEICAO: Replica = { texto: 'Entendi. Refaço com isso e a
 
 export const REPLICA_CONTESTACAO: Record<'assistente' | 'tutor', Replica> = {
   assistente: { texto: 'Registrei a sua contestação. Revejo esta entrega com o que você escreveu e aviso aqui.' },
-  tutor: { texto: 'Registrei a sua contestação. O sinal fica marcado como contestado e eu revejo o critério com o que você escreveu.' },
+  tutor: { texto: 'Registrei. O sinal fica marcado como contestado, e eu revejo o critério com o que você escreveu.' },
 }

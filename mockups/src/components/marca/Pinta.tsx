@@ -34,7 +34,7 @@ export function Marca({ className, negativo = false }: { className?: string; neg
 
 /* Cada turma tem a pinta dela (manual da marca): mesma forma, giro e cor fixos por turma.
    No mockup o giro e a cor saem do nome da turma, sempre iguais para a mesma turma. */
-const CORES_TURMA = ['#E8732E', '#0D0D0D', '#E8732E', '#5D5D5D', '#E8732E', '#0D0D0D']
+const CORES_TURMA = ['var(--color-laranja)', 'var(--color-tinta)', 'var(--color-laranja)', 'var(--color-sutil)', 'var(--color-laranja)', 'var(--color-tinta)']
 
 export function PintaTurma({ turma, className = 'h-7 w-7' }: { turma: string; className?: string }) {
   let soma = 0

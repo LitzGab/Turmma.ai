@@ -1,18 +1,14 @@
-import { Search } from 'lucide-react'
+import { Busca as BuscaDuo, CLASSE_CAMPO } from '@/components/duo'
 import { cn } from '@/lib/utils'
 
-/* O que o Catálogo e a Biblioteca dividem: a busca em pílula e a veste do botão em pílula da barra de 36 px. */
+/* O que o Catálogo e Criados dividem: a busca e a veste do botão em pílula da barra de controles.
+   12ª rodada: a busca é a peça duo (44 px, borda de 2 px, canto 12, foco em azul). */
 
 export const limpa = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
 
-export const campoBusca = 'h-9 w-full rounded-full border border-borda-campo bg-superficie pl-10 pr-3 text-sm text-tinta outline-none transition-colors duration-150 placeholder:text-inativo focus-visible:border-tinta'
-export const pilula = 'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-medium transition-colors duration-150'
+export const campoBusca = cn(CLASSE_CAMPO, 'h-11 pl-11 text-[16px]')
+export const pilula = 'inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border-2 border-borda px-4 text-[15px] font-bold transition-colors duration-150'
 
 export function Busca({ valor, aoMudar, rotulo, className }: { valor: string; aoMudar: (v: string) => void; rotulo: string; className?: string }) {
-  return (
-    <label className={cn('relative w-full sm:w-64', className)}>
-      <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-inativo" />
-      <input value={valor} onChange={(e) => aoMudar(e.target.value)} placeholder={rotulo} aria-label={rotulo} className={campoBusca} />
-    </label>
-  )
+  return <BuscaDuo valor={valor} aoMudar={aoMudar} rotulo={rotulo} className={cn('w-full sm:w-64', className)} />
 }

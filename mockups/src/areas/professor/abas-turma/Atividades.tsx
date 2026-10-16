@@ -1,21 +1,44 @@
-import { useRef, useState, type ReactNode, type Ref } from 'react'
-import { Link } from 'react-router-dom'
-import { CalendarClock, Check, CircleDashed, ClipboardList, Clock3, FilePlus2, ListChecks, PenLine, PencilLine, Search, Timer, type LucideIcon } from 'lucide-react'
-import { ChipFonte, LinhaAprovacao } from '@/components/turmma/ia'
-import { Trilho } from '@/components/turmma/painel'
-import { AvatarT, CabecalhoAba, CartaoT, ChipT, Periodo, botaoT, tabelaT, tipo as tipoT } from '@/components/turmma/teachy'
+import { useMemo, useState, type ReactNode, type Ref } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Search, type LucideIcon } from 'lucide-react'
+import {
+  Aviso, Avatar, BarraProgresso, Botao, Cartao, Carimbo, EstadoVazio, LadrilhoIcone, Linha, NumeroGrande, Segmentado, Selo, materiaDe, type Familia,
+} from '@/components/duo'
+import { Icone } from '@/components/duo/icones'
+import { Onca } from '@/components/duo/onca'
+import { ChipFonte } from '@/components/turmma/ia'
+import { PainelLado } from '@/components/turmma/painel-lado'
+import { useParametro } from '@/components/turmma/tela'
+import { AvatarT, tabelaT, tipo as tipoT } from '@/components/turmma/teachy'
+import { useAlunosDaTurma } from '@/dados/acesso'
 import { alunosDa, type Aluno } from '@/dados/alunos'
-import { turmaDe } from '@/dados/escola'
-import { atividadesDa, comVirgula, materialDa, type AtividadeTurma, type EstadoAtividade, type TipoAtividade } from '@/dados/turma-atividades'
+import { notasDoLote, useLotes, type Lote } from '@/dados/avaliacoes'
+import { BIBLIOTECA } from '@/dados/biblioteca'
+import { agora, criarFatia } from '@/dados/demo/nucleo'
+import { useEnvios, useEstadoEnvios, type Envio } from '@/dados/envios'
+import { useTurmasDoProfessor } from '@/dados/turmas-professora'
+import { resumoDa } from '@/dados/turmas-resumo'
+import { atividadesDa, diaDaSemana, materialDa, type AtividadeTurma, type TipoAtividade } from '@/dados/turma-atividades'
 import { cn } from '@/lib/utils'
 
-/* ABA ATIVIDADES da turma aberta, e as PEÇAS QUE AS CINCO ABAS DIVIDEM (Atividades, Notas, Uso de IA, Frequência e
-   Ranking), na PELE DA TEACHY (oitava rodada, 20/09/2026: "eu quero um ctrl c e ctrl v da Teachy").
-   O molde é o dela, igual em toda aba: `CabecalhoAba` (título Quicksand 16/700 + uma linha de apoio cinza; à direita o
-   seletor de período e o botão primário de 34 px), as subabas sublinhadas que filtram, e embaixo a tabela de canto 8
-   com cabeçalho de 49 px em cinza muito claro. A aba é um BLOCO DE ALTURA NATURAL: quem rola é a página da turma.
-   Tabela larga rola de lado dentro da própria caixa, no celular. As cores são as nossas: bordas e fundos neutros, e o
-   laranja só no botão primário, no sublinhado da subaba, em link e no ícone pequeno de rótulo. */
+/* A ABA "ATIVIDADES" DA TURMA — 12ª rodada (04/10/2026), no sistema Turmma × Duolingo (plano de polimento, 5.2).
+
+   UMA lista, num cartão, a mais nova primeiro. Cada linha: o ladrilho do tipo (prova, lista ou atividade) na cor da
+   matéria, o título, o selo do estado (PARA APROVAR · ABERTA ATÉ QUINTA · AGENDADA · CORRIGIDA; o rascunho também é PARA APROVAR) e "19 de 32".
+   O estado é VIVO: vem do dado da turma (dados/turma-atividades) mais o que aconteceu na demonstração:
+   · a prova aprovada e enviada pelo documento entra como "Aberta" (ou "Agendada", na próxima aula) — dados/envios;
+   · as entregas dos alunos contam ("1 de 32"), e com notas para aprovar a linha fica "Para aprovar";
+   · aprovadas as notas (aqui, no Início ou na página do lote), ela vira "Corrigida" quando todos entregaram (ou o
+     professor encerrou); antes disso segue "Aberta", com o carimbo das notas aprovadas — dados/avaliacoes (useLotes).
+   NOVA ATIVIDADE (primário) abre a conversa nova, já com a turma. O filtro só aparece com mais de 8 linhas.
+   A linha abre ao lado (?atividade=): os números grandes (ENTREGARAM · ACERTO · ABAIXO DE 6), os erros que se
+   repetiram com a página, quem ainda não começou e as ações: APROVAR AS NOTAS (oficial, com lote esperando),
+   ENCERRAR AGORA (aberta; D77), ABRIR O DOCUMENTO e, na discursiva do 1ºC, CORRIGIR AS DISCURSIVAS.
+   SAÍRAM o recado fixado, as linhas "Material", o Nova ▾ com Recado e Material, o Mural e os Recursos: o material vai
+   pelo "Aprovar e enviar" do documento, e a escola já tem o seu canal de recado.
+
+   As peças exportadas logo abaixo (SubAbas, BuscaAluno, CaixaTabela, AlunoT, LinhaVazia, FraseDoPe, RotuloCartao)
+   ficam até a P4 apagar o Ranking, que ainda as importa. */
 
 /* ── Peças comuns ────────────────────────────────────────────────────────────────────────────────────────── */
 
@@ -105,232 +128,419 @@ export function RotuloCartao({ icone: Icone, titulo, apoio, lado }: { icone: Luc
 
 /* ── A aba ───────────────────────────────────────────────────────────────────────────────────────────────── */
 
-const TIPO: Record<TipoAtividade, { nome: string; icone: LucideIcon }> = {
-  prova: { nome: 'Prova', icone: ClipboardList },
-  lista: { nome: 'Lista', icone: ListChecks },
-  atividade: { nome: 'Atividade', icone: PenLine },
+type Estado = 'aprovar' | 'aberta' | 'agendada' | 'corrigida' | 'rascunho' | 'corrigir' | 'encerrada'
+
+type LinhaAtv = {
+  id: string
+  titulo: string
+  tipo: TipoAtividade
+  /** dd/mm, para ordenar e para "Aberta até quinta" */
+  data: string
+  /** o prazo já passou e ainda aceita entrega (o selo fica neutro, como o "AINDA DÁ" do aluno; D59) */
+  vencida?: boolean
+  ordem: number
+  estado: Estado
+  selo: string
+  /** o selo no celular, numa palavra ou duas */
+  seloCurto: string
+  /** a coluna Prazo: "até quinta, 24/09", "abre terça 7h30", "aplicada 18/09" */
+  prazo: string
+  entregas: { feitas: number; total: number } | null
+  base?: AtividadeTurma
+  envio?: Envio
+  lote?: Lote
+  docId?: string
+  /** o documento ainda espera a aprovação do professor (não chegou à turma) */
+  docEspera?: boolean
+  /** a ação própria da linha: corrigir as discursivas, continuar o rascunho */
+  acao?: { rotulo: string; para: string }
+  /** os números de uma correção que não está em `aluno.notas` (as objetivas do 1ºC) */
+  numeros?: Correcao
+  /** quem a atividade ainda espera (a entrega que falta) */
+  faltam?: string[]
 }
 
-function IconeTipo({ tipo, className }: { tipo: TipoAtividade; className?: string }) {
-  const Icone = TIPO[tipo].icone
-  return (
-    <span aria-hidden className={cn('grid size-8 shrink-0 place-items-center rounded-[8px] bg-realce-suave text-tinta', className)}>
-      <Icone className="size-4" strokeWidth={1.9} />
-    </span>
-  )
+type Correcao = { acerto: number; abaixo: number; erros: { texto: string; alunos: number; pagina: number }[]; aprovadaEm: string }
+
+/** "17/09" já passou? (o hoje da demonstração vem do relógio: 21/09) */
+function jaPassou(data: string): boolean {
+  const [d, m] = data.split('/').map(Number)
+  const [hd, hm] = agora().dia.split('/').map(Number)
+  return !!d && !!m && (m < hm || (m === hm && d < hd))
 }
 
-const ESTADO: Record<EstadoAtividade, { icone: LucideIcon; chip: string; cor: string }> = {
-  esperando: { icone: Clock3, chip: 'bg-pendente-cx font-medium text-pendente', cor: 'text-pendente' },
-  aprovada: { icone: Check, chip: '', cor: 'text-ok' },
-  corrigir: { icone: CircleDashed, chip: '', cor: 'text-tinta' },
-  aberta: { icone: Timer, chip: '', cor: 'text-tinta' },
-  agendada: { icone: CalendarClock, chip: '', cor: 'text-sutil' },
-  rascunho: { icone: PencilLine, chip: 'text-inativo', cor: 'text-inativo' },
+const FAMILIA_DO_SELO: Record<Estado, Familia | 'neutro'> = {
+  aprovar: 'amarelo', corrigir: 'amarelo', aberta: 'azul', agendada: 'anil', corrigida: 'verde', rascunho: 'amarelo', encerrada: 'neutro',
 }
 
-/** O estado é o chip da Teachy (canto 4, cinza claro). Só o que espera a professora vem em laranja. */
-function SeloEstado({ a, naEscolhida = false }: { a: AtividadeTurma; /** a linha escolhida já é cinza: o chip vai para o branco */ naEscolhida?: boolean }) {
-  const e = ESTADO[a.estado]
-  const Icone = e.icone
-  return <ChipT className={cn('h-6 whitespace-nowrap', naEscolhida && a.estado !== 'esperando' && 'bg-superficie', e.chip)}><Icone aria-hidden className={e.cor} strokeWidth={2.2} />{a.selo}</ChipT>
+/* As atividades que o professor encerrou antes do prazo (D77: "cancelar" vira "encerrar agora"). */
+const fatiaEncerradas = criarFatia<string[]>('atividades-encerradas', [])
+
+/* As objetivas do 1ºC: o Assistente corrigiu pelo gabarito e a professora aprovou (a objetiva nunca fica "para
+   corrigir": quem corrige é o Assistente, e a professora só aprova). Só a discursiva do Lavoisier é dela, com a rubrica. */
+const OBJETIVAS_1C: Record<string, Correcao> = {
+  numero: { acerto: 58, abaixo: 9, aprovadaEm: '17/09', erros: [
+    { texto: 'Trocou número de massa por número atômico', alunos: 11, pagina: 48 },
+    { texto: 'Esqueceu de somar os nêutrons', alunos: 7, pagina: 48 },
+  ] },
+  modelos: { acerto: 72, abaixo: 4, aprovadaEm: '10/09', erros: [
+    { texto: 'Trocou o modelo de Thomson pelo de Rutherford', alunos: 6, pagina: 44 },
+  ] },
+  'prova-modelos': { acerto: 66, abaixo: 7, aprovadaEm: '27/08', erros: [
+    { texto: 'Pôs os elétrons dentro do núcleo no modelo de Rutherford', alunos: 8, pagina: 46 },
+    { texto: 'Confundiu Dalton com Thomson', alunos: 5, pagina: 44 },
+  ] },
 }
 
-type FiltroId = 'todas' | 'abertas' | 'corrigir' | 'corrigidas'
-const NO_FILTRO: Record<FiltroId, EstadoAtividade[]> = {
-  todas: ['esperando', 'aprovada', 'corrigir', 'aberta', 'agendada', 'rascunho'],
-  abertas: ['aberta', 'agendada'], corrigir: ['esperando', 'corrigir'], corrigidas: ['aprovada'],
+/** O que espera a CORREÇÃO da professora (não é da fila: é trabalho dela, com a rubrica). Entra no "esperando" da
+    turma em Turmas e no Hoje, para o número bater com o que a aba Atividades mostra. */
+export type CorrecaoPendente = { id: string; titulo: string; detalhe: string; para: string }
+const CORRECOES: Record<string, CorrecaoPendente[]> = {
+  '1c': [{ id: '1c-rascunho', titulo: 'Corrigir as discursivas', detalhe: 'Discursiva sobre Lavoisier · 32 entregas', para: '/professor/ferramentas/redacao?turma=1c&atividade=lavoisier' }],
 }
-const VAZIO: Record<FiltroId, string> = {
-  todas: 'Nenhuma atividade nesta turma ainda.', abertas: 'Nenhuma atividade aberta nesta turma.',
-  corrigir: 'Nada esperando correção nesta turma.', corrigidas: 'Ainda não há atividade corrigida nesta turma.',
+export const correcoesDa = (turmaId: string): CorrecaoPendente[] => CORRECOES[turmaId] ?? []
+
+const ordemDe = (data: string) => Number(data.slice(3)) * 100 + Number(data.slice(0, 2))
+const tipoDoEnvio = (t: string): TipoAtividade => (t === 'prova' || t === 'lista' ? t : 'atividade')
+const docPorTitulo = (turmaId: string, titulo: string) => BIBLIOTECA.find((b) => b.turmaId === turmaId && b.titulo === titulo && !b.versaoDe)?.id
+
+/** A lista viva da turma: o dado da turma, os envios e os lotes da demonstração. */
+function useLinhas(turmaId: string, nova: boolean, total: number): LinhaAtv[] {
+  const envios = useEnvios(turmaId)
+  const docs = useEstadoEnvios().docs
+  const lotes = useLotes(turmaId)
+  const encerradas = fatiaEncerradas.useValor()
+  return useMemo(() => {
+    const loteDe = (id: string) => lotes.find((l) => l.id === id)
+    const doEnvio = (e: Envio | undefined, id: string) => {
+      if (!e) return null
+      const lote = loteDe(`lote-${e.docId}`)
+      const feitas = lote?.entregas.length ?? 0
+      // o denominador é a turma toda, como nas outras linhas ("1 de 32"); quem ainda não entrou recebe quando entrar
+      const para = e.para === 'turma' ? total : e.para.length
+      // aprovar as notas de quem já entregou não fecha a atividade: ela só vira "Corrigida" quando todos entregaram
+      // (ou quando o professor encerra; o prazo da demonstração, quinta, ainda não passou)
+      const todos = feitas >= para || encerradas.includes(id)
+      const estado: Estado = lote && lote.estado === 'espera' && feitas > 0 ? 'aprovar'
+        : lote?.estado === 'aprovado' && todos ? 'corrigida'
+        : e.quando === 'proxima' ? 'agendada' : 'aberta'
+      return { estado, lote, entregas: { feitas, total: para } }
+    }
+    const linhas: LinhaAtv[] = []
+    const usados = new Set<string>()
+
+    for (const a of nova ? [] : atividadesDa(turmaId)) {
+      const curtoId = a.id.slice(turmaId.length + 1)
+      const docId = curtoId === 'prova-estequiometria' ? 'prova-estequiometria' : docPorTitulo(turmaId, a.nome)
+      const envio = envios.find((e) => e.docId === docId && e.versao === 'original')
+      const linha: LinhaAtv = { id: a.id, titulo: a.nome, tipo: a.tipo, data: a.data, ordem: ordemDe(a.data), estado: 'rascunho', selo: '', seloCurto: '', prazo: '', entregas: a.entregas, base: a, docId }
+      if (envio) {
+        usados.add(envio.docId)
+        const v = doEnvio(envio, a.id)!
+        Object.assign(linha, { envio, estado: v.estado, lote: v.lote, entregas: v.entregas, ordem: 10_000 + envio.em.ordem, data: envio.em.dia })
+      } else if (curtoId === 'prova-estequiometria') {
+        const espera = docs['prova-estequiometria']?.original?.estado !== 'recusado'
+        Object.assign(linha, { estado: espera ? 'aprovar' : 'rascunho', docEspera: espera, ordem: 9_999 })
+      } else if (a.estado === 'esperando') {
+        const lote = turmaId === '2b' ? loteDe('prova-2b') : undefined
+        Object.assign(linha, { lote, estado: lote?.estado === 'aprovado' ? 'corrigida' : 'aprovar', entregas: lote ? { feitas: notasDoLote(lote), total } : a.entregas })
+      } else if (curtoId === 'rascunho' && turmaId === '1c') {
+        // a discursiva sobre Lavoisier: aplicada em 04/09, e a correção é da professora (com a rubrica)
+        const pendente = correcoesDa('1c')[0]
+        const faltam = alunosDa('1c').slice().sort((x, y) => x.entregas.feitas - y.entregas.feitas).slice(0, 2).map((x) => x.nome)
+        Object.assign(linha, { estado: 'corrigir', entregas: { feitas: total - 2, total }, faltam, acao: { rotulo: pendente.titulo, para: pendente.para } })
+      } else if (turmaId === '1c' && OBJETIVAS_1C[curtoId]) {
+        Object.assign(linha, { estado: 'corrigida', numeros: OBJETIVAS_1C[curtoId], faltam: a.quem.map((x) => x.nome) })
+      } else {
+        const mapa: Record<AtividadeTurma['estado'], Estado> = { esperando: 'aprovar', aprovada: 'corrigida', corrigir: 'corrigir', aberta: 'aberta', agendada: 'agendada', rascunho: 'rascunho' }
+        linha.estado = mapa[a.estado]
+        if (a.estado === 'rascunho') linha.acao = { rotulo: 'Continuar', para: `/professor/conversa/nova?ferramenta=atividade&turma=${turmaId}` }
+      }
+      linhas.push(linha)
+    }
+
+    // o que foi enviado na demonstração e não estava na lista (outro documento aprovado e enviado a esta turma)
+    for (const e of envios.filter((x) => x.versao === 'original' && !usados.has(x.docId))) {
+      usados.add(e.docId)
+      const v = doEnvio(e, `envio-${e.docId}`)!
+      linhas.push({ id: `envio-${e.docId}`, titulo: e.titulo, tipo: tipoDoEnvio(e.tipo), data: e.em.dia, ordem: 10_000 + e.em.ordem, estado: v.estado, selo: '', seloCurto: '', prazo: '', entregas: v.entregas, envio: e, lote: v.lote, docId: e.docId })
+    }
+
+    for (const l of linhas) {
+      if (encerradas.includes(l.id) && (l.estado === 'aberta' || l.estado === 'agendada')) l.estado = l.lote?.estado === 'aprovado' ? 'corrigida' : 'encerrada'
+      // o envio da demonstração: a prova abre na aula; a lista e a atividade ficam até quinta (como o aluno vê)
+      l.vencida = l.estado === 'aberta' && !l.envio && jaPassou(l.data)
+      const quando = l.envio ? (l.envio.tipo === 'prova' ? 'na aula' : 'quinta') : `${diaDaSemana(l.data)}, ${l.data}`
+      l.prazo = l.vencida ? `venceu ${l.data}`
+        : l.estado === 'aberta' ? (l.envio?.tipo === 'prova' ? 'aberta agora, na aula' : `até ${quando}`)
+        : l.estado === 'agendada' ? (l.envio?.abre ? `abre ${l.envio.abre.selo.toLowerCase()}` : `abre ${l.data}`)
+        : l.estado === 'rascunho' || l.docEspera ? 'ainda não enviada'
+        : `aplicada ${l.data}`
+      l.selo = l.vencida ? 'Ainda aceita'
+        : l.estado === 'aprovar' ? (l.docEspera ? 'Para aprovar' : 'Notas para aprovar')
+        : { aberta: 'Aberta', agendada: 'Agendada', corrigida: 'Corrigida', rascunho: 'Para aprovar', corrigir: 'Para corrigir', encerrada: 'Encerrada' }[l.estado]
+      l.seloCurto = l.estado === 'aprovar' && !l.docEspera ? 'Notas' : l.selo
+    }
+    return linhas.sort((x, y) => y.ordem - x.ordem)
+  }, [turmaId, nova, total, envios, docs, lotes, encerradas])
 }
+
+type FiltroId = 'todas' | 'aprovar' | 'abertas' | 'corrigidas'
+const FILTROS: { id: FiltroId; rotulo: string; estados?: Estado[] }[] = [
+  { id: 'todas', rotulo: 'Todas' },
+  { id: 'aprovar', rotulo: 'Para aprovar', estados: ['aprovar', 'corrigir', 'rascunho'] },
+  { id: 'abertas', rotulo: 'Abertas', estados: ['aberta', 'agendada'] },
+  { id: 'corrigidas', rotulo: 'Corrigidas', estados: ['corrigida', 'encerrada'] },
+]
 
 export function AtividadesTurma({ turmaId }: { turmaId: string }) {
-  const todas = atividadesDa(turmaId)
-  const [periodo, setPeriodo] = useState('2026')
-  const [filtro, setFiltro] = useState<FiltroId>('todas')
-  const [escolhida, setEscolhida] = useState<string | null>(null)
-  const detalhe = useRef<HTMLDivElement>(null)
-  const visiveis = todas.filter((a) => NO_FILTRO[filtro].includes(a.estado))
-  // abre na que espera a professora; sem nenhuma, na mais recente que já tem número
-  const atual = visiveis.find((a) => a.id === escolhida) ?? visiveis.find((a) => a.estado === 'esperando') ?? visiveis.find((a) => a.entregas) ?? visiveis[0]
-  const conta = (f: FiltroId) => todas.filter((a) => NO_FILTRO[f].includes(a.estado)).length
-  // o detalhe mora embaixo da tabela: quem clica numa linha é levado até ele
-  const abrir = (id: string) => { setEscolhida(id); requestAnimationFrame(() => detalhe.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })) }
-
-  return (
-    <section className="font-teachy-corpo text-tinta">
-      <CabecalhoAba titulo="Atividades" apoio="Acompanhe o que você enviou para a turma e a correção de cada atividade">
-        <Periodo valor={periodo} aoMudar={setPeriodo} />
-        <Link to="/professor/ferramentas/prova" className={botaoT('primario', 'm')}><FilePlus2 aria-hidden /> Criar avaliação</Link>
-      </CabecalhoAba>
-
-      <SubAbas rotulo="Filtrar as atividades" valor={filtro} aoMudar={setFiltro} opcoes={[
-        { id: 'todas', nome: 'Todas', n: conta('todas') }, { id: 'abertas', nome: 'Abertas', n: conta('abertas') },
-        { id: 'corrigir', nome: 'Para corrigir', n: conta('corrigir') }, { id: 'corrigidas', nome: 'Corrigidas', n: conta('corrigidas') },
-      ]} />
-
-      <CaixaTabela rotulo={`Atividades do ${turmaDe(turmaId).nome}`} minimo="min-w-[980px]">
-        <colgroup><col /><col className="w-[92px]" /><col className="w-[160px]" /><col className="w-[116px]" /><col className="w-[188px]" /><col className="w-[170px]" /></colgroup>
-        <thead className={tabelaT.cabeca}>
-          <tr>
-            <th className={tabelaT.th}>Atividade</th><th className={tabelaT.th}>Data</th><th className={tabelaT.th}>Entregas</th>
-            <th className={tabelaT.th}>Acerto médio</th><th className={tabelaT.th}>Estado</th><th className={cn(tabelaT.th, 'text-right')}>Ação</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visiveis.map((a) => {
-            const aberta = a.id === atual?.id
-            const pct = a.entregas ? Math.round((a.entregas.feitas / a.entregas.total) * 100) : 0
-            return (
-              <tr key={a.id} aria-selected={aberta} onClick={() => abrir(a.id)} className={cn(tabelaT.tr, 'cursor-pointer', aberta && 'bg-realce-suave hover:bg-realce-suave')}>
-                <td className={cn(tabelaT.td, 'h-[60px] py-0')}>
-                  <span className="flex min-w-0 items-center gap-3">
-                    <IconeTipo tipo={a.tipo} className={cn(aberta && 'bg-superficie')} />
-                    <span className="min-w-0">
-                      <button type="button" aria-expanded={aberta} onClick={(e) => { e.stopPropagation(); abrir(a.id) }} className="block max-w-full truncate rounded-[4px] text-left text-[14px] font-medium leading-5 text-tinta">{a.nome}</button>
-                      <span className="block truncate text-[12px] leading-4 text-sutil">{TIPO[a.tipo].nome} · {a.detalhe}</span>
-                    </span>
-                  </span>
-                </td>
-                <td className={cn(tabelaT.td, 'py-0')}>
-                  <span className="block text-[14px] leading-5 text-tinta">{a.data}</span>
-                  <span className="block text-[12px] leading-4 text-sutil">{a.rotuloData.toLowerCase()}</span>
-                </td>
-                <td className={cn(tabelaT.td, 'py-0 text-sutil')}>
-                  {a.entregas
-                    ? <span className="flex items-center gap-3"><span className="w-[60px] shrink-0 whitespace-nowrap"><b className="font-semibold text-tinta">{a.entregas.feitas}</b> de {a.entregas.total}</span><Trilho valor={pct} className="h-1.5 w-16" /></span>
-                    : <span className="text-inativo">—</span>}
-                </td>
-                <td className={cn(tabelaT.td, 'py-0', a.acerto === null ? 'text-inativo' : a.acerto < 50 ? 'font-semibold text-pendente' : 'font-semibold text-tinta')}>{a.acerto === null ? '—' : `${a.acerto}%`}</td>
-                <td className={cn(tabelaT.td, 'py-0')}><SeloEstado a={a} naEscolhida={aberta} /></td>
-                <td className={cn(tabelaT.td, 'py-0 text-right')}>
-                  <Link to={a.acao.para} onClick={(e) => e.stopPropagation()} className={botaoT(a.estado === 'esperando' ? 'primario' : 'contorno', 'p')}>{a.acao.rotulo}</Link>
-                </td>
-              </tr>
-            )
-          })}
-          {visiveis.length === 0 && <LinhaVazia colunas={6}>{VAZIO[filtro]}</LinhaVazia>}
-        </tbody>
-      </CaixaTabela>
-
-      {atual && <div ref={detalhe} className="scroll-mb-6 scroll-mt-4"><Detalhe key={atual.id} a={atual} turmaId={turmaId} /></div>}
-    </section>
-  )
+  const t = useTurmasDoProfessor().find((x) => x.id === turmaId)
+  const nomes = useAlunosDaTurma(turmaId)
+  if (!t) return null
+  const total = t.nova ? nomes.length : t.alunos
+  return <Atividades key={turmaId} turmaId={turmaId} nova={!!t.nova} total={total} disciplina={t.disciplina} />
 }
 
-/* ── O detalhe da atividade escolhida: quem fez, como foi e o que falta, num cartão logo abaixo da tabela ─── */
+function Atividades({ turmaId, nova, total, disciplina }: { turmaId: string; nova: boolean; total: number; disciplina: string }) {
+  const [aberta, setAberta] = useParametro('atividade')
+  const [filtro, setFiltro] = useState<FiltroId>('todas')
+  const navegar = useNavigate()
+  const linhas = useLinhas(turmaId, nova, total)
+  const familia = materiaDe(disciplina)?.familia ?? 'azul'
+  const regra = FILTROS.find((f) => f.id === filtro)!
+  const visiveis = linhas.filter((l) => !regra.estados || regra.estados.includes(l.estado))
+  const linha = linhas.find((l) => l.id === aberta)
 
-const diasAte = (data: string) => { const n = Number(data.slice(0, 2)) - 21; return n <= 0 ? 'hoje' : n === 1 ? 'amanhã' : `em ${n} dias` }
+  // a linha abre o que ela é: as notas para aprovar, a correção, o documento ou as notas da turma; sem página
+  // própria, o detalhe ao lado. A coluna Entregas sempre abre o detalhe (quem entregou, acerto, erros).
+  const abrir = (l: LinhaAtv) => {
+    const destino = destinoDa(l, turmaId)
+    if (destino) navegar(destino)
+    else setAberta(l.id)
+  }
 
-function Par({ rotulo, valor, sufixo }: { rotulo: string; valor: ReactNode; sufixo?: ReactNode }) {
   return (
-    <div>
-      <p className="text-[12px] leading-4 text-sutil">{rotulo}</p>
-      <p className="mt-0.5 text-[24px] font-semibold leading-8 tracking-[-0.01em] text-tinta">{valor}{sufixo && <span className="ml-1.5 text-[12px] font-normal leading-4 tracking-normal text-sutil">{sufixo}</span>}</p>
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      {linhas.length > 8 && (
+        <div className="min-w-0 max-w-full shrink-0 overflow-x-auto [scrollbar-width:none]">
+          <Segmentado opcoes={FILTROS} valor={filtro} aoMudar={(id) => setFiltro(id as FiltroId)} rotulo="Filtrar as atividades" />
+        </div>
+      )}
+
+      {linhas.length === 0 ? (
+        <div className="grid min-h-[280px] flex-1 grid-rows-[1fr_auto_2fr]">
+          <span aria-hidden />
+          <EstadoVazio ilustracao={<Onca pose="dormindo" tamanho={96} />} titulo="Nenhuma atividade ainda" />
+          <span aria-hidden />
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-[16px] border-2 border-borda bg-white">
+          {/* computador: a tabela, com o cabeçalho preso */}
+          <div className="hidden min-h-0 overflow-y-auto overscroll-contain md:block">
+            <table aria-label="Atividades da turma" className="w-full table-fixed border-collapse text-left">
+              <colgroup><col /><col className="w-[12%]" /><col className="w-[17%]" /><col className="w-[17%]" /><col className="w-[208px]" /></colgroup>
+              <thead className="sticky top-0 z-[1] bg-white shadow-[inset_0_-2px_0_var(--color-borda)]">
+                <tr>
+                  {['Atividade', 'Tipo', 'Prazo', 'Entregas'].map((c) => <th key={c} scope="col" className="t-selo h-11 px-4 align-middle text-sutil">{c}</th>)}
+                  <th scope="col" className="t-selo h-11 px-4 text-right align-middle text-sutil">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visiveis.map((l) => (
+                  <tr key={l.id} tabIndex={0} onClick={() => abrir(l)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrir(l) } }}
+                    aria-selected={aberta === l.id}
+                    className={cn('h-16 cursor-pointer border-t-2 border-borda text-[15px] font-medium text-tinta transition-colors duration-150 first:border-t-0 hover:bg-fundo-suave focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-azul-texto',
+                      aberta === l.id && 'bg-azul-claro hover:bg-azul-claro')}>
+                    <td className="px-4 py-2">
+                      <span className="flex min-w-0 items-center gap-3">
+                        <LadrilhoTipo tipo={l.tipo} familia={familia} />
+                        <span className="t-cartao min-w-0 truncate" title={l.titulo}>{l.titulo}</span>
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-apoio">{NOME_TIPO[l.tipo]}</td>
+                    <td className="truncate px-4 py-2 text-apoio">{l.prazo}</td>
+                    <td className="px-4 py-2">
+                      {l.entregas && l.estado !== 'rascunho' && !l.docEspera ? (
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setAberta(l.id) }} aria-label={`${l.entregas.feitas} de ${l.entregas.total} entregaram: ver quem`}
+                          className="-mx-2 flex w-[calc(100%+16px)] min-w-0 items-center gap-2.5 rounded-[10px] px-2 py-1.5 transition-colors duration-150 hover:bg-white">
+                          <span className="w-12 shrink-0 font-bold tabular-nums">{l.entregas.feitas}/{l.entregas.total}</span>
+                          <BarraProgresso valor={l.entregas.feitas} max={Math.max(1, l.entregas.total)} familia={familia} altura={12} className="min-w-0 flex-1" />
+                        </button>
+                      ) : <span className="text-sutil">—</span>}
+                    </td>
+                    <td className="px-4 py-2 text-right"><Selo familia={l.vencida ? 'neutro' : FAMILIA_DO_SELO[l.estado]} tamanho="p">{l.selo}</Selo></td>
+                  </tr>
+                ))}
+                {visiveis.length === 0 && <tr><td colSpan={5} className="t-apoio h-16 px-4">Nada com este filtro.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+
+          {/* celular: uma linha de 64 px por atividade */}
+          <ul aria-label="Atividades da turma" className="min-h-0 overflow-y-auto overscroll-contain md:hidden">
+            {visiveis.map((l) => (
+              <li key={l.id} className="border-t-2 border-borda first:border-t-0">
+                <button type="button" onClick={() => abrir(l)} className="flex min-h-16 w-full min-w-0 items-center gap-3 px-4 py-2 text-left hover:bg-fundo-suave">
+                  <LadrilhoTipo tipo={l.tipo} familia={familia} tamanho={32} />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="t-cartao truncate text-tinta">{l.titulo}</span>
+                    <span className="t-apoio truncate">{[NOME_TIPO[l.tipo], l.entregas && l.estado !== 'rascunho' && !l.docEspera ? `${l.entregas.feitas}/${l.entregas.total}` : null].filter(Boolean).join(' · ')}</span>
+                  </span>
+                  <Selo familia={l.vencida ? 'neutro' : FAMILIA_DO_SELO[l.estado]} tamanho="p">{l.seloCurto}</Selo>
+                </button>
+              </li>
+            ))}
+            {visiveis.length === 0 && <li className="t-apoio px-4 py-5">Nada com este filtro.</li>}
+          </ul>
+        </div>
+      )}
+
+      <PainelLado aberto={!!linha} aoFechar={() => setAberta(null)} titulo={linha?.titulo ?? ''} descricao="A atividade: entregas, acerto e o que fazer."
+        rodape={linha && temRodape(linha) ? <Rodape l={linha} turmaId={turmaId} /> : undefined}>
+        {linha && <Detalhe l={linha} turmaId={turmaId} familia={familia} />}
+      </PainelLado>
     </div>
   )
 }
 
-function ListaAlunos({ titulo, itens, colunas = false, suave = false }: { titulo: string; itens: { aluno: Aluno; valor?: ReactNode }[]; colunas?: boolean; suave?: boolean }) {
+const NOME_TIPO: Record<TipoAtividade, string> = { prova: 'Prova', lista: 'Lista', atividade: 'Atividade' }
+
+/** Para onde a linha leva: as notas esperando aprovação, a correção da discursiva, o documento ou as notas da turma.
+    null = não tem página própria (abre o detalhe ao lado). */
+function destinoDa(l: LinhaAtv, turmaId: string): string | null {
+  if (l.lote && l.lote.estado === 'espera' && notasDoLote(l.lote) > 0) return `/professor/aprovar/${l.lote.id}`
+  if (l.estado === 'corrigir' && l.acao) return l.acao.para
+  if (l.docId) return `/professor/criados/${l.docId}`
+  if (l.estado === 'corrigida' && l.base?.indiceNota != null) return `/professor/turmas/${turmaId}?aba=alunos&ver=notas`
+  if (l.estado === 'rascunho' && l.acao) return l.acao.para
+  return null
+}
+
+function LadrilhoTipo({ tipo, familia, tamanho = 40 }: { tipo: TipoAtividade; familia: Familia; tamanho?: 32 | 40 }) {
+  // os três tipos no mesmo desenho, todos na cor da matéria (a atividade usa a prancheta das tarefas)
+  const icone = <Icone id={tipo === 'atividade' ? 'tarefas' : tipo} familia={familia} />
+  return <LadrilhoIcone familia={familia} tamanho={tamanho} icone={icone} rotulo={NOME_TIPO[tipo]} />
+}
+
+/* ── O detalhe ao lado ───────────────────────────────────────────────────────────────────────────────────── */
+
+
+function Detalhe({ l, turmaId, familia }: { l: LinhaAtv; turmaId: string; familia: Familia }) {
+  const alunos = alunosDa(turmaId)
+  const nomes = useAlunosDaTurma(turmaId)
+  const material = materialDa(turmaId)
+  const a = l.base
+  const i = a?.indiceNota ?? null
+
+  // os números: das notas da turma (a atividade já corrigida), da correção aprovada fora do boletim (o 1ºC) ou das
+  // entregas da demonstração (o lote novo)
+  let acerto: number | null = null
+  let abaixo: number | null = null
+  if (l.numeros) {
+    acerto = l.numeros.acerto
+    abaixo = l.numeros.abaixo
+  } else if (i !== null && a) {
+    const notas = alunos.map((x) => x.notas[i].valor).filter((v): v is number => v !== null)
+    acerto = a.acerto
+    abaixo = notas.filter((v) => v < 6).length
+  } else if (l.lote && l.lote.entregas.length) {
+    const e = l.lote.entregas
+    acerto = Math.round((e.reduce((s, x) => s + x.acertos / x.total, 0) / e.length) * 100)
+    abaixo = e.filter((x) => (x.acertos / x.total) * 10 < 6).length
+  }
+  const r = resumoDa(turmaId)
+  const erros = l.numeros ? l.numeros.erros : i !== null && a && r.origemDosErros.includes(a.data) ? r.erros.slice(0, 3) : []
+
+  // quem falta: na aberta da turma, os de sempre; na enviada agora, quem entrou e ainda não entregou; na corrigida, quem
+  // não entregou. Na enviada, quem ainda não entrou na turma fica numa linha à parte (não recebe a tarefa).
+  const entregues = new Set(l.lote?.entregas.map((x) => x.nome) ?? [])
+  const aberta = l.estado === 'aberta' || l.estado === 'agendada'
+  const candidatos: string[] = l.faltam
+    ?? (aberta
+      ? (l.envio ? nomes.filter((n) => n.situacao === 'na-turma' && !entregues.has(n.nome)).map((n) => n.nome) : (a?.quem ?? []).map((x) => x.nome))
+      : l.estado === 'corrigida' && a ? a.quem.map((x) => x.nome) : [])
+  // quem ainda não entrou na turma (só no envio à turma toda): conta no "de 32" e recebe a tarefa quando entrar
+  const foraDaTurma = l.envio && l.envio.para === 'turma' ? nomes.filter((n) => n.situacao !== 'na-turma').length : 0
+  // a lista só aparece quando bate com o número de cima (o "30 de 32" e os 2 que faltam)
+  const faltam = !l.entregas || candidatos.length + foraDaTurma === l.entregas.total - l.entregas.feitas ? candidatos : []
+  const tituloFaltam = aberta ? (l.envio ? 'Ainda não entregaram' : 'Ainda não começaram') : 'Não entregaram'
+
   return (
-    <div>
-      <p className={cn(tipoT.rotulo, 'mb-1 flex items-baseline gap-1.5')}>{titulo}<span className="font-teachy-corpo text-[12px] font-normal text-inativo">{itens.length}</span></p>
-      {itens.length === 0
-        ? <p className="py-1.5 text-[13px] text-inativo">Ninguém.</p>
-        : (
-          <ul className={cn('grid gap-x-4 sm:gap-x-6', colunas && 'grid-cols-2 xl:grid-cols-3')}>
-            {itens.map(({ aluno, valor }) => (
-              <li key={aluno.id} className="flex h-8 min-w-0 items-center gap-2">
-                <AvatarT nome={aluno.nome} className={cn('size-5 text-[10px]', suave && 'bg-inativo')} />
-                <span className={cn('min-w-0 flex-1 truncate text-[13px] leading-5', suave ? 'text-sutil' : 'text-tinta')}>{aluno.nome}</span>
-                {valor}
+    <div className="grid min-w-0 gap-6 text-tinta">
+      {l.docEspera && <Aviso tom="atencao" titulo="Só você vê">Chega à turma quando você aprovar.</Aviso>}
+      {l.envio && <Carimbo por={l.envio.por} quando={l.envio.em.rotulo} />}
+      {l.lote?.estado === 'aprovado' && l.lote.por && <Carimbo verbo="Notas aprovadas por" por={l.lote.por} quando={l.lote.quando} />}
+      {l.numeros && <p className="t-apoio">Corrigida pelo Assistente e aprovada por você em {l.numeros.aprovadaEm}.</p>}
+
+      {l.entregas && l.estado !== 'rascunho' && (
+        <div className="grid min-w-0 grid-cols-[repeat(3,minmax(0,1fr))] gap-2.5 max-sm:gap-2 max-sm:[&>div]:p-3 max-sm:[&>div>p:last-child]:text-[11px] max-sm:[&>div>p:last-child]:tracking-[0.02em]">
+          <NumeroGrande familia={familia} icone={<Icone id="alunos" />} rotulo="Entregaram"
+            valor={<>{l.entregas.feitas}<span className="text-[15px] text-sutil"> de {l.entregas.total}</span></>} />
+          <NumeroGrande familia="verde" icone={<Icone id="acerto" />} rotulo="Acerto" valor={acerto === null ? '—' : `${acerto}%`} />
+          <NumeroGrande familia="amarelo" icone={<Icone id="notas" />} rotulo="Abaixo de 6" valor={abaixo ?? '—'} />
+        </div>
+      )}
+      {foraDaTurma > 0 && <p className="t-apoio -mt-3">Outros {foraDaTurma} ainda não entraram na turma e recebem quando entrarem.</p>}
+      {l.estado === 'corrigir' && <p className="t-apoio -mt-3">A discursiva é você quem corrige, com a rubrica. O acerto aparece depois.</p>}
+
+      {erros.length > 0 && (
+        <section className="min-w-0">
+          <h3 className="t-selo mb-1 text-sutil">Erros que se repetiram</h3>
+          <ul>
+            {erros.map((e) => (
+              <li key={e.texto} className="flex min-w-0 items-center gap-3 border-t-2 border-borda py-2.5 first:border-t-0">
+                <span className="min-w-0 flex-1 text-[15px] font-medium leading-snug">{e.texto}</span>
+                <span className="t-apoio shrink-0 tabular-nums">{e.alunos}</span>
+                <ChipFonte pagina={e.pagina} material={material.titulo} capitulo={material.capitulo} />
               </li>
             ))}
           </ul>
-        )}
+        </section>
+      )}
+
+      {faltam.length > 0 && (
+        <section className="min-w-0">
+          <h3 className="t-selo mb-2 text-sutil">{tituloFaltam} · {faltam.length}</h3>
+          <ul className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-x-3 gap-y-2">
+            {faltam.slice(0, 12).map((n) => (
+              <li key={n} className="flex min-w-0 items-center gap-2">
+                <Avatar nome={n} tamanho={24} />
+                <span className="truncate text-[15px] font-medium">{n}</span>
+              </li>
+            ))}
+          </ul>
+          {faltam.length > 12 && <p className="t-apoio mt-2">e mais {faltam.length - 12}</p>}
+        </section>
+      )}
+
+      {l.estado === 'rascunho' && <p className="t-apoio">Só você vê. Chega à turma quando você aprovar.</p>}
     </div>
   )
 }
 
-/** O número que ainda não existe: um traço leve, e não um traço de 24 px em negrito. */
-const semNumero = <span className="font-normal text-inativo">—</span>
+/** O rodapé só aparece quando há o que fazer: sem ação, sem a linha divisória vazia. */
+function temRodape(l: LinhaAtv) {
+  return !!(l.docId || l.estado === 'aberta' || l.acao || (l.lote && l.lote.estado === 'espera' && notasDoLote(l.lote) > 0)
+    || (l.estado === 'corrigida' && l.base?.indiceNota != null))
+}
 
-const coluna = 'min-w-0 border-linha p-4 max-lg:border-t lg:border-l first:lg:border-l-0 first:max-lg:border-t-0'
-
-function Detalhe({ a, turmaId }: { a: AtividadeTurma; turmaId: string }) {
-  const alunos = alunosDa(turmaId)
-  const material = materialDa(turmaId)
-  const i = a.indiceNota
-  const notas = i === null ? [] : alunos.map((aluno) => ({ aluno, v: aluno.notas[i].valor })).filter((x): x is { aluno: Aluno; v: number } => x.v !== null)
-  const faixas: [string, number, 'caramelo' | 'tinta'][] = [
-    ['Abaixo de 6', notas.filter((x) => x.v < 6).length, 'caramelo'], ['De 6 a 8', notas.filter((x) => x.v >= 6 && x.v < 8).length, 'tinta'], ['8 ou mais', notas.filter((x) => x.v >= 8).length, 'tinta'],
-  ]
-  const abaixo = notas.filter((x) => x.v < 6).sort((x, y) => x.v - y.v)
-  // sem nota lançada, a coluna larga mostra os dois lados da chamada: quem falta e, mais claro, quem já fez
-  const falta = new Set(a.quem.map((x) => x.id))
-  const jaFez = alunos.filter((x) => !falta.has(x.id))
-  const rotuloJaFez = a.estado === 'aberta' ? 'Já entregou' : a.estado === 'agendada' ? `Fez a prova em ${alunos[0].notas[3].data}` : a.tipo === 'prova' ? 'Fez a prova' : 'Entregou'
-
+function Rodape({ l, turmaId }: { l: LinhaAtv; turmaId: string }) {
+  const encerrar = () => fatiaEncerradas.mudar((x) => (x.includes(l.id) ? x : [...x, l.id]))
+  const loteEspera = l.lote && l.lote.estado === 'espera' && notasDoLote(l.lote) > 0
+  const documento = l.docId ? `/professor/criados/${l.docId}` : null
+  // a corrigida com nota no boletim leva às notas da turma, na aba Alunos
+  const verNotas = l.estado === 'corrigida' && l.base?.indiceNota != null
   return (
-    <CartaoT className="mt-5 p-0">
-      <section aria-label={a.nome} className="grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.62fr)_minmax(0,1fr)_minmax(0,1.08fr)]">
-        <div className={cn(coluna, 'flex flex-col')}>
-          <div className="flex items-start gap-3">
-            <IconeTipo tipo={a.tipo} className="size-10 [&>svg]:size-5" />
-            <div className="min-w-0">
-              <h3 className={tipoT.aba}>{a.nome}</h3>
-              <p className="text-[12px] leading-4 text-sutil">{TIPO[a.tipo].nome} · {a.detalhe} · {a.rotuloData.toLowerCase()} {a.rotuloData === 'Agendada' ? 'para' : a.rotuloData === 'Prazo' ? 'até' : 'em'} {a.data}</p>
-            </div>
-          </div>
-          {a.habilidade && <p className="mt-3 text-[13px] leading-[22px] text-apoio">{a.habilidade.nome} <ChipFonte pagina={a.habilidade.pagina} material={material.titulo} capitulo={material.capitulo} /></p>}
-          <p className={cn('mt-2 text-[13px] leading-5', a.estado === 'esperando' ? 'rounded-[8px] bg-pendente-cx px-3 py-2 text-pendente' : 'text-apoio')}>{a.nota}</p>
-          {a.aprovadaEm && <LinhaAprovacao verbo="Aprovada por" quando={a.aprovadaEm} className="mt-2.5 self-start !rounded-[4px] text-[12px]" />}
-          <div className="mt-4 flex flex-wrap gap-2">
-            {/* a ação laranja já está na linha da tabela, logo acima: aqui o botão é o de contorno, para não haver dois laranjas iguais na tela */}
-            <Link to={a.acao.para} className={botaoT('contorno', 'm')}>{a.acao.rotulo}</Link>
-            {a.estado === 'esperando' && <Link to="/professor/biblioteca/prova-estequiometria" className={botaoT('texto', 'm')}>Abrir a prova</Link>}
-            {a.estado === 'agendada' && <Link to="/professor/time/assistente" className={botaoT('texto', 'm')}>Ver a versão adaptada</Link>}
-          </div>
-        </div>
-
-        <div className={cn(coluna, 'grid content-start gap-4 max-lg:grid-cols-2 sm:max-lg:grid-cols-3')}>
-          {a.entregas && <Par rotulo="Entregas" valor={a.entregas.feitas} sufixo={`de ${a.entregas.total}`} />}
-          {i !== null && <><Par rotulo="Acerto médio" valor={`${a.acerto}%`} /><Par rotulo="Nota média" valor={comVirgula(a.media!)} /></>}
-          {a.estado === 'corrigir' && <><Par rotulo="Acerto médio" valor={semNumero} /><Par rotulo="Nota média" valor={semNumero} /></>}
-          {a.estado === 'aberta' && <Par rotulo="Prazo" valor={a.data} sufixo={diasAte(a.data)} />}
-          {a.estado === 'agendada' && <><Par rotulo="Agendada para" valor={a.data} sufixo={diasAte(a.data)} /><Par rotulo="Horário" valor="8h20" sufixo="quinta-feira" /></>}
-          {a.estado === 'rascunho' && <><Par rotulo="Editado em" valor={a.data} /><Par rotulo="Prazo" valor={semNumero} sufixo="a definir" /></>}
-        </div>
-
-        {i !== null ? (
-          <>
-            <div className={coluna}>
-              <p className={cn(tipoT.rotulo, 'mb-2')}>Como a turma foi</p>
-              <ul className="grid gap-3">
-                {faixas.map(([nome, n, tom]) => (
-                  <li key={nome} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5">
-                    <span className="text-[13px] leading-5 text-tinta">{nome}</span>
-                    <span className="text-[13px] leading-5 text-sutil"><b className={cn('font-semibold', tom === 'caramelo' && n > 0 ? 'text-pendente' : 'text-tinta')}>{n}</b> {n === 1 ? 'aluno' : 'alunos'}</span>
-                    <Trilho valor={notas.length ? (n / notas.length) * 100 : 0} tom={tom} className="col-span-2 h-1.5" />
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className={cn(coluna, 'grid content-start gap-3')}>
-              {a.quem.length > 0 && <ListaAlunos titulo={a.rotuloQuem} itens={a.quem.map((aluno) => ({ aluno, valor: <span className="text-[13px] text-inativo">—</span> }))} />}
-              <ListaAlunos titulo="Abaixo de 6" itens={abaixo.map(({ aluno, v }) => ({ aluno, valor: <b className="text-[13px] font-semibold text-pendente">{comVirgula(v)}</b> }))} />
-            </div>
-          </>
-        ) : (
-          <div className={cn(coluna, 'grid content-start gap-3 lg:col-span-2')}>
-            {a.estado === 'rascunho'
-              ? <ListaAlunos colunas suave titulo="Vão receber quando você atribuir" itens={alunos.map((aluno) => ({ aluno }))} />
-              : <><ListaAlunos colunas titulo={a.rotuloQuem} itens={a.quem.map((aluno) => ({ aluno }))} /><ListaAlunos colunas suave titulo={rotuloJaFez} itens={jaFez.map((aluno) => ({ aluno }))} /></>}
-          </div>
-        )}
-      </section>
-    </CartaoT>
+    <>
+      {documento && (
+        <Botao asChild variante={l.docEspera ? 'oficial' : 'fantasma'} tamanho="m" className={cn(!l.docEspera && 'mr-auto')}>
+          <Link to={documento}>Abrir o documento</Link>
+        </Botao>
+      )}
+      {verNotas && <Botao asChild variante="secundario" tamanho="m"><Link to={`/professor/turmas/${turmaId}?aba=alunos&ver=notas`}>Ver as notas</Link></Botao>}
+      {l.estado === 'aberta' && <Botao variante="secundario" tamanho="m" onClick={encerrar}>Encerrar agora</Botao>}
+      {l.acao && <Botao asChild variante={l.estado === 'rascunho' ? 'secundario' : 'oficial'} tamanho="m"><Link to={l.acao.para}>{l.acao.rotulo}</Link></Botao>}
+      {loteEspera && <Botao asChild variante="oficial" tamanho="m"><Link to={`/professor/aprovar/${l.lote!.id}`}>Aprovar as notas</Link></Botao>}
+    </>
   )
 }

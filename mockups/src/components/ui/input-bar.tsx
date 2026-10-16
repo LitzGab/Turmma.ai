@@ -2,7 +2,13 @@
 
 /* serafimcloud/input-bar (21st.dev · 12399, MIT) — a caixa de pedido. Vestida na adoção:
    canto de 28 px e a sombra suave da caixa do ChatGPT, sem borda, texto de 16 px, enviar redondo no laranja
-   da pinta com seta preta, que vira "Parar" enquanto o texto chega (9.5). A largura quem dá é a tela. */
+   da pinta com seta preta, que vira "Parar" enquanto o texto chega (9.5). A largura quem dá é a tela.
+   11ª rodada (04/10/2026), pele Duolingo (sistema-turmma-duolingo.md, 3.16): moldura branca com borda de 2 px e canto
+   16, SEM sombra; no foco, a borda fica azul. Texto em 17/500. Enviar é um BotaoIcone laranja de 40 com degrau de 3 e
+   a seta em tinta (traço 2,5); desligado, cinza e sem degrau. Enquanto o texto chega, vira PARAR, um Botao grafite
+   pequeno. O clipe e os chips de anexo ganham borda de 2 px. As props não mudam.
+   15ª rodada (06/10/2026): canto de 24 (a caixa das IAs); enquanto o texto chega, o enviar vira o quadrado de PARAR
+   (BotaoIcone grafite, sem texto); Enter envia, Shift+Enter quebra a linha, e a composição do teclado não envia. */
 
 import {
   memo,
@@ -15,6 +21,7 @@ import {
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { FileCard, formatoDe } from "@/components/ui/file-card-collections";
+import { BotaoIcone } from "@/components/duo/botao";
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -77,7 +84,7 @@ const SendIcon = ({ className = "w-[14px] h-[14px]" }) => (
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
-    strokeWidth="2"
+    strokeWidth="2.5"
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
@@ -130,7 +137,7 @@ function AttachmentButton({
       disabled={disabled}
       aria-label="Anexar arquivo"
       title="Anexar arquivo"
-      className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-borda-campo text-sutil transition-colors duration-150 hover:bg-realce-suave hover:text-tinta disabled:opacity-40"
+      className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border-2 border-borda text-sutil transition-colors duration-150 hover:bg-fundo-suave hover:text-tinta disabled:opacity-40"
     >
       <PaperclipIcon className="w-[17px] h-[17px]" />
     </button>
@@ -146,20 +153,18 @@ function SendButton({
 }) {
   const isStreaming = state === "streaming";
   const isActive = state === "typing" || isStreaming;
+  if (isStreaming) {
+    // 15ª rodada: enquanto o texto chega, o enviar vira o QUADRADO DE PARAR (grafite, como nas IAs)
+    return (
+      <BotaoIcone variante="oficial" tamanho={40} rotulo="Parar a resposta" dica={false} onClick={onClick}>
+        <StopIcon className="!size-4" />
+      </BotaoIcone>
+    );
+  }
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={isStreaming ? "Parar" : "Enviar"}
-      className={cn(
-        "inline-flex shrink-0 items-center justify-center h-10 min-w-10 md:h-9 md:min-w-9 gap-2 rounded-full text-[13px] font-medium transition-[background-color,color,opacity] duration-150",
-        isActive
-          ? (isStreaming ? "bg-noite text-white px-4 hover:bg-noite-alto" : "bg-caramelo text-tinta hover:bg-caramelo-claro")
-          : "bg-realce text-inativo",
-      )}
-    >
-      {isStreaming ? (<><StopIcon /> Parar</>) : <SendIcon className="w-[17px] h-[17px]" />}
-    </button>
+    <BotaoIcone variante="primario" tamanho={40} rotulo="Enviar" dica={false} disabled={!isActive} onClick={onClick}>
+      <SendIcon className="w-[20px] h-[20px]" />
+    </BotaoIcone>
   );
 }
 
@@ -171,7 +176,7 @@ function ImageChip({
   onRemove?: () => void;
 }) {
   return (
-    <div className="relative w-12 h-12 rounded-md overflow-hidden bg-neutral-100 dark:bg-neutral-800 group">
+    <div className="relative w-12 h-12 rounded-[10px] border-2 border-borda overflow-hidden bg-fundo-suave group">
       <img src={url} alt="" className="w-full h-full object-cover" />
       {onRemove && (
         <button
@@ -203,20 +208,20 @@ function FileChip({
         ? `${Math.max(1, Math.round(size / 1024))} KB`
         : `${(size / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
   return (
-    <div className="inline-flex items-center gap-3.5 rounded-[14px] bg-realce-suave py-1.5 pl-2 pr-1.5">
+    <div className="inline-flex items-center gap-3.5 rounded-[14px] border-2 border-borda bg-white py-1.5 pl-2 pr-1.5">
       <FileCard formatFile={formatoDe(filename)} tamanho="sm" />
       <div className="flex min-w-0 flex-col">
-        <span className="max-w-[160px] truncate text-[13px] font-medium leading-tight text-tinta">
+        <span className="max-w-[160px] truncate text-[14px] font-bold leading-tight text-tinta">
           {filename}
         </span>
-        {sizeText && <span className="text-[11.5px] leading-tight text-sutil">{sizeText}</span>}
+        {sizeText && <span className="text-[13px] font-medium leading-tight text-sutil">{sizeText}</span>}
       </div>
       {onRemove && (
         <button
           type="button"
           onClick={onRemove}
           aria-label={`Tirar ${filename}`}
-          className="inline-flex size-6 items-center justify-center rounded-full text-sutil transition-colors hover:bg-realce hover:text-tinta"
+          className="inline-flex size-6 items-center justify-center rounded-full text-sutil transition-colors hover:bg-fundo-suave hover:text-tinta"
         >
           <XIcon />
         </button>
@@ -283,7 +288,7 @@ export const InputBar = memo(function InputBar({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
         e.preventDefault();
         handleSubmit();
       }
@@ -310,7 +315,7 @@ export const InputBar = memo(function InputBar({
     <div className={cn("shrink-0 w-full", className)}>
       <div className="mx-auto w-full">
         <div
-          className="relative cursor-text rounded-caixa bg-superficie shadow-caixa"
+          className="relative cursor-text rounded-[24px] border-2 border-borda bg-campo transition-colors duration-150 focus-within:border-azul-borda"
           onClick={handleContainerClick}
         >
           <div
@@ -321,7 +326,7 @@ export const InputBar = memo(function InputBar({
           >
             <div className="overflow-hidden">
               {hasContextItems && (
-                <div className="flex flex-wrap items-center gap-1.5 px-3 pt-3 pb-0.5">
+                <div className="flex flex-wrap items-center gap-1.5 px-3.5 pt-3.5 pb-0.5">
                   {attachedImages.map((img) => (
                     <ImageChip
                       key={img.id}
@@ -345,7 +350,7 @@ export const InputBar = memo(function InputBar({
               )}
             </div>
           </div>
-          <div className="pt-4 pb-0 px-5 min-h-[52px]">
+          <div className="pt-3.5 pb-0 px-5 min-h-[48px]">
             <textarea
               ref={textareaRef}
               value={input}
@@ -355,13 +360,13 @@ export const InputBar = memo(function InputBar({
               disabled={disabled}
               rows={1}
               className={cn(
-                "w-full resize-none bg-transparent border-0 outline-none focus-visible:outline-none text-base leading-[1.55] text-tinta placeholder:text-sutil",
+                "w-full resize-none bg-transparent border-0 outline-none focus-visible:outline-none text-[17px] font-medium leading-[25px] text-tinta placeholder:text-sutil",
                 "overflow-hidden",
                 disabled && "opacity-50 cursor-not-allowed",
               )}
             />
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-2.5 pt-1 pb-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-2.5 pt-0.5 pb-2.5">
             <div className="flex flex-wrap items-center gap-1.5 min-w-0">
               {onAttach && (
                 <AttachmentButton onClick={onAttach} disabled={disabled} />

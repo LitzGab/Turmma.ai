@@ -1,184 +1,173 @@
-import { useState, type ReactNode } from 'react'
-import { Ban, FileText, RotateCw, ShieldCheck, Upload } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
-import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Campo } from '@/components/turmma/ferramentas'
-import { Estado } from '@/components/turmma/ia'
-import { NotaMockup, NumeroPainel, Tela } from '@/components/turmma/tela'
-import { MATERIAIS } from '@/dados/escola'
+import { useRef, useState } from 'react'
+import { FileText, Lock, Upload } from 'lucide-react'
+import {
+  Aviso, Botao, Campo, CampoTexto, Dialogo, DialogoConfirmar, FaixaResultado, LadrilhoIcone, MenuMais, Opcao, Selo,
+} from '@/components/duo'
+import { Icone } from '@/components/duo/icones'
+import { PainelLado } from '@/components/turmma/painel-lado'
+import { useParametro } from '@/components/turmma/tela'
+import { DISCIPLINAS, SERIES } from '@/dados/estrutura'
+import { material, useMaterial, type EstadoIngestao, type Fonte } from '@/dados/escola-estado'
 import { cn } from '@/lib/utils'
-import { Aviso, CANTO_DIALOGO } from './_a-pecas'
+import { Escolha, TabelaGrade, type ColunaGrade } from './_estrutura-pecas'
 
-/* Material: fontes com TITULARIDADE e LICENÇA, e o estado da ingestão — o que entrou, o que está processando,
-   o que falhou e o que foi RECUSADO por falta de licença (D5 revista). Envio com haydenbleasel/dropzone (21st.dev · 542):
-   a licença é campo obrigatório e, sem ela declarada, a tela recusa ANTES de enviar. */
+/* MATERIAL (12ª rodada, 04/10/2026; plano 5.3), a terceira aba de Escola.
+   · ENVIAR MATERIAL: PDF, dono e licença obrigatórios, mais a declaração. Sem licença, o envio é recusado ANTES de sair
+     do computador (D5; Lei 9.610/1998 — lei). A série e a disciplina dizem para que turma a fonte vale (D6).
+   · A tabela (linhas de 64; 14ª rodada), com o que falhou primeiro: Material (ícone, título, dono) · Para · Licença ·
+     Situação, o selo à direita. A linha abre o painel (?fonte=).
+   · No painel: série e disciplina, a licença, ENVIAR OUTRA VERSÃO (PDF escaneado não resolve "tentando de novo") e, no
+     ⋯, RETIRAR DO USO com motivo (ECA Digital, arts. 29 e 30 — lei). Saíram os 4 cartões de número e o aviso largo. */
 
-type EstadoIngestao = 'pronto' | 'processando' | 'falhou' | 'recusado'
-type Fonte = { id: string; titulo: string; capitulo: string; paginas: number; titular: string; licenca: string; estado: EstadoIngestao; trechos: number; detalhe?: string }
-
-const FONTES: Fonte[] = [
-  ...MATERIAIS.map((m) => ({ ...m, estado: m.estado as EstadoIngestao })),
-  { id: 'bio', titulo: 'Biologia 1 — Caderno do professor', capitulo: 'cap. 2 · Citologia', paginas: 164, titular: 'Colégio Aurora',
-    licenca: 'Material próprio da escola', estado: 'falhou', trechos: 0, detalhe: 'PDF digitalizado sem texto nas páginas 40 a 72. Envie de novo com o texto reconhecido.' },
-]
-
-const LICENCAS = [
-  { id: 'proprio', nome: 'Material próprio da escola', entra: true },
-  { id: 'contrato', nome: 'Licenciado por contrato com o dono do conteúdo', entra: true },
-  { id: 'cc', nome: 'Licença aberta (Creative Commons ou domínio público)', entra: true },
-  { id: 'sem', nome: 'Não sei / não tenho a licença', entra: false },
-]
-
-const ROTULO: Record<EstadoIngestao, ReactNode> = {
-  pronto: <Estado tipo="ok">Pronto</Estado>,
-  processando: <Estado tipo="pendente">Processando</Estado>,
-  falhou: <Estado tipo="erro">Falhou</Estado>,
-  recusado: <Estado tipo="erro">Recusado · sem licença</Estado>,
+const SELO: Record<EstadoIngestao, { texto: string; familia: 'verde' | 'amarelo' | 'vermelho' }> = {
+  falhou: { texto: 'Não carregou', familia: 'vermelho' },
+  processando: { texto: 'Processando', familia: 'amarelo' },
+  pronto: { texto: 'Pronto', familia: 'verde' },
+  recusado: { texto: 'Recusado', familia: 'vermelho' },
 }
+const ORDEM: Record<EstadoIngestao, number> = { falhou: 0, processando: 1, pronto: 2, recusado: 3 }
+const LICENCAS = [
+  { valor: 'Material próprio da escola', rotulo: 'Material próprio da escola' },
+  { valor: 'Licenciado por contrato', rotulo: 'Licenciado por contrato' },
+  { valor: 'Licença aberta', rotulo: 'Licença aberta (CC ou domínio público)' },
+  { valor: 'sem', rotulo: 'Não tenho a licença' },
+]
+/** Série e disciplina das fontes de sempre (D6). As novas guardam no próprio capítulo. */
+const PARA: Record<string, string> = {
+  bio: '1º ano EM · Biologia', q2: '2º ano EM · Química', c9: '9º ano EF · Ciências', rea: '1º ano EM · Química', ap: '2º ano EM · Matemática',
+}
+const paraDe = (f: Fonte) => PARA[f.id] ?? f.capitulo
+/** A forma curta, para a coluna da tabela ("2º EM · Matemática"). */
+const paraCurto = (f: Fonte) => paraDe(f).replace(' ano ', ' ')
 
-function Envio({ aoFechar, aoEnviar }: { aoFechar: () => void; aoEnviar: (titulo: string) => void }) {
-  const [arquivos, setArquivos] = useState<File[] | undefined>()
-  const [licenca, setLicenca] = useState('')
-  const [declaro, setDeclaro] = useState(false)
-  const escolhida = LICENCAS.find((l) => l.id === licenca)
-  const recusa = escolhida && !escolhida.entra
-  const pode = !!arquivos?.length && !!escolhida?.entra && declaro
+export function Material() {
+  const lista = useMaterial()
+  const [enviando, setEnviando] = useState(false)
+  const [fonteId, setFonte] = useParametro('fonte')
+  const ordenada = [...lista].sort((a, b) => Number(!!a.retirado) - Number(!!b.retirado) || ORDEM[a.estado] - ORDEM[b.estado])
+  const aberta = lista.find((f) => f.id === fonteId) ?? null
+
+  const selo = (f: Fonte) => { const x = f.retirado ? { texto: 'Retirado', familia: 'neutro' as const } : SELO[f.estado]; return <Selo familia={x.familia} tamanho="p">{x.texto}</Selo> }
+  const ladrilho = (f: Fonte) => <LadrilhoIcone familia={f.estado === 'falhou' || f.estado === 'recusado' ? 'vermelho' : 'azul'} tamanho={40} icone={<Icone id={f.estado === 'falhou' ? 'material-falhou' : 'leitura'} tamanho={28} />} />
+  const colunas: ColunaGrade<Fonte>[] = [
+    { titulo: 'Material', largura: 'minmax(0,3.2fr)', celula: (f) => (
+      <span className={cn('flex min-w-0 items-center gap-3', f.retirado && 'opacity-70')}>
+        {ladrilho(f)}
+        <span className="flex min-w-0 flex-col">
+          <span className="t-cartao line-clamp-2 text-tinta [overflow-wrap:anywhere]" title={f.titulo}>{f.titulo}</span>
+          <span className="t-apoio truncate">{f.titular}</span>
+        </span>
+      </span>
+    ) },
+    { titulo: 'Para', largura: 'minmax(0,1.1fr)', celula: (f) => <span className="line-clamp-2 text-apoio">{paraCurto(f)}</span> },
+    { titulo: 'Licença', largura: 'minmax(0,1.1fr)', celula: (f) => <span className="line-clamp-2 text-apoio">{f.licenca}</span> },
+    { titulo: 'Situação', largura: '120px', alinhar: 'fim', celula: selo },
+  ]
 
   return (
-    <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); if (pode) aoEnviar(arquivos![0].name.replace(/\.pdf$/i, '')) }}>
-      <Dropzone src={arquivos} accept={{ 'application/pdf': ['.pdf'] }} maxFiles={1} maxSize={80 * 1024 * 1024} onDrop={setArquivos}
-        className="h-auto min-h-[132px] whitespace-normal rounded-cartao border-dashed border-borda-campo bg-fundo p-6 font-normal hover:bg-realce">
-        <DropzoneEmptyState>
-          <span className="grid size-10 place-items-center rounded-controle bg-ia-cx text-apoio"><Upload className="size-5" /></span>
-          <span className="mt-2 text-[15px] font-semibold text-tinta">Arraste o PDF aqui, ou clique para escolher</span>
-          <span className="text-[13px] text-sutil">Um arquivo por vez · PDF de até 80 MB</span>
-        </DropzoneEmptyState>
-        <DropzoneContent>
-          <span className="grid size-10 place-items-center rounded-controle bg-ok-cx text-ok"><FileText className="size-5" /></span>
-          <span className="mt-2 max-w-full truncate text-[15px] font-semibold text-tinta">{arquivos?.[0]?.name}</span>
-          <span className="text-[13px] text-sutil">Clique para trocar o arquivo</span>
-        </DropzoneContent>
-      </Dropzone>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Campo rotulo="Quem é o dono do conteúdo">{(id) => <Input id={id} required placeholder="Ex.: Colégio Aurora" autoComplete="organization" className="h-11 rounded-controle border-borda-campo bg-superficie text-[15px] md:h-10" />}</Campo>
-        <Campo rotulo="Licença de uso (obrigatório)">{(id) => (
-          <Select value={licenca} onValueChange={setLicenca}>
-            <SelectTrigger id={id} className={cn('h-11 rounded-controle bg-superficie text-[15px] md:h-10', recusa ? 'border-erro' : 'border-borda-campo')}><SelectValue placeholder="Escolha a licença" /></SelectTrigger>
-            <SelectContent className="rounded-controle">{LICENCAS.map((l) => <SelectItem key={l.id} value={l.id} className="rounded-linha">{l.nome}</SelectItem>)}</SelectContent>
-          </Select>
-        )}</Campo>
+    <div className="flex min-h-0 flex-1 flex-col gap-3 max-md:overflow-y-auto">
+      <div className="flex shrink-0 flex-wrap items-center gap-3">
+        <p className="t-apoio flex min-w-0 flex-1 items-center gap-1.5"><Lock aria-hidden className="size-4 shrink-0" strokeWidth={2.5} /> O material fica na escola e não treina IA.</p>
+        <Botao tamanho="m" icone={<Upload strokeWidth={2.5} />} className="max-sm:w-full" onClick={() => setEnviando(true)}>Enviar material</Botao>
       </div>
 
-      {recusa ? (
-        <Aviso tom="erro" titulo="Este arquivo não vai ser enviado">
-          Sem licença declarada, o material não entra — nem por aqui, nem por nenhum outro caminho. Nada foi enviado nem lido.
-          Apostila de sistema de ensino precisa de licença ou parceria com o dono do conteúdo. Fale com a gente se a escola tem o contrato.
-        </Aviso>
-      ) : (
-        <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-controle border border-linha p-3 text-[15px] leading-snug text-tinta">
-          <Checkbox checked={declaro} onCheckedChange={(v) => setDeclaro(v === true)}
-            className="mt-0.5 size-5 rounded-[6px] border-borda-campo data-[state=checked]:border-noite data-[state=checked]:bg-noite data-[state=checked]:text-white" />
-          Declaro, em nome da escola, que ela tem o direito de usar este material com os alunos. A declaração fica registrada com meu nome e a data.
-        </label>
-      )}
+      <TabelaGrade rotulo="Material" colunas={colunas} grupos={[{ id: 'todos', linhas: ordenada }]} chave={(f) => f.id} altura={64}
+        aoAbrir={(f) => setFonte(f.id)} ativa={fonteId} vazio="Nenhum material ainda."
+        celular={(f) => ({ inicio: ladrilho(f), titulo: f.titulo, apoio: `${paraCurto(f)} · ${f.titular}`, fim: selo(f) })} />
 
-      <div className="flex flex-wrap justify-end gap-2 pt-1">
-        <Button type="button" variant="discreto" onClick={aoFechar}>Cancelar</Button>
-        <Button type="submit" disabled={!pode}>{recusa ? 'Envio recusado' : 'Enviar material'}</Button>
-      </div>
-    </form>
+      <PainelFonte key={aberta?.id ?? 'nenhuma'} fonte={aberta} aoFechar={() => setFonte(null)} />
+      <DialogoEnviar aberto={enviando} aoFechar={() => setEnviando(false)} />
+    </div>
   )
 }
 
-export function Material() {
-  const [fontes, setFontes] = useState(FONTES)
-  const [enviando, setEnviando] = useState(false)
-  const conta = (e: EstadoIngestao) => fontes.filter((f) => f.estado === e).length
+/* ── O painel da fonte ─────────────────────────────────────────────────────────────────────────────────── */
 
+function PainelFonte({ fonte: f, aoFechar }: { fonte: Fonte | null; aoFechar: () => void }) {
+  const [retirando, setRetirando] = useState(false)
+  const [motivo, setMotivo] = useState('')
+  const [feito, setFeito] = useState<string | null>(null)
+  if (!f) return <PainelLado aberto={false} aoFechar={aoFechar} titulo=""><span /></PainelLado>
+  const s = f.retirado ? { texto: 'Retirado', familia: 'neutro' as const } : SELO[f.estado]
+  const podeReenviar = !f.retirado && f.estado === 'falhou'
   return (
-    <Tela titulo="Material"
-      descricao="Tudo que os agentes citam sai daqui. Cada fonte tem dono e licença; o que não tem licença não entra."
-      acoes={<Button onClick={() => setEnviando(true)}><Upload /> Enviar material</Button>}>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <NumeroPainel rotulo="Prontas para uso" valor={conta('pronto')} apoio="3.052 trechos com página" />
-        <NumeroPainel rotulo="Processando" valor={conta('processando')} apoio="fora do horário de aula, quando é lote" />
-        <NumeroPainel rotulo="Falharam" valor={conta('falhou')} apoio={<span className="font-medium text-erro">pedem um novo envio</span>} />
-        <NumeroPainel rotulo="Recusadas" valor={conta('recusado')} apoio="por falta de licença" />
+    <>
+      <PainelLado aberto aoFechar={aoFechar} titulo={f.titulo}
+        rodape={!f.retirado && (
+          <>
+            <MenuMais rotulo="Mais sobre o material" lado="top" alinhar="start" itens={[{ rotulo: 'Retirar do uso', perigo: true, aoEscolher: () => setRetirando(true) }]} />
+            <span className="flex-1" />
+            {podeReenviar && <Botao tamanho="m" icone={<Upload strokeWidth={2.5} />} onClick={() => { material.reenviar(f.id); setFeito('Outra versão enviada') }}>Enviar outra versão</Botao>}
+          </>
+        )}>
+        <div className="grid gap-5">
+          <div className="flex flex-wrap items-center gap-2"><Selo familia={s.familia}>{s.texto}</Selo></div>
+          {feito && <FaixaResultado tipo="certo" titulo={feito} className="-mx-6 border-b-2">{f.estado === 'pronto' ? 'Pronto para a IA ler.' : 'Lendo agora.'}</FaixaResultado>}
+          {f.estado === 'falhou' && f.falha && !feito && <Aviso tom="erro" titulo={f.falha[0].toUpperCase() + f.falha.slice(1)}>Envie um PDF com texto.</Aviso>}
+          {f.retirado && <Aviso tom="info" titulo="Retirado do uso">{f.retirado.motivo} · {f.retirado.quando}</Aviso>}
+          <dl className="grid gap-3">
+            {[['Para', paraDe(f)], ['Dono', f.titular], ['Licença', f.licenca], ...(f.paginas ? [['Páginas', String(f.paginas)]] : [])].map(([k, v]) => (
+              <div key={k} className="grid gap-0.5">
+                <dt className="t-selo text-sutil">{k}</dt>
+                <dd className="t-corpo text-tinta">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </PainelLado>
+      <DialogoConfirmar aberto={retirando} aoMudar={(v) => { setRetirando(v); if (!v) setMotivo('') }} titulo="Retirar do uso?"
+        frase="A IA para de usar este material na hora."
+        confirmar={{ rotulo: 'Retirar', variante: 'perigoCheio', desligado: !motivo.trim(), aoConfirmar: () => { material.retirar(f.id, motivo.trim()); setMotivo('') } }}>
+        <CampoTexto rotulo="Motivo" valor={motivo} aoMudar={setMotivo} placeholder="Ex.: o dono pediu a retirada" />
+      </DialogoConfirmar>
+    </>
+  )
+}
+
+/* ── Enviar material ───────────────────────────────────────────────────────────────────────────────────── */
+
+function DialogoEnviar({ aberto, aoFechar }: { aberto: boolean; aoFechar: () => void }) {
+  const entrada = useRef<HTMLInputElement>(null)
+  const [arquivo, setArquivo] = useState<string | null>(null)
+  const [dono, setDono] = useState('')
+  const [licenca, setLicenca] = useState('')
+  const [serie, setSerie] = useState('')
+  const [disciplina, setDisciplina] = useState('')
+  const [declaro, setDeclaro] = useState(false)
+  const [erro, setErro] = useState('')
+  const fechar = () => { aoFechar(); window.setTimeout(() => { setArquivo(null); setDono(''); setLicenca(''); setSerie(''); setDisciplina(''); setDeclaro(false); setErro('') }, 200) }
+  const enviar = () => {
+    if (!arquivo) return setErro('Escolha o PDF.')
+    if (!dono.trim()) return setErro('Diga quem é o dono.')
+    if (!licenca || licenca === 'sem') return setErro('Sem licença, não envia. Nada saiu do computador.')
+    if (!serie || !disciplina) return setErro('Escolha a série e a disciplina.')
+    if (!declaro) return setErro('Marque a declaração.')
+    material.enviar({ titulo: arquivo.replace(/\.pdf$/i, ''), capitulo: `${serie} · ${disciplina}`, paginas: 0, titular: dono.trim(), licenca })
+    fechar()
+  }
+  const limpaErro = () => setErro('')
+  return (
+    <Dialogo aberto={aberto} aoMudar={(v) => { if (!v) fechar() }} titulo="Enviar material" largura={600}
+      rodape={<Botao tamanho="m" onClick={enviar}>Enviar</Botao>}>
+      <div className="grid gap-4">
+        <Campo id="mt-arquivo" rotulo="PDF">
+          <input ref={entrada} id="mt-arquivo" type="file" accept="application/pdf,.pdf" className="sr-only"
+            onChange={(e) => { setArquivo(e.target.files?.[0]?.name ?? null); limpaErro() }} />
+          <Botao variante="secundario" tamanho="m" icone={<FileText strokeWidth={2.5} />} className="justify-self-start" onClick={() => entrada.current?.click()}>
+            {arquivo ?? 'Escolher PDF'}
+          </Botao>
+        </Campo>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CampoTexto rotulo="Dono" valor={dono} aoMudar={(v) => { setDono(v); limpaErro() }} placeholder="Colégio Aurora" />
+          <Escolha id="mt-licenca" rotulo="Licença" valor={licenca} aoMudar={(v) => { setLicenca(v); limpaErro() }} marcador="Escolha" opcoes={LICENCAS} />
+          <Escolha id="mt-serie" rotulo="Série" valor={serie} aoMudar={(v) => { setSerie(v); limpaErro() }} marcador="Escolha" opcoes={SERIES.map((s) => ({ valor: s, rotulo: s }))} />
+          <Escolha id="mt-disc" rotulo="Disciplina" valor={disciplina} aoMudar={(v) => { setDisciplina(v); limpaErro() }} marcador="Escolha" opcoes={DISCIPLINAS.map((d) => ({ valor: d, rotulo: d }))} />
+        </div>
+        <Opcao tipo="checkbox" marcado={declaro} aoMudar={(m) => { setDeclaro(m); limpaErro() }}>
+          <span className="text-[15px] font-medium leading-5">A escola pode usar este material. Fica registrado com meu nome.</span>
+        </Opcao>
+        {erro && <Aviso tom="erro">{erro}</Aviso>}
       </div>
-
-      <Aviso tom="info" className="mt-4" titulo="O material é da escola, e fica na escola">
-        O que você envia fica preso ao Colégio Aurora: não vai para outra escola, não vira banco nosso e não treina modelo.
-        Apostila de terceiro sem licença não entra por nenhum caminho.
-      </Aviso>
-
-      <ul className="mt-4 grid gap-3">
-        {fontes.map((f) => (
-          <li key={f.id} className={cn('rounded-cartao border bg-superficie p-4 lg:p-5', f.estado === 'recusado' ? 'border-dashed border-borda-campo' : 'border-linha')}>
-            <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
-              <span className={cn('grid size-10 shrink-0 place-items-center rounded-controle', f.estado === 'recusado' ? 'bg-erro-cx text-erro' : 'bg-realce-suave text-tinta')}>
-                {f.estado === 'recusado' ? <Ban className="size-5" /> : <FileText className="size-5" />}
-              </span>
-              <div className="min-w-0 flex-1 basis-[260px]">
-                <h2 className="font-corpo text-base font-semibold leading-snug text-tinta">{f.titulo}</h2>
-                <p className="text-sm text-sutil">{f.capitulo}{f.paginas > 0 && ` · ${f.paginas} páginas`}{f.trechos > 0 && ` · ${f.trechos.toLocaleString('pt-BR')} trechos indexados`}</p>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">{ROTULO[f.estado]}</div>
-            </div>
-
-            <dl className="mt-3 grid gap-x-8 gap-y-1.5 text-sm sm:grid-cols-2">
-              <div className="flex gap-2"><dt className="shrink-0 text-sutil">Dono do conteúdo</dt><dd className="font-medium text-tinta">{f.titular}</dd></div>
-              <div className="flex gap-2"><dt className="shrink-0 text-sutil">Licença</dt>
-                <dd className={cn('inline-flex items-center gap-1.5 font-medium', f.estado === 'recusado' ? 'text-erro' : 'text-tinta')}>
-                  {f.estado !== 'recusado' && <ShieldCheck className="size-4 text-ok" />}{f.licenca}
-                </dd>
-              </div>
-            </dl>
-
-            {f.estado === 'processando' && (
-              <div className="mt-3">
-                <Progress value={62} aria-label="62% processado" className="h-2 rounded-full bg-ia-cx [&>div]:bg-caramelo" />
-                <p className="mt-1.5 text-[13px] text-sutil">Lendo as páginas e separando por capítulo · 60 de 96 páginas. Você pode sair desta tela.</p>
-              </div>
-            )}
-            {f.estado === 'falhou' && (
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-controle bg-erro-cx p-3">
-                <p className="min-w-0 flex-1 basis-[240px] text-sm leading-snug text-erro">{f.detalhe}</p>
-                <Button variant="secundario" size="sm" onClick={() => setFontes((l) => l.map((x) => x.id === f.id ? { ...x, estado: 'processando' } : x))}><RotateCw /> Tentar de novo</Button>
-              </div>
-            )}
-            {f.estado === 'recusado' && (
-              <p className="mt-3 rounded-controle bg-erro-cx p-3 text-sm leading-snug text-erro">
-                Recusado antes de enviar, em 15/09: o arquivo não foi lido nem guardado. Para usar este material, a escola precisa de licença ou parceria com o dono do conteúdo.
-              </p>
-            )}
-          </li>
-        ))}
-      </ul>
-
-      <Dialog open={enviando} onOpenChange={setEnviando}>
-        <DialogContent className={cn(CANTO_DIALOGO, 'max-h-[92svh] max-w-xl overflow-y-auto')}>
-          <DialogHeader className="text-left">
-            <DialogTitle className="font-titulo text-[20px] font-semibold tracking-[-0.02em] text-tinta">Enviar material</DialogTitle>
-            <DialogDescription className="text-[15px] text-apoio">O arquivo só sai do seu computador depois de a licença estar declarada.</DialogDescription>
-          </DialogHeader>
-          <Envio aoFechar={() => setEnviando(false)} aoEnviar={(titulo) => {
-            setFontes((l) => [{ id: `n${l.length}`, titulo, capitulo: 'na fila de leitura', paginas: 0, titular: 'Colégio Aurora', licenca: 'Material próprio da escola', estado: 'processando', trechos: 0 }, ...l])
-            setEnviando(false)
-          }} />
-        </DialogContent>
-      </Dialog>
-
-      <NotaMockup>
-        Spec A2 (ingestão mínima, fatia do F4): upload de PDF com titularidade e licença, trechos com página, e recusa sem licença <b>antes</b> de
-        extrair. No passo 1 do roteiro a coordenação mostra esta tela já com o material do seed. D5 revista e D22: só material com licença, começando
-        pelo upload. Regra 60, item 10: o material pertence ao tenant da escola. Classificação BNCC completa, reprocessamento e adaptadores ficam para o F4.
-      </NotaMockup>
-    </Tela>
+    </Dialogo>
   )
 }

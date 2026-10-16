@@ -50,7 +50,7 @@ interface LeaderboardRankingItem {
 const GRADE =
   "grid grid-cols-[52px_minmax(0,1fr)_44px_52px] items-center gap-x-2 px-3 @xl:grid-cols-[64px_minmax(0,1fr)_minmax(0,1.15fr)_72px_64px] @xl:gap-x-3 @xl:px-4 @3xl:grid-cols-[64px_minmax(0,1fr)_minmax(0,1.15fr)_72px_176px]"
 
-const rowVariants = cva(cn(GRADE, "border-linha border-t transition-colors duration-150 hover:bg-[#FAFAFA]"), {
+const rowVariants = cva(cn(GRADE, "border-linha border-t transition-colors duration-150 hover:bg-fundo-suave"), {
   variants: {
     density: {
       default: "h-12",
@@ -217,7 +217,7 @@ const LeaderboardRankings = React.forwardRef<
           aria-hidden="true"
           className={cn(
             GRADE,
-            "font-teachy text-tinta h-[49px] shrink-0 bg-[#FAFAFA] text-[14px] leading-6 font-bold"
+            "font-teachy text-tinta h-[49px] shrink-0 bg-fundo-suave text-[14px] leading-6 font-bold"
           )}
         >
           <span>{titulos.rank}</span>

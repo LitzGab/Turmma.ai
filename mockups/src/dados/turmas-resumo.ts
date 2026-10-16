@@ -1,5 +1,4 @@
 import { alunosDa, dificuldades, type Aluno } from './alunos'
-import { rankingDeParticipacao } from './ranking'
 
 /* O RESUMO DE CADA TURMA, para a área "Turmas" (a lista, a Visão Geral e a aba Alunos da turma aberta).
    Aqui mora o que não sai de `alunosDa()`: os erros recorrentes que a correção achou, o uso do Tutor em agregado, as
@@ -128,8 +127,8 @@ export const virgula = (n: number, casas = 1) => n.toFixed(casas).replace('.', '
    Pontua o que o aluno FEZ, não o quanto acertou: presença vale 10 por aula, entrega vale 20. É o mesmo critério
    da aba Ranking. No empate vale a ordem de chamada (a ordenação é estável), sem desempate por nota. */
 export const pontosDe = (a: Aluno) => (a.aulasDadas - a.faltas) * 10 + a.entregas.feitas * 20
-/* a ordem é a da aba Ranking (dados/ranking): pontos e, no empate, quem entregou mais cedo */
-export const rankingDa = (turmaId: string) => rankingDeParticipacao(turmaId).linhas.map((l) => ({ aluno: l.aluno, pontos: l.pontos }))
+/* 12ª rodada: sem dependência de dados/ranking (o Ranking saiu da tela); a ordem é pontos e, no empate, a chamada. */
+export const rankingDa = (turmaId: string) => alunosDa(turmaId).map((aluno) => ({ aluno, pontos: pontosDe(aluno) })).sort((a, b) => b.pontos - a.pontos)
 
 /* ── Os números da turma ─────────────────────────────────────────────────────────────────────────────────── */
 export type NumerosTurma = {
@@ -240,3 +239,21 @@ export const statusDe = (a: Aluno): StatusAluno => (a.media !== null && a.media 
    só chega ao aluno depois que a professora aprova. Só o 2ºB tem, e são dois alunos (o mesmo "2" de TURMA_CARREGA). */
 const ADAPTACOES: Record<string, string> = { '2b-13': 'fonte ampliada', '2b-27': 'enunciado direto, um exercício por bloco' }
 export const adaptacaoDe = (alunoId: string): string | null => ADAPTACOES[alunoId] ?? null
+
+/* ── A Situação da lista de alunos (décima rodada, 04/10/2026) ───────────────────────────────────────────────
+   "Em dia" ou "Precisa de atenção" com UM motivo curto, sempre fato do trabalho (D57): o mesmo critério de
+   `atencaoDa` (quem entra em "Quem precisa de atenção" na aba Hoje), mas com a média que a tela está mostrando — só
+   com notas aprovadas. O motivo é a palavra do que mais pesa: entregas, faltas ou notas. */
+export type Situacao = { precisa: boolean; motivo: 'entregas' | 'faltas' | 'notas' | null }
+
+export function situacaoDe(a: Aluno, media: number | null = a.media): Situacao {
+  const fracas = media === null ? 0 : dificuldades(a).length
+  const faltando = a.entregas.total - a.entregas.feitas
+  const precisa = (fracas >= 3 && media !== null && media < 6) || (media !== null && media < 5) || faltando >= 2 || a.faltas >= 4
+  if (!precisa) return { precisa: false, motivo: null }
+  const motivo = faltando >= 2 ? 'entregas' : a.faltas >= 4 ? 'faltas' : 'notas'
+  return { precisa, motivo }
+}
+
+/** O limite de faltas: a escola exige 75% de presença (4 de 16 aulas). "Perto" é a uma falta do limite. */
+export const limiteDeFaltas = (a: Aluno) => Math.floor(a.aulasDadas * 0.25)

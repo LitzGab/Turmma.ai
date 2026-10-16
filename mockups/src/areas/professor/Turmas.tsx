@@ -1,132 +1,182 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Atom, Check, ChevronLeft, FlaskConical, ListFilter, UserPlus, type LucideIcon } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { BarraDesempenho, itemT, menuT } from '@/components/turmma/painel'
-import { NotaMockup } from '@/components/turmma/tela'
-import { botaoT, PeleTeachy, tipo } from '@/components/turmma/teachy'
-import { ESCOLAS, escolaDe, TURMAS } from '@/dados/escola'
+import {
+  Aviso, BarraProgresso, Botao, CabecalhoPagina, EstadoVazio, LadrilhoIcone, Pagina, Selo, materiaDe,
+} from '@/components/duo'
+import { Icone } from '@/components/duo/icones'
+import { Onca } from '@/components/duo/onca'
+import { useAbrirSino } from '@/components/turmma/sino'
+import { useParametro } from '@/components/turmma/tela'
+import { useEscolaAtiva } from '@/dados/escola-ativa'
+import { alocacoes, useAlocacoes, type AlocacaoEstado } from '@/dados/escola-estado'
+import { useFila } from '@/dados/fila'
+import { useEsperandoNaTurma } from './_pecas'
+import { proximaAulaDe, useSemana } from '@/dados/grade'
+import { useProfessorAtual } from '@/dados/sessao'
+import { useTurmasDoProfessor, type TurmaProfessora } from '@/dados/turmas-professora'
 import { numerosDa } from '@/dados/turmas-resumo'
-import { cn } from '@/lib/utils'
-import { ConvidarAlunos } from './abas-turma/ConvidarAlunos'
-import { MeuUso } from './abas-turma/MeuUso'
+import { usoTutorDa } from '@/dados/turma-atividades'
+import { EscolaDaSemana, NavegarSemana, SemanaDoProfessor } from './Calendario'
 
-/* TURMAS — A LISTA. CÓPIA da área "Turmas" da Teachy (oitava rodada, 20/09/2026). Na sétima rodada a lista eram quatro
-   cartões altos e cheios de dado, "adaptados" da Teachy; o Gabriel olhou e disse: "eu quero um ctrl c e ctrl v da Teachy.
-   Não está interessante o seu." Então agora é o desenho de lá, com as medidas tiradas no Chrome dele e as nossas cores:
-   · a linha de 42 px: "Turmas" em Quicksand 18/700 e, à direita, "Meu uso", "Filtrar" (o funil; filtra por escola, porque
-     a professora dá aula em duas) e o primário de 42 px;
-   · a grade `auto-fill` de 260 px com vão de 16;
-   · o cartão de 213 px: a linha 10/12 com o ícone da disciplina, "Química" e "2º ano EM"; o nome em Quicksand 20/700;
-     o espaço vazio; e, embaixo, "Desempenho" com a barra de 16 px e a pílula do percentual dentro (o acerto médio da
-     turma; o 1ºC, sem nota, mostra "-%"). NADA MAIS — e o resto da página fica vazio, como lá.
-   O que SAIU do cartão: a faixa de números (média, presença, entregas), a próxima aula e a semana, "esperando você",
-   "precisam de atenção", o ranking e o ícone de convite do canto. Da barra saíram a busca e o filtro em pílulas.
-   O que é nosso: a Teachy diz "Criar turma"; aqui a turma vem da estrutura que a coordenação importa (D3), então o
-   primário é "Convidar alunos": abre um menu com as turmas e depois o diálogo do convite daquela turma.
-   "Meu uso" é o espelho do professor (D45, D64), não de uma turma: troca a grade pelo conteúdo de MeuUso.tsx, com
-   "‹ Turmas" para voltar. O endereço guarda: /professor/turmas?aba=uso.
-   A página não rola: a linha do alto fica e quem rola é a área de baixo. */
+/* TURMAS (/professor/turmas) — 14ª rodada (05/10/2026; plano ux-composicao 1.3, 5.1 e 5.2).
 
-const ICONE_DISCIPLINA: Record<string, LucideIcon> = { Química: FlaskConical, Ciências: Atom }
+   Página do tipo Painel (até 1200, margem de 32), com o título "Turmas" e as abas TURMAS · SEMANA (?ver=semana),
+   sublinhadas. As duas abas usam a MESMA Pagina: a borda esquerda e a largura não mudam ao trocar.
+   · TURMAS: a faixa "Confirme sua turma" (56 px) acima da grade, enquanto houver alocação pendente: CONFIRMAR
+     (oficial) e NÃO É MINHA (secundário → ?item=<id da fila>&contestar=1: a Casca abre o painel já no formulário de
+     contestação; F13). Depois, a grade de cartões (3 por linha a 1440): o ladrilho da matéria, "2ºB · Química" em
+     20/700, "2º ano EM · 32 alunos", a barra de acerto na cor da matéria e, no rodapé, "5 esperando" (selo amarelo,
+     que abre o sino filtrado pela turma) ou EM DIA; a turma da aula de agora leva AGORA · COMEÇAR AULA.
+     O cartão é um link inteiro (o título estica sobre o cartão); os botões do rodapé ficam por cima dele.
+   · SEMANA: Calendario.tsx. Na linha das abas, o seletor da escola (quem dá aula em duas) e ‹ semana ›.
+   · O painel do item (?item=) é desenhado pela Casca; esta tela não desenha painel de fila.
+   Professor novo (o Marcos): "Nenhuma turma ainda", a 1/3 da altura, até confirmar a 3ºA. */
 
-function CartaoTurma({ t }: { t: (typeof TURMAS)[number] }) {
-  const Icone = ICONE_DISCIPLINA[t.disciplina] ?? FlaskConical
+const ABAS = [{ id: 'turmas', rotulo: 'Turmas' }, { id: 'semana', rotulo: 'Semana' }]
+
+export function Turmas() {
+  const [ver, setVer] = useParametro('ver')
+  const semana = ver === 'semana'
   return (
-    <Link to={`/professor/turmas/${t.id}`} data-cartao-turma aria-label={`Abrir o ${t.nome}: ${t.disciplina}, ${t.serie}, ${escolaDe(t.escolaId).nome}`}
-      className="flex h-[213px] min-w-0 flex-col justify-between rounded-[12px] border border-linha bg-superficie p-4 shadow-[0_2px_4px_rgba(0,0,0,.06)] outline-none transition-shadow duration-150 hover:shadow-[0_4px_14px_rgba(0,0,0,.10)] focus-visible:border-tinta">
-      <div className="min-w-0">
-        <p className="flex items-center gap-2 text-[10px] leading-3 text-sutil">
-          <span className="inline-flex items-center gap-1"><Icone aria-hidden className="size-3 shrink-0 text-caramelo" strokeWidth={2} />{t.disciplina}</span>
-          <span>{t.serie}</span>
-        </p>
-        {/* 11 e não 12: com o fio de 1 px do cartão, o nome fica a 40 px do topo, como lá */}
-        <h2 className="mt-[11px] truncate font-teachy text-[20px] font-bold leading-7 text-tinta">{t.nome}</h2>
-      </div>
-      <div>
-        <p className="text-[11px] leading-4 text-sutil">Desempenho</p>
-        <BarraDesempenho valor={numerosDa(t.id).desempenho} className="mt-1" />
-      </div>
-    </Link>
+    <Pagina tipo="painel" rolagem={semana ? 'nenhuma' : 'corpo'}
+      cabecalho={(
+        /* na Semana, a escola e ‹ semana › moram juntas na ponta direita da linha das abas: terminam na borda da grade
+           (a linha do título, na altura do sino, fica só com o título) */
+        <CabecalhoPagina titulo="Turmas"
+          abas={{ abas: ABAS, valor: semana ? 'semana' : 'turmas', aoMudar: (id) => setVer(id === 'semana' ? 'semana' : null), fim: semana ? <><EscolaDaSemana /><NavegarSemana /></> : undefined }} />
+      )}>
+      {semana ? <SemanaDoProfessor /> : <ListaDeTurmas />}
+    </Pagina>
   )
 }
 
-export function Turmas() {
-  const [params, setParams] = useSearchParams()
-  const noUso = params.get('aba') === 'uso'
-  const [escola, setEscola] = useState('todas')
-  // um diálogo só para a lista; a turma fica guardada para ele fechar sem piscar
-  const [convite, setConvite] = useState({ turmaId: TURMAS[0].id, aberto: false })
+function ListaDeTurmas() {
+  const escola = useEscolaAtiva()
+  const prof = useProfessorAtual()
+  const turmas = useTurmasDoProfessor(escola.id)
+  const pendentes = useAlocacoes(prof.profId).filter((a) => a.estado === 'pendente' && escola.id === 'aurora')
+  const [, setParams] = useSearchParams()
+  // o que acabou de acontecer nesta tela (some ao sair): a confirmação
+  const [feito, setFeito] = useState<{ turma: string; turmaId: string } | null>(null)
+  const itensTurma = useFila('professor').filter((i) => i.tipo === 'turma')
+  const hoje = useSemana(prof.id, escola.id)[0]?.aulas ?? []
 
-  const turmas = TURMAS.filter((t) => escola === 'todas' || t.escolaId === escola)
-  const escolas = [{ id: 'todas', nome: 'Todas' }, ...ESCOLAS.map((e) => ({ id: e.id, nome: e.nome }))]
-  const gatilho = 'outline-none data-[state=open]:bg-realce-suave'
+  const contestar = (a: AlocacaoEstado) => {
+    const id = itensTurma.find((i) => i.ref === a.id)?.id ?? (a.id === 'v4' ? 'turma-3a' : `turma-${a.id}`)
+    setParams((p) => { const n = new URLSearchParams(p); n.set('item', id); n.set('contestar', '1'); return n }, { replace: true })
+  }
+
+  if (turmas.length === 0 && pendentes.length === 0) {
+    return (
+      <div className="grid min-h-[360px] flex-1 grid-rows-[1fr_auto_2fr]">
+        <span aria-hidden />
+        <EstadoVazio ilustracao={<Onca pose="dormindo" tamanho={96} />} titulo="Nenhuma turma ainda" />
+        <span aria-hidden />
+      </div>
+    )
+  }
 
   return (
-    <PeleTeachy className="flex h-[calc(100svh-56px)] min-h-0 flex-col md:h-svh">
-      <header className="flex min-h-[42px] shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 pt-4">
-        {noUso ? (
-          <div className="flex h-[42px] items-center gap-3">
-            <button type="button" onClick={() => setParams({}, { replace: true })} className={botaoT('texto', 'g', '-ml-2 px-2')}><ChevronLeft aria-hidden strokeWidth={2} /> Turmas</button>
-            <span aria-hidden className="h-5 w-px bg-linha" />
-            <h1 className={tipo.secao}>Meu uso</h1>
-          </div>
-        ) : (
-          <>
-            <h1 className={tipo.secao}>Turmas</h1>
-            <div className="flex items-center gap-2 sm:gap-4">
-              <button type="button" onClick={() => setParams({ aba: 'uso' }, { replace: true })} className={botaoT('texto', 'g', 'px-2')}>Meu uso</button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button type="button" className={botaoT('texto', 'g', cn('px-2', gatilho))}>
-                    <ListFilter aria-hidden strokeWidth={2} /> Filtrar{escola !== 'todas' && <span className="font-teachy-corpo font-normal text-sutil">· {escolaDe(escola).curto}</span>}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className={cn(menuT, 'w-60')}>
-                  {escolas.map((e) => (
-                    <DropdownMenuItem key={e.id} className={itemT} onSelect={() => setEscola(e.id)}>
-                      <span className="min-w-0 flex-1 truncate">{e.nome}</span>
-                      {escola === e.id && <Check aria-hidden className="!text-tinta" />}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button type="button" className={botaoT('primario', 'g', 'outline-none')}><UserPlus aria-hidden strokeWidth={2} /> Convidar<span className="max-sm:hidden"> alunos</span></button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className={cn(menuT, 'w-64')}>
-                  <p className="px-2.5 pb-1 pt-1.5 text-[12px] leading-4 text-inativo">Para qual turma?</p>
-                  {TURMAS.map((t) => (
-                    // o convite abre depois que o menu fecha: os dois disputam o foco
-                    <DropdownMenuItem key={t.id} className={cn(itemT, 'h-11')} onSelect={() => window.setTimeout(() => setConvite({ turmaId: t.id, aberto: true }), 0)}>
-                      <span className="w-8 shrink-0 font-teachy font-bold">{t.nome}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] leading-4">{t.disciplina} · {t.serie}</span>
-                        <span className="block truncate text-[12px] leading-4 text-inativo">{escolaDe(t.escolaId).nome}</span>
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </>
-        )}
-      </header>
+    <div className="grid content-start gap-4">
+      {pendentes.map((a) => (
+        <ConfirmeSuaTurma key={a.id} a={a} aoContestar={() => contestar(a)}
+          aoConfirmar={() => { alocacoes.confirmar(a.id); setFeito({ turma: a.turma, turmaId: a.turmaId }) }} />
+      ))}
+      {feito && (
+        <Aviso tom="certo" titulo={`Turma ${feito.turma} confirmada`}
+          acao={<Botao asChild variante="secundario" tamanho="p"><Link to={`/professor/turmas/${feito.turmaId}?aba=alunos&convidar=1`}>Gerar o acesso</Link></Botao>} />
+      )}
+      {turmas.length > 0 && (
+        <ul aria-label={`Suas turmas no ${escola.nome}`} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* com a faixa "Confirme sua turma" na tela, o cheio é o CONFIRMAR dela: COMEÇAR AULA fica de contorno (um cheio só) */}
+          {turmas.map((t) => <CartaoTurma key={t.id} t={t} agora={hoje.some((x) => x.turmaId === t.id && x.agora)} aulaCheia={pendentes.length === 0} />)}
+        </ul>
+      )}
+    </div>
+  )
+}
 
-      <div className="relative min-h-0 flex-1 overflow-y-auto p-4">
-        {noUso ? <MeuUso /> : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-            {turmas.map((t) => <CartaoTurma key={t.id} t={t} />)}
-          </div>
-        )}
+function CartaoTurma({ t, agora, aulaCheia = true }: { t: TurmaProfessora; agora: boolean; aulaCheia?: boolean }) {
+  // o mesmo número do sino filtrado pela turma (o "5 esperando" do cabeçalho da turma)
+  const esperando = useEsperandoNaTurma(t.id)
+  const abrirSino = useAbrirSino()
+  const materia = materiaDe(t.disciplina)
+  const familia = materia?.familia ?? 'azul'
+  const acerto = t.nova ? null : numerosDa(t.id).desempenho
+  const apoio = [t.serie, t.alunos ? `${t.alunos} alunos` : 'sem lista'].join(' · ')
+  const prox = proximaAulaDe(t.id)
+  const semana = useSemana(useProfessorAtual().id, t.escolaId)
+  const conteudo = prox ? semana.flatMap((d) => d.aulas).find((a) => a.turmaId === t.id && a.data === prox.data && a.hora === prox.hora)?.conteudo : null
+  const uso = t.nova ? null : usoTutorDa(t.id)
+  return (
+    <li className="group relative flex min-w-0 flex-col rounded-[16px] border-2 border-borda bg-white shadow-[0_4px_0_0_var(--color-borda)] transition-colors duration-150 hover:bg-fundo-suave">
+      <div className="flex min-w-0 items-start gap-3 px-5 pt-5">
+        {materia && <LadrilhoIcone familia={familia} tamanho={44} icone={<Icone id={materia.icone} familia={familia} />} />}
+        <div className="min-w-0 flex-1">
+          <Link to={`/professor/turmas/${t.id}`} className="block truncate text-[20px] font-bold leading-[26px] text-tinta outline-none after:absolute after:inset-0 after:rounded-[14px] focus-visible:after:outline-3 focus-visible:after:outline-azul-texto"
+            aria-label={`${t.nome} · ${t.disciplina}. ${apoio}${acerto !== null ? ` · acerto ${acerto}%` : ''}`}>
+            {t.nome} · {t.disciplina}
+          </Link>
+          <p className="t-apoio mt-0.5 truncate">{apoio}</p>
+        </div>
       </div>
 
-      <ConvidarAlunos key={convite.turmaId} turmaId={convite.turmaId} aberto={convite.aberto} aoMudar={(v) => setConvite((c) => ({ ...c, aberto: v }))} />
-      <NotaMockup>
-        "Turmas" é cópia da Teachy (oitava rodada, 20/09/2026): lista de turmas em cartões e a turma aberta com abas. Saiu "Criar turma": a turma deriva da estrutura que a
-        coordenação importa (regra 60, item 8); no lugar entrou "Convidar alunos" (D3: o aluno reivindica o próprio nome e o professor aprova).
-      </NotaMockup>
-    </PeleTeachy>
+      <div className="mt-4 grid gap-1.5 px-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="t-selo text-sutil">Acerto da turma</span>
+          <span className="text-[15px] font-bold tabular-nums text-tinta">{acerto === null ? '—' : `${acerto}%`}</span>
+        </div>
+        <BarraProgresso valor={acerto ?? 0} familia={familia} altura={12} rotulo={`Acerto do ${t.nome}`} />
+      </div>
+
+      <dl className="mb-4 mt-3 grid grid-cols-[minmax(0,1fr)] px-5">
+        <ParCartao rotulo="Próxima aula">{prox ? `${prox.selo} · ${conteudo ?? 'falta preencher'}` : '—'}</ParCartao>
+        <ParCartao rotulo="Tutor">{uso ? `${uso.usaram} de ${uso.alunos} usaram` : '—'}</ParCartao>
+      </dl>
+
+      <div className="mt-auto flex h-14 min-w-0 items-center gap-2 border-t-2 border-borda px-5 py-2.5">
+        {esperando > 0 ? (
+          <button type="button" onClick={() => abrirSino(t.id)} aria-label={`${esperando} esperando você no ${t.nome}: abrir a lista`}
+            className="relative z-[1] -ml-1 inline-flex h-9 items-center rounded-[10px] px-1 transition-colors duration-150 hover:bg-amarelo-claro">
+            <Selo familia="amarelo">{esperando} esperando</Selo>
+          </button>
+        ) : t.nova && !t.alunos ? <Selo>Nova</Selo> : <Selo familia="verde">Em dia</Selo>}
+        {agora && (
+          <Botao asChild variante={aulaCheia ? 'primario' : 'secundario'} tamanho="p" className="relative z-[1] ml-auto shrink-0">
+            <Link to={`/professor/turmas/${t.id}/aula`} aria-label="Agora · Começar aula"><span className="2xl:hidden">Começar aula</span><span className="max-2xl:hidden">Agora · Começar aula</span></Link>
+          </Botao>
+        )}
+      </div>
+    </li>
+  )
+}
+
+/** Uma linha de rótulo e valor no cartão: o rótulo à esquerda, o valor à direita, cortado se não couber. */
+function ParCartao({ rotulo, children }: { rotulo: string; children: ReactNode }) {
+  return (
+    <div className="flex min-h-9 min-w-0 items-center justify-between gap-3 border-t-2 border-borda first:border-t-0">
+      <dt className="t-apoio shrink-0">{rotulo}</dt>
+      <dd className="min-w-0 truncate text-right text-[15px] font-bold text-tinta first-letter:uppercase">{children}</dd>
+    </div>
+  )
+}
+
+/** "Confirme sua turma": a faixa de 56 px com a turma nova que a coordenação pôs para o professor. Confirmar abre a
+    turma (D3); "Não é minha" abre o painel da casca já no formulário (o motivo e o envio à coordenação). */
+function ConfirmeSuaTurma({ a, aoConfirmar, aoContestar }: { a: AlocacaoEstado; aoConfirmar: () => void; aoContestar: () => void }) {
+  const materia = materiaDe(a.disciplina)
+  return (
+    <section aria-label="Turma para confirmar"
+      className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 rounded-[16px] border-2 border-amarelo-borda bg-amarelo-claro py-1.5 pl-2 pr-2 max-sm:p-3">
+      {materia && <LadrilhoIcone familia={materia.familia} tamanho={40} icone={<Icone id={materia.icone} familia={materia.familia} />} />}
+      <p className="min-w-0 flex-1 truncate">
+        <span className="t-cartao text-tinta">Confirme sua turma</span>
+        <span className="t-apoio text-apoio"> · {a.turma} · {a.disciplina}</span>
+      </p>
+      <div className="flex gap-2 max-sm:w-full [&>*]:max-sm:flex-1">
+        <Botao variante="secundario" tamanho="p" onClick={aoContestar}>Não é minha</Botao>
+        <Botao variante="oficial" tamanho="p" onClick={aoConfirmar}>Confirmar</Botao>
+      </div>
+    </section>
   )
 }

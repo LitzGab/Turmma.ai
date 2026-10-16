@@ -326,9 +326,10 @@ no Brasil, se um contrato exigir.
 
 **Para entender o produto:** `docs/visao-produto.md`, `docs/fluxos.md`, `docs/glossario.md`
 **Para entender a interface:** `docs/interface.md`
-**Para ver a interface desenhada:** o mockup de outubro, no repositório `Prototipo_Turmma` do Gabriel
-(branch `mockups/interface`; D80). A pasta `mockups/` daqui é a versão de setembro, anterior à pele
-nova. **Nada de mockup é copiado para o `apps/web`** nem para os `packages/`
+**Para ver a interface desenhada:** o mockup de outubro, em `mockups/` (cópia de `Prototipo_Turmma`,
+branch `mockups/interface`, commit `a95568d`, trazida em 16/10/2026; D80). A versão de setembro, anterior
+à pele nova, está no histórico do git e em `mockups/.antes-da-remodelagem/`. **Nada de mockup é copiado
+para o `apps/web`** nem para os `packages/`
 **Para saber o que a revisão dos mockups mudou e ainda não virou decisão:**
 `docs/pendencias-dos-mockups.md` (31 itens, com o que cada um pede de tela, API, dado, regra e teste)
 **Para entender o negócio:** `docs/negocio.md` (mercado, preço, concorrência). Não é leitura

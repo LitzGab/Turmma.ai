@@ -39,7 +39,7 @@ export const tipo = {
 /* ── Botão: canto 8, Quicksand 14/700. g = 42 px (página), m = 34 px (cabeçalho de aba), p = 28 px ("Gerenciar") ── */
 const BOTAO_TAM = { g: 'h-[42px] px-4 text-[14px] leading-5', m: 'h-[34px] px-4 text-[14px] leading-5', p: 'h-7 px-3 text-[12px] leading-4 gap-1.5' }
 const BOTAO_VAR = {
-  primario: 'bg-caramelo text-tinta hover:bg-caramelo-claro active:bg-caramelo-fundo',
+  primario: 'bg-caramelo text-sobre-cor hover:bg-caramelo-claro active:bg-caramelo-fundo',
   contorno: 'border border-borda-campo bg-superficie text-tinta hover:bg-realce-suave',
   texto: 'text-tinta hover:bg-realce-suave',
 }
@@ -121,9 +121,9 @@ export function AlternaT<T extends string>({ opcoes, valor, aoMudar }: { opcoes:
 export const tabelaT = {
   caixa: 'overflow-hidden rounded-[8px] border border-linha bg-superficie',
   tabela: 'w-full border-collapse text-left text-[14px] leading-6 text-tinta',
-  cabeca: 'bg-[#FAFAFA]',
+  cabeca: 'bg-fundo-suave',
   th: 'h-[49px] whitespace-nowrap px-4 py-3 font-teachy text-[14px] font-bold leading-6 text-tinta',
-  tr: 'border-t border-linha transition-colors duration-150 hover:bg-[#FAFAFA]',
+  tr: 'border-t border-linha transition-colors duration-150 hover:bg-fundo-suave',
   td: 'px-4 py-3 align-middle',
 }
 

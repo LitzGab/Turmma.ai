@@ -1,150 +1,152 @@
 import { useState } from 'react'
-import { Download, FileDown, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Estado } from '@/components/turmma/ia'
-import { Cartao, NotaMockup, Tela } from '@/components/turmma/tela'
-import { cn } from '@/lib/utils'
-import { AvisoInfo, caixaMarca, campo, TabelaResponsiva, type Coluna } from './_b-pecas'
+import { Download, Lock } from 'lucide-react'
+import { Botao, FaixaResultado, GrupoToques, Opcao, Segmentado } from '@/components/duo'
+import { PainelLado } from '@/components/turmma/painel-lado'
+import { listaDe } from '@/dados/acesso'
+import { registrar } from '@/dados/demo/nucleo'
+import { nomeDaTurma } from '@/dados/demo/turmas-base'
+import { useMesIA } from './Governanca'
 
-/* Exportar (D63): o que a escola e o professor produzem é deles, e sai em formato aberto,
-   a qualquer momento, sem depender de nós. A exportação fica em auditoria (regra 20, item 10). */
+/* EXPORTAR DADOS (12ª rodada, polimento C1, 04/10/2026; plano 5.3). O painel que (Exportar dados) abre em Registros
+   e que ?exportar=1&conjunto=<id> também abre: "uso" vem de IA (Exportar este relatório); "lista:<turmaId>" vem da
+   turma (C2), para exportar a lista com finalidade.
+   O quê, o formato (CSV · JSON), o período e a finalidade obrigatória → GERAR → o link de 24 h e BAIXAR, que baixa um
+   arquivo de verdade e registra `exportacao` (aparece na Auditoria). O que a escola produz é dela
+   e sai em formato aberto (D63). Conversa do Tutor e dado de um aluno só saem a pedido do titular (LGPD, art. 18 — lei). */
 
-const CONJUNTOS = [
-  { id: 'estrutura', nome: 'Estrutura da escola', detalhe: 'Séries, turmas, grade, calendário e alocação' },
-  { id: 'artefatos', nome: 'Artefatos dos professores', detalhe: 'Provas, atividades, planos e materiais, com a página citada' },
-  { id: 'diagnosticos', nome: 'Correções e diagnósticos aprovados', detalhe: 'Por avaliação e habilidade, com quem aprovou' },
-  { id: 'uso', nome: 'Histórico de uso de IA', detalhe: 'O que foi gerado, por qual agente, e quem aprovou' },
-  { id: 'auditoria', nome: 'Registros de auditoria', detalhe: 'Validações, leituras nominais, exportações, permissões' },
+/** Baixa um arquivo gerado na hora (Blob). Serve ao Dossiê, ao pedido do titular e às exportações. */
+export function baixarArquivo(nome: string, conteudo: string, tipo: string) {
+  try {
+    const url = URL.createObjectURL(new Blob([tipo.startsWith('text/csv') ? '﻿' + conteudo : conteudo], { type: tipo }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = nome
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  } catch { /* sem Blob (prévia, captura): não baixa, e a tela segue */ }
+}
+
+const COORDENACAO = { nome: 'Helena Martins', papel: 'coordenacao' as const }
+
+type Conjunto = { id: string; nome: string; detalhe: string }
+
+const CONJUNTOS: Conjunto[] = [
+  { id: 'estrutura', nome: 'Estrutura da escola', detalhe: 'Turmas, grade e quem dá aula' },
+  { id: 'documentos', nome: 'Documentos dos professores', detalhe: 'Provas, atividades e planos' },
+  { id: 'notas', nome: 'Notas aprovadas', detalhe: 'Com quem aprovou e quando' },
+  { id: 'uso', nome: 'Histórico de uso de IA', detalhe: 'O que a IA gerou e quem aprovou' },
+  { id: 'auditoria', nome: 'Registros de auditoria', detalhe: 'Quem fez o quê, quando e para quê' },
 ]
 
-const FORMATOS = [
-  { id: 'csv', nome: 'CSV', detalhe: 'Abre em qualquer planilha' },
-  { id: 'json', nome: 'JSON', detalhe: 'Para levar a outro sistema' },
-  { id: 'pdf', nome: 'PDF', detalhe: 'Para ler e arquivar' },
-]
+const FINALIDADES = ['Guarda da escola', 'Relatório à mantenedora', 'Troca de sistema', 'Pedido de órgão público']
+const PERIODOS = [{ id: 'set', rotulo: 'Setembro' }, { id: 'bim', rotulo: '3º bimestre' }, { id: 'ano', rotulo: 'Ano letivo' }]
 
-type Situacao = 'fila' | 'pronta' | 'expirada'
-type Exportacao = { id: string; oQue: string; formato: string; quando: string; finalidade: string; situacao: Situacao }
+/** O conjunto "lista:<turmaId>" (a lista de uma turma), que a turma manda pela URL. */
+function conjuntoDaLista(id: string | null | undefined): Conjunto | null {
+  if (!id?.startsWith('lista:')) return null
+  const turmaId = id.slice(6)
+  return { id, nome: `Lista do ${nomeDaTurma(turmaId)}`, detalhe: 'Nome, matrícula e situação' }
+}
 
-const INICIAIS: Exportacao[] = [
-  { id: 'e2', oQue: 'Histórico de uso de IA · agosto', formato: 'CSV', quando: '19/09, 16h20', finalidade: 'Relatório para a mantenedora', situacao: 'pronta' },
-  { id: 'e1', oQue: 'Artefatos dos professores · 1º semestre', formato: 'PDF', quando: '02/08, 9h10', finalidade: 'Guarda da escola', situacao: 'expirada' },
-]
+/** O conteúdo de cada conjunto, em linhas de CSV. */
+type Mes = { gerou: number; aprovadas: number; esperam: number }
 
-export function Exportar() {
-  const [conjuntos, setConjuntos] = useState<string[]>(['artefatos', 'uso'])
-  const [formato, setFormato] = useState('csv')
-  const [finalidade, setFinalidade] = useState('')
-  const [lista, setLista] = useState(INICIAIS)
+function linhasDe(id: string, mes: Mes): string[][] {
+  if (id.startsWith('lista:')) {
+    const lista = listaDe(id.slice(6))
+    return [['nome', 'matricula', 'situacao'], ...lista.map((n) => [n.nome, n.matricula, n.estado])]
+  }
+  switch (id) {
+    case 'estrutura': return [['turma', 'serie', 'turno'], ['2ºA', '2º ano EM', 'Manhã'], ['2ºB', '2º ano EM', 'Manhã'], ['1ºC', '1º ano EM', 'Manhã']]
+    case 'documentos': return [['documento', 'turma', 'professor', 'estado'], ['Prova de mol e massa molar', '2ºB', 'Camila Souza', 'aprovado'], ['Lista de estequiometria', '2ºB', 'Camila Souza', 'aprovado']]
+    case 'notas': return [['avaliacao', 'turma', 'media', 'aprovado_por', 'quando'], ['Lista de mol e massa molar', '2ºB', '6,1', 'Camila Souza', '18/09']]
+    case 'uso': return [['mes', 'gerado', 'aprovado', 'esperando'], ['setembro', String(mes.gerou), String(mes.aprovadas), String(mes.esperam)]]
+    default: return [['quando', 'quem', 'acao', 'finalidade'], ['19/09, 16h20', 'Helena Martins', 'Exportou dados', 'Relatório à mantenedora']]
+  }
+}
 
-  const alternar = (id: string) => setConjuntos((c) => c.includes(id) ? c.filter((x) => x !== id) : [...c, id])
-  const podeGerar = conjuntos.length > 0 && finalidade !== ''
+function conteudo(ids: string[], formato: 'csv' | 'json', nomes: Record<string, string>, mes: Mes) {
+  if (formato === 'json') {
+    const obj = Object.fromEntries(ids.map((id) => {
+      const [cab, ...linhas] = linhasDe(id, mes)
+      return [nomes[id] ?? id, linhas.map((l) => Object.fromEntries(cab.map((c, i) => [c, l[i]])))]
+    }))
+    return JSON.stringify({ escola: 'Colégio Aurora', ...obj }, null, 2)
+  }
+  return ids.map((id) => [`# ${nomes[id] ?? id}`, ...linhasDe(id, mes).map((l) => l.join(';'))].join('\n')).join('\n\n')
+}
+
+type Gerada = { ids: string[]; formato: 'csv' | 'json'; quando: string; finalidade: string }
+
+export function PainelExportar({ aberto, aoFechar, conjuntoInicial }: { aberto: boolean; aoFechar: () => void; conjuntoInicial?: string | null }) {
+  const lista = conjuntoDaLista(conjuntoInicial)
+  const mes = useMesIA()
+  const opcoes = lista ? [lista, ...CONJUNTOS] : CONJUNTOS
+  const valido = opcoes.some((c) => c.id === conjuntoInicial)
+  const [ids, setIds] = useState<string[]>(valido && conjuntoInicial ? [conjuntoInicial] : [])
+  const [formato, setFormato] = useState<'csv' | 'json'>('csv')
+  const [periodo, setPeriodo] = useState('set')
+  const [finalidade, setFinalidade] = useState<string | null>(null)
+  const [gerada, setGerada] = useState<Gerada | null>(null)
+
+  const nomes = Object.fromEntries(opcoes.map((c) => [c.id, c.nome]))
+  const alternar = (id: string, v: boolean) => { setIds((c) => (v ? [...c, id] : c.filter((x) => x !== id))); setGerada(null) }
+  const podeGerar = ids.length > 0 && !!finalidade
 
   const gerar = () => {
-    const id = `e${Date.now()}`
-    const oQue = conjuntos.map((c) => CONJUNTOS.find((x) => x.id === c)!.nome).join(' + ')
-    setLista((l) => [{ id, oQue, formato: formato.toUpperCase(), quando: '21/09, 10h42', finalidade, situacao: 'fila' }, ...l])
-    window.setTimeout(() => setLista((l) => l.map((e) => e.id === id ? { ...e, situacao: 'pronta' } : e)), 2200)
+    if (!podeGerar) return
+    const ev = registrar('exportacao', { conjunto: ids.map((i) => nomes[i]).join(' + '), finalidade, formato: formato.toUpperCase(), periodo }, COORDENACAO)
+    setGerada({ ids, formato, quando: ev.quando.rotulo, finalidade: finalidade! })
   }
-  const refazer = (id: string) => {
-    setLista((l) => l.map((e) => e.id === id ? { ...e, situacao: 'fila', quando: '21/09, 10h42' } : e))
-    window.setTimeout(() => setLista((l) => l.map((e) => e.id === id ? { ...e, situacao: 'pronta' } : e)), 2200)
+  const baixar = () => {
+    if (!gerada) return
+    const nome = ids.length === 1 ? ids[0].replace(':', '-') : 'exportacao'
+    baixarArquivo(`colegio-aurora-${nome}.${gerada.formato}`, conteudo(gerada.ids, gerada.formato, nomes, mes),
+      gerada.formato === 'csv' ? 'text/csv;charset=utf-8' : 'application/json')
   }
-
-  const colunas: Coluna<Exportacao>[] = [
-    { titulo: 'O quê', celula: (e) => <><span className="block font-medium leading-snug text-tinta">{e.oQue}</span><span className="text-[13px] text-sutil">{e.formato} · {e.finalidade}</span></> },
-    { titulo: 'Pedida por', celula: () => 'Helena Martins' },
-    { titulo: 'Quando', celula: (e) => <span className="whitespace-nowrap tabular-nums">{e.quando}</span> },
-    { titulo: 'Situação', celula: (e) => e.situacao === 'fila' ? <Estado tipo="info">Na fila</Estado> : e.situacao === 'pronta' ? <Estado tipo="ok">Pronta · o link vale 24 h</Estado> : <Estado tipo="contorno">Expirada</Estado> },
-  ]
 
   return (
-    <Tela titulo="Exportar" largura="media"
-      descricao="O que a escola e os professores produzem é de vocês. Sai em formato aberto, a qualquer momento, sem depender de nós.">
+    <PainelLado aberto={aberto} aoFechar={aoFechar} titulo="Exportar dados" className="[&>header_button:focus-visible]:-outline-offset-3"
+      rodape={gerada
+        ? (
+          <FaixaResultado tipo="certo" titulo="Pronto" acao={<Botao variante="oficial" icone={<Download strokeWidth={2.5} />} onClick={baixar}>Baixar</Botao>}
+            className="-mx-6 -mt-3 -mb-[calc(12px+env(safe-area-inset-bottom,0px))] basis-[calc(100%+48px)] border-t-0">
+            O link vale 24 h · {gerada.quando}
+          </FaixaResultado>
+        )
+        : <Botao disabled={!podeGerar} onClick={gerar}>Gerar</Botao>}>
+      <div className="grid gap-6">
+        <fieldset className="grid gap-2.5">
+          <legend className="t-selo mb-2.5 text-sutil">O quê</legend>
+          {opcoes.map((c) => (
+            <Opcao key={c.id} tipo="checkbox" marcado={ids.includes(c.id)} aoMudar={(v) => alternar(c.id, v)}>
+              <span className="block">{c.nome}</span>
+              <span className="t-apoio block">{c.detalhe}</span>
+            </Opcao>
+          ))}
+          <p className="t-apoio flex items-start gap-1.5"><Lock aria-hidden className="mt-0.5 size-4 shrink-0" strokeWidth={2.5} /> Conversa do Tutor e dado de um aluno só saem a pedido do titular.</p>
+        </fieldset>
 
-      <Cartao titulo="Nova exportação">
-        <form onSubmit={(e) => { e.preventDefault(); if (podeGerar) gerar() }} className="grid gap-6">
-          <fieldset className="grid gap-2">
-            <legend className="mb-2 text-[13px] font-semibold text-apoio">O que exportar</legend>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {CONJUNTOS.map((c) => {
-                const marcado = conjuntos.includes(c.id)
-                return (
-                  <label key={c.id} className={cn('flex min-h-[60px] cursor-pointer items-start gap-3 rounded-controle border p-3 transition-colors duration-150',
-                    marcado ? 'border-noite bg-info-cx' : 'border-linha bg-superficie hover:bg-realce')}>
-                    <Checkbox checked={marcado} onCheckedChange={() => alternar(c.id)} className={cn(caixaMarca, 'mt-0.5')} />
-                    <span className="min-w-0">
-                      <span className="block text-[15px] font-semibold leading-snug text-tinta">{c.nome}</span>
-                      <span className="block text-[13px] leading-snug text-sutil">{c.detalhe}</span>
-                    </span>
-                  </label>
-                )
-              })}
-            </div>
-            <p className="mt-1 text-[13px] leading-snug text-sutil">Conversa do Tutor e dado de um aluno não entram na exportação geral: saem só pelo pedido do titular ou do responsável, em Privacidade.</p>
-          </fieldset>
+        <div className="grid gap-2.5">
+          <p className="t-selo text-sutil">Formato</p>
+          <Segmentado rotulo="Formato" valor={formato} aoMudar={(v) => { setFormato(v as 'csv' | 'json'); setGerada(null) }} className="justify-self-start"
+            opcoes={[{ id: 'csv', rotulo: 'CSV' }, { id: 'json', rotulo: 'JSON' }]} />
+        </div>
 
-          <fieldset>
-            <legend className="mb-2 text-[13px] font-semibold text-apoio">Formato</legend>
-            <RadioGroup value={formato} onValueChange={setFormato} className="grid gap-2 sm:grid-cols-3">
-              {FORMATOS.map((f) => (
-                <label key={f.id} className={cn('flex min-h-11 cursor-pointer items-center gap-3 rounded-controle border p-3 transition-colors duration-150',
-                  formato === f.id ? 'border-noite bg-info-cx' : 'border-linha bg-superficie hover:bg-realce')}>
-                  <RadioGroupItem value={f.id} className="size-5 border-borda-campo text-noite data-[state=checked]:border-noite" />
-                  <span><span className="block text-[15px] font-semibold leading-tight text-tinta">{f.nome}</span><span className="block text-[13px] text-sutil">{f.detalhe}</span></span>
-                </label>
-              ))}
-            </RadioGroup>
-          </fieldset>
+        <div className="grid gap-2.5">
+          <p className="t-selo text-sutil">Período</p>
+          <Segmentado rotulo="Período" valor={periodo} aoMudar={(v) => { setPeriodo(v); setGerada(null) }} opcoes={PERIODOS} className="justify-self-start" />
+        </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-1.5">
-              <Label htmlFor="periodo-exp" className="text-[13px] font-semibold text-apoio">Período</Label>
-              <Select defaultValue="ano">
-                <SelectTrigger id="periodo-exp" className={campo}><SelectValue /></SelectTrigger>
-                <SelectContent className="rounded-controle">
-                  {[['mes', 'Setembro de 2026'], ['bim', '3º bimestre'], ['sem', '2º semestre'], ['ano', 'Ano letivo de 2026'], ['tudo', 'Tudo desde o início']].map(([v, n]) => <SelectItem key={v} value={v} className="rounded-linha">{n}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="finalidade-exp" className="text-[13px] font-semibold text-apoio">Finalidade</Label>
-              <Select value={finalidade} onValueChange={setFinalidade}>
-                <SelectTrigger id="finalidade-exp" className={campo}><SelectValue placeholder="Escolha a finalidade" /></SelectTrigger>
-                <SelectContent className="rounded-controle">
-                  {['Guarda da escola', 'Relatório para a mantenedora', 'Troca de sistema', 'Pedido de órgão público'].map((f) => <SelectItem key={f} value={f} className="rounded-linha">{f}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-sutil">Fica no registro de auditoria, com o seu nome e a data.</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            {!podeGerar && <p className="text-sm text-sutil">{conjuntos.length === 0 ? 'Escolha pelo menos um conjunto.' : 'Escolha a finalidade.'}</p>}
-            <Button type="submit" disabled={!podeGerar}><FileDown /> Gerar exportação</Button>
-          </div>
-        </form>
-      </Cartao>
-
-      <h2 className="mb-3 mt-8 font-corpo text-base font-semibold text-tinta">Exportações</h2>
-      <TabelaResponsiva colunas={colunas} linhas={lista} chave={(e) => e.id}
-        acao={(e) => e.situacao === 'pronta' ? <Button variant="secundario" size="sm"><Download /> Baixar</Button>
-          : e.situacao === 'expirada' ? <Button variant="discreto" size="sm" onClick={() => refazer(e.id)}><RefreshCw /> Gerar de novo</Button>
-          : <span className="text-sm text-sutil">Preparando…</span>} />
-
-      <AvisoInfo className="mt-4">
-        O arquivo é montado fora do horário de pico e o link expira em 24 horas. Depois disso é só gerar de novo: o dado continua aqui enquanto o contrato durar, e sai inteiro quando ele acabar.
-      </AvisoInfo>
-
-      <NotaMockup>
-        F12 (com o atendimento ao titular no F3) · fora do MVP de apresentação. Aplica D63 (formato aberto, a qualquer momento), regra 20 itens 7 e 10
-        (link assinado de validade curta; exportação auditada com finalidade), regra 00 item 4 (exportação vai para fila) e regra 20 item 14
-        (conversa de tutor fora da exportação geral).
-      </NotaMockup>
-    </Tela>
+        <div className="grid gap-2.5">
+          <p className="t-selo text-sutil">Para quê</p>
+          <GrupoToques rotulo="Para quê" valor={finalidade} aoMudar={(v) => { setFinalidade(v as string); setGerada(null) }}
+            opcoes={FINALIDADES.map((f) => ({ id: f, rotulo: f }))} />
+          <p className="t-apoio">Fica registrado com seu nome.</p>
+        </div>
+      </div>
+    </PainelLado>
   )
 }

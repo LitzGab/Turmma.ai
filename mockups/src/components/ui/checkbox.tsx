@@ -4,6 +4,9 @@ import { Check } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+/* 12ª rodada (04/10/2026), a PONTE VISUAL para o sistema Turmma × Duolingo: borda de 2 px, canto de 12 a 16, nenhuma
+   sombra borrada (degrau sólido no que flutua), foco azul de 3 px e letra de 14 ou mais. As props não mudam. */
+
 const Checkbox = React.forwardRef<
   React.ElementRef<typeof CheckboxPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
@@ -11,7 +14,7 @@ const Checkbox = React.forwardRef<
   <CheckboxPrimitive.Root
     ref={ref}
     className={cn(
-      "peer h-4 w-4 shrink-0 rounded-sm border border-primary ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground",
+      "peer size-5 shrink-0 rounded-[6px] border-2 border-borda-forte bg-white disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:border-azul data-[state=checked]:bg-azul data-[state=checked]:text-white",
       className,
     )}
     {...props}
@@ -19,7 +22,7 @@ const Checkbox = React.forwardRef<
     <CheckboxPrimitive.Indicator
       className={cn("flex items-center justify-center text-current")}
     >
-      <Check className="h-4 w-4" />
+      <Check className="size-3.5" strokeWidth={4} />
     </CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>
 ))

@@ -6,7 +6,14 @@ sem servidor, todo dado é sintético.
 **Para não misturar:**
 
 - **Só para consulta.** A pasta entrou na `develop` em 23/09/2026 (merge do branch `mockups/interface`), isolada
-  do produto pelas regras abaixo.
+  do produto pelas regras abaixo. Em 16/10/2026 passou à **versão de outubro** (`Prototipo_Turmma`, branch
+  `mockups/interface`, commit `a95568d`), a que a D80 descreve, por decisão do Joaquim. A cópia é fiel, com duas
+  exceções: este `README.md` e o `LEIAME.md` dizem onde a pasta mora, e três linhas foram reescritas sem mudar o
+  que a tela faz, porque o gitleaks da esteira as lia como chave (a constante `DO_TOKEN`, que virou
+  `ALFABETO_DO_LINK`, em `src/dados/acesso.ts` e em `.antes-da-remodelagem/…/ConvidarAlunos.tsx`, e a palavra
+  "token" num comentário de `src/dados/escola-estado.ts`)
+- **Os números de decisão nos comentários daqui** (D61, D70, D78 a D80) são os do protótipo, **não** os de
+  `docs/decisoes.md` (D80)
 - **Não copiar código daqui para o `apps/web`** nem para os `packages/`. Aqui valem atalhos que o produto não aceita
   (sem teste, sem orçamento de JS, peças do 21st.dev coladas sem revisão de licença, regras do `docs/interface.md`
   quebradas de propósito para ver como fica).

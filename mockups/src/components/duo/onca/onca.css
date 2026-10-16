@@ -1,0 +1,56 @@
+/* O movimento da onça (sistema-turmma-duolingo.md, 4.7). Só transform e opacity.
+   Nada em laço além dos 3 pontos do "pensando", que só aparecem enquanto a pose é essa.
+   Nada de respirar em laço: é laço decorativo. */
+
+.onca { overflow: visible; }
+
+/* Só os grupos que animam usam fill-box. Os grupos das poses (data-parte) giram por atributo, com o centro
+   escrito no próprio rotate(a cx cy): com fill-box, o navegador deslocaria esse centro. */
+.onca .onca-olho, .onca .onca-acena, .onca .onca-comemora, .onca .onca-entra {
+  transform-box: fill-box;
+}
+
+/* entrar: 240 ms, uma vez */
+.onca-animada .onca-entra { animation: onca-entrar 240ms ease-out both; }
+@keyframes onca-entrar {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* piscar: 120 ms, os olhos em scaleY a partir do centro */
+.onca .onca-olho { transform-origin: 50% 50%; }
+.onca-pisca .onca-olho { animation: onca-piscar 120ms ease-in-out; }
+@keyframes onca-piscar {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(.1); }
+}
+
+/* acenar: a pata gira 25° duas vezes em 800 ms, a partir do ombro (o centro da ponta de cima) */
+.onca .onca-acena { transform-origin: 50% 13px; animation: onca-acenar 800ms ease-in-out 240ms both; }
+@keyframes onca-acenar {
+  0%, 50%, 100% { transform: rotate(0deg); }
+  25%, 75% { transform: rotate(25deg); }
+}
+
+/* comemorar: encolhe (80 ms), salta −12 px (220 ms) e cai com um quique (180 ms) */
+.onca .onca-comemora { transform-origin: 50% 100%; animation: onca-comemorar 500ms ease-out both; }
+@keyframes onca-comemorar {
+  0% { transform: scale(1, 1); }
+  16% { transform: translateY(0) scale(1.02, .94); }
+  60% { transform: translateY(-12px) scale(.99, 1.03); }
+  84% { transform: translateY(0) scale(1.02, .97); }
+  100% { transform: none; }
+}
+
+/* pensando: 3 pontos em sequência, 1,2 s, só enquanto a pose é "pensando" */
+.onca-pontos > * { animation: onca-ponto 1.2s ease-in-out infinite; }
+.onca-pontos > *:nth-child(2) { animation-delay: .2s; }
+.onca-pontos > *:nth-child(3) { animation-delay: .4s; }
+@keyframes onca-ponto {
+  0%, 60%, 100% { opacity: .35; }
+  30% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onca *, .onca { animation: none !important; }
+}
