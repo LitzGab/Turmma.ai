@@ -6,15 +6,13 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** o `/seguir RELATÓRIO de Implementador` da correção `2026-10-16-galeria-da-onca-estoura-o-prazo` (1ª tentativa,
-  pedida em 16/10 depois das 12h20), **no andar da spec** (ambiente de teste 0; os ambientes 1 a 3 são da X2 à X4 do
-  "Claude Code #2"), com o `Implementador` e a `Mesa` reiniciados aqui. Motivo: a esteira `38896156999`, a primeira desta
-  spec no GitHub (push do merge da `develop`, `256b4a2`), caiu em 4 e2e, todos no limite de 30 s, nos dois projetos:
-  `pecas-ia.spec.ts:30`, `pecas-marca-onca.spec.ts:84` (claro e escuro) e `pecas-galeria.spec.ts:15`. O portão local de
-  03h10 os passou. Guardiões ditados: `test-engineer`, `revisor-geral`, `frontend-reviewer`, `conformidade-reviewer`
-- **Devo ainda:** (1) com o relatório: `linhas.ts conferir` (marca, `Revisões:`, árvore limpa e push; o push está
-  liberado), e ler a esteira do commit da correção; (2) **validar de novo** (Validador reiniciado, rodada 3 no topo do
-  `validacao.md`), porque a correção muda código que o Validador não viu; (3) com a esteira verde e a validação
+- **Espero:** o `/seguir RELATÓRIO de Validador` da **rodada 3** (revalidação sobre `9d46058`, pedida em 16/10 ~11h10,
+  Validador reiniciado no andar; ambiente de teste 0 é dele enquanto valida), e a esteira de `9d46058` no GitHub, que
+  corre em paralelo. A correção `2026-10-16-galeria-da-onca-estoura-o-prazo` chegou em `9d46058` (SUCESSO, 4 revisores
+  aprovados na 1ª rodada do documento, enviada); a esteira vermelha anterior era a `38896156999`, em `256b4a2`
+- **Devo ainda:** (1) ler o veredito da rodada 3 e a esteira de `9d46058` (`esteira.ts --fechamento`); (2) com as duas
+  verdes, `linhas.ts fechar` não precisa de novo (a X1 já está fechada em `c624ad6`): só o commit de documento do
+  `validacao.md`; (3) com a esteira verde e a validação
   aprovada, o pouso, já autorizado pelo Joaquim em 16/10: `maestri floor land "X1 pele-e-casca" --into develop`,
   `git push origin develop`, a esteira da `develop` em segundo plano e `maestri floor delete "X1 pele-e-casca L1"`; (4)
   com a esteira da `develop` verde, `PEDIDO` ao `Arquiteto`, no térreo: trazer o mockup de outubro
@@ -23,7 +21,7 @@
 - **A X1 foi validada e fechada** (`c624ad6`); a correção não reabre o roadmap. A X2, a X3 e a X4 correm fora do
   Maestri, pelo "Claude Code #2", em `.andares-avulsos/educaia--spec-telas-*`; não mexer naqueles checkouts. Pela palavra
   do Joaquim, cada spec pousa sozinha quando fecha
-- **Base:** `spec/pele-e-casca` em `9a07009` (enviada até `256b4a2`)
+- **Base:** `spec/pele-e-casca` em `9d46058` (enviada)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -133,6 +131,12 @@ Recomendo: apagar, pelo mesmo motivo que fez você escolher "tudo local"
   tarefa; aqui as duas coisas correram na mesma árvore. O commit das specs não levou código
 - **PRD e Tech Spec passam do teto de palavras** (2.189 e ~3.300): o que os revisores exigiram entrou no texto. O
   aceite está escrito no topo de cada um, por delegação
+- **`linhas.ts conferir` recusa a correção feita na branch da spec** (16/10, `9d46058`): ele percorre todos os commits
+  desde a `develop` e para no `81cc95d`, que leva `(tarefa 1.0)` e não `(correção …)`. Conferi o `9d46058` à mão: marca,
+  `Revisões:` com os quatro ditados, árvore limpa e push. O `conferir` só serve ao andar `correcao/*`; vai ao `/retro`
+- **`tools/ci/e2e.ts` engole `--repeat-each` e `--workers`** (16/10): passou "3 2" ao Playwright como filtro e rodou o
+  e2e inteiro (974) em vez de repetir três arquivos. Avisei o Implementador na vigia; ele repetiu com o Playwright direto
+  (198/198). Vai ao `/retro`. E a unidade `guardas.test.ts › redact` deu timeout de 5 s uma vez sob carga e passou depois
 
 ## O que decidi sem perguntar
 - **Quatro specs, e não duas ou três:** X1 `pele-e-casca` (tokens, peças, casca, sem mudar endereço), X2
