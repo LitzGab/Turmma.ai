@@ -6,12 +6,14 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** a esteira de `4f453d0` (execução `38914509279`, rodando em 16/10 à tarde; `esteira.ts --fechamento`). O
-  e2e 3/5 caiu por 502 do Docker Hub (ver "O que falhou"): ao terminar, `gh run rerun 38914509279 --failed` e esperar. A
-  rodada 3 da validação chegou: **APROVADA** sobre `4f453d0`, 24 de 24 RF; o `validacao.md` e os dois itens do `TODO.md`
-  que ela pedia foram registrados no commit de documento seguinte
-- **Devo ainda:** (1) com a esteira verde no último commit que alterou código (`9d46058`, coberto pela de `4f453d0`);
-  vermelha: correção na linha 1 e revalidação; (3) com a esteira verde e a validação
+- **Espero:** o `/seguir RELATÓRIO de Implementador` da correção `2026-10-16-pecas-sobrepor-estoura-o-prazo`, pedida em
+  16/10 ~15h10 ao par reiniciado **no andar da spec** (não na L1, que está atrás), 1ª tentativa. A esteira `38914509279`
+  (`4f453d0`) fechou **vermelha**: e2e 5/5 com `pecas-sobrepor.spec.ts:556` no `celular`, claro e escuro, em 32 s
+  (limite de 30 s; tarefa 7.0, `dc02f60`); e2e 3/5 por 502 do Docker Hub, sem teste rodado. A rodada 3 da validação
+  (APROVADA sobre `4f453d0`) deixa de valer para o pouso: a correção muda código que o Validador não viu
+- **Devo ainda:** (1) com o RELATÓRIO: conferir o commit (marca, `Revisões:`, árvore limpa), push da spec, esteira dele
+  (`esteira.ts --fechamento`) e, **em paralelo**, o `Validador` reiniciado no andar para a **rodada 4**; (2) com as duas
+  verdes, commit de documento do `validacao.md`; (3) com a esteira verde e a validação
   aprovada, o pouso, já autorizado pelo Joaquim em 16/10: `maestri floor land "X1 pele-e-casca" --into develop`,
   `git push origin develop`, a esteira da `develop` em segundo plano e `maestri floor delete "X1 pele-e-casca L1"`; (4)
   com a esteira da `develop` verde, `PEDIDO` ao `Arquiteto`, no térreo: trazer o mockup de outubro
