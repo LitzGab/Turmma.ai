@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test'
-import { expect } from './perfis.ts'
+import { carregarSemRedeLenta, expect } from './perfis.ts'
 import { larguraExcedente } from './verificacoes.ts'
 
 /**
@@ -7,15 +7,22 @@ import { larguraExcedente } from './verificacoes.ts'
  * grupo afirma de cor mora no arquivo do grupo, para a tarefa da peça não editar o arquivo de outra (tarefa 2.0 da X1).
  */
 
-/** A galeria baixa o pedaço dela com a CPU ×4 e a rede lenta do perfil. */
+/** O quanto `abrirGaleria` espera o título: a galeria baixa com a rede livre (`carregarSemRedeLenta`), mas lê o JS com a CPU ×4 do perfil. */
 export const PRAZO_DA_GALERIA_MS = 20_000
 
 /** O bloco da galeria pelo nome que a `Secao` dá (`data-galeria`). */
 export const secao = (page: Page, nome: string) => page.locator(`[data-galeria="${nome}"]`)
 
+/**
+ * Abre `/galeria` e espera o título. A galeria não chama a API e não tem sessão, e tudo o que ela baixa chega antes de o
+ * título aparecer: a abertura roda sem a rede do perfil (`carregarSemRedeLenta`), que custava mais de seis segundos de
+ * latência em cascata aos trinta de cada caso. A rede do perfil está de volta quando a função devolve.
+ */
 export async function abrirGaleria(page: Page): Promise<void> {
-  await page.goto('/galeria')
-  await expect(page.getByRole('heading', { level: 1, name: 'Galeria de peças' })).toBeVisible({ timeout: PRAZO_DA_GALERIA_MS })
+  await carregarSemRedeLenta(page, async () => {
+    await page.goto('/galeria')
+    await expect(page.getByRole('heading', { level: 1, name: 'Galeria de peças' })).toBeVisible({ timeout: PRAZO_DA_GALERIA_MS })
+  })
 }
 
 /** Clica ou toca, conforme o projeto: no celular não existe clique de mouse. */
