@@ -18,6 +18,8 @@ const Privacidade = lazy(() => import('./privacidade/Privacidade'))
 const DetalheDoPedido = lazy(() => import('./privacidade/DetalheDoPedido'))
 /** O aviso de incidente (F3, 10.0): o diálogo e a faixa, num pedaço próprio, para a fachada da área não crescer (`.size-limit.json`). */
 const AvisoDeIncidente = lazy(() => import('./privacidade/AvisoDeIncidente'))
+/** O sino "Esperando você" (telas da coordenação, 1.0): a fila e a lista num pedaço próprio, desenhado na âncora da casca. */
+const SinoDaCoordenacao = lazy(() => import('./SinoDaCoordenacao'))
 
 /**
  * A área da coordenação, relativa a `/coordenacao`, num chunk próprio, `coordenacao-*.js` (`apps/web/nome-dos-chunks.ts`),
@@ -35,6 +37,9 @@ export default function RotasDaCoordenacao() {
       {/* Em toda tela da coordenação, antes dela: o diálogo ao entrar e, com "Ver depois", a faixa até a confirmação. Sem fallback: a tela não espera por ele. */}
       <Suspense fallback={null}>
         <AvisoDeIncidente />
+      </Suspense>
+      <Suspense fallback={null}>
+        <SinoDaCoordenacao />
       </Suspense>
       <Switch>
         <Route path={ROTAS_DA_COORDENACAO.estrutura} component={Estrutura} />

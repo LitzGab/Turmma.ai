@@ -11,7 +11,7 @@ import { PECAS_FORA_DA_ENTRADA } from '../../nome-dos-chunks'
  * dinâmico, a peça de `PECAS_FORA_DA_ENTRADA` e a pasta `componentes/ia/` ou `componentes/onca/`.
  */
 const pasta = dirname(fileURLToPath(import.meta.url))
-const ARQUIVOS_DA_CASCA = ['CascaDaEscola.tsx', 'BarraDeBaixo.tsx', 'itens-da-lateral.tsx', 'MenuDaPessoa.tsx', 'SeletorDeEscola.tsx', 'lateral-recolhida.ts', 'Aparencia.tsx', 'Segmentado.tsx', 'Ladrilho.tsx', 'Icone.tsx', 'Marca.tsx', 'gaveta.ts'] as const
+const ARQUIVOS_DA_CASCA = ['CascaDaEscola.tsx', 'BarraDeBaixo.tsx', 'itens-da-lateral.tsx', 'MenuDaPessoa.tsx', 'SeletorDeEscola.tsx', 'lateral-recolhida.ts', 'Aparencia.tsx', 'Segmentado.tsx', 'Ladrilho.tsx', 'Icone.tsx', 'Marca.tsx', 'gaveta.ts', 'ancora-do-sino.ts'] as const
 
 function fonteDe(arquivo: string): string {
   return readFileSync(join(pasta, arquivo), 'utf8')

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { PapelDeUsuario } from '@educa/shared'
 import { QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
@@ -118,6 +118,31 @@ describe('a gaveta fecha com a rota e com a pessoa da sessão', () => {
       expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull()
     })
     expect(screen.getByRole('button', { name: 'Abrir a lateral' }).getAttribute('aria-expanded')).toBe('false')
+  })
+})
+
+describe('a âncora do sino (telas da coordenação, 1.0)', () => {
+  it('abaixo de 768 px a âncora está na barra do topo, e acima, no conteúdo: uma só por vez, vazia, para o sino se desenhar nela', async () => {
+    for (const [largura, dentroDe] of [
+      ['estreita', 'header'],
+      ['media', 'main'],
+      ['larga', 'main'],
+    ] as const) {
+      const rede = redeFalsa()
+      await abrirCasca(rede, 'coordenador', largura, ROTAS.estrutura)
+      const ancoras = document.querySelectorAll('[data-ancora-do-sino]')
+      expect(ancoras, largura).toHaveLength(1)
+      expect(ancoras[0]?.parentElement?.tagName.toLowerCase(), largura).toBe(dentroDe)
+      expect(ancoras[0]?.childElementCount, largura).toBe(0)
+      cleanup()
+    }
+  })
+
+  it('no celular a âncora fica na barra do topo, na mesma fileira do "Sair"', async () => {
+    const rede = redeFalsa()
+    await abrirCasca(rede, 'coordenador', 'estreita', ROTAS.estrutura)
+    const ancora = document.querySelector('[data-ancora-do-sino]')
+    expect(ancora?.parentElement?.contains(screen.getByRole('button', { name: 'Sair' }))).toBe(true)
   })
 })
 

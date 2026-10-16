@@ -9,6 +9,7 @@ import { MENU_DA_PESSOA, NAVEGACAO, NOME_DO_RODAPE, RODAPE_DA_LATERAL, SEU_TIME,
 import { ROTAS } from '../caminhos'
 import { NOME_DO_PAPEL } from '../papeis'
 import { useInatividade } from '../sessao/inatividade'
+import { ContextoDaAncoraDoSino, type AncoraDoSino } from './ancora-do-sino'
 import { BarraDeBaixo, ondeFicamOsItens } from './BarraDeBaixo'
 import { CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
 import { ContextoDaGaveta, type Gaveta } from './gaveta'
@@ -203,6 +204,9 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
     gaveta.current?.close()
   }, [])
   const contextoDaGaveta = useMemo<Gaveta>(() => ({ fechar: fecharGaveta }), [fecharGaveta])
+  // A âncora do sino: o elemento vazio de cada largura (`ancora-do-sino.ts`). Estado, e não ref: o sino só se desenha quando ele existe.
+  const [ancora, definirAncora] = useState<HTMLElement | null>(null)
+  const contextoDaAncora = useMemo<AncoraDoSino>(() => ({ elemento: ancora }), [ancora])
 
   function abrirGaveta(): void {
     // Com a gaveta aberta, o resto da página fica inerte: o botão que a abre não é tocado duas vezes.
@@ -261,7 +265,11 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
   const seletor = dados !== undefined && <SeletorDeEscola escolaAtual={dados.escola.nome} acessos={dados.acessos} usuarioAtual={dados.usuarioId} />
 
   const conteudo = (
-    <main className="mx-auto flex w-full max-w-[1200px] min-w-0 flex-1 flex-col gap-6 px-4 pt-4 pb-[calc(var(--barra-baixo,0px)+2rem)] md:px-8 md:pt-5">{children}</main>
+    <main className="mx-auto flex w-full max-w-[1200px] min-w-0 flex-1 flex-col gap-6 px-4 pt-4 pb-[calc(var(--barra-baixo,0px)+2rem)] md:px-8 md:pt-5">
+      {/* A âncora do sino, no canto de cima do conteúdo (a partir de 768 px); vazia, não ocupa nada. Abaixo disso ela está na barra do topo. */}
+      {faixa !== 'estreita' && <div ref={definirAncora} data-ancora-do-sino="" className="-mb-2 flex justify-end empty:hidden" />}
+      {children}
+    </main>
   )
 
   const gavetaNaPagina = faixa !== 'larga' && (
@@ -297,70 +305,73 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
   )
 
   return (
-    <ContextoDaGaveta value={contextoDaGaveta}>
-      <div className="flex min-h-screen flex-col bg-fundo text-tinta md:flex-row">
-        {faixa === 'estreita' && (
-          <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b-2 border-borda bg-fundo px-2">
-            <button
-              type="button"
-              onClick={abrirGaveta}
-              aria-haspopup="dialog"
-              aria-expanded={gavetaAberta}
-              className={CLASSE_DO_BOTAO_DE_ICONE}
-            >
-              <Menu aria-hidden="true" size={20} strokeWidth={2.5} />
-              <span className="sr-only">Abrir o menu</span>
-            </button>
-            <Link to={ROTAS.inicio} aria-label="Turmma, página inicial" className="flex size-11 shrink-0 items-center justify-center rounded-controle hover:bg-fundo-suave">
-              <img src="/marca/turmma-pinta.svg" alt="" width={24} height={24} className="h-6 w-6" />
-            </Link>
-            <p className="t-cartao min-w-0 flex-1 truncate">{dados?.escola.nome}</p>
-            <button type="button" onClick={aoSair} disabled={saindo} className={`${CLASSES_DO_BOTAO_SECUNDARIO} shrink-0`}>
-              {saindo ? 'Saindo…' : 'Sair'}
-            </button>
-          </header>
-        )}
-        {faixa === 'larga' && !recolhida ? (
-          <div className="sticky top-0 flex h-screen w-64 shrink-0 flex-col self-start border-r-2 border-borda bg-lateral">
-            <LateralAberta
-              pessoa={pessoa}
-              itens={itens}
-              time={time}
-              esperando={esperando}
-              rodape={rodape}
-              menuDaPessoa={menuDaPessoa}
-              seletor={seletor}
-              aoSair={aoSair}
-              saindo={saindo}
-              botaoDoTopo={
-                <button ref={botaoDeRecolher} type="button" onClick={() => recolher(true)} className={CLASSE_DO_BOTAO_DE_ICONE}>
-                  <PanelLeftClose aria-hidden="true" size={20} strokeWidth={2.5} />
-                  <span className="sr-only">Recolher a lateral</span>
-                </button>
-              }
-            />
-          </div>
-        ) : (
-          faixa !== 'estreita' && (
-            <Trilho
-              itens={itens}
-              time={time}
-              esperando={esperando}
-              rodape={rodape}
-              menuDaPessoa={menuDaPessoa}
-              botaoDeAbrir={botaoDeAbrir}
-              // No computador, abrir desfaz a escolha de recolher; entre 768 e 1023 px, a lateral abre por cima.
-              aoAbrir={() => (faixa === 'larga' ? recolher(false) : abrirGaveta())}
-              lateralAberta={faixa === 'media' && gavetaAberta}
-              aoSair={aoSair}
-              saindo={saindo}
-            />
-          )
-        )}
-        {gavetaNaPagina}
-        {conteudo}
-        {naBarraDeBaixo && <BarraDeBaixo itens={itens} />}
-      </div>
-    </ContextoDaGaveta>
+    <ContextoDaAncoraDoSino value={contextoDaAncora}>
+      <ContextoDaGaveta value={contextoDaGaveta}>
+        <div className="flex min-h-screen flex-col bg-fundo text-tinta md:flex-row">
+          {faixa === 'estreita' && (
+            <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b-2 border-borda bg-fundo px-2">
+              <button
+                type="button"
+                onClick={abrirGaveta}
+                aria-haspopup="dialog"
+                aria-expanded={gavetaAberta}
+                className={CLASSE_DO_BOTAO_DE_ICONE}
+              >
+                <Menu aria-hidden="true" size={20} strokeWidth={2.5} />
+                <span className="sr-only">Abrir o menu</span>
+              </button>
+              <Link to={ROTAS.inicio} aria-label="Turmma, página inicial" className="flex size-11 shrink-0 items-center justify-center rounded-controle hover:bg-fundo-suave">
+                <img src="/marca/turmma-pinta.svg" alt="" width={24} height={24} className="h-6 w-6" />
+              </Link>
+              <p className="t-cartao min-w-0 flex-1 truncate">{dados?.escola.nome}</p>
+              <div ref={definirAncora} data-ancora-do-sino="" className="flex shrink-0 empty:hidden" />
+              <button type="button" onClick={aoSair} disabled={saindo} className={`${CLASSES_DO_BOTAO_SECUNDARIO} shrink-0`}>
+                {saindo ? 'Saindo…' : 'Sair'}
+              </button>
+            </header>
+          )}
+          {faixa === 'larga' && !recolhida ? (
+            <div className="sticky top-0 flex h-screen w-64 shrink-0 flex-col self-start border-r-2 border-borda bg-lateral">
+              <LateralAberta
+                pessoa={pessoa}
+                itens={itens}
+                time={time}
+                esperando={esperando}
+                rodape={rodape}
+                menuDaPessoa={menuDaPessoa}
+                seletor={seletor}
+                aoSair={aoSair}
+                saindo={saindo}
+                botaoDoTopo={
+                  <button ref={botaoDeRecolher} type="button" onClick={() => recolher(true)} className={CLASSE_DO_BOTAO_DE_ICONE}>
+                    <PanelLeftClose aria-hidden="true" size={20} strokeWidth={2.5} />
+                    <span className="sr-only">Recolher a lateral</span>
+                  </button>
+                }
+              />
+            </div>
+          ) : (
+            faixa !== 'estreita' && (
+              <Trilho
+                itens={itens}
+                time={time}
+                esperando={esperando}
+                rodape={rodape}
+                menuDaPessoa={menuDaPessoa}
+                botaoDeAbrir={botaoDeAbrir}
+                // No computador, abrir desfaz a escolha de recolher; entre 768 e 1023 px, a lateral abre por cima.
+                aoAbrir={() => (faixa === 'larga' ? recolher(false) : abrirGaveta())}
+                lateralAberta={faixa === 'media' && gavetaAberta}
+                aoSair={aoSair}
+                saindo={saindo}
+              />
+            )
+          )}
+          {gavetaNaPagina}
+          {conteudo}
+          {naBarraDeBaixo && <BarraDeBaixo itens={itens} />}
+        </div>
+      </ContextoDaGaveta>
+    </ContextoDaAncoraDoSino>
   )
 }

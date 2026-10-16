@@ -9,7 +9,7 @@ e a operação) e 10.0 a 13.0 (Registros).
 
 ## Lista
 
-- [ ] **1.0 — A coordenação vê no sino o que espera por ela**
+- [x] **1.0 — A coordenação vê no sino o que espera por ela**
   - [ ] 1.1 A âncora do sino na casca (`useAncoraDoSino`)
   - [ ] 1.2 A peça `Sino`, com a lista por prop, o `Contador` parado e o `PainelLado`
   - [ ] 1.3 Os estados: carregando, erro, leitura parcial, e o vazio com ícone ilustrado e "Tudo em dia"

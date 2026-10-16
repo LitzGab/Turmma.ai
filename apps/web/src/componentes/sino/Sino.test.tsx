@@ -1,0 +1,181 @@
+// @vitest-environment jsdom
+import { cleanup, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { Router } from 'wouter'
+import { memoryLocation } from 'wouter/memory-location'
+import { Sino, type ItemDoSino } from './Sino'
+
+/**
+ * O sino, a peça (telas da coordenação, 1.0; RF4 e RF5): o botão e o que a lista diz em cada estado. A lista chega por prop,
+ * e a peça não lê nada. O `jsdom` não implementa o `dialog` modal: o teste instala o `showModal` e o `close`.
+ */
+beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+    this.setAttribute('open', '')
+  }
+  HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+    if (!this.hasAttribute('open')) return
+    this.removeAttribute('open')
+    this.dispatchEvent(new Event('close'))
+  }
+})
+afterEach(cleanup)
+
+const INCIDENTE: ItemDoSino = { id: 'a', titulo: 'Incidente de segurança sem confirmação', detalhe: 'Avisado em 01/10/2026.', urgente: true, para: '/privacidade/incidentes' }
+const CONVITE: ItemDoSino = { id: 'b', titulo: 'Refazer o convite de Paulo Sintético', detalhe: 'O convite venceu.', urgente: false, para: '/professores?professor=u1' }
+const TURMAS: ItemDoSino = { id: 'c', titulo: 'Turmas sem professor', detalhe: 'Aloque.', urgente: false, para: '/estrutura?situacao=sem-professor', contador: { n: 3, oQueConta: 'turmas sem professor' } }
+
+type PropsDoSino = Parameters<typeof Sino>[0]
+
+function desenhar(sobre: Partial<PropsDoSino> = {}, caminho = '/painel') {
+  const funcoes = { aoTentarDeNovo: vi.fn(), aoAtualizar: vi.fn() }
+  const localizacao = memoryLocation({ path: caminho, record: true })
+  const props: PropsDoSino = { itens: [], situacao: 'pronta', faltaPara: '/estrutura?painel=falta', ...funcoes, ...sobre }
+  render(
+    <Router hook={localizacao.hook}>
+      <Sino {...props} />
+    </Router>,
+  )
+  return { ...funcoes, localizacao }
+}
+
+describe('o botão do sino', () => {
+  it('diz quantos esperam, ou "nada", no nome acessível', () => {
+    desenhar({ itens: [INCIDENTE, CONVITE] })
+    expect(screen.getByRole('button', { name: 'Esperando você, 2' })).toBeTruthy()
+    cleanup()
+    desenhar({ itens: [] })
+    expect(screen.getByRole('button', { name: 'Esperando você, nada' })).toBeTruthy()
+  })
+
+  it('"nada" só vale para a lista lida inteira: carregando, parcial e erro têm o nome do que falta', () => {
+    for (const [situacao, nome] of [
+      ['carregando', 'Esperando você, carregando'],
+      ['parcial', 'Esperando você, parte não carregou'],
+      ['erro', 'Esperando você, não carregou'],
+    ] as const) {
+      desenhar({ situacao })
+      expect(screen.getByRole('button', { name: nome })).toBeTruthy()
+      expect(screen.queryByRole('button', { name: 'Esperando você, nada' })).toBeNull()
+      cleanup()
+    }
+  })
+
+  it('o número é um contador parado, sem nada animado, e some com a lista vazia', () => {
+    desenhar({ itens: [INCIDENTE] })
+    const contador = document.querySelector('[data-contador]')
+    expect(contador?.textContent).toContain('1')
+    expect(contador?.className ?? '').not.toMatch(/animate|pulse|ping|bounce|transition/)
+    cleanup()
+    desenhar({ itens: [] })
+    expect(document.querySelector('[data-contador]')).toBeNull()
+  })
+
+  it('abrir a lista não pede nada: nenhum "Tentar de novo" nem "Atualizar" é chamado', async () => {
+    const usuario = userEvent.setup()
+    const { aoTentarDeNovo, aoAtualizar } = desenhar({ itens: [INCIDENTE] })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, 1' }))
+    expect(screen.getByRole('dialog', { name: 'Esperando você' })).toBeTruthy()
+    expect(aoTentarDeNovo).not.toHaveBeenCalled()
+    expect(aoAtualizar).not.toHaveBeenCalled()
+  })
+})
+
+describe('a lista "Esperando você"', () => {
+  it('traz os grupos "Urgente" e "Da escola", cada item um link para a tela que resolve, e o contador só no que o tem', async () => {
+    const usuario = userEvent.setup()
+    desenhar({ itens: [INCIDENTE, CONVITE, TURMAS] })
+    await usuario.click(screen.getByRole('button', { name: /^Esperando você, 3/ }))
+    const painel = screen.getByRole('dialog', { name: 'Esperando você' })
+
+    const urgente = within(within(painel).getByRole('region', { name: 'Urgente' }))
+    const daEscola = within(within(painel).getByRole('region', { name: 'Da escola' }))
+    expect(urgente.getAllByRole('link')).toHaveLength(1)
+    expect(urgente.getByRole('link', { name: /Incidente de segurança/ }).getAttribute('href')).toBe('/privacidade/incidentes')
+    expect(daEscola.getAllByRole('link')).toHaveLength(2)
+    expect(daEscola.getByRole('link', { name: /Refazer o convite de Paulo/ }).getAttribute('href')).toBe('/professores?professor=u1')
+    expect(daEscola.getByRole('link', { name: /Turmas sem professor/ }).textContent).toContain('3')
+    expect(within(painel).queryByText('Tudo em dia')).toBeNull()
+  })
+
+  it('só aparece o grupo que tem item', async () => {
+    const usuario = userEvent.setup()
+    desenhar({ itens: [CONVITE] })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, 1' }))
+    expect(screen.queryByRole('region', { name: 'Urgente' })).toBeNull()
+    expect(screen.getByRole('region', { name: 'Da escola' })).toBeTruthy()
+  })
+
+  it('ir a um item fecha a lista, e a tela de destino fica sem nada por cima', async () => {
+    const usuario = userEvent.setup()
+    const { localizacao } = desenhar({ itens: [CONVITE] })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, 1' }))
+    await usuario.click(screen.getByRole('link', { name: /Refazer o convite/ }))
+    expect(screen.queryByRole('dialog', { name: 'Esperando você' })).toBeNull()
+    expect(localizacao.history?.at(-1)).toBe('/professores?professor=u1')
+  })
+
+  it('o item que muda só a consulta do endereço, na mesma tela, também fecha a lista', async () => {
+    const usuario = userEvent.setup()
+    desenhar({ itens: [CONVITE] }, '/professores')
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, 1' }))
+    expect(screen.getByRole('dialog', { name: 'Esperando você' })).toBeTruthy()
+    await usuario.click(screen.getByRole('link', { name: /Refazer o convite/ }))
+    expect(screen.queryByRole('dialog', { name: 'Esperando você' })).toBeNull()
+  })
+
+  it('o vazio é "Tudo em dia" com ícone ilustrado, sem mascote, e o link do que falta para a escola', async () => {
+    const usuario = userEvent.setup()
+    desenhar({ itens: [], situacao: 'pronta' })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, nada' }))
+    const painel = screen.getByRole('dialog', { name: 'Esperando você' })
+    expect(within(painel).getByText('Tudo em dia')).toBeTruthy()
+    expect(painel.querySelector('svg[data-icone]')).not.toBeNull()
+    // Sem a onça (a de corpo inteiro é decisão do Joaquim): nenhuma imagem, nenhum desenho de mascote.
+    expect(painel.querySelector('img, [data-onca], [data-mascote]')).toBeNull()
+    expect(within(painel).getByRole('link', { name: 'Ver o que falta para a escola' }).getAttribute('href')).toBe('/estrutura?painel=falta')
+  })
+
+  it('a lista parcial mostra o que veio, diz que parte não carregou e nunca diz "Tudo em dia", nem sem item', async () => {
+    const usuario = userEvent.setup()
+    const { aoTentarDeNovo } = desenhar({ itens: [], situacao: 'parcial' })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, parte não carregou' }))
+    const painel = screen.getByRole('dialog', { name: 'Esperando você' })
+    expect(within(painel).getByText('Parte da lista não carregou')).toBeTruthy()
+    expect(within(painel).queryByText('Tudo em dia')).toBeNull()
+    await usuario.click(within(painel).getByRole('button', { name: 'Tentar de novo' }))
+    expect(aoTentarDeNovo).toHaveBeenCalledTimes(1)
+  })
+
+  it('com itens e parte sem ler: os itens e o aviso, juntos', async () => {
+    const usuario = userEvent.setup()
+    desenhar({ itens: [CONVITE], situacao: 'parcial' })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, 1' }))
+    const painel = screen.getByRole('dialog', { name: 'Esperando você' })
+    expect(within(painel).getByText('Parte da lista não carregou')).toBeTruthy()
+    expect(within(painel).getByRole('link', { name: /Refazer o convite/ })).toBeTruthy()
+  })
+
+  it('lendo: o texto parado de carregando, sem "Tudo em dia"', async () => {
+    const usuario = userEvent.setup()
+    desenhar({ itens: [], situacao: 'carregando' })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, carregando' }))
+    const painel = screen.getByRole('dialog', { name: 'Esperando você' })
+    expect(within(painel).getByText('Carregando o que espera você…')).toBeTruthy()
+    expect(within(painel).queryByText('Tudo em dia')).toBeNull()
+  })
+
+  it('o erro tem "Tentar de novo", e o "Atualizar" e o "Atualizado às" vêm de quem usa a peça', async () => {
+    const usuario = userEvent.setup()
+    const { aoTentarDeNovo, aoAtualizar } = desenhar({ itens: [], situacao: 'erro', erro: new Error('caiu'), atualizadoEm: new Date(2026, 9, 16, 14, 32) })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, não carregou' }))
+    const painel = screen.getByRole('dialog', { name: 'Esperando você' })
+    expect(within(painel).queryByText('Tudo em dia')).toBeNull()
+    await usuario.click(within(painel).getByRole('button', { name: 'Tentar de novo' }))
+    expect(aoTentarDeNovo).toHaveBeenCalledTimes(1)
+    expect(within(painel).getByText('Atualizado às 14:32')).toBeTruthy()
+    await usuario.click(within(painel).getByRole('button', { name: 'Atualizar' }))
+    expect(aoAtualizar).toHaveBeenCalledTimes(1)
+  })
+})
