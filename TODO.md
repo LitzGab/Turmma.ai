@@ -875,6 +875,20 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       `apps/api/src/operacao/sessao.service.ts`). Unificar os dois da API no mesmo formato (`revisor-geral` da 4.0 da A1).
       A 14.0 fez a parte do convite de professor; o refresh é da API de sessão, fora de uma tarefa de tela. Destino:
       correção própria
+- [ ] **(X1, retrospectiva) Código de processo que a X1 pediu** (`tasks/prd-pele-e-casca/retro.md`, M1 a M3). Correção
+      própria, com teste e revisão; mexe em `tools/processo/` e `tools/ci/`:
+      (a) **o portão da tarefa mede a duração do e2e que roda**: caso alterado que passa de 15 s na máquina fica vermelho,
+      porque o runner leva perto do dobro e o prazo é 30 s. Na X1, os casos que caíram na esteira levavam de 19 a 29 s aqui,
+      e custaram duas correções e duas rodadas de validação depois da validação aprovada;
+      (b) **o hook conta as rodadas pelo `achados/`**, e não pelas linhas da seção "Revisões" (`tools/processo/revisoes.ts`,
+      `acrescentarRevisao`): a seção sumiu duas vezes na X1 e a contagem recomeçou do 1;
+      (c) `tools/ci/e2e.ts` repassa `--repeat-each` e `--workers` ao Playwright (hoje viram filtro e o e2e inteiro roda);
+      `tools/processo/linhas.ts conferir` aceita a correção feita na branch da spec (hoje para no primeiro `(tarefa N.0)`);
+      e `tools/processo/mutacoes.ts` roda o caso de e2e no projeto que ele declara, e não sempre no `chromebook`, para a
+      cláusula que só vale no celular se provar
+- [ ] **A vitrine não fotografa troca do Tutor do aluno** (validação da X1, rodada 1): ela não digita, e a escola
+      sintética não tem troca do Tutor, então o balão com a assinatura não sai em foto. Destino: antes da X4, que mexe
+      na tela do Tutor do aluno
 
 ## Regulação educacional
 
@@ -1046,7 +1060,7 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       (`docs/interface.md` 10.2)
 - [ ] **Texto de exemplo do `Campo` de linha única truncado a 360 px** (`frontend-reviewer`, 10.0 da X1): o placeholder
       "Tema" do `MotorFormulario` é cortado no `celular`; o `Campo` não mede o exemplo como a `CaixaPedido` faz. Peça
-      de `componentes/`, fora da 10.0; rever no `/retro` da X1
+      de `componentes/`, fora da 10.0. Destino (retrospectiva da X1): a tarefa da X3 que usar o `Campo`
 - [ ] **A demonstração `data-tabela-estreita` da galeria mostra a tabela em modo largo** (`frontend-reviewer`, 10.0 da
       X1): a 280 px (`apps/web/src/galeria/secoes/superficies.tsx`) corta "AGENTE E FUNÇÃO". Peça de outra tarefa
 - [ ] **`violacoesDasSecoes` repete o `violacoesGraves`** (`test-engineer`, 10.0 da X1): `e2e/pecas-ia.spec.ts` tem um
@@ -1060,7 +1074,8 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] **A caixa desligada no tema escuro não se distingue pelo fundo** (`frontend-reviewer`, 10.0 da X1): `fundo-suave`
       e `campo` têm o mesmo valor no escuro (`apps/web/src/estilos.css`), e o campo desligado da `CaixaPedido` só se
       diferencia pelo texto `apoio`. Dar um sinal que não dependa do fundo; o `Campo` desligado tem o mesmo par de tokens
-      (`docs/interface.md` 10.2). Muda peça que a 6.0 revestiu: levar ao `/retro` da X1
+      (`docs/interface.md` 10.2). Muda peça que a 6.0 revestiu. Destino (retrospectiva da X1): correção própria, com o
+      `frontend-reviewer`, antes da X4, que é onde a caixa desligada entra numa tela (o Tutor do aluno)
 - [ ] **Teste do desfazer da `CaixaPedido`** (`test-engineer` e `revisor-geral`, 10.0 da X1): em
       `CaixaPedido.test.tsx › apagar o pedido não escreve no campo`, o teste redefine `value` por cima do rastreador do
       React, então a regra de verdade é a do Ctrl+Z do e2e (`e2e/pecas-ia.spec.ts`); dizer isso num comentário, e trocar
@@ -1104,7 +1119,8 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       `e2e/inatividade.spec.ts:112-114`; repetir o Shift+Tab a partir do foco inicial, como na confirmação. Anterior à X1
 - [ ] **`QUEM_IMPORTA_O_AVATAR` ainda deixa a `Mensagem.tsx` importar o avatar** (`revisor-geral`, 8.0 da X1): fechar só
       na `AssinaturaIA`, com o aperto escrito na `techspec.md` 7b da X1 e na lista do teste. Muda contrato escrito: é do
-      Arquiteto, e da retrospectiva da X1
+      Arquiteto. Destino (retrospectiva da X1): correção própria, com o `conformidade-reviewer`; aperta a guarda e não
+      muda desenho, e o aperto se escreve no `docs/interface.md`, porque a Tech Spec da X1 está fechada
 - [ ] **A casca do selo da `AssinaturaIA`** (`revisor-geral` e `test-engineer`, 8.0 da X1): o espaço entre o nome e o
       selo é feito duas vezes (`{' '}` e o `ml-1`; ficar com um), e o `align-middle` não tem asserção. Acabamento; a
       tarefa que tocar a `AssinaturaIA` fecha as duas

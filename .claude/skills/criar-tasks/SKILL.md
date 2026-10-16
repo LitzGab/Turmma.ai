@@ -54,7 +54,11 @@ Cada uma dessas pode ser demonstrada, testada e auditada sozinha.
 
 2. **Acionar `test-engineer`** para definir, por tarefa, os cenários que provam a regra,
    incluindo os casos de borda do domínio escolar. Os testes saem daí, não de improviso na
-   hora de implementar.
+   hora de implementar. Em tarefa de tela, cada medida, token ou atributo que a subtarefa, a Tech
+   Spec ou o `docs/interface.md` nomeia para a peça (48 px, borda de 2, `t-cartao`, "o mesmo
+   `autoComplete`") ganha a sua linha na tabela, com o teste que o lê. Na X1, seis das onze
+   reprovações por cláusula sem prova foram uma medida escrita na subtarefa ou na spec e ausente
+   da tabela.
 
 3. **Montar a estrutura**: sequenciamento, dependências, os subagentes obrigatórios marcados em
    cada tarefa, e o porte de cada uma.

@@ -100,6 +100,12 @@ fazer, e as dos guardiões marcados:
   carga: a tentativa segurada passou a gravar no banco a cada requisição anônima. Antes do código, a
   divergência ganha a sua linha na tabela de testes e a resposta do guardião que ela toca (quem chama
   sem autenticação, quantas vezes por segundo, o que grava a cada vez).
+- **A coluna "Onde está na spec" diz a verdade?** Antes da primeira rodada, abra cada lugar que ela
+  cita e ache lá a decisão, com a palavra do código. Se a decisão muda algo que mais de um documento
+  descreve (a Tech Spec, o `cenarios.md`, o documento da seção 11), procure o termo antigo em todos de
+  uma vez, com `grep`, e não um por rodada. Na X1, sete reprovações do `revisor-geral` foram decisão
+  que só estava no `N_task.md`, ou a coluna citando seção que não a dizia; na 1.0, três rodadas
+  seguidas, um documento por vez.
 - **Qual peça que já existe faz isto?** Sete recomendações entre o F1 e a A0 foram código que refazia
   o que o repositório já tinha: o hash do token de convite, o formato do apelido, a conferência de
   senha na vez, um módulo importando o service de outro. Procure em `apps/api/src/sessao/` e em
