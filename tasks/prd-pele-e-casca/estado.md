@@ -6,9 +6,9 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** só a esteira `38926199536` sobre `b6291e3`, que acompanho com `gh run watch` em segundo plano (sessão
-  limpa: rode `esteira.ts --fechamento` de novo). A **rodada 4** da validação chegou **APROVADA** às ~13h (24 de 24 RF,
-  nenhum crítico nem maior) e foi registrada no commit "Registra a revalidação de pele-e-casca (APROVADA, rodada 4)"
+- **Espero:** o "pode" do Joaquim no meu terminal para o pouso (parada 6, entrada de 16/10 ~13h30 em "Esperando o
+  Joaquim"). A esteira `38926199536` ficou **verde** em `b6291e3` e a rodada 4 da validação, **APROVADA**: tudo pronto.
+  A autorização de 16/10 está só no diário, de uma sessão anterior, e o passo 2 do `/seguir` diz que ela não vale sozinha
 - **Devo ainda:** (1) feito; (2) feito; (3) com a esteira verde e a validação
   aprovada, o pouso, já autorizado pelo Joaquim em 16/10: `maestri floor land "X1 pele-e-casca" --into develop`,
   `git push origin develop`, a esteira da `develop` em segundo plano e `maestri floor delete "X1 pele-e-casca L1"`; (4)
@@ -43,6 +43,14 @@
 | PRD, Tech Spec e tarefas da X1 à X4 | `2ed7829` | Opus (as tarefas 8 a 15 da X1, 4 a 14 da X3 e 3 a 11 da X4, por agentes em Sonnet) | 4 da spec da X1 | só documento; a X2, a X3 e a X4 sem revisão de spec |
 
 ## Esperando o Joaquim
+
+### 16/10/2026 ~13h30 — X1, pouso na `develop` (parada 6), confirmação depois da rodada 4
+Decisão: pousar a X1 na `develop` e enviar a `develop` ao GitHub agora?
+Contexto: rodada 4 APROVADA (`validacao.md`), esteira verde em `b6291e3`; a `develop` local é igual à do GitHub e a
+branch a contém (avanço direto, 62 commits). A palavra de 16/10 ("cada spec finalizada pode pousar…") é de uma sessão
+já limpa; o `/seguir` pede a palavra nesta conversa
+Opções: pode (pousar, enviar, apagar a L1 e pedir ao Arquiteto o mockup) | esperar
+Recomendo: pode: tudo está verde, e o push público já foi decidido por você em 16/10, com o mockup junto
 
 ### 16/10/2026 — X1, pouso na `develop` (parada 6) — RESPONDIDA: pousar e enviar (o Joaquim, neste terminal: "cada spec finalizada pode pousar na develop e fazer o push para a remota e sobre o mockup pode trazer para o projeto aqui"). O "tudo local" de 13/10 acaba para spec finalizada
 Decisão: pousar a X1 na `develop` agora, ou esperar a X2, a X3 e a X4 para um pouso só?
