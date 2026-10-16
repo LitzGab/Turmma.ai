@@ -84,8 +84,9 @@ test.describe('área do operador Turmma', () => {
 
     await esperarCasca(page, operador)
     await expect(page).toHaveTitle('Escolas · Operação Turmma')
-    // O `<h1>` existe para o leitor de tela; a navegação já diz onde a pessoa está (A0b: a casca abre em Escolas).
-    await expect(page.getByRole('heading', { level: 1, name: 'Escolas' })).toBeAttached()
+    // O título da página é "Operação", à vista, e a aba do navegador diz a tela; a navegação diz onde a pessoa está (X2: a casca abre em Escolas).
+    await expect(page.getByRole('heading', { level: 1, name: 'Operação' })).toBeVisible()
+    await expect(page.getByRole('main')).toContainText('A operação não vê dado de aluno nem de professor: nem nome, nem nota, nem conversa.')
     await expect(page.getByRole('navigation', { name: 'Operação' }).getByRole('link', { name: 'Escolas' })).toHaveAttribute('aria-current', 'page')
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
@@ -165,7 +166,8 @@ test.describe('área do operador Turmma', () => {
         for (const tela of ['Escolas', 'Uso']) {
           const onde = `${tela} a ${String(largura)} px, ${esquema}`
           await navegacao.getByRole('link', { name: tela }).click()
-          await expect(page.getByRole('heading', { level: 1, name: tela }), onde).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
+          await expect(page, onde).toHaveTitle(`${tela} · Operação Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
+          await expect(page.getByRole('heading', { level: 1, name: 'Operação' }), onde).toBeVisible()
           const banner = page.getByRole('banner')
           await expect(banner, onde).toContainText('Operação Turmma')
 
@@ -188,10 +190,11 @@ test.describe('área do operador Turmma', () => {
           if (largura >= 768) expect(barra.altura, onde).toBe(72)
           else expect(barra.altura, onde).toBeGreaterThanOrEqual(56)
 
-          // Uma tela só, sem lateral: fora do `main`, a única navegação é a "Operação" (a lista das escolas tem a dela, dentro
-          // do `main`), e os links dela têm alvo de 44 px (A63, A97).
+          // Uma tela só, sem lateral: a navegação "Operação" mora dentro do `main`, embaixo do título (a lista das escolas tem a
+          // dela, as páginas), não há outra fora dele, e os links dela têm alvo de 44 px (A63, A97).
           await expect(page.getByRole('complementary'), onde).toHaveCount(0)
-          expect(await page.locator('nav').evaluateAll((todas) => todas.filter((nav) => nav.closest('main') === null).map((nav) => nav.getAttribute('aria-label'))), onde).toEqual(['Operação'])
+          expect(await page.locator('nav').evaluateAll((todas) => todas.filter((nav) => nav.closest('main') === null).map((nav) => nav.getAttribute('aria-label'))), onde).toEqual([])
+          await expect(page.getByRole('main').getByRole('navigation', { name: 'Operação' }), onde).toHaveCount(1)
           for (const link of await navegacao.getByRole('link').all()) {
             expect((await link.boundingBox())?.height ?? 0, onde).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
           }

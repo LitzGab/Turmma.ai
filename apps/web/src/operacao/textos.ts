@@ -12,6 +12,9 @@ import { TEXTO_DO_CONVITE_QUE_MUDOU, TEXTO_DO_CONVITE_QUE_NAO_VALE } from '../co
 /** A sessão que terminou (30 min parada, 8 h, saída, operador desativado): a pessoa volta à entrada com isto. */
 export const TEXTO_DA_SESSAO_ENCERRADA = MENSAGENS_DE_ERRO[CodigoDeErro.SESSAO_ENCERRADA]
 
+/** A linha fixa embaixo do título "Operação", em toda tela dela: o que a operação não alcança (D76). */
+export const TEXTO_DA_OPERACAO_SEM_DADO_DE_PESSOA = 'A operação não vê dado de aluno nem de professor: nem nome, nem nota, nem conversa.'
+
 /** O 503 da operação (banco ou Redis fora): diz o que fazer e a tela fica onde está. */
 export const TEXTO_DA_OPERACAO_INDISPONIVEL = 'O Turmma está indisponível agora. Tente de novo em instantes.'
 

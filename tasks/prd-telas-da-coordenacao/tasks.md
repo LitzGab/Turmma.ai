@@ -117,7 +117,7 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 13.5 O aviso de incidente ao entrar não muda de comportamento
   - [ ] 13.6 Testes: a confirmação idempotente entre duas pessoas; os e2e `privacidade` e `incidentes` sem perder asserção
 
-- [ ] **14.0 — A operação numa página, com Escolas e Uso**
+- [x] **14.0 — A operação numa página, com Escolas e Uso**
   - [ ] 14.1 O cabeçalho, com a frase fixa de que a operação não vê dado de pessoa
   - [ ] 14.2 Escolas em tabela, com os sete estados da coordenação em texto
   - [ ] 14.3 Uso em tabela, com o dia e o mês de referência
