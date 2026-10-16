@@ -163,7 +163,7 @@ vale 72 horas. O painel da operação não mostra dado de aluno nem de professor
 
 ## 4. Passo 2: a professora e o Assistente de ensino (Professora, 6 min)
 
-1. Perfil **Professora** → **Nova conversa** → na caixa, digite exatamente:
+1. Perfil **Professora** → **Início** → na caixa, digite exatamente:
    **`monta uma atividade de estequiometria com 5 questões`** → **Enviar**.
    **Aparece:** o Assistente pergunta "Quer que eu abra a ferramenta de atividade objetiva com 5 questões…", com duas
    opções do mesmo tamanho. **Diga:** "O chat pergunta antes de abrir a ferramenta (D18). A professora decide."
