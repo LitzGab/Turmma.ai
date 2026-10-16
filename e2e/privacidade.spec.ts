@@ -303,8 +303,9 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
     await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(nome, { timeout: PRAZO_DA_ENTRADA_MS })
 
     await page.reload()
-    await expect(page).toHaveURL(ENDERECO_DAS_EMPRESAS)
-    await expect(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS })).toHaveAttribute('aria-selected', 'true')
+    // Recarregar abre o aplicativo de novo (casca, renovação da sessão, área e sino): é o prazo da entrada, não os 5 s do `expect`.
+    await expect(page).toHaveURL(ENDERECO_DAS_EMPRESAS, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS })).toHaveAttribute('aria-selected', 'true', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(nome, { timeout: PRAZO_DA_ENTRADA_MS })
 
     await acionar(page.getByRole('tab', { name: NOME_DA_ABA }), hasTouch)
