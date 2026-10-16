@@ -4,12 +4,16 @@ import { campoCodigo } from './segundo-fator.ts'
 import { codigoDoAutenticador, criarEquipeComSenha, type EquipeDeTeste } from './sessao.ts'
 
 /**
- * A casca da escola pela tela (A1, tarefa 11.0): abaixo de 768 px a lateral é uma gaveta que abre pelo botão do menu; no
- * computador ela já está aberta. Os specs que andam pela navegação passam por aqui, para o mesmo teste valer nos
- * projetos `chromebook` e `celular` (D51).
+ * A casca da escola pela tela (A1, tarefa 11.0; X1, 13.0): abaixo de 768 px a lateral é uma gaveta que abre pelo botão do
+ * menu, e os itens do professor e do aluno ficam na **barra de baixo**, sempre à vista; no computador a lateral já está
+ * aberta. A coordenação, com sete itens, mantém os dela na gaveta. Os specs que andam pela navegação passam por aqui, para
+ * o mesmo teste valer nos projetos `chromebook` e `celular` (D51).
  */
 
-/** A casca está na largura da gaveta: a barra do topo com o botão do menu, e a lateral fechada. */
+/**
+ * A casca está na largura do celular: a barra do topo com o botão do menu e a lateral fechada, na gaveta. Não diz onde
+ * estão os itens de `Seções` (a barra de baixo ou a gaveta): quem pergunta isso é `secoes`.
+ */
 export function naGaveta(page: Page): boolean {
   return (page.viewportSize()?.width ?? 0) < 768
 }
@@ -19,10 +23,35 @@ export const gaveta = (page: Page): Locator => page.getByRole('dialog', { name: 
 
 /**
  * Onde a lateral está agora: dentro da gaveta, quando é gaveta, ou a página. Com a gaveta aberta, o "Sair" da barra do
- * topo continua na página, atrás dela: procurar a partir daqui acha o da lateral.
+ * topo continua na página, atrás dela: procurar a partir daqui acha o da lateral. Vale para a escola, "Seu time", o
+ * rodapé, "Sua conta" e o nome da pessoa; **não vale para `Seções` do professor e do aluno no celular**, que estão na
+ * barra de baixo, fora da gaveta: para eles, `secoes`.
  */
 export function lateral(page: Page): Locator {
   return naGaveta(page) ? gaveta(page) : page.locator('body')
+}
+
+/**
+ * A `navigation "Seções"` que a pessoa vê: a barra de baixo (professor e aluno abaixo de 768 px, sempre à vista), a
+ * lateral ou o trilho (a partir de 768 px) ou, com a gaveta aberta, a que está dentro dela (a coordenação no celular).
+ * Fechada, a gaveta não expõe nada. É a única navegação com esse nome na página: o resto da casca tem os dela ("Seu
+ * time", "Rodapé", "Sua conta").
+ */
+export const secoes = (page: Page): Locator => page.getByRole('navigation', { name: 'Seções', exact: true })
+
+/**
+ * O lugar que a barra de baixo toma da janela agora (X1, 13.0): a `--barra-baixo` do `<html>` e o `padding-bottom` do
+ * `<main>`, que guarda a variável mais 32 px. Sem barra (a coordenação no celular, o trilho e o computador) a variável é
+ * `0px` e o `<main>` guarda só os 32 px.
+ */
+export async function reservaDaBarraDeBaixo(page: Page): Promise<{ readonly variavel: string; readonly paddingDoMain: string }> {
+  return page.evaluate(() => {
+    const principal = document.querySelector('main')
+    return {
+      variavel: getComputedStyle(document.documentElement).getPropertyValue('--barra-baixo').trim(),
+      paddingDoMain: principal === null ? '' : getComputedStyle(principal).paddingBottom,
+    }
+  })
 }
 
 /** Abre a gaveta, se a casca está nela e ela ainda está fechada; no computador não faz nada. */
@@ -34,10 +63,19 @@ export async function abrirNavegacao(page: Page, hasTouch: boolean): Promise<voi
   await expect(gaveta(page)).toBeVisible()
 }
 
-/** Vai a uma seção pela navegação da lateral, abrindo a gaveta antes quando é preciso. */
+/**
+ * Vai a uma seção pelo link dela em `Seções`. A gaveta só abre quando `Seções` não está à vista (a coordenação no
+ * celular); a barra de baixo do professor e do aluno está sempre à vista. E com a gaveta aberta por outro motivo (o
+ * teste foi ver a escola ou a conta), a barra fica inerte: o toque nela cairia no fundo da gaveta e só a fecharia. Por
+ * isso a gaveta que não leva `Seções` fecha antes.
+ */
 export async function irPelaNavegacao(page: Page, rotulo: string, hasTouch: boolean): Promise<void> {
-  await abrirNavegacao(page, hasTouch)
-  const item = lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: rotulo })
+  if ((await gaveta(page).isVisible()) && (await gaveta(page).getByRole('navigation', { name: 'Seções', exact: true }).count()) === 0) {
+    await page.keyboard.press('Escape')
+    await expect(gaveta(page)).toBeHidden()
+  }
+  if (!(await secoes(page).first().isVisible())) await abrirNavegacao(page, hasTouch)
+  const item = secoes(page).getByRole('link', { name: rotulo })
   if (hasTouch) await item.tap()
   else await item.click()
 }
@@ -100,10 +138,12 @@ export const TITULO_DA_NOVA_CONVERSA = 'Início · Turmma'
 
 /**
  * O professor abre em "Início" (A2; D73; D80; `docs/interface.md` 11.1), a Home com a caixa de pedido, e não numa página
- * de passagem: o endereço (`/professor/nova-conversa`, que não mudou), a saudação com o primeiro nome dele e, na lateral, o nome inteiro de quem entrou. É o que prova que a sessão vale e de
- * quem ela é: a saudação sozinha não distingue duas professoras de mesmo primeiro nome.
+ * de passagem: o endereço (`/professor/nova-conversa`, que não mudou), a saudação com o primeiro nome dele e, na lateral,
+ * o nome inteiro de quem entrou. É o que prova que a sessão vale e de quem ela é: a saudação sozinha não distingue duas
+ * professoras de mesmo primeiro nome.
  *
- * No celular a lateral é a gaveta, fechada: o nome está nela, fora da vista, e o teste o lê sem abri-la.
+ * No celular a lateral é a gaveta, fechada: o nome está nela, fora da vista, e o teste o lê sem abri-la. A escola ativa
+ * está na barra de topo.
  */
 export async function esperarNovaConversa(page: Page, nome: string, opcoes: { readonly timeout?: number; readonly escolaNome?: string } = {}): Promise<void> {
   const timeout = opcoes.timeout ?? PRAZO_DA_ENTRADA_MS

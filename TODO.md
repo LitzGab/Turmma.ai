@@ -1078,6 +1078,18 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] **O trilho da coordenação não tem folga a 600 px** (`frontend-reviewer`, 12.0 da X1): a 1366 × 600 o "Sair" passa em
       `toBeInViewport({ ratio: 1 })` por pouco, e o trilho não rola (a dica `absolute` seria cortada). Um oitavo lugar na
       coordenação derruba o "Sair" da janela; reabre com o oitavo lugar, ou com a barra de baixo da 13.0 mexendo no trilho
+- [ ] **A lateral da coordenação a 1366 × 768 corta "PRIVACIDADE" pela metade** (`frontend-reviewer`, 13.0 da X1): o pé de
+      240 px toma a altura (`CascaDaEscola.tsx`, a lateral aberta e o pé). É da 12.0 e muda o desenho da lateral; entra na
+      X2 (`telas-da-coordenacao`), que reduz os lugares da coordenação a quatro
+- [ ] **Celular deitado (~640 × 360): a barra de topo e a de baixo tomam 124 px dos 360 px** (`frontend-reviewer`, 13.0 da
+      X1). Pede um projeto de paisagem que não existe; abrir quando houver (D51)
+- [ ] **A escola na barra de topo é texto: o professor com duas escolas troca abrindo a gaveta, um toque a mais**
+      (`frontend-reviewer`, 13.0 da X1). Segue `docs/interface.md` 11.1 e a regra 50, item 13; muda desenho, e entra na X3
+      (`telas-do-professor`)
+- [ ] **A barra de topo `sticky top-0` de 56 px não tem `scroll-padding-top`** (`revisor-geral`, 13.0 da X1): no
+      Shift+Tab o foco que o navegador rola para cima para atrás dela, o mesmo problema que a barra de baixo tinha embaixo
+      (resolvido na 13.0, com `scroll-padding-bottom`). Existia antes da 13.0 e muda comportamento: correção própria
+      (`/corrigir`), com e2e a 360 px que leve o foco por Shift+Tab ao meio de uma tela comprida
 
 ## Comercial
 

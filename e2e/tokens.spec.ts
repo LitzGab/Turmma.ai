@@ -1,6 +1,6 @@
 import type { Locator, Page, Request } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { botaoDoSeletor, lateral, naGaveta, esperarNovaConversa } from './__fixtures__/casca.ts'
+import { botaoDoSeletor, gaveta, lateral, naGaveta, esperarNovaConversa, secoes } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -119,11 +119,11 @@ function anelDoFoco(page: Page): Promise<{ visivel: boolean; estilo: string; lar
  * Caminha pelo teclado até o alvo e confere o anel dele: 3 px sólido na cor `foco` do tema, com 2 px de afastamento (9.1
  * e 10.1). O afastamento do campo (0) e o da linha de tabela (por dentro) são das tarefas que revestem essas peças.
  */
-async function tabAteOAnel(page: Page, alvo: Locator, descricao: string, maximoDeTeclas = 30, cor: string = RGB.foco): Promise<void> {
+async function tabAteOAnel(page: Page, alvo: Locator, descricao: string, maximoDeTeclas = 30, cor: string = RGB.foco, afastamento = '2px'): Promise<void> {
   for (let tecla = 0; tecla < maximoDeTeclas; tecla++) {
     await page.keyboard.press('Tab')
     if (await alvo.evaluate((elemento) => elemento === document.activeElement)) {
-      expect(await anelDoFoco(page), `anel de foco em ${descricao}`).toEqual({ visivel: true, estilo: 'solid', largura: '3px', cor, afastamento: '2px' })
+      expect(await anelDoFoco(page), `anel de foco em ${descricao}`).toEqual({ visivel: true, estilo: 'solid', largura: '3px', cor, afastamento })
       return
     }
   }
@@ -243,8 +243,20 @@ test.describe('pele da D72 nos componentes compartilhados', () => {
     expect(await pinta.evaluate((imagem) => (imagem as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
     expect(await larguraExcedente(page)).toBe(0)
     await tabAteOAnel(page, botaoDoSeletor(page), 'seletor de escola')
-    await tabAteOAnel(page, casca.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }), 'item Turmas da navegação')
-    await tabAteOAnel(page, casca.getByRole('button', { name: 'Sair' }), 'botão Sair')
+    const itemTurmas = secoes(page).getByRole('link', { name: 'Turmas' })
+    if (naGaveta(page)) {
+      await tabAteOAnel(page, casca.getByRole('button', { name: 'Sair' }), 'botão Sair')
+      // No celular o item é da barra de baixo, que fica fora da gaveta: modal aberta, ela está inerte (A5; 13.0). O Esc
+      // fecha a gaveta e devolve o foco ao botão do menu, e dali o Tab percorre o `<main>` até o item. A barra encosta no
+      // pé e nas laterais da janela, e por isso o anel dela é por dentro (−3 px), como o da linha de lista (10.1).
+      await page.keyboard.press('Escape')
+      await expect(gaveta(page)).toBeHidden()
+      await expect(page.getByRole('button', { name: 'Abrir o menu' })).toBeFocused()
+      await tabAteOAnel(page, itemTurmas, 'item Turmas da barra de baixo', 80, RGB.foco, '-3px')
+    } else {
+      await tabAteOAnel(page, itemTurmas, 'item Turmas da navegação')
+      await tabAteOAnel(page, casca.getByRole('button', { name: 'Sair' }), 'botão Sair')
+    }
 
     // O link de texto é `caramelo-texto` sublinhado: laranja como texto só nesse tom (5,1:1), nunca o `caramelo`
     // (3,0:1). Até a 11.0 ele era o "Meus vínculos" do cabeçalho; na casca da A1 a navegação é de itens, e o link de

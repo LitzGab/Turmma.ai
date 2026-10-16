@@ -77,11 +77,11 @@ pousar em duas, é 1.0 a 10.0 (a pele) e 11.0 a 15.0 (a página e as cascas).
   - [x] 12.2 `navegacao.ts`: "Nova conversa" vira "Início" (rótulo, `h1` e título da aba); o ícone de cada item; "Seu time" com o ícone da função num ladrilho
   - [x] 12.3 Testes: os nomes acessíveis não mudaram; aceso com `aria-current`; "Sair" visível sem abrir nada, do tamanho do vizinho, com "Meus dados" antes; a lateral recolhida lembrada, também com o armazenamento recusando; a mutação de `lembrarQuemEsta` (a da troca de escola, `usuarioDaSessao`, fica para a 13.0: ver `12_task.md`, "Mutações")
 
-- [ ] **13.0 — A casca da escola no celular: barra de topo, barra de baixo e gaveta**
-  - [ ] 13.1 A barra de topo de 56 px, com a escola ativa e "Sair", e a barra de baixo de 68 px, para o papel com até quatro itens
-  - [ ] 13.2 A gaveta com o resto; com mais de quatro itens, os itens continuam nela
-  - [ ] 13.3 `e2e/__fixtures__/casca.ts`: onde ficam os itens no celular (`cenarios.md`, parte B)
-  - [ ] 13.4 Testes: quatro itens na barra e cinco na gaveta; a 360 px nada rola de lado, com nome de escola comprido; o alvo de 44 px; o último botão da tela acima da barra; a gaveta fecha ao trocar de rota, de pessoa e de escola
+- [x] **13.0 — A casca da escola no celular: barra de topo, barra de baixo e gaveta**
+  - [x] 13.1 A barra de topo de 56 px, com a escola ativa e "Sair", e a barra de baixo de 68 px, para o papel com até quatro itens
+  - [x] 13.2 A gaveta com o resto; com mais de quatro itens, os itens continuam nela
+  - [x] 13.3 `e2e/__fixtures__/casca.ts`: onde ficam os itens no celular (`cenarios.md`, parte B)
+  - [x] 13.4 Testes: quatro itens na barra e cinco na gaveta; a 360 px nada rola de lado, com nome de escola comprido; o alvo de 44 px; o último botão da tela acima da barra; a gaveta fecha ao trocar de rota, de pessoa e de escola
 
 - [ ] **14.0 — A entrada e as páginas públicas na moldura nova**
   - [ ] 14.1 `CascaPublica`: o painel com a pinta a partir de 1024 px, empilhado abaixo

@@ -16,6 +16,7 @@ import {
   naGaveta,
   PRAZO_DA_ENTRADA_MS,
   esperarNovaConversa,
+  secoes,
   TITULO_DA_NOVA_CONVERSA,
   esperarAtividades,
 } from './__fixtures__/casca.ts'
@@ -96,17 +97,24 @@ async function navegarSemRecarregar(page: Page, caminho: string): Promise<void> 
 
 const naoEncontrada = (page: Page) => page.getByRole('heading', { name: 'Página não encontrada' })
 
-/** O que o navegador calcula num item da lateral, e que o aceso e o apagado mudam (A23, A24). */
+/**
+ * O que o navegador calcula num item da navegação, e que o aceso e o apagado mudam (A23, A24). Na lateral, o link inteiro
+ * leva a face, a borda e o texto; na barra de baixo do celular, a face e a borda são da pílula do ícone (`data-pilula`) e o
+ * texto é o do rótulo, que é o último filho do link: a pista é a mesma, em duas peças.
+ */
 async function pinturaDoItem(item: Locator): Promise<{ fundo: string; borda: string; larguraDaBorda: string; estiloDaBorda: string; texto: string; peso: string }> {
   return item.evaluate((elemento) => {
-    const estilo = getComputedStyle(elemento)
+    const pilula = elemento.querySelector('[data-pilula]')
+    const rotulo = pilula === null ? elemento : (elemento.lastElementChild ?? elemento)
+    const caixa = getComputedStyle(pilula ?? elemento)
+    const texto = getComputedStyle(rotulo)
     return {
-      fundo: estilo.backgroundColor,
-      borda: estilo.borderTopColor,
-      larguraDaBorda: estilo.borderTopWidth,
-      estiloDaBorda: estilo.borderTopStyle,
-      texto: estilo.color,
-      peso: estilo.fontWeight,
+      fundo: caixa.backgroundColor,
+      borda: caixa.borderTopColor,
+      larguraDaBorda: caixa.borderTopWidth,
+      estiloDaBorda: caixa.borderTopStyle,
+      texto: texto.color,
+      peso: texto.fontWeight,
     }
   })
 }
@@ -138,10 +146,11 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(page).toHaveURL(/\/professor\/nova-conversa$/)
     await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
 
+    // Os itens são os da tabela do papel, e só eles; cada tarefa de tela acrescenta a linha dela. Estão à vista sem abrir a
+    // gaveta: no celular são a barra de baixo (RF14), e no computador, a lateral.
+    await expect(secoes(page)).toHaveCount(1)
+    await expect(secoes(page).getByRole('link')).toHaveText(ITENS_DO_PROFESSOR.map(({ rotulo }) => rotulo))
     await abrirNavegacao(page, hasTouch)
-    const secoes = lateral(page).getByRole('navigation', { name: 'Seções' })
-    // Os itens são os da tabela do papel, e só eles; cada tarefa de tela acrescenta a linha dela.
-    await expect(secoes.getByRole('link')).toHaveText(ITENS_DO_PROFESSOR.map(({ rotulo }) => rotulo))
     // O menu da pessoa (P18): o nome, o papel e o "Sair", à vista, sem abrir nada.
     await expect(lateral(page)).toContainText(professora.nome)
     await expect(lateral(page)).toContainText('professor')
@@ -167,8 +176,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
 
     // O selecionado (A23; D80): o `aria-current`, que o leitor de tela anuncia, o fundo `azul-claro`, a borda de 2 px
     // `azul-borda` e o texto `azul-texto`. O peso deixa de ser pista (os dois em 700), e o filete saiu.
-    await abrirNavegacao(page, hasTouch)
-    const turmas = lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })
+    const turmas = secoes(page).getByRole('link', { name: 'Turmas' })
     await expect(turmas).toHaveAttribute('aria-current', 'page')
     expect(await pinturaDoItem(turmas)).toEqual({ fundo: 'rgb(223, 241, 253)', borda: 'rgb(153, 210, 248)', larguraDaBorda: '2px', estiloDaBorda: 'solid', texto: 'rgb(20, 110, 170)', peso: '700' })
     await expect(turmas.locator('[data-filete]')).toHaveCount(0)
@@ -180,8 +188,11 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await voltarAoInicio(page, hasTouch)
     await expect(gaveta(page)).toBeHidden()
     await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
-    await abrirNavegacao(page, hasTouch)
-    const apagado = lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })
+    const apagado = secoes(page).getByRole('link', { name: 'Turmas' })
+    // A negativa que passava vazia (A24): a busca é em `Seções`, que no celular é a barra de baixo, e o controle positivo é
+    // a própria barra à vista, com o item achado. Sem ele, um `Seções` fora do lugar deixaria a afirmação vazia.
+    await expect(secoes(page)).toHaveCount(1)
+    await expect(apagado).toHaveCount(1)
     await expect(apagado).not.toHaveAttribute('aria-current', 'page')
     // A negativa (A24): sem o filete, `toHaveCount(0)` passaria vazio. O apagado tem outro fundo, a borda de 2 px transparente
     // (o espaço que o aceso ocupa, e por isso acender não desloca nada) e o texto `sutil`: nenhuma das pistas do aceso.
@@ -257,8 +268,9 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await voltarAoInicio(page, hasTouch)
     await expect(page).toHaveURL(/\/aluno\/atividades$/)
 
+    await expect(secoes(page)).toHaveCount(1)
+    await expect(secoes(page).getByRole('link')).toHaveText(ITENS_DO_ALUNO.map(({ rotulo }) => rotulo))
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(ITENS_DO_ALUNO.map(({ rotulo }) => rotulo))
     await expect(lateral(page)).toContainText(aluno.nome)
     await expect(lateral(page)).toContainText('aluno')
     // F3 (18.0): "Privacidade" é do rodapé fixo, e não da lista de seções; o aluno não tem link no menu da pessoa.
@@ -271,8 +283,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
       await expect(page).toHaveURL(new RegExp(`${item.caminho}$`))
       await expect(page).toHaveTitle(`${item.rotulo} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
       await expect(naoEncontrada(page)).toHaveCount(0)
-      await abrirNavegacao(page, hasTouch)
-      await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: item.rotulo })).toHaveAttribute('aria-current', 'page')
+      await expect(secoes(page).getByRole('link', { name: item.rotulo })).toHaveAttribute('aria-current', 'page')
     }
     // O último item é "Minha turma": a tela dele, com a turma dele.
     await expect(page.getByRole('main')).toContainText(turma.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
@@ -434,6 +445,10 @@ test.describe('recomeço da tela', () => {
     // A coordenação abre em Governança (A5), que também não aponta para Turmas, tela do professor.
     await esperarGovernanca(page)
     await expect(page.getByRole('main').getByRole('link', { name: 'Turmas' })).toHaveCount(0)
+    // A barra de baixo da professora não ficou para a coordenação: no celular, com a gaveta fechada não há `Seções` à
+    // vista (os sete itens dela estão na gaveta) e a página não reserva o lugar de uma barra (A90, A91).
+    if (naGaveta(page)) await expect(secoes(page)).toHaveCount(0)
+    await expect(page.locator('html')).not.toHaveAttribute('data-barra-de-baixo', '')
 
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(ITENS_DA_COORDENACAO.map(({ rotulo }) => rotulo))

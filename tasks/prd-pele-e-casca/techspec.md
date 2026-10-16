@@ -148,7 +148,8 @@ largura; `apagado` nunca é cor de texto; nada depende de
 `:has()`, `scrollbar-width` nem `color-mix`, nem em estilo em linha.
 
 **Foco.** Anel de 3 px em `foco` (`#146EAA` no claro, `#60B9F4` no escuro), afastado 2 px; por dentro (−3 px) em
-linha de tabela e de lista; no campo, o anel mais a borda. O anel entra na tabela de pares, a 3:1, contra `fundo`,
+linha de tabela e de lista e no item da barra de baixo (que encosta no pé e nas laterais da janela, onde o anel por fora
+seria cortado); no campo, o anel mais a borda. O anel entra na tabela de pares, a 3:1, contra `fundo`,
 `superficie`, `fundo-suave` e `azul-claro`. A face `noite` que ainda existe (a faixa da operação, a dica da lateral, os
 avatares) é clara no escuro, e o `foco` dá 1,99:1 sobre ela: ali, e só no escuro, o anel é o `sobre-grafite`, e o chão
 próprio dentro da face (o grupo da `Aparencia` na faixa) volta ao `foco`. A regra sai com a última face `noite`.

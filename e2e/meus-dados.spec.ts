@@ -11,6 +11,7 @@ import {
   naGaveta,
   nomeNoSeletor,
   PRAZO_DA_ENTRADA_MS,
+  secoes,
 } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { doisCliquesNoMesmoInstante, entrarNosPedidos, hoje, registrarPeloFluxo } from './__fixtures__/pedidos-do-titular.ts'
@@ -245,10 +246,9 @@ test.describe('Meus dados: onde cada pessoa os acha', () => {
     test.setTimeout(90_000)
     const { aluno } = await montarEscola()
     await entrarComoAluno(page, aluno, hasTouch)
+    // A lista de seções do aluno está à vista sem abrir nada: no celular é a barra de baixo, fora da gaveta (A90).
+    await expect(secoes(page).getByRole('link')).toHaveText(['Tutor', 'Atividades', 'Minha turma'])
     await abrirNavegacao(page, hasTouch)
-
-    const secoes = lateral(page).getByRole('navigation', { name: 'Seções' })
-    await expect(secoes.getByRole('link')).toHaveText(['Tutor', 'Atividades', 'Minha turma'])
     const rodape = lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true })
     const item = rodape.getByRole('link', { name: 'Privacidade', exact: true })
     await expect(item).toBeVisible()
@@ -266,8 +266,10 @@ test.describe('Meus dados: onde cada pessoa os acha', () => {
     await expect(principal(page).getByRole('heading', { level: 2, name: 'Meus dados', exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await abrirNavegacao(page, hasTouch)
     await expect(lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true }).getByRole('link', { name: 'Privacidade', exact: true })).toHaveAttribute('aria-current', 'page')
-    // Nenhuma seção fica selecionada ali: o rodapé e a lista de seções nunca marcam duas telas.
-    await expect(secoes.locator('[aria-current="page"]')).toHaveCount(0)
+    // Nenhuma seção fica selecionada ali: o rodapé e a lista de seções nunca marcam duas telas. O controle positivo é a
+    // própria lista à vista, com os três itens: sem ele a ausência passaria vazia se `Seções` saísse do lugar.
+    await expect(secoes(page).getByRole('link')).toHaveCount(3)
+    await expect(secoes(page).locator('[aria-current="page"]')).toHaveCount(0)
   })
 
   test('o professor acha "Meus dados" no menu da pessoa, antes do "Sair", e o link fica selecionado na tela dele', async ({ page, hasTouch }) => {
@@ -286,7 +288,10 @@ test.describe('Meus dados: onde cada pessoa os acha', () => {
     const [caixaDoLink, caixaDoSair] = [await link.boundingBox(), await sairDaLateral.boundingBox()]
     expect(caixaDoLink?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(caixaDoSair?.y ?? 0)
     expect((caixaDoLink?.height ?? 0) >= ALVO_DE_TOQUE_PRINCIPAL_PX).toBe(true)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Meus dados' })).toHaveCount(0)
+    // A ausência de "Meus dados" em `Seções` precisa de controle positivo (A91): no celular `Seções` do professor é a barra de
+    // baixo, e olhar dentro da gaveta passaria vazio. Com os três itens dele à vista, a negativa vale.
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
+    await expect(secoes(page).getByRole('link', { name: 'Meus dados' })).toHaveCount(0)
 
     await acionar(link, hasTouch)
     await expect(page).toHaveURL(/\/professor\/meus-dados$/, { timeout: PRAZO_DA_ENTRADA_MS })

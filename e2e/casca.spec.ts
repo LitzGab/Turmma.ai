@@ -1,6 +1,6 @@
 import type { Locator, Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
-import { entrarComoCoordenacaoNaMesmaAba, entrarComoAluno, entrarComoProfessora, gaveta, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { entrarComoCoordenacaoNaMesmaAba, entrarComoAluno, entrarComoProfessora, gaveta, PRAZO_DA_ENTRADA_MS, reservaDaBarraDeBaixo, secoes } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, criarEquipeComSenha } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -341,10 +341,14 @@ test.describe('casca da escola', () => {
     await page.setViewportSize({ width: 360, height: 800 })
     await entrarComoProfessora(page, hasTouch)
 
-    // Sem lateral: a barra do topo tem o menu, a pinta, a escola e o "Sair", e nada passa da largura.
+    // Sem lateral: a barra do topo tem o menu, a pinta, a escola e o "Sair", e nada passa da largura. Os três itens do
+    // professor estão na barra de baixo, à vista com a gaveta fechada, e `Seções` existe uma vez só (A14, 13.0).
     const menu = page.getByRole('button', { name: 'Abrir o menu' })
     await expect(menu).toHaveAttribute('aria-expanded', 'false')
-    await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(0)
+    await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(1)
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
+    await expect(page.locator('html')).toHaveAttribute('data-barra-de-baixo', '')
+    await esperarAlvoDeToqueEm(secoes(page).getByRole('link', { name: 'Turmas' }))
     for (const alvo of [menu, page.getByRole('button', { name: 'Sair' }), page.getByRole('link', { name: 'Turmma, página inicial' })]) await esperarAlvoDeToqueEm(alvo)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
@@ -365,7 +369,10 @@ test.describe('casca da escola', () => {
     }
     expect(ondeFoi).not.toContain('atrás')
     expect(ondeFoi).toContain('gaveta')
-    await esperarAlvoDeToqueEm(gaveta(page).getByRole('link', { name: 'Turmas' }))
+    // A15: `Seções` saiu da gaveta e foi para a barra de baixo, que fica fora dela (irmã, e inerte com ela aberta). O
+    // controle positivo é a gaveta ter as outras navegações dela, logo adiante.
+    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' })).toHaveCount(0)
+    await expect(gaveta(page).getByRole('navigation', { name: 'Sua conta', exact: true })).toHaveCount(1)
     // F3 (18.0): o "Meus dados" do professor, no menu da pessoa, é alvo de 44 px na gaveta, como o "Sair" que vem depois dele.
     await esperarAlvoDeToqueEm(gaveta(page).getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link', { name: 'Meus dados' }))
     await esperarAlvoDeToqueEm(gaveta(page).getByRole('button', { name: 'Sair' }))
@@ -379,12 +386,25 @@ test.describe('casca da escola', () => {
     await expect(menu).toBeFocused()
     await expect(menu).toHaveAttribute('aria-expanded', 'false')
 
-    // O toque fora da lateral também fecha.
+    // O toque fora da lateral também fecha (A16): a gaveta tem 260 px, e o 350 px está depois da borda dela.
     if (hasTouch) await menu.tap()
     else await menu.click()
     await expect(gaveta(page)).toBeVisible()
+    const largura = (await gaveta(page).boundingBox())?.width ?? 0
+    expect(largura).toBeLessThan(350)
     await page.mouse.click(350, 400)
     await expect(gaveta(page)).toBeHidden()
+
+    // A barra de baixo fica inerte com a gaveta aberta: o toque em cima dela só fecha a gaveta, não navega.
+    const turmas = await secoes(page).getByRole('link', { name: 'Turmas' }).boundingBox()
+    if (turmas === null) throw new Error('o item Turmas da barra de baixo sem caixa')
+    const antes = page.url()
+    if (hasTouch) await menu.tap()
+    else await menu.click()
+    await expect(gaveta(page)).toBeVisible()
+    await page.mouse.click(turmas.x + turmas.width / 2, turmas.y + turmas.height / 2)
+    await expect(gaveta(page)).toBeHidden()
+    expect(page.url()).toBe(antes)
   })
 
   test('W12: no computador, a lateral aberta percorrida só com Tab, com o "Sair" a um clique e do tamanho dos itens', async ({ page, hasTouch }) => {
@@ -492,7 +512,11 @@ test.describe('casca da escola', () => {
     else await abrir.click()
     await expect(gaveta(page)).toBeVisible()
     await expect(abrir).toHaveAttribute('aria-expanded', 'true')
+    // A20: de 768 a 1023 px a gaveta do trilho leva os itens, e não há barra de baixo (ela é do celular).
     await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
+    await expect(page.locator('html')).not.toHaveAttribute('data-barra-de-baixo', '')
+    // E a página não reserva o lugar de uma barra que não existe: a variável vale zero, e o `<main>` guarda só os 32 px.
+    expect(await reservaDaBarraDeBaixo(page)).toEqual({ variavel: '0px', paddingDoMain: '32px' })
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
     await page.keyboard.press('Escape')
@@ -507,9 +531,15 @@ test.describe('casca da escola', () => {
     await page.setViewportSize({ width: 360, height: 800 })
     await expect(gaveta(page)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Abrir o menu' })).toHaveAttribute('aria-expanded', 'true')
+    // A20: a 360 px os itens são da barra de baixo, e a gaveta que seguiu aberta já não leva `Seções`.
+    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' })).toHaveCount(0)
+    await expect(page.locator('html')).toHaveAttribute('data-barra-de-baixo', '')
     await page.setViewportSize({ width: 900, height: 768 })
     await expect(gaveta(page)).toBeVisible()
     await expect(abrir).toHaveAttribute('aria-expanded', 'true')
+    // De volta aos 900 px, a gaveta tem os itens de novo (o controle positivo da asserção de cima), e a barra some.
+    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' })).toHaveCount(1)
+    await expect(page.locator('html')).not.toHaveAttribute('data-barra-de-baixo', '')
     await page.keyboard.press('Escape')
     await expect(gaveta(page)).toBeHidden()
 

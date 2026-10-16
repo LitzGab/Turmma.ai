@@ -1329,7 +1329,7 @@ teclado.
    grade na tabela) a peça do produto tem
 2. **Um anel de foco só**: contorno de 3 px em `foco`, com 2 px de afastamento, em tudo o que
    recebe foco pelo teclado, nos dois temas. No campo de texto o afastamento é zero; na linha de
-   tabela o anel vai por dentro. Nenhuma peça apaga o contorno, nem depende de `:has()` para
+   tabela e no item da barra de baixo (que encosta no pé e nas laterais da janela) o anel vai por dentro. Nenhuma peça apaga o contorno, nem depende de `:has()` para
    mostrá-lo. A única exceção é a face `noite` no escuro, onde ela é clara e o `foco` dá 1,99:1: ali o
    anel é o `sobre-grafite`, o texto da própria face (e volta ao `foco` dentro de peça com chão próprio)
 3. **Os quatro estados** (regra 50, item 5). O mockup não fala com servidor e não desenha
@@ -1410,7 +1410,7 @@ prova isso (RF6 da X1).
 
 | Peça | Desenho | Estados e teclado |
 |---|---|---|
-| `Dialogo` (R) | Sobre o `veu`. Caixa centrada de até 520 px, canto 16, borda 2 e degrau 4 (o anel e o degrau são a `shadow-flutua`). Título em `t-secao`, **sem altura mínima de 64 px** (produto: o diálogo de um campo e dois botões precisa caber nos 640 px de um celular baixo, A72). Miolo com 24 px (20 abaixo de 640), e a caixa rola por dentro; rodapé com os botões à direita. **Sem "X" no cabeçalho** (produto: ele seria o primeiro controle do Tab, e todo diálogo já tem "Cancelar" ou "Fechar") | O `veu` vale para todo `<dialog>` modal, e por isso a gaveta da casca (12.0 e 13.0) já o herda a partir da 7.0: não é decisão dela. Ao abrir, o foco vai ao primeiro campo ou ao primeiro botão do rodapé; na confirmação, ao texto. O Tab e o Shift+Tab não saem da caixa; o Esc fecha; ao fechar, o foco volta a quem abriu, ou ao `focoDeReserva` quando esse saiu da página |
+| `Dialogo` (R) | Sobre o `veu`. Caixa centrada de até 520 px, canto 16, borda 2 e degrau 4 (o anel e o degrau são a `shadow-flutua`). Título em `t-secao`, **sem altura mínima de 64 px** (produto: o diálogo de um campo e dois botões precisa caber nos 640 px de um celular baixo, A72). Miolo com 24 px (20 abaixo de 640), e a caixa rola por dentro; rodapé com os botões à direita. **Sem "X" no cabeçalho** (produto: ele seria o primeiro controle do Tab, e todo diálogo já tem "Cancelar" ou "Fechar") | O `veu` vale para todo `<dialog>` modal, e por isso a gaveta da casca (13.0) já o herda a partir da 7.0: não é decisão dela. Ao abrir, o foco vai ao primeiro campo ou ao primeiro botão do rodapé; na confirmação, ao texto. O Tab e o Shift+Tab não saem da caixa; o Esc fecha; ao fechar, o foco volta a quem abriu, ou ao `focoDeReserva` quando esse saiu da página |
 | `DialogoDeConfirmacao`, `dialogos.tsx` (R) | A caixa do `Dialogo` (produto: 520 px, e não os 460 do mockup: uma largura só para todo diálogo). **Dois botões do mesmo tamanho**, em duas colunas iguais a partir de 640 px e empilhados abaixo, com o `secundario` primeiro (à esquerda, ou em cima) e o que confirma depois, em `oficial` ou em `perigo` cheio. O `perigo` cheio só vive dentro de uma confirmação, e a lista é fechada: a `DialogoDeConfirmacao`, a `ConfirmacaoDePerigo` de `dialogos.tsx` e o `DialogoDeDecisao` dos pedidos de nome, mais a definição do botão e a galeria, que mostra o desenho. `componentes/perigo-cheio.test.ts` a guarda: um uso novo reprova. A `ConfirmacaoDePerigo` mantém os botões à direita, com a largura do rótulo e a mesma altura (produto) | O que vai acontecer está escrito antes dos botões (regra 50, item 8). O foco começa no texto, e nenhum botão o recebe ao abrir |
 | `LoginPorCima` (R) | O diálogo da sessão vencida, na mesma caixa e com os campos da pele (borda 2 em `borda-campo`, fundo `campo`). O véu dele é o forte, preto a 75% nos dois temas, e não o `veu` (produto: a tela de quem saiu tem de sumir) | Funciona com outro diálogo aberto por baixo |
 | `PainelLado` (N) | A partir de 768 px, entra pela direita com 480 px e a altura da janela. Abaixo, folha de baixo de até 88% da altura, com canto de 20 em cima e a área segura do aparelho no pé. Cabeçalho de 64 px, com o título em `t-secao` e o "Fechar" de 44 px; rodapé opcional com os botões à direita. Não anima largura nem altura | Diálogo modal: o Tab não sai, e o foco entra no miolo, e não no "Fechar" (produto: quem abre quer ler). Fecha com o "Fechar" e com o Esc, e só com eles: o toque fora não fecha (produto: apagaria o que foi digitado). Ao fechar, o foco volta a quem abriu, ou ao `focoDeReserva` |
@@ -1504,8 +1504,12 @@ Uma só para coordenação, professor e aluno. A lateral do professor, como fica
 | < 768 px, a partir de 360 px | Barra de topo de 56 px, com a pinta, a escola, o botão do menu e o **Sair**. Papel com até quatro itens tem a **barra de baixo**, fixa, de 68 px mais a área segura; o resto (escola, "Seu time", conta) abre na gaveta. Com mais de quatro, os itens continuam na gaveta. Nada rola de lado |
 
 Na barra de baixo cada lugar é uma coluna: o ícone de 28 px numa pílula de 48 × 36, e o rótulo de
-12 px em 700, caixa-alta. Nome comprido corta com reticências. Na conversa, em qualquer largura, a
-caixa de pedido fica presa embaixo e a lista rola por trás.
+12 px em 700, caixa-alta. O ícone do `lucide` não tem versão ilustrada: ele entra no ladrilho da
+família dele, e os 28 px são o miolo desse ladrilho (a peça de 32 px). Nome comprido corta com
+reticências. Na conversa, em qualquer largura, a caixa de pedido fica presa embaixo e a lista rola
+por trás. Enquanto a barra de baixo existe, a página reserva o lugar dela (`--barra-baixo`): o último
+botão da tela termina acima da barra, o foco do teclado nunca para atrás dela, e a barra presa
+(`BarraPresa`) de uma tela sobe para ficar logo acima.
 
 **O que cada papel vê.** Na X1 os itens são os de hoje, na ordem e nos endereços de hoje (RF16 e
 RF18); os lugares da D80 chegam com a spec da área. Lugar sem tela não aparece (D73).

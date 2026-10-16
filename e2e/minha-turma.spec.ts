@@ -1,6 +1,6 @@
 import type { Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
-import { abrirNavegacao, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarAtividades } from './__fixtures__/casca.ts'
+import { abrirNavegacao, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarAtividades, secoes } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, type AlunoDeTeste } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -151,10 +151,11 @@ test.describe('W12: "Minha turma" a 360 px', () => {
     const turma = await colocarAlunoNaTurma(aluno)
     await entrarComoAluno(page, aluno, hasTouch)
 
-    await abrirNavegacao(page, hasTouch)
-    const item = lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Minha turma' })
+    // A 360 px o item é da barra de baixo, numa coluna de 68 px, à vista sem abrir a gaveta (A93).
+    const item = secoes(page).getByRole('link', { name: 'Minha turma' })
     const caixa = await item.boundingBox()
     expect(caixa?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+    expect(caixa?.width ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
     await irPelaNavegacao(page, 'Minha turma', hasTouch)
     await expect(page.getByRole('main')).toContainText(turma.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
     expect(await larguraExcedente(page)).toBe(0)

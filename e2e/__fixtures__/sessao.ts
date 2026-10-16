@@ -190,6 +190,16 @@ export async function definirInatividadeDaEscola(escolaId: string, minutos: { eq
 }
 
 /**
+ * Dá à escola um nome comprido (de papel), como o de uma rede que escreve o nome por extenso: é o que a barra do topo do
+ * celular precisa cortar com reticências sem empurrar o "Sair" para fora da janela (13.0, RF14).
+ */
+export async function renomearEscolaNoBanco(escolaId: string, nome: string): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('update escola set nome = $2 where id = $1', [escolaId, nome])
+  })
+}
+
+/**
  * Um ajuste de retenção da escola, como o `ops:retencao` o grava (F3, 6.0): uma linha por escola e categoria, com o
  * contrato e o operador de teste. O comando confere piso, teto e travas; o teste que precisa de um ajuste válido escolhe um.
  */

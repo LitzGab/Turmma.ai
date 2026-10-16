@@ -1,7 +1,7 @@
 import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts'
-import { abrirNavegacao, entrarPorEmail, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, abrirAbaAlunos } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarPorEmail, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, abrirAbaAlunos, secoes } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   acessosVigentesDaTurma,
@@ -321,9 +321,7 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     await expect(acessoAtivo(page)).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
-    await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })).toHaveAttribute('aria-current', 'page')
-    if (await page.getByRole('dialog', { name: 'Menu' }).isVisible()) await page.keyboard.press('Escape')
+    await expect(secoes(page).getByRole('link', { name: 'Turmas' })).toHaveAttribute('aria-current', 'page')
 
     // O primeiro acesso: o diálogo diz o que ele faz, sem falar de acesso que cai, com 7 dias já escolhidos.
     await acionar(gerar, hasTouch)

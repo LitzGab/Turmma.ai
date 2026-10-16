@@ -37,6 +37,9 @@ function blocoQueRola(elemento: HTMLElement): HTMLElement {
  * (`scroll-padding-bottom`, medido a cada mudança de tamanho, porque a 360 px ela tem duas linhas), e o navegador passa
  * a parar o controle focado acima dela. Ao sair da tela, o bloco volta a ser o que era.
  *
+ * **Com a barra de baixo do celular** (`BarraDeBaixo`, RF23), ela sobe a altura da barra e fica acima dela: o `bottom` é a
+ * `--barra-baixo`, que vale zero onde não há barra. A reserva do foco soma o quanto ela sobe à própria altura.
+ *
  * A 360 px a informação e as ações quebram em duas linhas, e os botões continuam com 44 px. O fundo é cheio (`fundo`):
  * sem vidro fosco nem transparência, que custam quadro no Chromebook e deixariam o texto da lista vazar por trás. O fio
  * de cima é de 2 px em `borda`, como toda peça da D80. O degrau dos botões de dentro (4 px de sombra e de margem) fica
@@ -51,19 +54,28 @@ export function BarraPresa({ rotulo, informacao, children, semLinha = false }: P
     const bloco = blocoQueRola(elemento)
     const anterior = bloco.style.scrollPaddingBottom
     const reservar = () => {
-      bloco.style.scrollPaddingBottom = `${String(Math.ceil(elemento.getBoundingClientRect().height))}px`
+      // O quanto ela sobe do pé da janela (`bottom`, que é a barra de baixo do celular, ou zero) também é espaço que o
+      // foco não pode ocupar: com ela acima da barra, o controle parado só na altura dela ficaria atrás da barra.
+      const sobe = Number.parseFloat(getComputedStyle(elemento).bottom)
+      const altura = elemento.getBoundingClientRect().height + (Number.isFinite(sobe) ? sobe : 0)
+      bloco.style.scrollPaddingBottom = `${String(Math.ceil(altura))}px`
     }
     reservar()
     const observador = new ResizeObserver(reservar)
     observador.observe(elemento)
+    // A barra de baixo da casca nasce e some com a largura da janela e com a chegada do `/v1/eu`: muda o quanto esta sobe
+    // sem mudar o tamanho dela, e o `ResizeObserver` não vê.
+    const barraDeBaixo = new MutationObserver(reservar)
+    barraDeBaixo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-barra-de-baixo'] })
     return () => {
       observador.disconnect()
+      barraDeBaixo.disconnect()
       bloco.style.scrollPaddingBottom = anterior
     }
   }, [])
 
   return (
-    <div ref={barra} role="group" aria-label={rotulo} data-barra-presa="" className={`sticky bottom-0 z-10 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-fundo py-3 ${semLinha ? '' : 'border-t-2 border-borda'}`}>
+    <div ref={barra} role="group" aria-label={rotulo} data-barra-presa="" className={`sticky bottom-[var(--barra-baixo,0px)] z-10 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 bg-fundo py-3 ${semLinha ? '' : 'border-t-2 border-borda'}`}>
       {informacao !== undefined && <div className="min-w-0 text-sm break-words text-apoio">{informacao}</div>}
       <div className={`flex min-w-0 flex-wrap items-center gap-3 ${informacao === undefined ? 'w-full' : 'ml-auto'}`}>{children}</div>
     </div>

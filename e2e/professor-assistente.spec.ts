@@ -16,7 +16,7 @@ import {
   versaoAdaptada,
   type ApiDoAssistente,
 } from './__fixtures__/assistente.ts'
-import { abrirNavegacao, entrarPorEmail, gaveta, irPelaNavegacao, lateral, naGaveta, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarPorEmail, gaveta, irPelaNavegacao, lateral, naGaveta, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, secoes } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarEquipeComSenha, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -109,8 +109,9 @@ test.describe('a navegação do professor na A2 (D73)', () => {
     await expect(page).toHaveURL(/\/professor\/nova-conversa$/)
     await expect(page).toHaveTitle('Início · Turmma', { timeout: PRAZO_DA_TELA_MS })
 
+    // `Seções` está à vista sem abrir a gaveta (a barra de baixo, no celular); "Seu time" é que mora nela.
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
     const time = lateral(page).getByRole('navigation', { name: 'Seu time' })
     // Os dois agentes que já têm tela (fase 3): o Assistente e o Tutor, que não espera ninguém e não leva contador.
     await expect(time.getByRole('link')).toHaveText([/^Assistente de ensino/, /^Tutor$/])
@@ -134,8 +135,7 @@ test.describe('a navegação do professor na A2 (D73)', () => {
     await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /Assistente de ensino/ })).toHaveAttribute('aria-current', 'page')
     // Dentro da conversa, "Início" continua selecionado; dentro de um artefato, "Ferramentas".
     await irPara(page, '/professor/conversa')
-    await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Início' })).toHaveAttribute('aria-current', 'page')
+    await expect(secoes(page).getByRole('link', { name: 'Início' })).toHaveAttribute('aria-current', 'page')
   })
 })
 

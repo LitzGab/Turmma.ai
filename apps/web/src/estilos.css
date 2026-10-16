@@ -295,6 +295,27 @@
   }
 
   /*
+   * O lugar que a barra de baixo do celular toma da janela (RF14, RF23): 68 px mais a área segura, e zero onde ela não
+   * existe. Quem a desenha (`BarraDeBaixo`) põe `data-barra-de-baixo` no `<html>` enquanto está na página, e é só por
+   * isso que a variável vale: a coordenação, que no celular tem os itens na gaveta, e toda largura de 768 px para cima
+   * ficam com zero. O `<main>` da casca guarda esta altura embaixo, e a `BarraPresa` sobe por ela. O `env()` só vale com
+   * `viewport-fit=cover`, que o produto não pede: sem ele a área segura é zero, e a medida é a de 68 px.
+   */
+  :root {
+    --barra-baixo: 0px;
+  }
+
+  :root[data-barra-de-baixo] {
+    --barra-baixo: calc(68px + env(safe-area-inset-bottom, 0px));
+    /*
+     * O foco do teclado também não fica atrás dela (WCAG 2.4.11): a barra é `fixed` e cobre o pé da janela, e só o
+     * `padding` do `<main>` reserva o lugar, que vale no fim da página. No meio de uma tela comprida, o navegador pararia
+     * o controle focado no pé da janela, atrás da barra. A `BarraPresa` grava o dela em linha, que sobrepõe este valor.
+     */
+    scroll-padding-bottom: var(--barra-baixo);
+  }
+
+  /*
    * Foco sempre visível, em tudo que recebe foco pelo teclado (regra 50, item 11): contorno sólido de 3 px em `foco`,
    * com 2 px de afastamento (9.1 e 10.1). É um anel só, nos dois temas: o campo, a linha de tabela e o item de menu
    * mudam o afastamento, e nenhuma peça apaga o contorno.

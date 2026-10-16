@@ -137,7 +137,9 @@ describe('BarraPresa', () => {
     )
     const barra = screen.getByRole('group', { name: 'Aprovação do lote' })
     const classes = classesDo(barra)
-    for (const classe of ['border-t-2', 'border-borda', 'bg-fundo', 'sticky', 'bottom-0']) expect(classes.has(classe), classe).toBe(true)
+    // Presa no pé da janela, ou acima da barra de baixo do celular (`--barra-baixo`, zero onde não há barra: 13.0).
+    for (const classe of ['border-t-2', 'border-borda', 'bg-fundo', 'sticky', 'bottom-[var(--barra-baixo,0px)]']) expect(classes.has(classe), classe).toBe(true)
+    expect(classes.has('bottom-0'), 'presa no pé da janela, atrás da barra de baixo').toBe(false)
     expect(classes.has('border-t'), 'o fio de 1 px de antes').toBe(false)
     expect(classes.has('border-linha')).toBe(false)
   })
@@ -166,6 +168,71 @@ describe('BarraPresa', () => {
     const bloco = document.querySelector('[data-bloco]') as HTMLElement
     expect(bloco.style.scrollPaddingBottom).toBe('72px')
     unmount()
+    expect(bloco.style.scrollPaddingBottom).toBe('')
+  })
+
+  /**
+   * Os estilos que o `jsdom` não calcula: o bloco rola, e a barra sobe `sobe` do pé da janela (o `bottom` calculado, que é a
+   * `--barra-baixo` do celular). O resto do `getComputedStyle` fica como o `jsdom` o devolve.
+   */
+  function barraQueSobe(sobe: { valor: string }): void {
+    const real = window.getComputedStyle.bind(window)
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((elemento, pseudo) => {
+      const estilo = real(elemento, pseudo)
+      if (elemento.hasAttribute('data-barra-presa')) return new Proxy(estilo, { get: (alvo, nome) => (nome === 'bottom' ? sobe.valor : Reflect.get(alvo, nome) as unknown) })
+      if (elemento.hasAttribute('data-bloco')) return new Proxy(estilo, { get: (alvo, nome) => (nome === 'overflowY' ? 'auto' : Reflect.get(alvo, nome) as unknown) })
+      return estilo
+    })
+  }
+
+  it('acima da barra de baixo, reserva também o quanto sobe: o foco não para atrás da barra do celular', () => {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ height: 71.2 } as DOMRect)
+    barraQueSobe({ valor: '68px' })
+    render(
+      <div data-bloco="">
+        <BarraPresa rotulo="Aprovação do lote">
+          <button type="button">Aprovar</button>
+        </BarraPresa>
+      </div>,
+    )
+    const bloco = document.querySelector('[data-bloco]') as HTMLElement
+    // 71,2 de altura mais 68 de barra de baixo, para cima.
+    expect(bloco.style.scrollPaddingBottom).toBe('140px')
+  })
+
+  it('a barra de baixo nasce depois dela (o `/v1/eu` chega) e some com a largura: a reserva acompanha, e para ao sair', async () => {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ height: 71.2 } as DOMRect)
+    const sobe = { valor: '0px' }
+    barraQueSobe(sobe)
+    const { unmount } = render(
+      <div data-bloco="">
+        <BarraPresa rotulo="Aprovação do lote">
+          <button type="button">Aprovar</button>
+        </BarraPresa>
+      </div>,
+    )
+    const bloco = document.querySelector('[data-bloco]') as HTMLElement
+    expect(bloco.style.scrollPaddingBottom).toBe('72px')
+
+    // A barra de baixo entra na página: o atributo do `<html>` muda, e o tamanho da barra presa, não.
+    sobe.valor = '68px'
+    document.documentElement.setAttribute('data-barra-de-baixo', '')
+    await vi.waitFor(() => {
+      expect(bloco.style.scrollPaddingBottom).toBe('140px')
+    })
+
+    sobe.valor = '0px'
+    document.documentElement.removeAttribute('data-barra-de-baixo')
+    await vi.waitFor(() => {
+      expect(bloco.style.scrollPaddingBottom).toBe('72px')
+    })
+
+    // Depois de sair, a barra de baixo não mexe mais no bloco: o observador foi desligado.
+    unmount()
+    sobe.valor = '68px'
+    document.documentElement.setAttribute('data-barra-de-baixo', '')
+    await new Promise((resolver) => setTimeout(resolver, 20))
+    document.documentElement.removeAttribute('data-barra-de-baixo')
     expect(bloco.style.scrollPaddingBottom).toBe('')
   })
 })
