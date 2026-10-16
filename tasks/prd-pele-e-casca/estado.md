@@ -6,7 +6,8 @@
 > uma sessão limpa".
 
 ## Agora
-- **Espero:** a esteira de `4f453d0` (execução `38914509279`, rodando em 16/10 à tarde; `esteira.ts --fechamento`). A
+- **Espero:** a esteira de `4f453d0` (execução `38914509279`, rodando em 16/10 à tarde; `esteira.ts --fechamento`). O
+  e2e 3/5 caiu por 502 do Docker Hub (ver "O que falhou"): ao terminar, `gh run rerun 38914509279 --failed` e esperar. A
   rodada 3 da validação chegou: **APROVADA** sobre `4f453d0`, 24 de 24 RF; o `validacao.md` e os dois itens do `TODO.md`
   que ela pedia foram registrados no commit de documento seguinte
 - **Devo ainda:** (1) com a esteira verde no último commit que alterou código (`9d46058`, coberto pela de `4f453d0`);
@@ -87,6 +88,10 @@ Recomendo: apagar, pelo mesmo motivo que fez você escolher "tudo local"
   ícones de cada papel fora da entrada), é tarefa nova na 9.0
 
 ## O que falhou
+
+- **16/10, 14h18 — e2e 3/5 da esteira `38914509279` (`4f453d0`) caiu antes de testar:** o Docker Hub devolveu 502 no
+  `redis:8.8.2-alpine` ao subir o compose. Não é defeito: rodar de novo só o job que falhou (`gh run rerun --failed`)
+  quando a execução terminar
 
 - **16/10, ~12h15 — a primeira esteira da X1 no GitHub caiu em 4 e2e da galeria** (execução `38896156999`), todos no
   limite de 30 s, que o portão local de 03h10 passou. Sem branch no GitHub ("tudo local"), a esteira não rodou a cada
