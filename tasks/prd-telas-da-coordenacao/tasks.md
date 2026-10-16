@@ -17,7 +17,7 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 1.5 `SinoDaCoordenacao` por `lazy()`; galeria; `PECAS_FORA_DA_ENTRADA`
   - [ ] 1.6 Testes: a conta, tipo a tipo; nenhum pedido novo ao abrir a lista nem por tempo, foco ou retry; lista truncada; vínculo encerrado; sem ano letivo; só a coordenação monta o sino; nada pisca; a segunda pessoa não vê a fila da anterior
 
-- [ ] **2.0 — O Painel mostra os números da escola, a fila e o que falta**
+- [x] **2.0 — O Painel mostra os números da escola, a fila e o que falta**
   - [ ] 2.1 `o-que-falta-da-escola.ts`: os passos do roteiro saem da Estrutura para um módulo puro
   - [ ] 2.2 A tela `Painel`, na rota nova: função suspensa, os quatro números de hoje e o consumo do mês
   - [ ] 2.3 "Esperando você", com os itens da fila e a porta fixa "Pedidos dos titulares", sem número

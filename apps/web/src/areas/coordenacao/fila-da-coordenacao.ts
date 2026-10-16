@@ -177,9 +177,10 @@ export function anoEmCurso(anos: LeituraDaFila<readonly AnoLetivo[]>): AnoLetivo
 /**
  * As opções de leitura da fila (Tech Spec, seção 7c, "Releitura"): cinco minutos de frescor e **nenhuma leitura por tempo,
  * por foco ou por rede**. `consultaMateriais` traz o `refetchInterval` de 1,5 s da tela Material, e sem o `false` um
- * material `processando` faria cerca de 40 leituras por minuto por aba (regra 80).
+ * material `processando` faria cerca de 40 leituras por minuto por aba (regra 80). O Painel (2.0) lê com as mesmas opções: o
+ * mesmo frescor, para as duas telas não lerem de novo uma a leitura da outra.
  */
-const SEM_LEITURA_SOZINHA = { staleTime: 5 * 60_000, refetchInterval: false, refetchOnWindowFocus: false, refetchOnReconnect: false } as const
+export const SEM_LEITURA_SOZINHA = { staleTime: 5 * 60_000, refetchInterval: false, refetchOnWindowFocus: false, refetchOnReconnect: false } as const
 
 function leituraDe<Dado>(consulta: UseQueryResult<ListaDaEstrutura<Dado>>, aplica = true): LeituraDaFila<readonly Dado[]> {
   if (!aplica) return { estado: 'nao-se-aplica' }

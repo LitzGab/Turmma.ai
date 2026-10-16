@@ -207,14 +207,15 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     const pedidos = registrarChunks(page)
     await entrarComoProfessora(page, hasTouch)
 
-    // Os endereços da coordenação que têm tela: a Governança, onde ela abre (A5), uma turma aberta na Estrutura (13.0) e
-    // Professores (14.0).
-    for (const endereco of ['/coordenacao/governanca', `/coordenacao/estrutura/turmas/${randomUUID()}`, '/coordenacao/professores']) {
+    // Os endereços da coordenação que têm tela: a Governança, onde ela abre (A5), uma turma aberta na Estrutura (13.0),
+    // Professores (14.0) e o Painel (telas da coordenação, 2.0).
+    for (const endereco of ['/coordenacao/governanca', `/coordenacao/estrutura/turmas/${randomUUID()}`, '/coordenacao/professores', '/coordenacao/painel']) {
       await page.goto(endereco)
       await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await expect(page.getByRole('heading', { name: 'Governança' })).toHaveCount(0)
       await expect(page.getByRole('heading', { name: 'Estrutura' })).toHaveCount(0)
       await expect(page.getByRole('heading', { name: 'Professores' })).toHaveCount(0)
+      await expect(page.getByRole('heading', { name: 'Painel' })).toHaveCount(0)
     }
     await expect(page).toHaveTitle('Página não encontrada · Turmma')
     // A casca continua: a pessoa sai dali pela lateral, e não por um beco sem saída.

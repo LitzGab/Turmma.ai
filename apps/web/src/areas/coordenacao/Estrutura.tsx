@@ -41,7 +41,7 @@ import {
   renomearTurma,
 } from '../../api/estrutura'
 import { consultaProfessores } from '../../api/professores'
-import { caminhoDaTurmaNaEstrutura, ROTAS_DA_COORDENACAO } from '../../caminhos'
+import { caminhoDaTurmaNaEstrutura } from '../../caminhos'
 import { CLASSES_DO_BOTAO_PERIGO, CLASSES_DO_BOTAO_SECUNDARIO, CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
 import { Campo } from '../../componentes/Campo'
 import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
@@ -53,6 +53,7 @@ import { Tela } from '../../componentes/Tela'
 import { formatarData } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { Alocacao } from './Alocacao'
+import { passosDoRoteiro, type PassoDoRoteiro } from './o-que-falta-da-escola'
 import { ordenarPeloNome, ordenarSeries, ordenarTurmas } from './ordem'
 import { AvisoDeListaIncompleta, Linha } from './pecas-da-lista'
 
@@ -62,51 +63,6 @@ const NOME_DO_TURNO: Readonly<Record<Turno, string>> = { manha: 'manhã', tarde:
 /** Os diálogos da tela, um por vez. Os de renomear e excluir levam o item da linha, fotografado na abertura. */
 type TipoDeDialogo = 'ano' | 'serie' | 'disciplina' | 'turma' | 'renomear_disciplina' | 'excluir_disciplina' | 'renomear_turma' | 'excluir_turma'
 type AlvoDoDialogo = { readonly id: string; readonly nome: string }
-
-/** Um passo do roteiro: feito, falta, ou um passo que a tela não mede (a lista de cada turma, lida só com auditoria). */
-interface PassoDoRoteiro {
-  readonly titulo: string
-  readonly texto: string
-  readonly feito: boolean | undefined
-  /** A tela onde o passo se faz, quando não é esta: o link fecha a frase do passo. */
-  readonly link?: { readonly rotulo: string; readonly para: string }
-}
-
-/**
- * O que a tela sabe de cada passo. `undefined` é "ainda não sei": a leitura daquele passo está carregando ou falhou, e o
- * passo fica sem marca. Dizer "falta" ali mandaria a coordenação criar o que a escola já tem.
- */
-interface ContagemDoRoteiro {
-  readonly anoEmCurso: boolean
-  readonly series: number | undefined
-  readonly disciplinas: number | undefined
-  readonly turmas: number | undefined
-  readonly professores: number | undefined
-  readonly vinculos: number | undefined
-}
-
-/**
- * O roteiro da escola até a alocação (`docs/interface.md` 3; W4, "Estrutura"): o vazio o mostra inteiro, e com dado ele
- * diz o que falta. A lista de nomes não tem marca: saber se cada turma tem lista seria ler a lista de cada uma, e cada
- * leitura da coordenação vai para a auditoria (regra 20, item 10).
- */
-function passosDoRoteiro(dados: ContagemDoRoteiro | undefined): PassoDoRoteiro[] {
-  const tem = (quantos: number | undefined) => (quantos === undefined ? undefined : quantos > 0)
-  return [
-    { titulo: 'Ano letivo', texto: 'Crie o ano letivo e abra: as turmas nascem no ano em curso.', feito: dados?.anoEmCurso },
-    { titulo: 'Séries', texto: 'Do 6º ao 9º ano e do 1º ao 3º do Ensino Médio.', feito: tem(dados?.series) },
-    { titulo: 'Disciplinas', texto: 'As que os professores dão.', feito: tem(dados?.disciplinas) },
-    { titulo: 'Turmas', texto: 'Cada turma numa série do ano em curso.', feito: tem(dados?.turmas) },
-    { titulo: 'Lista de nomes', texto: 'Abra cada turma e cole a lista ou envie o arquivo, com nome e matrícula.', feito: undefined },
-    {
-      titulo: 'Professores',
-      texto: 'Cadastre cada professor com o e-mail dele e mande o convite, em',
-      feito: tem(dados?.professores),
-      link: { rotulo: 'Professores', para: ROTAS_DA_COORDENACAO.professores },
-    },
-    { titulo: 'Alocação', texto: 'Ligue cada professor à turma e à disciplina. Ele confirma pelo convite.', feito: tem(dados?.vinculos) },
-  ]
-}
 
 function Roteiro({ passos, titulo }: { passos: readonly PassoDoRoteiro[]; titulo: string }) {
   const idDoTitulo = useId()

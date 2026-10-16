@@ -63,6 +63,8 @@ export function caminhoDaCorrecaoDoProfessor(atividadeAplicadaId: string): strin
 
 /** As rotas da área da coordenação, relativas à base dela. */
 export const ROTAS_DA_COORDENACAO = {
+  /** O Painel: os números da IA na escola, o que espera pela coordenação e o que falta para terminar a escola (X2, 2.0; RF6). */
+  painel: '/painel',
   /** A governança de IA: o que a IA gerou e quem aprovou, e o consumo. É onde a coordenação abre (MVP, A5; `docs/interface.md` 11.1 e 11.7). */
   governanca: '/governanca',
   /** Os três agentes e as funções de cada um, com a suspensão por função (MVP, A5; D9, D60). */
@@ -169,6 +171,8 @@ export const ROTAS = {
   turmas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.turmas}`,
   /** "Meus dados" do professor, pela raiz: é o endereço do link do menu da pessoa (F3, 18.0). */
   meusDadosDoProfessor: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.meusDados}`,
+  /** O Painel da coordenação, pela raiz (X2, 2.0). Entra na lateral na 3.0, que também o faz o lugar onde ela abre. */
+  painel: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.painel}`,
   /** Governança da coordenação, pela raiz: é o endereço que a navegação usa, e onde a coordenação abre (MVP, A5). */
   governanca: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.governanca}`,
   /** Agentes da coordenação, pela raiz (MVP, A5). */
