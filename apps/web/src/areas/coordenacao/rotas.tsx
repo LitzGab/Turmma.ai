@@ -12,6 +12,8 @@ const Material = lazy(() => import('./Material'))
 const Governanca = lazy(() => import('./Governanca'))
 const Agentes = lazy(() => import('./Agentes'))
 const Analista = lazy(() => import('./Analista'))
+/** O Painel (telas da coordenação, 2.0): no pedaço dele (`tela-coordenacao-Painel-*.js`), para a fachada da área não crescer. */
+const Painel = lazy(() => import('./Painel'))
 /** Privacidade (F3, 6.0): no pedaço dela (`tela-coordenacao-Privacidade-*.js`), e só quem abre o item a baixa. */
 const Privacidade = lazy(() => import('./privacidade/Privacidade'))
 /** O detalhe do pedido de titular (F3, 17.0): num pedaço só dele, para a aba Pedidos não pagar pelos diálogos de quem não abre um pedido. */
@@ -42,6 +44,7 @@ export default function RotasDaCoordenacao() {
         <SinoDaCoordenacao />
       </Suspense>
       <Switch>
+        <Route path={ROTAS_DA_COORDENACAO.painel} component={Painel} />
         <Route path={ROTAS_DA_COORDENACAO.estrutura} component={Estrutura} />
         {/*
           A `key` pela turma: outra turma é outra tela. Sem ela, ir de uma turma já aberta para outra pelo histórico

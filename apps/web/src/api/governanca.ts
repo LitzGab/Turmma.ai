@@ -32,13 +32,26 @@ export const CHAVE_DO_ANALISTA = ['analista'] as const
 const CAMINHO_DA_GOVERNANCA = '/v1/governanca'
 const CAMINHO_DO_ANALISTA = '/v1/analista'
 
+const lerPaginaDoResumo = (pagina: string | undefined, signal: AbortSignal) =>
+  buscarComSessao(pagina === undefined ? `${CAMINHO_DA_GOVERNANCA}/resumo` : `${CAMINHO_DA_GOVERNANCA}/resumo?pagina=${encodeURIComponent(pagina)}`, esquemaRespostaResumoDaGovernanca, signal)
+
 /** "O que a IA gerou e quem aprovou", da mais nova para a mais antiga, uma página por vez (`proxima`). Os números vêm em toda página. */
 export const consultaResumoDaGovernanca = infiniteQueryOptions({
   queryKey: [...CHAVE_DA_GOVERNANCA, 'resumo'],
-  queryFn: ({ pageParam, signal }) =>
-    buscarComSessao(pageParam === undefined ? `${CAMINHO_DA_GOVERNANCA}/resumo` : `${CAMINHO_DA_GOVERNANCA}/resumo?pagina=${encodeURIComponent(pageParam)}`, esquemaRespostaResumoDaGovernanca, signal),
+  queryFn: ({ pageParam, signal }) => lerPaginaDoResumo(pageParam, signal),
   initialPageParam: undefined as string | undefined,
   getNextPageParam: (ultima) => ultima.proxima,
+})
+
+/**
+ * Só a primeira página do resumo, na **mesma chave** da consulta infinita (Tech Spec, seção 7c, "Carga na manhã de segunda"):
+ * para quem só quer os quatro números, que vêm em toda página. Um observador de consulta infinita releria todas as páginas que
+ * a Governança já paginou (uma requisição por página); este lê uma, e guarda o dado no formato da infinita, que a Governança
+ * continua lendo (`pages` e `pageParams`).
+ */
+export const consultaPrimeiraPaginaDoResumo = queryOptions({
+  queryKey: consultaResumoDaGovernanca.queryKey,
+  queryFn: async ({ signal }) => ({ pages: [await lerPaginaDoResumo(undefined, signal)], pageParams: [undefined] }),
 })
 
 /** O consumo do mês corrente, somado por função. */

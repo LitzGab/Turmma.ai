@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { caminhoDoPedidoDoTitular, ROTAS_DA_COORDENACAO } from './caminhos'
+import { BASE_DA_AREA, caminhoDoPedidoDoTitular, ROTAS, ROTAS_DA_COORDENACAO } from './caminhos'
 
 describe('o endereço do pedido de titular (F3, 17.0)', () => {
   it('leva só o id do pedido, na aba Pedidos da Privacidade, e nada além dele vira trecho do endereço', () => {
@@ -10,5 +10,13 @@ describe('o endereço do pedido de titular (F3, 17.0)', () => {
   it('a rota do pedido tem um trecho a mais que a da aba, e por isso é a que o Switch precisa ver primeiro', () => {
     expect(ROTAS_DA_COORDENACAO.pedidoDoTitular.startsWith(ROTAS_DA_COORDENACAO.privacidade)).toBe(true)
     expect(ROTAS_DA_COORDENACAO.pedidoDoTitular.split('/')).toHaveLength(ROTAS_DA_COORDENACAO.privacidadeDaAba.split('/').length + 1)
+  })
+})
+
+describe('o endereço do Painel (telas da coordenação, 2.0)', () => {
+  it('é /coordenacao/painel pela raiz, e o da área, relativo a ela, é o que o Switch da coordenação lê', () => {
+    expect(ROTAS.painel).toBe('/coordenacao/painel')
+    expect(ROTAS.painel).toBe(`${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.painel}`)
+    expect(ROTAS_DA_COORDENACAO.painel).toBe('/painel')
   })
 })
