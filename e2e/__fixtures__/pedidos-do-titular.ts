@@ -35,6 +35,11 @@ export const marca = () => Math.random().toString(36).slice(2, 10)
 /** As linhas da lista de pedidos: `tr` do corpo no chromebook, `li` da lista no celular. */
 export const linhas = (page: Page) => principal(page).locator('tbody tr, ul[data-tabela="lista"] > li')
 export const linhaDa = (page: Page, texto: string | RegExp) => linhas(page).filter({ hasText: texto })
+/**
+ * O link do pedido de uma pessoa dentro da linha dela. O nome acessível é "<nome>, <tipo do pedido>" (12.0): a busca ancora no
+ * nome inteiro e na vírgula, para "Ana" não achar "Ana Souza" e o nome de outra pessoa não casar por pedaço.
+ */
+export const linkDoPedido = (linha: Locator, nome: string) => linha.getByRole('link', { name: new RegExp(`^${nome.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}, `) })
 export const hoje = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 /** O dia como a tela o escreve por extenso: "9 de outubro de 2026". */
 export const comoNaTela = (dia: string) =>
@@ -55,6 +60,15 @@ export function somarDiasAHoje(dias: number): string {
 export async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
   if (hasTouch) await alvo.tap()
   else await alvo.click()
+}
+
+/**
+ * Clica (ou toca) no meio de um pedaço da linha que **não é o link**, onde só o link esticado pela linha (12.0) recebe o
+ * clique. `force` pula a espera de o próprio pedaço receber o toque: o ponto é justamente o que o link cobre por cima.
+ */
+export async function acionarNoPontoDaLinha(alvo: Locator, hasTouch: boolean): Promise<void> {
+  if (hasTouch) await alvo.tap({ force: true })
+  else await alvo.click({ force: true })
 }
 
 export function portao(): { aberta: Promise<void>; abrir: () => void } {

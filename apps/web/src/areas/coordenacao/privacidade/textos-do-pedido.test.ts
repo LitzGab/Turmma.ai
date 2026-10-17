@@ -14,6 +14,7 @@ import {
   acoesDoPedido,
   CODIGOS_QUE_MUDAM_O_PEDIDO,
   diasEntre,
+  EFEITO_DE_CORRIGIR_NOME,
   efeitoDeConcluir,
   nomeDaEmpresa,
   nomeNovoDoTitular,
@@ -223,6 +224,11 @@ describe('as orientações e as falhas dizem o que fazer, sem código nem texto 
     expect(orientacaoDoPedido({ tipo: 'portabilidade', estado: 'pronto' })).toContain('7 dias')
   })
 
+  it('o que corrigir o nome faz diz onde se corrige a turma, com o nome do lugar de hoje', () => {
+    expect(EFEITO_DE_CORRIGIR_NOME).toContain('pela turma, em Escola › Turmas.')
+    expect(EFEITO_DE_CORRIGIR_NOME).not.toContain('Estrutura')
+  })
+
   it('a orientação existe só nos estados que pedem uma ação ou uma espera, e cada uma diz o que a coordenação faz', () => {
     const estados = ['recebido', 'em_preparacao', 'pronto', 'agendado', 'concluido', 'cancelado'] as const
     const comOrientacao = {
@@ -241,6 +247,9 @@ describe('as orientações e as falhas dizem o que fazer, sem código nem texto 
     expect(orientacaoDoPedido({ tipo: 'compartilhamento', estado: 'recebido' })).toContain('lista abaixo')
     expect(orientacaoDoPedido({ tipo: 'correcao', estado: 'recebido' })).toContain('Corrija o nome')
     expect(orientacaoDoPedido({ tipo: 'correcao', estado: 'pronto' })).toContain('Corrija o nome')
+    // O nome do lugar de hoje: a turma se corrige em Escola › Turmas (X2, 12.0), e a palavra "Estrutura" saiu da tela.
+    expect(orientacaoDoPedido({ tipo: 'correcao', estado: 'recebido' })).toContain('pela turma, em Escola › Turmas.')
+    expect(orientacaoDoPedido({ tipo: 'correcao', estado: 'recebido' })).not.toContain('Estrutura')
     expect(orientacaoDoPedido({ tipo: 'eliminacao', estado: 'concluido' })).toContain('foram eliminados')
     expect(orientacaoDoPedido({ tipo: 'eliminacao', estado: 'cancelado' })).toContain('foi cancelada')
   })

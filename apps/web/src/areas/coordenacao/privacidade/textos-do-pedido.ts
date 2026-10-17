@@ -160,7 +160,7 @@ export function orientacaoDoPedido(pedido: Pick<PedidoDoTitular, 'tipo' | 'estad
         : undefined
     case 'correcao':
       return pedido.estado === 'recebido' || pedido.estado === 'pronto'
-        ? 'Corrija o nome da pessoa por aqui. A correção de turma ou de vínculo se faz pela turma, em Estrutura.'
+        ? 'Corrija o nome da pessoa por aqui. A correção de turma ou de vínculo se faz pela turma, em Escola › Turmas.'
         : undefined
     case 'eliminacao':
       if (pedido.estado === 'agendado') {
@@ -204,7 +204,7 @@ export const AVISO_DE_CANCELAR = 'O cancelamento fica registrado na auditoria da
 
 /** Corrigir o nome (RF13b): o que muda, o que não muda e o limite do nome anterior (Tech Spec do F3, seção 13). */
 export const EFEITO_DE_CORRIGIR_NOME =
-  'O nome muda no cadastro desta escola. O arquivo que já foi gerado não é refeito, e a correção de turma ou de vínculo se faz pela turma, em Estrutura.'
+  'O nome muda no cadastro desta escola. O arquivo que já foi gerado não é refeito, e a correção de turma ou de vínculo se faz pela turma, em Escola › Turmas.'
 export const AVISO_DO_NOME_ANTERIOR =
   'O nome anterior que tenha ficado em texto livre (tema, material gerado, conversa do professor) só sai quando o prazo de guarda dele passa. Se a pessoa pedir a eliminação depois, a troca procura só o nome novo. A correção fica na auditoria sem o nome anterior nem o novo.'
 

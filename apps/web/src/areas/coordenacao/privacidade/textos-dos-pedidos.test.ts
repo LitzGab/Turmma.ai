@@ -2,6 +2,7 @@ import { CHAVES_DE_RETENCAO, CodigoDeErro, ESTADOS_DO_PEDIDO, MINIMO_DE_LETRAS_D
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   anuncioDaBusca,
+  AVISO_DO_ALUNO_DA_LISTA,
   descricaoDoAchado,
   EFEITO_DA_ELIMINACAO,
   EFEITO_DO_PEDIDO,
@@ -12,6 +13,7 @@ import {
   ROTULO_DO_TIPO,
   SITUACAO_DO_PEDIDO,
   termoDaBusca,
+  TEXTO_DE_NINGUEM_ACHADO,
   TEXTO_DO_TERMO_CURTO,
   TEXTOS_DA_FALHA_DA_BUSCA,
   TEXTOS_DA_FALHA_DO_REGISTRO,
@@ -52,6 +54,15 @@ describe('os textos de cada valor do contrato: nenhum fica sem o seu, e nenhum �
     expect(EFEITO_DO_PEDIDO.eliminacao).toBe(EFEITO_DA_ELIMINACAO)
     expect(EFEITO_DA_ELIMINACAO).toContain('7 dias')
     expect(EFEITO_DA_ELIMINACAO).toContain('não há como desfazer')
+  })
+})
+
+describe('o caminho até a turma tem o nome do lugar de hoje: Escola › Turmas, e não "Estrutura"', () => {
+  it('a busca sem ninguém, o aviso do aluno da lista e o efeito do pedido de correção dizem onde fica a turma', () => {
+    expect(TEXTO_DE_NINGUEM_ACHADO).toContain('na lista de nomes da turma, em Escola › Turmas.')
+    expect(AVISO_DO_ALUNO_DA_LISTA).toContain('abra a turma em Escola › Turmas. Ler a lista')
+    expect(EFEITO_DO_PEDIDO.correcao).toContain('se faz pela turma, em Escola › Turmas.')
+    for (const texto of [TEXTO_DE_NINGUEM_ACHADO, AVISO_DO_ALUNO_DA_LISTA, EFEITO_DO_PEDIDO.correcao]) expect(texto).not.toContain('Estrutura')
   })
 })
 

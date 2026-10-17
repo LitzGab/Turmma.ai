@@ -15,8 +15,10 @@ import { mensagemDoErro } from '../../../api/cliente'
 import { caminhoDoPedidoDoTitular, ROTAS_DA_COORDENACAO } from '../../../caminhos'
 import { formatarData } from '../../../formatar'
 import { RegistrarPedido } from './RegistrarPedido'
+import { prazoDoPedido, textoDoPrazo } from './textos-do-pedido'
 import {
   AVISO_DO_ALUNO_DA_LISTA,
+  hojeEmSaoPaulo,
   ordenarOsPedidos,
   ROTULO_DE_QUEM_PEDIU,
   ROTULO_DO_TIPO,
@@ -28,34 +30,60 @@ import {
 /** Na turma da lista, o titular eliminado não tem turma para mostrar: o nome e a turma saíram do sistema com ele (RF14). */
 const TEXTO_SEM_TURMA_DO_ELIMINADO = 'Não consta'
 
-const COLUNAS_DOS_PEDIDOS: readonly [ColunaDaTabela<ItemDoPedido>, ...ColunaDaTabela<ItemDoPedido>[]] = [
-  {
-    chave: 'pessoa',
-    titulo: 'Pessoa',
-    // O link abre o detalhe do pedido (17.0). O nome é o texto do link, e o endereço leva só o id do pedido.
-    celula: (pedido) => (
-      <Link to={caminhoDoPedidoDoTitular(pedido.id)} className="inline-flex min-h-11 items-center text-caramelo-texto underline">
-        {pedido.titular?.nome ?? TEXTO_DO_TITULAR_ELIMINADO}
-      </Link>
-    ),
-  },
-  { chave: 'turma', titulo: 'Turma', celula: (pedido) => (pedido.titular === null ? TEXTO_SEM_TURMA_DO_ELIMINADO : textoDasTurmas(pedido.titular.turmas)) },
-  { chave: 'tipo', titulo: 'Pedido', celula: (pedido) => ROTULO_DO_TIPO[pedido.tipo] },
-  { chave: 'solicitante', titulo: 'Quem pediu', celula: (pedido) => ROTULO_DE_QUEM_PEDIU[pedido.solicitante] },
-  { chave: 'chegouEm', titulo: 'Chegou em', celula: (pedido) => formatarData(pedido.chegouEm) },
-  {
-    chave: 'situacao',
-    titulo: 'Situação',
-    celula: (pedido) => {
-      const situacao = SITUACAO_DO_PEDIDO[pedido.estado]
-      return <Estado familia={situacao.familia}>{situacao.texto}</Estado>
+/**
+ * As colunas da lista. `hoje` é o dia de São Paulo (`AAAA-MM-DD`): o prazo de cada linha sai dele e da chegada do pedido
+ * (`prazoDoPedido`), sem chamada a mais à API.
+ *
+ * - **A linha inteira abre o detalhe** (X2, 12.0): o link fica na célula da pessoa, e o `after:absolute after:inset-0` o
+ *   estende pela linha, que a `Tabela` deixa `relative`. É um link só por linha, com o tipo do pedido no nome para quem
+ *   ouve (uma pessoa pode ter dois pedidos; o texto à vista continua só o nome), e o endereço leva só o id do pedido.
+ * - **O prazo é um selo de estado**: o vencido é `erro`, diz "vencido há N dias" e leva o ícone da família; estado nunca é só cor.
+ */
+function colunasDosPedidos(hoje: string): readonly [ColunaDaTabela<ItemDoPedido>, ...ColunaDaTabela<ItemDoPedido>[]] {
+  return [
+    {
+      chave: 'pessoa',
+      titulo: 'Pessoa',
+      celula: (pedido) => {
+        const nome = pedido.titular?.nome ?? TEXTO_DO_TITULAR_ELIMINADO
+        return (
+          <Link
+            to={caminhoDoPedidoDoTitular(pedido.id)}
+            aria-label={`${nome}, ${ROTULO_DO_TIPO[pedido.tipo]}`}
+            className="inline-flex min-h-11 items-center text-caramelo-texto underline after:absolute after:inset-0"
+          >
+            {nome}
+          </Link>
+        )
+      },
     },
-  },
-]
+    { chave: 'turma', titulo: 'Turma', celula: (pedido) => (pedido.titular === null ? TEXTO_SEM_TURMA_DO_ELIMINADO : textoDasTurmas(pedido.titular.turmas)) },
+    { chave: 'tipo', titulo: 'Pedido', celula: (pedido) => ROTULO_DO_TIPO[pedido.tipo] },
+    { chave: 'solicitante', titulo: 'Quem pediu', celula: (pedido) => ROTULO_DE_QUEM_PEDIU[pedido.solicitante] },
+    { chave: 'chegouEm', titulo: 'Chegou em', celula: (pedido) => formatarData(pedido.chegouEm) },
+    {
+      chave: 'prazo',
+      titulo: 'Prazo',
+      celula: (pedido) => {
+        const prazo = textoDoPrazo(prazoDoPedido(pedido, hoje))
+        return <Estado familia={prazo.familia}>{prazo.texto}</Estado>
+      },
+    },
+    {
+      chave: 'situacao',
+      titulo: 'Situação',
+      celula: (pedido) => {
+        const situacao = SITUACAO_DO_PEDIDO[pedido.estado]
+        return <Estado familia={situacao.familia}>{situacao.texto}</Estado>
+      },
+    },
+  ]
+}
 
 /**
- * A aba "Pedidos" (F3, 16.0; RF10, RF14 e RF16): os pedidos dos titulares desta escola, o mais recente primeiro, e o
- * "Registrar pedido" que abre a busca e a confirmação. O nome da pessoa abre o detalhe do pedido (17.0, `DetalheDoPedido.tsx`).
+ * A aba "Pedidos" (F3, 16.0; X2, 12.0; RF10, RF14, RF16, RF20 e RF22): os pedidos dos titulares desta escola, o mais recente
+ * primeiro, com o prazo de cada um, e o "Registrar pedido" que abre a busca e a confirmação. A linha inteira abre o detalhe do
+ * pedido (17.0, `DetalheDoPedido.tsx`).
  *
  * - **Sempre relê ao abrir**: a lista não fica guardada fora da tela (`gcTime: 0`, em `api/privacidade.ts`), então cada
  *   abertura é uma leitura nova. Outra pessoa da coordenação pode ter registrado, e a eliminação muda de estado sozinha (o
@@ -69,6 +97,8 @@ export default function Pedidos() {
   const consulta = useInfiniteQuery(consultaPedidosDoTitular)
   const [anuncio, definirAnuncio] = useState('')
   const pedidos = useMemo(() => ordenarOsPedidos((consulta.data?.pages ?? []).flatMap((pagina) => pagina.itens)), [consulta.data])
+  const hoje = hojeEmSaoPaulo()
+  const colunas = useMemo(() => colunasDosPedidos(hoje), [hoje])
 
   if (consulta.isPending) return <EstadoCarregando rotulo="Carregando os pedidos…" />
   // Sem página nenhuma e fora do carregamento, só resta a falha. A falha de "Ver mais" fica abaixo da lista, com o que já foi lido.
@@ -81,14 +111,14 @@ export default function Pedidos() {
       <CabecalhoDeSecao
         id="titulo-dos-pedidos"
         titulo="Pedidos dos titulares"
-        apoio="Acesso, portabilidade, compartilhamento, correção e eliminação de dados, pedidos pela própria pessoa ou pelo responsável. O prazo de cada um aparece no detalhe."
+        apoio="Acesso, portabilidade, compartilhamento, correção e eliminação de dados, pedidos pela própria pessoa ou pelo responsável."
         acao={<RegistrarPedido aoRegistrado={definirAnuncio} />}
       />
       <Anuncio texto={anuncio} />
       <Faixa>{AVISO_DO_ALUNO_DA_LISTA}</Faixa>
       <div>
         <Link to={ROTAS_DA_COORDENACAO.estrutura} className={CLASSES_DO_LINK_SECUNDARIO}>
-          Ir para a Estrutura
+          Ir para as turmas
         </Link>
       </div>
       {pedidos.length === 0 ? (
@@ -97,7 +127,7 @@ export default function Pedidos() {
           descricao="Quando uma pessoa ou o responsável pedir acesso, correção ou eliminação dos dados, registre aqui: a Turmma monta o arquivo, guarda a lista de quem recebeu dado e agenda a eliminação."
         />
       ) : (
-        <Tabela rotulo="Pedidos dos titulares" colunas={COLUNAS_DOS_PEDIDOS} linhas={pedidos} chaveDaLinha={(pedido) => pedido.id} />
+        <Tabela rotulo="Pedidos dos titulares" colunas={colunas} linhas={pedidos} chaveDaLinha={(pedido) => pedido.id} />
       )}
       {consulta.isFetchNextPageError && (
         <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-3 break-words text-erro">

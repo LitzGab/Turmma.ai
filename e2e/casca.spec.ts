@@ -621,7 +621,7 @@ const ALTURA_BAIXA_PX = 600
 const PAPEIS_DA_CASCA: readonly { readonly papel: PapelDaCasca; readonly navegacoes: readonly string[]; readonly ausentes: readonly string[]; readonly primeiro: string }[] = [
   { papel: 'professor', navegacoes: ['Seções', 'Seu time', 'Sua conta'], ausentes: ['Rodapé'], primeiro: 'Início' },
   { papel: 'aluno', navegacoes: ['Seções', 'Rodapé'], ausentes: ['Seu time', 'Sua conta'], primeiro: 'Tutor' },
-  { papel: 'coordenacao', navegacoes: ['Seções'], ausentes: ['Seu time', 'Rodapé', 'Sua conta'], primeiro: 'Governança' },
+  { papel: 'coordenacao', navegacoes: ['Seções'], ausentes: ['Seu time', 'Rodapé', 'Sua conta'], primeiro: 'Painel' },
 ]
 
 async function entrarNaCasca(page: Page, papel: PapelDaCasca, hasTouch: boolean): Promise<void> {
@@ -660,6 +660,9 @@ async function conferirOSair(raiz: Locator, page: Page, primeiro: string, quadra
   await expect(sair).toBeVisible()
   // Inteiro dentro da janela: `toBeInViewport()` sozinho aprova o botão cortado pela metade (a coordenação a 1366 × 768).
   await expect(sair).toBeInViewport({ ratio: 1 })
+  // O primeiro lugar da navegação é o que a tabela `PAPEIS_DA_CASCA` diz. Sem esta linha, navegação reordenada só aparece
+  // como o estouro de 120 s do `boundingBox()` logo abaixo, sem dizer o motivo (foi o que escondeu a quebra da 3.0).
+  await expect(raiz.getByRole('navigation', { name: 'Seções' }).getByRole('link').first(), 'o primeiro lugar de "Seções" não é o da tabela PAPEIS_DA_CASCA').toHaveAccessibleName(primeiro)
   const [vizinho, caixa] = await Promise.all([raiz.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: primeiro, exact: true }).boundingBox(), sair.boundingBox()])
   expect(caixa?.height, 'altura do "Sair"').toBe(vizinho?.height)
   expect(caixa?.width, 'largura do "Sair"').toBe(vizinho?.width)

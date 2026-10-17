@@ -293,6 +293,8 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
   })
 
   test('as duas abas se alternam pelo clique ou toque, e o endereço guarda a aba', async ({ page, hasTouch }) => {
+    // Duas cargas de página (a entrada e a recarga) sob o perfil do celular, mais a troca de aba: passam dos 30 s que o teste tem por padrão.
+    test.setTimeout(90_000)
     const coordenadora = await criarEquipeComSenha('coordenador')
     const nome = `Hospedagem ${marca()}`
     await cadastrarSuboperadorDeTeste({ nome, escolas: [coordenadora.escolaId] })

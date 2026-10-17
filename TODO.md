@@ -499,14 +499,19 @@ para o staging".
 - [ ] **(F3, validação, rodada 2, m2) "Sem turma neste ano" quando não há ano em curso:**
       `apps/web/src/areas/coordenacao/privacidade/textos-dos-pedidos.ts:58`. "Sem turma" basta. Na próxima correção ou
       tarefa que mexer nos Pedidos (dono: Joaquim)
-- [ ] **(F3, validação, m3 a m6) Telas da Privacidade:** com destino desde a D80: m3 e m5 na X2 (`telas-da-coordenacao`), m6 na X1 (tarefa 11.0, título visível em toda tela); m4 pede campo no DTO e continua sem spec.
-      (m3) a lista de pedidos não mostra o prazo nem destaca o vencido
-      (`apps/web/src/areas/coordenacao/privacidade/Pedidos.tsx:84`): a correção vencida há 5 dias aparece só como
+- [ ] **(F3, validação, m3 a m6) Telas da Privacidade:** o m3 foi feito na tarefa 12.0 da X2 (`telas-da-coordenacao`): a lista de
+      pedidos tem a coluna "Prazo" e o vencido diz "vencido há N dias". O m6 foi para a X1 (tarefa 11.0, título visível em toda
+      tela); o m4 e o m5 pedem campo no DTO e continuam sem spec: o m4 na próxima tarefa que mexer em `packages/shared/src/privacidade/titular.ts`, e o m5 na próxima que mexer em `AcoesDoPedido.tsx` (dono: Joaquim).
+      (m3, feito) a lista de pedidos não mostrava o prazo nem destacava o vencido: a correção vencida há 5 dias aparecia só como
       "Recebido"; (m4) o DTO do pedido não leva `eliminarEm` (`packages/shared/src/privacidade/titular.ts`), e o detalhe diz
       "7 dias depois do registro" sem dizer o dia; (m5) "Baixar a versão da escola" aparece também com o titular de conta
       ativa, e aí sempre falha, com o texto certo (`AcoesDoPedido.tsx:279`); (m6) na área do professor, "Meus dados" não tem
       título à vista (`apps/web/src/componentes/meus-dados/MeusDados.tsx:189-191`). Fotos e detalhe em
       `tasks/prd-lgpd-e-titular/validacao.md`, seção 4 das duas rodadas (dono: Joaquim)
+- [ ] **(X2, 12.0) A lista de pedidos mistura dois formatos de data na mesma linha:** "Chegou em" diz "14 de outubro de 2026" e o
+      prazo diz "até 29/10/2026" (`textoDoPrazo`, em `apps/web/src/areas/coordenacao/privacidade/textos-do-pedido.ts`). O
+      formato curto é o do prazo em toda a Privacidade, e mudar o texto mexe nos testes e nos e2e que o afirmam. Na próxima
+      tarefa que mexer em `textos-do-pedido.ts` (dono: Joaquim)
 - [ ] **(F3, validação, m7) `IA_LATENCIA_FALSA_MS` obrigatória sem aviso no `README.md`:** `infra/compose.yml:211` exige a
       variável, e quem sobe o compose pela primeira vez não é avisado. Uma linha no `README.md` (dono: Joaquim)
 - [ ] **(F3, validação, m8) A vitrine não semeia nada da Privacidade:** `tools/vitrine/escola.ts` monta a escola sem pedido,
@@ -1311,6 +1316,10 @@ qualquer dado real:
   do MVP (`docs/mvp-rapido.md`, seção 8, item 3), e o item acima era o único que o acompanhava. Não reproduziu em 10
   execuções em 05/10/2026, e o código dele não tem a corrida do "segunda pessoa": aloca depois de entrar, mas relê pelo
   "Tentar de novo". Se voltar, entra por `/corrigir` com a execução da esteira em que falhou.
+- [ ] **E2e "duas abas" do acesso suspenso estoura o teto de 30 s na esteira** (`e2e/acesso-suspenso.spec.ts:169`, `chromebook`,
+  esteira 38990594424). Não reproduziu: 10 de 10 verdes, 12 s cada, em 16/10/2026. Hipótese: duas entradas e três esperas de
+  até 20 s sob o teto padrão; a correção, se voltar, é `test.slow()`. Detalhe na seção "O outro vermelho do run" de
+  `tasks/correcoes/2026-10-16-casca-procura-governanca.md`.
 - [ ] **Alocação nova demora até 30 s para aparecer em "Turmas"** (`test-engineer` da correção
   `2026-10-05-segunda-pessoa-cache-dos-vinculos`). Não é requisito hoje, mas o vazio da Nova conversa manda a professora
   a "Turmas" ("Ir para Turmas", `apps/web/src/areas/professor/Home.tsx`), que monta com a lista que a Nova conversa já
@@ -1348,3 +1357,4 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **A vitrine fotografa o miolo que rola e o seletor de arquivo em inglês (telas da coordenação, 9.0).** A foto de 1366 px da lista da turma corta a tabela dos nomes (a página não rola, o miolo rola por dentro), então a tabela só se vê no celular: rolar o miolo ou fotografar a região. E o seletor de arquivo sai "Choose File / No file chosen": fixar `locale: 'pt-BR'` no contexto do navegador da vitrine (`tools/vitrine/foto.ts`). É só da vitrine; o produto não muda.
 - [ ] **Escola › Turmas: o que os revisores deixaram para o `/validar` e para outras tarefas (telas da coordenação, 5.0; frontend-reviewer, test-engineer e revisor-geral, 1ª rodada).** (1) Sinal de que a linha abre: o "›" do `mockup.md` seção 3 na última célula, ou o nome com a cor de link (`Estrutura.tsx`, `CLASSES_DO_LINK_DA_LINHA`): tarefa 9.0 ou `/validar`. (2) `position: relative` em `<tr>` falha em Safari anterior ao 16: conferir no `/validar`. (3) O "—" de Turno e Situação não diz nada ao leitor de tela; um texto escondido como "Sem turno" muda o nome acessível que "Nomes que não mudam" fixa: a validação decide. (4) Fotografar o Aviso "Para terminar a escola" e o vazio "Comece pelo ano letivo" quando a vitrine (`tools/vitrine/`) ganhar uma escola sem ano letivo. (5) Um e2e que siga "Ver o que falta" do sino e `PARA_O_ANO` do Painel (`sino-da-coordenacao.spec.ts:115`, `painel-da-coordenacao.spec.ts:144`) e veja o painel abrir: o `/validar` confere o caminho de ponta a ponta. (6) `daProfessor` (`turmas-da-escola.ts`) repete `'pendente' | 'confirmado'` de `ESTADOS_QUE_DAO_PROFESSOR` (`fila-da-coordenacao.ts:51`): exportar e usar nas duas. (7) `ProfessoresDaTurma.tsx:75` repete `'Nome não carregado'`: usar `NOME_NAO_CARREGADO`. (8) "Ver o que falta" e "Ano letivo e disciplinas" são `<button>` crus com `CLASSES_DO_BOTAO_SECUNDARIO`, e "Tentar de novo" usa `<Botao variante="secundario">`: o `/validar` decide a peça. (9) A `Secao` mora em `AnoEDisciplinas.tsx` e serve à página de Turmas: levar para `pecas-da-lista.ts`.
 - [ ] **Escola › Turmas, restos da rodada 2 (telas da coordenação, 5.0; frontend-reviewer, revisor-geral e test-engineer, 2ª rodada).** (1) Vitrine (`tools/vitrine/foto.ts`): fotografar o menu da linha sem rolar, porque o `Menu` fecha na rolagem, e fotografar o da última e da penúltima linha, que abre para baixo sobre a linha seguinte (o clique sem `force` do e2e de Renomear, `estrutura.spec.ts`, prova o caso hoje). (2) O efeito do foco em `Estrutura.tsx` tem duas cláusulas, `painelAnterior.current !== undefined` e `painel === undefined`, que os testes não distinguem: passa a importar se a Estrutura um dia montar com os anos no cache e o foco no `body`; tarefa futura que toque `Estrutura.tsx`. (3) `e2e/estrutura.spec.ts`, caso "segunda pessoa": um comentário dizendo que a prova depende de a rota estar segurada (`portao`), e conferir o texto do vazio de Séries e de Disciplinas do painel de B, e não só `locator('li')` com contagem 0.
+- [ ] **e2e de Privacidade: o prazo de 90 s repetido em três testes (correção 2026-10-17-abas-das-empresas-estoura-o-prazo; test-engineer, 1ª rodada).** `e2e/privacidade.spec.ts` declara `test.setTimeout(90_000)` em três casos (a troca de escola, as duas abas e os estados das empresas), cada um com o seu comentário de causa. Passar o prazo para o `describe` ou para uma constante nomeada, numa passada de limpeza do arquivo.

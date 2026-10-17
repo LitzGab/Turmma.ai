@@ -101,7 +101,7 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 11.5 "O que a IA nunca faz", sempre à vista
   - [ ] 11.6 Testes: suspender uma função não desliga as outras; a auditoria da suspensão; função e selo "IA" em todo agente
 
-- [ ] **12.0 — Registros › Pedidos com o prazo na lista, e o detalhe do pedido**
+- [x] **12.0 — Registros › Pedidos com o prazo na lista, e o detalhe do pedido**
   - [ ] 12.1 A coluna "Prazo", com o vencido em texto (m3 do F3)
   - [ ] 12.2 A linha inteira é o link do detalhe; "Registrar pedido" é o único botão cheio
   - [ ] 12.3 Os textos de hoje, com o link "Ir para as turmas"
