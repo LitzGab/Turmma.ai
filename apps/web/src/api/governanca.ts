@@ -7,6 +7,7 @@ import {
   esquemaRespostaResumoDaGovernanca,
   esquemaRespostaResumoDoAnalista,
   type ChaveDeFuncao,
+  type EstadoDeEntrega,
   type FinalidadeDaLeituraNominal,
   type FuncaoDaGovernanca,
   type MotivoDeSuspensao,
@@ -32,8 +33,14 @@ export const CHAVE_DO_ANALISTA = ['analista'] as const
 const CAMINHO_DA_GOVERNANCA = '/v1/governanca'
 const CAMINHO_DO_ANALISTA = '/v1/analista'
 
-const lerPaginaDoResumo = (pagina: string | undefined, signal: AbortSignal) =>
-  buscarComSessao(pagina === undefined ? `${CAMINHO_DA_GOVERNANCA}/resumo` : `${CAMINHO_DA_GOVERNANCA}/resumo?pagina=${encodeURIComponent(pagina)}`, esquemaRespostaResumoDaGovernanca, signal)
+/** `resumo`, `resumo?pagina=…`, `resumo?estado=…` ou `resumo?estado=…&pagina=…`: só valor de lista fechada e o cursor da API, nunca professor nem turma. */
+const lerPaginaDoResumo = (pagina: string | undefined, signal: AbortSignal, estado?: EstadoDeEntrega) => {
+  const consulta = new URLSearchParams()
+  if (estado !== undefined) consulta.set('estado', estado)
+  if (pagina !== undefined) consulta.set('pagina', pagina)
+  const resto = consulta.toString()
+  return buscarComSessao(resto === '' ? `${CAMINHO_DA_GOVERNANCA}/resumo` : `${CAMINHO_DA_GOVERNANCA}/resumo?${resto}`, esquemaRespostaResumoDaGovernanca, signal)
+}
 
 /** "O que a IA gerou e quem aprovou", da mais nova para a mais antiga, uma página por vez (`proxima`). Os números vêm em toda página. */
 export const consultaResumoDaGovernanca = infiniteQueryOptions({
@@ -42,6 +49,28 @@ export const consultaResumoDaGovernanca = infiniteQueryOptions({
   initialPageParam: undefined as string | undefined,
   getNextPageParam: (ultima) => ultima.proxima,
 })
+
+function consultaDoResumoDoEstado(estado: EstadoDeEntrega) {
+  return infiniteQueryOptions({
+    queryKey: [...CHAVE_DA_GOVERNANCA, 'resumo', estado],
+    queryFn: ({ pageParam, signal }) => lerPaginaDoResumo(pageParam, signal, estado),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (ultima) => ultima.proxima,
+  })
+}
+
+const CONSULTAS_POR_ESTADO = {
+  pendente: consultaDoResumoDoEstado('pendente'),
+  aprovada: consultaDoResumoDoEstado('aprovada'),
+  rejeitada: consultaDoResumoDoEstado('rejeitada'),
+} as const satisfies Record<EstadoDeEntrega, unknown>
+
+/**
+ * A lista de uma tela filtrada por estado (X2, 10.0): **o estado entra na chave**, e por isso a resposta de um filtro nunca cai na
+ * lista de outro, nem a que chega atrasada. A API filtra a lista e **não os números**; mesmo assim a tela não os lê daqui: os
+ * quatro números são sempre os da consulta sem filtro (`consultaResumoDaGovernanca`), e esta só entrega as linhas.
+ */
+export const consultaResumoPorEstado = (estado: EstadoDeEntrega) => CONSULTAS_POR_ESTADO[estado]
 
 /**
  * Só a primeira página do resumo, na **mesma chave** da consulta infinita (Tech Spec, seção 7c, "Carga na manhã de segunda"):

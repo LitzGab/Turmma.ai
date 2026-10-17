@@ -146,6 +146,20 @@ describe('Segmentado', () => {
     expect(screen.getByRole('radiogroup', { name: 'Jeito de ver' })).toBeTruthy()
   })
 
+  it('com rótulos longos, `emDuasColunasNoCelular` põe as opções em duas colunas abaixo de 768 px e numa linha só a partir dela; sem a prop, a linha única de sempre', () => {
+    const { rerender } = render(<Segmentado rotulo="Jeito de ver" opcoes={OPCOES} valor="a" aoMudar={() => undefined} />)
+    const grupo = () => screen.getByRole('radiogroup', { name: 'Jeito de ver' })
+    expect(grupo().className).toMatch(/\bflex\b/)
+    expect(grupo().className).not.toMatch(/\bgrid\b|\bgrid-cols-2\b/)
+    rerender(<Segmentado rotulo="Jeito de ver" opcoes={OPCOES} valor="a" aoMudar={() => undefined} emDuasColunasNoCelular />)
+    expect(grupo().className).toMatch(/\bgrid\b/)
+    expect(grupo().className).toMatch(/\bgrid-cols-2\b/)
+    expect(grupo().className).toMatch(/\bmd:flex\b/)
+    // As opções continuam as mesmas: o rádio, a marcada e o alvo não mudam com o arranjo.
+    expect(screen.getAllByRole('radio')).toHaveLength(3)
+    expect(screen.getByRole('radio', { name: 'Primeira' }).getAttribute('aria-checked')).toBe('true')
+  })
+
   it('o alvo é de 44 px abaixo de 768 px e de 36 px a partir dela: a opção traz as duas classes', () => {
     render(<Controlado />)
     for (const radio of screen.getAllByRole('radio')) {

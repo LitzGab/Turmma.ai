@@ -19,6 +19,11 @@ interface Props<Valor extends string> {
   readonly opcoes: OpcoesDoSegmentado<Valor>
   readonly valor: Valor
   readonly aoMudar: (valor: Valor) => void
+  /**
+   * Com quatro rótulos que não cabem em uma linha a 360 px ("Esperando o professor", "Rejeitados"), abaixo de 768 px as opções
+   * ficam em **duas colunas**, duas por linha. Sem a prop, a linha única de sempre. A partir de 768 px é sempre uma linha só.
+   */
+  readonly emDuasColunasNoCelular?: boolean
 }
 
 /**
@@ -30,8 +35,9 @@ interface Props<Valor extends string> {
  * não é só cor: leva a borda e o fundo, que a desmarcada não tem, e o `aria-checked`.
  *
  * Alvo de 36 px no computador e de 44 px abaixo de 768 px (regra 50, item 2a): a peça não é a ação principal da tela.
+ * `emDuasColunasNoCelular` é para quatro rótulos longos, que a 360 px não cabem lado a lado sem sair do botão (X2, 10.0).
  */
-export function Segmentado<Valor extends string>({ rotulo, rotuloVisivel = false, opcoes, valor, aoMudar }: Props<Valor>) {
+export function Segmentado<Valor extends string>({ rotulo, rotuloVisivel = false, opcoes, valor, aoMudar, emDuasColunasNoCelular = false }: Props<Valor>) {
   const idDoRotulo = useId()
   const botoes = useRef<(HTMLButtonElement | null)[]>([])
   const marcada = opcoes.findIndex((opcao) => opcao.valor === valor)
@@ -82,7 +88,7 @@ export function Segmentado<Valor extends string>({ rotulo, rotuloVisivel = false
         role="radiogroup"
         aria-label={rotuloVisivel ? undefined : rotulo}
         aria-labelledby={rotuloVisivel ? idDoRotulo : undefined}
-        className="flex min-w-0 gap-1 rounded-controle border-2 border-borda bg-fundo p-1"
+        className={`min-w-0 gap-1 rounded-controle border-2 border-borda bg-fundo p-1 ${emDuasColunasNoCelular ? 'grid grid-cols-2 md:flex' : 'flex'}`}
       >
         {opcoes.map((opcao, indice) => {
           const ativa = indice === marcada

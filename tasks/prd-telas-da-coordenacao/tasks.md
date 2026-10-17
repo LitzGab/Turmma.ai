@@ -85,13 +85,13 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 9.5 A turma que não existe, a que saiu do ano e a leitura que falha
   - [ ] 9.6 Testes: cada leitura de pedidos é auditada e só acontece no clique; dois alunos com o mesmo nome; planilha suja
 
-- [ ] **10.0 — Registros › IA: os números, a tabela com filtro por estado e o consumo**
-  - [ ] 10.1 Os quatro números e o link "Como cada IA trabalha"
-  - [ ] 10.2 O seletor de estado, no endereço, com o parâmetro que a API já aceita
-  - [ ] 10.3 A tabela "O que a IA gerou e quem aprovou", sem turma nem quem decidiu
-  - [ ] 10.4 "Consumo do mês por função", com as barras neutras
-  - [ ] 10.5 Os vazios de hoje, e o do filtro
-  - [ ] 10.6 Testes: nenhum nome de professor, filtro ou ordem por professor; o e2e `governanca` sem perder asserção
+- [x] **10.0 — Registros › IA: os números, a tabela com filtro por estado e o consumo**
+  - [x] 10.1 Os quatro números e o link "Como cada IA trabalha"
+  - [x] 10.2 O seletor de estado, no endereço, com o parâmetro que a API já aceita
+  - [x] 10.3 A tabela "O que a IA gerou e quem aprovou", sem turma nem quem decidiu
+  - [x] 10.4 "Consumo do mês por função", com as barras neutras
+  - [x] 10.5 Os vazios de hoje, e o do filtro
+  - [x] 10.6 Testes: nenhum nome de professor, filtro ou ordem por professor; o e2e `governanca` sem perder asserção
 
 - [ ] **11.0 — "Como cada IA trabalha", uma IA por vez**
   - [ ] 11.1 A página de leitura, com "‹ Registros"

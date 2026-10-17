@@ -1,5 +1,6 @@
 import {
   type CodigoDeErro,
+  ESTADOS_DE_ENTREGA,
   FUNCOES,
   MENSAGENS_DE_ERRO,
   nomeDaSerie,
@@ -7,6 +8,7 @@ import {
   type AlertaDoAnalista,
   type ChaveDeFuncao,
   type ConsumoSomado,
+  type EstadoDeEntrega,
   type Etapa,
   type ItemDaGovernanca,
   type NivelDeAutonomia,
@@ -14,6 +16,7 @@ import {
 } from '@educa/shared'
 import { aparenciaDaFalha } from '../../api/ciclo-de-execucao'
 import type { Aprovacao } from '../../componentes/ia/aprovacao'
+import type { OpcoesDoSegmentado } from '../../componentes/Segmentado'
 import { formatarNumero, formatarQuantidade } from '../../formatar'
 
 /**
@@ -41,6 +44,33 @@ export function nomeDaFuncao(chave: ChaveDeFuncao): string {
 export function aprovacaoDoItem(item: Pick<ItemDaGovernanca, 'estado' | 'decididaEm'>): Aprovacao {
   if (item.estado === 'pendente' || item.decididaEm === null) return { estado: 'pendente' }
   return item.estado === 'aprovada' ? { estado: 'aprovada', por: 'um professor', quando: item.decididaEm } : { estado: 'rejeitada', por: 'Um professor', quando: item.decididaEm, motivo: '' }
+}
+
+/** O filtro "Estado" da lista: "todos" não vai ao endereço nem à API, os outros três são os estados da entrega. */
+export type FiltroDeEstado = 'todos' | EstadoDeEntrega
+
+/** As quatro opções do filtro, como a coordenação as lê. O valor é o que a API entende e o que o endereço leva (`?estado=aprovada`). */
+export const OPCOES_DO_ESTADO = [
+  { valor: 'todos', rotulo: 'Todos' },
+  { valor: 'pendente', rotulo: 'Esperando o professor' },
+  { valor: 'aprovada', rotulo: 'Aprovados' },
+  { valor: 'rejeitada', rotulo: 'Rejeitados' },
+] as const satisfies OpcoesDoSegmentado<FiltroDeEstado>
+
+/** O estado que o endereço pede (`?estado=aprovada`). Valor desconhecido é ignorado: a lista abre sem filtro, e a API nunca recebe o que não é estado. */
+export function estadoDoEndereco(busca: string): EstadoDeEntrega | undefined {
+  const valor = new URLSearchParams(busca).get('estado')
+  return ESTADOS_DE_ENTREGA.find((estado) => estado === valor)
+}
+
+/**
+ * O que a lista diz quando o filtro não acha nada, por estado. Nenhum texto diz quem decidiu nem de que turma é a entrega, e a
+ * frase fixa da tela continua explicando por que a série de um professor só não entra na lista (D45, D64).
+ */
+export const VAZIO_DO_FILTRO: Readonly<Record<EstadoDeEntrega, { readonly titulo: string; readonly descricao: string }>> = {
+  pendente: { titulo: 'Nenhuma entrega esperando o professor', descricao: 'Quando a IA gerar uma versão adaptada ou uma correção de objetiva, ela aparece aqui até um professor decidir.' },
+  aprovada: { titulo: 'Nenhuma entrega aprovada ainda', descricao: 'Quando um professor aprovar uma versão adaptada ou uma correção de objetiva, ela aparece aqui, com a data da decisão.' },
+  rejeitada: { titulo: 'Nenhuma entrega rejeitada', descricao: 'Quando um professor rejeitar uma entrega, ela aparece aqui, com a data da decisão.' },
 }
 
 /** O que o selo pendente diz à coordenação, que não é quem aprova. */

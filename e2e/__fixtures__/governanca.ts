@@ -200,6 +200,41 @@ export async function montarEscolaComEntregas(escolaId: string, coordenadoraId: 
   })
 }
 
+/**
+ * Acrescenta à escola do `montarEscolaComEntregas` uma série de **um professor só**: o 3º ano, com uma turma, uma professora e uma versão
+ * adaptada dela esperando decisão. A entrega conta nos números (um artefato original, a versão adaptada e uma entrega pendente) e não
+ * entra na lista, porque a linha diria o que ela fez (D45, D64). O nome da professora é o que nunca pode aparecer.
+ */
+export async function acrescentarSerieDeUmProfessorSo(escolaId: string): Promise<{ readonly serieNome: string; readonly professora: string }> {
+  const marca = randomUUID().slice(0, 8)
+  const professora = `Professora Sintética Rita ${marca}`
+  return comBanco(async (banco) => {
+    const { rows: anos } = await banco.query<{ id: string }>("select id from ano_letivo where escola_id = $1 and situacao = 'em_curso'", [escolaId])
+    const anoLetivoId = anos[0]?.id
+    if (anoLetivoId === undefined) throw new Error('a escola do e2e não tem ano letivo em curso')
+    const serieId = await id(banco, "insert into serie (escola_id, etapa, ano) values ($1, 'em', 3) on conflict (escola_id, etapa, ano) do update set ano = excluded.ano returning id", [escolaId])
+    const disciplinaId = await id(banco, 'insert into disciplina (escola_id, nome) values ($1, $2) returning id', [escolaId, `Matemática ${marca}`])
+    const turmaId = await id(banco, 'insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [escolaId, anoLetivoId, serieId, `3ºA ${marca}`])
+    const contaId = await id(banco, 'insert into conta (email) values ($1) returning id', [`professor-${randomUUID()}@educa.invalid`])
+    const professoraId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'professor', $3) returning id", [escolaId, contaId, professora])
+    await banco.query(
+      "insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, estado, decidido_em, criado_por) values ($1, $2, $3, $4, $5, 'professor', 'confirmado', now(), $3)",
+      [escolaId, anoLetivoId, professoraId, turmaId, disciplinaId],
+    )
+    const artefato = (titulo: string, origemId: string | null) =>
+      id(
+        banco,
+        `insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo, origem_id, criado_por)
+         values ($1, $2, $3, $4, 'atividade_objetiva', $5, $6::jsonb || $7::jsonb, $8, $9) returning id`,
+        [escolaId, anoLetivoId, turmaId, disciplinaId, titulo, conteudoDaLista(titulo), origemId === null ? '{}' : '{"adaptacao": {"tipos": ["fonte_ampliada"]}}', origemId, professoraId],
+      )
+    const original = await artefato('Funções: lista sintética', null)
+    const adaptada = await artefato('Funções: versão adaptada sintética', original)
+    await banco.query("insert into entrega (escola_id, ano_letivo_id, turma_id, funcao, tipo, artefato_id) values ($1, $2, $3, 'adaptacao', 'versao_adaptada', $4)", [escolaId, anoLetivoId, turmaId, adaptada])
+    return { serieNome: '3º ano do Ensino Médio', professora }
+  })
+}
+
 /** As suspensões da função na escola, da mais antiga para a mais nova, com o que o banco gravou. */
 export async function suspensoesNoBanco(escolaId: string, funcao: string): Promise<{ suspensaPor: string; motivo: string | null; retomada: boolean }[]> {
   return comBanco(async (banco) => {

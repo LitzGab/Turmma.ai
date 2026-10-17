@@ -1,8 +1,8 @@
 import { nomeDaSerie, type ItemDaGovernanca } from '@educa/shared'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
-import { Link } from 'wouter'
+import { Link, useLocation, useSearch } from 'wouter'
 import { mensagemDoErro } from '../../api/cliente'
-import { consultaConsumo, consultaResumoDaGovernanca } from '../../api/governanca'
+import { consultaConsumo, consultaResumoDaGovernanca, consultaResumoPorEstado } from '../../api/governanca'
 import { ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { BarraRotulada } from '../../componentes/BarraRotulada'
 import { Botao } from '../../componentes/Botao'
@@ -10,50 +10,79 @@ import { CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { LinhaAprovacao } from '../../componentes/ia/LinhaAprovacao'
 import { NumeroPainel } from '../../componentes/NumeroPainel'
+import { Segmentado } from '../../componentes/Segmentado'
 import { Tabela, type ColunaDaTabela } from '../../componentes/Tabela'
 import { CabecalhoDeSecao } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
-import { aprovacaoDoItem, ESPERANDO_O_PROFESSOR, NOME_DO_TIPO_DE_ENTREGA, nomeDaFuncao, O_QUE_CHEGA_AO_ALUNO, textoDoConsumo, textoDoCusto, textoDoPacoteDoTutor } from './textos-da-governanca'
+import { enderecoComParametro } from './endereco-da-tela'
+import {
+  aprovacaoDoItem,
+  ESPERANDO_O_PROFESSOR,
+  estadoDoEndereco,
+  type FiltroDeEstado,
+  NOME_DO_TIPO_DE_ENTREGA,
+  nomeDaFuncao,
+  O_QUE_CHEGA_AO_ALUNO,
+  OPCOES_DO_ESTADO,
+  textoDoConsumo,
+  textoDoCusto,
+  textoDoPacoteDoTutor,
+  VAZIO_DO_FILTRO,
+} from './textos-da-governanca'
 
 /**
  * As colunas de "O que a IA gerou e quem aprovou". **Não existe coluna de professor nem de turma**, e a tabela não tem
- * filtro nem ordenação: a API não os aceita (D45, D64). A última coluna diz que uma pessoa decidiu e quando; quem foi
- * está na auditoria.
+ * filtro nem ordenação por professor ou por turma: a API não os aceita (D45, D64). O único filtro é o estado da entrega. A última
+ * coluna diz que uma pessoa decidiu e quando; quem foi está na auditoria.
  */
 const COLUNAS: readonly [ColunaDaTabela<ItemDaGovernanca>, ...ColunaDaTabela<ItemDaGovernanca>[]] = [
   { chave: 'oQue', titulo: 'O que foi gerado', celula: (item) => NOME_DO_TIPO_DE_ENTREGA[item.tipo] },
   { chave: 'funcao', titulo: 'Agente e função', celula: (item) => nomeDaFuncao(item.funcao) },
-  { chave: 'serie', titulo: 'Série', celula: (item) => nomeDaSerie(item.serie) },
+  { chave: 'serie', titulo: 'Série', celula: (item) => <span className="inline-block min-w-28">{nomeDaSerie(item.serie)}</span> },
   { chave: 'quando', titulo: 'Gerado em', celula: (item) => formatarDataHora(item.criadaEm) },
   { chave: 'decisao', titulo: 'Decisão', celula: (item) => <LinhaAprovacao aprovacao={aprovacaoDoItem(item)} espera={ESPERANDO_O_PROFESSOR} /> },
 ]
 
 /**
- * Governança de IA (MVP, A5; `docs/interface.md` 3 e 11.7; D9, D45, D61, D64; regra 70, item 6): é onde a coordenação
- * abre. Quatro números, a tabela do que a IA gerou e se uma pessoa aprovou, e o consumo do mês por função.
+ * Registros › IA, a Governança de IA (MVP, A5; X2, 10.0; `docs/interface.md` 3 e 11.7; D9, D45, D61, D64; regra 70, itens 6, 8 e 9):
+ * é onde a coordenação abre em Registros. Quatro números, a tabela do que a IA gerou e se uma pessoa aprovou, com o filtro por
+ * estado, e o consumo do mês por função ao lado dela (embaixo, no celular).
+ *
+ * - **Os quatro números são sempre os da escola inteira**, lidos da consulta sem filtro. A API devolve números em toda página,
+ *   mas a tela não confia na resposta de um filtro para eles: escolher "Aprovados" muda as linhas, nunca os números.
+ * - **O filtro é o endereço** (`?estado=aprovada`), com `replace`, e entra na chave da consulta. Valor desconhecido é ignorado. A
+ *   resposta de um filtro, mesmo atrasada, nunca cai na lista de outro.
+ * - **Sem professor e sem turma**: nem coluna, nem filtro, nem ordem, e nada disso vai à API (D45, D64).
  *
  * Tudo é agregado. O dado nominal de uma turma não abre aqui: mora no fim da página do Analista (telas da coordenação, 4.0).
  */
 export default function Governanca() {
-  const resumo = useInfiniteQuery(consultaResumoDaGovernanca)
+  const [caminho, navegar] = useLocation()
+  const busca = useSearch()
+  const estado = estadoDoEndereco(busca)
+  // A consulta sem filtro está sempre montada: os números e, sem filtro, as linhas. A do estado só existe com um estado no endereço.
+  const todos = useInfiniteQuery(consultaResumoDaGovernanca)
+  const doEstado = useInfiniteQuery({ ...consultaResumoPorEstado(estado ?? 'pendente'), enabled: estado !== undefined })
 
-  if (resumo.isPending) {
+  if (todos.isPending) {
     return <EstadoCarregando rotulo="Carregando a governança…" />
   }
-  if (resumo.isError && resumo.data === undefined) {
-    return <EstadoErro erro={resumo.error} tentando={resumo.isFetching} aoTentarDeNovo={() => void resumo.refetch({ cancelRefetch: false })} />
+  if (todos.isError && todos.data === undefined) {
+    return <EstadoErro erro={todos.error} tentando={todos.isFetching} aoTentarDeNovo={() => void todos.refetch({ cancelRefetch: false })} />
   }
 
-  // Os números vêm em toda página: valem os da mais recente lida.
-  const numeros = resumo.data.pages.at(-1)?.numeros ?? { geradoPorIa: 0, aprovadoPorPessoa: 0, rejeitado: 0, esperando: 0 }
-  const itens = resumo.data.pages.flatMap((pagina) => pagina.itens)
+  const lista = estado === undefined ? todos : doEstado
+  // Os números vêm em toda página: valem os da mais recente lida, da consulta sem filtro.
+  const numeros = todos.data.pages.at(-1)?.numeros ?? { geradoPorIa: 0, aprovadoPorPessoa: 0, rejeitado: 0, esperando: 0 }
   const nadaGerado = numeros.geradoPorIa === 0 && numeros.aprovadoPorPessoa + numeros.rejeitado + numeros.esperando === 0
+  const itens = lista.data?.pages.flatMap((pagina) => pagina.itens) ?? []
+  const filtrar = (novo: FiltroDeEstado): void => navegar(enderecoComParametro(caminho, busca, 'estado', novo === 'todos' ? undefined : novo), { replace: true })
 
   return (
-    <>
-      <p className="max-w-prose text-apoio">O que a IA produziu nesta escola no ano letivo, e o que as pessoas decidiram sobre isso. {O_QUE_CHEGA_AO_ALUNO}</p>
-      {/* A porta para "Como cada IA trabalha" (X2, 3.0): sem ela a página dos agentes ficaria sem caminho depois que o item saiu da lateral. A 10.0 recompõe a aba e leva o link. */}
-      <div>
+    <div className="flex min-w-0 flex-col gap-6">
+      <div className="flex min-w-0 flex-col items-start gap-3">
+        <p className="max-w-prose text-apoio">O que a IA produziu nesta escola no ano letivo, e o que as pessoas decidiram sobre isso. {O_QUE_CHEGA_AO_ALUNO}</p>
+        {/* A porta para "Como cada IA trabalha" (X2, 3.0): sem ela a página dos agentes ficaria sem caminho depois que o item saiu da lateral. */}
         <Link to={ROTAS_DA_COORDENACAO.agentes} className={CLASSES_DO_LINK_SECUNDARIO}>
           Como cada IA trabalha
         </Link>
@@ -65,47 +94,63 @@ export default function Governanca() {
         <NumeroPainel rotulo="Rejeitado" valor={numeros.rejeitado} apoio="O professor recusou, com justificativa" />
       </div>
 
-      <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-registro">
-        <CabecalhoDeSecao id="titulo-registro" titulo="O que a IA gerou e quem aprovou" apoio="Da mais nova para a mais antiga. Cada linha diz o que foi gerado, por qual função, e se uma pessoa já decidiu." />
-        {/* A página seguinte que falhou: aviso com botão secundário, para a tela não ganhar um segundo primário ao lado do erro do consumo. */}
-        {resumo.isError && (
-          <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-controle border border-erro bg-erro-cx p-3">
-            <p role="alert" className="min-w-0 flex-1 basis-56 break-words text-erro">
-              {mensagemDoErro(resumo.error)}
-            </p>
-            <Botao variante="secundario" onClick={() => void resumo.fetchNextPage()} disabled={resumo.isFetchingNextPage}>
-              Tentar de novo
-            </Botao>
+      {/* Do computador largo para cima, o consumo fica ao lado da tabela; abaixo disso, embaixo dela. */}
+      <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+        <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-registro">
+          <CabecalhoDeSecao id="titulo-registro" titulo="O que a IA gerou e quem aprovou" apoio="Da mais nova para a mais antiga. Cada linha diz o que foi gerado, por qual função, e se uma pessoa já decidiu." />
+          <div className="max-w-3xl">
+            <Segmentado rotulo="Estado" rotuloVisivel opcoes={OPCOES_DO_ESTADO} valor={estado ?? 'todos'} aoMudar={filtrar} emDuasColunasNoCelular />
           </div>
-        )}
-        {itens.length === 0 ? (
-          <EstadoVazio
-            titulo={nadaGerado ? 'A IA ainda não gerou nada nesta escola' : 'Nenhuma linha para mostrar ainda'}
-            descricao={
-              nadaGerado
-                ? 'Quando um professor pedir uma versão adaptada ou encerrar uma atividade objetiva, a entrega aparece aqui, primeiro esperando o professor e depois com a decisão dele e a data.'
-                : 'Aqui entram as versões adaptadas e as correções de objetiva, das séries com dois ou mais professores. O que já foi gerado está contado nos números acima.'
-            }
-          />
-        ) : (
-          <>
-            <Tabela rotulo="O que a IA gerou e quem aprovou" colunas={COLUNAS} linhas={itens} chaveDaLinha={(item) => item.id} />
-            {resumo.hasNextPage && (
-              <div>
-                <Botao variante="secundario" onClick={() => void resumo.fetchNextPage()} disabled={resumo.isFetchingNextPage}>
-                  {resumo.isFetchingNextPage ? 'Carregando…' : 'Carregar mais'}
-                </Botao>
-              </div>
-            )}
-          </>
-        )}
-        <p className="max-w-prose text-sm text-sutil">
-          A lista não mostra turma nem quem decidiu: quem aprovou cada entrega, e quando, fica na auditoria da escola. Entrega de série com um professor só conta nos números e não entra na lista, porque a linha diria o que ele fez.
-        </p>
-      </section>
+          {lista.isPending && <EstadoCarregando rotulo="Carregando a lista…" />}
+          {lista.isError && lista.data === undefined && <EstadoErro erro={lista.error} tentando={lista.isFetching} aoTentarDeNovo={() => void lista.refetch({ cancelRefetch: false })} />}
+          {lista.data !== undefined && (
+            <>
+              {/* A página seguinte que falhou: aviso com botão secundário, para a tela não ganhar um segundo primário ao lado do erro do consumo. */}
+              {lista.isError && (
+                <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-controle border border-erro bg-erro-cx p-3">
+                  <p role="alert" className="min-w-0 flex-1 basis-56 break-words text-erro">
+                    {mensagemDoErro(lista.error)}
+                  </p>
+                  <Botao variante="secundario" onClick={() => void lista.fetchNextPage()} disabled={lista.isFetchingNextPage}>
+                    Tentar de novo
+                  </Botao>
+                </div>
+              )}
+              {itens.length === 0 ? (
+                estado === undefined ? (
+                  <EstadoVazio
+                    titulo={nadaGerado ? 'A IA ainda não gerou nada nesta escola' : 'Nenhuma linha para mostrar ainda'}
+                    descricao={
+                      nadaGerado
+                        ? 'Quando um professor pedir uma versão adaptada ou encerrar uma atividade objetiva, a entrega aparece aqui, primeiro esperando o professor e depois com a decisão dele e a data.'
+                        : 'Aqui entram as versões adaptadas e as correções de objetiva, das séries com dois ou mais professores. O que já foi gerado está contado nos números acima.'
+                    }
+                  />
+                ) : (
+                  <EstadoVazio titulo={VAZIO_DO_FILTRO[estado].titulo} descricao={VAZIO_DO_FILTRO[estado].descricao} />
+                )
+              ) : (
+                <>
+                  <Tabela rotulo="O que a IA gerou e quem aprovou" colunas={COLUNAS} linhas={itens} chaveDaLinha={(item) => item.id} />
+                  {lista.hasNextPage && (
+                    <div>
+                      <Botao variante="secundario" onClick={() => void lista.fetchNextPage()} disabled={lista.isFetchingNextPage}>
+                        {lista.isFetchingNextPage ? 'Carregando…' : 'Carregar mais'}
+                      </Botao>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+          <p className="max-w-prose text-sm text-sutil">
+            A lista não mostra turma nem quem decidiu: quem aprovou cada entrega, e quando, fica na auditoria da escola. Entrega de série com um professor só conta nos números e não entra na lista, porque a linha diria o que ele fez.
+          </p>
+        </section>
 
-      <Consumo />
-    </>
+        <Consumo />
+      </div>
+    </div>
   )
 }
 
