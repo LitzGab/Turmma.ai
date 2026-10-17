@@ -3,9 +3,19 @@ import type { Browser, BrowserContext, BrowserContextOptions, Locator, Page, Rou
 import { TEXTO_DO_PRAZO_LEGAL_DO_INCIDENTE } from '../packages/shared/src/privacidade/incidente.ts'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarPainel, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { irPelaCoordenacao, paginaNaoRola } from './__fixtures__/coordenacao.ts'
+import { linhaDa, linkDoPedido } from './__fixtures__/pedidos-do-titular.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { campoCodigo } from './__fixtures__/segundo-fator.ts'
-import { codigoDoAutenticador, confirmacaoDoIncidenteNoBanco, criarCoordenadoraNaEscola, criarEquipeComSenha, criarIncidenteNoBanco } from './__fixtures__/sessao.ts'
+import {
+  codigoDoAutenticador,
+  colocarAlunoNaTurma,
+  confirmacaoDoIncidenteNoBanco,
+  criarAlunoComMatricula,
+  criarCoordenadoraNaEscola,
+  criarEquipeComSenha,
+  criarIncidenteNoBanco,
+  criarPedidoDoTitularNoBanco,
+} from './__fixtures__/sessao.ts'
 import { focoVisivel, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -625,5 +635,75 @@ test.describe('Incidentes: os quatro estados da aba', () => {
       expect(await resumo.evaluate((elemento) => elemento.scrollHeight > elemento.clientHeight)).toBe(true)
     }
     await paginaNaoRola(page)
+  })
+
+  test('com o aviso adiado, o Painel, que não tem abas, também mantém a página sem rolar: a faixa não pode somar altura às listas dele', async ({ page, hasTouch }) => {
+    test.setTimeout(60_000)
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    await criarIncidenteNoBanco({ escolas: [coordenadora.escolaId], circunstancias: marca() })
+
+    await entrar(page, hasTouch, coordenadora)
+    await expect(aviso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await acionar(botao(aviso(page), VER_DEPOIS), hasTouch)
+    await expect(faixa(page)).toBeVisible()
+    await esperarPainel(page)
+    await expect(principal(page).getByRole('region', { name: 'Passos que faltam' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+
+    // A janela do perfil (1366 × 768): com a faixa a página rolava 97 px, porque as listas do Painel não descontavam a altura dela.
+    await paginaNaoRola(page)
+
+    const largura = page.viewportSize()?.width ?? 0
+    // Uma janela baixa garante que o conteúdo do Painel passa do miolo: sem isso a página poderia não rolar por ser curta, e a conta da faixa não seria posta à prova.
+    if (largura >= 768) await page.setViewportSize({ width: largura, height: 600 })
+    if (largura >= 768) {
+      const miolo = principal(page).getByRole('region', { name: 'O Painel da escola' })
+      expect(await miolo.evaluate((elemento) => elemento.scrollHeight > elemento.clientHeight)).toBe(true)
+      await expect(miolo).toHaveAttribute('tabindex', '0')
+      // O teclado alcança o miolo, vê o anel de foco e o rola; a página continua parada.
+      // Uma tecla antes do foco: depois de um clique o navegador não trata o `focus()` como foco de teclado (`:focus-visible`).
+      await page.keyboard.press('Shift')
+      await miolo.focus()
+      expect(await focoVisivel(page)).toBe(true)
+      await page.keyboard.press('End')
+      await expect.poll(() => miolo.evaluate((elemento) => elemento.scrollTop)).toBeGreaterThan(0)
+    }
+    await paginaNaoRola(page)
+  })
+
+  test('com o aviso adiado, o detalhe do pedido de titular também mantém a página sem rolar: a faixa não pode somar altura ao miolo dele', async ({ page, hasTouch }) => {
+    test.setTimeout(90_000)
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const nome = `Pedido ${marca()} Prado`
+    const aluno = await criarAlunoComMatricula({ escola: coordenadora, nome, matricula: `8${marca()}` })
+    await colocarAlunoNaTurma(aluno)
+    await criarPedidoDoTitularNoBanco({ escolaId: coordenadora.escolaId, titularId: aluno.usuarioId, registradoPor: coordenadora.usuarioId, tipo: 'acesso', estado: 'recebido', chegouHaDias: 3 })
+    await criarIncidenteNoBanco({ escolas: [coordenadora.escolaId], circunstancias: marca() })
+
+    await entrar(page, hasTouch, coordenadora)
+    await expect(aviso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await acionar(botao(aviso(page), VER_DEPOIS), hasTouch)
+    await expect(faixa(page)).toBeVisible()
+    await irPelaCoordenacao(page, 'Pedidos', hasTouch)
+    await acionar(linkDoPedido(linhaDa(page, nome), nome), hasTouch)
+    await expect(page).toHaveURL(/\/coordenacao\/privacidade\/pedidos\/[0-9a-f-]{36}$/, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page).getByRole('heading', { level: 1, name: nome, exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(faixa(page)).toBeVisible()
+    await paginaNaoRola(page)
+    // O miolo é a região de dentro da tela; a partir de 768 px ele recebe foco para rolar pelo teclado, e abaixo disso a página rola.
+    const miolo = principal(page).getByRole('region', { name: 'Tudo sobre este pedido', exact: true })
+    if ((page.viewportSize()?.width ?? 0) >= 768) {
+      await expect(miolo).toHaveAttribute('tabindex', '0')
+      expect(await miolo.evaluate((elemento) => elemento.scrollHeight > elemento.clientHeight)).toBe(true)
+      // O teclado alcança o miolo, vê o anel de foco (sem `outline-none`) e o rola; a página continua parada.
+      // Uma tecla antes do foco: depois de um clique o navegador não trata o `focus()` como foco de teclado (`:focus-visible`).
+      await page.keyboard.press('Shift')
+      await miolo.focus()
+      expect(await focoVisivel(page)).toBe(true)
+      await page.keyboard.press('End')
+      await expect.poll(() => miolo.evaluate((elemento) => elemento.scrollTop)).toBeGreaterThan(0)
+      await paginaNaoRola(page)
+    } else {
+      await expect(miolo).toHaveAttribute('tabindex', '-1')
+    }
   })
 })

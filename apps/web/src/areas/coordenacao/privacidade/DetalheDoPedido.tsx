@@ -11,11 +11,13 @@ import { CLASSES_DO_LINK_SECUNDARIO } from '../../../componentes/botao-secundari
 import { Cartao } from '../../../componentes/Cartao'
 import { Anuncio } from '../../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro } from '../../../componentes/estado'
+import { A_PARTIR_DE_768, useMidia } from '../../../componentes/midia'
 import { Estado } from '../../../componentes/SeloDeEstado'
 import { Tabela, type ColunaDaTabela } from '../../../componentes/Tabela'
 import { Tela } from '../../../componentes/Tela'
 import { formatarData, formatarDataHora } from '../../../formatar'
 import { useTituloDaTela } from '../../../titulo'
+import { O_MIOLO_QUE_ROLA } from '../miolo-que-rola'
 import { AcoesDoPedido } from './AcoesDoPedido'
 import { agendarPreparacao } from './preparacao-do-arquivo'
 import { ROTULO_DE_QUEM_PEDIU, ROTULO_DO_TIPO, SITUACAO_DO_PEDIDO, TEXTO_DO_TITULAR_ELIMINADO, hojeEmSaoPaulo, textoDasTurmas } from './textos-dos-pedidos'
@@ -73,7 +75,9 @@ export default function DetalheDoPedido({ pedidoId }: { readonly pedidoId: strin
   const pedido = consulta.data
   const estado = pedido?.estado
   const [anuncio, definirAnuncio] = useState('')
-  const inicio = useRef<HTMLDivElement>(null)
+  const inicio = useRef<HTMLElement>(null)
+  // A partir de 768 px quem rola é este miolo, e ele recebe foco para rolar pelo teclado; abaixo disso rola a página.
+  const comMiolo = useMidia(A_PARTIR_DE_768)
 
   const ler = useCallback(() => {
     void relerPedidoDoTitular(cliente, pedidoId)
@@ -166,7 +170,7 @@ export default function DetalheDoPedido({ pedidoId }: { readonly pedidoId: strin
         </Botao>
       }
     >
-      <div ref={inicio} tabIndex={-1} className="flex min-w-0 flex-col gap-4 outline-none">
+      <section ref={inicio} aria-label="Tudo sobre este pedido" tabIndex={comMiolo ? 0 : -1} className={`flex min-w-0 flex-col gap-4 ${O_MIOLO_QUE_ROLA}${comMiolo ? '' : ' outline-none'}`}>
         <Cartao titulo="Prazo da declaração completa">
           <div className="flex min-w-0 flex-col gap-2">
             <div>
@@ -215,7 +219,7 @@ export default function DetalheDoPedido({ pedidoId }: { readonly pedidoId: strin
             )}
           </div>
         </Cartao>
-      </div>
+      </section>
     </Tela>
   )
 }
