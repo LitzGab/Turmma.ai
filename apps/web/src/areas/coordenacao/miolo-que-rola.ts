@@ -10,3 +10,11 @@
  * descrição no lugar do título e das abas: a mesma altura de cabeçalho (X2, 9.0).
  */
 export const O_MIOLO_QUE_ROLA = 'md:relative md:max-h-[calc(100dvh-17rem)] md:overflow-y-auto'
+
+/**
+ * O miolo da tela **sem abas**, a Analista (correção `2026-10-17-pagina-rola-depois-da-12`). Ele começa a 164 px do alto (os 226 px
+ * das molduras menos as abas de 46 px e o vão de 16 px que vem com elas, a 1366 × 768) e a margem de baixo é de 32 px: são 196 px,
+ * ou 12,25 rem, e com 13 rem sobra uma folga como a das molduras (12 px). Sem o miolo, a página tinha a altura do conteúdo e rolava
+ * inteira numa fonte que a fazia passar de 768 px (+10 px no Chromebook); com ele tem a altura da janela, e quem rola é o resumo.
+ */
+export const O_MIOLO_SEM_ABAS_QUE_ROLA = 'md:relative md:max-h-[calc(100dvh-13rem)] md:overflow-y-auto'

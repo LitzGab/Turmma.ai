@@ -10,12 +10,14 @@ import { Cartao } from '../../componentes/Cartao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { AssinaturaIA } from '../../componentes/ia/AssinaturaIA'
 import { AvisoFila } from '../../componentes/ia/AvisoFila'
+import { A_PARTIR_DE_768, useMidia } from '../../componentes/midia'
 import { NumeroPainel } from '../../componentes/NumeroPainel'
 import { Estado } from '../../componentes/SeloDeEstado'
 import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { formatarData, formatarDataHora, formatarQuantidade } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { DadoNominal } from './DadoNominal'
+import { O_MIOLO_SEM_ABAS_QUE_ROLA } from './miolo-que-rola'
 import { acertoPercentual, AVISO_DE_HIPOTESE, falhaDoResumo, formatarPercentual, fraseDoAlerta, nomeDoRecorte } from './textos-da-governanca'
 
 const enviarPedido = (_pedido: null, chaveEnvio: string) => gerarResumoDoAnalista(chaveEnvio)
@@ -34,6 +36,8 @@ const enviarPedido = (_pedido: null, chaveEnvio: string) => gerarResumoDoAnalist
  */
 export default function Analista() {
   useTituloDaTela('Analista')
+  // O miolo que rola recebe foco, para rolar pelo teclado, a partir de 768 px: abaixo disso rola a página, e não há o que focar.
+  const comMiolo = useMidia(A_PARTIR_DE_768)
   const cliente = useQueryClient()
   const resumo = useQuery(consultaResumoDoAnalista)
   const { ciclo, demorando, iniciar, repetir, limpar } = useCicloDeExecucao(lugarDoResumoDoAnalista, enviarPedido)
@@ -77,37 +81,39 @@ export default function Analista() {
 
   return (
     <Tela titulo="Analista" largura="leitura" acoes={acoes}>
-      <div className="flex min-w-0 flex-col gap-3 rounded-cartao border-2 border-borda bg-superficie p-4 lg:p-5">
-        <AssinaturaIA agente="analista_de_desempenho_escolar" tamanho={48} />
-        <p className="break-words text-apoio">
-          Resume o desempenho por série e disciplina, a partir do que os professores já aprovaram. Feito de dado agregado: nenhum nome de aluno ou de professor entra nele. Só avisa a coordenação: nunca contata professor nem
-          família.
-        </p>
-      </div>
+      <section aria-label="Resumo do Analista" {...(comMiolo ? { tabIndex: 0 } : {})} className={`flex min-w-0 flex-col gap-4 ${O_MIOLO_SEM_ABAS_QUE_ROLA}`}>
+        <div className="flex min-w-0 flex-col gap-3 rounded-cartao border-2 border-borda bg-superficie p-4 lg:p-5">
+          <AssinaturaIA agente="analista_de_desempenho_escolar" tamanho={48} />
+          <p className="break-words text-apoio">
+            Resume o desempenho por série e disciplina, a partir do que os professores já aprovaram. Feito de dado agregado: nenhum nome de aluno ou de professor entra nele. Só avisa a coordenação: nunca contata professor nem
+            família.
+          </p>
+        </div>
 
-      <div className="flex min-w-0 flex-col gap-3 empty:hidden">
-        <p role="status" className="text-apoio empty:hidden">
-          {gerando ? 'O Analista está montando o resumo. Você pode continuar nesta tela.' : ''}
-        </p>
-        {gerando && demorando && <AvisoFila situacao="demora" />}
-        {falha !== undefined && (falha.repetivel ? <AvisoFila situacao="falha" aoTentarDeNovo={repetir} /> : <p role="alert" className="rounded-controle border border-pendente bg-pendente-cx p-3 break-words text-pendente">{falha.texto}</p>)}
-      </div>
+        <div className="flex min-w-0 flex-col gap-3 empty:hidden">
+          <p role="status" className="text-apoio empty:hidden">
+            {gerando ? 'O Analista está montando o resumo. Você pode continuar nesta tela.' : ''}
+          </p>
+          {gerando && demorando && <AvisoFila situacao="demora" />}
+          {falha !== undefined && (falha.repetivel ? <AvisoFila situacao="falha" aoTentarDeNovo={repetir} /> : <p role="alert" className="rounded-controle border border-pendente bg-pendente-cx p-3 break-words text-pendente">{falha.texto}</p>)}
+        </div>
 
-      {resumo.isPending && <EstadoCarregando rotulo="Carregando o resumo…" />}
-      {resumo.isError && <EstadoErro erro={resumo.error} tentando={resumo.isFetching} aoTentarDeNovo={() => void resumo.refetch({ cancelRefetch: false })} />}
-      {resumo.data !== undefined &&
-        (resumo.data.resumo === null ? (
-          <EstadoVazio
-            variante="tracejado"
-            titulo="Nenhum resumo gerado ainda"
-            descricao="O Analista monta o acerto por habilidade de cada série e disciplina, com os alertas. Só entra o que os professores já aprovaram, e nenhum nome de aluno ou de professor."
-            acao={{ rotulo: rotuloDeGerar, aoAcionar: gerar, desligada: gerando }}
-          />
-        ) : (
-          <Resumo geradoEm={resumo.data.resumo.geradoEm} conteudo={resumo.data.resumo.conteudo} foco={resumoNovo} />
-        ))}
+        {resumo.isPending && <EstadoCarregando rotulo="Carregando o resumo…" />}
+        {resumo.isError && <EstadoErro erro={resumo.error} tentando={resumo.isFetching} aoTentarDeNovo={() => void resumo.refetch({ cancelRefetch: false })} />}
+        {resumo.data !== undefined &&
+          (resumo.data.resumo === null ? (
+            <EstadoVazio
+              variante="tracejado"
+              titulo="Nenhum resumo gerado ainda"
+              descricao="O Analista monta o acerto por habilidade de cada série e disciplina, com os alertas. Só entra o que os professores já aprovaram, e nenhum nome de aluno ou de professor."
+              acao={{ rotulo: rotuloDeGerar, aoAcionar: gerar, desligada: gerando }}
+            />
+          ) : (
+            <Resumo geradoEm={resumo.data.resumo.geradoEm} conteudo={resumo.data.resumo.conteudo} foco={resumoNovo} />
+          ))}
 
-      <DadoNominal />
+        <DadoNominal />
+      </section>
     </Tela>
   )
 }

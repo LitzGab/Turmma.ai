@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { prepararTela, redeFalsa, renderizarTela, type RespostaFalsa } from '../../__fixtures__/tela'
 import Analista from './Analista'
 
@@ -11,6 +11,17 @@ import Analista from './Analista'
  * pessoa seguinte são do e2e (`e2e/analista.spec.ts`).
  */
 prepararTela()
+
+/** A largura da janela, para a consulta `(min-width: 768px)` que o miolo lê; o `jsdom` não tem `matchMedia`. */
+function janelaDe(largura: number): void {
+  vi.stubGlobal('matchMedia', (consulta: string) => ({
+    matches: consulta === '(min-width: 768px)' ? largura >= 768 : false,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }))
+}
+
+beforeEach(() => janelaDe(1366))
 
 const id = (n: number) => `0197a1c0-0000-7000-8000-${String(n).padStart(12, '0')}`
 const SERIE = { id: id(200), etapa: 'ef_anos_finais', ano: 7 }
@@ -161,6 +172,51 @@ function conferirQueNaoEConversa(): void {
   expect(screen.queryAllByRole('button', { name: /baixar|relat[óo]rio|anexar|perguntar|enviar/i })).toEqual([])
   expect(document.body.textContent).not.toMatch(/Pergunte|Relatório do mês|Baixar/)
 }
+
+describe('o miolo da tela', () => {
+  it('só o miolo rola a partir de 768 px, com o título de fora; ele recebe foco a 1366 px, e a 360 px rola a página e não há o que focar', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/analista/resumo', resumoComConteudo(CONTEUDO))
+    renderizarTela(<Analista />)
+    await waitFor(() => expect(document.querySelector('[data-resumo-do-analista]')).not.toBeNull())
+
+    const miolo = screen.getByRole('region', { name: 'Resumo do Analista' })
+    // Na região estão a assinatura, o resumo e o dado nominal; o título da tela, não: ele fica parado em cima.
+    expect(miolo.contains(document.querySelector('[data-resumo-do-analista]'))).toBe(true)
+    expect(within(miolo).getByText('Analista de desempenho escolar')).toBeTruthy()
+    expect(within(miolo).getByText('Dado nominal')).toBeTruthy()
+    expect(within(miolo).queryByRole('heading', { level: 1 })).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: 'Analista' })).toBeTruthy()
+    const classes = miolo.className.split(' ')
+    expect(classes).toContain('md:overflow-y-auto')
+    expect(classes).toContain('md:relative')
+    expect(classes.some((classe) => /^md:max-h-\[calc\(100dvh-/.test(classe))).toBe(true)
+    // Nenhuma classe sem o prefixo `md:` prende a altura: abaixo de 768 px quem rola é a página.
+    expect(classes.filter((classe) => /^(?:max-h|h|overflow-y)-/.test(classe))).toEqual([])
+    expect(miolo.getAttribute('tabindex')).toBe('0')
+    cleanup()
+
+    janelaDe(360)
+    renderizarTela(<Analista />)
+    await waitFor(() => expect(document.querySelector('[data-resumo-do-analista]')).not.toBeNull())
+    expect(screen.getByRole('region', { name: 'Resumo do Analista' }).hasAttribute('tabindex')).toBe(false)
+  })
+})
+
+describe('o miolo da tela, sem resumo', () => {
+  it('o estado vazio também fica dentro do miolo que rola, e o título da tela fora dele', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/analista/resumo', SEM_RESUMO)
+    renderizarTela(<Analista />)
+    await screen.findByText('Nenhum resumo gerado ainda')
+
+    const miolo = screen.getByRole('region', { name: 'Resumo do Analista' })
+    expect(within(miolo).getByText('Nenhum resumo gerado ainda')).toBeTruthy()
+    expect(within(miolo).getByText('Dado nominal')).toBeTruthy()
+    expect(within(miolo).queryByRole('heading', { level: 1 })).toBeNull()
+    expect(miolo.className.split(' ')).toContain('md:overflow-y-auto')
+  })
+})
 
 describe('o Analista não é conversa (RF8)', () => {
   it('sem resumo: sem campo de texto, de arquivo, pergunta pronta, relatório nem link de baixar', async () => {
