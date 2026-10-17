@@ -98,6 +98,18 @@ describe('EstadoVazio', () => {
     expect(screen.getByRole('status').textContent).toBe('Verificando…')
   })
 
+  it('com a ação desligada o botão não aciona: o pedido que ele fez ainda está no ar', async () => {
+    const usuario = userEvent.setup()
+    const aoAcionar = vi.fn()
+    const { rerender } = render(<EstadoVazio titulo="Vazio" descricao="Nada aqui." acao={{ rotulo: 'Gerar resumo', aoAcionar }} />)
+    expect((screen.getByRole('button', { name: 'Gerar resumo' }) as HTMLButtonElement).disabled).toBe(false)
+    rerender(<EstadoVazio titulo="Vazio" descricao="Nada aqui." acao={{ rotulo: 'Gerando o resumo…', aoAcionar, desligada: true }} />)
+    const botao = screen.getByRole('button', { name: 'Gerando o resumo…' }) as HTMLButtonElement
+    expect(botao.disabled).toBe(true)
+    await usuario.click(botao)
+    expect(aoAcionar).not.toHaveBeenCalled()
+  })
+
   it('sem ação não tem botão nem `status`; o título é `t-secao`', () => {
     render(<EstadoVazio titulo="Nenhuma atividade ainda" descricao="Aplique uma atividade à turma." />)
     expect(screen.queryByRole('button')).toBeNull()

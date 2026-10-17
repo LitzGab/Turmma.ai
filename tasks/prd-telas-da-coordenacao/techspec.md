@@ -110,7 +110,7 @@ Nenhuma chamada nova.
 
 **Painel** (`grade`): a faixa do incidente é a de hoje, acima da tela; função suspensa (`Aviso`, com link para Agentes); quatro `NumeroPainel` e o consumo, com "Ver em Registros"; "Esperando você" (a fila) e a porta "Pedidos dos titulares"; "Para terminar a escola" (`o-que-falta-da-escola.ts`, extraído da Estrutura).
 
-**Analista** (`leitura`): `AssinaturaIA` no topo, "Gerar resumo" como ação, os blocos de hoje e o `DadoNominal`, que sai da Governança.
+**Analista** (`leitura`): `AssinaturaIA` no topo, "Gerar resumo" como ação, os blocos de hoje e o `DadoNominal`, que sai da Governança. Sem resumo nenhum, o botão "Gerar resumo" é o do vazio (`EstadoVazio`, com a ação `desligada` enquanto o pedido está no ar) e o do alto não aparece: um só botão e um só primário na tela; com resumo, ou com a leitura falha, ele volta ao alto.
 
 **Escola › Turmas:** `Aviso` "Para terminar a escola" com "Ver o que falta" (`?painel=falta`); `Segmentado` "Situação"; `Tabela` agrupada por série, com `Linha`; `Menu` da linha; painel "Ano letivo e disciplinas" (`?painel=ano`) com as três seções de hoje e os diálogos delas por cima.
 **Professores:** `Tabela`; `PainelLado` do professor com a situação, as ações do convite, as turmas dele e "Acrescentar turma" (`Alocacao.tsx` vira esse diálogo).

@@ -35,7 +35,7 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [x] 3.7 Specs grandes divididos por tela, movendo sem editar
   - [x] 3.8 Testes: os quatro lugares nas três larguras; cada endereço de hoje abre a tela dele; cliques até cada tela
 
-- [ ] **4.0 — O Analista numa página de leitura, com o dado nominal**
+- [x] **4.0 — O Analista numa página de leitura, com o dado nominal**
   - [ ] 4.1 A página de leitura, com a assinatura do Analista e "Gerar resumo"
   - [ ] 4.2 O miolo de hoje nas peças da X1: números, alertas como hipótese, acerto por série e disciplina
   - [ ] 4.3 O vazio e o aviso de fila, como hoje

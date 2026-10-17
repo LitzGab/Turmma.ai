@@ -5,8 +5,11 @@ interface Props {
   titulo: string
   /** O que vai aparecer aqui e o que a pessoa pode fazer: vazio é convite para agir, não desculpa. */
   descricao: string
-  /** `emAndamento` mostra que o toque foi recebido, para a rede lenta não parecer tela quebrada. */
-  acao?: { rotulo: string; aoAcionar: () => void; emAndamento?: boolean }
+  /**
+   * `emAndamento` mostra que o toque foi recebido, para a rede lenta não parecer tela quebrada. `desligada` é o botão que
+   * não aceita outro toque enquanto o pedido que ele fez está no ar (o resumo do Analista): o texto dele diz o que acontece.
+   */
+  acao?: { rotulo: string; aoAcionar: () => void; emAndamento?: boolean; desligada?: boolean }
   /**
    * `tracejado` é o vazio que ocupa o lugar de um bloco inteiro da tela — a turma sem correção aprovada, onde entrariam
    * as barras de acerto por habilidade —: centralizado, com mais respiro e, se houver, um ícone em cima. O padrão é o
@@ -34,7 +37,9 @@ export function EstadoVazio({ titulo, descricao, acao, variante = 'padrao', icon
       <p className={`t-apoio mt-1 text-apoio ${tracejado ? 'max-w-prose' : ''}`}>{descricao}</p>
       {acao && (
         <div className={`mt-3 flex flex-wrap items-center gap-3 ${tracejado ? 'justify-center' : ''}`}>
-          <Botao onClick={acao.aoAcionar}>{acao.rotulo}</Botao>
+          <Botao onClick={acao.aoAcionar} disabled={acao.desligada === true}>
+            {acao.rotulo}
+          </Botao>
           <span role="status" className="t-apoio text-apoio">
             {acao.emAndamento ? 'Verificando…' : ''}
           </span>

@@ -19,12 +19,12 @@ A página do Analista fica como no mockup no que o produto tem: assinada por ele
 
 ## Subtarefas
 
-- [ ] 4.1 — `Tela` de largura `leitura`, título "Analista"; `AssinaturaIA` do Analista no topo, com o selo "IA"; "Gerar resumo" como a ação da tela; o período e a hora do resumo numa linha
-- [ ] 4.2 — O miolo de hoje nas peças da X1: quatro `NumeroPainel`; "Alertas", cada um com o selo "Hipótese" em texto e as hipóteses da lista fechada; "Acerto por série e disciplina" com `BarraRotulada`; "Recortes sem número"
-- [ ] 4.3 — O vazio "Nenhum resumo gerado ainda" com a ação de gerar; `AvisoFila` na demora e na falha, como hoje
-- [ ] 4.4 — `DadoNominal` sai da Governança e entra no fim da página, com o botão oficial "Abrir dado nominal de uma turma". Reabrir pede a finalidade de novo; a leitura não fica guardada
-- [ ] 4.5 — Nenhum campo de texto, anexo, pergunta pronta, "Relatório" nem "Baixar" na página
-- [ ] 4.6 — Testes
+- [x] 4.1 — `Tela` de largura `leitura`, título "Analista"; `AssinaturaIA` do Analista no topo, com o selo "IA"; "Gerar resumo" como a ação da tela; o período e a hora do resumo numa linha
+- [x] 4.2 — O miolo de hoje nas peças da X1: quatro `NumeroPainel`; "Alertas", cada um com o selo "Hipótese" em texto e as hipóteses da lista fechada; "Acerto por série e disciplina" com `BarraRotulada`; "Recortes sem número"
+- [x] 4.3 — O vazio "Nenhum resumo gerado ainda" com a ação de gerar; `AvisoFila` na demora e na falha, como hoje
+- [x] 4.4 — `DadoNominal` sai da Governança e entra no fim da página, com o botão oficial "Abrir dado nominal de uma turma". Reabrir pede a finalidade de novo; a leitura não fica guardada
+- [x] 4.5 — Nenhum campo de texto, anexo, pergunta pronta, "Relatório" nem "Baixar" na página
+- [x] 4.6 — Testes
 
 ## Arquivos previstos
 
@@ -32,7 +32,9 @@ A página do Analista fica como no mockup no que o produto tem: assinada por ele
 |---|---|
 | `apps/web/src/areas/coordenacao/Analista.tsx`, `apps/web/src/areas/coordenacao/DadoNominal.tsx`, `apps/web/src/areas/coordenacao/Governanca.tsx` | alterado |
 | `apps/web/src/areas/coordenacao/Analista.test.tsx` | novo |
-| `e2e/analista.spec.ts`, `e2e/roteiro-da-demonstracao.spec.ts` | alterado |
+| `apps/web/src/componentes/estado/EstadoVazio.tsx`, `apps/web/src/componentes/estado/estados.test.tsx` | alterado: a ação do vazio ganha `desligada`, para o botão do vazio parar enquanto o pedido está no ar |
+| `e2e/analista.spec.ts`, `e2e/governanca.spec.ts` | alterado: o nominal sai da Governança (a asserção de que o botão estava lá passa a dizer que não está) |
+| `e2e/roteiro-da-demonstracao.spec.ts` | sem alteração: o passo do nominal já ia pelo Analista desde a 3.0, e o `Gerar resumo` do vazio continua único |
 
 ## Testes que provam a regra
 
@@ -66,6 +68,7 @@ reprovações na A1). Sem nenhuma, escreva "nenhuma".
 
 | Divergência | Motivo | Onde está na spec (`techspec.md` §, id do `cenarios.md`, documento da seção 11) |
 |---|---|---|
+| O "Gerar resumo" do alto some enquanto o resumo é `null`: o botão do vazio é o único da tela, e o `EstadoVazio` ganha `desligada` para ele parar com o pedido no ar | Subtarefas 4.1 ("a ação da tela") e 4.3 ("o vazio com a ação de gerar") juntas pedem um só botão primário por tela; com resumo, ou com a leitura falha, o botão volta ao alto | `techspec.md` §9 (Analista, frase acrescentada nesta tarefa), `prd.md` RF8 e RF22 (vazio com "Gerar resumo"); a funcionalidade não tem `cenarios.md`, e o documento da seção 11 não descreve o botão |
 
 ## Mutações
 
@@ -75,10 +78,51 @@ O portão da tarefa aplica cada bloco, roda o teste citado e exige vermelho. Lin
 `+` entra, com espaço é contexto. Sem cláusula nova, escreva "nenhuma".
 
 ```mutacao
-arquivo: [caminho do arquivo que tem a cláusula]
-teste: [caminho do teste] › [nome do caso]
-  [linha de contexto, que fica]
-- [a cláusula que sai]
+arquivo: apps/web/src/areas/coordenacao/Analista.tsx
+teste: apps/web/src/areas/coordenacao/Analista.test.tsx › vazio: "Nenhum resumo gerado ainda" com a ação de gerar
+-  const acoes = semResumo ? undefined : (
++  const acoes = (
+```
+
+```mutacao
+arquivo: apps/web/src/areas/coordenacao/Analista.tsx
+teste: apps/web/src/areas/coordenacao/Analista.test.tsx › gerar: o pedido sai uma vez
+-  const semResumo = resumo.data !== undefined && resumo.data.resumo === null
++  const semResumo = resumo.data !== undefined && true
+```
+
+```mutacao
+arquivo: apps/web/src/areas/coordenacao/Analista.tsx
+teste: apps/web/src/areas/coordenacao/Analista.test.tsx › carregando: só o aviso de leitura
+-  const semResumo = resumo.data !== undefined && resumo.data.resumo === null
++  const semResumo = resumo.data.resumo === null
+```
+
+```mutacao
+arquivo: apps/web/src/areas/coordenacao/Analista.tsx
+teste: apps/web/src/areas/coordenacao/Analista.test.tsx › gerar: o pedido sai uma vez
+-            acao={{ rotulo: rotuloDeGerar, aoAcionar: gerar, desligada: gerando }}
++            acao={{ rotulo: rotuloDeGerar, aoAcionar: gerar }}
+```
+
+```mutacao
+arquivo: apps/web/src/areas/coordenacao/Analista.tsx
+teste: apps/web/src/areas/coordenacao/Analista.test.tsx › com dado: assinatura do Analista
+-    <Tela titulo="Analista" largura="leitura" acoes={acoes}>
++    <Tela titulo="Analista" acoes={acoes}>
+```
+
+```mutacao
+arquivo: apps/web/src/areas/coordenacao/Analista.tsx
+teste: apps/web/src/areas/coordenacao/Analista.test.tsx › com dado: assinatura do Analista
+-                  <Estado familia="info">Hipótese</Estado>
+```
+
+```mutacao
+arquivo: apps/web/src/componentes/estado/EstadoVazio.tsx
+teste: apps/web/src/componentes/estado/estados.test.tsx › com a ação desligada o botão não aciona
+-          <Botao onClick={acao.aoAcionar} disabled={acao.desligada === true}>
++          <Botao onClick={acao.aoAcionar}>
 ```
 
 ## Recomendações sem aplicar
@@ -89,9 +133,40 @@ nenhuma, escreva "nenhuma".
 
 | Revisor e rodada | Recomendação | Destino ou motivo |
 |---|---|---|
+| frontend-reviewer (1ª) | Esconder o "Gerar resumo" do alto também enquanto `resumo.isPending`: hoje ele aparece, um toque durante a leitura já gera, e ele some quando o vazio chega (salto de layout) | `TODO.md`. Muda comportamento, e o comentário de `Analista.test.tsx` diz que o botão no alto durante a carga é intencional. Vale o mesmo para revisor-geral (1ª), que apontou o mesmo ponto |
+| revisor-geral (1ª) | Mutação 3 com `&& true` é difícil de ler | Recusada: a mutação foi provada pelo portão (vermelho); reescrevê-la muda o que ele prova |
+| privacy-guardian (1ª) | Mínimo de alunos por recorte (hoje "2 alunos" mostra 75%, perto do individual; a regra pede dois professores) | `TODO.md`, junto da decisão em aberto dos indicadores de desempenho, antes do piloto com dado real. Já existia antes da tarefa |
+| privacy-guardian (1ª), conformidade-reviewer (1ª) | A foto `Gerar-resumo--computador-2.png` saiu em branco | Recusada: é faixa em branco da captura de página inteira, o estado com resumo está em `Gerar-resumo--computador-1.png`. Não é defeito da tela |
+| conformidade-reviewer (1ª) | Rotular a linha "Resumo gerado em…" como do Analista, para o rótulo de IA aparecer no celular sem o topo à vista | `TODO.md`: muda texto de tela; levar ao `/validar` |
+| conformidade-reviewer (1ª) | "conta como nominal" no selo do recorte sem número é jargão | `/validar`: o texto é de antes da tarefa (os textos da tela não mudam, subtarefa 4.4) |
+| frontend-reviewer (1ª) | "Verificando…" do vazio nunca aparece; "Ainda não escolhida" no diálogo | Sem ação: o revisor registrou como fato e como correto |
+| test-engineer (1ª) | `dblclick` no botão ainda ligado, em vez de clicar no desligado | `TODO.md`: teste novo, mais que as poucas linhas |
+| test-engineer (1ª) | Falha do pedido saindo do vazio (função suspensa, limite de pedidos): `AvisoFila` e botão do vazio volta ligado, sem dois primários | `TODO.md`: teste novo, mais que as poucas linhas; tarefa futura que toque `Analista.tsx` |
+| test-engineer (1ª) | A mutação 3 fica vermelha por `TypeError`, e `resumo.data?.resumo == null` esconderia o botão do alto na carga sem teste perceber | `TODO.md`, junto do primeiro ponto desta tabela |
+| test-engineer (2ª) | A espera de 20 s quando a aba aborta o pedido: avisar no próprio `route` se o `fulfill` falhou e esperar o anúncio ou esse aviso, o que chegar primeiro | `TODO.md` (entrada "a espera de 20 s do recomeço"). A anotação do caminho foi aplicada |
+| test-engineer (2ª) | Registrar qual caminho aconteceu, com um booleano no `catch` do `fulfill` | Aplicada: `entregaAbortada` e a anotação `resposta atrasada` |
+| revisor-geral (3ª), test-engineer (3ª) | Quando a anotação `resposta atrasada` diz "sem anúncio no prazo", a resposta nem chegou à aba nem foi abortada, e o teste passa sem ter provado nada: fazer esse caminho falhar, ou ao menos avisar | `TODO.md`, na entrada "a espera de 20 s do recomeço" (telas da coordenação, 4.0), que já trata desse trecho do e2e. Muda o comportamento do teste e pede decisão sobre o que fazer quando o aborto e o anúncio faltam |
 
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina, e o que os revisores exigem vai para
      achados/<este arquivo>, resumido em achados/indice.md. Não escreva nenhum dos três à mão
      e não acrescente seção depois de "Revisões". -->
 
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-10-16 22:51:18 | 2026-10-16 22:52:02 | `privacy-guardian` | 1 | APROVADO | a91bbc51f97a6fa98 |
+| 2026-10-16 22:51:12 | 2026-10-16 22:52:05 | `frontend-reviewer` | 1 | APROVADO | ae9e13440747b0122 |
+| 2026-10-16 22:51:15 | 2026-10-16 22:52:06 | `conformidade-reviewer` | 1 | APROVADO | ae64852d56aef9c78 |
+| 2026-10-16 22:51:24 | 2026-10-16 22:52:45 | `revisor-geral` | 1 | APROVADO | a57ddbd718af3e6fe |
+| 2026-10-16 22:51:21 | 2026-10-16 22:53:16 | `test-engineer` | 1 | APROVADO | a3e49b8c09491320f |
+| 2026-10-16 23:04:01 | 2026-10-16 23:04:41 | `test-engineer` | 2 | APROVADO | a65de2ad59d98e34e |
+| 2026-10-16 23:04:07 | 2026-10-16 23:05:01 | `revisor-geral` | 2 | REPROVADO | ae344f89590c8857c |
+| 2026-10-16 23:33:26 | 2026-10-16 23:33:48 | `revisor-geral` | 3 | APROVADO | a93533a0917fc1ba2 |
+| 2026-10-16 23:33:20 | 2026-10-16 23:34:11 | `test-engineer` | 3 | APROVADO | a0e3dac13cb99eceb |

@@ -10,7 +10,7 @@ import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.t
  * A governança de IA da coordenação, na aba IA de Registros (MVP, A5; `docs/interface.md` 11.7; D9, D45, D60, D64; regra 70, itens 5, 6,
  * 8 e 9), contra a API real com o adaptador falso, nos projetos `chromebook` e `celular`. É o passo 5 do roteiro: a
  * escola já tem entregas (`montarEscolaComEntregas`), e a coordenação chega à aba IA de Registros pela lateral.
- * Os Agentes estão em `agentes.spec.ts`, e o Analista e o dado nominal em `analista.spec.ts` (movidos sem editar o corpo; X2, 3.0).
+ * Os Agentes estão em `agentes.spec.ts`, e o Analista e o dado nominal em `analista.spec.ts` (vieram daqui na X2, 3.0; na 4.0 o nominal ganhou casos próprios, e a asserção do botão no fim deste arquivo passou a dizer que ele não está aqui).
  */
 
 const INDISPONIVEL = JSON.stringify({ erro: { codigo: 'INDISPONIVEL_TENTE_DE_NOVO', mensagem: 'texto que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } })
@@ -86,8 +86,8 @@ test.describe('Governança de IA', () => {
     await expect(consumo).toContainText('não é medido')
     await expect(consumo).not.toContainText('R$')
 
-    // Um botão de decisão oficial só, à parte, para o dado nominal.
-    await expect(principal(page).getByRole('button', { name: 'Abrir dado nominal de uma turma' })).toBeVisible()
+    // O dado nominal de uma turma não abre aqui: mora no fim da página do Analista (X2, 4.0), e a Governança é só agregado.
+    await expect(principal(page).getByRole('button', { name: 'Abrir dado nominal de uma turma' })).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
   })

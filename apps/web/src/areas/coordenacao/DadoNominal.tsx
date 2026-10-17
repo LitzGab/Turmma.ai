@@ -22,7 +22,7 @@ function ehFinalidade(valor: string): valor is FinalidadeDaLeituraNominal {
 const OPCOES_DE_FINALIDADE = FINALIDADES_DA_LEITURA_NOMINAL.map((finalidade) => ({ valor: finalidade, rotulo: NOME_DA_FINALIDADE_NOMINAL[finalidade] }))
 
 /**
- * O pedido de dado nominal (D45; regra 20, item 10; regra 70, item 8), igual na Governança e no Analista: fica **à
+ * O pedido de dado nominal (D45; regra 20, item 10; regra 70, item 8), no fim da página do Analista: fica **à
  * parte** do agregado, atrás de um botão `oficial` e de uma confirmação que diz, antes, que a abertura vai para a
  * auditoria, e que pede a turma e a finalidade (lista fechada, nunca texto livre).
  *
