@@ -1,74 +1,36 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero (17/10 ~17h45):** o `RELATÓRIO` do `Validador` (1ª rodada, funcionalidade completa, commit `6f86343`),
-  reiniciado no andar. Enquanto ele valida, ninguém usa o ambiente de teste 0. No fechamento, a esteira tem de
-  estar verde no último commit que alterou código: ler a de `41600a2` (39064583848), a de `3246cdc` (39066733762) e a
-  de `6f86343` (encontro da linha 2); o vermelho de `91d4722` (39062201162) é o das duas correções já encontradas.
-- **Devo ainda (fechamento):** as 2 recomendações do `frontend-reviewer` sem aplicar da correção
-  `troca-de-escola-sem-ir-para-a-entrada` (título do incidente truncado a 360 px no cartão do Painel; texto de
-  incidente da vitrine pouco realista), em "Recomendações sem aplicar" do documento dela: levar ao `TODO.md`.
-- **Encontrada às ~17h40:** a correção `troca-de-escola-sem-ir-para-a-entrada` (`a59b3dd`): defeito do teste, não da
-  tela nem da 11.0. O código de -30 s só vale se nenhuma virada de passo cair entre gerar e conferir; a fixture
-  `codigoDoPassoAnterior` espera a virada quando faltam ≤5 s, usada também em `e2e/sino-da-coordenacao.spec.ts:188`.
-- **Encontrada às ~17h12:** a correção `w2-carregando-estoura-o-prazo` (`fb78e67`, encontro em `3246cdc`): só
-  `test.slow()` em `e2e/areas.spec.ts:316`; nenhuma tela trava, o caso soma MFA e onze "Carregando" reais. O
-  "achado à parte" do relatório (o `painel:187` a 90 s) é a correção da linha 2.
-- **Encontrada às ~16h57:** a correção `material-processando-estoura-o-prazo` (`74cee48`, encontro em `41600a2`):
-  `test.slow()` no caso de `e2e/material.spec.ts`; o caso somava ~31 s contra os 30 s do Playwright.
-- **Encontrada às ~16h35:** a 11.0 (`492175f`, encontro em `91d4722`), a última: 14 de 14. Escalada do
-  `test-engineer` resolvida com o diagnóstico do `Arquiteto` (`.processo/ordens/diagnostico-11.md`, na linha 1):
-  `useEnvioUnico` soltava a trava pelo `onSettled` do `mutate`, que o `reset()` desliga.
-- **Encontrada às ~14h40:** a 8.0 (`652932f`, encontro em `5ecda3f`). Esteira `c0993ac` (39050559368) **verde**; a de
-  `5ecda3f` ler no encontro da 11.0. Achado da 8.0 para o Validador: a vitrine não tem material, a tabela com linhas e o
-  painel só foram vistos pelo e2e (`TODO.md`, X2 8.0 (j)).
-- **Encontrada às ~13h45:** a correção `casca-carregando-estoura-o-goto` (`5734676`, encontro em `c0993ac`). Causa
-  provável no traço: os 11 pedidos de JS/CSS sem resposta em 30 s no Fast 3G, não a rota atrasada; se a trava voltar
-  em outro caso, investigar o servidor estático da esteira (recomendação no documento, para o `/retro`).
-- **Esteiras lidas (13h45):** `d3ec693`, `13ceeab` e `b0bf8f1` **verdes**. `c0993ac` (39050559368, com a correção do
-  `casca:134`) na fila: ler no encontro da 8.0; vermelho ali é correção.
-- **Dizer ao Joaquim no fechamento (achado da 10.0, para ele com o `infra-guardian`):** o EXPLAIN de
-  `?estado=rejeitada` em Registros › IA levou 30,2 s com 60 mil entregas (subconsulta do grupo mínimo da A5, uma vez
-  por candidata, quadrática); pendente daria ~100 min (conta); a lista sem filtro nunca foi medida. Está na seção
-  "Plano do Postgres" de `10_task.md` e no `TODO.md`, com a saída proposta. Não bloqueou a tarefa; já dito a ele em 17/10 12h50.
-- **Esteiras lidas (12h20):** `00bc6ec` e `7bfd99e` vermelhas no e2e 1/6 e 4/6 (o `estrutura:765` esperado); `033a871`
-  vermelha só no `acesso-suspenso:169` (a correção da linha 2); `0646419` vermelha só no `casca:134` (a correção acima).
-  A seguinte, em `d3ec693` (encontro da 7.0), ler no próximo encontro.
+- **Validação, rodada 1 (17/10 ~18h15): REPROVADA**, sobre `f01ecbd` (`validacao.md`, seção 4). Quatro críticos e um
+  maior; nenhum é regra de negócio. O caminho, o do Validador: três correções, e depois revalidação só desses pontos e da
+  esteira (o `Validador` reiniciado, rodada 2 no topo do `validacao.md`).
+- **Espero (17/10 ~18h20):**
+  - linha 1: o `RELATÓRIO` do `Implementador`, correção `2026-10-17-painel-e-pedido-rolam-a-pagina` (C1 e C2: o Painel
+    com a faixa de incidente e o detalhe do pedido rolam a página a 1366 × 768), 1ª tentativa. Guardiões ditados:
+    `frontend-reviewer`;
+  - linha 2: o `RELATÓRIO` do `Implementador 2`, correção `2026-10-17-vazio-durante-a-leitura` (C4: as asserções do vazio
+    no carregando e no erro de seis telas e do consumo do Painel; e o Maior: `docs/interface.md` §3 e a tabela "O que cada
+    papel vê"), 1ª tentativa. Guardiões ditados: `frontend-reviewer`.
+- **Devo ainda:**
+  - a correção de **C3** (o painel lateral aberto pelo endereço fica por cima do aviso de incidente; e2e que entra com
+    incidente pendente direto num endereço com painel), na **linha 1, depois do encontro da correção dela** (as duas
+    mexem em `e2e/incidentes.spec.ts`). Guardiões: `frontend-reviewer`;
+  - a esteira: `41600a2` (39064583848) deu vermelho no `areas:316` (corrigido pela `w2-carregando`, em `3246cdc`) e no
+    **`agentes.spec.ts:164` (celular, 30 s)**, que não tinha caído antes. Ler a de `3246cdc` (39066733762), `6f86343`
+    (39066820938) e `f01ecbd` (39066847388): se o `agentes:164` cair de novo, é correção (com `test.slow()` só se o
+    traço mostrar leitura lenta e não trava);
+  - no fechamento, levar ao `TODO.md`: as 2 recomendações do `frontend-reviewer` da correção
+    `troca-de-escola-sem-ir-para-a-entrada` (título do incidente truncado a 360 px no cartão do Painel; texto de incidente
+    da vitrine pouco realista); o sino da 1.0 que faz 6 leituras a cada recarga de página da coordenação; e os Menores da
+    validação que não forem corrigidos (lista na seção 4 do `validacao.md`);
+  - dizer ao Joaquim no fechamento (achado da 10.0, para ele com o `infra-guardian`): o EXPLAIN de `?estado=rejeitada` em
+    Registros › IA levou 30,2 s com 60 mil entregas (subconsulta quadrática da A5); está em `10_task.md` e no `TODO.md`.
+    E o achado do RF3: o detalhe de um pedido passou de 2 para 3 cliques por Registros (do Painel continua 2);
+  - a X3 e a X4 continuam paradas por pedido do Joaquim (a X4 no andar "X4 telas-do-aluno-e-primeiro-acesso", com a 1.0
+    em `1477850`): não retomar sem a palavra dele.
 - **Maestri:** depois do reinício da máquina, o `maestri` não está no PATH do terminal do Orquestrador: usar
   `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
-- **Encontrada (10h37):** a correção `lista-de-nomes-com-41-px` (`cc2188e`, encontro em `033a871`). A 13.0 não tinha
-  sido marcada no `tasks.md` pelo commit dela; marquei (abaixo, "O que decidi"), e o quadro não pede mais linha 3.
-  Presas atrás da 7.0: 8.0 e 11.0 (as duas preveem `e2e/roteiro-da-demonstracao.spec.ts`).
-- **Histórico desta seção (já encontrado):** linha 1, o `RELATÓRIO` da **correção
-  `2026-10-17-pagina-rola-depois-da-12`**: `e2e/areas.spec.ts:316` (W2, chromebook) falha isolado e sempre, "a página
-  inteira rola a partir de 768 px: só o miolo deveria"; verde em `f279dde` (38996200178), e entre ele e `c325472` só
-  entrou a 12.0 (`18ba26f`, que pôs `relative` no tr e no li de `Tabela.tsx`), 1ª tentativa. Guardiões ditados:
-  `frontend-reviewer`. Depois do encontro dela, a linha 1 parte a **13.0** (o quadro já a liberou).
-  **17/10 ~03h50, retomada (2ª instrução, mesma correção):** a DIVERGÊNCIA de portão mostrou que a causa não é a 12.0
-  (falha local igual em `f279dde`; e2e verde em 38999161158). Mandei corrigir o layout da Analista para o miolo rolar
-  em vez de o main crescer (a página só cabe em 768 px pela fonte da esteira), sem mexer no teste, e renomear a correção.
-- **A conferir na esteira de `80a4bf8` (39002645989):** a de `c325472` (38999161158) deu e2e verde; o vermelho dela
-  foi só a unidade `tools/processo/linhas.test.ts` (ENOTEMPTY no rmdir do tmp, intermitente; em `80a4bf8` o verificar
-  passou). Se voltar, é correção de processo. A privacidade:295 já tem a correção `190d788` em `80a4bf8`. Se ela cair no chromebook aos 90 s,
-  ler o trace antes de subir prazo (ATENÇÃO 2 do relatório, no documento da correção)
-  Linha 2: a correção `encontro-5` (`76a1f1f`, conflito do `TODO.md` da 5.0) se encontrou às ~02h09; a linha 2
-  parte o que o quadro liberar.
-- **Ao partir a 7.0** (achado da 9.0): alinhar o texto de 'nome não carregado' da Alocação com o da lista da turma
-  ('Nome não carregado')
-- **Ao partir a 11.0** (observação do PEDIDO, achado da 3.0): `paginaNaoRola` aceita a primeira amostra (mesmo com
-  "Carregando…"), e `/coordenacao/agentes` ainda rola a página a 1366 × 768; ajustar junto os comentários de
-  `e2e/areas.spec.ts`
-- **A conferir na esteira de `f279dde` em diante** (`a3d5b2f` deu vermelho em casca W12 e acesso-suspenso:169,
-  corrigido pela `casca-procura-governanca`, `7ad1e07`, encontro em `f279dde`; o acesso-suspenso:169 não
-  reproduziu 10/10 e ficou no `TODO.md`, se voltar é correção com `test.slow()`). `8d43fe7` e `7dd9fae` ainda
-  não têm a correção: vermelho só na casca W12 ali é esperado. Em `f279dde` em diante, qualquer vermelho é
-  correção. A correção `68941e8` (encontro em `a3d5b2f`)
-  cobre a estrutura:294 e a professores:220 no celular (o sino relia na montagem). A privacidade:298 (hoje :295) voltou em
-  38994595783 (`8d43fe7`, celular, prazo do teste de 30 s): é a correção da linha 1, acima. O W6 do Uso (14.0) no chromebook também não caiu em 38977792982
-- **Devo ainda:** no fechamento, linha no `TODO.md`: o sino da 1.0 soma pedaços e 6 leituras a cada recarga de
-  página da coordenação (custo real no perfil lento, achado da correção da aba das empresas). A X3 e a X4 continuam paradas por pedido do Joaquim (a X4 no andar
-  "X4 telas-do-aluno-e-primeiro-acesso", com a 1.0 em `1477850`): não retomar sem a palavra dele
-- **Base:** `spec/telas-da-coordenacao` em `b0bf8f1` (encontro da 10.0), com a `develop` de `2029703` (X1 pousada, mockup e retro) juntada
+- **Base:** `spec/telas-da-coordenacao` em `f01ecbd`, com a `develop` de `2029703` juntada.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
