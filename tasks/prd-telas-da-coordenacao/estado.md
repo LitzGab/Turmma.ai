@@ -4,17 +4,17 @@
 - **Espero:** linha 1, `Implementador` (reiniciado com a `Mesa` às ~19h20): o `RELATÓRIO` da **correção**
   `2026-10-16-tentar-de-novo-da-estrutura-no-celular` (esteira vermelha 38966083912 em `b95722d`:
   `e2e/estrutura.spec.ts:294`, só no celular, o "Tentar de novo" do main não aparece; provável da 1.0;
-  `frontend-reviewer`). Depois do encontro dela, a **3.0** parte na linha 1 (o quadro já a mostrava).
-  Linha 2, `Implementador 2` (reiniciado com a `Mesa 2` às ~18h20): o `RELATÓRIO` da **correção**
-  `2026-10-16-aba-das-empresas-depois-de-recarregar` (esteira vermelha 38944717887 em `e30b9ca`:
-  `e2e/privacidade.spec.ts:298`, a aba "Empresas que recebem dados" some depois do reload, nos dois projetos; vem da
-  1.0; `frontend-reviewer`). Partida feita. Ao receber: `linhas.ts encontro 2`, depois `esteira.ts`. As duas
-  correções podem ter a mesma causa (o sino da 1.0); cada uma foi avisada da outra. Com as duas encontradas, a 3.0
-  parte, e o resto (4.0 a 12.0) se solta dela
-- **A conferir na esteira de `b95722d`:** a unidade deve passar com a sexta fatia; o W6 do Uso (14.0) falha no
-  chromebook com banco acumulado de outras execuções (regra 40 pede que passe nos três ambientes): se cair na
-  esteira, é correção
-- **Devo ainda:** nada além do ciclo. A X3 e a X4 continuam paradas por pedido do Joaquim (a X4 no andar
+  `frontend-reviewer`). Ao receber: `encontro 1`, `esteira.ts`, e a próxima do quadro na linha 1.
+  Passou das 2 h sem rodada: das 19h43 às 22h08 o spec de reprodução esperou num laço de `pgrep` que casava
+  com a própria linha de comando; na vigia das 22h07 mandei matar o laço e rodar direto (para a retro:
+  espera entre linhas por `pgrep -f` se casa sozinha).
+  Linha 2, `Implementador 2` (reiniciado com a `Mesa 2` às ~20h05): o `RELATÓRIO` da **tarefa 3.0** (grande,
+  prazo 4 h), 1ª tentativa; roda suíte sem laço, a linha 1 espera. A correção da aba das empresas se encontrou
+  (`d374377`, spec em `ddee86e`).
+- **A conferir na esteira de `ddee86e` em diante:** o W6 do Uso (14.0) falha no chromebook com banco acumulado de
+  outras execuções (regra 40 pede que passe nos três ambientes): se cair na esteira, é correção
+- **Devo ainda:** no fechamento, linha no `TODO.md`: o sino da 1.0 soma pedaços e 6 leituras a cada recarga de
+  página da coordenação (custo real no perfil lento, achado da correção da aba das empresas). A X3 e a X4 continuam paradas por pedido do Joaquim (a X4 no andar
   "X4 telas-do-aluno-e-primeiro-acesso", com a 1.0 em `1477850`): não retomar sem a palavra dele
 - **Base:** `spec/telas-da-coordenacao` em `586b76b`, com a `develop` de `2029703` (X1 pousada, mockup e retro) juntada
 
