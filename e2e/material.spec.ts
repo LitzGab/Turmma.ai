@@ -178,6 +178,9 @@ test.describe('Material da coordenação', () => {
   })
 
   test('enquanto o material está sendo lido a tela consulta sozinha, e troca "Processando" por "Pronto" sem recarregar', async ({ page, hasTouch }) => {
+    // O preparo (equipe, entrada, menu) leva ~21 s no runner, a troca mais ~5 s e a espera final mais 4 s: soma ~31 s contra os
+    // 30 s do relógio do Playwright (esteira 39054499168). O relógio é triplicado, e nenhuma asserção muda.
+    test.slow()
     let leituras = 0
     const material = (estado: 'processando' | 'pronto') => ({
       id: '0190f5a0-0000-7000-8000-0000000000aa',
@@ -205,9 +208,14 @@ test.describe('Material da coordenação', () => {
 
     const linha = linhaDe(page, TITULO)
     await expect(linha.getByText('Processando')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // A marca é posta com a página já aberta e antes da troca: uma recarga a apagaria (como no caso de cima).
+    await page.evaluate(() => {
+      ;(window as unknown as { semRecarga?: boolean }).semRecarga = true
+    })
     await expect(lista(page).getByRole('status').filter({ hasText: 'Um material está sendo lido.' })).toBeAttached()
     await expect(linha.getByText('Pronto · 6 páginas')).toBeVisible({ timeout: PRAZO_DA_LEITURA_MS })
     await expect(linha.getByText('Processando')).toHaveCount(0)
+    expect(await page.evaluate(() => (window as unknown as { semRecarga?: boolean }).semRecarga)).toBe(true)
 
     // Pronto, a consulta para: nada de leitura em laço com a tela parada.
     const depoisDePronto = leituras
