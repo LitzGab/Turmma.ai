@@ -1,9 +1,14 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero (17/10 10h40):** linha 1, `Implementador` (reiniciado com a `Mesa`): o `RELATÓRIO` da **tarefa 10.0**,
-  1ª tentativa, partida às ~10h40. Linha 2, `Implementador 2` (com a `Mesa 2`): o `RELATÓRIO` da **tarefa 7.0**, 1ª
-  tentativa, partida às ~10h30. Esteiras: 39035313940 (`00bc6ec`, 6.0), 39036615699 (`7bfd99e`, 13.0) e 39037075898
+- **Espero (17/10 ~11h45):** linha 1, `Implementador` (reiniciado com a `Mesa`): o `RELATÓRIO` da **tarefa 10.0**,
+  1ª tentativa, partida às ~10h40. Linha 2, `Implementador 2` (reiniciado com a `Mesa 2`): o `RELATÓRIO` da
+  **correção `encontro-7`**, pedida às ~11h45: a 7.0 terminou com SUCESSO (`b8e425d`, 2 rodadas), mas o encontro deu
+  CONFLITO em `apps/web/src/areas/coordenacao/Estrutura.test.tsx` com a `cc2188e`. Guardiões ditados:
+  `frontend-reviewer`. Com o RELATÓRIO: `encontro 2` de novo; aí a 7.0 entra em "Concluídas" (frontend-reviewer
+  ajustes r1/aprovado r2, privacy aprovado, test-engineer e revisor-geral reprovado r1/aprovado r2, 8 fotos da Mesa;
+  mexeu em `PainelLado.tsx`, tabIndex 0 no miolo; a observação da 9.0 ficou sem o que alinhar, a lista da Alocação
+  saiu; recomendações no `TODO.md`, X2 7.0), e a 8.0 e a 11.0 se soltam. Esteiras: 39035313940 (`00bc6ec`, 6.0), 39036615699 (`7bfd99e`, 13.0) e 39037075898
   (`033a871`, com a correção da lista de nomes): ler no próximo encontro. O vermelho do `estrutura:765` só é esperado nas
   duas primeiras; em `033a871` em diante, vermelho é correção.
 - **Maestri:** depois do reinício da máquina, o `maestri` não está no PATH do terminal do Orquestrador: usar
@@ -79,6 +84,8 @@
 - 17/10 02h02–02h08: a `Mesa` (linha 1) escreveu o RELATÓRIO aprovado da `pagina-rola` só no próprio terminal, sem
   `maestri ask`; o `Implementador` ficou esperando. A vigia viu e pedi à Mesa que o enviasse. Segundo conflito
   seguido no fim do `TODO.md` (encontro-4, encontro-5): para a retro, linhas novas do `TODO.md` em seção por tarefa
+- 17/10 ~11h45 — encontro da 7.0 (linha 2): CONFLITO em `Estrutura.test.tsx` com a correção `cc2188e` (linha 1);
+  correção `encontro-7` na própria linha.
 ## O que decidi sem perguntar
 - 17/10 ~03h50: DIVERGÊNCIA de portão do `Implementador` na correção `pagina-rola-depois-da-12`: areas:316 falha local
   também sem a 12.0 (+10 px na Analista) e passa na esteira. Ele perguntou se fechava sem correção; não fechei: a tela
