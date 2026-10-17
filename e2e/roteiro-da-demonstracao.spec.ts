@@ -5,7 +5,8 @@ import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts
 import { entregasNoBanco, validacoesNoBanco } from './__fixtures__/a2.ts'
 import { respostasNoBanco } from './__fixtures__/a3.ts'
 import { entrarComoAlunoPelaApi, responderPelaApi } from './__fixtures__/aluno-pela-api.ts'
-import { abrirAbaAlunos, abrirNavegacao, esperarAtividades, esperarGovernanca, esperarNovaConversa, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirAbaAlunos, abrirNavegacao, esperarAtividades, esperarPainel, esperarNovaConversa, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { caixa, conversa, DISCIPLINA, gerarAtividade, PRAZO_DA_IA_MS, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
 import { auditoriasNoBanco, suspensoesNoBanco } from './__fixtures__/governanca.ts'
 import { CAMINHO_DO_PDF_DE_DEMONSTRACAO, materiaisNoBanco, recusasNaAuditoria } from './__fixtures__/material.ts'
@@ -168,7 +169,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
 
     // ── 2. A coordenação aceita, configura o segundo fator e monta a escola (A1). ─────────────────────────────────
     const coordenacao = await outroNavegador(browser)
-    const convites = await test.step('a coordenação entra pelo convite, com segundo fator, e abre em Governança, vazia', async () => {
+    const convites = await test.step('a coordenação entra pelo convite, com segundo fator, e abre no Painel e vê a IA vazia', async () => {
       await coordenacao.goto(linkDaCoordenacao)
       await expect(principal(coordenacao)).toContainText(escolaNome, { timeout: PRAZO_DA_ENTRADA_MS })
       await botao(principal(coordenacao), 'Aceitar o convite').click()
@@ -184,11 +185,12 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(coordenacao.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await campoCodigo(coordenacao).fill(codigoDoAutenticador(segredo, 30))
       await coordenacao.getByRole('button', { name: /^Entrar$/ }).click()
-      await esperarGovernanca(coordenacao)
+      await esperarPainel(coordenacao)
+      await irPelaCoordenacao(coordenacao, 'IA', hasTouch)
       await expect(principal(coordenacao)).toContainText('A IA ainda não gerou nada nesta escola', { timeout: PRAZO_DA_ENTRADA_MS })
 
       // Estrutura: ano letivo aberto, a série, Química e Física, 2ºA e 2ºB.
-      await irPelaNavegacao(coordenacao, 'Estrutura', hasTouch)
+      await irPelaCoordenacao(coordenacao, 'Turmas', hasTouch)
       await expect(principal(coordenacao).getByText('Comece pelo ano letivo')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await botao(principal(coordenacao), 'Criar o ano letivo').click()
       await dialogo(coordenacao).getByLabel('Ano').fill('2026')
@@ -218,7 +220,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
 
       // A lista de nomes de cada turma: só nome e matrícula.
       for (const [turma, alunos] of [[turmaA, [ana, bruno, carla]], [turmaB, doB]] as const) {
-        if (turma === turmaB) await irPelaNavegacao(coordenacao, 'Estrutura', hasTouch)
+        if (turma === turmaB) await irPelaCoordenacao(coordenacao, 'Turmas', hasTouch)
         await principal(coordenacao).getByRole('link', { name: `Lista de nomes da turma ${turma}` }).click({ timeout: PRAZO_DA_ENTRADA_MS })
         await principal(coordenacao).getByLabel('Lista colada').fill(`nome;matrícula\n${alunos.map((aluno) => `${aluno.nome};${aluno.matricula}`).join('\n')}\n`, { timeout: PRAZO_DA_ENTRADA_MS })
         await botao(principal(coordenacao), 'Ver a prévia').click()
@@ -231,7 +233,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       }
 
       // Três professores, cada um com o convite de cópia única.
-      await irPelaNavegacao(coordenacao, 'Professores', hasTouch)
+      await irPelaCoordenacao(coordenacao, 'Professores', hasTouch)
       const links: Record<'helena' | 'marta' | 'davi', string> = { helena: '', marta: '', davi: '' }
       for (const [chave, professor] of [['helena', helena], ['marta', marta], ['davi', davi]] as const) {
         await botao(principal(coordenacao), 'Cadastrar professor').click()
@@ -248,7 +250,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       }
 
       // A alocação: duas professoras de Química na mesma série (2ºA e 2ºB) e um de Física no 2ºA.
-      await irPelaNavegacao(coordenacao, 'Estrutura', hasTouch)
+      await irPelaCoordenacao(coordenacao, 'Turmas', hasTouch)
       const alocacao = principal(coordenacao).getByRole('region', { name: 'Alocação' })
       for (const [professor, turma, disciplina] of [[helena, turmaA, DISCIPLINA], [marta, turmaB, DISCIPLINA], [davi, turmaA, 'Física']] as const) {
         await alocacao.getByLabel('Professor', { exact: true }).selectOption({ label: `${professor.nome} (convite em aberto)` }, { timeout: PRAZO_DA_ENTRADA_MS })
@@ -329,7 +331,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
 
     // ── 4. Passo 1: o material, recusado sem licença e lido com ela (A2; D5, D75). ─────────────────────────────────
     await test.step('a coordenação sobe o PDF sem licença e é recusada antes da leitura; com a licença, ele fica pronto', async () => {
-      await irPelaNavegacao(coordenacao, 'Material', hasTouch)
+      await irPelaCoordenacao(coordenacao, 'Material', hasTouch)
       const preencher = async (licenca: string) => {
         await coordenacao.getByTestId('arquivo-do-material').setInputFiles(CAMINHO_DO_PDF_DE_DEMONSTRACAO)
         await principal(coordenacao).getByLabel('Título').fill(TITULO_DO_MATERIAL)
@@ -577,8 +579,8 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     // ── 9. Passo 6: a governança, a suspensão por função, o Analista e o nominal com auditoria (A5; D9, D45, D64). ─
     const coordenadoraId = await usuarioDaEquipe(escolaId, coordenadora.email)
     await test.step('a coordenação vê o que a IA gerou e que uma pessoa aprovou, em agregado e sem nome de ninguém', async () => {
-      await irPelaNavegacao(coordenacao, 'Governança', hasTouch)
-      await esperarGovernanca(coordenacao)
+      await irPelaCoordenacao(coordenacao, 'IA', hasTouch)
+      await expect(coordenacao).toHaveURL(/\/coordenacao\/governanca$/, { timeout: PRAZO_DA_ENTRADA_MS })
       // Quatro artefatos (as duas atividades da Helena, a versão adaptada e a atividade da Marta) e dois lotes; aprovados a
       // versão e os dois lotes.
       await expect(numeroDoPainel(coordenacao, 'Gerado por IA')).toContainText('6', { timeout: PRAZO_DA_ENTRADA_MS })
@@ -595,7 +597,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     })
 
     await test.step('a coordenação suspende a Adaptação, o servidor recusa, e ela retoma, com tudo na auditoria', async () => {
-      await irPelaNavegacao(coordenacao, 'Agentes', hasTouch)
+      await irPelaCoordenacao(coordenacao, 'Agentes', hasTouch)
       for (const agente of ['Assistente de ensino', 'Tutor', 'Analista de desempenho escolar']) {
         await expect(principal(coordenacao).getByRole('heading', { level: 2, name: agente })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       }
@@ -622,7 +624,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     })
 
     await test.step('o Analista gera o resumo com número, porque as duas professoras de Química aprovaram correção, e o nominal pede finalidade e fica na auditoria', async () => {
-      await irPelaNavegacao(coordenacao, 'Analista', hasTouch)
+      await irPelaCoordenacao(coordenacao, 'Analista', hasTouch)
       await expect(principal(coordenacao)).toContainText('Nenhum resumo gerado ainda', { timeout: PRAZO_DA_ENTRADA_MS })
       await principal(coordenacao).getByRole('button', { name: 'Gerar resumo' }).click()
       const resumo = principal(coordenacao).locator('[data-resumo-do-analista]')

@@ -6,7 +6,7 @@ import {
   abrirNavegacao,
   entrarComoCoordenacaoNaMesmaAba,
   escolherNoSeletor,
-  esperarGovernanca,
+  esperarPainel,
   nomeNoSeletor,
   entrarComoProfessora,
   entrarPorEmail,
@@ -20,6 +20,7 @@ import {
   TITULO_DA_NOVA_CONVERSA,
   esperarAtividades,
 } from './__fixtures__/casca.ts'
+import { cliquesAte, irPelaCoordenacao, paginaNaoRola, type TelaDaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlocacaoDoProfessor, criarAlunoComMatricula, criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
 import { codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -48,18 +49,15 @@ const ITENS_DO_PROFESSOR = [
   { rotulo: 'Turmas', caminho: '/professor/turmas' },
 ] as const
 /**
- * Os itens da coordenação, como a mesma tabela os declara: "Estrutura" chegou na 13.0, "Professores", na 14.0, "Material",
- * no MVP de apresentação (A2), e "Governança", "Agentes" e "Analista", na A5, na frente: é na Governança que ela abre.
- * "Privacidade" chega com a tarefa 6.0 da F3, no fim da lista.
+ * Os quatro lugares da coordenação, como a mesma tabela os declara (X2, 3.0): o Painel, onde ela abre, o Analista e as molduras
+ * Escola e Registros, que abrem na primeira aba e dizem de onde a tela é na aba do navegador. O endereço de cada um é o de hoje
+ * da primeira aba (`/estrutura`, `/governanca`): nenhum endereço mudou.
  */
 const ITENS_DA_COORDENACAO = [
-  { rotulo: 'Governança', caminho: '/coordenacao/governanca' },
-  { rotulo: 'Agentes', caminho: '/coordenacao/agentes' },
-  { rotulo: 'Analista', caminho: '/coordenacao/analista' },
-  { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
-  { rotulo: 'Professores', caminho: '/coordenacao/professores' },
-  { rotulo: 'Material', caminho: '/coordenacao/material' },
-  { rotulo: 'Privacidade', caminho: '/coordenacao/privacidade' },
+  { rotulo: 'Painel', caminho: '/coordenacao/painel', titulo: 'Painel' },
+  { rotulo: 'Analista', caminho: '/coordenacao/analista', titulo: 'Analista' },
+  { rotulo: 'Escola', caminho: '/coordenacao/estrutura', titulo: 'Escola: turmas' },
+  { rotulo: 'Registros', caminho: '/coordenacao/governanca', titulo: 'Registros: IA' },
 ] as const
 /** Os itens do aluno, como a mesma tabela os declara: "Minha turma" chegou na 12.0; "Tutor" e "Atividades", no MVP (A3 e A4). */
 const ITENS_DO_ALUNO = [
@@ -295,6 +293,68 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     }
     expect(pedidos.filter((caminho) => CHUNK_DO_PROFESSOR.test(caminho) || CHUNK_DA_COORDENACAO.test(caminho))).toEqual([])
   })
+
+  /**
+   * A coordenação (X2, 3.0; RF1 a RF3): abre no Painel, tem os quatro lugares (na barra de baixo a 360 px), e cada tela de hoje
+   * está a até dois cliques do lugar em que a pessoa está — o lugar e a aba —, com Empresas e Incidentes a três (o seletor da
+   * Privacidade). Nenhum endereço mudou: o teste confere o de cada tela e o lugar que a lateral acende nele.
+   */
+  const TELAS_DA_COORDENACAO: readonly { readonly tela: TelaDaCoordenacao; readonly endereco: string; readonly lugar: string }[] = [
+    { tela: 'Painel', endereco: '/coordenacao/painel', lugar: 'Painel' },
+    { tela: 'Analista', endereco: '/coordenacao/analista', lugar: 'Analista' },
+    { tela: 'Turmas', endereco: '/coordenacao/estrutura', lugar: 'Escola' },
+    { tela: 'Professores', endereco: '/coordenacao/professores', lugar: 'Escola' },
+    { tela: 'Material', endereco: '/coordenacao/material', lugar: 'Escola' },
+    { tela: 'IA', endereco: '/coordenacao/governanca', lugar: 'Registros' },
+    { tela: 'Agentes', endereco: '/coordenacao/agentes', lugar: 'Registros' },
+    { tela: 'Pedidos', endereco: '/coordenacao/privacidade/pedidos', lugar: 'Registros' },
+    { tela: 'Prazos de guarda', endereco: '/coordenacao/privacidade/retencao', lugar: 'Registros' },
+    { tela: 'Empresas', endereco: '/coordenacao/privacidade/suboperadores', lugar: 'Registros' },
+    { tela: 'Incidentes', endereco: '/coordenacao/privacidade/incidentes', lugar: 'Registros' },
+  ]
+
+  test('a coordenação abre no Painel, vê Painel, Analista, Escola e Registros (na barra de baixo a 360 px), e cada tela de hoje fica a até dois cliques; Empresas e Incidentes, a três', async ({ page, hasTouch }) => {
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    await page.goto('/entrar')
+    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
+    await esperarPainel(page)
+    await expect(page).toHaveTitle('Painel · Turmma')
+
+    // Os quatro lugares, nessa ordem. No celular são a barra de baixo, sempre à vista, e a gaveta não leva mais a navegação;
+    // no computador, a lateral (RF1).
+    await expect(secoes(page)).toHaveCount(1)
+    await expect(secoes(page).getByRole('link')).toHaveText(ITENS_DA_COORDENACAO.map(({ rotulo }) => rotulo))
+    if (naGaveta(page)) {
+      await expect(page.locator('html')).toHaveAttribute('data-barra-de-baixo', '')
+      await expect(secoes(page).first()).toBeVisible()
+      await expect(gaveta(page).getByRole('navigation', { name: 'Seções', exact: true })).toHaveCount(0)
+    }
+    expect(await violacoesGraves(page)).toEqual([])
+
+    // Cada lugar leva ao endereço de hoje da primeira aba dele, com o título na aba e o lugar aceso.
+    for (const item of ITENS_DA_COORDENACAO) {
+      await irPelaNavegacao(page, item.rotulo, hasTouch)
+      await expect(page).toHaveURL(new RegExp(`${item.caminho}$`))
+      await expect(page).toHaveTitle(`${item.titulo} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(naoEncontrada(page)).toHaveCount(0)
+      await expect(secoes(page).getByRole('link', { name: item.rotulo, exact: true })).toHaveAttribute('aria-current', 'page')
+      expect(await larguraExcedente(page), item.rotulo).toBe(0)
+    }
+
+    // O RF3: de um lugar que não é o da tela, cada uma está a até dois cliques (três, no seletor da Privacidade), e o endereço
+    // e o lugar aceso são os de hoje. A ordem sai de um lugar e vai a outro de propósito: Registros → Escola → Registros.
+    // `cliquesAte` lê a mesma tabela que `irPelaCoordenacao` executa, então o `expect` dele só guarda o teto da tabela: a prova do
+    // RF3 é o clique de verdade, seguido do endereço e do lugar aceso. E, a 1366 × 768, a página não rola em nenhuma tela de
+    // Escola nem de Registros: só o miolo (RF23), o que `paginaNaoRola` mede na tela com o miolo mais longo, a Estrutura.
+    for (const { tela, endereco, lugar } of [...TELAS_DA_COORDENACAO].reverse()) {
+      expect(cliquesAte(tela), tela).toBeLessThanOrEqual(tela === 'Empresas' || tela === 'Incidentes' ? 3 : 2)
+      await irPelaCoordenacao(page, tela, hasTouch)
+      await expect(page, tela).toHaveURL(new RegExp(`${endereco}$`))
+      await expect(naoEncontrada(page), tela).toHaveCount(0)
+      await expect(secoes(page).getByRole('link', { name: lugar, exact: true }), tela).toHaveAttribute('aria-current', 'page')
+      await paginaNaoRola(page)
+    }
+  })
 })
 
 test.describe('W5: a fronteira do import() de cada área', () => {
@@ -333,7 +393,7 @@ test.describe('W5: a fronteira do import() de cada área', () => {
 
   test('a área da coordenação que não chega mostra a mesma fronteira, e a nova tentativa carrega', async ({ page, hasTouch }) => {
     const coordenadora = await criarEquipeComSenha('coordenador')
-    // A coordenação abre em Governança (A5): a área é pedida já na entrada, e é ali que ela não chega.
+    // A coordenação abre no Painel (X2): a área é pedida já na entrada, e é ali que ela não chega.
     const abortar = (rota: Route) => rota.abort('internetdisconnected')
     await page.route(CHUNK_DA_COORDENACAO, abortar)
     await page.goto('/entrar')
@@ -343,11 +403,11 @@ test.describe('W5: a fronteira do import() de cada área', () => {
     await expect(page.getByRole('heading', { name: TITULO_DA_FALHA })).toBeFocused()
     expect(await violacoesGraves(page)).toEqual([])
 
-    // Com a rede de volta, "Tentar de novo" recarrega e a área chega, com a Governança.
+    // Com a rede de volta, "Tentar de novo" recarrega e a área chega, com o Painel.
     await page.unroute(CHUNK_DA_COORDENACAO, abortar)
     if (hasTouch) await page.getByRole('button', { name: 'Tentar de novo' }).tap()
     else await page.getByRole('button', { name: 'Tentar de novo' }).click()
-    await esperarGovernanca(page)
+    await esperarPainel(page)
     await expect(page.getByRole('heading', { name: TITULO_DA_FALHA })).toHaveCount(0)
   })
 })
@@ -443,16 +503,17 @@ test.describe('recomeço da tela', () => {
     })
     const coordenadora = await criarEquipeComSenha('coordenador')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    // A coordenação abre em Governança (A5), que também não aponta para Turmas, tela do professor.
-    await esperarGovernanca(page)
+    // A coordenação abre no Painel (X2), que também não aponta para Turmas, tela do professor.
+    await esperarPainel(page)
     await expect(page.getByRole('main').getByRole('link', { name: 'Turmas' })).toHaveCount(0)
-    // A barra de baixo da professora não ficou para a coordenação: no celular, com a gaveta fechada não há `Seções` à
-    // vista (os sete itens dela estão na gaveta) e a página não reserva o lugar de uma barra (A90, A91).
-    if (naGaveta(page)) await expect(secoes(page)).toHaveCount(0)
-    await expect(page.locator('html')).not.toHaveAttribute('data-barra-de-baixo', '')
+    // A barra de baixo é a da coordenação agora (quatro lugares, X2), e não a da professora: no celular ela está à vista com os
+    // lugares de quem entrou, e a página reserva o lugar dela; no computador, os mesmos lugares estão na lateral (A90, A91).
+    await expect(secoes(page)).toHaveCount(1)
+    await expect(secoes(page).getByRole('link')).toHaveText(ITENS_DA_COORDENACAO.map(({ rotulo }) => rotulo))
+    if (naGaveta(page)) await expect(page.locator('html')).toHaveAttribute('data-barra-de-baixo', '')
+    else await expect(page.locator('html')).not.toHaveAttribute('data-barra-de-baixo', '')
 
     await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(ITENS_DA_COORDENACAO.map(({ rotulo }) => rotulo))
     await expect(lateral(page)).toContainText(coordenadora.nome)
     await expect(page.locator('body')).not.toContainText(professora.nome)
     await expect(page.locator('body')).not.toContainText(alocacao.turmaNome)

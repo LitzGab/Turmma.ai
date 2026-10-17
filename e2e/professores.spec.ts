@@ -1,7 +1,8 @@
 import type { Browser, BrowserContextOptions, Locator, Page, Route } from '@playwright/test'
 import { AVISO_DO_CONVITE_COM_SENHA_NOVA, MENSAGENS_DE_ERRO, mensagemDoConvite } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaConviteDeProfessor } from '../packages/shared/src/professores/professores.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, secoes } from './__fixtures__/casca.ts'
+import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   convidarProfessorNoBanco,
@@ -170,7 +171,7 @@ async function abrirProfessores(page: Page, coordenadora: EquipeDeTeste, hasTouc
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
   await abrirEstrutura(page, hasTouch)
-  await irPelaNavegacao(page, 'Professores', hasTouch)
+  await irPelaCoordenacao(page, 'Professores', hasTouch)
   await expect(page).toHaveURL(/\/coordenacao\/professores$/)
 }
 
@@ -245,10 +246,10 @@ test.describe('W4 (Professores): os quatro estados', () => {
     await abrirEstrutura(page, hasTouch)
 
     // W2: o item da lateral leva à tela, com o título dela na aba e as pistas do selecionado.
-    await irPelaNavegacao(page, 'Professores', hasTouch)
+    await irPelaCoordenacao(page, 'Professores', hasTouch)
     await expect(page).toHaveURL(/\/coordenacao\/professores$/)
-    await expect(page).toHaveTitle('Professores · Turmma')
-    await expect(principal(page).getByRole('heading', { level: 1, name: 'Professores' })).toBeAttached()
+    await expect(page).toHaveTitle('Escola: professores · Turmma')
+    await expect(principal(page).getByRole('heading', { level: 1, name: 'Escola' })).toBeAttached()
 
     // Carregando.
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando os professores…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -262,10 +263,9 @@ test.describe('W4 (Professores): os quatro estados', () => {
     await expect(lista(page)).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
-    await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Professores' })).toHaveAttribute('aria-current', 'page')
-    await expect(lateral(page).getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Estrutura' })).not.toHaveAttribute('aria-current', 'page')
-    if (await page.getByRole('dialog', { name: 'Menu' }).isVisible()) await page.keyboard.press('Escape')
+    // Os quatro lugares são a lateral no computador e a barra de baixo no celular: `secoes` acha a navegação onde ela estiver, sem abrir a gaveta.
+    await expect(secoes(page).getByRole('link', { name: 'Escola' })).toHaveAttribute('aria-current', 'page')
+    await expect(secoes(page).getByRole('link', { name: 'Painel' })).not.toHaveAttribute('aria-current', 'page')
 
     // O erro com a lista ainda vazia: o primeiro cadastro dá certo, e a releitura depois dele cai. A tela não afirma
     // "Nenhum professor ainda", que negaria o cadastro: mostra o erro, com "Tentar de novo", e o foco não cai no `body`.
@@ -285,7 +285,7 @@ test.describe('W4 (Professores): os quatro estados', () => {
     await expect(noDialogo(page)).toHaveCount(0)
     await expect(principal(page).getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO)
     await expect(principal(page).getByText('Nenhum professor ainda')).toHaveCount(0)
-    await expect(principal(page).getByRole('heading', { level: 1, name: 'Professores' })).toBeFocused()
+    await expect(principal(page).getByRole('heading', { level: 1, name: 'Escola' })).toBeFocused()
     expect(await violacoesGraves(page)).toEqual([])
     falhar = false
     await acionar(principal(page).getByRole('button', { name: 'Tentar de novo' }), hasTouch)
@@ -973,7 +973,7 @@ test.describe('recomeço da tela Professores', () => {
       return rota.fallback()
     })
     await entrarComoCoordenacaoNaMesmaAba(page, deB, hasTouch)
-    await irPelaNavegacao(page, 'Professores', hasTouch)
+    await irPelaCoordenacao(page, 'Professores', hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando os professores…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText(professorDeA.nome)
     await expect(dialogosAbertos(page)).toHaveCount(0)

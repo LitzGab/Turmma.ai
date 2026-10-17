@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { estaNoItem, MENU_DA_PESSOA, NAVEGACAO, RODAPE_DA_LATERAL, SEU_TIME } from './navegacao'
 
 describe('navegação por papel', () => {
-  it('W2: "Estrutura" e "Professores" da coordenação, "Minha turma" do aluno e, na A2, "Início" (era "Nova conversa"), "Ferramentas" e "Turmas" do professor têm tela', () => {
+  it('W2: os quatro lugares da coordenação, "Minha turma" do aluno e, na A2, "Início" (era "Nova conversa"), "Ferramentas" e "Turmas" do professor têm tela', () => {
     expect(NAVEGACAO.professor.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
       { rotulo: 'Início', caminho: '/professor/nova-conversa' },
       { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
@@ -14,22 +14,19 @@ describe('navegação por papel', () => {
       { rotulo: 'Atividades', caminho: '/aluno/atividades' },
       { rotulo: 'Minha turma', caminho: '/aluno/minha-turma' },
     ])
-    // A5: a coordenação abre em Governança, e Agentes e Analista vêm com ela. F3 (6.0): Privacidade fecha a lista.
+    // X2 (3.0): a coordenação tem quatro lugares, nesta ordem, e o Painel é o primeiro.
     expect(NAVEGACAO.coordenador.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
-      { rotulo: 'Governança', caminho: '/coordenacao/governanca' },
-      { rotulo: 'Agentes', caminho: '/coordenacao/agentes' },
+      { rotulo: 'Painel', caminho: '/coordenacao/painel' },
       { rotulo: 'Analista', caminho: '/coordenacao/analista' },
-      { rotulo: 'Estrutura', caminho: '/coordenacao/estrutura' },
-      { rotulo: 'Professores', caminho: '/coordenacao/professores' },
-      { rotulo: 'Material', caminho: '/coordenacao/material' },
-      { rotulo: 'Privacidade', caminho: '/coordenacao/privacidade' },
+      { rotulo: 'Escola', caminho: '/coordenacao/estrutura' },
+      { rotulo: 'Registros', caminho: '/coordenacao/governanca' },
     ])
   })
 
-  it('U, F3 (6.0): "Privacidade" é da coordenação, e o professor e o aluno não a têm na lista de seções', () => {
-    expect(NAVEGACAO.coordenador.map((item) => item.rotulo)).toContain('Privacidade')
+  it('X2: "Privacidade" já não é item da lista, e o professor e o aluno não a têm na lista de seções', () => {
+    // Na coordenação a Privacidade é uma aba de Registros; o do aluno é do rodapé fixo (F3, 18.0).
+    expect(NAVEGACAO.coordenador.map((item) => item.rotulo)).not.toContain('Privacidade')
     expect(NAVEGACAO.professor.map((item) => item.rotulo)).not.toContain('Privacidade')
-    // O do aluno é do rodapé fixo (F3, 18.0), e não da lista: "Seções" continua sendo só Tutor, Atividades e Minha turma.
     expect(NAVEGACAO.aluno.map((item) => item.rotulo)).not.toContain('Privacidade')
   })
 
@@ -61,13 +58,30 @@ describe('navegação por papel', () => {
     expect(estaNoItem('/aluno/atividades', privacidade)).toBe(false)
   })
 
-  it('F3 (6.0): a Privacidade fica selecionada nos endereços das abas dela, e não no de Governança', () => {
-    const privacidade = NAVEGACAO.coordenador.find((item) => item.rotulo === 'Privacidade')
-    const governanca = NAVEGACAO.coordenador.find((item) => item.rotulo === 'Governança')
-    if (privacidade === undefined || governanca === undefined) throw new Error('faltou item na navegação da coordenação')
-    expect(estaNoItem('/coordenacao/privacidade/retencao', privacidade)).toBe(true)
-    expect(estaNoItem('/coordenacao/privacidade', privacidade)).toBe(true)
-    expect(estaNoItem('/coordenacao/privacidade/retencao', governanca)).toBe(false)
+  it('X2 (3.0): cada endereço de hoje da coordenação acende o lugar dele, e só ele', () => {
+    const lugares = Object.fromEntries(NAVEGACAO.coordenador.map((item) => [item.rotulo, item]))
+    const acesos = (caminho: string) => NAVEGACAO.coordenador.filter((item) => estaNoItem(caminho, item)).map((item) => item.rotulo)
+    const ID = '0190f5a0-0000-7000-8000-000000000001'
+    expect(Object.keys(lugares)).toEqual(['Painel', 'Analista', 'Escola', 'Registros'])
+    expect(acesos('/coordenacao/painel')).toEqual(['Painel'])
+    expect(acesos('/coordenacao/analista')).toEqual(['Analista'])
+    // Escola: as três abas e a lista da turma, que é a Estrutura aberta.
+    for (const caminho of ['/coordenacao/estrutura', `/coordenacao/estrutura/turmas/${ID}`, '/coordenacao/professores', '/coordenacao/material']) expect(acesos(caminho), caminho).toEqual(['Escola'])
+    // Registros: a IA, os agentes, os pedidos, o detalhe do pedido e as três telas da Privacidade.
+    for (const caminho of [
+      '/coordenacao/governanca',
+      '/coordenacao/agentes',
+      '/coordenacao/privacidade',
+      '/coordenacao/privacidade/pedidos',
+      `/coordenacao/privacidade/pedidos/${ID}`,
+      '/coordenacao/privacidade/retencao',
+      '/coordenacao/privacidade/suboperadores',
+      '/coordenacao/privacidade/incidentes',
+    ])
+      expect(acesos(caminho), caminho).toEqual(['Registros'])
+    // Um endereço que só começa com as mesmas letras é outra tela.
+    expect(acesos('/coordenacao/professores-antigos')).toEqual([])
+    expect(acesos('/coordenacao/governanca-velha')).toEqual([])
   })
 
   it('D73: cada item só aparece com a fase dele — o professor não tem Calendário nem Histórico, e "Seu time" tem o Assistente de ensino e, desde a A4, o Tutor', () => {

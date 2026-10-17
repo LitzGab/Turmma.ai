@@ -1,5 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
-import { entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarGovernanca, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './casca.ts'
+import { entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarPainel, esperarNovaConversa, PRAZO_DA_ENTRADA_MS } from './casca.ts'
+import { irPelaCoordenacao } from './coordenacao.ts'
 import { CAMINHO_DO_PDF_DE_DEMONSTRACAO } from './material.ts'
 import { expect } from './perfis.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarCoordenadoraNaEscola, criarEquipeComSenha, type EquipeDeTeste } from './sessao.ts'
@@ -41,8 +42,8 @@ export async function montarEscolaEEntrar(page: Page, hasTouch: boolean): Promis
 
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-  await esperarGovernanca(page)
-  await irPelaNavegacao(page, 'Material', hasTouch)
+  await esperarPainel(page)
+  await irPelaCoordenacao(page, 'Material', hasTouch)
   await expect(page).toHaveURL(/\/coordenacao\/material$/)
   await page.getByTestId('arquivo-do-material').setInputFiles(CAMINHO_DO_PDF_DE_DEMONSTRACAO)
   await principal(page).getByLabel('Título').fill(TITULO_DO_MATERIAL)

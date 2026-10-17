@@ -16,9 +16,7 @@ import { Anuncio, useEnvioUnico } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { Selecao } from '../../componentes/Selecao'
 import { Estado } from '../../componentes/SeloDeEstado'
-import { Tela } from '../../componentes/Tela'
 import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
-import { useTituloDaTela } from '../../titulo'
 import {
   AVISO_DE_SEM_LICENCA,
   BYTES_DA_ASSINATURA,
@@ -74,7 +72,6 @@ const CLASSES_DO_ITEM = 'flex min-w-0 flex-col gap-3 rounded-cartao border bg-su
  * Os quatro estados: carregando; erro com "Tentar de novo"; vazio, que convida a enviar o primeiro material; e com dado.
  */
 export default function Material() {
-  useTituloDaTela('Material')
   const cliente = useQueryClient()
   const materiais = useQuery(consultaMateriais)
   const disciplinas = useQuery(consultaDisciplinas)
@@ -212,18 +209,10 @@ export default function Material() {
   )
 
   if (materiais.isPending || disciplinas.isPending) {
-    return (
-      <Tela titulo="Material" largura="formulario">
-        <EstadoCarregando rotulo="Carregando os materiais…" />
-      </Tela>
-    )
+    return <EstadoCarregando rotulo="Carregando os materiais…" />
   }
   if (lista === undefined || dasDisciplinas === undefined) {
-    return (
-      <Tela titulo="Material" largura="formulario">
-        {erroDaLeitura}
-      </Tela>
-    )
+    return erroDaLeitura
   }
 
   const nomeDaDisciplina = new Map(dasDisciplinas.itens.map((disciplina: Disciplina) => [disciplina.id, disciplina.nome]))
@@ -233,10 +222,10 @@ export default function Material() {
   const aberta = dialogo.aberta
 
   return (
-    <Tela titulo="Material" largura="formulario">
+    <>
       <Cartao titulo="Enviar material">
         {dasDisciplinas.itens.length === 0 ? (
-          <p className="text-apoio">Antes de enviar material, crie as disciplinas da escola em Estrutura: todo material é de uma disciplina.</p>
+          <p className="text-apoio">Antes de enviar material, crie as disciplinas da escola em Escola › Turmas: todo material é de uma disciplina.</p>
         ) : (
           <form ref={formulario} className="flex min-w-0 flex-col gap-4" onSubmit={aoEnviar} noValidate>
             <div
@@ -451,7 +440,7 @@ export default function Material() {
           focoDeReserva={() => tituloDaLista.current?.focus()}
         />
       )}
-    </Tela>
+    </>
   )
 }
 

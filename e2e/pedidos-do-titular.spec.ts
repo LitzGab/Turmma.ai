@@ -1,5 +1,6 @@
 import type { Route } from '@playwright/test'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, esperarGovernanca, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, esperarPainel, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   abrirABusca,
@@ -569,8 +570,8 @@ test.describe('Pedidos: recomeço', () => {
       },
     )
     await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
-    await esperarGovernanca(page)
-    await irPelaNavegacao(page, 'Privacidade', hasTouch)
+    await esperarPainel(page)
+    await irPelaCoordenacao(page, 'Pedidos', hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText(aluno.nome)
 
@@ -609,8 +610,8 @@ test.describe('Pedidos: a lista e os quatro estados', () => {
     )
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarGovernanca(page)
-    await irPelaNavegacao(page, 'Privacidade', hasTouch)
+    await esperarPainel(page)
+    await irPelaCoordenacao(page, 'Pedidos', hasTouch)
     await expect(page).toHaveURL(ENDERECO_DA_ABA, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('tab', { name: 'Pedidos', exact: true })).toHaveAttribute('aria-selected', 'true')
 
@@ -683,7 +684,7 @@ test.describe('Pedidos: a lista e os quatro estados', () => {
     expect(await violacoesGraves(page)).toEqual([])
 
     // Sair da aba e voltar lê a lista de novo, e a de antes não ficou guardada: volta a primeira página, com "Ver mais pedidos".
-    await acionar(page.getByRole('tab', { name: 'Por quanto tempo guardamos' }), hasTouch)
+    await acionar(page.getByRole('tab', { name: 'Privacidade', exact: true }), hasTouch)
     await expect(page).toHaveURL(/\/coordenacao\/privacidade\/retencao$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await acionar(page.getByRole('tab', { name: 'Pedidos', exact: true }), hasTouch)
     await expect(linhas(page)).toHaveCount(50, { timeout: PRAZO_DA_ENTRADA_MS })

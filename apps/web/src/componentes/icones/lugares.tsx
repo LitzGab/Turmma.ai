@@ -1,8 +1,9 @@
 import type { ReactElement } from 'react'
 
 /**
- * Os ícones ilustrados dos lugares da navegação (`docs/interface.md` 9.4; D80, item 4): os quatro que a X1 desenha, e
- * nenhum outro. Os outros nascem com o lugar de cada um (X2 a X4).
+ * Os ícones ilustrados dos lugares da navegação (`docs/interface.md` 9.4; D80, item 4): os quatro que a X1 desenha
+ * (`inicio`, `turmas`, `tarefas`, `ferramentas`) e os quatro que a coordenação ganha na X2 (`painel`, `ia`, `escola`,
+ * `registros`). Os outros nascem com o lugar de cada um (X3 e X4).
  *
  * Cada desenho é **a grade de 48 por 48 e só as formas dela**: o `<svg>` é do `Icone`, que dá o tamanho, o `viewBox` e o
  * nome. Chapados, de duas a três cores, sem contorno, sem degradê e sem sombra.
@@ -16,7 +17,7 @@ import type { ReactElement } from 'react'
  * - O visto é feito de dois retângulos de ponta redonda, e não de um traço, para a cor ser sempre `fill-*`.
  */
 
-export const NOMES_DOS_LUGARES = ['inicio', 'turmas', 'tarefas', 'ferramentas'] as const
+export const NOMES_DOS_LUGARES = ['inicio', 'turmas', 'tarefas', 'ferramentas', 'painel', 'ia', 'escola', 'registros'] as const
 export type NomeDoLugar = (typeof NOMES_DOS_LUGARES)[number]
 
 /** Início, em laranja: a casa, com a porta e a chaminé na família e as janelas na linha. */
@@ -72,10 +73,66 @@ function Ferramentas() {
   )
 }
 
+/** Painel, em anil: o cartão com as três colunas de um gráfico. O papel é o fundo do gráfico. */
+function Painel() {
+  return (
+    <>
+      <rect x="5" y="7" width="38" height="34" rx="6" className="fill-anil" />
+      <rect x="9" y="11" width="30" height="26" rx="3" className="fill-icone-papel" />
+      <rect x="13" y="26" width="6" height="7" rx="1.5" className="fill-anil" />
+      <rect x="21" y="19" width="6" height="14" rx="1.5" className="fill-anil" />
+      <rect x="29" y="15" width="6" height="18" rx="1.5" className="fill-anil" />
+    </>
+  )
+}
+
+/** IA, em anil: o balão de fala com as reticências no papel. É o lugar do Analista, que escreve e não conversa. */
+function Ia() {
+  return (
+    <>
+      <path d="M13 7h22a8 8 0 0 1 8 8v12a8 8 0 0 1-8 8H24l-9 7v-7h-2a8 8 0 0 1-8-8V15a8 8 0 0 1 8-8z" className="fill-anil" />
+      <circle cx="16" cy="21" r="2.5" className="fill-icone-papel" />
+      <circle cx="24" cy="21" r="2.5" className="fill-icone-papel" />
+      <circle cx="32" cy="21" r="2.5" className="fill-icone-papel" />
+    </>
+  )
+}
+
+/** Escola, em azul: o prédio com a torre do meio, a bandeira na linha e as janelas e a porta no papel. */
+function Escola() {
+  return (
+    <>
+      <rect x="22.5" y="3" width="2.5" height="9" rx="1" className="fill-icone-linha" />
+      <rect x="18" y="10" width="12" height="16" rx="2" className="fill-azul" />
+      <rect x="5" y="22" width="38" height="20" rx="3" className="fill-azul" />
+      <rect x="20" y="31" width="8" height="11" rx="2" className="fill-icone-papel" />
+      <rect x="9" y="28" width="5" height="5" rx="1.5" className="fill-icone-papel" />
+      <rect x="34" y="28" width="5" height="5" rx="1.5" className="fill-icone-papel" />
+    </>
+  )
+}
+
+/** Registros, em amarelo: a folha de registro, com as três linhas escritas na linha neutra. */
+function Registros() {
+  return (
+    <>
+      <rect x="9" y="5" width="30" height="38" rx="5" className="fill-amarelo" />
+      <rect x="13" y="9" width="22" height="30" rx="2.5" className="fill-icone-papel" />
+      <rect x="17" y="15" width="14" height="3" rx="1.5" className="fill-icone-linha" />
+      <rect x="17" y="22" width="14" height="3" rx="1.5" className="fill-icone-linha" />
+      <rect x="17" y="29" width="9" height="3" rx="1.5" className="fill-icone-linha" />
+    </>
+  )
+}
+
 /** O desenho de cada lugar. A chave é o `nome` do `Icone`. */
 export const DESENHO_DO_LUGAR: Readonly<Record<NomeDoLugar, () => ReactElement>> = {
   inicio: Inicio,
   turmas: Turmas,
   tarefas: Tarefas,
   ferramentas: Ferramentas,
+  painel: Painel,
+  ia: Ia,
+  escola: Escola,
+  registros: Registros,
 }

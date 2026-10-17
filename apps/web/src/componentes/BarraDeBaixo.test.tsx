@@ -46,11 +46,11 @@ describe('ondeFicamOsItens', () => {
     expect(ondeFicamOsItens([])).toBe('gaveta')
   })
 
-  it('professor e aluno têm os itens na barra, e a coordenação, com sete, na gaveta', () => {
+  it('professor, aluno e, desde a X2, a coordenação (quatro lugares) têm os itens na barra', () => {
     expect(ondeFicamOsItens(NAVEGACAO.professor)).toBe('barra')
     expect(ondeFicamOsItens(NAVEGACAO.aluno)).toBe('barra')
-    expect(NAVEGACAO.coordenador).toHaveLength(7)
-    expect(ondeFicamOsItens(NAVEGACAO.coordenador)).toBe('gaveta')
+    expect(NAVEGACAO.coordenador).toHaveLength(MAXIMO_NA_BARRA)
+    expect(ondeFicamOsItens(NAVEGACAO.coordenador)).toBe('barra')
   })
 })
 

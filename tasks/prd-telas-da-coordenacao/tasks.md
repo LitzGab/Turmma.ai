@@ -25,15 +25,15 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 2.5 Cada bloco com o seu carregando e o seu erro
   - [ ] 2.6 Testes: nenhum número é de um professor nem de uma turma; os quatro estados de cada bloco
 
-- [ ] **3.0 — A coordenação navega por quatro lugares e abre no Painel**
-  - [ ] 3.1 `navegacao.ts`: os quatro lugares, com ícone; a coordenação abre no Painel
-  - [ ] 3.2 As molduras `Escola` (Turmas, Professores, Material) e `Registros` (IA, Pedidos, Privacidade)
-  - [ ] 3.3 `rotas.tsx`: cada rota na moldura dela, nos endereços de hoje
-  - [ ] 3.4 `Privacidade.tsx`: as três abas que sobram viram um seletor, nos mesmos endereços
-  - [ ] 3.5 As fixtures do e2e: `irPelaCoordenacao`, e onde a coordenação abre, num lugar só
-  - [ ] 3.6 Nos specs, troca mecânica do caminho de navegação, do `h1` e do título; nenhuma outra asserção muda
-  - [ ] 3.7 Specs grandes divididos por tela, movendo sem editar
-  - [ ] 3.8 Testes: os quatro lugares nas três larguras; cada endereço de hoje abre a tela dele; cliques até cada tela
+- [x] **3.0 — A coordenação navega por quatro lugares e abre no Painel**
+  - [x] 3.1 `navegacao.ts`: os quatro lugares, com ícone; a coordenação abre no Painel
+  - [x] 3.2 As molduras `Escola` (Turmas, Professores, Material) e `Registros` (IA, Pedidos, Privacidade)
+  - [x] 3.3 `rotas.tsx`: cada rota na moldura dela, nos endereços de hoje
+  - [x] 3.4 `Privacidade.tsx`: as três abas que sobram viram um seletor, nos mesmos endereços
+  - [x] 3.5 As fixtures do e2e: `irPelaCoordenacao`, e onde a coordenação abre, num lugar só
+  - [x] 3.6 Nos specs, troca mecânica do caminho de navegação, do `h1` e do título; nenhuma outra asserção muda
+  - [x] 3.7 Specs grandes divididos por tela, movendo sem editar
+  - [x] 3.8 Testes: os quatro lugares nas três larguras; cada endereço de hoje abre a tela dele; cliques até cada tela
 
 - [ ] **4.0 — O Analista numa página de leitura, com o dado nominal**
   - [ ] 4.1 A página de leitura, com a assinatura do Analista e "Gerar resumo"

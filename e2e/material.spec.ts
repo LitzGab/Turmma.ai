@@ -1,6 +1,7 @@
 import type { Locator, Page, Request, Route } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { entrarComoCoordenacaoNaMesmaAba, esperarGovernanca, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { entrarComoCoordenacaoNaMesmaAba, esperarPainel, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { CAMINHO_DO_PDF_DE_DEMONSTRACAO, criarMaterialNoBanco, materiaisNoBanco, recusasNaAuditoria } from './__fixtures__/material.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { criarEquipeComSenha, montarEstruturaNoBanco, type EquipeDeTeste, type EstruturaDeTeste } from './__fixtures__/sessao.ts'
@@ -60,8 +61,8 @@ async function abrirMaterial(page: Page, hasTouch: boolean, antes?: (cenario: Ce
   await antes?.(cenario)
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-  await esperarGovernanca(page)
-  await irPelaNavegacao(page, 'Material', hasTouch)
+  await esperarPainel(page)
+  await irPelaCoordenacao(page, 'Material', hasTouch)
   await expect(page).toHaveURL(/\/coordenacao\/material$/)
   return cenario
 }
@@ -80,7 +81,7 @@ async function preencher(page: Page, cenario: Cenario, campos: { titulo?: string
 test.describe('Material da coordenação', () => {
   test('a coordenação sobe o PDF de demonstração com licença e vê "Pronto · 6 páginas", sem recarregar a página', async ({ page, hasTouch }) => {
     const cenario = await abrirMaterial(page, hasTouch)
-    await expect(page).toHaveTitle('Material · Turmma')
+    await expect(page).toHaveTitle('Escola: material · Turmma')
     // O vazio convida a enviar o primeiro material.
     await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await page.evaluate(() => {
@@ -119,7 +120,7 @@ test.describe('Material da coordenação', () => {
     // A caixa tem 24 px de fonte e está num cabeçalho de 64 px ou mais. O padding do `main`, acima, é o da moldura da
     // casca (32 px a partir de 768 px, 16 px abaixo).
     const titulo = await principal(page)
-      .getByRole('heading', { level: 1, name: 'Material' })
+      .getByRole('heading', { level: 1, name: 'Escola' })
       .evaluate((h1) => {
         const caixa = h1.getBoundingClientRect()
         return { largura: caixa.width, altura: caixa.height, fonte: getComputedStyle(h1).fontSize, posicao: getComputedStyle(h1).position, cabecalho: h1.closest('header')?.getBoundingClientRect().height ?? null }
@@ -307,7 +308,7 @@ test.describe('Material da coordenação', () => {
 
     // Carregando: a lista ainda não chegou.
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando os materiais…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(principal(page).getByRole('heading', { level: 1, name: 'Material' })).toBeAttached()
+    await expect(principal(page).getByRole('heading', { level: 1, name: 'Escola' })).toBeAttached()
 
     // Erro: diz o que fazer, e "Tentar de novo" lê outra vez.
     segurada.abrir()

@@ -65,7 +65,7 @@ const COLUNAS_DOS_PEDIDOS: readonly [ColunaDaTabela<ItemDoPedido>, ...ColunaDaTa
  *   empate, que é a ordem da tela: o pedido recém-registrado abre a primeira página, e a seguinte só traz os mais antigos.
  * - **Aviso fixo** do aluno da lista: ele não tem conta e não aparece na busca, e o caminho dele é a lista da turma.
  */
-export function Pedidos() {
+export default function Pedidos() {
   const consulta = useInfiniteQuery(consultaPedidosDoTitular)
   const [anuncio, definirAnuncio] = useState('')
   const pedidos = useMemo(() => ordenarOsPedidos((consulta.data?.pages ?? []).flatMap((pagina) => pagina.itens)), [consulta.data])

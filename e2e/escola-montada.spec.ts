@@ -3,6 +3,7 @@ import type { Browser, BrowserContext, BrowserContextOptions, Locator, Page } fr
 import { exibirCodigoDaTurma } from '../packages/shared/src/sala/acesso.ts'
 import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts'
 import { entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, abrirEstrutura, irPelaNavegacao, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, esperarAtividades, abrirAbaAlunos } from './__fixtures__/casca.ts'
+import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { alunosDaTurmaNoBanco, criarEquipeComSenha, montarEstruturaNoBanco, porNaListaDaTurma } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -117,7 +118,7 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
   await expect(anuncio(principal(page).getByRole('region', { name: 'Nomes da turma' }), '2 nomes gravados na lista.')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 
   // O professor, com o convite de cópia única.
-  await irPelaNavegacao(page, 'Professores', hasTouch)
+  await irPelaCoordenacao(page, 'Professores', hasTouch)
   await acionar(botao(principal(page), 'Cadastrar professor'), hasTouch)
   await dialogo(page).getByLabel('Nome do professor').fill(professorNome)
   await dialogo(page).getByLabel('E-mail do professor').fill(professorEmail)
@@ -132,7 +133,7 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
   await conferirTela(page)
 
   // A alocação vem antes do aceite: o vínculo espera o professor confirmar (E12).
-  await irPelaNavegacao(page, 'Estrutura', hasTouch)
+  await irPelaCoordenacao(page, 'Turmas', hasTouch)
   const alocacao = principal(page).getByRole('region', { name: 'Alocação' })
   await alocacao.getByLabel('Professor', { exact: true }).selectOption({ label: `${professorNome} (convite em aberto)` }, { timeout: PRAZO_DA_ENTRADA_MS })
   await alocacao.getByLabel('Turma').selectOption({ label: turma })

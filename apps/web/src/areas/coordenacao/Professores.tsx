@@ -1,6 +1,6 @@
 import type { ProfessorDaEscola } from '@educa/shared'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { consultaProfessores, mutacaoDoCadastroDeProfessor, mutacaoDoRefazerConviteDoProfessor, revogarConviteDoProfessor } from '../../api/professores'
 import { aoTrocarDeSessao } from '../../api/sessao'
 import { Botao } from '../../componentes/Botao'
@@ -10,8 +10,6 @@ import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
 import { DialogoDeConviteNovo, DialogoDeConviteRefeito } from '../../componentes/DialogoDoConvite'
 import { Anuncio, ConfirmacaoDePerigo } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
-import { Tela } from '../../componentes/Tela'
-import { useTituloDaTela } from '../../titulo'
 import {
   acoesDoConviteDeProfessor,
   falhaDoCadastroDeProfessor,
@@ -25,6 +23,7 @@ import {
   TEXTOS_DO_CONVITE_QUE_MUDOU,
 } from './convite-de-professor'
 import { ordenarPeloNome } from './ordem'
+import { useFocarOTituloDaMoldura } from './moldura'
 import { AvisoDeListaIncompleta, Linha } from './pecas-da-lista'
 
 /** Os diálogos da tela, um por vez. O refazer e o revogar levam o professor da linha, fotografado na abertura. */
@@ -66,8 +65,7 @@ function mandeOLinkA(nome: string, email?: string) {
  * sessão desta aba deixa de ser a mesma — venceu, ou outra pessoa entrou —, o diálogo aberto sai com o link: ele é
  * credencial do professor, e não fica na tela atrás do login por cima (regra 20, item 8).
  */
-export function Professores() {
-  useTituloDaTela('Professores')
+export default function Professores() {
   const cliente = useQueryClient()
   const professores = useQuery(consultaProfessores)
   const dialogo = useDialogoDaTela<TipoDeDialogo, ProfessorDaLinha>()
@@ -76,14 +74,13 @@ export function Professores() {
   // O professor da linha, fotografado na abertura: os diálogos de refazer e de revogar só existem com ele.
   const alvo = aberta?.alvo
   const [anuncio, definirAnuncio] = useState('')
-  const idDoTitulo = useId()
-  const tituloDaTela = useRef<HTMLHeadingElement>(null)
+  const focarOTituloDaMoldura = useFocarOTituloDaMoldura()
   const tituloDaLista = useRef<HTMLHeadingElement>(null)
 
   const recarregar = useCallback(() => cliente.invalidateQueries({ queryKey: consultaProfessores.queryKey }), [cliente])
   // O foco quando o botão que abriu o diálogo saiu da tela: o "Cadastrar" do vazio, ou a ação que o estado novo não tem.
   // Sem a lista na tela (a releitura caiu com ela ainda vazia), vai para o título da tela, e não para o `body`.
-  const focarNaLista = useCallback(() => (tituloDaLista.current ?? tituloDaTela.current)?.focus(), [])
+  const focarNaLista = useCallback(() => (tituloDaLista.current === null ? focarOTituloDaMoldura() : tituloDaLista.current.focus()), [focarOTituloDaMoldura])
 
   useEffect(() => aoTrocarDeSessao(fechar), [fechar])
 
@@ -97,8 +94,7 @@ export function Professores() {
   const erroDaLeitura = <EstadoErro erro={professores.error} tentando={professores.isFetching} aoTentarDeNovo={() => void professores.refetch({ cancelRefetch: false })} />
 
   return (
-    <Tela titulo="Professores" idDoTitulo={idDoTitulo} refDoTitulo={tituloDaTela}>
-      <section className="flex min-w-0 flex-col gap-6" aria-labelledby={idDoTitulo}>
+      <section className="flex min-w-0 flex-col gap-6" aria-label="Professores">
         {professores.isPending ? (
           <EstadoCarregando rotulo="Carregando os professores…" />
         ) : dados === undefined ? (
@@ -217,6 +213,5 @@ export function Professores() {
           />
         )}
       </section>
-    </Tela>
   )
 }

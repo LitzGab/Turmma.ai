@@ -54,7 +54,7 @@ const DEPOIS_DA_FALHA_DA_COORDENACAO = 'Alguns pedidos podem já ter sido decidi
 const TEXTO_DA_TURMA_INDISPONIVEL =
   'Esta turma não está disponível para você agora: o seu vínculo com ela pode não estar confirmado, ou ela saiu do ano letivo em curso. Volte para Turmas; se ela deveria estar lá, fale com a coordenação.'
 const DOS_APROVADOS = 'Eles contam entre os nomes da lista, mas não aparecem pelo nome: já entram com a matrícula e a senha.'
-const TEXTO_DA_TURMA_FORA_DO_ANO = 'Esta turma não está no ano letivo em curso: ela pode ter sido excluída. Volte para Estrutura e abra a turma de novo.'
+const TEXTO_DA_TURMA_FORA_DO_ANO = 'Esta turma não está no ano letivo em curso: ela pode ter sido excluída. Volte para Escola › Turmas e abra a turma de novo.'
 
 /** O grafite da decisão oficial (`--color-grafite`, #333333) e o texto do `perigo` (`--color-vermelho-texto`, #b84045). */
 const COR_DO_OFICIAL = 'rgb(51, 51, 51)'

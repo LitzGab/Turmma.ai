@@ -1,16 +1,18 @@
 import { nomeDaSerie, type ItemDaGovernanca } from '@educa/shared'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { Link } from 'wouter'
 import { mensagemDoErro } from '../../api/cliente'
 import { consultaConsumo, consultaResumoDaGovernanca } from '../../api/governanca'
+import { ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { BarraRotulada } from '../../componentes/BarraRotulada'
 import { Botao } from '../../componentes/Botao'
+import { CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { LinhaAprovacao } from '../../componentes/ia/LinhaAprovacao'
 import { NumeroPainel } from '../../componentes/NumeroPainel'
 import { Tabela, type ColunaDaTabela } from '../../componentes/Tabela'
-import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
+import { CabecalhoDeSecao } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
-import { useTituloDaTela } from '../../titulo'
 import { DadoNominal } from './DadoNominal'
 import { aprovacaoDoItem, ESPERANDO_O_PROFESSOR, NOME_DO_TIPO_DE_ENTREGA, nomeDaFuncao, O_QUE_CHEGA_AO_ALUNO, textoDoConsumo, textoDoCusto, textoDoPacoteDoTutor } from './textos-da-governanca'
 
@@ -35,22 +37,13 @@ const COLUNAS: readonly [ColunaDaTabela<ItemDaGovernanca>, ...ColunaDaTabela<Ite
  * auditoria (`DadoNominal`).
  */
 export default function Governanca() {
-  useTituloDaTela('Governança')
   const resumo = useInfiniteQuery(consultaResumoDaGovernanca)
 
   if (resumo.isPending) {
-    return (
-      <Tela titulo="Governança">
-        <EstadoCarregando rotulo="Carregando a governança…" />
-      </Tela>
-    )
+    return <EstadoCarregando rotulo="Carregando a governança…" />
   }
   if (resumo.isError && resumo.data === undefined) {
-    return (
-      <Tela titulo="Governança">
-        <EstadoErro erro={resumo.error} tentando={resumo.isFetching} aoTentarDeNovo={() => void resumo.refetch({ cancelRefetch: false })} />
-      </Tela>
-    )
+    return <EstadoErro erro={resumo.error} tentando={resumo.isFetching} aoTentarDeNovo={() => void resumo.refetch({ cancelRefetch: false })} />
   }
 
   // Os números vêm em toda página: valem os da mais recente lida.
@@ -59,8 +52,14 @@ export default function Governanca() {
   const nadaGerado = numeros.geradoPorIa === 0 && numeros.aprovadoPorPessoa + numeros.rejeitado + numeros.esperando === 0
 
   return (
-    <Tela titulo="Governança">
+    <>
       <p className="max-w-prose text-apoio">O que a IA produziu nesta escola no ano letivo, e o que as pessoas decidiram sobre isso. {O_QUE_CHEGA_AO_ALUNO}</p>
+      {/* A porta para "Como cada IA trabalha" (X2, 3.0): sem ela a página dos agentes ficaria sem caminho depois que o item saiu da lateral. A 10.0 recompõe a aba e leva o link. */}
+      <div>
+        <Link to={ROTAS_DA_COORDENACAO.agentes} className={CLASSES_DO_LINK_SECUNDARIO}>
+          Como cada IA trabalha
+        </Link>
+      </div>
       <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <NumeroPainel rotulo="Gerado por IA" valor={numeros.geradoPorIa} apoio="Atividades, planos, versões adaptadas e correções" />
         <NumeroPainel rotulo="Aprovado por gente" valor={numeros.aprovadoPorPessoa} apoio="Versões adaptadas e correções que um professor aprovou" />
@@ -109,7 +108,7 @@ export default function Governanca() {
 
       <Consumo />
       <DadoNominal />
-    </Tela>
+    </>
   )
 }
 
