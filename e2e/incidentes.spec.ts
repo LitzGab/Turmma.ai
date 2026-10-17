@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto'
 import type { Browser, BrowserContext, BrowserContextOptions, Locator, Page, Route } from '@playwright/test'
 import { TEXTO_DO_PRAZO_LEGAL_DO_INCIDENTE } from '../packages/shared/src/privacidade/incidente.ts'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarPainel, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
-import { irPelaCoordenacao, paginaNaoRola } from './__fixtures__/coordenacao.ts'
+import { irPelaCoordenacao, paginaNaoRola, painelDoAno } from './__fixtures__/coordenacao.ts'
+import { criarMaterialNoBanco } from './__fixtures__/material.ts'
 import { linhaDa, linkDoPedido } from './__fixtures__/pedidos-do-titular.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { campoCodigo } from './__fixtures__/segundo-fator.ts'
@@ -10,11 +11,13 @@ import {
   codigoDoAutenticador,
   colocarAlunoNaTurma,
   confirmacaoDoIncidenteNoBanco,
+  convidarProfessorNoBanco,
   criarAlunoComMatricula,
   criarCoordenadoraNaEscola,
   criarEquipeComSenha,
   criarIncidenteNoBanco,
   criarPedidoDoTitularNoBanco,
+  montarEstruturaNoBanco,
 } from './__fixtures__/sessao.ts'
 import { focoVisivel, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -59,6 +62,17 @@ function portao(): { aberta: Promise<void>; abrir: () => void } {
     abrir = resolver
   })
   return { aberta, abrir }
+}
+
+/**
+ * Segura o pedaço da tela que traz o painel (`tela-coordenacao-<Tela>-*.js`) até a porta abrir. Sem a tela, o painel pelo endereço não
+ * existe; com a porta fechada, o aviso chega primeiro, que é a ordem do defeito, sem depender de qual resposta a rede entregar antes.
+ */
+async function segurarATelaDoPainel(page: Page, aberta: Promise<void>): Promise<void> {
+  await page.route(/\/tela-coordenacao-(Estrutura|Professores|Material)-[^/]*\.js$/, async (rota: Route) => {
+    await aberta
+    return rota.fallback()
+  })
 }
 
 const ehLeituraDosIncidentes = (url: URL, metodo: string) => metodo === 'GET' && url.pathname === '/v1/privacidade/incidentes'
@@ -705,5 +719,135 @@ test.describe('Incidentes: os quatro estados da aba', () => {
     } else {
       await expect(miolo).toHaveAttribute('tabindex', '-1')
     }
+  })
+})
+
+test.describe('Aviso de incidente: o painel aberto pelo endereço (telas da coordenação, correção C3 da validação)', () => {
+  /**
+   * Os três endereços que abrem um painel lateral por si, como o link do sino ou a página recarregada. O painel é um `<dialog>` modal,
+   * e o último modal a abrir fica por cima: sem a regra, ele cobria o aviso e o deixava inerte. O aviso de incidente é o que se lê
+   * primeiro; o painel abre depois dele.
+   */
+  interface Endereco {
+    readonly nome: string
+    /** Semeia o que o painel precisa e devolve o endereço e o painel que abre. */
+    readonly preparar: (escolaId: string) => Promise<{ readonly endereco: string; readonly painel: (page: Page) => Locator }>
+  }
+  const enderecos: readonly Endereco[] = [
+    {
+      nome: '?professor=',
+      preparar: async (escolaId) => {
+        const professor = await convidarProfessorNoBanco(escolaId, 'pendente', 'Zoé')
+        return { endereco: `/coordenacao/professores?professor=${professor.usuarioId}`, painel: (page) => page.getByRole('dialog', { name: professor.nome, exact: true }) }
+      },
+    },
+    {
+      nome: '?material=',
+      preparar: async (escolaId) => {
+        const estrutura = await montarEstruturaNoBanco(escolaId)
+        const materialId = await criarMaterialNoBanco(escolaId, estrutura.disciplina.id, { titulo: 'Capítulo sem texto', estado: 'falhou', falha: 'sem_texto' })
+        return { endereco: `/coordenacao/material?material=${materialId}`, painel: (page) => page.getByRole('dialog', { name: 'Capítulo sem texto', exact: true }) }
+      },
+    },
+    { nome: '?painel=ano', preparar: async () => ({ endereco: '/coordenacao/estrutura?painel=ano', painel: painelDoAno }) },
+  ]
+
+  for (const { nome, preparar } of enderecos) {
+    test(`${nome}: o aviso fica por cima, confirma pelo aviso, e só então o painel abre`, async ({ page, hasTouch }) => {
+      test.setTimeout(90_000)
+      const coordenadora = await criarEquipeComSenha('coordenador')
+      const doAviso = marca()
+      const secoes = await criarIncidenteNoBanco({ escolas: [coordenadora.escolaId], circunstancias: doAviso })
+      const secao = secoes[coordenadora.escolaId]
+      if (secao === undefined) throw new Error('o incidente de teste não criou a seção da escola')
+      const { endereco, painel } = await preparar(coordenadora.escolaId)
+
+      // O incidente continua por confirmar quando a página abre direto no endereço do painel (o link do sino, a página recarregada).
+      await entrar(page, hasTouch, coordenadora)
+      await expect(aviso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+      // A ordem é a do defeito, e não a que a rede escolher: a tela do painel só chega depois de o aviso estar na tela.
+      const telaDoPainel = portao()
+      await segurarATelaDoPainel(page, telaDoPainel.aberta)
+      await page.goto(endereco)
+      await expect(aviso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(page.locator('dialog[data-painel-lado]')).toHaveCount(0)
+      telaDoPainel.abrir()
+
+      // O painel espera: a tela o montou, mas ele não abriu, e o aviso recebe o toque sem que nada o intercepte. Só o diálogo do aviso
+      // está aberto.
+      const montado = page.locator('dialog[data-painel-lado]')
+      await expect(montado).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(montado).not.toHaveAttribute('open', '')
+      await expect(painel(page)).toHaveCount(0)
+      await expect(page.locator('dialog[open]')).toHaveCount(1)
+      await expect(aviso(page)).toContainText(doAviso)
+      await acionar(botao(aviso(page), CONFIRMAR), hasTouch)
+      await expect(aviso(page)).toBeHidden({ timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(faixa(page)).toHaveCount(0)
+      expect((await confirmacaoDoIncidenteNoBanco(secao)).confirmadoEm).not.toBeNull()
+
+      // Confirmado o aviso, o painel que o endereço pedia abre com o foco no miolo (regra 50, item 11), e o endereço continua o mesmo.
+      await expect(painel(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(page.locator('[data-painel-miolo]')).toBeFocused()
+      await expect(page).toHaveURL(new RegExp(`${endereco.replace(/[?.]/g, '\\$&')}$`))
+    })
+  }
+
+  test('"Ver depois" com o painel esperando: o painel abre por cima da faixa com o foco no miolo, e o Esc devolve o foco ao título da lista; "Ver o aviso" traz o aviso de volta', async ({ page, hasTouch }) => {
+    test.setTimeout(90_000)
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    await criarIncidenteNoBanco({ escolas: [coordenadora.escolaId], circunstancias: marca() })
+    await entrar(page, hasTouch, coordenadora)
+    await expect(aviso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    const telaDoPainel = portao()
+    await segurarATelaDoPainel(page, telaDoPainel.aberta)
+    await page.goto('/coordenacao/estrutura?painel=ano')
+    await expect(aviso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    telaDoPainel.abrir()
+    await expect(page.locator('dialog[data-painel-lado]')).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(painelDoAno(page)).toHaveCount(0)
+    await expect(page.locator('dialog[open]')).toHaveCount(1)
+
+    await acionar(botao(aviso(page), VER_DEPOIS), hasTouch)
+    await expect(painelDoAno(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.locator('[data-painel-miolo]')).toBeFocused()
+    await expect(faixa(page)).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(painelDoAno(page)).toHaveCount(0)
+    // Sem botão que o tenha aberto (o painel veio do endereço), o foco vai ao título da lista, como em toda tela com painel pelo endereço: não se perde no `body` (regra 50, item 11).
+    await expect(principal(page).getByRole('heading', { name: /^Turmas de / })).toBeFocused()
+    await acionar(botao(faixa(page), VER_O_AVISO), hasTouch)
+    await expect(aviso(page)).toBeVisible()
+  })
+
+  test('o painel já aberto quando o aviso chega não é mexido: o aviso abre por cima, com os dois abertos, e "Ver depois" o deixa como estava', async ({ page, hasTouch }) => {
+    test.setTimeout(90_000)
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    await criarIncidenteNoBanco({ escolas: [coordenadora.escolaId], circunstancias: marca() })
+    await entrar(page, hasTouch, coordenadora)
+    await expect(aviso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // A ordem inversa, também controlada: a leitura dos incidentes só volta depois de o painel estar aberto.
+    const leitura = portao()
+    await page.route(
+      (url) => ehLeituraDosIncidentes(url, 'GET'),
+      async (rota: Route) => {
+        if (rota.request().method() === 'GET') await leitura.aberta
+        return rota.fallback()
+      },
+    )
+    await page.goto('/coordenacao/estrutura?painel=ano')
+    await expect(painelDoAno(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(aviso(page)).toHaveCount(0)
+    leitura.abrir()
+
+    // O aviso abre depois e fica por cima: os dois estão abertos, e o aviso recebe o toque.
+    await expect(aviso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.locator('dialog[open]')).toHaveCount(2)
+    await acionar(botao(aviso(page), VER_DEPOIS), hasTouch)
+    await expect(aviso(page)).toBeHidden({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(faixa(page)).toBeVisible()
+    await expect(painelDoAno(page)).toBeVisible()
+    await expect(page.locator('dialog[open]')).toHaveCount(1)
+    await expect(page).toHaveURL(/\/estrutura\?painel=ano$/)
   })
 })

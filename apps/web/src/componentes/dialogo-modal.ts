@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react'
+import { quandoNaoHouverPrioritario } from './dialogo-prioritario'
 
 /**
  * O que os dois `<dialog>` modais do produto, o `Dialogo` e o `PainelLado`, fazem do mesmo jeito: abrir com `showModal`,
@@ -55,6 +56,12 @@ interface OpcoesDoDialogoModal {
    * recarrega com o convite revogado. Sem isto, o foco cairia no `body` (regra 50, item 11).
    */
   readonly focoDeReserva?: (() => void) | undefined
+  /**
+   * O diálogo abre sozinho (o painel pelo endereço) e cede a vez ao diálogo prioritário, o aviso de incidente: enquanto houver um na
+   * tela ele não chama `showModal`, porque o último modal a abrir cobriria o aviso e o deixaria inerte. Abre quando o último sai.
+   * O diálogo que o toque da pessoa abre não precisa disto: a página está inerte atrás do aviso. Ver `dialogo-prioritario.ts`.
+   */
+  readonly cedeAoPrioritario?: boolean | undefined
 }
 
 /**
@@ -67,7 +74,7 @@ interface OpcoesDoDialogoModal {
  * - **O gatilho que continua na página mas ficou desligado** (o "Aprovar" depois de aprovado) não aceita foco: vale como
  *   o que saiu da página, e o foco vai para a reserva.
  */
-export function useDialogoModal({ focoInicial, focoDeReserva }: OpcoesDoDialogoModal) {
+export function useDialogoModal({ focoInicial, focoDeReserva, cedeAoPrioritario = false }: OpcoesDoDialogoModal) {
   const dialogo = useRef<HTMLDialogElement>(null)
   const desmontando = useRef(false)
   // O `focoDeReserva` da última renderização: a limpeza do efeito roda uma vez só, ao desmontar.
@@ -79,19 +86,27 @@ export function useDialogoModal({ focoInicial, focoDeReserva }: OpcoesDoDialogoM
   useEffect(() => {
     const atual = dialogo.current
     if (atual === null) return
-    // Quem abriu é quem tinha o foco antes do `showModal`: o clique e o Enter num botão deixam o foco nele.
-    const quemAbriu = document.activeElement instanceof HTMLElement ? document.activeElement : undefined
+    // Quem abriu é quem tinha o foco antes do `showModal`: o clique e o Enter num botão deixam o foco nele. Se o diálogo espera o
+    // prioritário, é quem tem o foco quando ele de fato abre.
+    let quemAbriu: HTMLElement | undefined
+    let abriu = false
     desmontando.current = false
-    if (!atual.open) atual.showModal()
-    focoInicial?.current?.focus()
+    const abrir = () => {
+      abriu = true
+      quemAbriu = document.activeElement instanceof HTMLElement ? document.activeElement : undefined
+      if (!atual.open) atual.showModal()
+      focoInicial?.current?.focus()
+    }
+    const desistir = cedeAoPrioritario ? quandoNaoHouverPrioritario(abrir) : (abrir(), undefined)
     return () => {
+      desistir?.()
       desmontando.current = true
       if (atual.open) atual.close()
       if (quemAbriu?.isConnected === true && !quemAbriu.matches(':disabled')) quemAbriu.focus()
-      else reserva.current?.()
+      else if (abriu) reserva.current?.()
     }
     // O `focoInicial` é um `useRef` de quem desenha o diálogo: o mesmo objeto enquanto o diálogo vive.
-  }, [focoInicial])
+  }, [focoInicial, cedeAoPrioritario])
 
   /**
    * O `close` chega depois, numa tarefa à parte: sob `StrictMode` o efeito fecha e reabre, e o `close` do fechamento de

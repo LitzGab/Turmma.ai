@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import { consultaIncidentes } from '../../../api/privacidade'
 import { Botao } from '../../../componentes/Botao'
 import { Dialogo } from '../../../componentes/Dialogo'
+import { useDialogoPrioritario } from '../../../componentes/dialogo-prioritario'
 import { useConfirmarIncidente } from './confirmar-o-incidente'
 import { DetalhesDoIncidente } from './DetalhesDoIncidente'
 import { TEXTO_DO_QUE_CONFIRMAR_FAZ, textoDaFaixa, textoDaFila } from './textos-dos-incidentes'
@@ -39,6 +40,15 @@ function FaixaDoIncidente({ pendentes, botao, aoVer }: { readonly pendentes: num
       </Botao>
     </div>
   )
+}
+
+/**
+ * Marca o diálogo do aviso como prioritário enquanto ele está na tela: o painel que abre pelo endereço espera por ele em vez de
+ * abrir por cima (`componentes/dialogo-prioritario.ts`). É um filho do `Dialogo`: o efeito dos filhos roda antes do que abre o `dialog`.
+ */
+function PrioridadeDoAviso() {
+  useDialogoPrioritario()
+  return null
 }
 
 /**
@@ -110,6 +120,7 @@ export default function AvisoDeIncidente() {
       papel="alertdialog"
       descritoPor={idDaDescricao}
     >
+      <PrioridadeDoAviso />
       <div className="mt-4 flex min-w-0 flex-col gap-4">
         <p id={idDaDescricao} className="break-words text-apoio">
           A Turmma registrou um incidente de segurança que afetou dados desta escola. Leia o aviso e confirme que a coordenação o recebeu.

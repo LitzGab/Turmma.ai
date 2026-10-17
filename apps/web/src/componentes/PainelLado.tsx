@@ -28,6 +28,8 @@ export interface PropsDoPainelLado {
  * prisão do foco e a devolução dele a quem abriu (ou ao `focoDeReserva`, quando esse saiu da página). O navegador dá o
  * Esc e o resto inerte.
  *
+ * - **Cede a vez ao aviso de incidente** (`dialogo-prioritario.ts`): o painel que abre pelo endereço espera, sem abrir, enquanto o
+ *   aviso está na tela, e abre quando ele sai. Sem isso, o último modal a abrir o cobria e o deixava inerte.
  * - **O foco entra no miolo**, e não no "Fechar": quem abre o painel quer ler o que há nele, e o primeiro Tab já vai ao
  *   primeiro controle do conteúdo. O miolo é `tabIndex={0}`: recebe o foco inicial por código e fica no ciclo do Tab, porque é a
  *   região que rola (WCAG 2.1.1; o axe acusa `scrollable-region-focusable` quando o conteúdo passa da altura e não há controle
@@ -38,12 +40,12 @@ export interface PropsDoPainelLado {
  *   aqui o faz.
  * - **O "Fechar" tem 44 px**, como todo alvo de toque da ação principal.
  *
- * Nenhuma tela do produto o usa ainda: ele entra com o sino e com as telas que o pedirem (X2 e X3), e por ora só a
- * galeria o mostra. Fica fora da entrada (`PECAS_FORA_DA_ENTRADA`), como as outras peças novas.
+ * Quem o usa: o sino da coordenação e os painéis das telas Turmas, Professores e Material (X2); a X3 traz os do professor.
+ * Fica fora da entrada (`PECAS_FORA_DA_ENTRADA`), como as outras peças novas.
  */
 export function PainelLado({ titulo, aoFechar, children, rodape, descritoPor, focoDeReserva }: PropsDoPainelLado) {
   const miolo = useRef<HTMLDivElement>(null)
-  const { dialogo, fechadoPeloNavegador, prender } = useDialogoModal({ focoInicial: miolo, focoDeReserva })
+  const { dialogo, fechadoPeloNavegador, prender } = useDialogoModal({ focoInicial: miolo, focoDeReserva, cedeAoPrioritario: true })
   const idDoTitulo = useId()
   return (
     <dialog
