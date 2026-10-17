@@ -110,3 +110,11 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-17 12:22:25 | `test-engineer` | 1ª | REPROVADO | `10_task` | O "Tentar de novo" da página seguinte de um filtro não tem teste que falhe. |
 | 2026-10-17 12:41:58 | `revisor-geral` | 2ª | APROVADO | `10_task` | `e2e/governanca.spec.ts:219-228`: os ouvintes de `requestfinished` e `requestfailed` nunca saem da página. Hoje não muda nada, porque a promessa só resolve uma… |
 | 2026-10-17 12:42:50 | `test-engineer` | 2ª | APROVADO | `10_task` | Espera do e2e (`e2e/governanca.spec.ts:237`): o `requestfinished` chega ao Playwright quando o corpo da resposta foi recebido, que pode ser antes de a página… |
+| 2026-10-17 11:25:16 | `frontend-reviewer` | 1ª | AJUSTES NECESSÁRIOS | `7_task` | `apps/web/src/componentes/PainelLado.tsx:71`, e o e2e de `e2e/alocacao.spec.ts`: o miolo rolável do painel é `overflow-y-auto` com `tabIndex={-1}` e agora tem… |
+| 2026-10-17 11:25:23 | `privacy-guardian` | 1ª | APROVADO | `7_task` | Pelo título do teste e pela tabela de testes da tarefa, o e2e "o vínculo nasce pendente" deveria provar também que o professor ainda não alcança a turma. O… |
+| 2026-10-17 11:26:29 | `revisor-geral` | 1ª | REPROVADO | `7_task` | Divergências que só existem no `7_task.md` |
+| 2026-10-17 11:27:34 | `test-engineer` | 1ª | REPROVADO | `7_task` | `apps/web/src/areas/coordenacao/PainelDoProfessor.tsx:117`: cláusula nova sem bloco e sem teste. A linha é `if (anos.data === undefined) return… |
+| 2026-10-17 11:59:33 | `frontend-reviewer` | 2ª | APROVADO | `7_task` | , todas já registradas no `TODO.md` (X2, 7.0): |
+| 2026-10-17 11:59:36 | `privacy-guardian` | 2ª | APROVADO | `7_task` | `apps/web/src/componentes/PainelLado.tsx:73` é um componente compartilhado. Com `tabIndex={0}`, o miolo recebe foco visível em todo painel que o usa, inclusive… |
+| 2026-10-17 12:00:22 | `revisor-geral` | 2ª | APROVADO | `7_task` | Dois comentários ficaram desatualizados: `apps/web/src/componentes/dialogo-modal.ts:26` e `apps/web/src/componentes/dialogo-modal.test.ts:31` ainda dizem que o… |
+| 2026-10-17 12:01:27 | `test-engineer` | 2ª | APROVADO | `7_task` | O comentário de `apps/web/src/componentes/dialogo-modal.ts:26` ainda cita "o miolo do painel, focados por código (`tabIndex={-1}`)". Desde esta tarefa isso é… |

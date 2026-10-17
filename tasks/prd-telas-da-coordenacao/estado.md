@@ -1,11 +1,18 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero (17/10 10h40):** linha 1, `Implementador` (reiniciado com a `Mesa`): o `RELATÓRIO` da **tarefa 10.0**,
-  1ª tentativa, partida às ~10h40. Linha 2, `Implementador 2` (com a `Mesa 2`): o `RELATÓRIO` da **tarefa 7.0**, 1ª
-  tentativa, partida às ~10h30. Esteiras: 39035313940 (`00bc6ec`, 6.0), 39036615699 (`7bfd99e`, 13.0) e 39037075898
-  (`033a871`, com a correção da lista de nomes): ler no próximo encontro. O vermelho do `estrutura:765` só é esperado nas
-  duas primeiras; em `033a871` em diante, vermelho é correção.
+- **Espero (17/10 ~12h25):** linha 1, `Implementador` (com a `Mesa`): o `RELATÓRIO` da **tarefa 10.0**, 1ª tentativa,
+  partida às ~10h34 (às 12h06 esperava um e2e em segundo plano, `playwright test e2e/governanca.spec.ts 3 2`, que parece
+  ter tomado "3 2" como filtro de arquivo; se passar de 2 h sem a 1ª rodada, `PEDIDO de estado`). Linha 2,
+  `Implementador 2` (reiniciado com a `Mesa 2`): o `RELATÓRIO` da **correção `2026-10-17-duas-abas-do-acesso-suspenso`**,
+  pedida às ~12h25 (guardiões ditados: `frontend-reviewer`). Com ele, `encontro 2`.
+- **Devo antes da 8.0 (esteira VERMELHA):** a correção **`2026-10-17-casca-carregando-estoura-o-goto`** na primeira linha
+  que ficar ociosa (a 1, depois do encontro da 10.0): `e2e/casca.spec.ts:134` (chromebook), `page.goto('/sistema')` não
+  chega ao `load` em 30 s com a rota atrasada (esteira 39037149357, `0646419`). Guardiões: `frontend-reviewer`. Só depois
+  das duas correções a 8.0 e a 11.0 partem (o quadro já pede a 8.0 para a linha 2).
+- **Esteiras lidas (12h20):** `00bc6ec` e `7bfd99e` vermelhas no e2e 1/6 e 4/6 (o `estrutura:765` esperado); `033a871`
+  vermelha só no `acesso-suspenso:169` (a correção da linha 2); `0646419` vermelha só no `casca:134` (a correção acima).
+  A seguinte, em `d3ec693` (encontro da 7.0), ler no próximo encontro.
 - **Maestri:** depois do reinício da máquina, o `maestri` não está no PATH do terminal do Orquestrador: usar
   `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
 - **Encontrada (10h37):** a correção `lista-de-nomes-com-41-px` (`cc2188e`, encontro em `033a871`). A 13.0 não tinha
@@ -40,7 +47,7 @@
 - **Devo ainda:** no fechamento, linha no `TODO.md`: o sino da 1.0 soma pedaços e 6 leituras a cada recarga de
   página da coordenação (custo real no perfil lento, achado da correção da aba das empresas). A X3 e a X4 continuam paradas por pedido do Joaquim (a X4 no andar
   "X4 telas-do-aluno-e-primeiro-acesso", com a 1.0 em `1477850`): não retomar sem a palavra dele
-- **Base:** `spec/telas-da-coordenacao` em `80a4bf8` (correção abas-das-empresas encontrada), com a `develop` de `2029703` (X1 pousada, mockup e retro) juntada
+- **Base:** `spec/telas-da-coordenacao` em `d3ec693` (encontro da 7.0), com a `develop` de `2029703` (X1 pousada, mockup e retro) juntada
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -61,6 +68,8 @@
 | 6.0 | `290b7cb` | Sonnet 5.5 | 2 | 1ª rodada reprovada (`revisor-geral`, `test-engineer`: e2e do sino com o botão antigo, mutação do `replace`); retomada depois da queda das 03h13 |
 | 13.0 | `a81d2e0` | Sonnet 5.5 | 2 | linha 2; 1ª rodada reprovada (`test-engineer`); 29 mutações vermelhas; sem aplicar: 4 linhas no `TODO.md` e a tabela copiada para o documento; `e2e/privacidade.spec.ts:361` caiu uma vez no celular (reload, 20 s) e passou em seguida; contêineres Dead do `educa-teste-2` removidos; encontro em `7bfd99e` |
 | correção lista-de-nomes-com-41-px | `cc2188e` | Sonnet | 1 | linha 1, ~10h10–10h37; o link da linha da Estrutura (5.0) era inline, ganhou `inline-flex min-h-11` e `wrap-anywhere`; `frontend-reviewer` e `test-engineer` aprovaram na r1; encontro em `033a871` |
+| 7.0 | `b8e425d` | Sonnet 5.5 | 2 | linha 2, ~10h27–11h40; `frontend-reviewer` ajustes r1 e aprovado r2, `privacy-guardian` aprovado, `test-engineer` e `revisor-geral` reprovado r1 e aprovado r2; 8 fotos da Mesa; mexeu em `PainelLado.tsx` (tabIndex 0 no miolo); a observação da 9.0 ficou sem o que alinhar (a lista da Alocação saiu); recomendações no `TODO.md` (X2, 7.0); encontro em CONFLITO no `Estrutura.test.tsx`, resolvido pela correção `encontro-7`; encontro em `d3ec693` |
+| correção encontro-7 | `e5012a4` | Sonnet 5.5 | 1 | linha 2, ~11h45–12h15; mantidos o it.each dos 44 px (`cc2188e`) e o teste novo do Nova turma; `frontend-reviewer` e `test-engineer` aprovaram na r1; 2 recomendações da vitrine no documento |
 
 ## Esperando o Joaquim
 ## O que falhou
@@ -79,6 +88,8 @@
 - 17/10 02h02–02h08: a `Mesa` (linha 1) escreveu o RELATÓRIO aprovado da `pagina-rola` só no próprio terminal, sem
   `maestri ask`; o `Implementador` ficou esperando. A vigia viu e pedi à Mesa que o enviasse. Segundo conflito
   seguido no fim do `TODO.md` (encontro-4, encontro-5): para a retro, linhas novas do `TODO.md` em seção por tarefa
+- 17/10 ~11h45 — encontro da 7.0 (linha 2): CONFLITO em `Estrutura.test.tsx` com a correção `cc2188e` (linha 1);
+  correção `encontro-7` na própria linha.
 ## O que decidi sem perguntar
 - 17/10 ~03h50: DIVERGÊNCIA de portão do `Implementador` na correção `pagina-rola-depois-da-12`: areas:316 falha local
   também sem a 12.0 (+10 px na Analista) e passa na esteira. Ele perguntou se fechava sem correção; não fechei: a tela

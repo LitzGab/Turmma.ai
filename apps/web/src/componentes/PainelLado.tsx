@@ -29,7 +29,9 @@ export interface PropsDoPainelLado {
  * Esc e o resto inerte.
  *
  * - **O foco entra no miolo**, e não no "Fechar": quem abre o painel quer ler o que há nele, e o primeiro Tab já vai ao
- *   primeiro controle do conteúdo. O miolo é `tabIndex={-1}`: recebe foco por código e fica fora da ordem do Tab.
+ *   primeiro controle do conteúdo. O miolo é `tabIndex={0}`: recebe o foco inicial por código e fica no ciclo do Tab, porque é a
+ *   região que rola (WCAG 2.1.1; o axe acusa `scrollable-region-focusable` quando o conteúdo passa da altura e não há controle
+ *   dentro). Como o foco já está nele, o primeiro Tab continua indo ao primeiro controle do conteúdo.
  * - **Fecha pelo "Fechar" e pelo Esc, e só por eles.** O toque fora não fecha: ele apagaria o que foi digitado no painel
  *   de quem erra a borda com o dedo.
  * - **Não anima largura nem altura** (regra 50, item 1): ele aparece. Só `transform` e `opacity` poderiam animar, e nada
@@ -68,7 +70,7 @@ export function PainelLado({ titulo, aoFechar, children, rodape, descritoPor, fo
             <X aria-hidden="true" size={20} strokeWidth={2.5} />
           </Botao>
         </div>
-        <div ref={miolo} tabIndex={-1} data-painel-miolo="" className="min-h-0 flex-1 overflow-y-auto p-5 -outline-offset-3 md:p-6">
+        <div ref={miolo} tabIndex={0} data-painel-miolo="" className="min-h-0 flex-1 overflow-y-auto p-5 -outline-offset-3 md:p-6">
           {children}
         </div>
         {rodape !== undefined && (

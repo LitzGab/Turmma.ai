@@ -1,7 +1,7 @@
-import type { ProfessorDaEscola, VinculoDaCoordenacao } from '@educa/shared'
+import { ESTADOS_DO_PROFESSOR_ALOCAVEIS, type EstadoDoProfessor, type MotivoDeEncerramentoDeVinculo, type ProfessorDaEscola, type VinculoDaCoordenacao } from '@educa/shared'
 import type { ListaDaEstrutura } from '../../api/estrutura'
 import { PARAMETRO_DO_PROFESSOR } from '../../caminhos'
-import { ordenarPeloNome } from './ordem'
+import { ordenarPeloNome, ordenarVinculos } from './ordem'
 
 /**
  * O que a aba Professores desenha, sem React (telas da coordenação, 6.0; Tech Spec seção 9, "Professores"): cada professor com as
@@ -71,4 +71,44 @@ export function professorDoEndereco(busca: string, professores: readonly Profess
 /** A contagem ao lado do botão: "1 professor", "31 professores". */
 export function contagemDeProfessores(quantos: number): string {
   return quantos === 1 ? '1 professor' : `${String(quantos)} professores`
+}
+
+/** Os estados do professor que não recebem turma: os que `ESTADOS_DO_PROFESSOR_ALOCAVEIS` não lista. */
+type EstadoNaoAlocavel = Exclude<EstadoDoProfessor, (typeof ESTADOS_DO_PROFESSOR_ALOCAVEIS)[number]>
+
+/**
+ * O professor que a coordenação pode alocar: com o convite em aberto e dentro do prazo, ou já aceito. É a mesma lista pela qual
+ * a API decide (`ESTADOS_DO_PROFESSOR_ALOCAVEIS`); o vencido, o revogado e o desativado ela recusa como inexistentes.
+ */
+export function professorAlocavel(estado: EstadoDoProfessor): estado is (typeof ESTADOS_DO_PROFESSOR_ALOCAVEIS)[number] {
+  return (ESTADOS_DO_PROFESSOR_ALOCAVEIS as readonly EstadoDoProfessor[]).includes(estado)
+}
+
+const PORQUE_NAO_RECEBE_TURMA: Readonly<Record<EstadoNaoAlocavel, string>> = {
+  vencido: 'O convite venceu. Refaça o convite para acrescentar uma turma.',
+  revogado: 'O convite foi revogado. Para acrescentar uma turma, cadastre o mesmo e-mail de novo.',
+  desativado: 'A conta foi desativada. Para acrescentar uma turma, cadastre o mesmo e-mail de novo.',
+}
+
+/** Por que o painel não oferece "Acrescentar turma" a este professor, em texto; `undefined` quando ele recebe turma. */
+export function porQueNaoRecebeTurma(estado: EstadoDoProfessor): string | undefined {
+  return professorAlocavel(estado) ? undefined : PORQUE_NAO_RECEBE_TURMA[estado]
+}
+
+/**
+ * Os vínculos deste professor, **em todo estado** — o painel mostra também o contestado, que a escola ainda precisa corrigir, e o
+ * encerrado, que já não é dele —, pela turma e, dentro dela, pela disciplina (7ºA antes de 10ºA). O vínculo de outra pessoa não entra.
+ */
+export function vinculosDoProfessor(vinculos: readonly VinculoDaCoordenacao[], usuarioId: string): VinculoDaCoordenacao[] {
+  return ordenarVinculos(
+    vinculos.filter((vinculo) => vinculo.papel === 'professor' && vinculo.usuarioId === usuarioId),
+    () => '',
+  )
+}
+
+/** Por que o vínculo acabou, como a coordenação o lê. */
+export const MOTIVO_DO_ENCERRAMENTO: Readonly<Record<MotivoDeEncerramentoDeVinculo, string>> = {
+  fim_do_ano: 'fim do ano letivo',
+  desligamento: 'desligamento',
+  realocacao: 'realocação',
 }

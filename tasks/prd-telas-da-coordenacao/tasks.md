@@ -61,7 +61,7 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 6.5 O vazio, com "Cadastrar professor"
   - [ ] 6.6 Testes: o link aparece uma vez; clique duplo; recomeço; nenhum e-mail na tela
 
-- [ ] **7.0 — A alocação no painel do professor**
+- [x] **7.0 — A alocação no painel do professor**
   - [ ] 7.1 A seção "Turmas" do painel: um item por vínculo, com o estado em texto e a contestação
   - [ ] 7.2 "Acrescentar turma", só para quem é alocável
   - [ ] 7.3 Sem turma ou sem disciplina: o vazio de hoje

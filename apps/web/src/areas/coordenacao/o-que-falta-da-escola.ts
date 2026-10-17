@@ -62,7 +62,7 @@ export function passosDoRoteiro(dados: ContagemDoRoteiro | undefined): PassoDoRo
       para: PARA_OS_PROFESSORES,
       link: { rotulo: 'Professores', para: PARA_OS_PROFESSORES },
     },
-    { titulo: 'Alocação', texto: 'Ligue cada professor à turma e à disciplina. Ele confirma pelo convite.', acao: 'Ligue cada professor à turma e à disciplina.', feito: tem(dados?.vinculos), para: PARA_AS_TURMAS },
+    { titulo: 'Alocação', texto: 'Ligue cada professor à turma e à disciplina. Ele confirma pelo convite.', acao: 'Ligue cada professor à turma e à disciplina.', feito: tem(dados?.vinculos), para: PARA_OS_PROFESSORES },
   ]
 }
 

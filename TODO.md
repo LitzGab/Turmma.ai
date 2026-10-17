@@ -524,6 +524,16 @@ para o staging".
       link da turma passou a levar ao painel (spec da 9.0); (f) `e2e/professores.spec.ts:1108`: o `toHaveCount(0)` logo
       depois do `goBack` pode passar antes de um painel reabrir, e uma espera curta pelo título da lista deixaria a
       intenção clara (dono: Joaquim)
+- [ ] **(X2, 7.0) Recomendações que a tarefa deixou para depois:** (a) o vazio "Crie uma turma primeiro" do painel do professor
+      não diz onde criar a turma, e "Nenhuma turma." poderia convidar ("Nenhuma turma ainda. Use Acrescentar turma."),
+      só quando o botão existe: um link para a aba Turmas fecha o próximo passo; é texto e caminho de tela, que o
+      Arquiteto decide, junto com a 8.0 (`frontend-reviewer`, 1ª rodada; `PainelDoProfessor.tsx` e
+      `o-que-falta-para-alocar.ts`); (b) o selo do vínculo do painel repete o de `ProfessoresDaTurma.tsx`, mudando só os
+      textos: uma peça só, recebendo o mapa de textos, e o ternário que repete `<Estado>` em `SeloDoVinculo` pede um
+      comentário de uma linha ou o tipo corrigido (`revisor-geral`, 1ª rodada; mexe na lista da turma e refaz os blocos
+      de mutação do selo); (c) o selo "ATIVO." sai com ponto final, vindo de `convite-de-professor.ts` na 6.0
+      (`frontend-reviewer`, 1ª rodada); (d) o e2e do contestado não confere o complemento que o professor escreveu: estender
+      `contestarVinculosNoBanco` para gravá-lo (`test-engineer`, 1ª rodada); (e) `dialogo-modal.ts:26` e `dialogo-modal.test.ts:31` ainda dizem que o miolo do painel é `tabIndex={-1}`, fora da ordem do Tab (hoje é `tabIndex={0}`): tirar "o miolo do painel" dos dois comentários (`revisor-geral` e `test-engineer`, 2ª rodada); (f) o caso "abrir de novo com o diálogo ainda aberto é uma abertura nova" de `PainelDoProfessor.test.tsx` só funciona no jsdom, onde o fundo não fica inerte: o nome deveria dizer que prova a garantia defensiva da `key`; e o bloco de mutação `if (falhou !== undefined)` poderia trocar por `if (false)`, para o vermelho vir só da regra (`test-engineer`, 2ª rodada)
 - [ ] **(F3, validação, m7) `IA_LATENCIA_FALSA_MS` obrigatória sem aviso no `README.md`:** `infra/compose.yml:211` exige a
       variável, e quem sobe o compose pela primeira vez não é avisado. Uma linha no `README.md` (dono: Joaquim)
 - [ ] **(F3, validação, m8) A vitrine não semeia nada da Privacidade:** `tools/vitrine/escola.ts` monta a escola sem pedido,
@@ -1328,10 +1338,16 @@ qualquer dado real:
   do MVP (`docs/mvp-rapido.md`, seção 8, item 3), e o item acima era o único que o acompanhava. Não reproduziu em 10
   execuções em 05/10/2026, e o código dele não tem a corrida do "segunda pessoa": aloca depois de entrar, mas relê pelo
   "Tentar de novo". Se voltar, entra por `/corrigir` com a execução da esteira em que falhou.
-- [ ] **E2e "duas abas" do acesso suspenso estoura o teto de 30 s na esteira** (`e2e/acesso-suspenso.spec.ts:169`, `chromebook`,
-  esteira 38990594424). Não reproduziu: 10 de 10 verdes, 12 s cada, em 16/10/2026. Hipótese: duas entradas e três esperas de
-  até 20 s sob o teto padrão; a correção, se voltar, é `test.slow()`. Detalhe na seção "O outro vermelho do run" de
-  `tasks/correcoes/2026-10-16-casca-procura-governanca.md`.
+- [x] **E2e "duas abas" do acesso suspenso** (`e2e/acesso-suspenso.spec.ts`, `chromebook`, esteiras 38990594424 e 39037075898).
+  A hipótese do teto de 30 s (`test.slow()`) estava errada: o trace mostrou a segunda aba pedindo antes da primeira, com
+  as leituras da Nova conversa ainda a caminho quando a marca foi ao banco. A hipótese foi revista duas vezes: o trace
+  mostrou duas leituras (vínculos e time), e a auditoria do `test-engineer` achou a terceira (`/v1/entregas`). Corrigido em
+  `tasks/correcoes/2026-10-17-duas-abas-do-acesso-suspenso.md` (a segunda aba só é devolvida com nenhuma requisição a caminho).
+- [ ] **`abrirSegundaAbaQuieta` do acesso suspenso: duas folgas** (`test-engineer`, 2ª rodada da correção
+  `2026-10-17-duas-abas-do-acesso-suspenso`). (1) O `expect.poll` pode ler zero entre uma resposta e uma consulta que dependa
+  dela: se a Nova conversa ganhar consulta com `enabled` dependente, exigir zero em duas leituras seguidas. (2) Falta a prova
+  de que o atraso pegou: um `expect` de que o `Set` de requisições teve mais de um item quando a saudação apareceu; hoje quem
+  prova é o vermelho da mutação, no portão.
 - [ ] **Alocação nova demora até 30 s para aparecer em "Turmas"** (`test-engineer` da correção
   `2026-10-05-segunda-pessoa-cache-dos-vinculos`). Não é requisito hoje, mas o vazio da Nova conversa manda a professora
   a "Turmas" ("Ir para Turmas", `apps/web/src/areas/professor/Home.tsx`), que monta com a lista que a Nova conversa já

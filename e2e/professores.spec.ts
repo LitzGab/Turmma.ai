@@ -701,15 +701,9 @@ test.describe('clique duplo', () => {
   }) => {
     test.slow()
     const coordenadora = await criarEquipeComSenha('coordenador')
-    // Com turma e disciplina, e sem professor: o vazio da Alocação leva à tela Professores (herdado da 13.0).
+    // Com turma e disciplina, e sem professor: a escola vai direto à tela Professores, que ainda está vazia (a alocação mora no painel do professor, 7.0).
     await montarEstruturaNoBanco(coordenadora.escolaId)
-    await page.goto('/entrar')
-    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await abrirEstrutura(page, hasTouch)
-    const alocacao = principal(page).getByRole('region', { name: 'Alocação' })
-    await expect(alocacao).toContainText('Crie um professor primeiro', { timeout: PRAZO_DA_ENTRADA_MS })
-    await acionar(alocacao.getByRole('link', { name: 'Ir para Professores' }), hasTouch)
-    await expect(page).toHaveURL(/\/coordenacao\/professores$/)
+    await abrirProfessores(page, coordenadora, hasTouch)
     await expect(principal(page).getByText('Nenhum professor ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 
     let pedidos = 0

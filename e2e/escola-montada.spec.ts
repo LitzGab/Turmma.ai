@@ -137,14 +137,15 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
   await expect(dialogo(page)).toHaveCount(0)
   await conferirTela(page)
 
-  // A alocação vem antes do aceite: o vínculo espera o professor confirmar (E12).
-  await irPelaCoordenacao(page, 'Turmas', hasTouch)
-  const alocacao = principal(page).getByRole('region', { name: 'Alocação' })
-  await alocacao.getByLabel('Professor', { exact: true }).selectOption({ label: `${professorNome} (convite em aberto)` }, { timeout: PRAZO_DA_ENTRADA_MS })
-  await alocacao.getByLabel('Turma').selectOption({ label: turma })
-  await alocacao.getByLabel('Disciplina').selectOption({ label: disciplina })
-  await acionar(botao(alocacao, 'Alocar'), hasTouch)
-  await expect(alocacao.getByRole('list', { name: 'Professores alocados' })).toContainText('Esperando o professor confirmar', { timeout: PRAZO_DA_ENTRADA_MS })
+  // A alocação vem antes do aceite: o vínculo espera o professor confirmar (E12). Ela é o "Acrescentar turma" do painel do professor
+  // (7.0), que a linha dele abre em Professores.
+  await acionar(botao(principal(page), professorNome), hasTouch)
+  const painelDoProfessor = page.getByRole('dialog', { name: professorNome })
+  await acionar(botao(painelDoProfessor, 'Acrescentar turma'), hasTouch)
+  await dialogo(page).getByLabel('Turma').selectOption({ label: turma }, { timeout: PRAZO_DA_ENTRADA_MS })
+  await dialogo(page).getByLabel('Disciplina').selectOption({ label: disciplina })
+  await acionar(botao(dialogo(page), 'Acrescentar'), hasTouch)
+  await expect(painelDoProfessor.getByRole('list', { name: 'Turmas do professor' })).toContainText('Esperando o professor confirmar', { timeout: PRAZO_DA_ENTRADA_MS })
 
   // O professor, no computador dele: aceita o convite, cria a senha, entra e confirma a turma.
   const professor = await outroNavegador(browser)
@@ -158,6 +159,8 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
   await irPelaNavegacao(professor, 'Turmas', hasTouch)
   const paraConfirmar = principal(professor).getByRole('region', { name: 'Confirme suas turmas', exact: true })
   await expect(paraConfirmar).toContainText(turma, { timeout: PRAZO_DA_ENTRADA_MS })
+  // O vínculo nasceu pendente: até ele confirmar, a turma não abre (regra 60, item 8a).
+  await expect(principal(professor).getByRole('link', { name: `Abrir a turma ${turma}` })).toHaveCount(0)
   await acionar(paraConfirmar.getByRole('listitem').filter({ hasText: turma }).getByRole('button', { name: 'Confirmar' }), hasTouch)
   await acionar(principal(professor).getByRole('link', { name: `Abrir a turma ${turma}` }), hasTouch)
   // O acesso dos alunos e os pedidos ficam na aba "Alunos" da turma aberta (A3).

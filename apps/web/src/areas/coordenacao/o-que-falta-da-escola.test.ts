@@ -58,7 +58,7 @@ describe('os passos do roteiro', () => {
     expect(passosDoRoteiro(TUDO_FEITO).filter((passo) => passo.semMarca === true)).toHaveLength(1)
   })
 
-  it('cada passo leva à tela onde se faz: o ano, as séries e as disciplinas no painel do ano; os professores em Professores', () => {
+  it('cada passo leva à tela onde se faz: o ano, as séries e as disciplinas no painel do ano; os professores e a alocação em Professores', () => {
     const para = Object.fromEntries(passosDoRoteiro(TUDO_FEITO).map((passo) => [passo.titulo, passo.para]))
     expect(para).toEqual({
       'Ano letivo': '/estrutura?painel=ano',
@@ -67,7 +67,7 @@ describe('os passos do roteiro', () => {
       Turmas: '/estrutura',
       'Lista de nomes': '/estrutura',
       Professores: '/professores',
-      Alocação: '/estrutura',
+      Alocação: '/professores',
     })
     // O link que fecha a frase na Estrutura é só o do passo dos professores, e leva ao mesmo lugar.
     const comLink = passosDoRoteiro(TUDO_FEITO).filter((passo) => passo.link !== undefined)

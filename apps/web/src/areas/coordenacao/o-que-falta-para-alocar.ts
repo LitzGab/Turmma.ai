@@ -1,7 +1,8 @@
 /**
- * O vazio da Alocação (A1, 13.0 e 14.0; W4): o que ainda falta para ligar um professor a uma turma e a uma disciplina,
- * dito no título e na descrição. O título diz só o que falta de fato: com a turma criada, "Crie uma turma e um professor
- * primeiro" ao lado de "Falta: uma disciplina" contradizia a descrição.
+ * O vazio da Alocação (A1, 13.0 e 14.0; X2, 7.0; W4), hoje no painel do professor: o que ainda falta para ligar um professor
+ * a uma turma e a uma disciplina, dito no título e na descrição. O título diz só o que falta de fato: com a turma criada,
+ * "Crie uma turma e um professor primeiro" ao lado de "Falta: uma disciplina" contradizia a descrição. O painel já tem o
+ * professor na mão e conta um (`professores: 1`): a parte do professor continua na conta, que é a da escola inteira.
  */
 
 /** O que a alocação precisa e a escola ainda não tem, na ordem em que a escola se monta. */

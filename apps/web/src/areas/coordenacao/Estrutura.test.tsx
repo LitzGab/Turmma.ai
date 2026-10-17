@@ -303,17 +303,17 @@ describe('os quatro estados da tela', () => {
     expect(classes).toContain('wrap-anywhere')
   })
 
-  it('"Nova turma" é o único botão cheio da aba; o "Alocar" da Alocação, que a 7.0 refaz, continua cheio até lá', async () => {
+  it('"Nova turma" é o único botão cheio da aba, e a alocação já não mora nela: sem a seção e sem o "Alocar" (ela é o "Acrescentar turma" do painel do professor, 7.0)', async () => {
     instalar(redeFalsa())
     await montarEEsperar()
-    // Espera a alocação carregar: com ela ainda em "Carregando", o "Alocar" não existe e a conta saía certa por falta de leitura.
-    await screen.findByRole('button', { name: 'Alocar' })
-    const cheios = (dentro: HTMLElement) =>
-      within(dentro)
-        .getAllByRole('button')
-        .filter((botao) => botao.className.includes('bg-laranja'))
-    expect(cheios(screen.getByRole('region', { name: 'Turmas de 2026' })).map((botao) => botao.textContent)).toEqual(['Nova turma'])
-    expect(cheios(screen.getByRole('region', { name: 'Alocação' })).map((botao) => botao.textContent)).toEqual(['Alocar'])
+    // Espera as leituras que a alocação pedia (professores, disciplinas, vínculos): com elas lidas, a ausência da seção não é falta de leitura.
+    await waitFor(() => expect(celulasDe('7ºA').slice(2, 4)).toEqual(['Beatriz Sintética, Camila Sintética +1', 'Com professor']))
+    const cheios = within(document.body)
+      .getAllByRole('button')
+      .filter((botao) => botao.className.includes('bg-laranja'))
+    expect(cheios.map((botao) => botao.textContent)).toEqual(['Nova turma'])
+    expect(screen.queryByRole('region', { name: 'Alocação' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Alocar' })).toBeNull()
   })
 })
 
@@ -338,11 +338,14 @@ describe('"Para terminar a escola"', () => {
 
   it('com a escola montada, o aviso não existe', async () => {
     instalar(redeFalsa(), { vinculos: ok([VINCULO(1, CAMILA, TURMA_7A, MATEMATICA, 'confirmado')]) })
-    await montarEEsperar()
+    // O painel do ano mostra as séries e as disciplinas, e por isso só tem o que mostrar quando as duas foram lidas.
+    await montarEEsperar('/estrutura?painel=ano')
     await turmas().findByRole('link', { name: 'Lista de nomes da turma 7ºA' })
     // Espera as leituras de que o "falta" depende: o aviso ausente precisa vir da escola montada, e não de a leitura não ter terminado.
     await waitFor(() => expect(celulasDe('7ºA').slice(2, 4)).toEqual(['Camila Sintética', 'Com professor']))
-    await screen.findByRole('button', { name: 'Alocar' })
+    const painelDoAno = await screen.findByRole('dialog', { name: 'Ano letivo e disciplinas' })
+    await within(painelDoAno).findByText('Matemática')
+    await within(painelDoAno).findByText('7º ano do Ensino Fundamental')
     expect(screen.queryByText('Para terminar a escola')).toBeNull()
   })
 
