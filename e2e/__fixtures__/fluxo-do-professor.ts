@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
 import { entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarPainel, esperarNovaConversa, PRAZO_DA_ENTRADA_MS } from './casca.ts'
-import { irPelaCoordenacao } from './coordenacao.ts'
+import { irPelaCoordenacao, linhasDaTabela } from './coordenacao.ts'
 import { CAMINHO_DO_PDF_DE_DEMONSTRACAO } from './material.ts'
 import { expect } from './perfis.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarCoordenadoraNaEscola, criarEquipeComSenha, type EquipeDeTeste } from './sessao.ts'
@@ -45,14 +45,18 @@ export async function montarEscolaEEntrar(page: Page, hasTouch: boolean): Promis
   await esperarPainel(page)
   await irPelaCoordenacao(page, 'Material', hasTouch)
   await expect(page).toHaveURL(/\/coordenacao\/material$/)
-  await page.getByTestId('arquivo-do-material').setInputFiles(CAMINHO_DO_PDF_DE_DEMONSTRACAO)
-  await principal(page).getByLabel('Título').fill(TITULO_DO_MATERIAL)
-  await principal(page).getByLabel('Disciplina').selectOption({ label: DISCIPLINA })
-  await principal(page).getByLabel('De quem é o material').selectOption({ label: 'Material próprio da escola' })
-  await principal(page).getByLabel('Licença de uso (obrigatória)').selectOption({ label: 'Autoria da escola ou de professor dela' })
-  await principal(page).getByLabel(/^Declaro que a escola pode usar este material/).check()
+  // O formulário está no diálogo "Enviar material": o botão da tela o abre (o do vazio, nesta escola sem material).
   await acionar(principal(page).getByRole('button', { name: 'Enviar material' }), hasTouch)
-  const material = principal(page).getByRole('region', { name: 'Materiais da escola' }).getByRole('listitem').filter({ hasText: TITULO_DO_MATERIAL })
+  const envio = page.getByRole('dialog', { name: 'Enviar material' })
+  await expect(envio).toBeVisible()
+  await page.getByTestId('arquivo-do-material').setInputFiles(CAMINHO_DO_PDF_DE_DEMONSTRACAO)
+  await envio.getByLabel('Título').fill(TITULO_DO_MATERIAL)
+  await envio.getByLabel('Disciplina').selectOption({ label: DISCIPLINA })
+  await envio.getByLabel('De quem é o material').selectOption({ label: 'Material próprio da escola' })
+  await envio.getByLabel('Licença de uso (obrigatória)').selectOption({ label: 'Autoria da escola ou de professor dela' })
+  await envio.getByLabel(/^Declaro que a escola pode usar este material/).check()
+  await acionar(envio.getByRole('button', { name: 'Enviar material' }), hasTouch)
+  const material = linhasDaTabela(principal(page).getByRole('region', { name: 'Materiais da escola' })).filter({ hasText: TITULO_DO_MATERIAL })
   await expect(material.getByText('Pronto · 6 páginas')).toBeVisible({ timeout: PRAZO_DA_IA_MS })
 
   // A coordenação sai, e a professora entra no mesmo computador.

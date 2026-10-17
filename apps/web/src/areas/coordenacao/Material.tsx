@@ -1,202 +1,152 @@
-import { CodigoDeErro, MENSAGEM_DA_FALHA_DE_MATERIAL, TAMANHO_MAXIMO_DO_LICENCIANTE, TAMANHO_MAXIMO_TITULO_DO_MATERIAL, type Disciplina, type Material as MaterialDaEscola, type MotivoDaRecusaDoMaterial } from '@educa/shared'
+import { type Disciplina, type Material as MaterialDaEscola } from '@educa/shared'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, Upload } from 'lucide-react'
-import { useCallback, useEffect, useId, useRef, useState, type DragEvent, type FormEvent } from 'react'
-import { ErroDaApi, mensagemDoErro } from '../../api/cliente'
+import { ChevronRight } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useSearch } from 'wouter'
+import { mensagemDoErro } from '../../api/cliente'
 import { consultaDisciplinas } from '../../api/estrutura'
-import { consultaMateriais, enviarMaterial, excluirMaterial, type CamposDoEnvioDeMaterial } from '../../api/material'
+import { consultaMateriais, excluirMaterial, type CamposDoEnvioDeMaterial } from '../../api/material'
 import { aoTrocarDeSessao } from '../../api/sessao'
+import { PARAMETRO_DO_MATERIAL } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
-import { CLASSES_DO_BOTAO_SECUNDARIO } from '../../componentes/botao-secundario'
-import { Campo } from '../../componentes/Campo'
-import { Cartao } from '../../componentes/Cartao'
 import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
 import { DialogoDeConfirmacao } from '../../componentes/DialogoDeConfirmacao'
 import { Anuncio, useEnvioUnico } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
-import { Selecao } from '../../componentes/Selecao'
 import { Estado } from '../../componentes/SeloDeEstado'
-import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
-import {
-  AVISO_DE_SEM_LICENCA,
-  BYTES_DA_ASSINATURA,
-  CAMPOS_DO_ENVIO,
-  camposDoEnvio,
-  doMaisNovoAoMaisAntigo,
-  errosDoRascunho,
-  motivoDaRecusa,
-  OPCOES_DE_LICENCA,
-  OPCOES_DE_TITULARIDADE,
-  origemDoMaterial,
-  problemaDoArquivo,
-  RASCUNHO_VAZIO,
-  tamanhoPorExtenso,
-  TEXTO_DA_RECUSA,
-  TEXTO_DE_UM_ARQUIVO_POR_VEZ,
-  textoDoEstado,
-  TEXTOS_DA_FALHA_DA_EXCLUSAO,
-  TEXTOS_DA_FALHA_DO_ENVIO,
-  tituloPeloArquivo,
-  type RascunhoDoEnvio,
-} from './material-envio'
-import { AvisoDeListaIncompleta } from './pecas-da-lista'
+import { Tabela, type ColunaDaTabela } from '../../componentes/Tabela'
+import { textoDaFalha } from '../../componentes/texto-da-falha'
+import { DialogoDeEnvioDeMaterial } from './DialogoDeEnvioDeMaterial'
+import { enderecoComParametro } from './endereco-da-tela'
+import { RASCUNHO_VAZIO, TEXTO_DA_RECUSA, TEXTOS_DA_FALHA_DA_EXCLUSAO } from './material-envio'
+import { FAMILIA_DA_SITUACAO_DO_MATERIAL, linhasDosMateriais, materialDoEndereco, nomeDaLicenca, rascunhoDoMaterialQueFalhou, textoDaSituacaoDaRecusa, textoDaSituacaoDoMaterial, type LinhaDoMaterial, type RecusaDeEnvio } from './materiais-da-escola'
+import { useFocarOTituloDaMoldura } from './moldura'
+import { AvisoDeListaIncompleta, CLASSES_DO_BOTAO_DA_LINHA } from './pecas-da-lista'
+import { PainelDoMaterial } from './PainelDoMaterial'
 
-/** Um envio recusado por licença: existe só nesta tela, porque a recusa não vira material (D5). */
-interface Recusa {
-  readonly chave: number
-  readonly titulo: string
-  readonly motivo: MotivoDaRecusaDoMaterial
+/** Os diálogos da tela, um por vez. O envio leva, quando vem do painel de um material que falhou, esse material; a exclusão leva o da linha. */
+type TipoDeDialogo = 'enviar' | 'excluir'
+
+const TEXTO_DO_ENVIO = 'Material enviado. A leitura das páginas começa agora e leva alguns instantes.'
+
+function colunasDosMateriais(
+  nomeDaDisciplina: (disciplinaId: string) => string,
+  aoAbrir: (materialId: string) => void,
+  aoDispensar: (chave: number) => void,
+): readonly [ColunaDaTabela<LinhaDoMaterial>, ...ColunaDaTabela<LinhaDoMaterial>[]] {
+  return [
+    {
+      chave: 'material',
+      titulo: 'Material',
+      celula: (linha) =>
+        linha.tipo === 'material' ? (
+          // O nome acessível é o título; o "›" só diz, a quem enxerga, que a linha abre algo ao lado.
+          <button type="button" aria-haspopup="dialog" onClick={() => aoAbrir(linha.material.id)} className={CLASSES_DO_BOTAO_DA_LINHA}>
+            <span className="min-w-0 break-words">{linha.material.titulo}</span>
+            <ChevronRight aria-hidden="true" size={16} strokeWidth={2.5} className="shrink-0 text-sutil" />
+          </button>
+        ) : (
+          <span className="font-semibold break-words text-tinta">{linha.recusa.titulo}</span>
+        ),
+    },
+    { chave: 'disciplina', titulo: 'Disciplina', celula: (linha) => nomeDaDisciplina(linha.tipo === 'material' ? linha.material.disciplinaId : linha.recusa.disciplinaId) },
+    {
+      chave: 'licenca',
+      titulo: 'Licença',
+      celula: (linha) => nomeDaLicenca(linha.tipo === 'material' ? linha.material.licenca : linha.recusa.licenca),
+    },
+    {
+      chave: 'situacao',
+      titulo: 'Situação',
+      celula: (linha) =>
+        linha.tipo === 'material' ? (
+          <Estado familia={FAMILIA_DA_SITUACAO_DO_MATERIAL[linha.material.estado]}>{textoDaSituacaoDoMaterial(linha.material)}</Estado>
+        ) : (
+          <div className="flex min-w-0 flex-col items-start gap-2">
+            <Estado familia="erro">{textoDaSituacaoDaRecusa(linha.recusa)}</Estado>
+            <p className="max-w-prose text-sm break-words text-apoio">{TEXTO_DA_RECUSA[linha.recusa.motivo]}</p>
+            <Botao variante="discreto" onClick={() => aoDispensar(linha.recusa.chave)}>
+              Dispensar <span className="sr-only">o aviso de {linha.recusa.titulo}</span>
+            </Botao>
+          </div>
+        ),
+    },
+  ]
 }
-
-interface Envio {
-  readonly campos: CamposDoEnvioDeMaterial
-  readonly arquivo: File | undefined
-  /** O material que falhou e que este envio substitui: sai da lista quando o novo entra. */
-  readonly substitui: string | undefined
-}
-
-const FAMILIA_DO_ESTADO = { processando: 'pendente', pronto: 'ok', falhou: 'erro' } as const
-const CLASSES_DO_ITEM = 'flex min-w-0 flex-col gap-3 rounded-cartao border bg-superficie p-4 md:flex-row md:items-start md:justify-between'
 
 /**
- * Material (MVP, A2; `docs/interface.md` 3; D5, D22, D75): a coordenação envia o PDF com a titularidade e a licença
- * declaradas, e acompanha o que entrou, o que está sendo lido, o que falhou e o que foi recusado por falta de licença.
+ * Escola › Material (MVP, A2; X2, 8.0; `docs/interface.md` 3; RF15; D5, D22, D75): a coordenação acompanha o que a escola enviou, o que
+ * está sendo lido, o que não carregou e o que foi recusado por falta de licença, numa tabela, e envia o PDF pelo diálogo "Enviar
+ * material", com a titularidade e a licença declaradas. "Enviar material" é o único botão cheio.
  *
- * - **Sem licença, ou sem a declaração, o envio é recusado**: a tela manda só o pedido, sem o arquivo, para a recusa
- *   ficar na auditoria da escola, e mostra "Envio recusado" com o motivo. A recusa não vira linha no banco: ela vive
- *   nesta tela, em borda tracejada, até a pessoa dispensá-la ou sair.
- * - O arquivo entra arrastado **ou** pelo botão: nada aqui só funciona arrastando (regra 50, item 2a).
- * - A lista é do TanStack Query, e se relê sozinha enquanto houver material `processando`.
- * - Excluir é `perigo`, com a confirmação que diz o que acontece (regra 50, item 8).
+ * - **A tabela** (Material, Disciplina, Licença e Situação) põe o que falhou primeiro e, depois, o mais novo. A linha inteira abre o
+ *   painel do material ao lado (`?material=<id>`), com o que foi declarado e as ações: "Tentar de novo" (só no que falhou, que abre o
+ *   envio com o que ele declarava) e "Excluir material", que é `perigo` e confirma antes (regra 50, item 8). O id que a lista da
+ *   escola não tem não abre nada (regra 10, item 6).
+ * - **Sem licença, ou sem a declaração, o envio é recusado** (`DialogoDeEnvioDeMaterial`): a recusa não vira material. Ela vive só nesta
+ *   tela, como uma linha "Envio recusado" na tabela, até a pessoa dispensá-la ou sair.
+ * - A lista é do TanStack Query, e se relê sozinha **só enquanto houver material `processando`** (`consultaMateriais`).
  *
  * Os quatro estados: carregando; erro com "Tentar de novo"; vazio, que convida a enviar o primeiro material; e com dado.
  */
 export default function Material() {
   const cliente = useQueryClient()
+  const [caminho, navegar] = useLocation()
+  const busca = useSearch()
   const materiais = useQuery(consultaMateriais)
   const disciplinas = useQuery(consultaDisciplinas)
-  const dialogo = useDialogoDaTela<'excluir', MaterialDaEscola>()
+  const dialogo = useDialogoDaTela<TipoDeDialogo, MaterialDaEscola>()
+  const aberta = dialogo.aberta
+  const alvo = aberta?.alvo
   const fecharDialogo = dialogo.fechar
 
-  const [rascunho, definirRascunho] = useState<RascunhoDoEnvio>(RASCUNHO_VAZIO)
-  const [arquivo, definirArquivo] = useState<File | undefined>(undefined)
-  const [erroDoArquivo, definirErroDoArquivo] = useState<string | undefined>(undefined)
-  const [conferindo, definirConferindo] = useState(false)
-  const [sobre, definirSobre] = useState(false)
-  const [tentou, definirTentou] = useState(false)
-  const [substitui, definirSubstitui] = useState<string | undefined>(undefined)
-  const [recusas, definirRecusas] = useState<readonly Recusa[]>([])
+  const [recusas, definirRecusas] = useState<readonly RecusaDeEnvio[]>([])
   const [anuncio, definirAnuncio] = useState('')
-  const [falha, definirFalha] = useState<string | undefined>(undefined)
-
-  const formulario = useRef<HTMLFormElement>(null)
-  const entradaDeArquivo = useRef<HTMLInputElement>(null)
-  const botaoDoArquivo = useRef<HTMLButtonElement>(null)
-  const tituloDaLista = useRef<HTMLHeadingElement>(null)
-  const alerta = useRef<HTMLParagraphElement>(null)
   const ultimaRecusa = useRef(0)
-  const idDoErroDoArquivo = useId()
-  const idDaDeclaracao = useId()
-  const idDoAvisoDaLicenca = useId()
-
-  const recarregar = useCallback(() => cliente.invalidateQueries({ queryKey: consultaMateriais.queryKey }), [cliente])
-  useEffect(() => aoTrocarDeSessao(fecharDialogo), [fecharDialogo])
-
-  const mudar = (parte: Partial<RascunhoDoEnvio>): void => definirRascunho((atual) => ({ ...atual, ...parte }))
-
-  /** Confere o arquivo pelo conteúdo antes de aceitá-lo no formulário: tamanho e assinatura de PDF. */
-  async function receberArquivos(arquivos: FileList | null): Promise<void> {
-    definirFalha(undefined)
-    if (arquivos === null || arquivos.length === 0) return
-    if (arquivos.length > 1) return definirErroDoArquivo(TEXTO_DE_UM_ARQUIVO_POR_VEZ)
-    const [escolhido] = arquivos
-    if (escolhido === undefined) return
-    definirConferindo(true)
-    let comeco = new Uint8Array()
-    try {
-      comeco = new Uint8Array(await escolhido.slice(0, BYTES_DA_ASSINATURA).arrayBuffer())
-    } catch {
-      // Sem conseguir ler o começo, o arquivo é tratado como o que não se abre.
-    }
-    definirConferindo(false)
-    const problema = problemaDoArquivo(escolhido.size, comeco)
-    definirErroDoArquivo(problema)
-    definirArquivo(problema === undefined ? escolhido : undefined)
-    definirRascunho((atual) => ({ ...atual, temArquivo: problema === undefined, titulo: problema === undefined && atual.titulo.trim() === '' ? tituloPeloArquivo(escolhido.name) : atual.titulo }))
-  }
-
-  function aoSoltar(evento: DragEvent<HTMLDivElement>): void {
-    evento.preventDefault()
-    definirSobre(false)
-    void receberArquivos(evento.dataTransfer.files)
-  }
-
-  const { enviar, mutacao } = useEnvioUnico<Envio, MaterialDaEscola>({
-    mutationFn: ({ campos, arquivo: doEnvio }) => enviarMaterial(campos, doEnvio),
-    onSuccess: async (_material, envio) => {
-      if (envio.substitui !== undefined) await excluirMaterial(envio.substitui).catch(() => undefined)
-      // A disciplina, a titularidade e a licença ficam para o próximo capítulo; a declaração é de cada material.
-      definirRascunho((atual) => ({ ...atual, titulo: '', declaracao: false, temArquivo: false }))
-      definirArquivo(undefined)
-      definirSubstitui(undefined)
-      definirTentou(false)
-      if (entradaDeArquivo.current !== null) entradaDeArquivo.current.value = ''
-      definirAnuncio('Material enviado. A leitura das páginas começa agora e leva alguns instantes.')
-      await recarregar()
-    },
-    onError: (erro, envio) => {
-      if (erro instanceof ErroDaApi && erro.codigo === CodigoDeErro.MATERIAL_SEM_LICENCA) {
-        ultimaRecusa.current += 1
-        const recusa: Recusa = { chave: ultimaRecusa.current, titulo: envio.campos.titulo, motivo: motivoDaRecusa(envio.campos) ?? 'sem_licenca' }
-        definirRecusas((atuais) => [recusa, ...atuais])
-        definirFalha(`Envio recusado. ${TEXTO_DA_RECUSA[recusa.motivo]}`)
-      } else {
-        definirFalha(textoDaFalha(erro, TEXTOS_DA_FALHA_DO_ENVIO))
-        if (listaMudou(erro, [CodigoDeErro.CONFLITO])) void recarregar()
-      }
-    },
-  })
-
-  // A falha do envio recebe o foco quando chega: quem não a vê na tela a ouve.
-  useEffect(() => {
-    if (falha !== undefined) alerta.current?.focus()
-  }, [falha])
-
-  const erros = tentou ? errosDoRascunho(rascunho) : {}
-  const recusa = motivoDaRecusa(rascunho)
-
-  function aoEnviar(evento: FormEvent<HTMLFormElement>): void {
-    evento.preventDefault()
-    definirTentou(true)
-    definirAnuncio('')
-    definirFalha(undefined)
-    const campos = camposDoEnvio(rascunho)
-    if (campos === undefined) {
-      const comErro = errosDoRascunho(rascunho)
-      const primeiro = CAMPOS_DO_ENVIO.find((campo) => comErro[campo] !== undefined)
-      if (primeiro === 'arquivo') botaoDoArquivo.current?.focus()
-      else if (primeiro !== undefined) formulario.current?.querySelector<HTMLElement>(`[data-campo="${primeiro}"] input, [data-campo="${primeiro}"] select`)?.focus()
-      return
-    }
-    // O envio que será recusado vai sem o arquivo: a recusa fica registrada, e o arquivo não sai do computador.
-    enviar({ campos, arquivo: recusa === null ? arquivo : undefined, substitui })
-  }
-
-  /** "Tentar de novo" de um material que falhou: o formulário volta com o que ele declarava, e pede o arquivo. */
-  function tentarDeNovo(material: MaterialDaEscola): void {
-    definirRascunho({ titulo: material.titulo, disciplinaId: material.disciplinaId, titularidade: material.titularidade, licenciante: material.licenciante ?? '', licenca: material.licenca, declaracao: false, temArquivo: false })
-    definirArquivo(undefined)
-    definirErroDoArquivo(undefined)
-    definirSubstitui(material.id)
-    definirTentou(false)
-    definirFalha(undefined)
-    definirAnuncio('Escolha o arquivo de novo, marque a declaração e envie. O material que falhou sai da lista quando o novo entrar.')
-    if (entradaDeArquivo.current !== null) entradaDeArquivo.current.value = ''
-    botaoDoArquivo.current?.focus()
-  }
+  const focarOTituloDaMoldura = useFocarOTituloDaMoldura()
+  const tituloDaLista = useRef<HTMLHeadingElement>(null)
 
   const lista = materiais.data
-  const dasDisciplinas = disciplinas.data
+  const doPainel = lista === undefined ? undefined : materialDoEndereco(busca, lista.itens)
+  const painelAberto = doPainel !== undefined
+
+  const recarregar = useCallback(() => cliente.invalidateQueries({ queryKey: consultaMateriais.queryKey }), [cliente])
+  // O foco quando o botão que abriu o diálogo ou o painel saiu da tela: o "Enviar material" do vazio, a linha do material excluído.
+  // Sem a lista na tela (a releitura caiu com ela ainda vazia), vai para o título da tela, e não para o `body`.
+  const focarNaLista = useCallback(() => (tituloDaLista.current === null ? focarOTituloDaMoldura() : tituloDaLista.current.focus()), [focarOTituloDaMoldura])
+  // A sessão que acaba ou muda de dono leva o que a pessoa fazia: o diálogo fecha e as recusas da tabela — que carregam o título e a
+  // disciplina que ela declarou — saem, para não passarem à pessoa seguinte do mesmo computador (regra 20, item 15).
+  useEffect(
+    () =>
+      aoTrocarDeSessao(() => {
+        fecharDialogo()
+        definirRecusas([])
+      }),
+    [fecharDialogo],
+  )
+
+  // O painel aberto já pelo endereço (o link do sino, ou o Voltar do histórico) não tem botão que o tenha aberto: o foco devolvido a
+  // "quem abriu" cai no `body`. Quando o painel fecha e o foco está no `body`, vai ao título da lista, e não se perde.
+  useEffect(() => {
+    const titulo = tituloDaLista.current
+    return () => {
+      if (document.activeElement === document.body) titulo?.focus()
+    }
+  }, [painelAberto])
+
+  const abrirPainel = (materialId: string): void => navegar(enderecoComParametro(caminho, busca, PARAMETRO_DO_MATERIAL, materialId))
+  const fecharPainel = (): void => navegar(enderecoComParametro(caminho, busca, PARAMETRO_DO_MATERIAL, undefined), { replace: true })
+  /** O material saiu da lista (excluído, ou trocado pelo envio novo): o endereço que o abria deixa de apontar para ele. */
+  const tirarDoEndereco = (materialId: string): void => {
+    if (new URLSearchParams(busca).get(PARAMETRO_DO_MATERIAL) === materialId) fecharPainel()
+  }
+
+  /** Abrir um diálogo apaga o anúncio da ação anterior: o que ele dizia já não é o que a pessoa está fazendo. */
+  function abrir(tipo: TipoDeDialogo, material?: MaterialDaEscola): void {
+    definirAnuncio('')
+    dialogo.abrir(tipo, material)
+  }
+
   const erroDaLeitura = (
     <EstadoErro
       erro={materiais.error ?? disciplinas.error}
@@ -208,239 +158,119 @@ export default function Material() {
     />
   )
 
-  if (materiais.isPending || disciplinas.isPending) {
-    return <EstadoCarregando rotulo="Carregando os materiais…" />
-  }
-  if (lista === undefined || dasDisciplinas === undefined) {
-    return erroDaLeitura
-  }
+  const dasDisciplinas = disciplinas.data
+  const nomeDaDisciplina = new Map((dasDisciplinas?.itens ?? []).map((disciplina: Disciplina) => [disciplina.id, disciplina.nome]))
+  const nomeDe = (disciplinaId: string): string => nomeDaDisciplina.get(disciplinaId) ?? 'Disciplina'
+  const emLeitura = lista === undefined ? 0 : lista.itens.filter((material) => material.estado === 'processando').length
+  const semNada = lista !== undefined && lista.itens.length === 0 && recusas.length === 0
 
-  const nomeDaDisciplina = new Map(dasDisciplinas.itens.map((disciplina: Disciplina) => [disciplina.id, disciplina.nome]))
-  const emLeitura = lista.itens.filter((material) => material.estado === 'processando').length
-  const semNada = lista.itens.length === 0 && recusas.length === 0
-  const alvo = dialogo.aberta?.alvo
-  const aberta = dialogo.aberta
+  function registrarRecusa(campos: CamposDoEnvioDeMaterial, motivo: RecusaDeEnvio['motivo']): void {
+    ultimaRecusa.current += 1
+    const recusa: RecusaDeEnvio = { chave: ultimaRecusa.current, titulo: campos.titulo, disciplinaId: campos.disciplinaId, licenca: campos.licenca, motivo }
+    definirRecusas((atuais) => [recusa, ...atuais])
+  }
 
   return (
-    <>
-      <Cartao titulo="Enviar material">
-        {dasDisciplinas.itens.length === 0 ? (
-          <p className="text-apoio">Antes de enviar material, crie as disciplinas da escola em Escola › Turmas: todo material é de uma disciplina.</p>
+    <section className="flex min-w-0 flex-col gap-6" aria-label="Materiais da escola">
+      {materiais.isPending || disciplinas.isPending ? (
+        <EstadoCarregando rotulo="Carregando os materiais…" />
+      ) : lista === undefined || dasDisciplinas === undefined ? (
+        erroDaLeitura
+      ) : semNada ? (
+        // A releitura que cai com a lista ainda vazia não afirma o vazio: a lista de antes já não vale.
+        materiais.isError ? (
+          erroDaLeitura
         ) : (
-          <form ref={formulario} className="flex min-w-0 flex-col gap-4" onSubmit={aoEnviar} noValidate>
-            <div
-              onDragOver={(evento) => {
-                evento.preventDefault()
-                definirSobre(true)
-              }}
-              onDragLeave={() => definirSobre(false)}
-              onDrop={aoSoltar}
-              className={`flex min-w-0 flex-col items-center gap-2 rounded-cartao border border-dashed p-5 text-center ${sobre ? 'border-tinta bg-realce-suave' : erros.arquivo !== undefined || erroDoArquivo !== undefined ? 'border-erro' : 'border-borda-campo'}`}
-            >
-              {arquivo === undefined ? <Upload aria-hidden="true" size={24} strokeWidth={1.75} className="text-sutil" /> : <FileText aria-hidden="true" size={24} strokeWidth={1.75} className="text-ok" />}
-              {arquivo === undefined ? (
-                <p className="text-apoio">Arraste o PDF para cá, ou escolha o arquivo. Um por vez, com até 20 MB.</p>
-              ) : (
-                <p className="max-w-full font-medium break-words text-tinta">
-                  {arquivo.name} <span className="font-normal text-apoio">· {tamanhoPorExtenso(arquivo.size)}</span>
-                </p>
-              )}
-              <button
-                ref={botaoDoArquivo}
-                type="button"
-                className={CLASSES_DO_BOTAO_SECUNDARIO}
-                onClick={() => entradaDeArquivo.current?.click()}
-                {...(erros.arquivo !== undefined || erroDoArquivo !== undefined ? { 'aria-describedby': idDoErroDoArquivo } : {})}
-              >
-                {arquivo === undefined ? 'Escolher arquivo' : 'Trocar arquivo'}
-              </button>
-              <input ref={entradaDeArquivo} type="file" accept="application/pdf,.pdf" hidden tabIndex={-1} onChange={(evento) => void receberArquivos(evento.target.files)} data-testid="arquivo-do-material" />
-              <p id={idDoErroDoArquivo} role="alert" className="text-sm text-erro empty:hidden">
-                {erroDoArquivo ?? erros.arquivo}
-              </p>
-              <span role="status" className="sr-only">
-                {conferindo ? 'Conferindo o arquivo…' : arquivo === undefined ? '' : `Arquivo escolhido: ${arquivo.name}`}
-              </span>
-            </div>
-
-            <div data-campo="titulo">
-              <Campo rotulo="Título" value={rascunho.titulo} maxLength={TAMANHO_MAXIMO_TITULO_DO_MATERIAL} onChange={(evento) => mudar({ titulo: evento.target.value })} erro={erros.titulo} autoComplete="off" />
-            </div>
-            <div className="grid min-w-0 gap-4 md:grid-cols-2">
-              <div data-campo="disciplinaId" className="min-w-0">
-                <Selecao
-                  rotulo="Disciplina"
-                  marcador="Escolha a disciplina"
-                  opcoes={dasDisciplinas.itens.map((disciplina) => ({ valor: disciplina.id, rotulo: disciplina.nome }))}
-                  valor={rascunho.disciplinaId}
-                  aoMudar={(disciplinaId) => mudar({ disciplinaId })}
-                  erro={erros.disciplinaId}
-                />
-              </div>
-              <div data-campo="titularidade" className="min-w-0">
-                <Selecao
-                  rotulo="De quem é o material"
-                  marcador="Escolha o dono do conteúdo"
-                  opcoes={OPCOES_DE_TITULARIDADE}
-                  valor={rascunho.titularidade}
-                  aoMudar={(valor) => mudar({ titularidade: OPCOES_DE_TITULARIDADE.find((opcao) => opcao.valor === valor)?.valor ?? '' })}
-                  erro={erros.titularidade}
-                />
-              </div>
-            </div>
-            {rascunho.titularidade === 'terceiro_com_licenca' && (
-              <div data-campo="licenciante">
-                <Campo
-                  rotulo="Quem deu a licença"
-                  dica="O dono do conteúdo: a editora, o sistema de ensino ou o autor."
-                  value={rascunho.licenciante}
-                  maxLength={TAMANHO_MAXIMO_DO_LICENCIANTE}
-                  onChange={(evento) => mudar({ licenciante: evento.target.value })}
-                  erro={erros.licenciante}
-                  autoComplete="organization"
-                />
-              </div>
-            )}
-            <div data-campo="licenca">
-              <Selecao
-                rotulo="Licença de uso (obrigatória)"
-                marcador="Escolha a licença"
-                opcoes={OPCOES_DE_LICENCA}
-                valor={rascunho.licenca}
-                aoMudar={(valor) => mudar({ licenca: OPCOES_DE_LICENCA.find((opcao) => opcao.valor === valor)?.valor ?? '' })}
-                erro={erros.licenca}
-                {...(recusa === 'sem_licenca' ? { dica: AVISO_DE_SEM_LICENCA } : {})}
-              />
-            </div>
-            <div className="flex min-w-0 items-start gap-3">
-              <input
-                id={idDaDeclaracao}
-                type="checkbox"
-                checked={rascunho.declaracao}
-                onChange={(evento) => mudar({ declaracao: evento.target.checked })}
-                className="mt-0.5 size-6 shrink-0 accent-tinta"
-                {...(recusa === 'sem_declaracao' && tentou ? { 'aria-describedby': idDoAvisoDaLicenca } : {})}
-              />
-              <label htmlFor={idDaDeclaracao} className="min-w-0 break-words text-tinta">
-                Declaro que a escola pode usar este material com os professores e os alunos dela, pela licença indicada acima.
-              </label>
-            </div>
-            <p id={idDoAvisoDaLicenca} className="text-sm text-apoio empty:hidden">
-              {recusa === 'sem_declaracao' && tentou ? 'Sem a declaração marcada, o envio é recusado.' : ''}
-            </p>
-
-            <p ref={alerta} tabIndex={-1} role="alert" className="rounded-controle border border-erro bg-erro-cx p-3 break-words text-erro empty:hidden">
-              {falha}
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <Botao type="submit" disabled={mutacao.isPending || conferindo}>
-                {mutacao.isPending ? 'Enviando…' : 'Enviar material'}
-              </Botao>
-              <span role="status" className="text-apoio">
-                {mutacao.isPending ? 'Enviando o material…' : ''}
-              </span>
-            </div>
-          </form>
-        )}
-      </Cartao>
-
-      <section className="flex min-w-0 flex-col gap-3" aria-label="Materiais da escola">
-        <h2 ref={tituloDaLista} tabIndex={-1} className="text-base font-semibold text-tinta">
-          Materiais da escola
-        </h2>
-        <Anuncio texto={anuncio} />
-        <span role="status" className="sr-only">
-          {emLeitura === 0 ? '' : emLeitura === 1 ? 'Um material está sendo lido.' : `${String(emLeitura)} materiais estão sendo lidos.`}
-        </span>
-        {/*
-          Com a lista já na tela, a releitura que falhou é dita aqui com o "Tentar de novo" em `secundario`: o `primario`
-          da tela é um só, o "Enviar material".
-        */}
-        {materiais.isError && (
-          <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-cartao border border-erro bg-erro-cx p-4">
-            <p role="alert" className="min-w-0 flex-1 basis-56 break-words text-erro">
-              {mensagemDoErro(materiais.error)}
-            </p>
-            <Botao variante="secundario" onClick={() => void materiais.refetch({ cancelRefetch: false })}>
-              Tentar de novo
-            </Botao>
-            <span role="status" className="text-erro">
-              {materiais.isFetching ? 'Tentando de novo…' : ''}
-            </span>
+          <EstadoVazio
+            titulo="Nenhum material ainda"
+            descricao="Envie o primeiro PDF da escola, com a licença declarada. É dele que o Assistente e o Tutor tiram as atividades e as explicações, sempre citando a página."
+            acao={{ rotulo: 'Enviar material', aoAcionar: () => abrir('enviar') }}
+          />
+        )
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 ref={tituloDaLista} tabIndex={-1} className="text-lg font-semibold text-tinta">
+              Materiais da escola
+            </h2>
+            <Botao onClick={() => abrir('enviar')}>Enviar material</Botao>
           </div>
-        )}
-        {semNada ? (
-          !materiais.isError && (
-            <EstadoVazio
-              titulo="Nenhum material ainda"
-              // Sem botão aqui: o arquivo se escolhe no formulário acima, e o `primario` da tela é o "Enviar material".
-              descricao="Envie o primeiro PDF da escola pelo formulário acima, com a licença declarada. É dele que o Assistente e o Tutor tiram as atividades e as explicações, sempre citando a página."
-            />
-          )
-        ) : (
-          <>
-            <AvisoDeListaIncompleta completa={lista.completa} />
-            <ul className="flex min-w-0 flex-col gap-3">
-              {recusas.map((recusada) => (
-                <li key={`recusa-${String(recusada.chave)}`} className={`${CLASSES_DO_ITEM} border-dashed border-erro`}>
-                  <div className="flex min-w-0 flex-col gap-1.5">
-                    <p className="font-medium break-words text-tinta">{recusada.titulo}</p>
-                    <div>
-                      <Estado familia="erro">{recusada.motivo === 'sem_licenca' ? 'Envio recusado · sem licença' : 'Envio recusado · sem declaração'}</Estado>
-                    </div>
-                    <p className="text-sm break-words text-apoio">{TEXTO_DA_RECUSA[recusada.motivo]}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Botao variante="discreto" onClick={() => definirRecusas((atuais) => atuais.filter((outra) => outra.chave !== recusada.chave))}>
-                      Dispensar<span className="sr-only"> o aviso de {recusada.titulo}</span>
-                    </Botao>
-                  </div>
-                </li>
-              ))}
-              {doMaisNovoAoMaisAntigo(lista.itens).map((material) => (
-                <li key={material.id} className={`${CLASSES_DO_ITEM} border-linha`}>
-                  <div className="flex min-w-0 flex-col gap-1.5">
-                    <p className="font-medium break-words text-tinta">{material.titulo}</p>
-                    <p className="text-sm break-words text-apoio">
-                      {nomeDaDisciplina.get(material.disciplinaId) ?? 'Disciplina'} · {origemDoMaterial(material)}
-                    </p>
-                    <div>
-                      <Estado familia={FAMILIA_DO_ESTADO[material.estado]}>{textoDoEstado(material)}</Estado>
-                    </div>
-                    {material.falha !== null && <p className="text-sm break-words text-erro">{MENSAGEM_DA_FALHA_DE_MATERIAL[material.falha]}</p>}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {material.estado === 'falhou' && (
-                      <Botao variante="secundario" onClick={() => tentarDeNovo(material)}>
-                        Tentar de novo<span className="sr-only"> o envio de {material.titulo}</span>
-                      </Botao>
-                    )}
-                    <Botao variante="perigo" onClick={() => dialogo.abrir('excluir', material)}>
-                      Excluir<span className="sr-only"> {material.titulo}</span>
-                    </Botao>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
+          {/*
+            Com a lista já na tela, a releitura que falhou é dita aqui com o "Tentar de novo" em `secundario`: o `primario`
+            da tela é um só, o "Enviar material".
+          */}
+          {materiais.isError && (
+            <div className="flex min-w-0 flex-wrap items-center gap-3 rounded-cartao border border-erro bg-erro-cx p-4">
+              <p role="alert" className="min-w-0 flex-1 basis-56 break-words text-erro">
+                {mensagemDoErro(materiais.error)}
+              </p>
+              <Botao variante="secundario" onClick={() => void materiais.refetch({ cancelRefetch: false })}>
+                Tentar de novo
+              </Botao>
+              <span role="status" className="text-erro">
+                {materiais.isFetching ? 'Tentando de novo…' : ''}
+              </span>
+            </div>
+          )}
+          <Tabela
+            rotulo="Lista de materiais"
+            colunas={colunasDosMateriais(nomeDe, abrirPainel, (chave) => definirRecusas((atuais) => atuais.filter((outra) => outra.chave !== chave)))}
+            linhas={linhasDosMateriais(lista.itens, recusas)}
+            chaveDaLinha={(linha) => (linha.tipo === 'material' ? linha.material.id : `recusa-${String(linha.recusa.chave)}`)}
+          />
+          <AvisoDeListaIncompleta completa={lista.completa} />
+        </>
+      )}
+      <Anuncio texto={anuncio} />
+      <span role="status" className="sr-only">
+        {emLeitura === 0 ? '' : emLeitura === 1 ? 'Um material está sendo lido.' : `${String(emLeitura)} materiais estão sendo lidos.`}
+      </span>
 
-      {aberta !== undefined && alvo !== undefined && (
+      {doPainel !== undefined && (
+        <PainelDoMaterial
+          key={doPainel.id}
+          material={doPainel}
+          disciplina={nomeDe(doPainel.disciplinaId)}
+          aoFechar={fecharPainel}
+          aoTentarDeNovo={() => abrir('enviar', doPainel)}
+          aoExcluir={() => abrir('excluir', doPainel)}
+          focoDeReserva={focarNaLista}
+        />
+      )}
+
+      {aberta?.tipo === 'enviar' && dasDisciplinas !== undefined && (
+        <DialogoDeEnvioDeMaterial
+          key={aberta.numero}
+          disciplinas={dasDisciplinas.itens}
+          inicial={alvo === undefined ? RASCUNHO_VAZIO : rascunhoDoMaterialQueFalhou(alvo)}
+          {...(alvo === undefined ? {} : { substitui: alvo.id })}
+          aoEnviar={(substituiu) => {
+            dialogo.fecharSeAinda(aberta)
+            definirAnuncio(TEXTO_DO_ENVIO)
+            if (substituiu !== undefined) tirarDoEndereco(substituiu)
+          }}
+          aoRecusar={registrarRecusa}
+          recarregar={recarregar}
+          aoFechar={fecharDialogo}
+          focoDeReserva={focarNaLista}
+        />
+      )}
+      {aberta?.tipo === 'excluir' && alvo !== undefined && (
         <ExcluirMaterial
           key={aberta.numero}
           material={alvo}
-          disciplina={nomeDaDisciplina.get(alvo.disciplinaId) ?? 'Disciplina'}
+          disciplina={nomeDe(alvo.disciplinaId)}
           aoFechar={fecharDialogo}
           aoTerminar={recarregar}
           aoExcluir={() => {
             dialogo.fecharSeAinda(aberta)
+            tirarDoEndereco(alvo.id)
             definirAnuncio('Material excluído. A busca do Assistente e do Tutor deixou de achá-lo.')
           }}
-          focoDeReserva={() => tituloDaLista.current?.focus()}
+          focoDeReserva={focarNaLista}
         />
       )}
-    </>
+    </section>
   )
 }
 
@@ -471,7 +301,7 @@ function ExcluirMaterial({ material, disciplina, aoFechar, aoTerminar, aoExcluir
       resumo={[
         { rotulo: 'Material', valor: material.titulo },
         { rotulo: 'Disciplina', valor: disciplina },
-        { rotulo: 'Situação', valor: textoDoEstado(material) },
+        { rotulo: 'Situação', valor: textoDaSituacaoDoMaterial(material) },
       ]}
       efeito="As atividades e os planos já gerados continuam citando a página deste material. Daqui em diante, a busca do Assistente e do Tutor deixa de achá-lo, e o texto lido dele é apagado."
       rotuloDeConfirmar="Excluir material"

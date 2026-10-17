@@ -100,6 +100,9 @@ export function caminhoDaTurmaNaEstrutura(turmaId: string): string {
 /** O nome do parâmetro que abre o painel do professor em Professores (X2, 6.0): o endereço o escreve, e a tela o lê, por este nome só. */
 export const PARAMETRO_DO_PROFESSOR = 'professor'
 
+/** O nome do parâmetro que abre o painel do material em Material (X2, 8.0): só o id do material vai ao endereço, nunca o título (regra 20, item 9). */
+export const PARAMETRO_DO_MATERIAL = 'material'
+
 /**
  * O endereço de Professores com o professor aberto, **relativo à área**: só o id do usuário vai na consulta, nunca o nome (regra
  * 20, item 9). É o que a fila do sino e a lista de professores da turma usam para levar ao painel dele (X2, 9.0; o painel é o da 6.0).

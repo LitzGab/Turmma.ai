@@ -6,7 +6,7 @@ import { entregasNoBanco, validacoesNoBanco } from './__fixtures__/a2.ts'
 import { respostasNoBanco } from './__fixtures__/a3.ts'
 import { entrarComoAlunoPelaApi, responderPelaApi } from './__fixtures__/aluno-pela-api.ts'
 import { abrirAbaAlunos, abrirNavegacao, esperarAtividades, esperarPainel, esperarNovaConversa, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
-import { irPelaCoordenacao, painelDoAno } from './__fixtures__/coordenacao.ts'
+import { irPelaCoordenacao, linhasDaTabela, painelDoAno } from './__fixtures__/coordenacao.ts'
 import { caixa, conversa, DISCIPLINA, gerarAtividade, PRAZO_DA_IA_MS, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
 import { auditoriasNoBanco, suspensoesNoBanco } from './__fixtures__/governanca.ts'
 import { CAMINHO_DO_PDF_DE_DEMONSTRACAO, materiaisNoBanco, recusasNaAuditoria } from './__fixtures__/material.ts'
@@ -340,22 +340,27 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     // ── 4. Passo 1: o material, recusado sem licença e lido com ela (A2; D5, D75). ─────────────────────────────────
     await test.step('a coordenação sobe o PDF sem licença e é recusada antes da leitura; com a licença, ele fica pronto', async () => {
       await irPelaCoordenacao(coordenacao, 'Material', hasTouch)
+      // O formulário está no diálogo "Enviar material", que a tela abre pelo botão do vazio (a escola ainda não tem material).
+      await principal(coordenacao).getByRole('button', { name: 'Enviar material' }).click()
+      const envio = coordenacao.getByRole('dialog', { name: 'Enviar material' })
+      await expect(envio).toBeVisible()
       const preencher = async (licenca: string) => {
         await coordenacao.getByTestId('arquivo-do-material').setInputFiles(CAMINHO_DO_PDF_DE_DEMONSTRACAO)
-        await principal(coordenacao).getByLabel('Título').fill(TITULO_DO_MATERIAL)
-        await principal(coordenacao).getByLabel('Disciplina').selectOption({ label: DISCIPLINA })
-        await principal(coordenacao).getByLabel('De quem é o material').selectOption({ label: 'Material próprio da escola' })
-        await principal(coordenacao).getByLabel('Licença de uso (obrigatória)').selectOption({ label: licenca })
-        await principal(coordenacao).getByLabel(/^Declaro que a escola pode usar este material/).check()
-        await principal(coordenacao).getByRole('button', { name: 'Enviar material' }).click()
+        await envio.getByLabel('Título').fill(TITULO_DO_MATERIAL)
+        await envio.getByLabel('Disciplina').selectOption({ label: DISCIPLINA })
+        await envio.getByLabel('De quem é o material').selectOption({ label: 'Material próprio da escola' })
+        await envio.getByLabel('Licença de uso (obrigatória)').selectOption({ label: licenca })
+        await envio.getByLabel(/^Declaro que a escola pode usar este material/).check()
+        await envio.getByRole('button', { name: 'Enviar material' }).click()
       }
       await preencher('Não tenho a licença, ou não sei')
-      await expect(principal(coordenacao).getByRole('alert').filter({ hasText: 'Envio recusado.' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(envio.getByRole('alert').filter({ hasText: 'Envio recusado.' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       expect(await materiaisNoBanco(escolaId)).toEqual([])
       expect(await recusasNaAuditoria(escolaId)).toEqual([{ motivo: 'sem_licenca', licenca: 'sem_licenca', declaracao: true }])
 
+      // O diálogo continua aberto com o que foi digitado: a coordenação corrige a licença e envia de novo.
       await preencher('Autoria da escola ou de professor dela')
-      const material = principal(coordenacao).getByRole('region', { name: 'Materiais da escola' }).getByRole('listitem').filter({ hasText: TITULO_DO_MATERIAL }).filter({ hasText: 'Pronto' })
+      const material = linhasDaTabela(principal(coordenacao).getByRole('region', { name: 'Materiais da escola' })).filter({ hasText: TITULO_DO_MATERIAL }).filter({ hasText: 'Pronto' })
       await expect(material.getByText('Pronto · 6 páginas')).toBeVisible({ timeout: PRAZO_DA_IA_MS })
       expect(await materiaisNoBanco(escolaId)).toEqual([expect.objectContaining({ titulo: TITULO_DO_MATERIAL, estado: 'pronto', paginas: 6, trechos: 6 })])
     })

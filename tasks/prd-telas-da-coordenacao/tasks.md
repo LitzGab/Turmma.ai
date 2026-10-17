@@ -69,7 +69,7 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 7.5 A seção sai da Estrutura; o passo "Alocação" de "O que falta" leva a Professores
   - [ ] 7.6 Testes: o vínculo nasce esperando a confirmação; duas alocações iguais ao mesmo tempo; o e2e de alocação sem perder asserção
 
-- [ ] **8.0 — Escola › Material em tabela, com o envio num diálogo**
+- [x] **8.0 — Escola › Material em tabela, com o envio num diálogo**
   - [ ] 8.1 A tabela, com o que falhou primeiro
   - [ ] 8.2 "Enviar material" num diálogo, com os campos e os erros de hoje
   - [ ] 8.3 A linha abre o painel, com "Tentar de novo" e "Excluir"

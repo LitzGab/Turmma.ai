@@ -534,6 +534,28 @@ para o staging".
       de mutação do selo); (c) o selo "ATIVO." sai com ponto final, vindo de `convite-de-professor.ts` na 6.0
       (`frontend-reviewer`, 1ª rodada); (d) o e2e do contestado não confere o complemento que o professor escreveu: estender
       `contestarVinculosNoBanco` para gravá-lo (`test-engineer`, 1ª rodada); (e) `dialogo-modal.ts:26` e `dialogo-modal.test.ts:31` ainda dizem que o miolo do painel é `tabIndex={-1}`, fora da ordem do Tab (hoje é `tabIndex={0}`): tirar "o miolo do painel" dos dois comentários (`revisor-geral` e `test-engineer`, 2ª rodada); (f) o caso "abrir de novo com o diálogo ainda aberto é uma abertura nova" de `PainelDoProfessor.test.tsx` só funciona no jsdom, onde o fundo não fica inerte: o nome deveria dizer que prova a garantia defensiva da `key`; e o bloco de mutação `if (falhou !== undefined)` poderia trocar por `if (false)`, para o vermelho vir só da regra (`test-engineer`, 2ª rodada)
+- [ ] **(X2, 8.0) Recomendações que a tarefa deixou para depois:** (a) a tabela de Material não tem o teto de linhas com
+      "Mostrar mais" que a Tech Spec §7 prevê (`frontend-reviewer`, 1ª rodada); (b) a barra de abas da Escola quebra em duas
+      linhas no celular, nas três abas: é da moldura (`frontend-reviewer`); (c) o texto de "sem disciplina na escola" cita
+      "Escola › Turmas" sem link: pede navegação, que o Arquiteto decide (`frontend-reviewer`); (d) o "Tentar de novo"
+      de um material que falhou troca o antigo pelo novo com um segundo pedido e engole o erro da exclusão: a API deveria
+      fazer a troca numa operação só, com auditoria ligando os dois, e a tela avisar se a exclusão falhar (`privacy-guardian`;
+      muda o contrato da API); (e) o texto de conflito do envio em `material-envio.ts` diz "lista abaixo" com o formulário
+      num diálogo, e `origemDoMaterial` e o ramo `'Falhou'` de `textoDoEstado` são código morto: acertar na próxima tarefa
+      que abrir esse arquivo (`revisor-geral`); (f) `fila-da-coordenacao.ts:121` escreve `'material'` à mão em vez de
+      `PARAMETRO_DO_MATERIAL` (`revisor-geral`); (g) a 360 px o campo "De quem é o material" não comporta a opção "Material de
+      autoria de professor da escola" (42 caracteres) numa linha só: o texto fica cortado no celular; encurtar o nome em
+      `NOME_DA_TITULARIDADE` (`packages/shared`) ou deixar o campo quebrar linha (dono: Joaquim e Gabriel). Ao
+      corrigir, o e2e "cabe inteiro" passa a medir também no `celular` e muda de nome (hoje sai no celular e
+      mede só a largura do computador); (h) uma recusa que chega depois da troca de sessão ainda pode entrar na
+      tabela de quem entrou depois: pede um contador de sessão no `Material` e um caso de teste (`privacy-guardian`, 2ª); (i) o comentário de `Material.tsx` sobre a troca de sessão cita "regra 20, item 15"; a
+      justificativa certa é a regra 10 e o RF14 que `sessao.ts` já cita (`privacy-guardian`, 2ª); (j) as escolas
+      da vitrine não têm material: o Validador fotografa a tabela com linhas e o painel no fim da spec
+      (`frontend-reviewer`, 2ª); (k) `techspec.md` §7 ainda diz que Material tem teto de linhas com "Mostrar
+      mais": ajustar no próximo commit de documento da spec (`revisor-geral`, 2ª); (l) ajustes de teste: o bloco
+      de `abrirPainel` pode manter o id e acrescentar o título; o "+24" do e2e "cabe inteiro" é estimado e só se
+      mede de outro jeito se ficar instável; o teste de troca de sessão usa um `vi.mock` que guarda os ouvintes,
+      e sairia se `api/sessao` tiver função pública que dispare a troca (`test-engineer`, 2ª)
 - [ ] **(F3, validação, m7) `IA_LATENCIA_FALSA_MS` obrigatória sem aviso no `README.md`:** `infra/compose.yml:211` exige a
       variável, e quem sobe o compose pela primeira vez não é avisado. Uma linha no `README.md` (dono: Joaquim)
 - [ ] **(F3, validação, m8) A vitrine não semeia nada da Privacidade:** `tools/vitrine/escola.ts` monta a escola sem pedido,

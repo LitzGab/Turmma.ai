@@ -23,3 +23,10 @@ export function AvisoDeListaIncompleta({ completa }: { completa: boolean }) {
   if (completa) return null
   return <p className="text-sm text-apoio">A lista é maior do que esta tela mostra: aparecem só os primeiros.</p>
 }
+
+/**
+ * O botão do nome que abre o painel da linha (Professores, 6.0; Material, 8.0): ele se estende pela linha toda (`after:inset-0`, sobre
+ * o `relative` da linha da `Tabela`), com o anel do foco por dentro dela.
+ */
+export const CLASSES_DO_BOTAO_DA_LINHA =
+  "inline-flex min-h-11 max-w-full items-center gap-1 text-left font-semibold text-tinta after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:rounded-linha focus-visible:after:outline-3 focus-visible:after:-outline-offset-3 focus-visible:after:outline-foco"

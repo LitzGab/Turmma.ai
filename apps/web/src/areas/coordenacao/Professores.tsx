@@ -32,7 +32,7 @@ import { DialogoDeAlocacao } from './Alocacao'
 import { enderecoComParametro } from './endereco-da-tela'
 import { textoDaListaCurta } from './lista-curta'
 import { useFocarOTituloDaMoldura } from './moldura'
-import { AvisoDeListaIncompleta } from './pecas-da-lista'
+import { AvisoDeListaIncompleta, CLASSES_DO_BOTAO_DA_LINHA } from './pecas-da-lista'
 import { PainelDoProfessor } from './PainelDoProfessor'
 import { contagemDeProfessores, professorAlocavel, professorDoEndereco, professoresDaTabela, type ProfessorDaTabela } from './professores-da-escola'
 
@@ -60,10 +60,6 @@ function mandeOLinkA(nome: string, email?: string) {
     </>
   )
 }
-
-/** O botão do nome do professor se estende pela linha toda (`after:inset-0`, sobre o `relative` da linha da `Tabela`), com o anel do foco por dentro dela. */
-const CLASSES_DO_BOTAO_DA_LINHA =
-  "inline-flex min-h-11 max-w-full items-center gap-1 text-left font-semibold text-tinta after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:rounded-linha focus-visible:after:outline-3 focus-visible:after:-outline-offset-3 focus-visible:after:outline-foco"
 
 function colunasDosProfessores(aoAbrir: (usuarioId: string) => void): readonly [ColunaDaTabela<ProfessorDaTabela>, ...ColunaDaTabela<ProfessorDaTabela>[]] {
   return [
