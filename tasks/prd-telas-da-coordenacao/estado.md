@@ -8,15 +8,13 @@
   - linha 1: o `RELATÓRIO` do `Implementador`, correção **C3** `2026-10-17-painel-pelo-endereco-cobre-o-aviso`
     (partida ~19h), 1ª tentativa. A C1+C2 e o conflito do `TODO.md` se encontraram em `97506c7` (spec em `732cd2b`).
     Guardiões: `frontend-reviewer`;
-  - linha 2: o `RELATÓRIO` do `Implementador 2`, correção `2026-10-17-agentes-tres-funcoes-perto-do-prazo` (partida
-    ~19h15), 1ª tentativa: o achado à parte da correção anterior, `e2e/agentes.spec.ts:186` ("três funções no
-    Assistente…") a 25,5 s no celular, único caso do arquivo sem `test.slow()`; ainda não caiu, corrijo antes de cair no
-    fechamento. Guardiões: `frontend-reviewer`.
+  - linha 2: ociosa. A correção `agentes-tres-funcoes-perto-do-prazo` se encontrou (`2884140`, spec em `5357324`, ~19h40).
 - **Devo ainda:**
-  - a esteira: em ~19h10 a última lida foi VERMELHA em `b022543` (39068217314, e2e 4/6: o `agentes:164`, já corrigido em
-    `4a3835f`, encontro em `c85c5c8`, cuja esteira 39073976956 está na fila). Ler de novo no próximo encontro;
-  - C4 e o Maior já corrigidos (`ed03046`), C1+C2 em `c2e3398`, o `agentes:164` em `4a3835f`; com a C3 e o `agentes:186`
-    encontrados: a
+  - a esteira: em ~19h40 a última lida foi VERMELHA em `ed03046` (39069356834, e2e 4/6: o `agentes:164`, já corrigido em
+    `4a3835f`). A fila do GitHub está lenta: 39069424594 em curso e quatro na fila, a mais nova 39075671455 em `5357324`.
+    Ler de novo no próximo encontro;
+  - C4 e o Maior já corrigidos (`ed03046`), C1+C2 em `c2e3398`, o `agentes:164` em `4a3835f`, o `agentes:186` em `2884140`; com a C3
+    encontrada: a
     revalidação (o `Validador` reiniciado, rodada 2 no topo do `validacao.md`, só esses pontos e a esteira);
   - no fechamento, levar ao `TODO.md`: as 2 recomendações do `frontend-reviewer` da correção
     `troca-de-escola-sem-ir-para-a-entrada` (título do incidente truncado a 360 px no cartão do Painel; texto de incidente
@@ -29,7 +27,7 @@
     em `1477850`): não retomar sem a palavra dele.
 - **Maestri:** depois do reinício da máquina, o `maestri` não está no PATH do terminal do Orquestrador: usar
   `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
-- **Base:** `spec/telas-da-coordenacao` em `c85c5c8`, com a `develop` de `2029703` juntada.
+- **Base:** `spec/telas-da-coordenacao` em `5357324`, com a `develop` de `2029703` juntada.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -62,6 +60,7 @@
 | correção troca-de-escola-sem-ir-para-a-entrada | `a59b3dd` | Sonnet 5.5 | 2 | linha 2, ~17h01–17h40; vermelho da esteira de `91d4722` em `e2e/painel-da-coordenacao.spec.ts:187` (chromebook): o POST /mfa/ativar chegou 249 ms depois da virada do passo, 401; defeito do teste (código do passo anterior), mesmo defeito no `sino-da-coordenacao:188`; teste de unidade com relógio falso vermelho antes, verde depois; 40/40 verdes; 2 mutações vermelhas; `frontend-reviewer`, `privacy-guardian` e `test-engineer` aprovaram (o `test-engineer` na r1 e na r2); 2 recomendações sem aplicar |
 | correção vazio-durante-a-leitura | `ed03046` | Sonnet 5.5 | 2 | linha 2, ~17h47–18h04; C4 e o Maior da validação rodada 1: carregando e erro conferiam a ausência da tabela, não do texto do vazio; `interface.md` §3 no estado de antes da X2; sem defeito de produção, prova por 21 mutações vermelhas; `frontend-reviewer` aprovou na r1, `revisor-geral` e `test-engineer` na r2; 2 linhas novas no `TODO.md` (ramo isError de Professores; título truncado de `Linha.tsx`) |
 | correção agentes-carregando-estoura-o-prazo | `4a3835f` | Sonnet 5.5 | 1 | linha 2, ~18h39–19h10; vermelho da esteira em `e2e/agentes.spec.ts:164` [celular] 30,2 s (39066733762, 39066820938, 39066847388, 39068217314): entrar 14 s + 5 s deliberados de `paginaNaoRola` + carregar passavam dos 30 s; só `test.slow()`; vermelho 4/4 a 22 s antes, 4/4 verde depois, 20/20 no relógio normal; `frontend-reviewer` e `test-engineer` aprovaram na r1 (a Mesa pediu 3 ajustes de texto na r1); achado à parte: `agentes:186` a 25,5 s virou correção própria; encontro em `c85c5c8` |
+| correção agentes-tres-funcoes-perto-do-prazo | `2884140` | Sonnet 5.5 | 1 | linha 2, ~19h15–19h40; `e2e/agentes.spec.ts:186` [celular] a 21 s local e 25,5 s na esteira, o único caso do arquivo sem `test.slow()`; vermelho 4/4 com `--timeout=16000` antes, 4/4 verde depois, 20/20 no relógio normal; 1º portão: `:307` caiu uma vez (chunk da rota não carregou, 12/12 depois, anotado no documento); `frontend-reviewer` e `test-engineer` aprovaram na r1; encontro em `5357324` |
 
 ## Esperando o Joaquim
 ## O que falhou
