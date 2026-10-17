@@ -161,6 +161,9 @@ describe('os quatro estados da tela', () => {
     instalar(redeFalsa(), { anos: nuncaResponde })
     montar()
     expect(await screen.findByText('Carregando a estrutura da escola…')).toBeTruthy()
+    // O vazio só vem com a leitura terminada e sem erro (RF22): durante a leitura, nem o convite do ano nem o das turmas.
+    expect(screen.queryByText('Comece pelo ano letivo')).toBeNull()
+    expect(screen.queryByText('Nenhuma turma ainda')).toBeNull()
   })
 
   it('erro: a mensagem curta e "Tentar de novo", que lê só os anos de novo', async () => {
@@ -170,6 +173,9 @@ describe('os quatro estados da tela', () => {
     instalar(rede, { anos: () => (falhar ? FALHA : ok([ANO])) })
     montar()
     await screen.findByRole('alert')
+    // A leitura que falhou não afirma o vazio: nem "Comece pelo ano letivo" nem "Nenhuma turma ainda" ao lado do erro (RF22).
+    expect(screen.queryByText('Comece pelo ano letivo')).toBeNull()
+    expect(screen.queryByText('Nenhuma turma ainda')).toBeNull()
     falhar = false
     await usuario.click(screen.getByRole('button', { name: 'Tentar de novo' }))
     await screen.findByRole('region', { name: 'Turmas de 2026' })

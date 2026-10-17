@@ -182,6 +182,10 @@ describe('os estados da turma', () => {
 
     expect(await screen.findByText('Carregando a turma…')).toBeTruthy()
     expect(screen.queryByRole('region', { name: 'Nomes da turma' })).toBeNull()
+    // O vazio só vem com a leitura terminada e sem erro (RF22): nenhum dos três convites da turma durante a leitura.
+    expect(screen.queryByText('Nenhum nome nesta turma ainda')).toBeNull()
+    expect(screen.queryByText('Nenhum professor nesta turma')).toBeNull()
+    expect(screen.queryByText('Nenhum pedido esperando')).toBeNull()
     liberar({ status: 200, corpo: TURMA_ABERTA })
     expect(await screen.findByRole('region', { name: 'Nomes da turma' })).toBeTruthy()
     expect(screen.queryByText('Carregando a turma…')).toBeNull()
@@ -195,6 +199,10 @@ describe('os estados da turma', () => {
 
     expect(await screen.findByRole('alert')).toBeTruthy()
     expect(screen.queryByRole('region', { name: 'Nomes da turma' })).toBeNull()
+    // A leitura que falhou não afirma o vazio (RF22): nenhum dos três convites da turma ao lado do erro.
+    expect(screen.queryByText('Nenhum nome nesta turma ainda')).toBeNull()
+    expect(screen.queryByText('Nenhum professor nesta turma')).toBeNull()
+    expect(screen.queryByText('Nenhum pedido esperando')).toBeNull()
     expect(screen.getByRole('link', { name: 'Voltar para Escola' })).toBeTruthy()
     falhar = false
     await usuario.click(screen.getByRole('button', { name: 'Tentar de novo' }))

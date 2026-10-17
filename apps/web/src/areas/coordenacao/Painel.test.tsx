@@ -509,6 +509,9 @@ describe('os quatro estados de cada bloco', () => {
     montar()
     expect(await bloco(REGIOES.ia).findByText('Carregando o consumo do mês…')).toBeTruthy()
     expect(await bloco(REGIOES.ia).findByText('Gerado por IA')).toBeTruthy()
+    // O vazio do consumo só vem com a leitura terminada e sem erro (RF22): carregando, nem "Nenhuma função…" nem a linha do mês.
+    expect(bloco(REGIOES.ia).queryByText('Nenhuma função da IA trabalhou neste mês.')).toBeNull()
+    expect(bloco(REGIOES.ia).queryByText(/Consumo do mês: /)).toBeNull()
     cleanup()
 
     const rede = redeFalsa()
@@ -516,6 +519,10 @@ describe('os quatro estados de cada bloco', () => {
     instalar(rede, { ...TUDO_EM_DIA, consumo: () => (fora ? FORA : consumo()) })
     montar()
     await esperarTudoLido()
+    // Com o erro, o consumo não afirma o vazio nem mostra a linha do mês: o alerta do bloco está na tela antes de conferir.
+    await bloco(REGIOES.ia).findByRole('alert')
+    expect(bloco(REGIOES.ia).queryByText('Nenhuma função da IA trabalhou neste mês.')).toBeNull()
+    expect(bloco(REGIOES.ia).queryByText(/Consumo do mês: /)).toBeNull()
     const antes = rede.chamadas.length
     fora = false
     await usuario.click(bloco(REGIOES.ia).getByRole('button', { name: 'Tentar de novo' }))

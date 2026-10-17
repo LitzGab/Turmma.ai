@@ -299,9 +299,10 @@ O que continua valendo do desenho da área, e o que ela **não** herda do profes
 
 ## 3. Área da coordenação
 
-**Decidido** (D80): quatro lugares, **Painel · Analista · Escola · Registros**, e o sino. Até a
-**X2** (`telas-da-coordenacao`) a lateral é a lista plana de hoje, com sete itens (Governança,
-Agentes, Analista, Estrutura, Professores, Material e Privacidade), na casca nova da X1. O que cada
+**Decidido** (D80): quatro lugares, **Painel · Analista · Escola · Registros**, e o sino. Eles
+chegaram com a **X2** (`telas-da-coordenacao`): a lateral não é mais a lista plana de sete itens
+(Governança, Agentes, Analista, Estrutura, Professores, Material e Privacidade) que a X1 deixou.
+Cada tela dos sete continua no endereço de antes; o que mudou foi o lugar que a acende. O que cada
 lugar recebe:
 
 **Painel** é onde a coordenação abre, e a tela que fecha a venda. Recebe os números da Governança
@@ -1510,18 +1511,19 @@ por trás. Enquanto a barra de baixo existe, a página reserva o lugar dela (`--
 botão da tela termina acima da barra, o foco do teclado nunca para atrás dela, e a barra presa
 (`BarraPresa`) de uma tela sobe para ficar logo acima.
 
-**O que cada papel vê.** Na X1 os itens são os de hoje, na ordem e nos endereços de hoje (RF16 e
-RF18); os lugares da D80 chegam com a spec da área. Lugar sem tela não aparece (D73).
+**O que cada papel vê.** Na X1 os itens eram os de antes da pele, na ordem e nos endereços de antes
+(RF16 e RF18); os lugares da D80 chegam com a spec da área, e a coordenação já os tem desde a X2.
+Lugar sem tela não aparece (D73).
 
 | Papel | Na X1 | Os lugares da D80 | Chegam na |
 |---|---|---|---|
 | Professor | Início (era "Nova conversa") · Ferramentas · Turmas, e o grupo "Seu time" | Início · Turmas · Ferramentas · Criados, as Conversas embaixo e o sino | X3 |
 | Aluno | Tutor · Atividades · Minha turma, e Privacidade no rodapé | Início · Tarefas · Eu · Avisar um adulto (este, com o F9) | X4 |
-| Coordenação | Governança · Agentes · Analista · Estrutura · Professores · Material · Privacidade. São sete: no celular ficam na gaveta | Painel · Analista · Escola · Registros, e o sino | X2 |
+| Coordenação | Governança · Agentes · Analista · Estrutura · Professores · Material · Privacidade. Eram sete, na gaveta do celular, e só valeram até a X2 | Painel · Analista · Escola · Registros, e o sino. São quatro: cabem na barra de baixo do celular | X2 (entregue) |
 | Rede | — | Painel · Analista · Escolas | F14 |
 
-A coordenação abre em Governança (depois, no Painel). O aluno abre no Tutor quando ele está ligado
-para a turma, e em Atividades quando não está.
+A coordenação abre no Painel (X2); Governança é a aba IA de Registros. O aluno abre no Tutor
+quando ele está ligado para a turma, e em Atividades quando não está.
 
 **O sino** (X2 e X3) fica no canto de cima à direita da área de conteúdo, e na barra de topo no
 celular. O contador é laranja, e é o único número da casca do professor e da coordenação. A lista

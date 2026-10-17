@@ -90,6 +90,8 @@ describe('Pedidos: os quatro estados', () => {
     montar()
     expect(await screen.findByText('Carregando os pedidos…')).toBeTruthy()
     expect(screen.queryByRole('table')).toBeNull()
+    // O vazio só vem com a leitura terminada e sem erro (RF22).
+    expect(screen.queryByText('Nenhum pedido registrado')).toBeNull()
     lida.liberar(pagina(DOS_CINCO))
     await screen.findByRole('table', { name: 'Pedidos dos titulares' })
   })
@@ -102,6 +104,7 @@ describe('Pedidos: os quatro estados', () => {
     montar()
     await screen.findByRole('alert')
     expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.queryByText('Nenhum pedido registrado')).toBeNull()
     await usuario.click(screen.getByRole('button', { name: 'Tentar de novo' }))
     await screen.findByRole('table', { name: 'Pedidos dos titulares' })
     expect(screen.queryByRole('alert')).toBeNull()
