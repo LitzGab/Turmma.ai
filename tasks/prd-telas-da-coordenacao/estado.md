@@ -1,15 +1,16 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero (17/10 ~12h25):** linha 1, `Implementador` (com a `Mesa`): o `RELATÓRIO` da **tarefa 10.0**, 1ª tentativa,
-  partida às ~10h34 (às 12h06 esperava um e2e em segundo plano, `playwright test e2e/governanca.spec.ts 3 2`, que parece
-  ter tomado "3 2" como filtro de arquivo; se passar de 2 h sem a 1ª rodada, `PEDIDO de estado`). Linha 2,
-  `Implementador 2` (reiniciado com a `Mesa 2`): o `RELATÓRIO` da **correção `2026-10-17-duas-abas-do-acesso-suspenso`**,
-  pedida às ~12h25 (guardiões ditados: `frontend-reviewer`). Com ele, `encontro 2`.
-- **Devo antes da 8.0 (esteira VERMELHA):** a correção **`2026-10-17-casca-carregando-estoura-o-goto`** na primeira linha
-  que ficar ociosa (a 1, depois do encontro da 10.0): `e2e/casca.spec.ts:134` (chromebook), `page.goto('/sistema')` não
-  chega ao `load` em 30 s com a rota atrasada (esteira 39037149357, `0646419`). Guardiões: `frontend-reviewer`. Só depois
-  das duas correções a 8.0 e a 11.0 partem (o quadro já pede a 8.0 para a linha 2).
+- **Espero (17/10 ~12h45):** linha 1, `Implementador` (com a `Mesa`): o `RELATÓRIO` da **tarefa 10.0**, 1ª tentativa,
+  partida às ~10h34; o `test-engineer` reprovou na 1ª rodada (ordem `.processo/ordens/10_task-r1.md`), e às 12h37 ele
+  rodava o portão antes de pedir a rodada 2. Linha 2, `Implementador 2` (reiniciado com a `Mesa 2`): o `RELATÓRIO` da
+  **correção `2026-10-17-casca-carregando-estoura-o-goto`**, pedida às ~12h45: `e2e/casca.spec.ts:134` (chromebook),
+  `page.goto('/sistema')` não chega ao `load` em 30 s com a rota atrasada (esteira 39037149357, `0646419`). Guardiões
+  ditados: `frontend-reviewer`. Com ele, `encontro 2`.
+- **Depois das duas:** a 8.0 e a 11.0 partem (o quadro já pede a 8.0). Encontrada às 12h40 a correção
+  `duas-abas-do-acesso-suspenso` (`8c7f3a7`, encontro em `13ceeab`).
+- **Esteiras lidas (12h40):** `d3ec693` e `13ceeab` ainda rodando; ler no próximo encontro (em `13ceeab`, o
+  `acesso-suspenso:169` já tem a correção; o `casca:134` não).
 - **Esteiras lidas (12h20):** `00bc6ec` e `7bfd99e` vermelhas no e2e 1/6 e 4/6 (o `estrutura:765` esperado); `033a871`
   vermelha só no `acesso-suspenso:169` (a correção da linha 2); `0646419` vermelha só no `casca:134` (a correção acima).
   A seguinte, em `d3ec693` (encontro da 7.0), ler no próximo encontro.
@@ -70,6 +71,7 @@
 | correção lista-de-nomes-com-41-px | `cc2188e` | Sonnet | 1 | linha 1, ~10h10–10h37; o link da linha da Estrutura (5.0) era inline, ganhou `inline-flex min-h-11` e `wrap-anywhere`; `frontend-reviewer` e `test-engineer` aprovaram na r1; encontro em `033a871` |
 | 7.0 | `b8e425d` | Sonnet 5.5 | 2 | linha 2, ~10h27–11h40; `frontend-reviewer` ajustes r1 e aprovado r2, `privacy-guardian` aprovado, `test-engineer` e `revisor-geral` reprovado r1 e aprovado r2; 8 fotos da Mesa; mexeu em `PainelLado.tsx` (tabIndex 0 no miolo); a observação da 9.0 ficou sem o que alinhar (a lista da Alocação saiu); recomendações no `TODO.md` (X2, 7.0); encontro em CONFLITO no `Estrutura.test.tsx`, resolvido pela correção `encontro-7`; encontro em `d3ec693` |
 | correção encontro-7 | `e5012a4` | Sonnet 5.5 | 1 | linha 2, ~11h45–12h15; mantidos o it.each dos 44 px (`cc2188e`) e o teste novo do Nova turma; `frontend-reviewer` e `test-engineer` aprovaram na r1; 2 recomendações da vitrine no documento |
+| correção duas-abas-do-acesso-suspenso | `8c7f3a7` | Sonnet 5.5 | 2 | linha 2, ~12h11–12h40; corrida do teste (a 2ª aba levava o 403 antes da 1ª), não o teto de 30 s; espera por zero requisições a caminho, 40 de 40 nos dois perfis; `frontend-reviewer` aprovado r1, `test-engineer` reprovado r1 e aprovado r2; `TODO.md` com as duas folgas do `test-engineer`; encontro em `13ceeab` |
 
 ## Esperando o Joaquim
 ## O que falhou
