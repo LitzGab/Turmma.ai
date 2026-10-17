@@ -59,7 +59,7 @@ export function Tabela<Linha>({ rotulo, colunas, linhas, chaveDaLinha }: PropsDa
     return (
       <ul aria-label={rotulo} data-tabela="lista" className="flex min-w-0 flex-col gap-3">
         {linhas.map((linha) => (
-          <li key={chaveDaLinha(linha)} className="min-w-0 rounded-cartao border-2 border-borda bg-superficie p-4">
+          <li key={chaveDaLinha(linha)} className="relative min-w-0 rounded-cartao border-2 border-borda bg-superficie p-4">
             <div className="t-cartao min-w-0 break-words text-tinta">
               <span className="sr-only">{primeira.titulo}: </span>
               {primeira.celula(linha)}
@@ -93,7 +93,7 @@ export function Tabela<Linha>({ rotulo, colunas, linhas, chaveDaLinha }: PropsDa
         </thead>
         <tbody>
           {linhas.map((linha) => (
-            <tr key={chaveDaLinha(linha)} className="h-16 border-b-2 border-borda last:border-b-0">
+            <tr key={chaveDaLinha(linha)} className="relative h-16 border-b-2 border-borda last:border-b-0">
               <th scope="row" className={`t-apoio px-4 py-3 text-tinta ${primeira.alinhamento === 'fim' ? 'text-right' : ''}`}>
                 {primeira.celula(linha)}
               </th>

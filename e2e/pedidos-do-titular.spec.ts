@@ -5,6 +5,7 @@ import { expect, test } from './__fixtures__/perfis.ts'
 import {
   abrirABusca,
   acionar,
+  acionarNoPontoDaLinha,
   busca,
   buscarPor,
   campoDoTermo,
@@ -12,6 +13,7 @@ import {
   confirmacao,
   COR_DO_OFICIAL,
   COR_DO_PERIGO,
+  diaCurto,
   doisCliquesNoMesmoInstante,
   ELIMINADO,
   ENDERECO_DA_ABA,
@@ -23,10 +25,12 @@ import {
   INDISPONIVEL,
   linhaDa,
   linhas,
+  linkDoPedido,
   marca,
   portao,
   principal,
   registrarPeloFluxo,
+  somarDiasAHoje,
 } from './__fixtures__/pedidos-do-titular.ts'
 import {
   colocarAlunoNaTurma,
@@ -35,6 +39,7 @@ import {
   criarAlunoComMatricula,
   criarEquipeComSenha,
   criarPedidoDeTitularEliminadoNoBanco,
+  criarPedidoDoTitularNoBanco,
   criarPedidosDoTitularNoBanco,
   pedidosDoTitularNoBanco,
 } from './__fixtures__/sessao.ts'
@@ -330,12 +335,12 @@ test.describe('Pedidos: a busca', () => {
     expect(await larguraExcedenteDoDialogo(page)).toBe(0)
   })
 
-  test('a aba avisa que o aluno que nunca reivindicou o nome está na lista da turma, e o link leva à Estrutura', async ({ page, hasTouch }) => {
+  test('a aba avisa que o aluno que nunca reivindicou o nome está na lista da turma, e o link leva às turmas', async ({ page, hasTouch }) => {
     const coordenadora = await criarEquipeComSenha('coordenador')
     await entrarNosPedidos(page, hasTouch, coordenadora)
     await expect(principal(page).getByRole('note')).toContainText(TEXTO_DO_ALUNO_DA_LISTA)
     await expect(principal(page).getByRole('note')).toContainText('corrigir é retirar o nome e acrescentá-lo de novo')
-    await acionar(principal(page).getByRole('link', { name: 'Ir para a Estrutura' }), hasTouch)
+    await acionar(principal(page).getByRole('link', { name: 'Ir para as turmas', exact: true }), hasTouch)
     await expect(page).toHaveURL(/\/coordenacao\/estrutura$/, { timeout: PRAZO_DA_ENTRADA_MS })
   })
 })
@@ -653,6 +658,9 @@ test.describe('Pedidos: a lista e os quatro estados', () => {
     await expect(linhaDeOntem).toContainText('Acesso aos dados')
     await expect(linhaDeOntem).toContainText('A própria pessoa')
     await expect(linhaDeOntem).toContainText('Recebido')
+    // O prazo está na linha: o pedido de ontem ainda tem 14 dias, e o do titular eliminado, concluído, não tem prazo a cumprir.
+    await expect(linhaDeOntem).toContainText(`Faltam 14 dias, até ${diaCurto(somarDiasAHoje(14))}`)
+    await expect(linhaDa(page, ELIMINADO)).toContainText('Pedido concluído: não há prazo a cumprir')
     const ontem = new Date(`${hoje()}T12:00:00Z`)
     ontem.setUTCDate(ontem.getUTCDate() - 1)
     await expect(linhaDeOntem).toContainText(comoNaTela(ontem.toISOString().slice(0, 10)))
@@ -680,6 +688,9 @@ test.describe('Pedidos: a lista e os quatro estados', () => {
     await expect(doEliminado).toContainText('Concluído')
     await expect(linhas(page).first()).toContainText(ELIMINADO)
     await expect(linhas(page).last()).toContainText(aluno.nome)
+    // O pedido mais antigo da página seguinte chegou há 50 dias: o prazo venceu há 35, dito em texto e na família do erro.
+    await expect(linhas(page).last()).toContainText(`Prazo vencido há 35 dias (venceu em ${diaCurto(somarDiasAHoje(-35))})`)
+    await expect(linhas(page).last().locator('[data-estado="erro"]')).toHaveCount(1)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
@@ -720,10 +731,69 @@ test.describe('Pedidos: a escola entre dois anos letivos', () => {
     expect(await violacoesGraves(page)).toEqual([])
 
     // O detalhe abre: o nome da pessoa é o título, e a página não cai em "não está mais disponível".
-    await acionar(doNovo.getByRole('link', { name: novo.nome, exact: true }), hasTouch)
+    await acionar(linkDoPedido(doNovo, novo.nome), hasTouch)
     await expect(page).toHaveURL(ENDERECO_DO_DETALHE, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('heading', { level: 1, name: novo.nome, exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText('não está mais disponível')
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+  })
+})
+
+test.describe('Pedidos: o prazo na linha e a linha inteira como o link do detalhe', () => {
+  test('o prazo de cada pedido está na linha, o vencido diz há quantos dias em texto, e qualquer ponto da linha abre o pedido dela', async ({ page, hasTouch }) => {
+    test.setTimeout(150_000)
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const vencida = await criarAlunoComMatricula({ escola: coordenadora, nome: `Vera ${marca()} Lopes`, matricula: `5${marca()}` })
+    const aberta = await criarAlunoComMatricula({ escola: coordenadora, nome: `Bia ${marca()} Reis`, matricula: `6${marca()}` })
+    await colocarAlunoNaTurma(vencida)
+    await colocarAlunoNaTurma(aberta)
+    const semear = (titularId: string, tipo: 'acesso' | 'correcao', chegouHaDias: number) =>
+      criarPedidoDoTitularNoBanco({ escolaId: coordenadora.escolaId, titularId, registradoPor: coordenadora.usuarioId, tipo, estado: 'recebido', chegouHaDias })
+    // Duas pessoas, dois pedidos: um que chegou há 20 dias (o prazo de 15 venceu há 5) e um de há 2 dias (faltam 13).
+    const idDaVencida = await semear(vencida.usuarioId, 'correcao', 20)
+    const idDaAberta = await semear(aberta.usuarioId, 'acesso', 2)
+    await entrarNosPedidos(page, hasTouch, coordenadora)
+    await expect(linhas(page)).toHaveCount(2, { timeout: PRAZO_DA_ENTRADA_MS })
+    // A ordem é a da chegada, e o vencido não sobe: a pessoa de há 2 dias abre a lista.
+    await expect(linhas(page).first()).toContainText(aberta.nome)
+
+    // O prazo está na linha: o aberto em pendente, o vencido em texto, na família do erro e com o ícone dela.
+    const daVencida = linhaDa(page, vencida.nome)
+    const daAberta = linhaDa(page, aberta.nome)
+    await expect(daVencida).toContainText(`Prazo vencido há 5 dias (venceu em ${diaCurto(somarDiasAHoje(-5))})`)
+    await expect(daVencida.locator('[data-estado="erro"]')).toHaveCount(1)
+    await expect(daVencida.locator('[data-estado="erro"] svg')).toHaveCount(1)
+    await expect(daAberta).toContainText(`Faltam 13 dias, até ${diaCurto(somarDiasAHoje(13))}`)
+    await expect(daAberta.locator('[data-estado="erro"]')).toHaveCount(0)
+    // No celular a tabela vira lista e cada item diz "Prazo"; no computador, o cabeçalho da coluna.
+    if ((page.viewportSize()?.width ?? 1366) < 768) await expect(daVencida.locator('dt', { hasText: 'Prazo' })).toHaveCount(1)
+    else await expect(principal(page).getByRole('columnheader', { name: 'Prazo', exact: true })).toBeVisible()
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+
+    // Um link por linha, com o tipo do pedido no nome para quem ouve.
+    await expect(daVencida.getByRole('link')).toHaveCount(1)
+    await expect(daVencida.getByRole('link')).toHaveAccessibleName(`${vencida.nome}, Correção de dados`)
+    await expect(daAberta.getByRole('link')).toHaveAccessibleName(`${aberta.nome}, Acesso aos dados`)
+
+    // A linha inteira abre o pedido dela: o toque cai fora do nome, em "Quem pediu", e cada linha abre o seu. Com duas linhas, o link
+    // que não estivesse preso à linha dele cobriria a outra.
+    await acionarNoPontoDaLinha(daAberta.getByText('A própria pessoa', { exact: true }), hasTouch)
+    await expect(page).toHaveURL(new RegExp(`/coordenacao/privacidade/pedidos/${idDaAberta}$`), { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page).getByRole('heading', { level: 1, name: aberta.nome, exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // O detalhe é uma página de leitura, com o prazo no topo e o "‹ Pedidos" de volta.
+    await expect(principal(page).locator('[data-tela]').first()).toHaveAttribute('data-tela', 'leitura')
+    const prazo = principal(page).getByRole('region', { name: 'Prazo da declaração completa', exact: true })
+    const pedido = principal(page).getByRole('region', { name: 'O pedido', exact: true })
+    expect((await prazo.boundingBox())?.y ?? Number.POSITIVE_INFINITY).toBeLessThan((await pedido.boundingBox())?.y ?? 0)
+    await acionar(principal(page).getByRole('link', { name: 'Voltar para Pedidos', exact: true }), hasTouch)
+    await expect(page).toHaveURL(ENDERECO_DA_ABA, { timeout: PRAZO_DA_ENTRADA_MS })
+
+    await expect(linhas(page)).toHaveCount(2, { timeout: PRAZO_DA_ENTRADA_MS })
+    await acionarNoPontoDaLinha(linhaDa(page, vencida.nome).getByText('A própria pessoa', { exact: true }), hasTouch)
+    await expect(page).toHaveURL(new RegExp(`/coordenacao/privacidade/pedidos/${idDaVencida}$`), { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal(page).getByRole('heading', { level: 1, name: vencida.nome, exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
   })

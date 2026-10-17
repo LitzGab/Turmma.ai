@@ -83,11 +83,11 @@ export function anuncioDaBusca(quantidade: number): string {
 }
 
 export const TEXTO_DE_NINGUEM_ACHADO =
-  'Confira a grafia. O aluno que ainda não reivindicou o nome não aparece aqui: ele está só na lista de nomes da turma, em Estrutura.'
+  'Confira a grafia. O aluno que ainda não reivindicou o nome não aparece aqui: ele está só na lista de nomes da turma, em Escola › Turmas.'
 
 /** O aviso fixo da aba: o aluno da lista não tem conta, e o caminho dele é a lista da turma (A1; Tech Spec do F3, seção 4). */
 export const AVISO_DO_ALUNO_DA_LISTA =
-  'O aluno que ainda não reivindicou o nome não tem conta e não aparece na busca: ele está só na lista de nomes da turma. Para atendê-lo, abra a turma em Estrutura. Ler a lista é o acesso, e corrigir é retirar o nome e acrescentá-lo de novo.'
+  'O aluno que ainda não reivindicou o nome não tem conta e não aparece na busca: ele está só na lista de nomes da turma. Para atendê-lo, abra a turma em Escola › Turmas. Ler a lista é o acesso, e corrigir é retirar o nome e acrescentá-lo de novo.'
 
 export const TEXTO_DO_TERMO_CURTO = `Digite pelo menos ${String(MINIMO_DE_LETRAS_DO_TERMO)} letras do nome.`
 
@@ -111,7 +111,7 @@ export const EFEITO_DO_PEDIDO: Readonly<Record<TipoDePedidoDoTitular, string>> =
   acesso: `O sistema monta um arquivo com tudo o que esta escola guarda da pessoa, com um resumo para ler. Quando ficar pronto, ela o baixa na área dela por ${String(VALIDADE_DO_ARQUIVO_DIAS)} dias.`,
   portabilidade: `O sistema monta o mesmo arquivo em formato aberto, legível por máquina, para a pessoa levar a outro lugar. Ela o baixa na área dela por ${String(VALIDADE_DO_ARQUIVO_DIAS)} dias.`,
   compartilhamento: 'O pedido guarda a lista das empresas por onde passou dado da pessoa, com o período, para a escola avisar cada uma. A lista aparece no pedido.',
-  correcao: 'O pedido fica aberto para a coordenação corrigir o nome da pessoa. A correção de turma ou de vínculo se faz pela turma, em Estrutura.',
+  correcao: 'O pedido fica aberto para a coordenação corrigir o nome da pessoa. A correção de turma ou de vínculo se faz pela turma, em Escola › Turmas.',
   eliminacao: EFEITO_DA_ELIMINACAO,
 }
 

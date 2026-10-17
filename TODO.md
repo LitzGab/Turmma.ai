@@ -499,14 +499,19 @@ para o staging".
 - [ ] **(F3, validação, rodada 2, m2) "Sem turma neste ano" quando não há ano em curso:**
       `apps/web/src/areas/coordenacao/privacidade/textos-dos-pedidos.ts:58`. "Sem turma" basta. Na próxima correção ou
       tarefa que mexer nos Pedidos (dono: Joaquim)
-- [ ] **(F3, validação, m3 a m6) Telas da Privacidade:** com destino desde a D80: m3 e m5 na X2 (`telas-da-coordenacao`), m6 na X1 (tarefa 11.0, título visível em toda tela); m4 pede campo no DTO e continua sem spec.
-      (m3) a lista de pedidos não mostra o prazo nem destaca o vencido
-      (`apps/web/src/areas/coordenacao/privacidade/Pedidos.tsx:84`): a correção vencida há 5 dias aparece só como
+- [ ] **(F3, validação, m3 a m6) Telas da Privacidade:** o m3 foi feito na tarefa 12.0 da X2 (`telas-da-coordenacao`): a lista de
+      pedidos tem a coluna "Prazo" e o vencido diz "vencido há N dias". O m6 foi para a X1 (tarefa 11.0, título visível em toda
+      tela); o m4 e o m5 pedem campo no DTO e continuam sem spec: o m4 na próxima tarefa que mexer em `packages/shared/src/privacidade/titular.ts`, e o m5 na próxima que mexer em `AcoesDoPedido.tsx` (dono: Joaquim).
+      (m3, feito) a lista de pedidos não mostrava o prazo nem destacava o vencido: a correção vencida há 5 dias aparecia só como
       "Recebido"; (m4) o DTO do pedido não leva `eliminarEm` (`packages/shared/src/privacidade/titular.ts`), e o detalhe diz
       "7 dias depois do registro" sem dizer o dia; (m5) "Baixar a versão da escola" aparece também com o titular de conta
       ativa, e aí sempre falha, com o texto certo (`AcoesDoPedido.tsx:279`); (m6) na área do professor, "Meus dados" não tem
       título à vista (`apps/web/src/componentes/meus-dados/MeusDados.tsx:189-191`). Fotos e detalhe em
       `tasks/prd-lgpd-e-titular/validacao.md`, seção 4 das duas rodadas (dono: Joaquim)
+- [ ] **(X2, 12.0) A lista de pedidos mistura dois formatos de data na mesma linha:** "Chegou em" diz "14 de outubro de 2026" e o
+      prazo diz "até 29/10/2026" (`textoDoPrazo`, em `apps/web/src/areas/coordenacao/privacidade/textos-do-pedido.ts`). O
+      formato curto é o do prazo em toda a Privacidade, e mudar o texto mexe nos testes e nos e2e que o afirmam. Na próxima
+      tarefa que mexer em `textos-do-pedido.ts` (dono: Joaquim)
 - [ ] **(F3, validação, m7) `IA_LATENCIA_FALSA_MS` obrigatória sem aviso no `README.md`:** `infra/compose.yml:211` exige a
       variável, e quem sobe o compose pela primeira vez não é avisado. Uma linha no `README.md` (dono: Joaquim)
 - [ ] **(F3, validação, m8) A vitrine não semeia nada da Privacidade:** `tools/vitrine/escola.ts` monta a escola sem pedido,

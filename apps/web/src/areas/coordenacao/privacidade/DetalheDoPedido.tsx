@@ -53,9 +53,10 @@ function Linha({ rotulo, children }: { readonly rotulo: string; readonly childre
 }
 
 /**
- * O detalhe de um pedido de titular (F3, 17.0; RF12, RF13, RF13b, RF14, RF16): quem, o quê, quem pediu, a situação, o prazo
- * da declaração completa, as empresas por onde passou dado da pessoa e o que a coordenação pode fazer agora (concluir,
- * cancelar a eliminação, corrigir o nome e baixar a versão da escola).
+ * O detalhe de um pedido de titular (F3, 17.0; X2, 12.0; RF12, RF13, RF13b, RF14, RF16): o prazo da declaração completa no
+ * topo, depois quem, o quê, quem pediu, a situação, as empresas por onde passou dado da pessoa e o que a coordenação pode
+ * fazer agora (concluir, cancelar a eliminação, corrigir o nome e baixar a versão da escola). É uma página de leitura, com
+ * "‹ Pedidos" para voltar à lista.
  *
  * - **Cada leitura é auditada** (`pedido.lido`, regra 20, item 10): a página lê ao abrir e depois de cada ação, e nunca ao
  *   voltar o foco nem quando a rede volta. A única leitura sozinha é a do arquivo em preparação, a cada 10 s e só com a
@@ -119,15 +120,15 @@ export default function DetalheDoPedido({ pedidoId }: { readonly pedidoId: strin
 
   const voltar = (
     // Relativo à área: o `Route` aninhado em `/coordenacao` resolve o `to` a partir da base dela.
-    <Link to={caminhoDaAbaDaPrivacidade('pedidos')} className="inline-flex min-h-11 items-center gap-2 self-start text-caramelo-texto underline">
+    <Link to={caminhoDaAbaDaPrivacidade('pedidos')} aria-label="Voltar para Pedidos" className="inline-flex min-h-11 items-center gap-2 self-start text-caramelo-texto underline">
       <ArrowLeft aria-hidden="true" size={18} />
-      Voltar para os pedidos
+      Pedidos
     </Link>
   )
 
   if (consulta.isPending) {
     return (
-      <Tela titulo="Pedido de titular" antes={voltar}>
+      <Tela titulo="Pedido de titular" largura="leitura" antes={voltar}>
         <EstadoCarregando rotulo="Carregando o pedido…" />
       </Tela>
     )
@@ -135,7 +136,7 @@ export default function DetalheDoPedido({ pedidoId }: { readonly pedidoId: strin
   if (pedido === undefined) {
     const naoAchado = consulta.error instanceof ErroDaApi && consulta.error.codigo === CodigoDeErro.NAO_ENCONTRADO
     return (
-      <Tela titulo="Pedido de titular" antes={voltar}>
+      <Tela titulo="Pedido de titular" largura="leitura" antes={voltar}>
         {naoAchado ? (
           <p role="status" className="rounded-cartao border border-linha bg-superficie p-4 text-apoio">
             {TEXTO_DO_PEDIDO_AUSENTE}
@@ -155,6 +156,7 @@ export default function DetalheDoPedido({ pedidoId }: { readonly pedidoId: strin
   return (
     <Tela
       titulo={pedido.titular?.nome ?? TEXTO_DO_TITULAR_ELIMINADO}
+      largura="leitura"
       objeto
       descricao={ROTULO_DO_TIPO[pedido.tipo]}
       antes={voltar}
@@ -165,6 +167,16 @@ export default function DetalheDoPedido({ pedidoId }: { readonly pedidoId: strin
       }
     >
       <div ref={inicio} tabIndex={-1} className="flex min-w-0 flex-col gap-4 outline-none">
+        <Cartao titulo="Prazo da declaração completa">
+          <div className="flex min-w-0 flex-col gap-2">
+            <div>
+              <Estado familia={prazo.familia}>{prazo.texto}</Estado>
+            </div>
+            <p className="text-sm break-words text-sutil">
+              O prazo é de {String(PRAZO_DA_DECLARACAO_COMPLETA_DIAS)} dias e conta do dia em que o pedido chegou à escola (LGPD, art. 19, II).
+            </p>
+          </div>
+        </Cartao>
         <Cartao titulo="O pedido">
           <div className="flex min-w-0 flex-col gap-3">
             <dl className="flex min-w-0 flex-col gap-1.5 rounded-controle border border-linha p-3">
@@ -178,27 +190,17 @@ export default function DetalheDoPedido({ pedidoId }: { readonly pedidoId: strin
               {pedido.concluidoEm !== null && <Linha rotulo="Concluído em">{formatarDataHora(pedido.concluidoEm)}</Linha>}
             </dl>
             {orientacao !== undefined && <p className="break-words text-apoio">{orientacao}</p>}
-            {/* A correção de turma ou de vínculo não é deste pedido: o caminho é a turma, na Estrutura (A1). */}
+            {/* A correção de turma ou de vínculo não é deste pedido: o caminho é a turma, em Escola › Turmas (A1). */}
             {acoesDoPedido(pedido).corrigirNome && (
               <div>
                 <Link to={ROTAS_DA_COORDENACAO.estrutura} className={CLASSES_DO_LINK_SECUNDARIO}>
-                  Ir para a Estrutura
+                  Ir para as turmas
                 </Link>
               </div>
             )}
             {troca !== undefined && <p className="rounded-controle border border-linha bg-info-cx p-3 break-words text-info">{troca}</p>}
             <Anuncio texto={anuncio} />
             <AcoesDoPedido pedido={pedido} aoAnunciar={definirAnuncio} focoDeReserva={() => inicio.current?.focus()} />
-          </div>
-        </Cartao>
-        <Cartao titulo="Prazo da declaração completa">
-          <div className="flex min-w-0 flex-col gap-2">
-            <div>
-              <Estado familia={prazo.familia}>{prazo.texto}</Estado>
-            </div>
-            <p className="text-sm break-words text-sutil">
-              O prazo é de {String(PRAZO_DA_DECLARACAO_COMPLETA_DIAS)} dias e conta do dia em que o pedido chegou à escola (LGPD, art. 19, II).
-            </p>
           </div>
         </Cartao>
         <Cartao titulo="Empresas que receberam dado desta pessoa">

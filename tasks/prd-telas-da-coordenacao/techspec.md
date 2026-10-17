@@ -123,7 +123,7 @@ Nenhuma chamada nova.
 
 **Nomes que não mudam** (contrato com o e2e): um `<main>`; as regiões "Turmas de <ano>", "Ano letivo", "Séries", "Disciplinas", "O que falta para a escola começar", "Nomes da turma", "Prévia", "Materiais da escola", "Lista de escolas", "Uso por escola"; os rótulos dos campos e os títulos dos diálogos; o link "Lista de nomes da turma <nome>"; `data-agente`, `data-funcao`, `data-aprovacao`, `data-estado`, `data-dado-nominal`; `navigation` "Operação".
 
-**Chromebook e celular.** Nenhuma biblioteca nova; a `Tabela` vira lista abaixo de 768 px. Alvo de toque de 24/44 px no e2e `celular`. Material, Pedidos e IA têm teto de linhas com "Mostrar mais". O link da linha fica na célula do nome, com o `Menu` como irmão.
+**Chromebook e celular.** Nenhuma biblioteca nova; a `Tabela` vira lista abaixo de 768 px. Alvo de toque de 24/44 px no e2e `celular`. Material, Pedidos e IA têm teto de linhas com "Mostrar mais". O link da linha fica na célula do nome, com o `Menu` como irmão. A `Tabela` deixa a linha (`tr`) e o item da lista (`li`) `relative`, e o link se estende por eles (`after:absolute after:inset-0`): a linha inteira é o alvo. Na lista de pedidos o nome acessível do link leva o tipo do pedido ("Ana Souza, Correção de dados"), porque uma pessoa pode ter dois.
 
 ## 10. Testes
 

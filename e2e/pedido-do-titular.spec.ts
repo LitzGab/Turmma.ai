@@ -13,6 +13,7 @@ import {
   hoje,
   INDISPONIVEL,
   linhaDa,
+  linkDoPedido,
   marca,
   portao,
   principal,
@@ -86,16 +87,16 @@ function semear(cenario: Cenario, pedido: Pick<PedidoDoTitularSemeado, 'tipo' | 
   return criarPedidoDoTitularNoBanco({ escolaId: cenario.coordenadora.escolaId, titularId: aluno.usuarioId, registradoPor: cenario.coordenadora.usuarioId, ...pedido })
 }
 
-/** Da lista de pedidos ao detalhe do pedido da pessoa, pelo nome dela, que é o link. */
+/** Da lista de pedidos ao detalhe do pedido da pessoa, pelo nome dela, que é o link (a linha inteira o estende, 12.0). */
 async function abrirODetalhe(page: Page, hasTouch: boolean, nome: string, filtro?: string | RegExp): Promise<void> {
   const linha = filtro === undefined ? linhaDa(page, nome) : linhaDa(page, nome).filter({ hasText: filtro })
-  await acionar(linha.getByRole('link', { name: nome, exact: true }), hasTouch)
+  await acionar(linkDoPedido(linha, nome), hasTouch)
   await expect(page).toHaveURL(ENDERECO_DO_DETALHE, { timeout: PRAZO_DA_ENTRADA_MS })
   await expect(titulo(page, nome)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
 }
 
 async function voltarParaALista(page: Page, hasTouch: boolean): Promise<void> {
-  await acionar(principal(page).getByRole('link', { name: 'Voltar para os pedidos' }), hasTouch)
+  await acionar(principal(page).getByRole('link', { name: 'Voltar para Pedidos', exact: true }), hasTouch)
   await expect(page).toHaveURL(ENDERECO_DA_ABA, { timeout: PRAZO_DA_ENTRADA_MS })
 }
 
@@ -381,8 +382,8 @@ test.describe('Detalhe do pedido: corrigir o nome', () => {
     })
     await abrirODetalhe(page, hasTouch, aluno.nome)
 
-    // A correção de turma ou de vínculo não é deste pedido: o caminho é a turma, na Estrutura.
-    await expect(principal(page).getByRole('link', { name: 'Ir para a Estrutura', exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // A correção de turma ou de vínculo não é deste pedido: o caminho é a turma, em Escola › Turmas.
+    await expect(principal(page).getByRole('link', { name: 'Ir para as turmas', exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await acionar(principal(page).getByRole('button', { name: 'Corrigir nome', exact: true }), hasTouch)
     const dialogo = confirmacao(page, 'Corrigir o nome')
     await expect(dialogo).toBeVisible()
@@ -438,12 +439,12 @@ test.describe('Detalhe do pedido: corrigir o nome', () => {
     await abrirODetalhe(page, hasTouch, cenario.aluno.nome)
     await expect(principal(page).getByRole('button', { name: 'Concluir', exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('button', { name: 'Corrigir nome', exact: true })).toHaveCount(0)
-    await expect(principal(page).getByRole('link', { name: 'Ir para a Estrutura', exact: true })).toHaveCount(0)
+    await expect(principal(page).getByRole('link', { name: 'Ir para as turmas', exact: true })).toHaveCount(0)
     await voltarParaALista(page, hasTouch)
     await abrirODetalhe(page, hasTouch, outra.nome)
     await expect(secaoDoPedido(page)).toContainText('Concluído', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('button', { name: 'Corrigir nome', exact: true })).toHaveCount(0)
-    await expect(principal(page).getByRole('link', { name: 'Ir para a Estrutura', exact: true })).toHaveCount(0)
+    await expect(principal(page).getByRole('link', { name: 'Ir para as turmas', exact: true })).toHaveCount(0)
   })
 })
 
@@ -589,7 +590,7 @@ test.describe('Detalhe do pedido: a página acompanha o arquivo em preparação'
       },
     )
     await entrarNosPedidos(page, hasTouch, coordenadora)
-    await acionar(linhaDa(page, aluno.nome).getByRole('link', { name: aluno.nome, exact: true }), hasTouch)
+    await acionar(linkDoPedido(linhaDa(page, aluno.nome), aluno.nome), hasTouch)
     // Carregando: a tela diz o que espera, sem nome nem dado do titular.
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando o pedido…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText(aluno.nome)
@@ -606,7 +607,7 @@ test.describe('Detalhe do pedido: a página acompanha o arquivo em preparação'
     await page.goto('/coordenacao/privacidade/pedidos/0197f3b0-6f3e-7c11-9a3e-5d1c2b7a8e99')
     await expect(principal(page).getByRole('status').filter({ hasText: 'Este pedido não está mais disponível nesta escola' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveTitle('Pedido de titular · Turmma')
-    await expect(principal(page).getByRole('link', { name: 'Voltar para os pedidos' })).toBeVisible()
+    await expect(principal(page).getByRole('link', { name: 'Voltar para Pedidos', exact: true })).toBeVisible()
   })
 
   test('o pedaço do detalhe que demora a chegar mostra "Carregando…", e não uma área em branco', async ({ page, hasTouch }) => {
@@ -620,7 +621,7 @@ test.describe('Detalhe do pedido: a página acompanha o arquivo em preparação'
       return rota.continue()
     })
     await entrarNosPedidos(page, hasTouch, coordenadora)
-    await acionar(linhaDa(page, aluno.nome).getByRole('link', { name: aluno.nome, exact: true }), hasTouch)
+    await acionar(linkDoPedido(linhaDa(page, aluno.nome), aluno.nome), hasTouch)
     // O pedaço não chegou: a tela diz que está carregando, e não fica vazia.
     await expect(page.getByText('Carregando…', { exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     segurada.abrir()
@@ -632,7 +633,7 @@ test.describe('Detalhe do pedido: a página acompanha o arquivo em preparação'
     const coordenadora = await criarEquipeComSenha('coordenador')
     const pedidoId = await criarPedidoDeTitularEliminadoNoBanco(coordenadora.escolaId, coordenadora.usuarioId, 9)
     await entrarNosPedidos(page, hasTouch, coordenadora)
-    await acionar(linhaDa(page, ELIMINADO).getByRole('link', { name: ELIMINADO, exact: true }), hasTouch)
+    await acionar(linkDoPedido(linhaDa(page, ELIMINADO), ELIMINADO), hasTouch)
     await expect(page).toHaveURL(ENDERECO_DO_DETALHE, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(titulo(page, ELIMINADO)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(secaoDoPedido(page)).toContainText('Eliminação dos dados')
