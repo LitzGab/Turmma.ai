@@ -1,17 +1,15 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero (17/10 ~15h55): `ESCALADA` da Mesa na 11.0.** O `test-engineer` reprovou 2 vezes seguidas (na 2ª,
-  defeito real: `reset()` da retomada deixa `useEnvioUnico` travado; ordem `.processo/ordens/11_task-r2.md`, na
-  linha 1; frontend, conformidade e revisor-geral aprovaram na 2ª). Pedi o diagnóstico ao `Arquiteto`, reiniciado no
-  checkout da **linha 1** (`.processo/ordens/diagnostico-11.md`). **Diagnóstico recebido (~16h):** o
-  `useEnvioUnico` solta a trava pelo `onSettled` do `mutate`, que o `reset()` desliga; solta pela promessa
-  (`mutateAsync`), e o anúncio só sai na IA da função retomada; não é desenho. Par da linha 1 reiniciado e
-  `PEDIDO de retomada` enviado (~16h05), com a ordem r2 e o diagnóstico: espero o `RELATÓRIO` da 11.0. A próxima
-  reprovação do `test-engineer` na 11.0 é o limite (parada).
-- **Antes (17/10 ~14h40):** linha 1, `Implementador` (com a `Mesa`): o `RELATÓRIO` da **tarefa 11.0** (porte
-  pequeno), 1ª tentativa, partida às ~14h40, com a observação "Ao partir a 11.0" abaixo. Linha 2 **ociosa**: é a
-  última tarefa. Com o encontro dela, o commit "antes da validação" e o `Validador` (passo 8).
+- **Espero (17/10 ~16h40):** linha 1, `Implementador` (com a `Mesa`): o `RELATÓRIO` da **correção
+  `material-processando-estoura-o-prazo`**, 1ª tentativa, partida às ~16h40. A esteira de `5ecda3f` (39054499168) caiu
+  só em `e2e/material.spec.ts:180` [chromebook] (prazo de 30 s no `waitForTimeout` da linha 214; 1 de 179), teste da
+  8.0. Guardião ditado: `frontend-reviewer`. Linha 2 **ociosa**. Com o encontro da correção: ler a esteira de
+  `91d4722` (encontro da 11.0); vermelho ali é outra correção. Sem correção pendente: o commit "antes da validação"
+  e o `Validador` (passo 8); o `linhas.ts fechar` só no fechamento.
+- **Encontrada às ~16h35:** a 11.0 (`492175f`, encontro em `91d4722`), a última: 14 de 14. Escalada do
+  `test-engineer` resolvida com o diagnóstico do `Arquiteto` (`.processo/ordens/diagnostico-11.md`, na linha 1):
+  `useEnvioUnico` soltava a trava pelo `onSettled` do `mutate`, que o `reset()` desliga.
 - **Encontrada às ~14h40:** a 8.0 (`652932f`, encontro em `5ecda3f`). Esteira `c0993ac` (39050559368) **verde**; a de
   `5ecda3f` ler no encontro da 11.0. Achado da 8.0 para o Validador: a vitrine não tem material, a tabela com linhas e o
   painel só foram vistos pelo e2e (`TODO.md`, X2 8.0 (j)).
@@ -88,6 +86,7 @@
 | 10.0 | `76079c9` | Sonnet 5.5 | 2 | linha 1, ~10h34–12h48; `frontend-reviewer` e `conformidade-reviewer` aprovaram na r1, `test-engineer` e `revisor-geral` na r2; 9 fotos da Mesa; EXPLAIN de `?estado=rejeitada` em 30,2 s com 60 mil entregas (quadrático, da A5), na seção "Plano do Postgres" da tarefa e no `TODO.md`, para o Joaquim com o `infra-guardian`; encontro em `b0bf8f1` |
 | correção casca-carregando-estoura-o-goto | `5734676` | Sonnet 5.5 | 1 | linha 2, ~12h40–13h45; sem vermelho determinístico (50 de 50 antes); traço da esteira: JS/CSS sem resposta no Fast 3G, hipótese não confirmada; depois 60 de 60 no caso e 132 de 132 no spec; `frontend-reviewer` e `test-engineer` aprovaram na r1; 2 recomendações para o `/retro`; encontro em `c0993ac` |
 | 8.0 | `652932f` | Sonnet 5.5 | 2 | linha 1, ~12h50–14h40; `frontend-reviewer`, `privacy-guardian`, `test-engineer` e `revisor-geral` aprovaram na r2; corrigiu defeito real (o cancelar do seletor de arquivo fechava o diálogo e apagava o formulário); 53 mutações vermelhas; recomendações no documento e no `TODO.md` (X2, 8.0), com o corte a 360 px de "De quem é o material"; tabela com linhas e painel vistos só pelo e2e; encontro em `5ecda3f` |
+| 11.0 | `492175f` | Sonnet 5.5 | 3 | linha 1, ~14h36–16h35; `test-engineer` reprovou na r1 e na r2 (na r2, defeito real: o `reset()` da retomada deixava o `useEnvioUnico` travado) → `ESCALADA` da Mesa, diagnóstico do `Arquiteto` (`diagnostico-11.md`: soltar a trava pela promessa do `mutateAsync`), par reiniciado; os quatro revisores aprovaram na r3; 18 fotos; tabela "Sem aplicar" (r1 + r3) no documento; encontro em `91d4722` |
 
 ## Esperando o Joaquim
 ## O que falhou
