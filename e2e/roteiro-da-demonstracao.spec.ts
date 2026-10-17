@@ -611,8 +611,11 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
 
     await test.step('a coordenação suspende a Adaptação, o servidor recusa, e ela retoma, com tudo na auditoria', async () => {
       await irPelaCoordenacao(coordenacao, 'Agentes', hasTouch)
-      for (const agente of ['Assistente de ensino', 'Tutor', 'Analista de desempenho escolar']) {
+      // Uma IA por vez (X2, 11.0): cada uma se escolhe no seletor "Qual IA". O Assistente fica por último, porque a Adaptação é dele.
+      for (const agente of ['Tutor', 'Analista de desempenho escolar', 'Assistente de ensino']) {
+        await principal(coordenacao).getByRole('radio', { name: agente, exact: true }).click()
         await expect(principal(coordenacao).getByRole('heading', { level: 2, name: agente })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+        await expect(principal(coordenacao).locator('[data-cartao-do-agente]')).toHaveCount(1)
       }
       const adaptacao = principal(coordenacao).locator('[data-funcao="adaptacao"]')
       await adaptacao.getByRole('button', { name: 'Suspender esta função: Adaptação' }).click()

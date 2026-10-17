@@ -1,4 +1,6 @@
 import {
+  AGENTES,
+  type Agente,
   type CodigoDeErro,
   ESTADOS_DE_ENTREGA,
   FUNCOES,
@@ -61,6 +63,15 @@ export const OPCOES_DO_ESTADO = [
 export function estadoDoEndereco(busca: string): EstadoDeEntrega | undefined {
   const valor = new URLSearchParams(busca).get('estado')
   return ESTADOS_DE_ENTREGA.find((estado) => estado === valor)
+}
+
+/**
+ * A IA que o endereço pede (`?ia=tutor`), em "Como cada IA trabalha" (X2, 11.0). Só vale um dos três agentes do catálogo; qualquer
+ * outro valor é ignorado, e a tela abre no Assistente de ensino, o primeiro.
+ */
+export function agenteDoEndereco(busca: string): Agente {
+  const valor = new URLSearchParams(busca).get('ia')
+  return AGENTES.find((agente) => agente === valor) ?? 'assistente_de_ensino'
 }
 
 /**

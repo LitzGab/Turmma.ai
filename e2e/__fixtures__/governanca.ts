@@ -235,6 +235,21 @@ export async function acrescentarSerieDeUmProfessorSo(escolaId: string): Promise
   })
 }
 
+/**
+ * "Outra pessoa da coordenação" suspende a função, por fora da tela da coordenadora do teste (X2, 11.0): uma segunda coordenação,
+ * criada na mesma escola, e a suspensão gravada em nome dela. **Só a linha de `suspensao_de_funcao`**: não passa pela API nem grava a
+ * auditoria (`funcao.suspensa`), e por isso não serve a teste da auditoria (regra 70, item 6). Devolve quem suspendeu, para o teste conferir
+ * que a suspensão vigente continua sendo a dela depois de a coordenadora do teste tentar suspender de novo.
+ */
+export async function suspenderFuncaoPorOutraPessoa(escolaId: string, funcao: string): Promise<{ readonly usuarioId: string }> {
+  return comBanco(async (banco) => {
+    const contaId = await id(banco, 'insert into conta (email) values ($1) returning id', [`coordenacao-${randomUUID()}@educa.invalid`])
+    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'coordenador', $3) returning id", [escolaId, contaId, `Coordenação Sintética ${randomUUID().slice(0, 8)}`])
+    await banco.query('insert into suspensao_de_funcao (escola_id, funcao, suspensa_por) values ($1, $2, $3)', [escolaId, funcao, usuarioId])
+    return { usuarioId }
+  })
+}
+
 /** As suspensões da função na escola, da mais antiga para a mais nova, com o que o banco gravou. */
 export async function suspensoesNoBanco(escolaId: string, funcao: string): Promise<{ suspensaPor: string; motivo: string | null; retomada: boolean }[]> {
   return comBanco(async (banco) => {

@@ -4,6 +4,7 @@ import { trocarFuncao } from '../../api/governanca'
 import { textoDaAprovacao } from '../../componentes/ia/aprovacao'
 import { O_QUE_A_IA_NUNCA_FAZ } from './nunca-faz'
 import {
+  agenteDoEndereco,
   aprovacaoDoItem,
   AVISO_DA_SUSPENSAO,
   AVISO_DO_NOMINAL,
@@ -189,6 +190,15 @@ describe('o filtro "Estado" da lista da governança (telas da coordenação, 10.
     expect(estadoDoEndereco('estado=rejeitada')).toBe('rejeitada')
     for (const busca of ['', 'estado=', 'estado=todos', 'estado=APROVADA', 'estado=aprovada,pendente', 'estado=qualquer-coisa', 'professor=0197a1c0-0000-7000-8000-000000000301']) {
       expect(estadoDoEndereco(busca), busca).toBeUndefined()
+    }
+  })
+
+  it('a IA do endereço vale só se for um dos três agentes; qualquer outro valor abre no Assistente de ensino', () => {
+    expect(agenteDoEndereco('ia=tutor')).toBe('tutor')
+    expect(agenteDoEndereco('estado=aprovada&ia=analista_de_desempenho_escolar')).toBe('analista_de_desempenho_escolar')
+    expect(agenteDoEndereco('ia=assistente_de_ensino')).toBe('assistente_de_ensino')
+    for (const busca of ['', 'ia=', 'ia=TUTOR', 'ia=tutor,assistente_de_ensino', 'ia=professor', 'estado=aprovada']) {
+      expect(agenteDoEndereco(busca), busca).toBe('assistente_de_ensino')
     }
   })
 

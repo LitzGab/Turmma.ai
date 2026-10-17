@@ -23,3 +23,11 @@ export const O_MIOLO_QUE_ROLA = 'md:relative md:max-h-[calc(100dvh-17rem-var(--f
  * inteira numa fonte que a fazia passar de 768 px (+10 px no Chromebook); com ele tem a altura da janela, e quem rola é o resumo.
  */
 export const O_MIOLO_SEM_ABAS_QUE_ROLA = 'md:relative md:max-h-[calc(100dvh-13rem-var(--faixa-de-incidente,0px))] md:overflow-y-auto'
+
+/**
+ * O miolo dos Agentes ("Como cada IA trabalha", X2, 11.0). Acima dele ficam o "‹ Registros" (44 px), o título (64 px) e o seletor
+ * "Qual IA" (48 px), com 16 px entre cada um: são 62 px a mais que o título e as abas das molduras, e a conta de 17 rem, que dava
+ * 14 px de folga, passa a faltar 48 px (a página rolava 48 px a 1366 × 768, medido por `paginaNaoRola`). Com 21 rem o miolo começa
+ * a 320 px do alto e a folga volta a ser de 16 px. A faixa do aviso de incidente desconta do mesmo jeito.
+ */
+export const O_MIOLO_DOS_AGENTES = 'md:relative md:max-h-[calc(100dvh-21rem-var(--faixa-de-incidente,0px))] md:overflow-y-auto'

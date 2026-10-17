@@ -29,7 +29,12 @@ export function useEnvioUnico<Entrada, Saida>(opcoes: UseMutationOptions<Saida, 
   function enviar(entrada: Entrada): void {
     if (noAr.current) return
     noAr.current = true
-    mutacao.mutate(entrada, { onSettled: () => (noAr.current = false) })
+    // A trava solta pela promessa do próprio pedido, que termina com ele: o `onSettled` passado ao `mutate` é do observador,
+    // e um `reset()` com o pedido no ar o desliga — a trava ficaria presa até a tela sair.
+    const soltar = (): void => {
+      noAr.current = false
+    }
+    void mutacao.mutateAsync(entrada).then(soltar, soltar)
   }
   return { enviar, mutacao }
 }

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { screen, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { prepararTela, redeFalsa, renderizarTela, type RespostaFalsa } from '../../__fixtures__/tela'
@@ -69,6 +69,8 @@ describe('Registros › IA', () => {
 
 describe('as telas que ficam dentro de um lugar voltam para ele', () => {
   it('Agentes volta para Registros, na aba IA', async () => {
+    // O miolo dos Agentes lê a largura da janela; o `jsdom` não tem `matchMedia`.
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }))
     const rede = redeFalsa()
     rede.responderPor('/v1/governanca/funcoes', NUNCA)
     emUmaArea('/coordenacao/agentes', <Agentes />)

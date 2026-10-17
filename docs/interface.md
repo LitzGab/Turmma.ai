@@ -1678,10 +1678,11 @@ auditoria. O resto está na seção 1.3.
 - A tabela é a consulta da regra 70, item 6. "Aprovado por" em `ok`, "Esperando" em `pendente`
 - **Nenhuma coluna, filtro ou ordenação por professor** (D45, D64). Abrir o nominal é botão
   `oficial` à parte, com diálogo dizendo que fica em auditoria
-- **Agentes** são três cartões, um por agente: o avatar, o nome e três listas — *faz sozinho*,
-  *espera aprovação*, *nunca faz*. O cartão do Assistente lista **as funções**, cada uma com a
-  autonomia em português comum, o selo de alto risco, o resumo da AIA e o botão de **suspender só
-  aquela função** (D9 e D60 revistas; P19)
+- **Agentes** (a página "Como cada IA trabalha", X2, 11.0) mostra **uma IA por vez**, escolhida no
+  seletor "Qual IA" e guardada no endereço (`?ia=`): o avatar, o nome e **as funções** dela, cada uma
+  com o que *faz sozinha* e o que *espera aprovação*, a autonomia em português comum, o selo de alto
+  risco e o botão de **suspender só aquela função**; o que a IA *nunca faz* fica embaixo, igual para
+  as três. O resumo da AIA na tela é do F12 (D9 e D60 revistas; P19)
 
 **Entrada** (era 11.8): está na 11.3.
 

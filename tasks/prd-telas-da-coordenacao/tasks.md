@@ -93,7 +93,7 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [x] 10.5 Os vazios de hoje, e o do filtro
   - [x] 10.6 Testes: nenhum nome de professor, filtro ou ordem por professor; o e2e `governanca` sem perder asserção
 
-- [ ] **11.0 — "Como cada IA trabalha", uma IA por vez**
+- [x] **11.0 — "Como cada IA trabalha", uma IA por vez**
   - [ ] 11.1 A página de leitura, com "‹ Registros"
   - [ ] 11.2 O seletor "Qual IA", no endereço
   - [ ] 11.3 O agente escolhido: o que faz sozinho e o que espera aprovação, por função

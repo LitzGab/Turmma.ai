@@ -93,6 +93,9 @@ export async function irPelaCoordenacao(page: Page, tela: TelaDaCoordenacao, has
  * página tem a altura da janela; abaixo, rola a página, e o que não pode acontecer é a rolagem de lado.
  */
 export async function paginaNaoRola(page: Page): Promise<void> {
+  // A primeira amostra bastava para passar, e com a tela ainda em "Carregando…" a página é curta e passa sem provar nada (foi o que
+  // deixou o laço do W2 passar nos Agentes, que rolavam). Só se mede com a leitura terminada, nas duas larguras.
+  await expect(page.getByRole('main').getByText(/^(Carregando|Verificando)/), 'a tela ainda está carregando: a medida dela não é a de verdade').toHaveCount(0)
   expect(await larguraExcedente(page)).toBe(0)
   if ((page.viewportSize()?.width ?? 0) < 768) return
   const sobra = () => page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight)

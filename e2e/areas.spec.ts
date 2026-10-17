@@ -344,8 +344,9 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     // O RF3: de um lugar que não é o da tela, cada uma está a até dois cliques (três, no seletor da Privacidade), e o endereço
     // e o lugar aceso são os de hoje. A ordem sai de um lugar e vai a outro de propósito: Registros → Escola → Registros.
     // `cliquesAte` lê a mesma tabela que `irPelaCoordenacao` executa, então o `expect` dele só guarda o teto da tabela: a prova do
-    // RF3 é o clique de verdade, seguido do endereço e do lugar aceso. E, a 1366 × 768, a página não rola em nenhuma tela de
-    // Escola nem de Registros: só o miolo (RF23), o que `paginaNaoRola` mede na tela com o miolo mais longo, a Estrutura.
+    // RF3 é o clique de verdade, seguido do endereço e do lugar aceso. E, a 1366 × 768, a página não rola em nenhuma tela do laço
+    // (RF23), medida com a leitura terminada: a partir de 768 px quem rola é o miolo, o da moldura em Escola e Registros e o da própria
+    // tela nos Agentes e no Analista; o Painel, com a escola deste teste, cabe na janela.
     for (const { tela, endereco, lugar } of [...TELAS_DA_COORDENACAO].reverse()) {
       expect(cliquesAte(tela), tela).toBeLessThanOrEqual(tela === 'Empresas' || tela === 'Incidentes' ? 3 : 2)
       await irPelaCoordenacao(page, tela, hasTouch)
