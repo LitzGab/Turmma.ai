@@ -5,6 +5,7 @@ import { consultaAnosLetivos, consultaTurmas, consultaVinculos, type ListaDaEstr
 import { consultaMateriais } from '../../api/material'
 import { consultaIncidentes } from '../../api/privacidade'
 import { consultaProfessores } from '../../api/professores'
+import { caminhoDoProfessor } from '../../caminhos'
 import type { ItemDoSino, SituacaoDoSino } from '../../componentes/sino/Sino'
 import { formatarDiaDoInstante } from '../../formatar'
 
@@ -59,9 +60,6 @@ export function turmasSemProfessor(turmas: readonly Turma[], vinculos: readonly 
   return turmas.filter((turma) => !comProfessor.has(turma.id))
 }
 
-const PARA_PROFESSORES = '/professores'
-const PARA_PROFESSOR = (usuarioId: string): string => `${PARA_PROFESSORES}?professor=${encodeURIComponent(usuarioId)}`
-
 function lida<Dado>(leitura: LeituraDaFila<Dado>): Dado | undefined {
   return leitura.estado === 'lida' ? leitura.dado : undefined
 }
@@ -94,7 +92,7 @@ function itensDeContestacao(vinculos: readonly VinculoDaCoordenacao[], professor
       titulo: `${nomes.get(vinculo.usuarioId) ?? 'Um professor'} contestou a turma`,
       detalhe: vinculo.disciplina === undefined ? vinculo.turma.nome : `${vinculo.turma.nome} · ${vinculo.disciplina.nome}`,
       urgente: false,
-      para: PARA_PROFESSOR(vinculo.usuarioId),
+      para: caminhoDoProfessor(vinculo.usuarioId),
     }))
 }
 
@@ -107,7 +105,7 @@ function itensDeConviteVencido(professores: readonly ProfessorDaEscola[]): ItemD
       titulo: `Refazer o convite de ${professor.nome}`,
       detalhe: 'O convite venceu antes de ser aceito.',
       urgente: false,
-      para: PARA_PROFESSOR(professor.usuarioId),
+      para: caminhoDoProfessor(professor.usuarioId),
     }))
 }
 

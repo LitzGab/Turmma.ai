@@ -2,7 +2,7 @@
 import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { prepararTela, renderizarTela } from '../__fixtures__/tela'
 import { MinhaTurma } from './aluno/MinhaTurma'
 import Escola from './coordenacao/Escola'
@@ -27,6 +27,20 @@ import { Turmas } from './professor/Turmas'
  * quebraria a cada leitura que a tela ganhasse. Caminho que o caso não nomeia responde com lista vazia.
  */
 prepararTela()
+
+// A lista da turma da coordenação lê a largura da janela (a tabela dos nomes e o miolo que rola) e a `Tabela` mede o que
+// rola; o `jsdom` não tem `matchMedia` nem `ResizeObserver`. Janela larga, como a do Chromebook.
+beforeEach(() => {
+  vi.stubGlobal('matchMedia', (consulta: string) => ({ matches: consulta === '(min-width: 768px)', addEventListener: () => undefined, removeEventListener: () => undefined }))
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    },
+  )
+})
 
 const REQUISICAO = '0190f5a0-0000-7000-8000-000000000001'
 const UUID_DA_TURMA = '0192a4c0-5b1e-7c3d-8e4f-a0b1c2d3e4f5'
