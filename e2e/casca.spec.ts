@@ -1,7 +1,7 @@
 import type { Locator, Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { entrarComoCoordenacaoNaMesmaAba, entrarComoAluno, entrarComoProfessora, gaveta, PRAZO_DA_ENTRADA_MS, reservaDaBarraDeBaixo, secoes } from './__fixtures__/casca.ts'
-import { expect, test } from './__fixtures__/perfis.ts'
+import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, criarEquipeComSenha } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -137,7 +137,11 @@ test.describe('casca da web', () => {
       await segurada.aberta
       await rota.continue()
     })
-    await page.goto('/sistema')
+    // O caso afirma o que a tela diz enquanto o estado não chega, e não quanto a casca leva para baixar (isso o caso
+    // "com dado: versão e componentes vindos da API real, em até 5 s" mede). A primeira carga vai sem a rede do perfil:
+    // na esteira, uma vez, o documento chegou e os onze pedidos de script e estilo seguintes ficaram sem resposta por
+    // trinta segundos, antes de a página buscar o estado.
+    await carregarSemRedeLenta(page, () => page.goto('/sistema'))
 
     const carregando = secaoComponentes(page).getByRole('status')
     await expect(carregando).toHaveText('Carregando o estado do sistema…')

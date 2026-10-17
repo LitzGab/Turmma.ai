@@ -1,16 +1,19 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero (17/10 ~12h45):** linha 1, `Implementador` (com a `Mesa`): o `RELATÓRIO` da **tarefa 10.0**, 1ª tentativa,
-  partida às ~10h34; o `test-engineer` reprovou na 1ª rodada (ordem `.processo/ordens/10_task-r1.md`), e às 12h37 ele
-  rodava o portão antes de pedir a rodada 2. Linha 2, `Implementador 2` (reiniciado com a `Mesa 2`): o `RELATÓRIO` da
+- **Espero (17/10 ~12h50):** linha 1, `Implementador` (com a `Mesa`): o `RELATÓRIO` da **tarefa 8.0** (porte grande),
+  1ª tentativa, partida às ~12h50. Linha 2, `Implementador 2` (com a `Mesa 2`): o `RELATÓRIO` da
   **correção `2026-10-17-casca-carregando-estoura-o-goto`**, pedida às ~12h45: `e2e/casca.spec.ts:134` (chromebook),
   `page.goto('/sistema')` não chega ao `load` em 30 s com a rota atrasada (esteira 39037149357, `0646419`). Guardiões
-  ditados: `frontend-reviewer`. Com ele, `encontro 2`.
-- **Depois das duas:** a 8.0 e a 11.0 partem (o quadro já pede a 8.0). Encontrada às 12h40 a correção
-  `duas-abas-do-acesso-suspenso` (`8c7f3a7`, encontro em `13ceeab`).
-- **Esteiras lidas (12h40):** `d3ec693` e `13ceeab` ainda rodando; ler no próximo encontro (em `13ceeab`, o
-  `acesso-suspenso:169` já tem a correção; o `casca:134` não).
+  ditados: `frontend-reviewer`. Com ele, `encontro 2`, e o quadro deve pedir a 11.0 (observação dela abaixo).
+- **Encontrada às 12h48:** a 10.0 (`76079c9`, encontro em `b0bf8f1`).
+- **Esteiras lidas (12h48):** `0646419` vermelha só no `casca:134` (a correção da linha 2, já em curso); `d3ec693`
+  rodando, `13ceeab` e `b0bf8f1` na fila: ler no próximo encontro (em `13ceeab` em diante, o `acesso-suspenso:169` já
+  tem a correção; o `casca:134` só depois do encontro da linha 2).
+- **Dizer ao Joaquim no fechamento (achado da 10.0, para ele com o `infra-guardian`):** o EXPLAIN de
+  `?estado=rejeitada` em Registros › IA levou 30,2 s com 60 mil entregas (subconsulta do grupo mínimo da A5, uma vez
+  por candidata, quadrática); pendente daria ~100 min (conta); a lista sem filtro nunca foi medida. Está na seção
+  "Plano do Postgres" de `10_task.md` e no `TODO.md`, com a saída proposta. Não bloqueou a tarefa; já dito a ele em 17/10 12h50.
 - **Esteiras lidas (12h20):** `00bc6ec` e `7bfd99e` vermelhas no e2e 1/6 e 4/6 (o `estrutura:765` esperado); `033a871`
   vermelha só no `acesso-suspenso:169` (a correção da linha 2); `0646419` vermelha só no `casca:134` (a correção acima).
   A seguinte, em `d3ec693` (encontro da 7.0), ler no próximo encontro.
@@ -48,7 +51,7 @@
 - **Devo ainda:** no fechamento, linha no `TODO.md`: o sino da 1.0 soma pedaços e 6 leituras a cada recarga de
   página da coordenação (custo real no perfil lento, achado da correção da aba das empresas). A X3 e a X4 continuam paradas por pedido do Joaquim (a X4 no andar
   "X4 telas-do-aluno-e-primeiro-acesso", com a 1.0 em `1477850`): não retomar sem a palavra dele
-- **Base:** `spec/telas-da-coordenacao` em `d3ec693` (encontro da 7.0), com a `develop` de `2029703` (X1 pousada, mockup e retro) juntada
+- **Base:** `spec/telas-da-coordenacao` em `b0bf8f1` (encontro da 10.0), com a `develop` de `2029703` (X1 pousada, mockup e retro) juntada
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -72,6 +75,7 @@
 | 7.0 | `b8e425d` | Sonnet 5.5 | 2 | linha 2, ~10h27–11h40; `frontend-reviewer` ajustes r1 e aprovado r2, `privacy-guardian` aprovado, `test-engineer` e `revisor-geral` reprovado r1 e aprovado r2; 8 fotos da Mesa; mexeu em `PainelLado.tsx` (tabIndex 0 no miolo); a observação da 9.0 ficou sem o que alinhar (a lista da Alocação saiu); recomendações no `TODO.md` (X2, 7.0); encontro em CONFLITO no `Estrutura.test.tsx`, resolvido pela correção `encontro-7`; encontro em `d3ec693` |
 | correção encontro-7 | `e5012a4` | Sonnet 5.5 | 1 | linha 2, ~11h45–12h15; mantidos o it.each dos 44 px (`cc2188e`) e o teste novo do Nova turma; `frontend-reviewer` e `test-engineer` aprovaram na r1; 2 recomendações da vitrine no documento |
 | correção duas-abas-do-acesso-suspenso | `8c7f3a7` | Sonnet 5.5 | 2 | linha 2, ~12h11–12h40; corrida do teste (a 2ª aba levava o 403 antes da 1ª), não o teto de 30 s; espera por zero requisições a caminho, 40 de 40 nos dois perfis; `frontend-reviewer` aprovado r1, `test-engineer` reprovado r1 e aprovado r2; `TODO.md` com as duas folgas do `test-engineer`; encontro em `13ceeab` |
+| 10.0 | `76079c9` | Sonnet 5.5 | 2 | linha 1, ~10h34–12h48; `frontend-reviewer` e `conformidade-reviewer` aprovaram na r1, `test-engineer` e `revisor-geral` na r2; 9 fotos da Mesa; EXPLAIN de `?estado=rejeitada` em 30,2 s com 60 mil entregas (quadrático, da A5), na seção "Plano do Postgres" da tarefa e no `TODO.md`, para o Joaquim com o `infra-guardian`; encontro em `b0bf8f1` |
 
 ## Esperando o Joaquim
 ## O que falhou
@@ -92,6 +96,9 @@
   seguido no fim do `TODO.md` (encontro-4, encontro-5): para a retro, linhas novas do `TODO.md` em seção por tarefa
 - 17/10 ~11h45 — encontro da 7.0 (linha 2): CONFLITO em `Estrutura.test.tsx` com a correção `cc2188e` (linha 1);
   correção `encontro-7` na própria linha.
+- 17/10 ~12h — 10.0 (linha 1): o `Implementador` rodou o portão da correção com a linha 2 ativa (ambientes
+  separados, passou) e disparou sem querer uma rodada de e2e com a suíte inteira, que caiu em specs de outras áreas
+  por carga (a governança, 16/16). Para a retro: o e2e da tarefa só com os arquivos dela (`npx playwright test <arquivo>`).
 ## O que decidi sem perguntar
 - 17/10 ~03h50: DIVERGÊNCIA de portão do `Implementador` na correção `pagina-rola-depois-da-12`: areas:316 falha local
   também sem a 12.0 (+10 px na Analista) e passa na esteira. Ele perguntou se fechava sem correção; não fechei: a tela
