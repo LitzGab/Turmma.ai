@@ -39,7 +39,17 @@ function detalhe(parcial: Record<string, unknown> = {}): RespostaFalsa {
   }
 }
 
+/** A largura da janela, para a consulta `(min-width: 768px)` que o miolo lê; o `jsdom` não tem `matchMedia`. */
+function janelaDe(largura: number): void {
+  vi.stubGlobal('matchMedia', (consulta: string) => ({
+    matches: consulta === '(min-width: 768px)' ? largura >= 768 : false,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }))
+}
+
 beforeEach(() => {
+  janelaDe(1366)
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(AGORA)
 })
@@ -91,6 +101,21 @@ describe('o detalhe do pedido: a página de leitura', () => {
     expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeTruthy()
     expect(larguraDaTela()).toBe('leitura')
     expect(screen.getByRole('link', { name: 'Voltar para Pedidos' })).toBeTruthy()
+  })
+
+  it('a partir de 768 px a coluna do pedido é o miolo que rola e recebe foco; abaixo disso a página rola e a coluna só recebe o foco de reserva', async () => {
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/privacidade/pedidos/${PEDIDO_ID}`, detalhe())
+    const { unmount } = montar()
+    await screen.findByRole('heading', { level: 1, name: 'Ana Souza' })
+    const coluna = () => screen.getByRole('region', { name: 'Tudo sobre este pedido' })
+    expect(coluna().getAttribute('tabindex')).toBe('0')
+    expect(coluna().className).toContain('overflow-y-auto')
+    unmount()
+    janelaDe(360)
+    montar()
+    await screen.findByRole('heading', { level: 1, name: 'Ana Souza' })
+    expect(coluna().getAttribute('tabindex')).toBe('-1')
   })
 
   it('o prazo vem no topo, antes de "O pedido", e diz há quantos dias venceu', async () => {

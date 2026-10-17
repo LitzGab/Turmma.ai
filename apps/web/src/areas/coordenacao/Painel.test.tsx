@@ -3,7 +3,7 @@ import { CHAVES_DE_CATEGORIA_DO_INCIDENTE, montarTime, RISCOS_DO_INCIDENTE, type
 import { focusManager, onlineManager, QueryClientProvider, QueryObserver, useInfiniteQuery, useQuery, type QueryClient } from '@tanstack/react-query'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
@@ -129,6 +129,17 @@ const LEITURAS_DO_PAINEL = ['/v1/anos-letivos', '/v1/professores', '/v1/materiai
 const semConsulta = (caminho: string) => caminho.split('?')[0] ?? caminho
 const caminhosDe = (rede: RedeFalsa) => rede.chamadas.map((chamada) => semConsulta(chamada.caminho))
 
+/** A largura da janela, para a consulta `(min-width: 768px)` que o miolo lê; o `jsdom` não tem `matchMedia`. */
+function janelaDe(largura: number): void {
+  vi.stubGlobal('matchMedia', (consulta: string) => ({
+    matches: consulta === '(min-width: 768px)' ? largura >= 768 : false,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }))
+}
+
+beforeEach(() => janelaDe(1366))
+
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
@@ -182,6 +193,21 @@ describe('o Painel da escola montada', () => {
     }
     expect(ia.getByText('Consumo do mês: 1.500 tokens · 2 execuções. Trocas dos alunos com o Tutor: 12 de 9.600 trocas.')).toBeTruthy()
     expect(ia.getByRole('link', { name: 'Ver em Registros' }).getAttribute('href')).toBe('/governanca')
+  })
+
+  it('a partir de 768 px o Painel é o miolo que rola e recebe foco; abaixo disso a página rola e não há o que focar', async () => {
+    const rede = redeFalsa()
+    instalar(rede, TUDO_EM_DIA)
+    const { desmontar } = montar()
+    await esperarTudoLido()
+    const miolo = () => screen.getByRole('region', { name: 'O Painel da escola' })
+    expect(miolo().getAttribute('tabindex')).toBe('0')
+    expect(miolo().className).toContain('overflow-y-auto')
+    desmontar()
+    janelaDe(360)
+    montar()
+    await esperarTudoLido()
+    expect(miolo().hasAttribute('tabindex')).toBe(false)
   })
 
   it('a fila em dia diz "Tudo em dia" e o roteiro completo diz "A escola está montada"; a porta dos pedidos fica sempre, sem número', async () => {

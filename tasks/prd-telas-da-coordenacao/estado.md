@@ -4,19 +4,20 @@
 - **Validação, rodada 1 (17/10 ~18h15): REPROVADA**, sobre `f01ecbd` (`validacao.md`, seção 4). Quatro críticos e um
   maior; nenhum é regra de negócio. O caminho, o do Validador: três correções, e depois revalidação só desses pontos e da
   esteira (o `Validador` reiniciado, rodada 2 no topo do `validacao.md`).
-- **Espero (17/10 ~18h20):**
-  - linha 1: o `RELATÓRIO` do `Implementador`, correção `2026-10-17-painel-e-pedido-rolam-a-pagina` (C1 e C2: o Painel
-    com a faixa de incidente e o detalhe do pedido rolam a página a 1366 × 768), 1ª tentativa. Guardiões ditados:
-    `frontend-reviewer`;
-  - linha 2: ociosa. A correção `2026-10-17-vazio-durante-a-leitura` (C4 e o Maior) se encontrou em `ed03046` (17/10 ~18h04).
+- **Espero (17/10 ~18h45):**
+  - linha 1: o `RELATÓRIO` do `Implementador`, correção `encontro-2026-10-17-painel-e-pedido-rolam-a-pagina`, 1ª
+    tentativa: a C1+C2 terminou em `c2e3398` (APROVADA pelos três revisores na r2), mas o encontro deu CONFLITO no
+    `TODO.md`; ele faz o merge da spec, resolve e fecha com o commit da correção. Depois, `linhas.ts encontro 1` de novo.
+    Guardiões: só `test-engineer` e `revisor-geral`;
+  - linha 2: o `RELATÓRIO` do `Implementador 2`, correção `2026-10-17-agentes-carregando-estoura-o-prazo`, 1ª tentativa:
+    `e2e/agentes.spec.ts:164` [celular] 30,2 s, vermelho em 39066733762, 39066820938 e 39066847388. Guardiões:
+    `frontend-reviewer`.
 - **Devo ainda:**
   - a correção de **C3** (o painel lateral aberto pelo endereço fica por cima do aviso de incidente; e2e que entra com
     incidente pendente direto num endereço com painel), na **linha 1, depois do encontro da correção dela** (as duas
     mexem em `e2e/incidentes.spec.ts`). Guardiões: `frontend-reviewer`;
-  - a esteira: `41600a2` (39064583848) deu vermelho no `areas:316` (corrigido pela `w2-carregando`, em `3246cdc`) e no
-    **`agentes.spec.ts:164` (celular, 30 s)**, que não tinha caído antes. Ler a de `3246cdc` (39066733762), `6f86343`
-    (39066820938) e `f01ecbd` (39066847388): se o `agentes:164` cair de novo, é correção (com `test.slow()` só se o
-    traço mostrar leitura lenta e não trava). Às 18h05 as três ainda rodavam, e a de `ed03046` (39069356834) na fila;
+  - a esteira: o `agentes:164` caiu nas três (a correção está na linha 2); `b022543` (39068217314) e as seguintes ainda
+    rodavam às 18h45. Ler de novo no próximo encontro;
   - no fechamento, levar ao `TODO.md`: as 2 recomendações do `frontend-reviewer` da correção
     `troca-de-escola-sem-ir-para-a-entrada` (título do incidente truncado a 360 px no cartão do Painel; texto de incidente
     da vitrine pouco realista); o sino da 1.0 que faz 6 leituras a cada recarga de página da coordenação; e os Menores da
@@ -28,7 +29,7 @@
     em `1477850`): não retomar sem a palavra dele.
 - **Maestri:** depois do reinício da máquina, o `maestri` não está no PATH do terminal do Orquestrador: usar
   `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
-- **Base:** `spec/telas-da-coordenacao` em `ed03046`, com a `develop` de `2029703` juntada.
+- **Base:** `spec/telas-da-coordenacao` em `8642275`, com a `develop` de `2029703` juntada.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -63,6 +64,8 @@
 
 ## Esperando o Joaquim
 ## O que falhou
+- 17/10 ~18h45 — CONFLITO no encontro da linha 1 (C1+C2, `c2e3398`) só no `TODO.md`, com a linha 2 (`ed03046`) que também
+  tinha escrito nele: correção `encontro-…` na linha 1.
 - 16/10 — encontro da 4.0 (linha 2): CONFLITO no `TODO.md` com a spec; correção `encontro-4` na própria linha.
 - 16/10 18h00–18h38: a correção da linha 2 ficou 37 min parada num laço de espera que nunca saía: `pgrep -f` sem
   colchete acha a própria linha do `zsh -c`. Ao mandar uma linha esperar a outra, escreva o padrão já com colchete

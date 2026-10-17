@@ -13,10 +13,12 @@ import { Contador } from '../../componentes/Contador'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { Linha } from '../../componentes/Linha'
 import { NumeroPainel } from '../../componentes/NumeroPainel'
+import { A_PARTIR_DE_768, useMidia } from '../../componentes/midia'
 import { Estado } from '../../componentes/SeloDeEstado'
 import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
 import { SEM_LEITURA_SOZINHA, useFilaDaCoordenacao } from './fila-da-coordenacao'
+import { O_MIOLO_SEM_ABAS_QUE_ROLA } from './miolo-que-rola'
 import { oQueFaltaDaEscola, PARA_O_ANO, passosDoRoteiro, type PassoDoRoteiro } from './o-que-falta-da-escola'
 import { nomeDaFuncao, textoDoConsumo, textoDoPacoteDoTutor } from './textos-da-governanca'
 
@@ -35,14 +37,18 @@ import { nomeDaFuncao, textoDoConsumo, textoDoPacoteDoTutor } from './textos-da-
  */
 export default function Painel() {
   useTituloDaTela('Painel')
+  // O miolo que rola recebe foco, para rolar pelo teclado, a partir de 768 px: abaixo disso rola a página, e não há o que focar.
+  const comMiolo = useMidia(A_PARTIR_DE_768)
   return (
     <Tela titulo="Painel">
-      <FuncaoSuspensa />
-      <ANoEscola />
-      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
-        <EsperandoVoce />
-        <ParaTerminarAEscola />
-      </div>
+      <section aria-label="O Painel da escola" {...(comMiolo ? { tabIndex: 0 } : {})} className={`flex min-w-0 flex-col gap-4 ${O_MIOLO_SEM_ABAS_QUE_ROLA}`}>
+        <FuncaoSuspensa />
+        <ANoEscola />
+        <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+          <EsperandoVoce />
+          <ParaTerminarAEscola />
+        </div>
+      </section>
     </Tela>
   )
 }
@@ -55,7 +61,7 @@ function semLeituraSozinha<Opcoes extends object>(opcoes: Opcoes): Opcoes & type
   return { ...opcoes, ...SEM_LEITURA_SOZINHA }
 }
 
-/** Quanto cabe numa lista antes de ela rolar por dentro: a 1366 × 768 a página não rola (RF23). */
+/** Quanto cabe numa lista antes de ela rolar por dentro. Que a página não role a 1366 × 768 (RF23) é do miolo do Painel (`O_MIOLO_SEM_ABAS_QUE_ROLA`); as listas só limitam a própria altura dentro dele. */
 const LISTA_QUE_ROLA = 'max-h-[clamp(9rem,calc(100dvh_-_40rem),18rem)] overflow-y-auto'
 
 function Lista({ rotulo, children }: { readonly rotulo: string; readonly children: ReactNode }) {

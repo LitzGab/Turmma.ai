@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import type { Page, Request, Route } from '@playwright/test'
 import { PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   acionar,
@@ -136,6 +137,8 @@ test.describe('Detalhe do pedido: prazo e compartilhamento', () => {
     // 11 dias depois da chegada, faltam 4 dos 15: o texto diz quantos e até que dia.
     await abrirODetalhe(page, hasTouch, noPrazo.nome)
     await expect(secaoDoPrazo(page)).toContainText(`Faltam 4 dias, até ${diaCurto(somarDiasAHoje(4))}`, { timeout: PRAZO_DA_ENTRADA_MS })
+    // O pedido recebido, sem arquivo, é o estado mais curto da tela, e já passava da janela de 1366 × 768 (88 px): só o miolo rola.
+    await paginaNaoRola(page)
     await expect(secaoDoPrazo(page).locator('[data-estado="pendente"]')).toBeVisible()
     await expect(secaoDoPedido(page)).toContainText('Acesso aos dados')
     await expect(secaoDoPedido(page)).toContainText('Recebido')
