@@ -524,6 +524,16 @@ para o staging".
       link da turma passou a levar ao painel (spec da 9.0); (f) `e2e/professores.spec.ts:1108`: o `toHaveCount(0)` logo
       depois do `goBack` pode passar antes de um painel reabrir, e uma espera curta pelo título da lista deixaria a
       intenção clara (dono: Joaquim)
+- [ ] **(X2, 7.0) Recomendações que a tarefa deixou para depois:** (a) o vazio "Crie uma turma primeiro" do painel do professor
+      não diz onde criar a turma, e "Nenhuma turma." poderia convidar ("Nenhuma turma ainda. Use Acrescentar turma."),
+      só quando o botão existe: um link para a aba Turmas fecha o próximo passo; é texto e caminho de tela, que o
+      Arquiteto decide, junto com a 8.0 (`frontend-reviewer`, 1ª rodada; `PainelDoProfessor.tsx` e
+      `o-que-falta-para-alocar.ts`); (b) o selo do vínculo do painel repete o de `ProfessoresDaTurma.tsx`, mudando só os
+      textos: uma peça só, recebendo o mapa de textos, e o ternário que repete `<Estado>` em `SeloDoVinculo` pede um
+      comentário de uma linha ou o tipo corrigido (`revisor-geral`, 1ª rodada; mexe na lista da turma e refaz os blocos
+      de mutação do selo); (c) o selo "ATIVO." sai com ponto final, vindo de `convite-de-professor.ts` na 6.0
+      (`frontend-reviewer`, 1ª rodada); (d) o e2e do contestado não confere o complemento que o professor escreveu: estender
+      `contestarVinculosNoBanco` para gravá-lo (`test-engineer`, 1ª rodada); (e) `dialogo-modal.ts:26` e `dialogo-modal.test.ts:31` ainda dizem que o miolo do painel é `tabIndex={-1}`, fora da ordem do Tab (hoje é `tabIndex={0}`): tirar "o miolo do painel" dos dois comentários (`revisor-geral` e `test-engineer`, 2ª rodada); (f) o caso "abrir de novo com o diálogo ainda aberto é uma abertura nova" de `PainelDoProfessor.test.tsx` só funciona no jsdom, onde o fundo não fica inerte: o nome deveria dizer que prova a garantia defensiva da `key`; e o bloco de mutação `if (falhou !== undefined)` poderia trocar por `if (false)`, para o vermelho vir só da regra (`test-engineer`, 2ª rodada)
 - [ ] **(F3, validação, m7) `IA_LATENCIA_FALSA_MS` obrigatória sem aviso no `README.md`:** `infra/compose.yml:211` exige a
       variável, e quem sobe o compose pela primeira vez não é avisado. Uma linha no `README.md` (dono: Joaquim)
 - [ ] **(F3, validação, m8) A vitrine não semeia nada da Privacidade:** `tools/vitrine/escola.ts` monta a escola sem pedido,

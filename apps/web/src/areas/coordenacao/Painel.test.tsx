@@ -634,7 +634,7 @@ describe('os quatro estados de cada bloco', () => {
       ['Disciplinas', '/estrutura?painel=ano'],
       ['Turmas', '/estrutura'],
       ['Professores', '/professores'],
-      ['Alocação', '/estrutura'],
+      ['Alocação', '/professores'],
     ])
     expect(links.every((link) => link.textContent?.includes('Falta'))).toBe(true)
     // Embaixo do título, a frase que fecha sozinha (a `acao`), e não a descrição longa do roteiro da Estrutura.

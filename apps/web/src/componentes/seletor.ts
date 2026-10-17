@@ -10,7 +10,7 @@
  *
  * `FACE_DO_CAMPO` é a parte sem o canto, para a seleção em pílula da caixa de pedido, que tem o canto dela. Fica aqui, e
  * não em `Campo.tsx`, porque o `Campo`, o `CampoLongo`, a `Selecao` e a `Busca` a dividem, e a seleção é a peça que a
- * Estrutura e a Alocação já usam sem o `Campo`. A altura, o enchimento e o tamanho da letra são de cada peça.
+ * Estrutura e o "Acrescentar turma" já usam sem o `Campo`. A altura, o enchimento e o tamanho da letra são de cada peça.
  */
 export const FACE_DO_CAMPO =
   'border-2 border-borda-campo bg-campo text-tinta focus-visible:outline-offset-0 aria-invalid:border-vermelho-texto disabled:bg-fundo-suave disabled:text-apoio'
@@ -20,6 +20,6 @@ export const CAIXA_DO_CAMPO = `rounded-controle ${FACE_DO_CAMPO}`
 
 /**
  * O `select` dos formulários, com a altura de 48 px do campo e a caixa dele (regra 50, itens 2a e 11). A largura é de
- * quem usa: o da Alocação ocupa a coluna inteira (`w-full`).
+ * quem usa.
  */
 export const CLASSES_DO_SELETOR = `min-h-12 min-w-0 px-3.5 py-2 t-corpo ${CAIXA_DO_CAMPO}`

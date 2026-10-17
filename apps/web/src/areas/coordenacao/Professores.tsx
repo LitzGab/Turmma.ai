@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useSearch } from 'wouter'
-import { consultaAnosLetivos, consultaVinculos } from '../../api/estrutura'
+import { CHAVE_DA_ESTRUTURA, consultaAnosLetivos, consultaVinculos } from '../../api/estrutura'
 import { consultaProfessores, mutacaoDoCadastroDeProfessor, mutacaoDoRefazerConviteDoProfessor, revogarConviteDoProfessor } from '../../api/professores'
 import { aoTrocarDeSessao } from '../../api/sessao'
 import { PARAMETRO_DO_PROFESSOR } from '../../caminhos'
@@ -28,15 +28,16 @@ import {
   TEXTO_DO_NOME_REPETIDO,
   TEXTOS_DO_CONVITE_QUE_MUDOU,
 } from './convite-de-professor'
+import { DialogoDeAlocacao } from './Alocacao'
 import { enderecoComParametro } from './endereco-da-tela'
 import { textoDaListaCurta } from './lista-curta'
 import { useFocarOTituloDaMoldura } from './moldura'
 import { AvisoDeListaIncompleta } from './pecas-da-lista'
 import { PainelDoProfessor } from './PainelDoProfessor'
-import { contagemDeProfessores, professorDoEndereco, professoresDaTabela, type ProfessorDaTabela } from './professores-da-escola'
+import { contagemDeProfessores, professorAlocavel, professorDoEndereco, professoresDaTabela, type ProfessorDaTabela } from './professores-da-escola'
 
-/** Os diálogos da tela, um por vez. O refazer e o revogar levam o professor da linha, fotografado na abertura. */
-type TipoDeDialogo = 'cadastrar' | 'refazer' | 'revogar'
+/** Os diálogos da tela, um por vez. O refazer, o revogar e o acrescentar turma levam o professor da linha, fotografado na abertura. */
+type TipoDeDialogo = 'cadastrar' | 'refazer' | 'revogar' | 'acrescentar'
 type ProfessorDaLinha = Pick<ProfessorDaEscola, 'usuarioId' | 'nome'>
 
 /** A etapa do link e a pergunta de fechar, com quem entra pelo convite da coordenação. */
@@ -93,7 +94,9 @@ function colunasDosProfessores(aoAbrir: (usuarioId: string) => void): readonly [
  * e-mail: o link sai da escola pela mão da coordenação.
  *
  * Os professores estão numa tabela (Nome, Disciplinas, Turmas e Situação), pelo nome, e a linha inteira abre o painel dele ao lado
- * (`?professor=<usuarioId>`), onde ficam a situação e as ações que o estado permite. "Cadastrar professor" é o único botão cheio.
+ * (`?professor=<usuarioId>`), onde ficam a situação, as turmas dele e as ações que o estado permite — entre elas "Acrescentar turma", que
+ * é a alocação (7.0): o diálogo abre por cima do painel, e o vínculo nasce esperando o professor confirmar. "Cadastrar professor" é o único
+ * botão cheio.
  * Sem e-mail, sem busca e sem ordem que não seja a do nome (regra 70, item 9; D64): a tabela diz o que a escola alocou, e nunca uso.
  *
  * - **Quatro estados** (W4): carregando; erro com "Tentar de novo"; vazio, "Nenhum professor ainda", com o Cadastrar; e com dado, o
@@ -125,17 +128,22 @@ export default function Professores() {
   const focarOTituloDaMoldura = useFocarOTituloDaMoldura()
   const tituloDaLista = useRef<HTMLHeadingElement>(null)
   const tituloDaSituacao = useRef<HTMLHeadingElement>(null)
+  const tituloDasTurmas = useRef<HTMLHeadingElement>(null)
 
   const dados = professores.data
   const doPainel = dados === undefined ? undefined : professorDoEndereco(busca, dados.itens)
   const painelAberto = doPainel !== undefined
 
   const recarregar = useCallback(() => cliente.invalidateQueries({ queryKey: consultaProfessores.queryKey }), [cliente])
+  // Acrescentar uma turma muda os vínculos, e a falha dela diz que a turma, a disciplina ou o convite mudou: a estrutura toda relê.
+  const recarregarAEstrutura = useCallback(() => cliente.invalidateQueries({ queryKey: CHAVE_DA_ESTRUTURA }), [cliente])
   // O foco quando o botão que abriu o diálogo saiu da tela: o "Cadastrar" do vazio, ou a ação que o estado novo não tem.
   // Sem a lista na tela (a releitura caiu com ela ainda vazia), vai para o título da tela, e não para o `body`.
   const focarNaLista = useCallback(() => (tituloDaLista.current === null ? focarOTituloDaMoldura() : tituloDaLista.current.focus()), [focarOTituloDaMoldura])
   // Os diálogos abertos do painel: o "Refazer" e o "Revogar" saem do rodapé quando o estado muda, e o foco fica no painel, e não na página inerte atrás.
   const focarNoPainel = useCallback(() => (tituloDaSituacao.current === null ? focarNaLista() : tituloDaSituacao.current.focus()), [focarNaLista])
+  // O "Acrescentar turma" que saiu do rodapé (o convite venceu com o diálogo aberto): o foco vai às turmas do painel.
+  const focarNasTurmas = useCallback(() => (tituloDasTurmas.current === null ? focarNoPainel() : tituloDasTurmas.current.focus()), [focarNoPainel])
 
   useEffect(() => aoTrocarDeSessao(fechar), [fechar])
 
@@ -162,6 +170,10 @@ export default function Professores() {
   const turmasComFalha = anos.isError || vinculos.isError
   const lerTurmasDeNovo = () => void (anos.isError ? anos : vinculos).refetch({ cancelRefetch: false })
   const lendoTurmas = anos.isFetching || vinculos.isFetching
+  // O professor do diálogo "Acrescentar turma" como a lista de agora o tem, e não como foi fotografado na abertura: o convite que
+  // venceu com o diálogo aberto tira o envio.
+  const alvoAgora = alvo === undefined ? undefined : dados?.itens.find((candidato) => candidato.usuarioId === alvo.usuarioId)
+  const alvoRecebeTurma = alvoAgora !== undefined && professorAlocavel(alvoAgora.estado)
 
   return (
     <section className="flex min-w-0 flex-col gap-6" aria-label="Professores">
@@ -217,8 +229,10 @@ export default function Professores() {
           aoFechar={fecharPainel}
           aoRefazer={() => abrir('refazer', doPainel)}
           aoRevogar={() => abrir('revogar', doPainel)}
+          aoAcrescentar={() => abrir('acrescentar', doPainel)}
           anuncio={anuncio?.usuarioId === doPainel.usuarioId ? anuncio.texto : ''}
           tituloDaSituacao={tituloDaSituacao}
+          tituloDasTurmas={tituloDasTurmas}
           focoDeReserva={focarNaLista}
         />
       )}
@@ -291,6 +305,20 @@ export default function Professores() {
           aoTerminar={recarregar}
           textosDaFalha={TEXTOS_DO_CONVITE_QUE_MUDOU}
           focoDeReserva={focarNoPainel}
+        />
+      )}
+      {aberta?.tipo === 'acrescentar' && alvo !== undefined && (
+        <DialogoDeAlocacao
+          key={aberta.numero}
+          professor={alvo}
+          alocavel={alvoRecebeTurma}
+          aoFechar={fechar}
+          aoAlocar={(texto) => {
+            definirAnuncio({ usuarioId: alvo.usuarioId, texto })
+            dialogo.fecharSeAinda(aberta)
+          }}
+          recarregar={recarregarAEstrutura}
+          focoDeReserva={focarNasTurmas}
         />
       )}
     </section>

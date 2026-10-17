@@ -1,12 +1,10 @@
 import {
   CodigoDeErro,
-  ESTADOS_DO_PROFESSOR_ALOCAVEIS,
   nomeDaSerie,
   TAMANHO_MAXIMO_NOME_DISCIPLINA,
   TAMANHO_MAXIMO_NOME_TURMA,
   TURNOS,
   type AnoLetivo,
-  type EstadoDoProfessor,
   type Serie,
   type Turma,
   type Turno,
@@ -45,7 +43,6 @@ import { Segmentado } from '../../componentes/Segmentado'
 import { Estado } from '../../componentes/SeloDeEstado'
 import { Tabela, type ColunaDaTabela } from '../../componentes/Tabela'
 import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
-import { Alocacao } from './Alocacao'
 import {
   PainelDoAnoEDisciplinas,
   NovaDisciplina,
@@ -65,6 +62,7 @@ import { oQueFaltaDaEscola, passosDoRoteiro } from './o-que-falta-da-escola'
 import { PainelDoQueFalta, Roteiro } from './OQueFalta'
 import { ordenarSeries } from './ordem'
 import { AvisoDeListaIncompleta } from './pecas-da-lista'
+import { professorAlocavel } from './professores-da-escola'
 import {
   agruparPorSerie,
   NOME_NAO_CARREGADO,
@@ -143,8 +141,8 @@ function colunasDasTurmas(aoEscolher: (turma: Turma, acao: 'renomear' | 'excluir
 /**
  * Escola › Turmas (X2, 5.0; RF11, RF12 e RF22; Tech Spec seções 5 e 9): as turmas do ano em tabela, por série, com a linha
  * inteira abrindo a lista da turma. O ano letivo, as séries e as disciplinas ficam num painel ao lado (`?painel=ano`), e "O
- * que falta para a escola começar" noutro (`?painel=falta`); o filtro "Situação" é `?situacao=sem-professor`. A alocação
- * continua na página, abaixo das turmas, até a 7.0 levá-la ao painel do professor. Tudo o que a Estrutura fazia continua: as
+ * que falta para a escola começar" noutro (`?painel=falta`); o filtro "Situação" é `?situacao=sem-professor`. A alocação não
+ * mora mais aqui: é o "Acrescentar turma" do painel do professor, em Professores (7.0). Tudo o que a Estrutura fazia continua: as
  * escritas, os diálogos, os anúncios e o foco de cada ação.
  *
  * - **Quatro estados** (RF22): carregando; erro com "Tentar de novo"; vazio, que é a escola sem ano letivo (o roteiro e o botão
@@ -218,7 +216,7 @@ export default function Estrutura() {
 
   if (anos.isError) return <EstadoErro erro={anos.error} tentando={anos.isFetching} aoTentarDeNovo={() => void anos.refetch({ cancelRefetch: false })} />
 
-  const alocaveis = professores.data?.itens.filter((professor) => (ESTADOS_DO_PROFESSOR_ALOCAVEIS as readonly EstadoDoProfessor[]).includes(professor.estado))
+  const alocaveis = professores.data?.itens.filter((professor) => professorAlocavel(professor.estado))
   // Turmas e vínculos são do ano em curso: sem ele não há leitura a esperar, e o passo falta de fato.
   const passos = passosDoRoteiro(
     anos.data.itens.length === 0
@@ -297,8 +295,6 @@ export default function Estrutura() {
               />
             )}
           </Secao>
-
-          <Alocacao anoEmCurso={anoEmCurso !== undefined} anuncio={anuncioDa('alocacao')} aoAnunciar={(texto) => anunciar('alocacao', texto)} />
 
           {painel === 'ano' && (
             <PainelDoAnoEDisciplinas

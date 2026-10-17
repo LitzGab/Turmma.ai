@@ -23,12 +23,12 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, larguraExceden
 /**
  * A Estrutura da coordenação (A1, tarefa 13.0; `tasks/prd-apresentacao-escola/cenarios.md`): W4 de Estrutura; W12 (360 px,
  * dentro do diálogo, cartões, alvos, teclado); e o recomeço da tela. A lista da turma está em `lista-da-turma.spec.ts` e a
- * alocação em `alocacao.spec.ts` (X2, 3.0). Tudo pela tela, nos projetos `chromebook` e `celular`, com nomes
+ * alocação em `alocacao.spec.ts` (X2, 3.0 e 7.0: ela mora no painel do professor). Tudo pela tela, nos projetos `chromebook` e `celular`, com nomes
  * e matrículas inventados pelo teste.
  */
 
 const ROTA_ANOS = '**/v1/anos-letivos*'
-/** As leituras das seções da Estrutura que têm o seu próprio carregando e o seu próprio erro, e a dos professores, que a Alocação e o roteiro usam. */
+/** As leituras das seções da Estrutura que têm o seu próprio carregando e o seu próprio erro, e a dos professores, que só o roteiro usa. */
 const ROTAS_DAS_SECOES = ['**/v1/series?*', '**/v1/disciplinas?*', '**/v1/turmas?*', '**/v1/professores?*']
 const INDISPONIVEL = JSON.stringify({ erro: { codigo: 'INDISPONIVEL_TENTE_DE_NOVO', mensagem: 'texto que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } })
 
@@ -204,7 +204,6 @@ test.describe('W4 (Estrutura): do vazio ao roteiro, montando a escola pela tela'
     })
     // Sem ano em curso, a turma não nasce: a seção diz o que fazer, sem o botão, e a tela não pediu turma nem vínculo.
     await expect(principal(page).getByRole('button', { name: 'Nova turma' })).toHaveCount(0)
-    await expect(principal(page).getByRole('region', { name: 'Alocação' })).toContainText('Abra o ano letivo acima')
     expect(doAnoEmCurso).toEqual([])
     const doPainel = await abrirAnoEDisciplinas(page, hasTouch)
     await acionar(doPainel.getByRole('button', { name: 'Abrir o ano letivo 2026' }), hasTouch)
@@ -270,14 +269,9 @@ test.describe('W4 (Estrutura): do vazio ao roteiro, montando a escola pela tela'
     await expect(turmas.getByRole('heading', { level: 3 })).toHaveText('7º ano do Ensino Fundamental')
     await expect(linhasDaTabela(turmas).filter({ hasText: turma })).toContainText('manhã')
     await expect(anuncio(turmas, `Turma ${turma} criada. Abra a turma para subir a lista de nomes.`)).toBeVisible()
-    // Com turma e professor, mas sem disciplina, a alocação ainda diz o que criar primeiro.
-    const alocacao = principal(page).getByRole('region', { name: 'Alocação' })
-    // O título diz só o que falta: com a turma e o professor, não pede outra vez a turma nem o professor (14.0).
-    await expect(alocacao).toContainText('Crie uma disciplina primeiro')
-    await expect(alocacao).not.toContainText('Crie uma turma')
-    await expect(alocacao).toContainText('Falta: uma disciplina.')
-    // O professor já existe: o vazio não manda à tela Professores.
-    await expect(alocacao.getByRole('link', { name: 'Ir para Professores' })).toHaveCount(0)
+    // A alocação já não mora na Estrutura (7.0): com turma e professor, mas sem disciplina, quem diz o que criar primeiro é o painel
+    // do professor (`alocacao.spec.ts`), e aqui não há seção nem "Alocar".
+    await expect(principal(page).getByRole('region', { name: 'Alocação' })).toHaveCount(0)
 
     // A disciplina (no painel do ano letivo), com o nome repetido recusado pela API e explicado no diálogo.
     const disciplina = `Matemática ${marca}`
@@ -305,12 +299,12 @@ test.describe('W4 (Estrutura): do vazio ao roteiro, montando a escola pela tela'
     }
 
     await fecharPainel(page, painelDoAno(page), hasTouch)
-    // O roteiro diz o que falta, e a alocação passa a oferecer a escolha.
+    // O roteiro diz o que falta, e a Estrutura não tem "Alocar": o passo da alocação leva a Professores.
     await comOQueFalta(page, hasTouch, async (oQueFalta) => {
       for (const passo of ['Ano letivo · feito', 'Séries · feito', 'Disciplinas · feito', 'Turmas · feito', 'Professores · feito', 'Alocação · falta'])
         await expect(oQueFalta).toContainText(passo)
     })
-    await expect(alocacao.getByRole('button', { name: 'Alocar' })).toBeVisible()
+    await expect(principal(page).getByRole('button', { name: 'Alocar' })).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
     expect(await larguraExcedente(page)).toBe(0)
     // Só o que passou pela conferência da tela saiu: os dois anos, a turma, e a disciplina e a repetição dela.
@@ -410,11 +404,10 @@ test.describe('W4 (Estrutura): do vazio ao roteiro, montando a escola pela tela'
     await acionar(turmasDaPagina.regiao.getByRole('button', { name: 'Tentar de novo' }), hasTouch)
     await expect(turmasDaPagina.regiao).toContainText(turmasDaPagina.vazio, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(turmasDaPagina.regiao.getByRole('alert')).toHaveCount(0)
-    // A alocação ainda espera os professores, e o "Tentar de novo" dela os traz: o vazio diz o que falta, e o roteiro
-    // volta a marcar o que a escola de fato não tem.
-    const alocacao = principal(page).getByRole('region', { name: 'Alocação' })
-    await acionar(alocacao.getByRole('button', { name: 'Tentar de novo' }), hasTouch)
-    await expect(alocacao).toContainText('Falta: uma turma; uma disciplina; um professor cadastrado, com o convite em aberto ou já aceito.', { timeout: PRAZO_DA_ENTRADA_MS })
+    // A leitura dos professores só alimenta o roteiro, e não tem "Tentar de novo" nesta tela: a tela relida, com as leituras de volta,
+    // marca o que a escola de fato não tem.
+    await page.reload()
+    await expect(turmasDaPagina.regiao).toContainText(turmasDaPagina.vazio, { timeout: PRAZO_DA_ENTRADA_MS })
     await comOQueFalta(page, hasTouch, async (oQueFalta) => {
       for (const passo of semLeitura) await expect(oQueFalta).toContainText(passo)
     })
@@ -773,14 +766,11 @@ test.describe('W12: a Estrutura a 360 px e só com teclado', () => {
     const estrutura = await montarEstruturaNoBanco(coordenadora.escolaId, [`7${'A'.repeat(28)}`])
     const turma = estrutura.turmas[0]
     if (turma === undefined) throw new Error('estrutura sem turma')
-    // Um professor alocável, para a alocação mostrar a escolha e o "Alocar".
-    await convidarProfessorNoBanco(coordenadora.escolaId, 'pendente')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
     await abrirEstrutura(page, hasTouch)
     const turmas = principal(page).getByRole('region', { name: 'Turmas de 2026' })
     await expect(turmas).toContainText(turma.nome, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(principal(page).getByRole('region', { name: 'Alocação' }).getByRole('button', { name: 'Alocar' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     expect(await larguraExcedente(page)).toBe(0)
     // Abaixo de 768 px a tabela vira lista: sem tabela, e a turma e as ações dentro do mesmo cartão.
     await expect(turmas.getByRole('table')).toHaveCount(0)
@@ -790,7 +780,6 @@ test.describe('W12: a Estrutura a 360 px e só com teclado', () => {
       [principal(page).getByRole('button', { name: 'Ano letivo e disciplinas' }), 'Ano letivo e disciplinas'],
       [turmas.getByRole('link', { name: `Lista de nomes da turma ${turma.nome}` }), 'Lista de nomes'],
       [turmas.getByRole('button', { name: `Mais ações da turma ${turma.nome}` }), 'Mais ações da turma'],
-      [principal(page).getByRole('region', { name: 'Alocação' }).getByRole('button', { name: 'Alocar' }), 'Alocar'],
     ] as const)
       await alvoDeToque(alvo, descricao)
     // O item da lateral leva à mesma tela.

@@ -254,17 +254,20 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
         await expect(dialogo(coordenacao)).toHaveCount(0)
       }
 
-      // A alocação: duas professoras de Química na mesma série (2ºA e 2ºB) e um de Física no 2ºA.
-      await irPelaCoordenacao(coordenacao, 'Turmas', hasTouch)
-      const alocacao = principal(coordenacao).getByRole('region', { name: 'Alocação' })
+      // A alocação: duas professoras de Química na mesma série (2ºA e 2ºB) e um de Física no 2ºA. Ela é o "Acrescentar turma" do painel de
+      // cada professor (7.0), que a linha dele abre em Professores.
       for (const [professor, turma, disciplina] of [[helena, turmaA, DISCIPLINA], [marta, turmaB, DISCIPLINA], [davi, turmaA, 'Física']] as const) {
-        await alocacao.getByLabel('Professor', { exact: true }).selectOption({ label: `${professor.nome} (convite em aberto)` }, { timeout: PRAZO_DA_ENTRADA_MS })
-        await alocacao.getByLabel('Turma').selectOption({ label: turma })
-        await alocacao.getByLabel('Disciplina').selectOption({ label: disciplina })
-        await botao(alocacao, 'Alocar').click()
-        await expect(alocacao.getByRole('list', { name: 'Professores alocados' })).toContainText(professor.nome, { timeout: PRAZO_DA_ENTRADA_MS })
+        await botao(principal(coordenacao), professor.nome).click()
+        const painel = coordenacao.getByRole('dialog', { name: professor.nome })
+        await botao(painel, 'Acrescentar turma').click({ timeout: PRAZO_DA_ENTRADA_MS })
+        await dialogo(coordenacao).getByLabel('Turma').selectOption({ label: turma }, { timeout: PRAZO_DA_ENTRADA_MS })
+        await dialogo(coordenacao).getByLabel('Disciplina').selectOption({ label: disciplina })
+        await botao(dialogo(coordenacao), 'Acrescentar').click()
+        await expect(painel.getByRole('list', { name: 'Turmas do professor' })).toContainText([`${turma}`], { timeout: PRAZO_DA_ENTRADA_MS })
+        await expect(painel.getByRole('list', { name: 'Turmas do professor' })).toContainText('Esperando o professor confirmar')
+        await botao(painel, 'Fechar').click()
+        await expect(painel).toHaveCount(0)
       }
-      await expect(alocacao.getByRole('list', { name: 'Professores alocados' })).toContainText('Esperando o professor confirmar')
       return links
     })
     const turmaAId = await turmaDoNome(escolaId, turmaA)

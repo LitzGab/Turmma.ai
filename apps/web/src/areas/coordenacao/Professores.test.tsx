@@ -63,15 +63,28 @@ interface Respostas {
   anos: Resposta
   professores: Resposta
   vinculos: Resposta
+  turmas: Resposta
+  disciplinas: Resposta
 }
+const SERIE_7 = { id: id(207), etapa: 'ef_anos_finais', ano: 7 }
+const TURMAS = [T7A, T7B, T8A].map((turma) => ({ ...turma, anoLetivoId: ANO.id, turno: null, serie: SERIE_7 }))
 // Fora da ordem do nome: a tela é que põe cada professor no seu lugar.
-const PADRAO: Respostas = { anos: ok([ANO]), professores: ok([FABIO, CAIO, ELIS, BRUNO, DAVI, ANA]), vinculos: ok(VINCULOS) }
+const PADRAO: Respostas = {
+  anos: ok([ANO]),
+  professores: ok([FABIO, CAIO, ELIS, BRUNO, DAVI, ANA]),
+  vinculos: ok(VINCULOS),
+  // O painel do professor que recebe turma lê as turmas e as disciplinas da escola; o resto não as lê.
+  turmas: ok(TURMAS),
+  disciplinas: ok([MATEMATICA, FISICA].map((disciplina) => ({ ...disciplina, area: null }))),
+}
 
 function instalar(rede: RedeFalsa, parcial: Partial<Respostas> = {}): void {
   const respostas = { ...PADRAO, ...parcial }
   rede.responderPor(/^\/v1\/anos-letivos\?/, respostas.anos)
   rede.responderPor('/v1/professores', respostas.professores)
   rede.responderPor('/v1/vinculos', respostas.vinculos)
+  rede.responderPor(/^\/v1\/turmas\?/, respostas.turmas)
+  rede.responderPor('/v1/disciplinas', respostas.disciplinas)
 }
 
 /** Os caminhos pedidos, sem a consulta, na ordem. */
@@ -220,16 +233,18 @@ describe('a tabela', () => {
     expect(celulasDe(ELIS.nome).slice(0, 3)).toEqual([`${ELIS.nome}`, '—', '—'])
   })
 
-  it('sem e-mail: a tabela e o painel não o pedem à API, e a tela só lê anos, professores e vínculos', async () => {
+  it('sem e-mail: a tabela e o painel não o pedem à API, e a tela só lê anos, professores e vínculos — e, no painel de quem recebe turma, as turmas e as disciplinas', async () => {
     const usuario = userEvent.setup()
     const rede = redeFalsa()
     instalar(rede)
     await montarEEsperar()
     await usuario.click(botaoDe(BRUNO.nome))
-    await painelDe(BRUNO.nome)
-    // O que prova é o que a tela pede: só os anos, os professores e os vínculos. Nenhuma outra rota, e nenhuma delas traz e-mail:
-    // o esquema da lista de professores é estrito, e uma resposta com `email` nem chega à tela (o contrato é o de `@educa/shared`).
-    expect([...new Set(caminhosDe(rede))].sort()).toEqual(['/v1/anos-letivos', '/v1/professores', '/v1/vinculos'])
+    const painel = await painelDe(BRUNO.nome)
+    // O botão só existe com as turmas e as disciplinas lidas: depois dele, as leituras do painel já saíram.
+    await within(painel).findByRole('button', { name: 'Acrescentar turma' })
+    // O que prova é o que a tela pede: nenhuma outra rota, e nenhuma delas traz e-mail: o esquema da lista de professores é estrito,
+    // e uma resposta com `email` nem chega à tela (o contrato é o de `@educa/shared`).
+    expect([...new Set(caminhosDe(rede))].sort()).toEqual(['/v1/anos-letivos', '/v1/disciplinas', '/v1/professores', '/v1/turmas', '/v1/vinculos'])
   })
 
   it('"Cadastrar professor" é o único botão cheio da tela, com a tabela e com o painel aberto', async () => {
@@ -331,13 +346,15 @@ describe('o painel do professor', () => {
     expect(localizacao.history).toEqual(['/professores', '/professores'])
   })
 
-  it('só as ações que o estado permite: o convite em aberto, pendente ou vencido, refaz e revoga; o resto não tem rodapé', async () => {
+  it('só as ações que o estado permite: o convite em aberto, pendente ou vencido, refaz e revoga; quem recebe turma tem "Acrescentar turma"; o revogado e o desativado não têm rodapé', async () => {
     const usuario = userEvent.setup()
     instalar(redeFalsa())
     await montarEEsperar()
-    const acoesDo = async (dono: { nome: string }) => {
+    const acoesDo = async (dono: { nome: string }, recebeTurma: boolean) => {
       await usuario.click(botaoDe(dono.nome))
       const painel = await painelDe(dono.nome)
+      // "Acrescentar turma" espera as turmas e as disciplinas da escola: quem a tem, espera por ela antes de contar os botões.
+      if (recebeTurma) await within(painel).findByRole('button', { name: 'Acrescentar turma' })
       const botoes = within(painel)
         .getAllByRole('button')
         .filter((botao) => botao.getAttribute('aria-label') !== 'Fechar')
@@ -347,9 +364,11 @@ describe('o painel do professor', () => {
       await usuario.click(within(painel).getByRole('button', { name: 'Fechar' }))
       return { botoes, temRodape: rodape !== null }
     }
-    expect(await acoesDo(BRUNO)).toEqual({ botoes: ['Refazer convite', 'Revogar convite'], temRodape: true })
-    expect(await acoesDo(CAIO)).toEqual({ botoes: ['Refazer convite', 'Revogar convite'], temRodape: true })
-    for (const dono of [ANA, DAVI, ELIS, FABIO]) expect(await acoesDo(dono), dono.nome).toEqual({ botoes: [], temRodape: false })
+    expect(await acoesDo(BRUNO, true)).toEqual({ botoes: ['Refazer convite', 'Revogar convite', 'Acrescentar turma'], temRodape: true })
+    // O vencido tem o convite a refazer e revogar, mas não recebe turma.
+    expect(await acoesDo(CAIO, false)).toEqual({ botoes: ['Refazer convite', 'Revogar convite'], temRodape: true })
+    for (const dono of [ANA, ELIS]) expect(await acoesDo(dono, true), dono.nome).toEqual({ botoes: ['Acrescentar turma'], temRodape: true })
+    for (const dono of [DAVI, FABIO]) expect(await acoesDo(dono, false), dono.nome).toEqual({ botoes: [], temRodape: false })
   })
 
   it('pelo endereço, abre já com o painel; o id que a lista não tem, ou outro parâmetro, não abre nada', async () => {

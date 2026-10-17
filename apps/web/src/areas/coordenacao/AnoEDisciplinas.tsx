@@ -41,7 +41,7 @@ export type AlvoDoDialogo = { readonly id: string; readonly nome: string }
 export type TipoDeDialogoDoPainel = 'ano' | 'serie' | 'disciplina' | 'renomear_disciplina' | 'excluir_disciplina'
 
 /** As seções da tela que têm escrita: o anúncio de cada ação aparece na seção dela. */
-export type SecaoDaTela = 'ano' | 'series' | 'disciplinas' | 'turmas' | 'alocacao'
+export type SecaoDaTela = 'ano' | 'series' | 'disciplinas' | 'turmas'
 
 export interface PropsDaSecao {
   readonly titulo: string

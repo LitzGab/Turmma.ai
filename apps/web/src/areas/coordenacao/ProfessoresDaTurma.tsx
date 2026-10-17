@@ -13,7 +13,7 @@ import { AvisoDeListaIncompleta } from './pecas-da-lista'
 
 /**
  * O estado do vínculo como a coordenação o lê, em texto (regra 50, item 11), e a família do selo: quem decide agora é o
- * professor, e a contestação é a que pede ação da escola. Os textos são os da alocação (`Alocacao.tsx`).
+ * professor, e a contestação é a que pede ação da escola. O painel do professor (`PainelDoProfessor.tsx`) diz o mesmo com palavras mais curtas.
  */
 const SELO_DO_VINCULO = {
   pendente: { familia: 'pendente', texto: 'Esperando o professor confirmar' },
