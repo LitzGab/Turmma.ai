@@ -5,19 +5,17 @@
   maior; nenhum é regra de negócio. O caminho, o do Validador: três correções, e depois revalidação só desses pontos e da
   esteira (o `Validador` reiniciado, rodada 2 no topo do `validacao.md`).
 - **Espero (17/10 ~18h45):**
-  - linha 1: o `RELATÓRIO` do `Implementador`, correção `encontro-2026-10-17-painel-e-pedido-rolam-a-pagina`, 1ª
-    tentativa: a C1+C2 terminou em `c2e3398` (APROVADA pelos três revisores na r2), mas o encontro deu CONFLITO no
-    `TODO.md`; ele faz o merge da spec, resolve e fecha com o commit da correção. Depois, `linhas.ts encontro 1` de novo.
-    Guardiões: só `test-engineer` e `revisor-geral`;
+  - linha 1: o `RELATÓRIO` do `Implementador`, correção **C3** `2026-10-17-painel-pelo-endereco-cobre-o-aviso`
+    (partida ~19h), 1ª tentativa. A C1+C2 e o conflito do `TODO.md` se encontraram em `97506c7` (spec em `732cd2b`).
+    Guardiões: `frontend-reviewer`;
   - linha 2: o `RELATÓRIO` do `Implementador 2`, correção `2026-10-17-agentes-carregando-estoura-o-prazo`, 1ª tentativa:
     `e2e/agentes.spec.ts:164` [celular] 30,2 s, vermelho em 39066733762, 39066820938 e 39066847388. Guardiões:
     `frontend-reviewer`.
 - **Devo ainda:**
-  - a correção de **C3** (o painel lateral aberto pelo endereço fica por cima do aviso de incidente; e2e que entra com
-    incidente pendente direto num endereço com painel), na **linha 1, depois do encontro da correção dela** (as duas
-    mexem em `e2e/incidentes.spec.ts`). Guardiões: `frontend-reviewer`;
-  - a esteira: o `agentes:164` caiu nas três (a correção está na linha 2); `b022543` (39068217314) e as seguintes ainda
-    rodavam às 18h45. Ler de novo no próximo encontro;
+  - a esteira: em ~19h a última lida foi VERMELHA em `f01ecbd` (39066847388, e2e 4/6: o `agentes:164`, cuja correção
+    está na linha 2); `732cd2b` rodava. Ler de novo no próximo encontro;
+  - C4 e o Maior já corrigidos (`ed03046`), C1+C2 em `c2e3398`; com a C3 e o `agentes:164` encontrados: a
+    revalidação (o `Validador` reiniciado, rodada 2 no topo do `validacao.md`, só esses pontos e a esteira);
   - no fechamento, levar ao `TODO.md`: as 2 recomendações do `frontend-reviewer` da correção
     `troca-de-escola-sem-ir-para-a-entrada` (título do incidente truncado a 360 px no cartão do Painel; texto de incidente
     da vitrine pouco realista); o sino da 1.0 que faz 6 leituras a cada recarga de página da coordenação; e os Menores da
