@@ -1311,6 +1311,10 @@ qualquer dado real:
   do MVP (`docs/mvp-rapido.md`, seção 8, item 3), e o item acima era o único que o acompanhava. Não reproduziu em 10
   execuções em 05/10/2026, e o código dele não tem a corrida do "segunda pessoa": aloca depois de entrar, mas relê pelo
   "Tentar de novo". Se voltar, entra por `/corrigir` com a execução da esteira em que falhou.
+- [ ] **E2e "duas abas" do acesso suspenso estoura o teto de 30 s na esteira** (`e2e/acesso-suspenso.spec.ts:169`, `chromebook`,
+  esteira 38990594424). Não reproduziu: 10 de 10 verdes, 12 s cada, em 16/10/2026. Hipótese: duas entradas e três esperas de
+  até 20 s sob o teto padrão; a correção, se voltar, é `test.slow()`. Detalhe na seção "O outro vermelho do run" de
+  `tasks/correcoes/2026-10-16-casca-procura-governanca.md`.
 - [ ] **Alocação nova demora até 30 s para aparecer em "Turmas"** (`test-engineer` da correção
   `2026-10-05-segunda-pessoa-cache-dos-vinculos`). Não é requisito hoje, mas o vazio da Nova conversa manda a professora
   a "Turmas" ("Ir para Turmas", `apps/web/src/areas/professor/Home.tsx`), que monta com a lista que a Nova conversa já
