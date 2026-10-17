@@ -162,6 +162,9 @@ test.describe('Como cada IA trabalha', () => {
   })
 
   test('`paginaNaoRola` não aceita a tela ainda carregando: a medida só vale com a leitura terminada', async ({ page, hasTouch }) => {
+    // O caso gasta de propósito os 5 s da espera de `paginaNaoRola` (que tem de rejeitar), depois de entrar (14 s no celular, CPU ×4) e de
+    // esperar o "Carregando…" da página recarregada, e ainda falta o cartão aparecer: no runner isso passa dos 30 s, sem nada travado.
+    test.slow()
     await entrar(page, hasTouch, false)
     // A leitura das funções fica segurada: a página recarregada mostra "Carregando os agentes…", curta, e passaria em qualquer medida.
     const segurada = portao()
