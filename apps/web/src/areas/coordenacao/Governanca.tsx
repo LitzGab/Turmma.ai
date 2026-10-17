@@ -13,7 +13,6 @@ import { NumeroPainel } from '../../componentes/NumeroPainel'
 import { Tabela, type ColunaDaTabela } from '../../componentes/Tabela'
 import { CabecalhoDeSecao } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
-import { DadoNominal } from './DadoNominal'
 import { aprovacaoDoItem, ESPERANDO_O_PROFESSOR, NOME_DO_TIPO_DE_ENTREGA, nomeDaFuncao, O_QUE_CHEGA_AO_ALUNO, textoDoConsumo, textoDoCusto, textoDoPacoteDoTutor } from './textos-da-governanca'
 
 /**
@@ -33,8 +32,7 @@ const COLUNAS: readonly [ColunaDaTabela<ItemDaGovernanca>, ...ColunaDaTabela<Ite
  * Governança de IA (MVP, A5; `docs/interface.md` 3 e 11.7; D9, D45, D61, D64; regra 70, item 6): é onde a coordenação
  * abre. Quatro números, a tabela do que a IA gerou e se uma pessoa aprovou, e o consumo do mês por função.
  *
- * Tudo é agregado. O dado nominal fica numa seção à parte, atrás de um botão `oficial` e de um diálogo que avisa da
- * auditoria (`DadoNominal`).
+ * Tudo é agregado. O dado nominal de uma turma não abre aqui: mora no fim da página do Analista (telas da coordenação, 4.0).
  */
 export default function Governanca() {
   const resumo = useInfiniteQuery(consultaResumoDaGovernanca)
@@ -107,7 +105,6 @@ export default function Governanca() {
       </section>
 
       <Consumo />
-      <DadoNominal />
     </>
   )
 }

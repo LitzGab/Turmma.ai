@@ -161,10 +161,12 @@ describe('guarda de log com dado pessoal', () => {
 
   it('a guarda conhece as mesmas chaves que o redact do logger remove', async () => {
     // Import por variável: o tsconfig de tools não compila o código do núcleo, só o Vitest o carrega.
+    // O prazo de 60 s é deste import: o índice do núcleo puxa o banco, a fila e o storage, e a primeira transformação,
+    // com a máquina cheia de outros arquivos da unidade, passa dos 5 s do Vitest.
     const nucleo = '@educa/nucleo'
     const { CHAVES_PESSOAIS: chavesDoRedact } = (await import(nucleo)) as { CHAVES_PESSOAIS: readonly string[] }
     expect([...CHAVES_PESSOAIS].sort()).toEqual([...chavesDoRedact].sort())
-  })
+  }, 60_000)
 })
 
 describe('guarda de SDK de provedor de IA', () => {

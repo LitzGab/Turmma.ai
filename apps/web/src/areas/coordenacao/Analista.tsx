@@ -29,7 +29,8 @@ const enviarPedido = (_pedido: null, chaveEnvio: string) => gerarResumoDoAnalist
  * - **O recorte com menos de dois professores não tem número**, e a tela diz isso: o número dele seria o de uma pessoa.
  * - **"Gerar resumo"** segue o ciclo de execução das outras telas de IA: 202, consulta até terminar, e o resumo novo é
  *   lido. Função suspensa e limite de pedidos viram aviso, nunca erro cru.
- * - O dado nominal fica à parte, com o aviso de auditoria (`DadoNominal`).
+ * - O dado nominal fica no fim da página, à parte, com o aviso de auditoria (`DadoNominal`; telas da coordenação, 4.0, RF9).
+ * - **Não é conversa** (RF8): sem campo de texto, anexo, pergunta pronta nem relatório. O Analista em conversa é do F12.
  */
 export default function Analista() {
   useTituloDaTela('Analista')
@@ -64,18 +65,24 @@ export default function Analista() {
   }, [iniciar, limpar])
 
   const falha = ciclo?.etapa === 'falhou' ? falhaDoResumo(ciclo.erro) : undefined
-  const acoes = (
+  const rotuloDeGerar = gerando ? 'Gerando o resumo…' : 'Gerar resumo'
+  // Sem resumo nenhum, o botão é o do vazio, e o do alto sai: um só "Gerar resumo" na tela, e um só primário.
+  const semResumo = resumo.data !== undefined && resumo.data.resumo === null
+  const acoes = semResumo ? undefined : (
     // Um `primario` por tela: com o erro na tela, o "Tentar de novo" dele é o primário.
     <Botao variante={resumo.isError ? 'secundario' : 'primario'} onClick={gerar} disabled={gerando}>
-      {gerando ? 'Gerando o resumo…' : 'Gerar resumo'}
+      {rotuloDeGerar}
     </Botao>
   )
 
   return (
-    <Tela titulo="Analista" acoes={acoes}>
-      <div className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4">
+    <Tela titulo="Analista" largura="leitura" acoes={acoes}>
+      <div className="flex min-w-0 flex-col gap-3 rounded-cartao border-2 border-borda bg-superficie p-4 lg:p-5">
         <AssinaturaIA agente="analista_de_desempenho_escolar" tamanho={48} />
-        <p className="break-words text-apoio">Resume o desempenho por série e disciplina, a partir do que os professores já aprovaram. Só avisa a coordenação: nunca contata professor nem família.</p>
+        <p className="break-words text-apoio">
+          Resume o desempenho por série e disciplina, a partir do que os professores já aprovaram. Feito de dado agregado: nenhum nome de aluno ou de professor entra nele. Só avisa a coordenação: nunca contata professor nem
+          família.
+        </p>
       </div>
 
       <div className="flex min-w-0 flex-col gap-3 empty:hidden">
@@ -93,7 +100,8 @@ export default function Analista() {
           <EstadoVazio
             variante="tracejado"
             titulo="Nenhum resumo gerado ainda"
-            descricao="Use “Gerar resumo” para o Analista montar o acerto por habilidade de cada série e disciplina, com os alertas. Só entra o que os professores já aprovaram, e nenhum nome de aluno ou de professor."
+            descricao="O Analista monta o acerto por habilidade de cada série e disciplina, com os alertas. Só entra o que os professores já aprovaram, e nenhum nome de aluno ou de professor."
+            acao={{ rotulo: rotuloDeGerar, aoAcionar: gerar, desligada: gerando }}
           />
         ) : (
           <Resumo geradoEm={resumo.data.resumo.geradoEm} conteudo={resumo.data.resumo.conteudo} foco={resumoNovo} />
@@ -115,7 +123,7 @@ function Resumo({ geradoEm, conteudo, foco }: { readonly geradoEm: string; reado
   return (
     <div data-resumo-do-analista className="flex min-w-0 flex-col gap-4">
       <p ref={foco} tabIndex={-1} className="text-sm text-sutil">
-        Resumo gerado em {formatarDataHora(geradoEm)}, com o que aconteceu de {formatarData(periodo.inicio)} a {formatarData(periodo.fim)}. Feito de dado agregado: nenhum nome de aluno ou de professor entrou nele.
+        Resumo gerado em {formatarDataHora(geradoEm)} · de {formatarData(periodo.inicio)} a {formatarData(periodo.fim)}
       </p>
       <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <NumeroPainel rotulo="Atividades aplicadas" valor={escola.atividadesAplicadas} />
@@ -131,8 +139,12 @@ function Resumo({ geradoEm, conteudo, foco }: { readonly geradoEm: string; reado
         ) : (
           <ul className="flex min-w-0 flex-col gap-3">
             {alertas.map(({ alerta, frase }) => (
-              <li key={`${alerta.serie.id}:${alerta.disciplina.id}:${alerta.habilidade?.codigo ?? ''}`} data-alerta={alerta.tipo} className="flex min-w-0 flex-col gap-2 rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
-                <h3 className="font-medium break-words text-tinta">{NOME_DO_ALERTA_DO_ANALISTA[alerta.tipo]}</h3>
+              <li key={`${alerta.serie.id}:${alerta.disciplina.id}:${alerta.habilidade?.codigo ?? ''}`} data-alerta={alerta.tipo} className="flex min-w-0 flex-col gap-2 rounded-cartao border-2 border-borda bg-superficie p-4 lg:p-5">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h3 className="min-w-0 font-medium break-words text-tinta">{NOME_DO_ALERTA_DO_ANALISTA[alerta.tipo]}</h3>
+                  {/* O alerta é hipótese, e o selo diz isso em texto: a cor sozinha não diz (regra 50, item 11). */}
+                  <Estado familia="info">Hipótese</Estado>
+                </div>
                 <p className="max-w-prose break-words text-tinta">{frase}</p>
                 <div className="min-w-0 rounded-controle bg-info-cx p-3 text-info">
                   <p className="font-medium">Hipóteses a conferir</p>
