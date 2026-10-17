@@ -4,18 +4,13 @@
 - **Validação, rodada 1 (17/10 ~18h15): REPROVADA**, sobre `f01ecbd` (`validacao.md`, seção 4). Quatro críticos e um
   maior; nenhum é regra de negócio. O caminho, o do Validador: três correções, e depois revalidação só desses pontos e da
   esteira (o `Validador` reiniciado, rodada 2 no topo do `validacao.md`).
-- **Espero (17/10 ~18h45):**
-  - linha 1: o `RELATÓRIO` do `Implementador`, correção **C3** `2026-10-17-painel-pelo-endereco-cobre-o-aviso`
-    (partida ~19h), 1ª tentativa. A C1+C2 e o conflito do `TODO.md` se encontraram em `97506c7` (spec em `732cd2b`).
-    Guardiões: `frontend-reviewer`;
-  - linha 2: ociosa. A correção `agentes-tres-funcoes-perto-do-prazo` se encontrou (`2884140`, spec em `5357324`, ~19h40).
+- **Espero (17/10 ~19h50):** o `RELATÓRIO` do `Validador`, **revalidação, rodada 2**, sobre `8397171` (só os achados da
+  rodada 1 e o que as correções mudaram). As duas linhas estão ociosas; ninguém usa o ambiente 0 enquanto ele valida.
 - **Devo ainda:**
-  - a esteira: em ~19h40 a última lida foi VERMELHA em `ed03046` (39069356834, e2e 4/6: o `agentes:164`, já corrigido em
-    `4a3835f`). A fila do GitHub está lenta: 39069424594 em curso e quatro na fila, a mais nova 39075671455 em `5357324`.
-    Ler de novo no próximo encontro;
-  - C4 e o Maior já corrigidos (`ed03046`), C1+C2 em `c2e3398`, o `agentes:164` em `4a3835f`, o `agentes:186` em `2884140`; com a C3
-    encontrada: a
-    revalidação (o `Validador` reiniciado, rodada 2 no topo do `validacao.md`, só esses pontos e a esteira);
+  - a esteira: em ~19h50 a última lida foi VERMELHA em `54faa82` (39069424594, e2e 4/6: o `agentes:164`, anterior à
+    correção `4a3835f`). A fila do GitHub segue lenta; no fechamento, `esteira.ts --fechamento` sobre `2919d08`/`8397171`;
+  - C1+C2 (`c2e3398`), C3 (`2919d08`), C4 e o Maior (`ed03046`), `agentes:164` (`4a3835f`) e `agentes:186` (`2884140`)
+    estão todas na spec. Com a validação APROVADA: o fechamento (passo 8);
   - no fechamento, levar ao `TODO.md`: as 2 recomendações do `frontend-reviewer` da correção
     `troca-de-escola-sem-ir-para-a-entrada` (título do incidente truncado a 360 px no cartão do Painel; texto de incidente
     da vitrine pouco realista); o sino da 1.0 que faz 6 leituras a cada recarga de página da coordenação; e os Menores da
@@ -27,7 +22,7 @@
     em `1477850`): não retomar sem a palavra dele.
 - **Maestri:** depois do reinício da máquina, o `maestri` não está no PATH do terminal do Orquestrador: usar
   `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
-- **Base:** `spec/telas-da-coordenacao` em `5357324`, com a `develop` de `2029703` juntada.
+- **Base:** `spec/telas-da-coordenacao` em `8397171`, com a `develop` de `2029703` juntada.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -61,6 +56,7 @@
 | correção vazio-durante-a-leitura | `ed03046` | Sonnet 5.5 | 2 | linha 2, ~17h47–18h04; C4 e o Maior da validação rodada 1: carregando e erro conferiam a ausência da tabela, não do texto do vazio; `interface.md` §3 no estado de antes da X2; sem defeito de produção, prova por 21 mutações vermelhas; `frontend-reviewer` aprovou na r1, `revisor-geral` e `test-engineer` na r2; 2 linhas novas no `TODO.md` (ramo isError de Professores; título truncado de `Linha.tsx`) |
 | correção agentes-carregando-estoura-o-prazo | `4a3835f` | Sonnet 5.5 | 1 | linha 2, ~18h39–19h10; vermelho da esteira em `e2e/agentes.spec.ts:164` [celular] 30,2 s (39066733762, 39066820938, 39066847388, 39068217314): entrar 14 s + 5 s deliberados de `paginaNaoRola` + carregar passavam dos 30 s; só `test.slow()`; vermelho 4/4 a 22 s antes, 4/4 verde depois, 20/20 no relógio normal; `frontend-reviewer` e `test-engineer` aprovaram na r1 (a Mesa pediu 3 ajustes de texto na r1); achado à parte: `agentes:186` a 25,5 s virou correção própria; encontro em `c85c5c8` |
 | correção agentes-tres-funcoes-perto-do-prazo | `2884140` | Sonnet 5.5 | 1 | linha 2, ~19h15–19h40; `e2e/agentes.spec.ts:186` [celular] a 21 s local e 25,5 s na esteira, o único caso do arquivo sem `test.slow()`; vermelho 4/4 com `--timeout=16000` antes, 4/4 verde depois, 20/20 no relógio normal; 1º portão: `:307` caiu uma vez (chunk da rota não carregou, 12/12 depois, anotado no documento); `frontend-reviewer` e `test-engineer` aprovaram na r1; encontro em `5357324` |
+| correção painel-pelo-endereco-cobre-o-aviso (C3) | `2919d08` | Sonnet 5.5 | 2 | linha 1, ~18h50–19h45; o último modal a abrir ficava por cima, e o `PainelLado` aberto pelo endereço não sabia do aviso de incidente; e2e em `incidentes.spec.ts` vermelho antes nos dois projetos, unidade em `PainelLado.test.tsx` e `dialogo-prioritario.test.ts`; 9 mutações vermelhas; `frontend-reviewer` aprovou na r1, `revisor-geral` e `test-engineer` na r2; encontro em `8397171` |
 
 ## Esperando o Joaquim
 ## O que falhou
