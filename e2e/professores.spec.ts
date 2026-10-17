@@ -2,7 +2,7 @@ import type { Browser, BrowserContextOptions, Locator, Page, Route } from '@play
 import { AVISO_DO_CONVITE_COM_SENHA_NOVA, MENSAGENS_DE_ERRO, mensagemDoConvite } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaConviteDeProfessor } from '../packages/shared/src/professores/professores.ts'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, secoes } from './__fixtures__/casca.ts'
-import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
+import { abrirOQueFalta, irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   convidarProfessorNoBanco,
@@ -381,7 +381,7 @@ test.describe('cadastrar, copiar o link e o aceite do professor', () => {
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
     await abrirEstrutura(page, hasTouch)
     // O caminho até Professores pelo roteiro da Estrutura (herdado da 13.0).
-    const roteiro = principal(page).getByRole('region', { name: 'O que falta para a escola começar' })
+    const roteiro = await abrirOQueFalta(page, hasTouch)
     await acionar(roteiro.getByRole('link', { name: 'Professores' }), hasTouch)
     await expect(page).toHaveURL(/\/coordenacao\/professores$/)
     await expect(principal(page).getByText('Nenhum professor ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })

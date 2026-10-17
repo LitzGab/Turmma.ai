@@ -95,7 +95,11 @@ export function corDoToken(page: Page, token: string): Promise<string> {
  * não enxerga. Zero é sem rolagem; sem diálogo aberto, falha alto.
  */
 export function larguraExcedenteDoDialogo(page: Page): Promise<number> {
-  return page.locator('dialog[open]').evaluate((dialogo) => dialogo.scrollWidth - dialogo.clientWidth)
+  // O de cima é o último: o diálogo que abre por cima do painel vem depois dele na página.
+  return page
+    .locator('dialog[open]')
+    .last()
+    .evaluate((dialogo) => dialogo.scrollWidth - dialogo.clientWidth)
 }
 
 /**

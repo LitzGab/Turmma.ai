@@ -26,8 +26,11 @@ interface PropsDaTabela<Linha> {
  *
  * - **A pele (D80)**: moldura de canto 16 e borda de 2 px em `borda`, sem sombra e sem degrau (peça de leitura); o
  *   cabeçalho de 44 px em `t-selo`, e a linha de 64 px, separada da de cima por 2 px. No celular, cada linha é um cartão
- *   da mesma borda, com a primeira coluna em `t-cartao` e o nome das outras em `t-selo`. A tabela não ordena, de propósito,
- *   e a linha que abre é da X2.
+ *   da mesma borda, com a primeira coluna em `t-cartao` e o nome das outras em `t-selo`. A tabela não ordena, de propósito.
+ * - **A linha que abre** (X2, 5.0): a linha e o cartão são `relative`, e o link da primeira célula se estende por eles
+ *   (`after:absolute after:inset-0`). A linha inteira passa a ser o alvo, e o que fica dentro dela e precisa do próprio
+ *   clique (o menu da linha) ganha `relative` sem `z-index`: ele vem depois do link no documento e é pintado acima do `::after`, e sem
+ *   `z-index` não cria contexto de empilhamento, de modo que a lista e o fundo do `Menu` (`fixed z-30` e `z-20`) ficam acima das linhas de baixo.
  * - **Uma estrutura de cada vez no documento**, escolhida pela largura (`useMidia`): pôr as duas e esconder uma com CSS
  *   dobraria os nós de uma tabela longa no Chromebook, e os controles de dentro das células existiriam duas vezes.
  * - **Na tabela, o cabeçalho é acessível**: `caption`, `th` de coluna e a primeira célula como `th` de linha. Quando ela
@@ -59,7 +62,7 @@ export function Tabela<Linha>({ rotulo, colunas, linhas, chaveDaLinha }: PropsDa
     return (
       <ul aria-label={rotulo} data-tabela="lista" className="flex min-w-0 flex-col gap-3">
         {linhas.map((linha) => (
-          <li key={chaveDaLinha(linha)} className="min-w-0 rounded-cartao border-2 border-borda bg-superficie p-4">
+          <li key={chaveDaLinha(linha)} className="relative min-w-0 rounded-cartao border-2 border-borda bg-superficie p-4">
             <div className="t-cartao min-w-0 break-words text-tinta">
               <span className="sr-only">{primeira.titulo}: </span>
               {primeira.celula(linha)}
@@ -93,7 +96,7 @@ export function Tabela<Linha>({ rotulo, colunas, linhas, chaveDaLinha }: PropsDa
         </thead>
         <tbody>
           {linhas.map((linha) => (
-            <tr key={chaveDaLinha(linha)} className="h-16 border-b-2 border-borda last:border-b-0">
+            <tr key={chaveDaLinha(linha)} className="relative h-16 border-b-2 border-borda last:border-b-0">
               <th scope="row" className={`t-apoio px-4 py-3 text-tinta ${primeira.alinhamento === 'fim' ? 'text-right' : ''}`}>
                 {primeira.celula(linha)}
               </th>

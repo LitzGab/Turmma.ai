@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { comOQueFalta } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   apagarDisciplinaNoBanco,
@@ -72,17 +73,19 @@ test.describe('W4 (Alocação): o professor com convite em aberto', () => {
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
     await abrirEstrutura(page, hasTouch)
     const alocacao = principal(page).getByRole('region', { name: 'Alocação' })
-    const oQueFalta = principal(page).getByRole('region', { name: 'O que falta para a escola começar' })
     // Vazio: há turma e disciplina, mas não há professor alocável.
     await expect(alocacao).toContainText('Crie um professor primeiro', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(alocacao).not.toContainText('Crie uma turma')
     await expect(alocacao).toContainText('Falta: um professor cadastrado, com o convite em aberto ou já aceito.')
-    await expect(oQueFalta).toContainText('Professores · falta')
     // O caminho até a tela onde o professor se cadastra e o convite vencido se refaz (14.0), no vazio e no roteiro.
     const paraProfessores = alocacao.getByRole('link', { name: 'Ir para Professores' })
     await expect(paraProfessores).toHaveAttribute('href', '/coordenacao/professores')
     await alvoDeToque(paraProfessores, 'Ir para Professores')
-    await expect(oQueFalta.getByRole('link', { name: 'Professores' })).toHaveAttribute('href', '/coordenacao/professores')
+    // O roteiro agora mora no painel "O que falta": abre, confere e fecha.
+    await comOQueFalta(page, hasTouch, async (oQueFalta) => {
+      await expect(oQueFalta).toContainText('Professores · falta')
+      await expect(oQueFalta.getByRole('link', { name: 'Professores' })).toHaveAttribute('href', '/coordenacao/professores')
+    })
 
     // Dois com o convite em aberto, criados fora da ordem do nome: a escolha vem pelo nome, e não pela ordem da API.
     const bruno = await convidarProfessorNoBanco(coordenadora.escolaId, 'pendente', 'Bruno')
@@ -97,10 +100,12 @@ test.describe('W4 (Alocação): o professor com convite em aberto', () => {
     // Carregando: a leitura dos vínculos segurada.
     await expect(alocacao.getByRole('status').filter({ hasText: 'Carregando a alocação…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     // Sem os vínculos lidos, o roteiro não diz que a alocação falta.
-    await expect(oQueFalta).toContainText('Turmas · feito')
-    await expect(oQueFalta).not.toContainText('Alocação · falta')
-    vinculosSegurados.abrir()
-    await expect(oQueFalta).toContainText('Alocação · falta', { timeout: PRAZO_DA_ENTRADA_MS })
+    await comOQueFalta(page, hasTouch, async (oQueFalta) => {
+      await expect(oQueFalta).toContainText('Turmas · feito')
+      await expect(oQueFalta).not.toContainText('Alocação · falta')
+      vinculosSegurados.abrir()
+      await expect(oQueFalta).toContainText('Alocação · falta', { timeout: PRAZO_DA_ENTRADA_MS })
+    })
     // Exato: "Professores alocados", o nome da lista de vínculos, também começa por "Professor".
     const professor = alocacao.getByLabel('Professor', { exact: true })
     await expect(professor).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -109,7 +114,9 @@ test.describe('W4 (Alocação): o professor com convite em aberto', () => {
     await expect(alocacao.getByLabel('Disciplina').locator('option')).toHaveText(['Escolha a disciplina', artes, estrutura.disciplina.nome])
     await expect(alocacao).not.toContainText(vencido.nome)
     await expect(alocacao).toContainText('Nenhum professor alocado ainda')
-    await expect(oQueFalta).toContainText('Professores · feito')
+    await comOQueFalta(page, hasTouch, async (oQueFalta) => {
+      await expect(oQueFalta).toContainText('Professores · feito')
+    })
 
     // Sem escolher tudo, diz o que falta, e nada sai.
     await acionar(alocacao.getByRole('button', { name: 'Alocar' }), hasTouch)
@@ -125,7 +132,9 @@ test.describe('W4 (Alocação): o professor com convite em aberto', () => {
     await expect(alocados.getByRole('listitem')).toHaveCount(1)
     await expect(alocados).toContainText(ana.nome)
     await expect(alocados).toContainText('Esperando o professor confirmar')
-    await expect(oQueFalta).toContainText('Alocação · feito')
+    await comOQueFalta(page, hasTouch, async (oQueFalta) => {
+      await expect(oQueFalta).toContainText('Alocação · feito')
+    })
     // A mesma alocação de novo: a API recusa, a tela explica, e o anúncio da alocação anterior sai.
     await acionar(alocacao.getByRole('button', { name: 'Alocar' }), hasTouch)
     await expect(alocacao.getByRole('alert')).toHaveText('Este professor já está alocado nesta turma e nesta disciplina.', { timeout: PRAZO_DA_ENTRADA_MS })

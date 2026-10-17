@@ -156,7 +156,7 @@ describe('o título das seis telas que passaram à Tela', () => {
     carregando: { rotas: { '/v1/anos-letivos': 'segurar' }, aparece: () => screen.findByText('Carregando a estrutura da escola…') },
     erro: { rotas: { '/v1/anos-letivos': FALHA } },
     vazio: { rotas: { '/v1/anos-letivos': LISTA_VAZIA }, aparece: () => screen.findByText('Comece pelo ano letivo') },
-    comDado: { rotas: { '/v1/anos-letivos': { status: 200, corpo: { itens: [ANO_EM_CURSO] } } }, aparece: () => screen.findByRole('heading', { name: 'Séries' }) },
+    comDado: { rotas: { '/v1/anos-letivos': { status: 200, corpo: { itens: [ANO_EM_CURSO] } } }, aparece: () => screen.findByRole('heading', { name: 'Turmas de 2026' }) },
   })
 
   provar('Professores', {

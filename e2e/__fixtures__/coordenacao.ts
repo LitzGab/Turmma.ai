@@ -107,3 +107,53 @@ export async function paginaNaoRola(page: Page): Promise<void> {
 export function linhasDaTabela(regiao: Locator): Locator {
   return regiao.locator('tbody tr, [data-tabela="lista"] > li')
 }
+
+/**
+ * Os dois painéis da aba Turmas (telas da coordenação, 5.0): o do ano letivo, das séries e das disciplinas, e o do que falta para a
+ * escola começar. Cada um é um `<dialog>` modal pelo endereço (`?painel=ano` e `?painel=falta`), e a página por trás fica inerte
+ * enquanto ele está aberto: quem usa a tela volta a ela fechando o painel.
+ */
+export const painelDoAno = (page: Page): Locator => page.getByRole('dialog', { name: 'Ano letivo e disciplinas' })
+export const painelDoQueFalta = (page: Page): Locator => page.getByRole('dialog', { name: 'O que falta' })
+
+/** Abre o painel do ano letivo pelo botão da aba Turmas e devolve o painel, já visível. */
+export async function abrirAnoEDisciplinas(page: Page, hasTouch: boolean): Promise<Locator> {
+  await acionar(page.getByRole('main').getByRole('button', { name: 'Ano letivo e disciplinas' }), hasTouch)
+  const painel = painelDoAno(page)
+  await expect(painel).toBeVisible()
+  return painel
+}
+
+/** Abre o painel do que falta pelo "Ver o que falta" do aviso e devolve o roteiro dos sete passos, dentro do painel. Quem sai por um link dele não fecha o painel. */
+export async function abrirOQueFalta(page: Page, hasTouch: boolean): Promise<Locator> {
+  await acionar(page.getByRole('main').getByRole('button', { name: 'Ver o que falta' }), hasTouch)
+  const painel = painelDoQueFalta(page)
+  await expect(painel).toBeVisible()
+  return painel.getByRole('region', { name: 'O que falta para a escola começar' })
+}
+
+/**
+ * Abre o painel do que falta, confere o que o teste quer ver no roteiro dos sete passos e fecha. Abre pelo "Ver o que falta" do
+ * aviso; quando a escola já está pronta o aviso sai, e então abre pelo endereço (`?painel=falta`), que é o mesmo painel.
+ */
+export async function comOQueFalta(page: Page, hasTouch: boolean, conferir: (roteiro: Locator) => Promise<void>): Promise<void> {
+  const botao = page.getByRole('main').getByRole('button', { name: 'Ver o que falta' })
+  if ((await botao.count()) > 0) await acionar(botao, hasTouch)
+  else
+    await page.evaluate(() => {
+      const endereco = new URL(window.location.href)
+      endereco.searchParams.set('painel', 'falta')
+      window.history.pushState(null, '', endereco)
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+  const painel = painelDoQueFalta(page)
+  await expect(painel).toBeVisible()
+  await conferir(painel.getByRole('region', { name: 'O que falta para a escola começar' }))
+  await fecharPainel(page, painel, hasTouch)
+}
+
+/** Fecha o painel que está aberto pelo "Fechar" dele e espera ele sair. */
+export async function fecharPainel(page: Page, painel: Locator, hasTouch: boolean): Promise<void> {
+  await acionar(painel.getByRole('button', { name: 'Fechar', exact: true }), hasTouch)
+  await expect(painel).toHaveCount(0)
+}
