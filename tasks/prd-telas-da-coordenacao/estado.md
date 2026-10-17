@@ -1,8 +1,10 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero:** linha 1, `Implementador` (reiniciado com a `Mesa` às ~23h47): o `RELATÓRIO` da **tarefa 12.0**
-  (pequena, partida às 23h46, com o ajuste do `12_task.md` de `c2dab30`), 1ª tentativa.
+- **Espero:** linha 1, `Implementador` (reiniciado com a `Mesa` em 17/10 ~00h15): o `RELATÓRIO` da **correção
+  `2026-10-17-abas-das-empresas-estoura-o-prazo`** (privacidade:295 no celular, "Test timeout of 30000ms exceeded",
+  esteira 38994595783 sobre `8d43fe7`), 1ª tentativa. Guardiões ditados: `frontend-reviewer` (o mesmo da correção
+  da aba das empresas). Depois do encontro dela, a linha 1 parte a **13.0** (o quadro já a liberou).
   Linha 2, `Implementador 2` (reiniciado com a `Mesa 2`): o `RELATÓRIO` da **tarefa 5.0** (grande, partida às
   ~23h41), 1ª tentativa. O PEDIDO levou a observação da 9.0 (`NOME_DO_TURNO`, `caminhos.ts`, `miolo-que-rola.ts`).
 - **Ao partir a 7.0** (achado da 9.0): alinhar o texto de 'nome não carregado' da Alocação com o da lista da turma
@@ -15,12 +17,12 @@
   reproduziu 10/10 e ficou no `TODO.md`, se voltar é correção com `test.slow()`). `8d43fe7` e `7dd9fae` ainda
   não têm a correção: vermelho só na casca W12 ali é esperado. Em `f279dde` em diante, qualquer vermelho é
   correção. A correção `68941e8` (encontro em `a3d5b2f`)
-  cobre a estrutura:294 e a professores:220 no celular (o sino relia na montagem). A privacidade:298 tem outra causa (o Implementador não tocou) e não caiu em 38977792982; se voltar,
-  é correção própria. O W6 do Uso (14.0) no chromebook também não caiu em 38977792982
+  cobre a estrutura:294 e a professores:220 no celular (o sino relia na montagem). A privacidade:298 (hoje :295) voltou em
+  38994595783 (`8d43fe7`, celular, prazo do teste de 30 s): é a correção da linha 1, acima. O W6 do Uso (14.0) no chromebook também não caiu em 38977792982
 - **Devo ainda:** no fechamento, linha no `TODO.md`: o sino da 1.0 soma pedaços e 6 leituras a cada recarga de
   página da coordenação (custo real no perfil lento, achado da correção da aba das empresas). A X3 e a X4 continuam paradas por pedido do Joaquim (a X4 no andar
   "X4 telas-do-aluno-e-primeiro-acesso", com a 1.0 em `1477850`): não retomar sem a palavra dele
-- **Base:** `spec/telas-da-coordenacao` em `f279dde` (correção casca-procura-governanca encontrada), com a `develop` de `2029703` (X1 pousada, mockup e retro) juntada
+- **Base:** `spec/telas-da-coordenacao` em `c325472` (tarefa 12.0 encontrada), com a `develop` de `2029703` (X1 pousada, mockup e retro) juntada
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -33,6 +35,7 @@
 | 4.0 | `95b775e` | Sonnet | 3 | linha 2, 22h16–23h50; correção das guardas antes dela (`bb6a890`, prazo de 60 s); `test-engineer` e `revisor-geral` aprovaram na r3; encontro em CONFLITO no `TODO.md`, resolvido pela correção `encontro-4` (`3beffaa`); encontro em `7dd9fae` |
 | 9.0 | `a8335f0` | Sonnet | 2 | linha 1, 22h22–23h35; r1 aprovou com recomendações (`.processo/ordens/9_task-r1.md`), r2 aprovada por todos; a lista da turma a 1366 px não mostra a tabela no miolo que rola (linha no `TODO.md`); achados para a 5.0 e a 7.0 no "Agora"; encontro em `8d43fe7` |
 | correção casca-procura-governanca | `7ad1e07` | Sonnet | 2 | linha 1, ~23h40 até o encontro às 23h46; só `e2e/casca.spec.ts` (o W12 procurava 'Governança', trocada pela 3.0); acesso-suspenso:169 não reproduziu 10/10, registrado no `TODO.md`; `revisor-geral` e `test-engineer` aprovaram na r2; encontro em `f279dde` |
+| 12.0 | `18ba26f` | Sonnet | 2 | linha 1, 23h46–00h10; `frontend-reviewer` e `privacy-guardian` aprovaram na r1, `test-engineer` e `revisor-geral` na r2; 7 fotos com pedidos semeados à mão (a vitrine não os semeia); aviso ao encontro: `Tabela.tsx` leva o mesmo `relative` que a 5.0 e a techspec §9 ganhou uma frase no parágrafo que a 5.0 pode tocar; encontro em `c325472` |
 
 ## Esperando o Joaquim
 ## O que falhou
@@ -51,6 +54,8 @@
 ## O que decidi sem perguntar
 - 16/10 ~22h25: o quadro pediu uma terceira linha para a 9.0; não abri. Desde as 17h15 as linhas rodam em fila por
   carga (e2e estoura 30 s com load 9+), e uma terceira linha só somaria espera. Reabro a pergunta se a máquina folgar
+- 17/10 00h37: o quadro pediu a terceira linha para a 13.0; não abri, pelo mesmo motivo (load 9,2, a correção da
+  linha 1 repetindo o e2e). A 13.0 parte na linha 1 depois do encontro da correção
 - 16/10 ~22h25: a professores:220 [celular] foi para a correção da linha 1 e não virou correção própria na linha 2: o
   sintoma é o mesmo da estrutura:294 (o "Tentar de novo" no celular) e duas correções na mesma peça dariam conflito
   no encontro. Com a correção da linha 1 em curso desde antes, a 4.0 partiu na linha 2, como a 3.0 partiu às 19h47
