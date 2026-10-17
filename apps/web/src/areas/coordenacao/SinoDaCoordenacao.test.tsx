@@ -6,10 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
-import { consultaAnosLetivos } from '../../api/estrutura'
+import { consultaAnosLetivos, consultaTurmas, consultaVinculos } from '../../api/estrutura'
 import { consultaListaDaTurma } from '../../api/lista'
+import { consultaMateriais } from '../../api/material'
 import { consultaPedidosDaTurma } from '../../api/pedidos'
 import { consultaIncidentes, consultaPedidosDoTitular } from '../../api/privacidade'
+import { consultaProfessores } from '../../api/professores'
 import { prepararTela, redeFalsa, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
 import { ContextoDaAncoraDoSino } from '../../componentes/ancora-do-sino'
 import SinoDaCoordenacao from './SinoDaCoordenacao'
@@ -42,6 +44,7 @@ const MATERIAL = (estado: 'processando' | 'falhou' | 'pronto') => ({
 })
 
 const ok = (itens: readonly unknown[], extra: Record<string, unknown> = {}): RespostaFalsa => ({ status: 200, corpo: { itens, ...extra } })
+const INDISPONIVEL: RespostaFalsa = { status: 503, corpo: { erro: { codigo: 'INDISPONIVEL_TENTE_DE_NOVO', mensagem: 'x', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } } }
 const FORA = { status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO', mensagem: 'x', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } } }
 
 /** O que cada leitura da fila responde. Cada caso muda só o que importa para ele. */
@@ -264,6 +267,71 @@ describe('o sino não relê sozinho (RF5)', () => {
     await avancar(CINCO_MINUTOS_E_UM)
     await sairEVoltar('rede')
     expect(rede.chamadas).toHaveLength(antes)
+  })
+
+  it('o sino que monta depois de a tela já ter a leitura dos anos em erro não a relê: o "Tentar de novo" da tela continua de pé até o toque', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const rede = redeFalsa()
+    let indisponivel = true
+    instalar(rede, { ...TUDO_EM_DIA, anos: () => (indisponivel ? INDISPONIVEL : ok([ANO])) })
+    const cliente = criarClienteDeConsultas()
+    cliente.mount()
+    // A tela da Estrutura, que já leu os anos e falhou (uma tentativa automática, um segundo depois).
+    const tela = new QueryObserver(cliente, consultaAnosLetivos)
+    const largar = tela.subscribe(() => undefined)
+    await avancar(2 * MIL)
+    expect(tela.getCurrentResult().isError).toBe(true)
+    // A rede volta, e só então o sino (lazy) chega: uma leitura de anos aqui tiraria o erro de debaixo do dedo de quem vai tocar.
+    indisponivel = false
+    const antes = caminhosDe(rede).filter((caminho) => caminho === '/v1/anos-letivos').length
+    montar({ cliente })
+    // Sem releitura, o sino continua dizendo que parte da lista não carregou (e não "nada"): é o erro dos anos que ele ainda vê.
+    await screen.findByRole('button', { name: 'Esperando você, parte não carregou' })
+    await avancar(2 * MIL)
+    expect(screen.getByRole('button', { name: 'Esperando você, parte não carregou' })).toBeTruthy()
+    expect(caminhosDe(rede).filter((caminho) => caminho === '/v1/anos-letivos')).toHaveLength(antes)
+    expect(tela.getCurrentResult().isError).toBe(true)
+    largar()
+    cliente.unmount()
+  })
+
+  it('o sino que monta depois de a tela já ter em erro as outras cinco leituras (incidentes, professores, materiais, turmas e vínculos) não relê nenhuma', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const rede = redeFalsa()
+    let indisponivel = true
+    const quando = (resposta: RespostaFalsa) => (): RespostaFalsa => (indisponivel ? INDISPONIVEL : resposta)
+    instalar(rede, {
+      anos: ok([ANO]),
+      incidentes: quando(TUDO_EM_DIA.incidentes as RespostaFalsa),
+      professores: quando(ok([CAMILA])),
+      materiais: quando(ok([MATERIAL('pronto')])),
+      turmas: quando(ok([TURMA])),
+      vinculos: quando(ok([VINCULO])),
+    })
+    const cliente = criarClienteDeConsultas()
+    cliente.mount()
+    // As telas da área leem os anos (com dado, para turmas e vínculos terem ano em curso) e as outras cinco, que falham.
+    const telas = [
+      new QueryObserver(cliente, consultaAnosLetivos),
+      new QueryObserver(cliente, consultaIncidentes),
+      new QueryObserver(cliente, consultaProfessores),
+      new QueryObserver(cliente, consultaMateriais),
+      new QueryObserver(cliente, consultaTurmas),
+      new QueryObserver(cliente, consultaVinculos),
+    ]
+    const largar = telas.map((tela) => tela.subscribe(() => undefined))
+    await avancar(2 * MIL)
+    expect(telas.map((tela) => tela.getCurrentResult().status)).toEqual(['success', 'error', 'error', 'error', 'error', 'error'])
+    indisponivel = false
+    const leiturasDe = () => LEITURAS_DA_FILA.map((caminho) => caminhosDe(rede).filter((chamado) => chamado === caminho).length)
+    const antes = leiturasDe()
+    montar({ cliente })
+    await screen.findByRole('button', { name: /^Esperando você/ })
+    await avancar(2 * MIL)
+    expect(leiturasDe()).toEqual(antes)
+    expect(telas.map((tela) => tela.getCurrentResult().status)).toEqual(['success', 'error', 'error', 'error', 'error', 'error'])
+    for (const parar of largar) parar()
+    cliente.unmount()
   })
 
   it('controle: a mesma consulta de anos, com a opção ligada, relê na volta do foco e na volta da rede (o teste enxerga a leitura que o sino evita)', async () => {
