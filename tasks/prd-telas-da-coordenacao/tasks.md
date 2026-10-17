@@ -109,13 +109,13 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 12.5 `TODO.md`: o m3 feito; m4 e m5 ficam
   - [ ] 12.6 Testes: os dois e2e de pedidos sem perder asserção; homônimos; a eliminação continua em perigo
 
-- [ ] **13.0 — Registros › Privacidade: prazos, empresas e incidentes num seletor**
-  - [ ] 13.1 O seletor de três, no endereço
-  - [ ] 13.2 Prazos em tabela, com "Prazos que não mudam"
-  - [ ] 13.3 Empresas, vigentes e passadas, em tabela
-  - [ ] 13.4 Incidentes, os sem confirmação primeiro, com "Confirmo que recebi" em botão oficial
-  - [ ] 13.5 O aviso de incidente ao entrar não muda de comportamento
-  - [ ] 13.6 Testes: a confirmação idempotente entre duas pessoas; os e2e `privacidade` e `incidentes` sem perder asserção
+- [x] **13.0 — Registros › Privacidade: prazos, empresas e incidentes num seletor**
+  - [x] 13.1 O seletor de três, no endereço
+  - [x] 13.2 Prazos em tabela, com "Prazos que não mudam"
+  - [x] 13.3 Empresas, vigentes e passadas, em tabela
+  - [x] 13.4 Incidentes, os sem confirmação primeiro, com "Confirmo que recebi" em botão oficial
+  - [x] 13.5 O aviso de incidente ao entrar não muda de comportamento
+  - [x] 13.6 Testes: a confirmação idempotente entre duas pessoas; os e2e `privacidade` e `incidentes` sem perder asserção
 
 - [x] **14.0 — A operação numa página, com Escolas e Uso**
   - [ ] 14.1 O cabeçalho, com a frase fixa de que a operação não vê dado de pessoa
