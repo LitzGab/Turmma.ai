@@ -45,6 +45,8 @@ describe('Escolas: os estados da tela (RF22)', () => {
     renderizarTelaDaOperacao(<Escolas />)
     expect(await screen.findByText('Carregando as escolas…')).toBeTruthy()
     expect(screen.queryByRole('table')).toBeNull()
+    // O vazio só vem com a leitura terminada e sem erro (RF22).
+    expect(screen.queryByText('Nenhuma escola ainda.')).toBeNull()
 
     solta.liberar(lista([escolaDoPainel(1), escolaDoPainel(2)]))
     expect(await screen.findByRole('table')).toBeTruthy()
@@ -62,6 +64,7 @@ describe('Escolas: os estados da tela (RF22)', () => {
     renderizarTelaDaOperacao(<Escolas />)
     expect((await screen.findByRole('alert', {}, { timeout: 4000 })).textContent).toBe('O Turmma está indisponível agora. Tente de novo em instantes.')
     expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.queryByText('Nenhuma escola ainda.')).toBeNull()
     expect(screen.getByRole('button', { name: 'Nova escola' })).toBeTruthy()
 
     rede.responder(lista([escolaDoPainel(1)]))

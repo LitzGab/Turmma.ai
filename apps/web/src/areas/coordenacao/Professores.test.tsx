@@ -156,6 +156,8 @@ describe('os quatro estados da tela', () => {
     montar()
     expect(await screen.findByText('Carregando os professores…')).toBeTruthy()
     expect(screen.queryByRole('table')).toBeNull()
+    // O vazio só vem com a leitura terminada e sem erro (RF22).
+    expect(screen.queryByText('Nenhum professor ainda')).toBeNull()
   })
 
   it('erro: a mensagem curta e "Tentar de novo", que lê só a lista de novo', async () => {
