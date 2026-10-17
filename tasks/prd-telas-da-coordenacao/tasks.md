@@ -43,7 +43,7 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 4.5 Nenhum campo de pergunta, anexo, relatório nem "Baixar"
   - [ ] 4.6 Testes: uma auditoria por leitura; a regra dos dois professores; nenhum `textbox`
 
-- [ ] **5.0 — Escola › Turmas em tabela, com o ano e as disciplinas num painel ao lado**
+- [x] **5.0 — Escola › Turmas em tabela, com o ano e as disciplinas num painel ao lado**
   - [ ] 5.1 `turmas-da-escola.ts` (puro): turmas por série, com os professores de cada uma
   - [ ] 5.2 A tabela, com a linha inteira levando à lista da turma
   - [ ] 5.3 O seletor "Todas" e "Sem professor", no endereço

@@ -1,12 +1,20 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero:** linha 1, `Implementador` (reiniciado com a `Mesa` em 17/10 ~00h15): o `RELATÓRIO` da **correção
-  `2026-10-17-abas-das-empresas-estoura-o-prazo`** (privacidade:295 no celular, "Test timeout of 30000ms exceeded",
-  esteira 38994595783 sobre `8d43fe7`), 1ª tentativa. Guardiões ditados: `frontend-reviewer` (o mesmo da correção
-  da aba das empresas). Depois do encontro dela, a linha 1 parte a **13.0** (o quadro já a liberou).
-  Linha 2, `Implementador 2` (reiniciado com a `Mesa 2`): o `RELATÓRIO` da **tarefa 5.0** (grande, partida às
-  ~23h41), 1ª tentativa. O PEDIDO levou a observação da 9.0 (`NOME_DO_TURNO`, `caminhos.ts`, `miolo-que-rola.ts`).
+- **Espero:** linha 1, `Implementador` (reiniciado com a `Mesa` em 17/10 ~01h25): o `RELATÓRIO` da **correção
+  `2026-10-17-pagina-rola-depois-da-12`**: `e2e/areas.spec.ts:316` (W2, chromebook) falha isolado e sempre, "a página
+  inteira rola a partir de 768 px: só o miolo deveria"; verde em `f279dde` (38996200178), e entre ele e `c325472` só
+  entrou a 12.0 (`18ba26f`, que pôs `relative` no tr e no li de `Tabela.tsx`), 1ª tentativa. Guardiões ditados:
+  `frontend-reviewer`. Depois do encontro dela, a linha 1 parte a **13.0** (o quadro já a liberou).
+  **17/10 ~03h50, retomada (2ª instrução, mesma correção):** a DIVERGÊNCIA de portão mostrou que a causa não é a 12.0
+  (falha local igual em `f279dde`; e2e verde em 38999161158). Mandei corrigir o layout da Analista para o miolo rolar
+  em vez de o main crescer (a página só cabe em 768 px pela fonte da esteira), sem mexer no teste, e renomear a correção.
+- **A conferir na esteira de `80a4bf8` (39002645989):** a de `c325472` (38999161158) deu e2e verde; o vermelho dela
+  foi só a unidade `tools/processo/linhas.test.ts` (ENOTEMPTY no rmdir do tmp, intermitente; em `80a4bf8` o verificar
+  passou). Se voltar, é correção de processo. A privacidade:295 já tem a correção `190d788` em `80a4bf8`. Se ela cair no chromebook aos 90 s,
+  ler o trace antes de subir prazo (ATENÇÃO 2 do relatório, no documento da correção)
+  Linha 2: a correção `encontro-5` (`76a1f1f`, conflito do `TODO.md` da 5.0) se encontrou às ~02h09; a linha 2
+  parte o que o quadro liberar.
 - **Ao partir a 7.0** (achado da 9.0): alinhar o texto de 'nome não carregado' da Alocação com o da lista da turma
   ('Nome não carregado')
 - **Ao partir a 11.0** (observação do PEDIDO, achado da 3.0): `paginaNaoRola` aceita a primeira amostra (mesmo com
@@ -22,7 +30,7 @@
 - **Devo ainda:** no fechamento, linha no `TODO.md`: o sino da 1.0 soma pedaços e 6 leituras a cada recarga de
   página da coordenação (custo real no perfil lento, achado da correção da aba das empresas). A X3 e a X4 continuam paradas por pedido do Joaquim (a X4 no andar
   "X4 telas-do-aluno-e-primeiro-acesso", com a 1.0 em `1477850`): não retomar sem a palavra dele
-- **Base:** `spec/telas-da-coordenacao` em `c325472` (tarefa 12.0 encontrada), com a `develop` de `2029703` (X1 pousada, mockup e retro) juntada
+- **Base:** `spec/telas-da-coordenacao` em `80a4bf8` (correção abas-das-empresas encontrada), com a `develop` de `2029703` (X1 pousada, mockup e retro) juntada
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -36,6 +44,10 @@
 | 9.0 | `a8335f0` | Sonnet | 2 | linha 1, 22h22–23h35; r1 aprovou com recomendações (`.processo/ordens/9_task-r1.md`), r2 aprovada por todos; a lista da turma a 1366 px não mostra a tabela no miolo que rola (linha no `TODO.md`); achados para a 5.0 e a 7.0 no "Agora"; encontro em `8d43fe7` |
 | correção casca-procura-governanca | `7ad1e07` | Sonnet | 2 | linha 1, ~23h40 até o encontro às 23h46; só `e2e/casca.spec.ts` (o W12 procurava 'Governança', trocada pela 3.0); acesso-suspenso:169 não reproduziu 10/10, registrado no `TODO.md`; `revisor-geral` e `test-engineer` aprovaram na r2; encontro em `f279dde` |
 | 12.0 | `18ba26f` | Sonnet | 2 | linha 1, 23h46–00h10; `frontend-reviewer` e `privacy-guardian` aprovaram na r1, `test-engineer` e `revisor-geral` na r2; 7 fotos com pedidos semeados à mão (a vitrine não os semeia); aviso ao encontro: `Tabela.tsx` leva o mesmo `relative` que a 5.0 e a techspec §9 ganhou uma frase no parágrafo que a 5.0 pode tocar; encontro em `c325472` |
+| correção abas-das-empresas-estoura-o-prazo | `190d788` | Sonnet | 1 | linha 1, 00h33–01h20; `test.setTimeout(90_000)` no teste das duas abas (duas cargas de página no celular); 16/16 em 4×2; `frontend-reviewer` e `test-engineer` aprovaram na r1; achou o areas:316 da 12.0; encontro em `80a4bf8` |
+| 5.0 | `738c3c4` | Sonnet | 2 | linha 2, ~23h41–02h03; `frontend-reviewer` aprovou na r1, `test-engineer` e `revisor-geral` reprovaram na r1 e aprovaram na r2; 14 fotos da Mesa; também viu o areas:316 (Analista, +10 px), que é a correção em curso na linha 1; encontro em CONFLITO no `TODO.md` (correção `encontro-5`) |
+| correção pagina-rola-depois-da-12 | `74dcace` | Sonnet | 2 | linha 1, 01h28–02h10; a causa não era a 12.0: a Analista não tinha miolo e rolava inteira com a fonte local (778 × 768); `frontend-reviewer` aprovou na r1, `test-engineer` na r2; duas linhas no `TODO.md` (sombra do miolo, texto do areas:347) |
+| correção encontro-5 | `76a1f1f` | Sonnet | 1 | linha 2, 02h04–02h09; as três linhas do fim do `TODO.md` mantidas; `test-engineer` e `revisor-geral` aprovaram na r1 |
 
 ## Esperando o Joaquim
 ## O que falhou
@@ -51,7 +63,14 @@
 - 16/10 19h43–22h08: a correção da linha 1 perdeu ~2h25 num laço de espera (`pgrep -f` com `--l2.*[p]laywright test`)
   que casava com a própria linha de comando, pela terceira vez no dia. Eu mesmo deixei passar em duas vigias, lendo
   "espera a linha 2" sem olhar o que o laço achava. Para a retro: a fila entre linhas tem de ser trava de arquivo
+- 17/10 02h02–02h08: a `Mesa` (linha 1) escreveu o RELATÓRIO aprovado da `pagina-rola` só no próprio terminal, sem
+  `maestri ask`; o `Implementador` ficou esperando. A vigia viu e pedi à Mesa que o enviasse. Segundo conflito
+  seguido no fim do `TODO.md` (encontro-4, encontro-5): para a retro, linhas novas do `TODO.md` em seção por tarefa
 ## O que decidi sem perguntar
+- 17/10 ~03h50: DIVERGÊNCIA de portão do `Implementador` na correção `pagina-rola-depois-da-12`: areas:316 falha local
+  também sem a 12.0 (+10 px na Analista) e passa na esteira. Ele perguntou se fechava sem correção; não fechei: a tela
+  depender da métrica da fonte para não rolar é defeito real no Chromebook (fonte diferente da esteira), e deixaria o
+  portão local vermelho na 11.0, que mexe em `e2e/areas.spec.ts`. A correção segue, com o motivo novo
 - 16/10 ~22h25: o quadro pediu uma terceira linha para a 9.0; não abri. Desde as 17h15 as linhas rodam em fila por
   carga (e2e estoura 30 s com load 9+), e uma terceira linha só somaria espera. Reabro a pergunta se a máquina folgar
 - 17/10 00h37: o quadro pediu a terceira linha para a 13.0; não abri, pelo mesmo motivo (load 9,2, a correção da

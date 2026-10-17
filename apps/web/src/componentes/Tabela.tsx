@@ -26,8 +26,11 @@ interface PropsDaTabela<Linha> {
  *
  * - **A pele (D80)**: moldura de canto 16 e borda de 2 px em `borda`, sem sombra e sem degrau (peça de leitura); o
  *   cabeçalho de 44 px em `t-selo`, e a linha de 64 px, separada da de cima por 2 px. No celular, cada linha é um cartão
- *   da mesma borda, com a primeira coluna em `t-cartao` e o nome das outras em `t-selo`. A tabela não ordena, de propósito,
- *   e a linha que abre é da X2.
+ *   da mesma borda, com a primeira coluna em `t-cartao` e o nome das outras em `t-selo`. A tabela não ordena, de propósito.
+ * - **A linha que abre** (X2, 5.0): a linha e o cartão são `relative`, e o link da primeira célula se estende por eles
+ *   (`after:absolute after:inset-0`). A linha inteira passa a ser o alvo, e o que fica dentro dela e precisa do próprio
+ *   clique (o menu da linha) ganha `relative` sem `z-index`: ele vem depois do link no documento e é pintado acima do `::after`, e sem
+ *   `z-index` não cria contexto de empilhamento, de modo que a lista e o fundo do `Menu` (`fixed z-30` e `z-20`) ficam acima das linhas de baixo.
  * - **Uma estrutura de cada vez no documento**, escolhida pela largura (`useMidia`): pôr as duas e esconder uma com CSS
  *   dobraria os nós de uma tabela longa no Chromebook, e os controles de dentro das células existiriam duas vezes.
  * - **Na tabela, o cabeçalho é acessível**: `caption`, `th` de coluna e a primeira célula como `th` de linha. Quando ela

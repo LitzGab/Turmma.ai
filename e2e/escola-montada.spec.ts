@@ -3,7 +3,7 @@ import type { Browser, BrowserContext, BrowserContextOptions, Locator, Page } fr
 import { exibirCodigoDaTurma } from '../packages/shared/src/sala/acesso.ts'
 import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts'
 import { entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, abrirEstrutura, irPelaNavegacao, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, esperarAtividades, abrirAbaAlunos } from './__fixtures__/casca.ts'
-import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
+import { irPelaCoordenacao, painelDoAno } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { alunosDaTurmaNoBanco, criarEquipeComSenha, montarEstruturaNoBanco, porNaListaDaTurma } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -20,7 +20,8 @@ const SENHA_DO_PROFESSOR = 'senha do professor sintético'
 const SENHA_DA_ALUNA = 'a frase que só a aluna sabe'
 
 const principal = (page: Page) => page.getByRole('main')
-const dialogo = (page: Page) => page.getByRole('dialog')
+/** O diálogo de formulário ou de confirmação, e não o painel (o painel do ano letivo guarda o diálogo que abre por cima dele). */
+const dialogo = (page: Page) => page.locator('dialog[open]:not([data-painel-lado])')
 const anuncio = (lugar: Locator, texto: string) => lugar.getByRole('status').filter({ hasText: texto })
 
 async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
@@ -88,6 +89,8 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
   await dialogo(page).getByLabel('Fim').fill('2026-12-11')
   await acionar(botao(dialogo(page), 'Criar ano letivo'), hasTouch)
   await expect(dialogo(page)).toHaveCount(0, { timeout: PRAZO_DA_ENTRADA_MS })
+  // O ano criado a partir do vazio abre o painel dele, e é nele que o ano se abre e que a série e a disciplina nascem.
+  await expect(painelDoAno(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   await acionar(botao(principal(page), 'Abrir o ano letivo 2026'), hasTouch)
   await expect(principal(page)).toContainText('Em curso', { timeout: PRAZO_DA_ENTRADA_MS })
 
@@ -100,6 +103,8 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
   await dialogo(page).getByLabel('Nome da disciplina').fill(disciplina)
   await acionar(botao(dialogo(page), 'Criar disciplina'), hasTouch)
   await expect(dialogo(page)).toHaveCount(0, { timeout: PRAZO_DA_ENTRADA_MS })
+  await acionar(botao(painelDoAno(page), 'Fechar'), hasTouch)
+  await expect(painelDoAno(page)).toHaveCount(0)
   await acionar(botao(principal(page), 'Nova turma'), hasTouch)
   await dialogo(page).getByLabel('Nome da turma').fill(turma)
   await acionar(botao(dialogo(page), 'Criar turma'), hasTouch)

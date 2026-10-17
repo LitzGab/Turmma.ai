@@ -6,7 +6,7 @@ import { entregasNoBanco, validacoesNoBanco } from './__fixtures__/a2.ts'
 import { respostasNoBanco } from './__fixtures__/a3.ts'
 import { entrarComoAlunoPelaApi, responderPelaApi } from './__fixtures__/aluno-pela-api.ts'
 import { abrirAbaAlunos, abrirNavegacao, esperarAtividades, esperarPainel, esperarNovaConversa, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
-import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
+import { irPelaCoordenacao, painelDoAno } from './__fixtures__/coordenacao.ts'
 import { caixa, conversa, DISCIPLINA, gerarAtividade, PRAZO_DA_IA_MS, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
 import { auditoriasNoBanco, suspensoesNoBanco } from './__fixtures__/governanca.ts'
 import { CAMINHO_DO_PDF_DE_DEMONSTRACAO, materiaisNoBanco, recusasNaAuditoria } from './__fixtures__/material.ts'
@@ -66,7 +66,8 @@ const TEMA_DA_SEGUNDA = 'Reagente limitante'
 const SEGUNDA = `Atividade — ${TEMA_DA_SEGUNDA}`
 
 const principal = (page: Page) => page.getByRole('main')
-const dialogo = (page: Page) => page.getByRole('dialog')
+/** O diálogo de formulário ou de confirmação, e não o painel (o painel do ano letivo guarda o diálogo que abre por cima dele). */
+const dialogo = (page: Page) => page.locator('dialog[open]:not([data-painel-lado])')
 const botao = (lugar: Locator, nome: string) => lugar.getByRole('button', { name: nome, exact: true })
 
 const contextos: { close: () => Promise<void> }[] = []
@@ -198,6 +199,8 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await dialogo(coordenacao).getByLabel('Fim').fill('2026-12-11')
       await botao(dialogo(coordenacao), 'Criar ano letivo').click()
       await expect(dialogo(coordenacao)).toHaveCount(0, { timeout: PRAZO_DA_ENTRADA_MS })
+      // O ano criado a partir do vazio abre o painel dele: o ano se abre ali, e a série e a disciplina nascem ali.
+      await expect(painelDoAno(coordenacao)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await botao(principal(coordenacao), 'Abrir o ano letivo 2026').click()
       await expect(principal(coordenacao)).toContainText('Em curso', { timeout: PRAZO_DA_ENTRADA_MS })
       await botao(principal(coordenacao), 'Nova série').click()
@@ -210,6 +213,8 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
         await botao(dialogo(coordenacao), 'Criar disciplina').click()
         await expect(dialogo(coordenacao)).toHaveCount(0, { timeout: PRAZO_DA_ENTRADA_MS })
       }
+      await botao(painelDoAno(coordenacao), 'Fechar').click()
+      await expect(painelDoAno(coordenacao)).toHaveCount(0)
       for (const turma of [turmaA, turmaB]) {
         await botao(principal(coordenacao), 'Nova turma').click()
         await dialogo(coordenacao).getByLabel('Nome da turma').fill(turma)
