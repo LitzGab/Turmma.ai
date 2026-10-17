@@ -22,7 +22,7 @@ A lista dos pedidos dos titulares passa a dizer o prazo de cada pedido e a marca
 
 - [ ] 12.1 — A coluna "Prazo" na tabela "Pedidos dos titulares": o texto de `textoDoPrazo` e o `Estado` da família dele; o vencido diz "vencido há N dias", com ícone. A ordem continua a da chegada
 - [ ] 12.2 — A linha inteira é o link do detalhe, com o tipo do pedido no nome acessível; "Registrar pedido" é o único botão `primario`
-- [ ] 12.3 — O aviso do aluno da lista fica; o link "Ir para a Estrutura" passa a dizer "Ir para as turmas", no mesmo endereço; a frase "O prazo de cada um aparece no detalhe" sai
+- [ ] 12.3 — O aviso do aluno da lista fica; o link "Ir para a Estrutura" passa a dizer "Ir para as turmas", no mesmo endereço, na lista (`Pedidos.tsx:91`) e no detalhe (`DetalheDoPedido.tsx:185`, e o comentário da 181); a frase "O prazo de cada um aparece no detalhe" sai. Nos textos, "em Estrutura" vira "em Escola › Turmas" (o nome da 3.0, Tech Spec §5): `textos-dos-pedidos.ts:86, 90 e 114` e `textos-do-pedido.ts:163 e 207`. Só o nome do lugar muda; o resto da frase fica
 - [ ] 12.4 — O detalhe: `Tela` `leitura`, "‹ Pedidos" no lugar de "Voltar para os pedidos", o prazo no topo, o compartilhamento em tabela e o grupo "O que fazer com este pedido" como hoje. `AcoesDoPedido.tsx` e `RegistrarPedido.tsx` não mudam
 - [ ] 12.5 — Marcar o m3 como feito no `TODO.md`, e deixar m4 e m5
 - [ ] 12.6 — Testes
@@ -33,6 +33,7 @@ A lista dos pedidos dos titulares passa a dizer o prazo de cada pedido e a marca
 |---|---|
 | `apps/web/src/areas/coordenacao/privacidade/Pedidos.tsx`, `apps/web/src/areas/coordenacao/privacidade/DetalheDoPedido.tsx` | alterado |
 | `apps/web/src/areas/coordenacao/privacidade/textos-dos-pedidos.ts`, `apps/web/src/areas/coordenacao/privacidade/textos-dos-pedidos.test.ts` | alterado |
+| `apps/web/src/areas/coordenacao/privacidade/textos-do-pedido.ts` | alterado (só o nome do lugar, 12.3) |
 | `apps/web/src/areas/coordenacao/privacidade/Pedidos.test.tsx` | novo |
 | `e2e/pedidos-do-titular.spec.ts`, `e2e/pedido-do-titular.spec.ts`, `e2e/__fixtures__/pedidos-do-titular.ts` | alterado |
 | `TODO.md` | alterado |
@@ -55,6 +56,7 @@ A lista dos pedidos dos titulares passa a dizer o prazo de cada pedido e a marca
 - `e2e/pedidos-do-titular.spec.ts › carregando, erro com "Tentar de novo", vazio e com dado…`; a navegação está em `e2e/__fixtures__/pedidos-do-titular.ts`
 - Pedido vencido: semeie com `chegouEm` de vinte dias atrás; "hoje" é o dia de São Paulo
 - Rodar: `npx vitest run --project unidade apps/web/src/areas/coordenacao/privacidade/Pedidos.test.tsx`; `node tools/ci/e2e.ts --manter-ambiente e2e/pedidos-do-titular.spec.ts`
+- O link novo: `e2e/pedido-do-titular.spec.ts:385, 441 e 446` e `e2e/pedidos-do-titular.spec.ts:338` afirmam "Ir para a Estrutura" e passam a afirmar "Ir para as turmas", com a mesma asserção (visível, ou contagem zero)
 - A vitrine não semeia pedido: semeie à mão e diga em "Telas vistas"
 - Telas: `coordenacao`, `/coordenacao/privacidade/pedidos`, e o clique na primeira linha; mockup `/coordenacao/registros?aba=avisos`
 

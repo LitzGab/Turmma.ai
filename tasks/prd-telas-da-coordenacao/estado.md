@@ -1,18 +1,22 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero:** linha 1, `Implementador` (reiniciado com a `Mesa` às ~19h20): o `RELATÓRIO` da **correção**
-  `2026-10-16-tentar-de-novo-da-estrutura-no-celular` (esteira vermelha 38966083912 em `b95722d`:
-  `e2e/estrutura.spec.ts:294`, só no celular, o "Tentar de novo" do main não aparece; provável da 1.0;
-  `frontend-reviewer`). Ao receber: `encontro 1`, `esteira.ts`, e a próxima do quadro na linha 1.
-  Passou das 2 h sem rodada: das 19h43 às 22h08 o spec de reprodução esperou num laço de `pgrep` que casava
-  com a própria linha de comando; na vigia das 22h07 mandei matar o laço e rodar direto (para a retro:
-  espera entre linhas por `pgrep -f` se casa sozinha).
-  Linha 2, `Implementador 2` (reiniciado com a `Mesa 2` às ~20h05): o `RELATÓRIO` da **tarefa 3.0** (grande,
-  prazo 4 h), 1ª tentativa; roda suíte sem laço, a linha 1 espera. A correção da aba das empresas se encontrou
-  (`d374377`, spec em `ddee86e`).
-- **A conferir na esteira de `ddee86e` em diante:** o W6 do Uso (14.0) falha no chromebook com banco acumulado de
-  outras execuções (regra 40 pede que passe nos três ambientes): se cair na esteira, é correção
+- **Espero:** linha 1, `Implementador` (reiniciado com a `Mesa` às ~22h45): o `RELATÓRIO` da **tarefa 9.0**
+  (grande, prazo 4 h), 1ª tentativa; roda suíte direto, sem laço.
+  Linha 2, `Implementador 2` (reiniciado com a `Mesa 2` às ~23h15): primeiro a **correção** do timeout de
+  `tools/guardas/guardas.test.ts` (DIVERGÊNCIA de portão da 4.0; commit na linha, sem encontro próprio), depois
+  retoma a **tarefa 4.0** (pequena, 2ª ordem, falta só o portão) e manda o `RELATÓRIO` dela. Espera o
+  Playwright da linha 1 antes de suíte ou portão.
+  O ajuste do `12_task.md` (trocas de "Estrutura" no detalhe e nos textos dos pedidos, achado da 3.0) está na
+  spec em `c2dab30`, sem dependência nova; a linha que partir a 12.0 o recebe na partida.
+- **Ao partir a 11.0** (observação do PEDIDO, achado da 3.0): `paginaNaoRola` aceita a primeira amostra (mesmo com
+  "Carregando…"), e `/coordenacao/agentes` ainda rola a página a 1366 × 768; ajustar junto os comentários de
+  `e2e/areas.spec.ts`
+- **A conferir na esteira de `a3d5b2f` em diante:** a correção da linha 1 (`68941e8`, encontro em `a3d5b2f`)
+  cobre a estrutura:294 e a professores:220 no celular (o sino relia na montagem). As esteiras de `cb8968e` e
+  `c2dab30` ainda não a têm: vermelho só nesses dois ali é esperado. Em `a3d5b2f` em diante, qualquer vermelho é
+  correção. A privacidade:298 tem outra causa (o Implementador não tocou) e não caiu em 38977792982; se voltar,
+  é correção própria. O W6 do Uso (14.0) no chromebook também não caiu em 38977792982
 - **Devo ainda:** no fechamento, linha no `TODO.md`: o sino da 1.0 soma pedaços e 6 leituras a cada recarga de
   página da coordenação (custo real no perfil lento, achado da correção da aba das empresas). A X3 e a X4 continuam paradas por pedido do Joaquim (a X4 no andar
   "X4 telas-do-aluno-e-primeiro-acesso", com a 1.0 em `1477850`): não retomar sem a palavra dele
@@ -24,6 +28,8 @@
 | 1.0 | `694f9d4` | Sonnet | 3+ | conduzida fora do Maestri pelo "Claude Code #2" (`conduzir.mjs`), em 16/10 de manhã; a X2 foi parada às 09h40 e retomada às ~14h15 |
 | 14.0 | `d289c98` | Sonnet | 3 | linha 2, 15h07–18h15; escalada do `test-engineer` (r1, r2) com diagnóstico do Arquiteto (faltavam mutações declaradas), aprovada na r3; cherry-pick da sexta fatia (`c2965ac`); a Mesa não fotografou a operação (a vitrine não a cobre): **a validação refotografa** `/operacao` e `/operacao/uso`; linha nova no `TODO.md` (coluna Uso com turmas 0) |
 | 2.0 | `229da54` | Sonnet | 2 | linha 1, 15h06–19h15; DIVERGÊNCIA de portão (sexta fatia, `9d9985f`), de carga (fila entre linhas) e de desenho (opção (b), techspec em `8e45a1d`); `revisor-geral` e `test-engineer` reprovaram na r1. Para a retro: `tools/ci/e2e.ts --repeat-each` roda a suíte inteira (33 min), use `npx playwright test`; e2e a 2 workers estoura 30 s na entrada compartilhada com carga 9+; o Painel lê a chave do resumo com observador simples (TODO da r2) |
+| 3.0 | `3be23c9` | Sonnet | 2 | linha 2, 19h47–22h20; `frontend-reviewer`, `revisor-geral` e `test-engineer` reprovaram na r1; achados para a 12.0 (pedido ao Arquiteto) e para a 11.0 (no "Agora"); encontro em `cb8968e` |
+| correção tentar-de-novo-da-estrutura-no-celular | `68941e8` | Sonnet | 2 | linha 1, 19h26–22h40; cobre também professores:220; ~2h25 perdidas num laço de `pgrep` que casava consigo (ver "O que falhou"); `test-engineer` reprovou na r1; encontro em `a3d5b2f` |
 
 ## Esperando o Joaquim
 ## O que falhou
@@ -35,7 +41,15 @@
   1 esperava esse laço. Desfeito mandando a linha 2 rodar sem laço. Lição: **só uma linha espera, a outra roda
   direto**; ou o padrão casa só com o processo do Playwright (`node_modules/.bin/[p]laywright`), nunca com texto que o
   próprio laço carrega. Fila entre linhas devia ser trava de arquivo no `tools/processo/`, não `pgrep` (para a retro)
+- 16/10 19h43–22h08: a correção da linha 1 perdeu ~2h25 num laço de espera (`pgrep -f` com `--l2.*[p]laywright test`)
+  que casava com a própria linha de comando, pela terceira vez no dia. Eu mesmo deixei passar em duas vigias, lendo
+  "espera a linha 2" sem olhar o que o laço achava. Para a retro: a fila entre linhas tem de ser trava de arquivo
 ## O que decidi sem perguntar
+- 16/10 ~22h25: o quadro pediu uma terceira linha para a 9.0; não abri. Desde as 17h15 as linhas rodam em fila por
+  carga (e2e estoura 30 s com load 9+), e uma terceira linha só somaria espera. Reabro a pergunta se a máquina folgar
+- 16/10 ~22h25: a professores:220 [celular] foi para a correção da linha 1 e não virou correção própria na linha 2: o
+  sintoma é o mesmo da estrutura:294 (o "Tentar de novo" no celular) e duas correções na mesma peça dariam conflito
+  no encontro. Com a correção da linha 1 em curso desde antes, a 4.0 partiu na linha 2, como a 3.0 partiu às 19h47
 - 16/10 ~14h15: juntei a `develop` (`2029703`) na `spec/telas-da-coordenacao` antes da 2.0, para a X2 partir da X1
   pousada e com os ajustes da retrospectiva; merge sem conflito
 - 16/10 ~16h05: DIVERGÊNCIA de portão da 2.0 (1002 casos de e2e em 5 fatias, 201 por fatia, acima do teto de 197 de
@@ -53,3 +67,8 @@
   máquina livre, aí é defeito, e vira FALHA da 2.0
 - 16/10 ~17h45: reiniciei o `Arquiteto` para o diagnóstico da 14.0. Na caixa dele havia "pode fazer o push da develop",
   digitado e não enviado; a `develop` local já estava igual à `origin/develop`, então nada se perdeu
+- 16/10 ~23h15: DIVERGÊNCIA de portão do `Implementador 2` na 4.0: `guardas.test.ts` ('a guarda conhece as mesmas
+  chaves que o redact do logger remove') estoura 5000 ms no import dinâmico de `@educa/nucleo` com a máquina em load
+  10 a 24 (Playwright da linha 1); falhou nos dois portões da 2ª ordem, passa isolado. Pelo passo 6, virou correção na
+  linha 2 antes de retomar a tarefa, com o par reiniciado e os arquivos da 4.0 fora dela; ditei só `test-engineer` e
+  `revisor-geral` (`privacy-guardian` se a asserção ou o logger mudar), porque o que muda é o tempo

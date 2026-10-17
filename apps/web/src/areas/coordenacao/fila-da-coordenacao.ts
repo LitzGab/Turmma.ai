@@ -5,6 +5,7 @@ import { consultaAnosLetivos, consultaTurmas, consultaVinculos, type ListaDaEstr
 import { consultaMateriais } from '../../api/material'
 import { consultaIncidentes } from '../../api/privacidade'
 import { consultaProfessores } from '../../api/professores'
+import { caminhoDoProfessor } from '../../caminhos'
 import type { ItemDoSino, SituacaoDoSino } from '../../componentes/sino/Sino'
 import { formatarDiaDoInstante } from '../../formatar'
 
@@ -59,9 +60,6 @@ export function turmasSemProfessor(turmas: readonly Turma[], vinculos: readonly 
   return turmas.filter((turma) => !comProfessor.has(turma.id))
 }
 
-const PARA_PROFESSORES = '/professores'
-const PARA_PROFESSOR = (usuarioId: string): string => `${PARA_PROFESSORES}?professor=${encodeURIComponent(usuarioId)}`
-
 function lida<Dado>(leitura: LeituraDaFila<Dado>): Dado | undefined {
   return leitura.estado === 'lida' ? leitura.dado : undefined
 }
@@ -94,7 +92,7 @@ function itensDeContestacao(vinculos: readonly VinculoDaCoordenacao[], professor
       titulo: `${nomes.get(vinculo.usuarioId) ?? 'Um professor'} contestou a turma`,
       detalhe: vinculo.disciplina === undefined ? vinculo.turma.nome : `${vinculo.turma.nome} · ${vinculo.disciplina.nome}`,
       urgente: false,
-      para: PARA_PROFESSOR(vinculo.usuarioId),
+      para: caminhoDoProfessor(vinculo.usuarioId),
     }))
 }
 
@@ -107,7 +105,7 @@ function itensDeConviteVencido(professores: readonly ProfessorDaEscola[]): ItemD
       titulo: `Refazer o convite de ${professor.nome}`,
       detalhe: 'O convite venceu antes de ser aceito.',
       urgente: false,
-      para: PARA_PROFESSOR(professor.usuarioId),
+      para: caminhoDoProfessor(professor.usuarioId),
     }))
 }
 
@@ -182,6 +180,15 @@ export function anoEmCurso(anos: LeituraDaFila<readonly AnoLetivo[]>): AnoLetivo
  */
 export const SEM_LEITURA_SOZINHA = { staleTime: 5 * 60_000, refetchInterval: false, refetchOnWindowFocus: false, refetchOnReconnect: false } as const
 
+/**
+ * As opções dos seis observadores da fila: as de cima, mais **nenhuma releitura de consulta que já falhou só porque o sino
+ * montou**. O sino é `lazy()` e chega depois da tela: se a consulta dos anos já falhou ali, a releitura da montagem a refaz
+ * sem ninguém tocar, e o erro e o "Tentar de novo" da tela somem debaixo do dedo (esteira de 16/10/2026, "Tentar de novo"
+ * da Estrutura no celular). Quem relê o que falhou é o "Tentar de novo" do sino ou o da tela. Consulta que ainda não
+ * existe carrega normalmente: `retryOnMount` só vale para a que já está em erro.
+ */
+const LEITURA_DA_FILA = { ...SEM_LEITURA_SOZINHA, retryOnMount: false } as const
+
 function leituraDe<Dado>(consulta: UseQueryResult<ListaDaEstrutura<Dado>>, aplica = true): LeituraDaFila<readonly Dado[]> {
   if (!aplica) return { estado: 'nao-se-aplica' }
   if (consulta.isError) return { estado: 'erro', erro: consulta.error }
@@ -213,14 +220,14 @@ export interface FilaLida extends FilaDaCoordenacao {
  * que alcançaria também a lista de nomes e os pedidos de titular, cuja leitura é auditada (regra 20, item 10).
  */
 export function useFilaDaCoordenacao(): FilaLida {
-  const anos = useQuery({ ...consultaAnosLetivos, ...SEM_LEITURA_SOZINHA })
-  const incidentes = useQuery({ ...consultaIncidentes, ...SEM_LEITURA_SOZINHA, staleTime: Infinity })
-  const professores = useQuery({ ...consultaProfessores, ...SEM_LEITURA_SOZINHA })
-  const materiais = useQuery({ ...consultaMateriais, ...SEM_LEITURA_SOZINHA })
+  const anos = useQuery({ ...consultaAnosLetivos, ...LEITURA_DA_FILA })
+  const incidentes = useQuery({ ...consultaIncidentes, ...LEITURA_DA_FILA, staleTime: Infinity })
+  const professores = useQuery({ ...consultaProfessores, ...LEITURA_DA_FILA })
+  const materiais = useQuery({ ...consultaMateriais, ...LEITURA_DA_FILA })
   const leituraDosAnos = leituraDe(anos)
   const aplicaAoAno = anoEmCurso(leituraDosAnos) !== undefined
-  const turmas = useQuery({ ...consultaTurmas, ...SEM_LEITURA_SOZINHA, enabled: aplicaAoAno })
-  const vinculos = useQuery({ ...consultaVinculos, ...SEM_LEITURA_SOZINHA, enabled: aplicaAoAno })
+  const turmas = useQuery({ ...consultaTurmas, ...LEITURA_DA_FILA, enabled: aplicaAoAno })
+  const vinculos = useQuery({ ...consultaVinculos, ...LEITURA_DA_FILA, enabled: aplicaAoAno })
 
   // Os incidentes são uma leitura à parte (`staleTime: Infinity`) e entram na fila como as outras: lidos, em erro ou carregando.
   const leituraDeIncidentes: LeituraDaFila<readonly IncidenteDaEscola[]> = incidentes.isError

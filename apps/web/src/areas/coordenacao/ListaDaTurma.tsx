@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent, type RefObject } from 'react'
 import { Link } from 'wouter'
 import { ErroDaApi } from '../../api/cliente'
-import { consultaTurmaAberta } from '../../api/estrutura'
+import { consultaTurmaAberta, consultaTurmas } from '../../api/estrutura'
 import { acrescentarNome, consultaListaDaTurma, gravarLista, previaDaLista, retirarNome } from '../../api/lista'
 import { ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
@@ -13,13 +13,18 @@ import { Campo } from '../../componentes/Campo'
 import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
 import { AlertaDaFalha, AlertaSemFoco, Anuncio, ConfirmacaoDePerigo, DialogoDeFormulario, useEnvioUnico } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
+import { A_PARTIR_DE_768, useMidia } from '../../componentes/midia'
 import { ListaDePedidos } from '../../componentes/pedidos/ListaDePedidos'
+import { Estado } from '../../componentes/SeloDeEstado'
+import { Tabela, type ColunaDaTabela } from '../../componentes/Tabela'
 import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
 import { Tela } from '../../componentes/Tela'
 import { TurmaIndisponivel } from '../../componentes/TurmaIndisponivel'
 import { formatarNumero, formatarQuantidade } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { comQuebrasDoCampo, lerArquivoDaLista, tetoPassado, type MotivoDoArquivoRecusado } from './ler-arquivo-da-lista'
+import { O_MIOLO_QUE_ROLA } from './miolo-que-rola'
+import { NOME_DO_TURNO } from './nome-do-turno'
 import {
   avisosDaPrevia,
   linhasNaOrdemDaTela,
@@ -28,6 +33,7 @@ import {
   TEXTO_DO_ERRO_DA_LINHA,
   TEXTO_DO_RESULTADO,
 } from './previa-da-lista'
+import { ProfessoresDaTurma } from './ProfessoresDaTurma'
 
 /**
  * O estado do nome em texto, para a coordenação (regra 50, item 11). O aprovado não tem linha: a lista o traz sem nome nem
@@ -86,8 +92,12 @@ interface PreviaDoTexto {
 /**
  * A turma aberta na Estrutura, com a lista de nomes dela (A1, 13.0; RF4 e RF5; W4, "Lista"; W10): colar ou escolher o
  * arquivo, ver a prévia linha a linha, com os erros primeiro e em texto, e gravar só sem erro; acrescentar um nome
- * avulso; retirar um nome livre. A matrícula aparece aqui, para a coordenação, e em nenhuma tela do aluno. Embaixo, os
- * pedidos de nome da turma, que a coordenação também decide (16.0; RF12), lidos só no "Atualizar".
+ * avulso; retirar um nome livre. A matrícula aparece aqui, para a coordenação, e em nenhuma tela do aluno. Os pedidos de
+ * nome da turma, que a coordenação também decide (16.0; RF12), são lidos só no "Atualizar".
+ *
+ * **Duas colunas a partir de 1024 px** (X2, 9.0; RF16): à esquerda, o envio da lista e os nomes em tabela; à direita, os
+ * professores da turma e os pedidos. Abaixo disso, uma coluna, nessa ordem. A 768 px ou mais **só o miolo rola**, e a página
+ * fica parada (RF23).
  *
  * - **Nome e matrícula só na memória da página e no corpo das requisições**: nunca no endereço, em `localStorage` nem em
  *   `sessionStorage` (regra 20; regra 50, item 7).
@@ -100,6 +110,9 @@ interface PreviaDoTexto {
  */
 export default function ListaDaTurma({ turmaId }: { turmaId: string }) {
   const turma = useQuery(consultaTurmaAberta(turmaId))
+  // O turno não vem na turma aberta, só na lista de turmas do ano. Ela é não auditada e, com a turma lida, o ano em curso existe.
+  // O complemento do título é só apoio: a lista que falha, ou que não traz a turma, deixa só a série.
+  const turmas = useQuery({ ...consultaTurmas, enabled: turma.data !== undefined })
   // A leitura dos pedidos deixou de achar a turma: a página diz isso, como quando é a leitura da turma que não a acha.
   const [perdida, definirPerdida] = useState(false)
   const perderATurma = useCallback(() => definirPerdida(true), [])
@@ -133,13 +146,40 @@ export default function ListaDaTurma({ turmaId }: { turmaId: string }) {
       </Tela>
     )
 
+  const turno = turmas.data?.itens.find((candidata) => candidata.id === turmaId)?.turno ?? null
+  const serie = nomeDaSerie(turma.data.serie)
   return (
-    <Tela titulo={nomeDaTurma} descricao={nomeDaSerie(turma.data.serie)} antes={voltar} idDoTitulo="titulo-da-turma">
-      <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-da-turma">
-        <ConteudoDaLista turmaId={turmaId} turmaNome={turma.data.nome} aoPerderATurma={perderATurma} />
-      </section>
+    <Tela titulo={nomeDaTurma} descricao={turno === null ? serie : `${serie} · ${NOME_DO_TURNO[turno]}`} antes={voltar} idDoTitulo="titulo-da-turma">
+      <ConteudoDaLista turmaId={turmaId} turmaNome={turma.data.nome} aoPerderATurma={perderATurma} />
     </Tela>
   )
+}
+
+/** O que a tabela dos nomes diz de cada coluna. A tabela vira lista no celular (`Tabela`), e o título da coluna passa a ser o rótulo do valor. */
+function colunasDosNomes(aoRetirar: (nome: NomeAindaNaLista) => void): readonly [ColunaDaTabela<NomeAindaNaLista>, ...ColunaDaTabela<NomeAindaNaLista>[]] {
+  return [
+    { chave: 'nome', titulo: 'Nome', celula: (nome) => <span className="font-medium break-words">{nome.nome}</span> },
+    { chave: 'matricula', titulo: 'Matrícula', celula: (nome) => <span className="break-words">{nome.matricula}</span> },
+    {
+      chave: 'situacao',
+      titulo: 'Situação',
+      celula: (nome) => (
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {nome.estado === 'livre' ? <Estado familia="info">{ESTADO_DO_NOME.livre}</Estado> : <Estado familia="pendente">{ESTADO_DO_NOME.reivindicado}</Estado>}
+          {nome.estado === 'livre' && (
+            <button type="button" onClick={() => aoRetirar(nome)} className={CLASSES_DO_BOTAO_PERIGO}>
+              {/* Com a matrícula: dois alunos com o mesmo nome na turma têm botões de nome diferente. */}
+              Retirar
+              <span className="sr-only">
+                {' '}
+                {nome.nome}, matrícula {nome.matricula} da lista
+              </span>
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ]
 }
 
 function ConteudoDaLista({ turmaId, turmaNome, aoPerderATurma }: { turmaId: string; turmaNome: string; aoPerderATurma: () => void }) {
@@ -152,10 +192,12 @@ function ConteudoDaLista({ turmaId, turmaNome, aoPerderATurma }: { turmaId: stri
   const alvo = aberta?.alvo
   const tituloDosNomes = useRef<HTMLHeadingElement>(null)
   const idDoTitulo = useId()
+  // O miolo que rola recebe foco, para rolar pelo teclado, a partir de 768 px: abaixo disso rola a página, e não há o que focar.
+  const comMiolo = useMidia(A_PARTIR_DE_768)
 
   const recarregarNomes = () => cliente.invalidateQueries({ queryKey: consultaListaDaTurma(turmaId).queryKey })
   const itens = nomes.data?.pages.flatMap((pagina) => pagina.itens) ?? []
-  // Os aprovados vêm sem nome nem matrícula: entram na contagem, e não em cartões.
+  // Os aprovados vêm sem nome nem matrícula: entram na contagem, e não na tabela.
   const semAprovados = itens.filter((nome): nome is NomeAindaNaLista => nome.estado !== 'aprovado' && nome.nome !== null && nome.matricula !== null)
   const aprovados = itens.length - semAprovados.length
 
@@ -166,81 +208,75 @@ function ConteudoDaLista({ turmaId, turmaNome, aoPerderATurma }: { turmaId: stri
 
   return (
     <>
-      <SubirLista
-        turmaId={turmaId}
-        aoGravar={(texto) => {
-          definirAnuncio(texto)
-          // O "Gravar lista" saiu com a prévia: o foco vai para os nomes, que já chegaram com os gravados.
-          tituloDosNomes.current?.focus()
-        }}
-        recarregarNomes={recarregarNomes}
-      />
+      <section
+        aria-labelledby="titulo-da-turma"
+        {...(comMiolo ? { tabIndex: 0 } : {})}
+        className={`grid min-w-0 grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem] ${O_MIOLO_QUE_ROLA}`}
+      >
+        <div className="flex min-w-0 flex-col gap-6">
+          <SubirLista
+            turmaId={turmaId}
+            aoGravar={(texto) => {
+              definirAnuncio(texto)
+              // O "Gravar lista" saiu com a prévia: o foco vai para os nomes, que já chegaram com os gravados.
+              tituloDosNomes.current?.focus()
+            }}
+            recarregarNomes={recarregarNomes}
+          />
 
-      <section aria-labelledby={idDoTitulo} className="flex min-w-0 flex-col gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 ref={tituloDosNomes} id={idDoTitulo} tabIndex={-1} className="text-lg font-semibold text-tinta">
-            Nomes da turma
-          </h2>
-          <button type="button" onClick={() => abrir('acrescentar')} className={CLASSES_DO_BOTAO_SECUNDARIO}>
-            Acrescentar um nome
-          </button>
-        </div>
-        {/* O anúncio fica aqui, com os nomes: é para onde o foco vai depois de gravar, acrescentar e retirar. */}
-        <Anuncio texto={anuncio} />
-        {nomes.isPending ? (
-          <EstadoCarregando rotulo="Carregando a lista de nomes…" />
-        ) : nomes.isError ? (
-          <EstadoErro erro={nomes.error} tentando={nomes.isFetching} aoTentarDeNovo={() => void nomes.refetch({ cancelRefetch: false })} />
-        ) : itens.length === 0 ? (
-          <EstadoVazio titulo="Nenhum nome nesta turma ainda" descricao="Cole a lista ou envie o arquivo: nome; matrícula, um aluno por linha, no campo acima." />
-        ) : (
-          <>
-            <p className="text-sm text-sutil">
-              {nomes.hasNextPage ? `Mostrando os primeiros ${formatarQuantidade(itens.length, 'nome', 'nomes')}` : `${formatarQuantidade(itens.length, 'nome', 'nomes')} na lista`}
-            </p>
-            {aprovados > 0 && (
-              <p className="rounded-cartao border border-ok bg-ok-cx p-4 break-words text-ok">{textoDosAprovados(aprovados, itens.length, nomes.hasNextPage)}</p>
-            )}
-            <ul className="flex flex-col gap-3">
-              {semAprovados.map((nome) => (
-                <li key={nome.id} className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4 md:flex-row md:items-center md:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-medium break-words text-tinta">{nome.nome}</p>
-                    <p className="text-sm break-words text-apoio">Matrícula {nome.matricula}</p>
-                    <p className={`text-sm ${nome.estado === 'livre' ? 'text-apoio' : 'text-pendente'}`}>{ESTADO_DO_NOME[nome.estado]}</p>
-                  </div>
-                  {nome.estado === 'livre' && (
-                    <button type="button" onClick={() => abrir('retirar', nome)} className={CLASSES_DO_BOTAO_PERIGO}>
-                      {/* Com a matrícula: dois alunos com o mesmo nome na turma têm botões de nome diferente. */}
-                      Retirar
-                      <span className="sr-only">
-                        {' '}
-                        {nome.nome}, matrícula {nome.matricula} da lista
-                      </span>
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {nomes.hasNextPage && (
-              <button type="button" onClick={() => void nomes.fetchNextPage()} disabled={nomes.isFetchingNextPage} className={`${CLASSES_DO_BOTAO_SECUNDARIO} self-start`}>
-                {nomes.isFetchingNextPage ? 'Carregando…' : 'Ver mais nomes'}
+          <section aria-labelledby={idDoTitulo} className="flex min-w-0 flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 ref={tituloDosNomes} id={idDoTitulo} tabIndex={-1} className="text-lg font-semibold text-tinta">
+                Nomes da turma
+              </h2>
+              <button type="button" onClick={() => abrir('acrescentar')} className={CLASSES_DO_BOTAO_SECUNDARIO}>
+                Acrescentar um nome
               </button>
+            </div>
+            {/* O anúncio fica aqui, com os nomes: é para onde o foco vai depois de gravar, acrescentar e retirar. */}
+            <Anuncio texto={anuncio} />
+            {nomes.isPending ? (
+              <EstadoCarregando rotulo="Carregando a lista de nomes…" />
+            ) : nomes.isError ? (
+              <EstadoErro erro={nomes.error} tentando={nomes.isFetching} aoTentarDeNovo={() => void nomes.refetch({ cancelRefetch: false })} />
+            ) : itens.length === 0 ? (
+              <EstadoVazio titulo="Nenhum nome nesta turma ainda" descricao="Cole a lista ou envie o arquivo: nome; matrícula, um aluno por linha, no campo acima." />
+            ) : (
+              <>
+                <p className="text-sm text-sutil">
+                  {nomes.hasNextPage ? `Mostrando os primeiros ${formatarQuantidade(itens.length, 'nome', 'nomes')}` : `${formatarQuantidade(itens.length, 'nome', 'nomes')} na lista`}
+                </p>
+                {aprovados > 0 && (
+                  <p className="rounded-cartao border border-ok bg-ok-cx p-4 break-words text-ok">{textoDosAprovados(aprovados, itens.length, nomes.hasNextPage)}</p>
+                )}
+                {/* Só aprovados: a tabela ficaria só com o cabeçalho, e a contagem acima já diz tudo o que há para dizer. */}
+                {semAprovados.length > 0 && (
+                  <Tabela rotulo="Cada nome com a matrícula e a situação" colunas={colunasDosNomes((nome) => abrir('retirar', nome))} linhas={semAprovados} chaveDaLinha={(nome) => nome.id} />
+                )}
+                {nomes.hasNextPage && (
+                  <button type="button" onClick={() => void nomes.fetchNextPage()} disabled={nomes.isFetchingNextPage} className={`${CLASSES_DO_BOTAO_SECUNDARIO} self-start`}>
+                    {nomes.isFetchingNextPage ? 'Carregando…' : 'Ver mais nomes'}
+                  </button>
+                )}
+              </>
             )}
-          </>
-        )}
-      </section>
+          </section>
+        </div>
 
-      <ListaDePedidos
-        turma={{ id: turmaId, nome: turmaNome }}
-        quem="coordenacao"
-        vazio={{
-          titulo: 'Nenhum pedido esperando',
-          descricao: 'Os pedidos chegam quando o professor da turma gerar o acesso e os alunos pedirem o nome.',
-        }}
-        aoPerderATurma={aoPerderATurma}
-        aoDecidir={recarregarNomes}
-      />
+        <div className="flex min-w-0 flex-col gap-6">
+          <ProfessoresDaTurma turmaId={turmaId} />
+          <ListaDePedidos
+            turma={{ id: turmaId, nome: turmaNome }}
+            quem="coordenacao"
+            vazio={{
+              titulo: 'Nenhum pedido esperando',
+              descricao: 'Os pedidos chegam quando o professor da turma gerar o acesso e os alunos pedirem o nome.',
+            }}
+            aoPerderATurma={aoPerderATurma}
+            aoDecidir={recarregarNomes}
+          />
+        </div>
+      </section>
 
       {aberta?.tipo === 'acrescentar' && (
         <NomeAvulso

@@ -97,6 +97,14 @@ export function caminhoDaTurmaNaEstrutura(turmaId: string): string {
   return ROTAS_DA_COORDENACAO.turma.replace(':turmaId', encodeURIComponent(turmaId))
 }
 
+/**
+ * O endereço de Professores com o professor aberto, **relativo à área**: só o id do usuário vai na consulta, nunca o nome (regra
+ * 20, item 9). É o que a fila do sino e a lista de professores da turma usam para levar ao painel dele (X2, 9.0; o painel é o da 6.0).
+ */
+export function caminhoDoProfessor(usuarioId: string): string {
+  return `${ROTAS_DA_COORDENACAO.professores}?professor=${encodeURIComponent(usuarioId)}`
+}
+
 /** O endereço de uma aba da Privacidade, **relativo à área**, como `caminhoDaTurmaNaEstrutura`: é o que a aba usa para trocar de aba. */
 export function caminhoDaAbaDaPrivacidade(aba: string): string {
   return ROTAS_DA_COORDENACAO.privacidadeDaAba.replace(':aba', encodeURIComponent(aba))

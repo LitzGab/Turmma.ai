@@ -2,6 +2,7 @@ import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaPedidosDaTurma } from '../packages/shared/src/sala/pedidos.ts'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, abrirEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, abrirAbaAlunos } from './__fixtures__/casca.ts'
+import { linhasDaTabela } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   alunosDaTurmaNoBanco,
@@ -421,7 +422,7 @@ test.describe('W4 (Pedidos) e W6, pela coordenação', () => {
     await expect(nomesDaTurma).toContainText(`Aprovados nesta turma: 2. ${DOS_APROVADOS}`, {
       timeout: PRAZO_DA_ENTRADA_MS,
     })
-    await expect(nomesDaTurma.getByRole('listitem')).toHaveCount(2)
+    await expect(linhasDaTabela(nomesDaTurma)).toHaveCount(2)
     await expect(nomesDaTurma).not.toContainText('Aluno aprovado')
     for (const { nome } of [ana, bruno]) await expect(nomesDaTurma).not.toContainText(nome)
 
@@ -469,7 +470,7 @@ test.describe('W4 (Pedidos) e W6, pela coordenação', () => {
     await tocar(noDialogo(page), 'Recusar 1 pedido', hasTouch)
     await expect(noDialogo(page).getByRole('alert')).toBeFocused({ timeout: PRAZO_DA_ENTRADA_MS })
     await tocar(noDialogo(page), 'Fechar', hasTouch)
-    await expect(nomesDaTurma.getByRole('listitem').filter({ hasText: carla.nome })).toContainText('Livre: esperando o aluno pedir o nome', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(linhasDaTabela(nomesDaTurma).filter({ hasText: carla.nome })).toContainText('Livre: esperando o aluno pedir o nome', { timeout: PRAZO_DA_ENTRADA_MS })
     await page.unroute(ehADecisao)
     expect(await alunosDaTurmaNoBanco(coordenadora.escolaId, turma.id)).toBe(2)
     expect(leituras).toHaveLength(3)
@@ -991,10 +992,10 @@ test.describe('os aprovados na lista de nomes da coordenação', () => {
     await expect(nomesDaTurma).toContainText('Mostrando os primeiros 100 nomes', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(nomesDaTurma).toContainText(`Aprovados entre os primeiros 100 nomes: 1. ${DOS_APROVADOS}`)
     await expect(nomesDaTurma).not.toContainText('Aprovados nesta turma')
-    await expect(nomesDaTurma.getByRole('listitem')).toHaveCount(99)
+    await expect(linhasDaTabela(nomesDaTurma)).toHaveCount(99)
     await tocar(nomesDaTurma, 'Ver mais nomes', hasTouch)
     await expect(nomesDaTurma).toContainText('102 nomes na lista', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(nomesDaTurma).toContainText(`Aprovados nesta turma: 2. ${DOS_APROVADOS}`)
-    await expect(nomesDaTurma.getByRole('listitem')).toHaveCount(100)
+    await expect(linhasDaTabela(nomesDaTurma)).toHaveCount(100)
   })
 })

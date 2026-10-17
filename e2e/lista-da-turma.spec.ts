@@ -2,9 +2,13 @@ import { randomUUID } from 'node:crypto'
 import type { Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, esperarEstrutura, esperarPainel, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { linhasDaTabela, paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   apagarTurmaNoBanco,
+  confirmarVinculosNoBanco,
+  convidarProfessorNoBanco,
+  criarAlocacaoDoProfessor,
   criarEquipeComSenha,
   montarEstruturaNoBanco,
   porNaListaDaTurma,
@@ -14,6 +18,10 @@ import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.t
 /**
  * A lista de nomes da turma (X2, 3.0; movida de `estrutura.spec.ts` sem editar o corpo): W10 e W4 (Lista), o arquivo do Excel e o
  * clique duplo em "Gravar lista". Tudo pela tela, nos projetos `chromebook` e `celular`, com nomes e matrículas inventados pelo teste.
+ *
+ * Na 9.0 os nomes passaram a uma tabela (que vira lista no celular) e a turma ganhou os professores ao lado: o que mudou nos
+ * casos de cima é só o elemento que se conta (`linhasDaTabela`, no lugar de `listitem`) e a matrícula, que deixou de vir com a
+ * palavra "Matrícula" colada no número. Nenhuma regra mudou, e os dois casos novos, no fim, são os da coluna e da altura.
  */
 
 const INDISPONIVEL = JSON.stringify({ erro: { codigo: 'INDISPONIVEL_TENTE_DE_NOVO', mensagem: 'texto que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } })
@@ -161,7 +169,9 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     await expect(principal(page).getByRole('heading', { name: 'Nomes da turma' })).toBeFocused()
     const lista = principal(page).getByRole('region', { name: 'Nomes da turma' })
     for (const nome of nomes) await expect(lista).toContainText(nome)
-    await expect(lista).toContainText('Matrícula 880001')
+    // A matrícula está na linha do nome, e não solta na região: cada nome com a sua (os dois homônimos, a primeira e a quarta).
+    for (const [posicao, nome] of nomes.entries())
+      await expect(linhasDaTabela(lista).filter({ hasText: nome }).filter({ hasText: String(880001 + posicao) })).toHaveCount(1)
     await expect(principal(page).getByLabel('Lista colada')).toHaveValue('')
     await expect(lido).toHaveCount(0)
 
@@ -173,7 +183,7 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     await expect(previa).toContainText('nada muda, nem o nome gravado')
     await expect(previa).toContainText('Nada novo para gravar')
     await expect(previa.getByRole('button', { name: 'Gravar lista' })).toHaveCount(0)
-    await expect(lista.getByRole('listitem')).toHaveCount(4)
+    await expect(linhasDaTabela(lista)).toHaveCount(4)
 
     // Dois alunos com o mesmo nome: cada "Retirar" diz a matrícula, e a confirmação também. Sai o da matrícula
     // escolhida, e o outro fica.
@@ -183,9 +193,11 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     await expect(retirar).toContainText(`${homonimo}, matrícula 880004, sai da lista desta turma`)
     await acionar(retirar.getByRole('button', { name: 'Retirar da lista' }), hasTouch)
     await expect(anuncio(secao(page, 'Nomes da turma'), 'Nome retirado da lista.')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(lista.getByRole('listitem')).toHaveCount(3)
-    await expect(lista).toContainText('Matrícula 880001')
-    await expect(lista).not.toContainText('Matrícula 880004')
+    await expect(linhasDaTabela(lista)).toHaveCount(3)
+    // Fica o homônimo da matrícula 880001, na linha dele; a 880004 saiu da região inteira.
+    await expect(linhasDaTabela(lista).filter({ hasText: homonimo })).toHaveCount(1)
+    await expect(linhasDaTabela(lista).filter({ hasText: homonimo })).toContainText('880001')
+    await expect(lista).not.toContainText('880004')
 
     // Sem rastro: nome e matrícula não vão para o armazenamento do navegador nem para o endereço, e a tela não cria
     // banco nem cache no navegador.
@@ -230,7 +242,7 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     const lista = principal(page).getByRole('region', { name: 'Nomes da turma' })
     await expect(lista).toContainText(`Primeira da lista ${marca}`, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(lista).toContainText('Mostrando os primeiros 100 nomes')
-    await expect(lista.getByRole('listitem')).toHaveCount(100)
+    await expect(linhasDaTabela(lista)).toHaveCount(100)
 
     // Cada leitura da coordenação vai para a auditoria: voltar para a aba, uma hora depois, relê o que envelhece (a turma
     // aberta), e não a lista. A releitura da turma é o sinal de que a volta foi tratada: a da lista sairia junto com ela,
@@ -253,11 +265,11 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
 
     // A página seguinte: o nome que o aluno já pediu, sem "Retirar", com o estado em texto.
     await acionar(lista.getByRole('button', { name: 'Ver mais nomes' }), hasTouch)
-    await expect(lista.getByRole('listitem')).toHaveCount(101, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(linhasDaTabela(lista)).toHaveCount(101, { timeout: PRAZO_DA_ENTRADA_MS })
     // As leituras até aqui: a de abrir a turma e a da página seguinte, e nenhuma pela volta para a aba.
     expect(leituras).toHaveLength(2)
     await expect(lista).toContainText('101 nomes na lista')
-    const reivindicado = lista.getByRole('listitem').filter({ hasText: `Já pediu o nome ${marca}` })
+    const reivindicado = linhasDaTabela(lista).filter({ hasText: `Já pediu o nome ${marca}` })
     await expect(reivindicado).toContainText('O aluno pediu o nome: esperando a decisão')
     await expect(reivindicado.getByRole('button')).toHaveCount(0)
     await expect(lista.getByRole('button', { name: `Retirar Primeira da lista ${marca}, matrícula 660001 da lista` })).toBeVisible()
@@ -570,5 +582,131 @@ test.describe('W10 e W4 (Lista): a lista de nomes da turma', () => {
     await acionar(previa.getByRole('button', { name: 'Gravar lista' }), hasTouch)
     await expect(subir.getByRole('alert')).toHaveText('Esta turma não está mais no ano letivo em curso. Nada foi gravado.', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(previa).toHaveCount(0)
+  })
+})
+
+/** Vai a um endereço da área pelo histórico, sem passar pela Estrutura: o que o botão "Voltar" do navegador faria. */
+const irParaOEndereco = (page: Page, destino: string) =>
+  page.evaluate((caminho) => {
+    window.history.pushState(null, '', caminho)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }, destino)
+
+test.describe('RF16 (9.0): os professores da turma, ao lado dos nomes', () => {
+  test('duas disciplinas do mesmo professor são duas linhas, cada uma com o estado em texto e o link para o painel dele; a turma sem professor diz que não há; a lista de nomes continua lida uma vez só', async ({
+    page,
+    hasTouch,
+  }) => {
+    test.slow()
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const camila = await convidarProfessorNoBanco(coordenadora.escolaId, 'ativo', 'Camila')
+    const alocacao = await criarAlocacaoDoProfessor(coordenadora.escolaId, camila.usuarioId, ['Matemática', 'Ciências'])
+    const estrutura = await montarEstruturaNoBanco(coordenadora.escolaId, ['8B'])
+    const [semProfessor] = estrutura.turmas
+    if (semProfessor === undefined) throw new Error('estrutura sem turma')
+    const leituras: Request[] = []
+    const professoresLidos: Request[] = []
+    page.on('request', (pedido) => {
+      const caminho = new URL(pedido.url()).pathname
+      if (pedido.method() === 'GET' && caminho === `/v1/turmas/${alocacao.turmaId}/lista`) leituras.push(pedido)
+      if (pedido.method() === 'GET' && (caminho === '/v1/vinculos' || caminho === '/v1/professores')) professoresLidos.push(pedido)
+    })
+    await page.goto('/entrar')
+    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
+    await abrirEstrutura(page, hasTouch)
+    await expect(principal(page).getByRole('region', { name: 'Turmas de 2026' })).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
+    await abrirTurma(page, alocacao.turmaNome, hasTouch)
+
+    // Uma linha por vínculo: o professor aparece duas vezes, cada uma com a sua disciplina (em ordem), e o vínculo nasceu
+    // esperando a confirmação dele. O link leva ao painel do professor, só com o id no endereço.
+    const professores = secao(page, 'Professores da turma')
+    const links = professores.getByRole('link')
+    await expect(links).toHaveCount(2, { timeout: PRAZO_DA_ENTRADA_MS })
+    for (const [posicao, disciplina] of ['Ciências', 'Matemática'].entries()) {
+      await expect(links.nth(posicao)).toContainText(camila.nome)
+      await expect(links.nth(posicao)).toContainText(disciplina)
+      await expect(links.nth(posicao)).toContainText('Esperando o professor confirmar')
+      await expect(links.nth(posicao)).toHaveAttribute('href', `/coordenacao/professores?professor=${camila.usuarioId}`)
+    }
+    // Ler os professores da turma não é ler a lista de nomes: a lista saiu uma vez, ao abrir, e nenhuma leitura de professor leva finalidade.
+    expect(leituras).toHaveLength(1)
+    expect(professoresLidos.length).toBeGreaterThan(0)
+    for (const leitura of professoresLidos) expect(new URL(leitura.url()).searchParams.has('finalidade')).toBe(false)
+    expect(await violacoesGraves(page)).toEqual([])
+    expect(await larguraExcedente(page)).toBe(0)
+
+    // O professor confirma, e a tela diz em texto, depois de a leitura ser feita de novo.
+    await confirmarVinculosNoBanco(coordenadora.escolaId, alocacao.vinculoIds)
+    await page.reload()
+    await expect(professores.getByRole('link').first()).toContainText('Confirmado pelo professor', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(professores.getByRole('link').last()).toContainText('Confirmado pelo professor')
+
+    // O link abre Professores, com o professor no endereço.
+    await acionar(professores.getByRole('link').first(), hasTouch)
+    await expect(page).toHaveURL(new RegExp(`/coordenacao/professores\\?professor=${camila.usuarioId}$`), { timeout: PRAZO_DA_ENTRADA_MS })
+    await page.goBack()
+    await expect(principal(page).getByRole('heading', { level: 1, name: `Turma ${alocacao.turmaNome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+
+    // A turma sem professor diz que não há, com o caminho para Professores.
+    await irParaOEndereco(page, `/coordenacao/estrutura/turmas/${semProfessor.id}`)
+    await expect(principal(page).getByRole('heading', { level: 1, name: `Turma ${semProfessor.nome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(professores).toContainText('Nenhum professor nesta turma', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(professores.getByRole('link')).toHaveCount(0)
+    await acionar(professores.getByRole('button', { name: 'Ver os professores' }), hasTouch)
+    await expect(page).toHaveURL(/\/coordenacao\/professores$/, { timeout: PRAZO_DA_ENTRADA_MS })
+  })
+
+  test('a 1366 × 768 há duas colunas, a página fica parada e a lista rola dentro do miolo, que se alcança pelo teclado; a 360 px é uma coluna só, a página rola e nada rola de lado', async ({
+    page,
+    hasTouch,
+  }) => {
+    test.slow()
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const camila = await convidarProfessorNoBanco(coordenadora.escolaId, 'ativo', 'Camila')
+    const alocacao = await criarAlocacaoDoProfessor(coordenadora.escolaId, camila.usuarioId, ['Matemática'])
+    const marca = randomUUID().slice(0, 8)
+    // Cem nomes: a lista passa da altura da janela nos dois perfis.
+    await porNaListaDaTurma(
+      coordenadora.escolaId,
+      alocacao.turmaId,
+      Array.from({ length: 100 }, (_, posicao) => ({ nome: `Colega ${String(posicao)} ${marca}`, matricula: String(770000 + posicao) })),
+    )
+    await page.goto('/entrar')
+    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
+    await abrirEstrutura(page, hasTouch)
+    await expect(principal(page).getByRole('region', { name: 'Turmas de 2026' })).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
+    await abrirTurma(page, alocacao.turmaNome, hasTouch)
+    const nomes = secao(page, 'Nomes da turma')
+    const professores = secao(page, 'Professores da turma')
+    const subir = secao(page, 'Subir a lista de nomes')
+    await expect(linhasDaTabela(nomes)).toHaveCount(100, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(professores.getByRole('link')).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
+    const [caixaDosNomes, caixaDosProfessores, caixaDoEnvio] = await Promise.all([nomes.boundingBox(), professores.boundingBox(), subir.boundingBox()])
+    if (caixaDosNomes === null || caixaDosProfessores === null || caixaDoEnvio === null) throw new Error('uma das seções não tem caixa na tela')
+    const miolo = principal(page).getByRole('region', { name: `Turma ${alocacao.turmaNome}` })
+    const largura = page.viewportSize()?.width ?? 0
+
+    if (largura >= 1024) {
+      // Duas colunas: os professores à direita dos nomes, e no alto, na altura do envio da lista.
+      expect(caixaDosProfessores.x).toBeGreaterThanOrEqual(caixaDosNomes.x + caixaDosNomes.width - 1)
+      expect(Math.abs(caixaDosProfessores.y - caixaDoEnvio.y)).toBeLessThan(2)
+      // A página não rola; quem rola é o miolo, que recebe foco, e o teclado o alcança.
+      await paginaNaoRola(page)
+      await expect(miolo).toHaveAttribute('tabindex', '0')
+      expect(await miolo.evaluate((elemento) => elemento.scrollHeight > elemento.clientHeight)).toBe(true)
+      await miolo.focus()
+      await page.keyboard.press('End')
+      await expect.poll(() => miolo.evaluate((elemento) => elemento.scrollTop)).toBeGreaterThan(0)
+      await paginaNaoRola(page)
+    } else {
+      // Uma coluna, na ordem do documento: os professores abaixo dos nomes, na mesma largura. A página é que rola.
+      expect(caixaDosProfessores.y).toBeGreaterThanOrEqual(caixaDosNomes.y + caixaDosNomes.height - 1)
+      expect(Math.abs(caixaDosProfessores.x - caixaDosNomes.x)).toBeLessThan(2)
+      expect(Math.abs(caixaDosProfessores.width - caixaDosNomes.width)).toBeLessThan(2)
+      await expect(miolo).not.toHaveAttribute('tabindex')
+      expect(await page.evaluate(() => document.documentElement.scrollHeight > document.documentElement.clientHeight)).toBe(true)
+      expect(await larguraExcedente(page)).toBe(0)
+    }
+    expect(await violacoesGraves(page)).toEqual([])
   })
 })

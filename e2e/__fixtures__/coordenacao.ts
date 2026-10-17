@@ -98,3 +98,12 @@ export async function paginaNaoRola(page: Page): Promise<void> {
   const sobra = () => page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight)
   await expect.poll(sobra, { message: 'a página inteira rola a partir de 768 px: só o miolo deveria' }).toBeLessThanOrEqual(0)
 }
+
+/**
+ * As linhas de uma tabela que vira lista (`Tabela`), numa região: as do corpo da tabela a partir de 768 px e os itens da lista
+ * abaixo disso. Quem conta nomes ou procura um nome pela linha usa isto, para o mesmo caso valer nos projetos `chromebook` e
+ * `celular` (telas da coordenação, 9.0): o cabeçalho da tabela não é linha de dado.
+ */
+export function linhasDaTabela(regiao: Locator): Locator {
+  return regiao.locator('tbody tr, [data-tabela="lista"] > li')
+}

@@ -77,7 +77,7 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 8.5 O vazio de hoje
   - [ ] 8.6 Testes: sem licença, nada é enviado; a recusa continua auditada; o e2e `material` sem perder asserção
 
-- [ ] **9.0 — A lista da turma em duas colunas, com os professores da turma**
+- [x] **9.0 — A lista da turma em duas colunas, com os professores da turma**
   - [ ] 9.1 O cabeçalho, com "‹ Escola"
   - [ ] 9.2 "Nomes da turma" em tabela, com a contagem de aprovados sem o nome
   - [ ] 9.3 "Subir a lista de nomes", com a prévia e os erros por linha, como hoje
