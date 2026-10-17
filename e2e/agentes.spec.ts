@@ -187,6 +187,8 @@ test.describe('Como cada IA trabalha', () => {
     page,
     hasTouch,
   }) => {
+    // O caso entra, abre a aba, suspende e retoma uma função e confere o banco: 21 s aqui e 25,5 s na esteira, no celular (CPU ×4), contra os 30 s do relógio padrão.
+    test.slow()
     const { coordenadora } = await entrar(page, hasTouch, false)
     await abrirAgentes(page, hasTouch)
     const correcao = principal(page).locator('[data-funcao="correcao_de_objetiva"]')
