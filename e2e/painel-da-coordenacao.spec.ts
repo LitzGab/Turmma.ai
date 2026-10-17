@@ -3,7 +3,7 @@ import { montarEscolaComEntregas } from './__fixtures__/governanca.ts'
 import { abrirSeletorDeEscola, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarPainel, linhaDoSeletor, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { campoCodigo } from './__fixtures__/segundo-fator.ts'
-import { codigoDoAutenticador, convidarProfessorNoBanco, criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
+import { codigoDoAutenticador, codigoDoPassoAnterior, convidarProfessorNoBanco, criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -198,7 +198,7 @@ test.describe('recomeço: a troca de escola pelo seletor', () => {
     await acionar(page.getByRole('button', { name: `${emA.escolaNome} · coordenação` }), hasTouch)
     await expect(page.getByRole('heading', { name: 'Configurar o segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     const { segredo } = (await (await respostaDoSegredo).json()) as { segredo: string }
-    await campoCodigo(page).fill(codigoDoAutenticador(segredo, -30))
+    await campoCodigo(page).fill(await codigoDoPassoAnterior(segredo))
     await acionar(page.getByRole('button', { name: /Ativar o segundo fator|Ativando/ }), hasTouch)
     await acionar(page.getByRole('link', { name: 'Ir para a entrada' }), hasTouch)
     await entrarPorEmail(page, emA, hasTouch)

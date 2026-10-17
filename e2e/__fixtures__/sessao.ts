@@ -361,6 +361,34 @@ export function codigoDoAutenticador(segredoBase32: string, deslocamentoSegundos
   return new TOTP({ secret: Secret.fromBase32(segredoBase32) }).generate({ timestamp: Date.now() + deslocamentoSegundos * 1_000 })
 }
 
+const PASSO_DO_TOTP_MS = 30_000
+/** Quanto o código gerado pode demorar até a API conferi-lo (digitar, clicar, a rede do perfil), com sobra: o medido é de 0,5 a 1 s. */
+const MARGEM_DA_VIRADA_MS = 5_000
+/** Para o relógio do Node, que pode disparar um pouco antes da hora, não devolver a espera em cima da virada. */
+const FOLGA_DA_VIRADA_MS = 50
+
+/**
+ * Quanto esperar para que uma virada de passo não caia entre gerar o código e a API conferi-lo: zero, se faltam mais de 5 s para
+ * ela; senão, o que falta mais uma folga. A API aceita um passo para cada lado (`JANELA_TOTP`), e o código de `-30` é o do passo
+ * anterior ao da hora de gerar: só vale enquanto o passo da conferência for o mesmo da geração. Esta conta é pura para o teste
+ * conferir os limites sem esperar o relógio.
+ */
+export function esperaPelaViradaDoPasso(agoraMs: number, margemMs = MARGEM_DA_VIRADA_MS): number {
+  const faltam = PASSO_DO_TOTP_MS - (agoraMs % PASSO_DO_TOTP_MS)
+  return faltam <= margemMs ? faltam + FOLGA_DA_VIRADA_MS : 0
+}
+
+/**
+ * O código do passo anterior, para a ativação do segundo fator: o login que vem depois usa o `0`, e a troca de escola, o `+30`,
+ * e cada um precisa de um passo maior que o anterior (`mfa_ultimo_passo`). Só o `-30` está na beira da janela da API, e por isso
+ * só ele espera a virada do passo quando ela está perto: o `0` e o `+30` nunca saem da janela, porque o tempo só anda para frente.
+ */
+export async function codigoDoPassoAnterior(segredoBase32: string): Promise<string> {
+  const espera = esperaPelaViradaDoPasso(Date.now())
+  if (espera > 0) await new Promise<void>((resolver) => setTimeout(resolver, espera))
+  return codigoDoAutenticador(segredoBase32, -30)
+}
+
 /** A turma com os vínculos que a coordenação alocou para o professor, como a tela "Turmas" do professor os recebe (RF4). */
 export interface AlocacaoDeTeste {
   readonly turmaId: string
