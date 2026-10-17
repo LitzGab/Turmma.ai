@@ -1,15 +1,14 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero (17/10 ~12h50):** linha 1, `Implementador` (com a `Mesa`): o `RELATÓRIO` da **tarefa 8.0** (porte grande),
-  1ª tentativa, partida às ~12h50. Linha 2, `Implementador 2` (com a `Mesa 2`): o `RELATÓRIO` da
-  **correção `2026-10-17-casca-carregando-estoura-o-goto`**, pedida às ~12h45: `e2e/casca.spec.ts:134` (chromebook),
-  `page.goto('/sistema')` não chega ao `load` em 30 s com a rota atrasada (esteira 39037149357, `0646419`). Guardiões
-  ditados: `frontend-reviewer`. Com ele, `encontro 2`, e o quadro deve pedir a 11.0 (observação dela abaixo).
-- **Encontrada às 12h48:** a 10.0 (`76079c9`, encontro em `b0bf8f1`).
-- **Esteiras lidas (12h48):** `0646419` vermelha só no `casca:134` (a correção da linha 2, já em curso); `d3ec693`
-  rodando, `13ceeab` e `b0bf8f1` na fila: ler no próximo encontro (em `13ceeab` em diante, o `acesso-suspenso:169` já
-  tem a correção; o `casca:134` só depois do encontro da linha 2).
+- **Espero (17/10 ~13h45):** linha 1, `Implementador` (com a `Mesa`): o `RELATÓRIO` da **tarefa 8.0** (porte grande),
+  1ª tentativa, partida às ~12h50. Linha 2 **ociosa**: o quadro prende a 11.0 atrás da 8.0 (as duas preveem
+  `e2e/roteiro-da-demonstracao.spec.ts`). No encontro da 8.0, a 11.0 parte (observação dela abaixo).
+- **Encontrada às ~13h45:** a correção `casca-carregando-estoura-o-goto` (`5734676`, encontro em `c0993ac`). Causa
+  provável no traço: os 11 pedidos de JS/CSS sem resposta em 30 s no Fast 3G, não a rota atrasada; se a trava voltar
+  em outro caso, investigar o servidor estático da esteira (recomendação no documento, para o `/retro`).
+- **Esteiras lidas (13h45):** `d3ec693`, `13ceeab` e `b0bf8f1` **verdes**. `c0993ac` (39050559368, com a correção do
+  `casca:134`) na fila: ler no encontro da 8.0; vermelho ali é correção.
 - **Dizer ao Joaquim no fechamento (achado da 10.0, para ele com o `infra-guardian`):** o EXPLAIN de
   `?estado=rejeitada` em Registros › IA levou 30,2 s com 60 mil entregas (subconsulta do grupo mínimo da A5, uma vez
   por candidata, quadrática); pendente daria ~100 min (conta); a lista sem filtro nunca foi medida. Está na seção
@@ -76,6 +75,7 @@
 | correção encontro-7 | `e5012a4` | Sonnet 5.5 | 1 | linha 2, ~11h45–12h15; mantidos o it.each dos 44 px (`cc2188e`) e o teste novo do Nova turma; `frontend-reviewer` e `test-engineer` aprovaram na r1; 2 recomendações da vitrine no documento |
 | correção duas-abas-do-acesso-suspenso | `8c7f3a7` | Sonnet 5.5 | 2 | linha 2, ~12h11–12h40; corrida do teste (a 2ª aba levava o 403 antes da 1ª), não o teto de 30 s; espera por zero requisições a caminho, 40 de 40 nos dois perfis; `frontend-reviewer` aprovado r1, `test-engineer` reprovado r1 e aprovado r2; `TODO.md` com as duas folgas do `test-engineer`; encontro em `13ceeab` |
 | 10.0 | `76079c9` | Sonnet 5.5 | 2 | linha 1, ~10h34–12h48; `frontend-reviewer` e `conformidade-reviewer` aprovaram na r1, `test-engineer` e `revisor-geral` na r2; 9 fotos da Mesa; EXPLAIN de `?estado=rejeitada` em 30,2 s com 60 mil entregas (quadrático, da A5), na seção "Plano do Postgres" da tarefa e no `TODO.md`, para o Joaquim com o `infra-guardian`; encontro em `b0bf8f1` |
+| correção casca-carregando-estoura-o-goto | `5734676` | Sonnet 5.5 | 1 | linha 2, ~12h40–13h45; sem vermelho determinístico (50 de 50 antes); traço da esteira: JS/CSS sem resposta no Fast 3G, hipótese não confirmada; depois 60 de 60 no caso e 132 de 132 no spec; `frontend-reviewer` e `test-engineer` aprovaram na r1; 2 recomendações para o `/retro`; encontro em `c0993ac` |
 
 ## Esperando o Joaquim
 ## O que falhou
