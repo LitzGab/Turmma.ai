@@ -9,15 +9,18 @@ import {
   AVISO_DO_NOMINAL,
   EFEITO_DA_SUSPENSAO,
   ESPERANDO_O_PROFESSOR,
+  estadoDoEndereco,
   NOME_DA_AUTONOMIA,
   O_QUE_CHEGA_AO_ALUNO,
   falhaDoResumo,
   formatarPercentual,
   fraseDoAlerta,
   nomeDaFuncao,
+  OPCOES_DO_ESTADO,
   textoDoConsumo,
   textoDoCusto,
   textoDoPacoteDoTutor,
+  VAZIO_DO_FILTRO,
 } from './textos-da-governanca'
 
 const QUANDO = '2026-10-04T13:00:00.000Z'
@@ -167,5 +170,33 @@ describe('a função que a API devolve entra no lugar da antiga', () => {
 
   it('sem lista lida, nada é inventado', () => {
     expect(trocarFuncao(undefined, suspensa)).toBeUndefined()
+  })
+})
+
+describe('o filtro "Estado" da lista da governança (telas da coordenação, 10.0)', () => {
+  it('as quatro opções, com o valor que a API e o endereço entendem, e "Todos" primeiro', () => {
+    expect(OPCOES_DO_ESTADO).toEqual([
+      { valor: 'todos', rotulo: 'Todos' },
+      { valor: 'pendente', rotulo: 'Esperando o professor' },
+      { valor: 'aprovada', rotulo: 'Aprovados' },
+      { valor: 'rejeitada', rotulo: 'Rejeitados' },
+    ])
+  })
+
+  it('o estado do endereço vale só se for um dos três da entrega; qualquer outro valor, inclusive "todos", é ignorado', () => {
+    expect(estadoDoEndereco('estado=pendente')).toBe('pendente')
+    expect(estadoDoEndereco('painel=ano&estado=aprovada')).toBe('aprovada')
+    expect(estadoDoEndereco('estado=rejeitada')).toBe('rejeitada')
+    for (const busca of ['', 'estado=', 'estado=todos', 'estado=APROVADA', 'estado=aprovada,pendente', 'estado=qualquer-coisa', 'professor=0197a1c0-0000-7000-8000-000000000301']) {
+      expect(estadoDoEndereco(busca), busca).toBeUndefined()
+    }
+  })
+
+  it('o vazio de cada estado diz o que vai aparecer ali, e nenhum diz quem decidiu nem de que turma é a entrega', () => {
+    expect(Object.keys(VAZIO_DO_FILTRO).sort()).toEqual(['aprovada', 'pendente', 'rejeitada'])
+    expect(VAZIO_DO_FILTRO.pendente.titulo).toBe('Nenhuma entrega esperando o professor')
+    expect(VAZIO_DO_FILTRO.aprovada.titulo).toBe('Nenhuma entrega aprovada ainda')
+    expect(VAZIO_DO_FILTRO.rejeitada.titulo).toBe('Nenhuma entrega rejeitada')
+    for (const { titulo, descricao } of Object.values(VAZIO_DO_FILTRO)) expect(`${titulo} ${descricao}`).not.toMatch(/turma|quem (decidiu|aprovou)|por [A-Z]/)
   })
 })

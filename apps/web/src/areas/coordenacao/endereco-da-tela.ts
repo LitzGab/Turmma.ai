@@ -2,10 +2,10 @@ import type { PARAMETRO_DO_PROFESSOR } from '../../caminhos'
 
 /**
  * Os parâmetros que as telas da coordenação põem no endereço para abrir algo por cima delas ou filtrar (Tech Spec da X2, seção 5):
- * `?painel=` e `?situacao=` das Turmas e `?professor=` dos Professores. Só id ou valor de lista fechada vai ao endereço, nunca nome
+ * `?painel=` e `?situacao=` das Turmas, `?professor=` dos Professores e `?estado=` da IA de Registros. Só id ou valor de lista fechada vai ao endereço, nunca nome
  * (regra 20, item 9). Mora num arquivo próprio porque duas telas o usam, e uma tela não importa o módulo de outra.
  */
-export type ParametroDoEndereco = 'painel' | 'situacao' | typeof PARAMETRO_DO_PROFESSOR
+export type ParametroDoEndereco = 'painel' | 'situacao' | 'estado' | typeof PARAMETRO_DO_PROFESSOR
 
 /** O endereço com um parâmetro posto (`valor`) ou tirado (`undefined`), sem mexer nos outros. */
 export function enderecoComParametro(caminho: string, busca: string, nome: ParametroDoEndereco, valor: string | undefined): string {
