@@ -2,11 +2,9 @@ import type { Turma, VinculoDaCoordenacao } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import {
   agruparPorSerie,
-  enderecoComParametro,
   NOME_NAO_CARREGADO,
   painelDoEndereco,
   situacaoDoEndereco,
-  textoDosProfessores,
   turmasDaTabela,
   type VinculosLidos,
 } from './turmas-da-escola'
@@ -125,18 +123,6 @@ describe('agruparPorSerie', () => {
   })
 })
 
-describe('textoDosProfessores', () => {
-  it.each([
-    [[], '—'],
-    [['Camila'], 'Camila'],
-    [['Camila', 'Rafael'], 'Camila, Rafael'],
-    [['Camila', 'Rafael', 'Beatriz'], 'Camila, Rafael +1'],
-    [['Camila', 'Rafael', 'Beatriz', 'Davi', 'Elis'], 'Camila, Rafael +3'],
-  ] as const)('%j → %s', (nomes, esperado) => {
-    expect(textoDosProfessores(nomes)).toBe(esperado)
-  })
-})
-
 describe('o endereço da Estrutura', () => {
   it('o painel é de lista fechada: valor desconhecido é ignorado', () => {
     expect(painelDoEndereco('painel=ano')).toBe('ano')
@@ -150,11 +136,5 @@ describe('o endereço da Estrutura', () => {
     expect(situacaoDoEndereco('situacao=sem-professor')).toBe('sem-professor')
     expect(situacaoDoEndereco('situacao=sem-lista')).toBe('todas')
     expect(situacaoDoEndereco('')).toBe('todas')
-  })
-
-  it('põe e tira um parâmetro sem mexer no outro', () => {
-    expect(enderecoComParametro('/estrutura', 'situacao=sem-professor', 'painel', 'ano')).toBe('/estrutura?situacao=sem-professor&painel=ano')
-    expect(enderecoComParametro('/estrutura', 'situacao=sem-professor&painel=ano', 'painel', undefined)).toBe('/estrutura?situacao=sem-professor')
-    expect(enderecoComParametro('/estrutura', 'painel=ano', 'painel', undefined)).toBe('/estrutura')
   })
 })

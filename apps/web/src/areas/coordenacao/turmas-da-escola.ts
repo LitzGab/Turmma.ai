@@ -84,13 +84,6 @@ export function agruparPorSerie(turmas: readonly TurmaDaTabela[]): GrupoDeSerie[
   return grupos
 }
 
-/** O que a coluna Professores diz: até dois nomes e "+N" para o resto ("Camila, Rafael +3"), ou o traço quando não há. */
-export function textoDosProfessores(nomes: readonly string[]): string {
-  if (nomes.length === 0) return '—'
-  const resto = nomes.length - 2
-  return resto > 0 ? `${nomes.slice(0, 2).join(', ')} +${String(resto)}` : nomes.join(', ')
-}
-
 /** O que abre por cima da tela, no endereço: `?painel=ano` ou `?painel=falta`. Valor desconhecido é ignorado. */
 export const PAINEIS_DA_ESTRUTURA = ['ano', 'falta'] as const
 export type PainelDaEstrutura = (typeof PAINEIS_DA_ESTRUTURA)[number]
@@ -105,13 +98,4 @@ export type SituacaoDasTurmas = 'todas' | 'sem-professor'
 
 export function situacaoDoEndereco(busca: string): SituacaoDasTurmas {
   return new URLSearchParams(busca).get('situacao') === 'sem-professor' ? 'sem-professor' : 'todas'
-}
-
-/** O endereço com um parâmetro posto (`valor`) ou tirado (`undefined`), sem mexer nos outros. Só id ou valor de lista fechada vai ao endereço. */
-export function enderecoComParametro(caminho: string, busca: string, nome: 'painel' | 'situacao', valor: string | undefined): string {
-  const parametros = new URLSearchParams(busca)
-  if (valor === undefined) parametros.delete(nome)
-  else parametros.set(nome, valor)
-  const resto = parametros.toString()
-  return resto === '' ? caminho : `${caminho}?${resto}`
 }

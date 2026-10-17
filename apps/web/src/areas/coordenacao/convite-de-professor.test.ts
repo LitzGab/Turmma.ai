@@ -6,6 +6,7 @@ import {
   acoesDoConviteDeProfessor,
   falhaDoCadastroDeProfessor,
   falhaDoRefazerConviteDeProfessor,
+  FAMILIA_DO_ESTADO_DO_PROFESSOR,
   pedidoDeProfessor,
   temHomonimo,
   TEXTO_DA_VALIDADE_DO_CONVITE,
@@ -43,6 +44,10 @@ describe('o convite do professor na tela Professores (A1, 14.0)', () => {
     })
     // O `aceito` não diz se a pessoa já entrou: separar os dois casos diria se o e-mail tinha conta em outra escola (E11).
     expect(TEXTO_DO_ESTADO_DO_PROFESSOR.aceito).not.toMatch(/entr|conta|senha/i)
+  })
+
+  it('cada estado tem a família do selo: o que espera é pendente, o vencido é erro, quem entrou é ok, e o revogado e o desativado são info', () => {
+    expect(FAMILIA_DO_ESTADO_DO_PROFESSOR).toEqual({ pendente: 'pendente', vencido: 'erro', revogado: 'info', aceito: 'ok', ativo: 'ok', desativado: 'info' })
   })
 
   it('o prazo dito é o do convite do professor, em dias', () => {

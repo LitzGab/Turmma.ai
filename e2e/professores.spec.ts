@@ -2,7 +2,7 @@ import type { Browser, BrowserContextOptions, Locator, Page, Route } from '@play
 import { AVISO_DO_CONVITE_COM_SENHA_NOVA, MENSAGENS_DE_ERRO, mensagemDoConvite } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaConviteDeProfessor } from '../packages/shared/src/professores/professores.ts'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, secoes } from './__fixtures__/casca.ts'
-import { abrirOQueFalta, irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
+import { abrirOQueFalta, irPelaCoordenacao, linhasDaTabela, paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
   convidarProfessorNoBanco,
@@ -38,10 +38,10 @@ const TEXTO_DO_ESTADO: Readonly<Record<EstadoDoProfessorDeTeste, string>> = {
   desativado: 'Desativado. Para convidar de novo, cadastre o mesmo e-mail.',
 }
 
-/** As ações que cada estado oferece na linha, pela matriz da Tech Spec, seção 4: só o convite em aberto refaz e revoga. */
+/** As ações que cada estado oferece no painel do professor, pela matriz da Tech Spec, seção 4: só o convite em aberto refaz e revoga. */
 const ACOES_DO_ESTADO: Readonly<Record<EstadoDoProfessorDeTeste, readonly string[]>> = {
-  pendente: ['Refazer', 'Revogar'],
-  vencido: ['Refazer', 'Revogar'],
+  pendente: ['Refazer convite', 'Revogar convite'],
+  vencido: ['Refazer convite', 'Revogar convite'],
   revogado: [],
   aceito: [],
   ativo: [],
@@ -112,21 +112,34 @@ function portao(): { aberta: Promise<void>; abrir: () => void } {
 }
 
 const principal = (page: Page) => page.getByRole('main')
-/** Os `dialog` abertos, pelo elemento e não pelo papel: a gaveta fechada da casca também é um `dialog`, abaixo de 768 px. */
-const dialogosAbertos = (page: Page) => page.locator('dialog[open]')
 /**
- * Os `dialog` da tela Professores, abertos ou não: ela os desenha dentro do conteúdo, e só enquanto estão abertos. O
+ * Os `dialog` abertos que não são o painel do professor, pelo elemento e não pelo papel: a gaveta fechada da casca também é um
+ * `dialog`, abaixo de 768 px, e o painel do professor fica aberto por baixo dos diálogos do convite (dois `<dialog>` modais empilhados).
+ */
+const dialogosAbertos = (page: Page) => page.locator('dialog[open]:not([data-painel-lado])')
+/**
+ * Os `dialog` da tela Professores, abertos ou não, fora o painel: ela os desenha dentro do conteúdo, e só enquanto estão abertos. O
  * diálogo que o navegador fechou e a tela não desmontou continuaria aqui, fechado, com o que guardava.
  */
-const dialogosDaTela = (page: Page) => principal(page).locator('dialog')
-const noDialogo = (page: Page): Locator => page.getByRole('dialog')
-const lista = (page: Page) => principal(page).getByRole('list', { name: 'Professores da escola' })
+const dialogosDaTela = (page: Page) => principal(page).locator('dialog:not([data-painel-lado])')
+/** O diálogo do convite aberto (cadastrar, refazer, revogar): o que está por cima do painel, quando há um. */
+const noDialogo = (page: Page): Locator => dialogosAbertos(page)
+/** O painel do professor, pelo nome dele no título. */
+const painelDe = (page: Page, nome: string) => page.getByRole('dialog', { name: nome })
+/** Qualquer painel do professor aberto. */
+const paineisAbertos = (page: Page) => page.locator('dialog[data-painel-lado][open]')
+/** As linhas da tabela (a partir de 768 px) ou os itens da lista (abaixo), todas as da tela. */
+const linhasDaLista = (page: Page) => linhasDaTabela(principal(page))
 /** A linha de um professor, pelo nome. */
-const linhaDe = (page: Page, nome: string) => lista(page).getByRole('listitem').filter({ hasText: nome })
+const linhaDe = (page: Page, nome: string) => linhasDaLista(page).filter({ hasText: nome })
+/** O botão do nome, que abre o painel do professor. */
+const botaoDaLinha = (page: Page, nome: string) => linhaDe(page, nome).getByRole('button', { name: nome })
 /** O título da lista, para onde o foco vai quando o botão que abriu o diálogo saiu da tela. */
 const tituloDaLista = (page: Page) => principal(page).getByRole('heading', { name: 'Professores da escola' })
-/** O anúncio da ação que terminou. */
+/** O anúncio da ação que terminou, no painel do professor. */
 const anuncio = (page: Page, texto: string) => principal(page).getByRole('status').filter({ hasText: texto })
+/** Os botões de ação do painel (o rodapé), sem o "Fechar" do cabeçalho. */
+const acoesDoPainel = (painel: Locator) => painel.locator('button:not([aria-label="Fechar"])')
 /** A pergunta de fechar sem o link copiado. */
 const pergunta = (page: Page) => noDialogo(page).getByRole('heading', { name: 'Fechar sem copiar o link?' })
 /** O título da etapa do link. */
@@ -175,9 +188,24 @@ async function abrirProfessores(page: Page, coordenadora: EquipeDeTeste, hasTouc
   await expect(page).toHaveURL(/\/coordenacao\/professores$/)
 }
 
-/** Refaz pela linha do professor, com a confirmação, até o link novo aparecer. Devolve o link. */
+/** Abre o painel do professor pelo botão do nome na linha dele e devolve o painel, já à vista. */
+async function abrirPainel(page: Page, nome: string, hasTouch: boolean): Promise<Locator> {
+  await acionar(botaoDaLinha(page, nome), hasTouch)
+  const painel = painelDe(page, nome)
+  await expect(painel).toBeVisible()
+  return painel
+}
+
+/** Fecha o painel aberto pelo "Fechar" dele: a página por trás é inerte enquanto ele está aberto. */
+async function fecharPainel(page: Page, hasTouch: boolean): Promise<void> {
+  await acionar(paineisAbertos(page).getByRole('button', { name: 'Fechar', exact: true }), hasTouch)
+  await expect(paineisAbertos(page)).toHaveCount(0)
+}
+
+/** Refaz pelo painel do professor (que abre se ainda não está aberto), com a confirmação, até o link novo aparecer. Devolve o link. */
 async function refazerPelaTela(page: Page, nome: string, hasTouch: boolean): Promise<string> {
-  await tocar(linhaDe(page, nome), `Refazer o convite de ${nome}`, hasTouch)
+  if ((await paineisAbertos(page).count()) === 0) await abrirPainel(page, nome, hasTouch)
+  await tocar(painelDe(page, nome), 'Refazer convite', hasTouch)
   await tocar(noDialogo(page), 'Refazer convite', hasTouch)
   await expect(etapaDoLink(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   return linkNaTela(page)
@@ -260,7 +288,7 @@ test.describe('W4 (Professores): os quatro estados', () => {
     const cadastrar = principal(page).getByRole('button', { name: 'Cadastrar professor' })
     await expect(cadastrar).toHaveCount(1)
     await alvoDeToque(cadastrar, 'Cadastrar professor')
-    await expect(lista(page)).toHaveCount(0)
+    await expect(linhasDaLista(page)).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
     // Os quatro lugares são a lateral no computador e a barra de baixo no celular: `secoes` acha a navegação onde ela estiver, sem abrir a gaveta.
@@ -300,28 +328,29 @@ test.describe('W4 (Professores): os quatro estados', () => {
     falhar = true
     await page.reload()
     await expect(principal(page).getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(lista(page)).toHaveCount(0)
+    await expect(linhasDaLista(page)).toHaveCount(0)
     await expect(principal(page).getByText('Nenhum professor ainda')).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
     falhar = false
     await acionar(principal(page).getByRole('button', { name: 'Tentar de novo' }), hasTouch)
 
     // Com dado: pelo nome, em português (a Érica entre o Davi e a Zuleica), e não na ordem em que a API os entrega.
-    await expect(lista(page).getByRole('listitem')).toHaveCount(7, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(linhasDaLista(page)).toHaveCount(7, { timeout: PRAZO_DA_ENTRADA_MS })
     const naOrdemDoNome: EstadoDoProfessorDeTeste[] = ['aceito', 'vencido', 'revogado', 'desativado', 'ativo', 'pendente']
-    await expect(lista(page).getByRole('listitem').locator('p').first()).toHaveText(professores.aceito.nome)
-    const titulos = await lista(page).getByRole('listitem').evaluateAll((itens) => itens.map((item) => item.querySelector('p')?.textContent ?? ''))
+    const titulos = await linhasDaLista(page).evaluateAll((itens) => itens.map((item) => item.querySelector('button')?.textContent ?? ''))
     // A Yara do primeiro cadastro, criada antes de todos, fica entre a Érica e a Zuleica.
     const nomesNaOrdem = naOrdemDoNome.map((estado) => professores[estado].nome)
     expect(titulos).toEqual([...nomesNaOrdem.slice(0, 5), primeira, ...nomesNaOrdem.slice(5)])
-    // O estado de cada convite em texto, e só as ações que a matriz permite.
+    // A contagem ao lado do título.
+    await expect(principal(page).getByText('7 professores', { exact: true })).toBeVisible()
+    // O estado de cada convite em texto na tabela, e só as ações que a matriz permite no painel dele.
     for (const estado of naOrdemDoNome) {
-      const linha = linhaDe(page, professores[estado].nome)
-      await expect(linha, estado).toContainText(TEXTO_DO_ESTADO[estado])
-      await expect(linha.getByRole('button'), estado).toHaveText(ACOES_DO_ESTADO[estado].map((acao) => new RegExp(`^${acao}`)))
+      await expect(linhaDe(page, professores[estado].nome), estado).toContainText(TEXTO_DO_ESTADO[estado])
+      const painel = await abrirPainel(page, professores[estado].nome, hasTouch)
+      await expect(painel, estado).toContainText(TEXTO_DO_ESTADO[estado])
+      await expect(acoesDoPainel(painel), estado).toHaveText([...ACOES_DO_ESTADO[estado]])
+      await fecharPainel(page, hasTouch)
     }
-    await expect(linhaDe(page, professores.pendente.nome).getByRole('button', { name: `Refazer o convite de ${professores.pendente.nome}` })).toBeVisible()
-    await expect(linhaDe(page, professores.vencido.nome).getByRole('button', { name: `Revogar o convite de ${professores.vencido.nome}` })).toBeVisible()
     // Com dado, o Cadastrar fica no topo da lista, um só.
     await expect(cadastrar).toHaveCount(1)
     await alvoDeToque(cadastrar, 'Cadastrar professor')
@@ -329,9 +358,11 @@ test.describe('W4 (Professores): os quatro estados', () => {
     const conteudo = await page.content()
     for (const professor of Object.values(professores)) expect(conteudo).not.toContain(professor.email)
     expect(await larguraExcedente(page)).toBe(0)
+    // A página não rola a partir de 768 px: só o miolo da moldura (RF23). A tabela com sete linhas e o painel por cima não a fazem crescer.
+    await paginaNaoRola(page)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // O convite vencido se refaz pela tela: o link novo aparece, e a linha passa a convite em aberto.
+    // O convite vencido se refaz pelo painel: o link novo aparece, e a linha passa a convite em aberto. O painel continua aberto, com a situação nova.
     const daBia = linhaDe(page, professores.vencido.nome)
     const refeito = await refazerPelaTela(page, professores.vencido.nome, hasTouch)
     expect(tokenDo(refeito)).toMatch(/^[A-Za-z0-9_-]{43}$/)
@@ -339,30 +370,38 @@ test.describe('W4 (Professores): os quatro estados', () => {
     await tocar(noDialogo(page), 'Fechar sem copiar', hasTouch)
     await expect(daBia).toContainText(TEXTO_DO_ESTADO.pendente, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(daBia).not.toContainText('Convite vencido.')
+    await expect(painelDe(page, professores.vencido.nome)).toContainText(TEXTO_DO_ESTADO.pendente)
+    await expect(painelDe(page, professores.vencido.nome)).not.toContainText('Convite vencido.')
+    await fecharPainel(page, hasTouch)
 
     // O erro com a lista na tela: a releitura depois de revogar cai, a lista de antes fica, com o erro e o "Tentar de
     // novo" por cima, e a nova tentativa traz o estado novo.
     falhar = true
     const daZuleica = linhaDe(page, professores.pendente.nome)
-    await tocar(daZuleica, `Revogar o convite de ${professores.pendente.nome}`, hasTouch)
+    await abrirPainel(page, professores.pendente.nome, hasTouch)
+    await tocar(painelDe(page, professores.pendente.nome), 'Revogar convite', hasTouch)
     await tocar(noDialogo(page), 'Revogar convite', hasTouch)
     await expect(anuncio(page, `Convite de ${professores.pendente.nome} revogado.`)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO)
-    await expect(lista(page).getByRole('listitem')).toHaveCount(7)
+    await expect(linhasDaLista(page)).toHaveCount(7)
     await expect(daZuleica).toContainText(TEXTO_DO_ESTADO.pendente)
     expect(await violacoesGraves(page)).toEqual([])
+    // O "Tentar de novo" é da página, que fica inerte com o painel aberto: fecha-se o painel para ele.
+    await fecharPainel(page, hasTouch)
     falhar = false
     await acionar(principal(page).getByRole('button', { name: 'Tentar de novo' }), hasTouch)
     await expect(daZuleica).toContainText(TEXTO_DO_ESTADO.revogado, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('alert')).toHaveCount(0)
-    await expect(daZuleica.getByRole('button')).toHaveCount(0)
+    await acionar(botaoDaLinha(page, professores.pendente.nome), hasTouch)
+    await expect(acoesDoPainel(painelDe(page, professores.pendente.nome))).toHaveCount(0)
+    await fecharPainel(page, hasTouch)
 
     // A lista maior do que a tela lê: toda página diz que há outra, a tela para no teto de dez e avisa que mostra só os
     // primeiros.
     semFim = true
     await page.reload()
     await expect(principal(page)).toContainText('A lista é maior do que esta tela mostra: aparecem só os primeiros.', { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(lista(page).getByRole('listitem')).toHaveCount(10)
+    await expect(linhasDaLista(page)).toHaveCount(10)
     expect(paginasSemFim).toBe(10)
   })
 })
@@ -453,8 +492,9 @@ test.describe('cadastrar, copiar o link e o aceite do professor', () => {
     await expect(linhaDe(page, nome)).toContainText(TEXTO_DO_ESTADO.pendente)
     expect(await convitesDeProfessorEmAberto(coordenadora.escolaId)).toBe(1)
 
-    // Refazer, com a confirmação que diz que o link anterior para; o foco começa no texto, não no botão.
-    await tocar(linhaDe(page, nome), `Refazer o convite de ${nome}`, hasTouch)
+    // Refazer, pelo painel do professor, com a confirmação que diz que o link anterior para; o foco começa no texto, não no botão.
+    await abrirPainel(page, nome, hasTouch)
+    await tocar(painelDe(page, nome), 'Refazer convite', hasTouch)
     await expect(noDialogo(page).getByText('O link mandado antes para de valer na hora.', { exact: false })).toBeFocused()
     await expect(noDialogo(page)).toContainText(nome)
     await expect(noDialogo(page)).toContainText('O convite vale 7 dias e entra uma vez só.')
@@ -483,6 +523,9 @@ test.describe('cadastrar, copiar o link e o aceite do professor', () => {
     expect(await page.content()).not.toContain(tokenDo(novo))
     expect(await convitesDeProfessorEmAberto(coordenadora.escolaId)).toBe(1)
     await semToken(tokenDo(anterior), tokenDo(novo))
+    // O painel não guarda nem repete o link (regra 20, item 8): fechados os diálogos, ele só diz a situação.
+    await expect(painelDe(page, nome)).not.toContainText(tokenDo(novo))
+    await fecharPainel(page, hasTouch)
 
     // O professor, no computador dele: o link refeito mostra o convite inválido, sem o nome da escola.
     const professor = await outroNavegador(browser)
@@ -509,10 +552,12 @@ test.describe('cadastrar, copiar o link e o aceite do professor', () => {
     await expect(professor).toHaveURL(/\/professor\/turmas$/)
     await expect(professor.getByRole('main')).toContainText('A coordenação ainda não alocou você', { timeout: PRAZO_DA_ENTRADA_MS })
 
-    // A lista da coordenação, recarregada: o convite aceito, sem ação nenhuma.
+    // A lista da coordenação, recarregada: o convite aceito, sem ação nenhuma no painel dele.
     await page.reload()
     await expect(linhaDe(page, nome)).toContainText(TEXTO_DO_ESTADO.aceito, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(linhaDe(page, nome).getByRole('button')).toHaveCount(0)
+    const doAceito = await abrirPainel(page, nome, hasTouch)
+    await expect(doAceito).toContainText(TEXTO_DO_ESTADO.aceito)
+    await expect(acoesDoPainel(doAceito)).toHaveCount(0)
     expect(await convitesDeProfessorEmAberto(coordenadora.escolaId)).toBe(0)
   })
 })
@@ -570,19 +615,31 @@ test.describe('W12 (Professores): a 360 px e só com teclado', () => {
     await expect(noDialogo(page)).toHaveCount(0)
     await expect(tituloDaLista(page)).toBeFocused()
 
-    // A lista a 360 px: o cartão em coluna, os alvos de 44 px, e nada passa da largura com o nome longo.
+    // A tabela vira lista a 360 px: um cartão por professor, o alvo do nome de 44 px, e nada passa da largura com o nome longo.
     const linha = linhaDe(page, nome)
     await expect(linha).toContainText(TEXTO_DO_ESTADO.pendente, { timeout: PRAZO_DA_ENTRADA_MS })
-    expect(await linha.evaluate((item) => getComputedStyle(item).flexDirection)).toBe('column')
-    const refazer = linha.getByRole('button', { name: `Refazer o convite de ${nome}` })
+    await expect(principal(page).locator('[data-tabela="lista"]')).toHaveCount(1)
+    await expect(principal(page).locator('[data-tabela="tabela"]')).toHaveCount(0)
     await alvoDeToque(cadastrar, 'Cadastrar professor')
-    await alvoDeToque(refazer, 'Refazer')
-    await alvoDeToque(linha.getByRole('button', { name: `Revogar o convite de ${nome}` }), 'Revogar')
+    await alvoDeToque(botaoDaLinha(page, nome), 'o nome do professor')
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+
+    // O painel só com o teclado: Tab até o nome da linha e Enter abrem a folha de baixo, com os alvos de 44 px.
+    await tabAte(page, botaoDaLinha(page, nome))
+    await page.keyboard.press('Enter')
+    const painel = painelDe(page, nome)
+    await expect(painel).toBeVisible()
+    const refazer = painel.getByRole('button', { name: 'Refazer convite', exact: true })
+    const revogar = painel.getByRole('button', { name: 'Revogar convite', exact: true })
+    await alvoDeToque(refazer, 'Refazer convite')
+    await alvoDeToque(revogar, 'Revogar convite')
+    await alvoDeToque(painel.getByRole('button', { name: 'Fechar', exact: true }), 'Fechar')
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
     // Dois Esc seguidos, sem tecla nem clique entre eles: o primeiro pergunta, o segundo fecha — e fecha de verdade, com
-    // o link junto. O foco volta ao "Refazer" que abriu.
+    // o link junto. O foco volta ao "Refazer convite" do painel, que abriu o diálogo.
     await tabAte(page, refazer)
     await page.keyboard.press('Enter')
     await expect(noDialogo(page).getByText('O link mandado antes para de valer na hora.', { exact: false })).toBeFocused()
@@ -614,9 +671,8 @@ test.describe('W12 (Professores): a 360 px e só com teclado', () => {
     await expect(dialogosDaTela(page)).toHaveCount(0)
     expect(await page.content()).not.toContain(fechadoPeloNavegador)
 
-    // Revogar só pelo teclado, com a confirmação que diz o que acontece; o foco começa no texto. Revogado, o botão sai
-    // da linha, e o foco vai para o título da lista.
-    const revogar = linha.getByRole('button', { name: `Revogar o convite de ${nome}` })
+    // Revogar só pelo teclado, com a confirmação que diz o que acontece; o foco começa no texto. Revogado, os botões saem
+    // do rodapé do painel, e o foco vai para a situação, no próprio painel.
     await tabAte(page, revogar)
     await page.keyboard.press('Enter')
     await expect(noDialogo(page).getByText('deixa de valer na hora', { exact: false })).toBeFocused()
@@ -630,8 +686,9 @@ test.describe('W12 (Professores): a 360 px e só com teclado', () => {
     await expect(anuncio(page, 'Convite de')).toContainText('revogado.', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(noDialogo(page)).toHaveCount(0)
     await expect(linha).toContainText(TEXTO_DO_ESTADO.revogado)
-    await expect(linha.getByRole('button')).toHaveCount(0)
-    await expect(tituloDaLista(page)).toBeFocused()
+    await expect(painel).toContainText(TEXTO_DO_ESTADO.revogado)
+    await expect(acoesDoPainel(painel)).toHaveCount(0)
+    await expect(painel.getByRole('heading', { name: 'Situação do convite' })).toBeFocused()
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
   })
@@ -696,7 +753,7 @@ test.describe('clique duplo', () => {
     await page.unroute(ehALista, segurar)
     await tocar(noDialogo(page), 'Fechar', hasTouch)
     await tocar(noDialogo(page), 'Fechar sem copiar', hasTouch)
-    await expect(lista(page).getByRole('listitem')).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(linhasDaLista(page)).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(linhaDe(page, nome)).toContainText(TEXTO_DO_ESTADO.pendente)
     expect(await convitesDeProfessorEmAberto(coordenadora.escolaId)).toBe(1)
 
@@ -705,7 +762,8 @@ test.describe('clique duplo', () => {
     pedidos = 0
     seguro = portao()
     await page.route(ROTA_DO_REFAZER, segurar)
-    await tocar(linhaDe(page, nome), `Refazer o convite de ${nome}`, hasTouch)
+    await abrirPainel(page, nome, hasTouch)
+    await tocar(painelDe(page, nome), 'Refazer convite', hasTouch)
     const refeito = page.waitForResponse((resposta) => ROTA_DO_REFAZER(new URL(resposta.url())))
     await doisCliquesNoMesmoInstante(noDialogo(page).getByRole('button', { name: 'Refazer convite' }))
     await expect.poll(() => pedidos).toBe(1)
@@ -723,11 +781,11 @@ test.describe('clique duplo', () => {
     await tocar(noDialogo(page), 'Fechar sem copiar', hasTouch)
     await expect(noDialogo(page)).toHaveCount(0)
 
-    // Revogar: um pedido só, e o anúncio do revogado, sem "esse convite já não vale".
+    // Revogar, com o painel ainda aberto no mesmo professor: um pedido só, e o anúncio do revogado, sem "esse convite já não vale".
     pedidos = 0
     seguro = portao()
     await page.route(ROTA_DO_REVOGAR, segurar)
-    await tocar(linhaDe(page, nome), `Revogar o convite de ${nome}`, hasTouch)
+    await tocar(painelDe(page, nome), 'Revogar convite', hasTouch)
     await doisCliquesNoMesmoInstante(noDialogo(page).getByRole('button', { name: 'Revogar convite' }))
     await expect.poll(() => pedidos).toBe(1)
     seguro.abrir()
@@ -737,9 +795,16 @@ test.describe('clique duplo', () => {
     expect(pedidos).toBe(1)
     expect(await convitesDeProfessorEmAberto(coordenadora.escolaId)).toBe(0)
     await page.unroute(ROTA_DO_REVOGAR, segurar)
-    // Abrir outro diálogo apaga o anúncio da ação anterior.
+    // O painel fica com o anúncio e sem ação; fechado, a página volta. Abrir outro diálogo apaga o anúncio da ação anterior: ao reabrir o
+    // painel do mesmo professor, ele já não diz "revogado.".
+    await expect(acoesDoPainel(painelDe(page, nome))).toHaveCount(0)
+    await fecharPainel(page, hasTouch)
     await acionar(principal(page).getByRole('button', { name: 'Cadastrar professor' }), hasTouch)
-    await expect(page.locator('[role="status"]').filter({ hasText: 'revogado.' })).toHaveCount(0)
+    await expect(page.getByRole('dialog', { name: 'Cadastrar professor' })).toBeVisible()
+    await tocar(noDialogo(page), 'Cancelar', hasTouch)
+    await expect(noDialogo(page)).toHaveCount(0)
+    await abrirPainel(page, nome, hasTouch)
+    await expect(anuncio(page, 'revogado.')).toHaveCount(0)
   })
 })
 
@@ -754,13 +819,14 @@ test.describe('recomeço da tela Professores', () => {
     const bruno = await convidarProfessorNoBanco(coordenadora.escolaId, 'pendente', 'Bruno')
     const caio = await convidarProfessorNoBanco(coordenadora.escolaId, 'pendente', 'Caio')
     await abrirProfessores(page, coordenadora, hasTouch)
-    await expect(lista(page).getByRole('listitem')).toHaveCount(3, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(linhasDaLista(page)).toHaveCount(3, { timeout: PRAZO_DA_ENTRADA_MS })
 
-    // Outra pessoa da coordenação revoga o convite da Ana com esta tela aberta: o refazer daqui recebe CONFLITO, dentro
-    // do diálogo, com o foco no aviso; a lista recarrega com o estado novo, e sobra só "Fechar".
+    // Outra pessoa da coordenação revoga o convite da Ana com esta tela aberta: o refazer daqui, pelo painel dela, recebe CONFLITO,
+    // dentro do diálogo, com o foco no aviso; a lista recarrega com o estado novo, e sobra só "Fechar".
     await revogarConvite({ escolaId: coordenadora.escolaId, usuarioId: ana.usuarioId })
     const recarregada = proximaLista(page)
-    await tocar(linhaDe(page, ana.nome), `Refazer o convite de ${ana.nome}`, hasTouch)
+    await abrirPainel(page, ana.nome, hasTouch)
+    await tocar(painelDe(page, ana.nome), 'Refazer convite', hasTouch)
     await tocar(noDialogo(page), 'Refazer convite', hasTouch)
     await expect(noDialogo(page).getByRole('alert')).toHaveText(TEXTO_DO_CONVITE_QUE_MUDOU, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(noDialogo(page).getByRole('alert')).toBeFocused()
@@ -769,16 +835,18 @@ test.describe('recomeço da tela Professores', () => {
     await expect(noDialogo(page).getByRole('button', { name: 'Cancelar' })).toHaveCount(0)
     await expect(noDialogo(page).getByLabel('Link do convite')).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
-    // O "Refazer" que abriu o diálogo saiu da linha com a lista recarregada: fechado o diálogo, o foco vai para o
-    // título da lista.
+    // O "Refazer convite" que abriu o diálogo saiu do rodapé do painel com a lista recarregada: fechado o diálogo, o foco vai para a
+    // situação, no painel, e não para a página inerte atrás dele.
     await tocar(noDialogo(page), 'Fechar', hasTouch)
     await expect(noDialogo(page)).toHaveCount(0)
     await expect(linhaDe(page, ana.nome)).toContainText(TEXTO_DO_ESTADO.revogado)
-    await expect(linhaDe(page, ana.nome).getByRole('button')).toHaveCount(0)
-    await expect(tituloDaLista(page)).toBeFocused()
+    await expect(acoesDoPainel(painelDe(page, ana.nome))).toHaveCount(0)
+    await expect(painelDe(page, ana.nome).getByRole('heading', { name: 'Situação do convite' })).toBeFocused()
+    await fecharPainel(page, hasTouch)
 
     // Reabrindo o refazer de outro professor: sem o aviso da tentativa anterior, com o foco no texto da confirmação.
-    await tocar(linhaDe(page, bruno.nome), `Refazer o convite de ${bruno.nome}`, hasTouch)
+    await abrirPainel(page, bruno.nome, hasTouch)
+    await tocar(painelDe(page, bruno.nome), 'Refazer convite', hasTouch)
     await expect(noDialogo(page).getByRole('alert')).toHaveCount(0)
     await expect(noDialogo(page).getByText('O link mandado antes para de valer na hora.', { exact: false })).toBeFocused()
     await expect(noDialogo(page)).toContainText(bruno.nome)
@@ -787,17 +855,20 @@ test.describe('recomeço da tela Professores', () => {
     await tocar(noDialogo(page), 'Cancelar', hasTouch)
     await expect(noDialogo(page)).toHaveCount(0)
     expect(await convitesDeProfessorEmAberto(coordenadora.escolaId)).toBe(2)
+    await fecharPainel(page, hasTouch)
 
     // O revogar do convite que outra pessoa já revogou: "esse convite já não vale", e a lista recarrega.
     await revogarConvite({ escolaId: coordenadora.escolaId, usuarioId: caio.usuarioId })
-    await tocar(linhaDe(page, caio.nome), `Revogar o convite de ${caio.nome}`, hasTouch)
+    await abrirPainel(page, caio.nome, hasTouch)
+    await tocar(painelDe(page, caio.nome), 'Revogar convite', hasTouch)
     await tocar(noDialogo(page), 'Revogar convite', hasTouch)
     await expect(noDialogo(page).getByRole('alert')).toHaveText(TEXTO_DO_CONVITE_QUE_NAO_VALE, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(noDialogo(page).getByRole('button', { name: 'Revogar convite' })).toHaveCount(0)
     await tocar(noDialogo(page), 'Fechar', hasTouch)
     await expect(linhaDe(page, caio.nome)).toContainText(TEXTO_DO_ESTADO.revogado)
-    await expect(tituloDaLista(page)).toBeFocused()
+    await expect(painelDe(page, caio.nome).getByRole('heading', { name: 'Situação do convite' })).toBeFocused()
     await expect(anuncio(page, 'revogado.')).toHaveCount(0)
+    await fecharPainel(page, hasTouch)
 
     // O cadastro com o e-mail de quem já tem convite em aberto: o aviso diz o que fazer, e a pessoa volta e corrige.
     await acionar(principal(page).getByRole('button', { name: 'Cadastrar professor' }), hasTouch)
@@ -852,7 +923,7 @@ test.describe('recomeço da tela Professores', () => {
     await tocar(noDialogo(page), 'Fechar sem copiar', hasTouch)
     await expect(linhaDe(page, deVolta)).toContainText(TEXTO_DO_ESTADO.pendente, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(linhaDe(page, ana.nome)).toHaveCount(0)
-    await expect(lista(page).getByRole('listitem')).toHaveCount(4)
+    await expect(linhasDaLista(page)).toHaveCount(4)
     expect(await convitesDeProfessorEmAberto(coordenadora.escolaId)).toBe(3)
   })
 
@@ -902,7 +973,8 @@ test.describe('recomeço da tela Professores', () => {
     // Refazer: o mesmo, na confirmação.
     seguro = portao()
     await page.route(ROTA_DO_REFAZER, derrubar)
-    await tocar(linhaDe(page, professor.nome), `Refazer o convite de ${professor.nome}`, hasTouch)
+    await abrirPainel(page, professor.nome, hasTouch)
+    await tocar(painelDe(page, professor.nome), 'Refazer convite', hasTouch)
     await tocar(noDialogo(page), 'Refazer convite', hasTouch)
     await expect(noDialogo(page).getByRole('button', { name: 'Refazendo…' })).toBeDisabled()
     await page.keyboard.press('Escape')
@@ -939,9 +1011,11 @@ test.describe('recomeço da tela Professores', () => {
 
     await page.clock.fastForward(`00:${String(INATIVIDADE_MIN + 1)}:00`)
     await expect(page.getByRole('dialog', { name: 'Sua sessão expirou' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    // Só o login por cima: o diálogo do convite saiu da página, e o link com ele.
+    // Só o login por cima: o diálogo do convite saiu da página, e o link com ele. O painel do professor sai junto, porque a lista que o
+    // sustentava deixou de valer com a sessão (a tela volta ao erro de leitura), e o nome do professor não fica atrás do login.
     await expect(dialogosAbertos(page)).toHaveCount(1)
     await expect(dialogosDaTela(page)).toHaveCount(0)
+    await expect(paineisAbertos(page)).toHaveCount(0)
     expect(await page.content()).not.toContain(token)
 
     await acionar(page.getByRole('button', { name: 'Entrar com outra conta' }), hasTouch)
@@ -960,6 +1034,9 @@ test.describe('recomeço da tela Professores', () => {
     await tocar(noDialogo(page), 'Fechar', hasTouch)
     await tocar(noDialogo(page), 'Fechar sem copiar', hasTouch)
     await expect(noDialogo(page)).toHaveCount(0)
+    // O painel de A fica aberto por baixo: a página, e a lateral com ela, só voltam quando ele fecha.
+    await expect(paineisAbertos(page)).toHaveCount(1)
+    await fecharPainel(page, hasTouch)
     await abrirNavegacao(page, hasTouch)
     await acionar(lateral(page).getByRole('button', { name: 'Sair' }), hasTouch)
     await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
@@ -979,9 +1056,82 @@ test.describe('recomeço da tela Professores', () => {
     await expect(dialogosAbertos(page)).toHaveCount(0)
     segurada.abrir()
     await expect(linhaDe(page, professorDeB.nome)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(lista(page).getByRole('listitem')).toHaveCount(1)
+    await expect(linhasDaLista(page)).toHaveCount(1)
     await expect(page.locator('body')).not.toContainText(professorDeA.nome)
     await expect(dialogosAbertos(page)).toHaveCount(0)
     expect(await page.content()).not.toContain(token)
+
+    // O endereço do professor de A, aberto na sessão de B: a lista de B não o tem, e a tela não abre painel nem diz que ele existe.
+    await page.goto(`/coordenacao/professores?professor=${professorDeA.usuarioId}`)
+    await expect(linhaDe(page, professorDeB.nome)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(paineisAbertos(page)).toHaveCount(0)
+    await expect(page.locator('body')).not.toContainText(professorDeA.nome)
+  })
+})
+
+test.describe('o painel do professor', () => {
+  test('a linha inteira abre o painel, no endereço, com o id e mais nada; o Esc fecha e tira o parâmetro; o Voltar não o reabre', async ({ page, hasTouch }) => {
+    test.slow()
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const professor = await convidarProfessorNoBanco(coordenadora.escolaId, 'vencido', 'Zoé')
+    await abrirProfessores(page, coordenadora, hasTouch)
+    await expect(linhaDe(page, professor.nome)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+
+    // Um toque no canto de baixo da linha, longe do nome: o botão do nome se estende pela linha (e pelo cartão, no celular).
+    const caixa = await linhaDe(page, professor.nome).boundingBox()
+    expect(caixa, 'a linha sem caixa').not.toBeNull()
+    const x = (caixa?.x ?? 0) + (caixa?.width ?? 0) - 12
+    const y = (caixa?.y ?? 0) + (caixa?.height ?? 0) - 12
+    if (hasTouch) await page.touchscreen.tap(x, y)
+    else await page.mouse.click(x, y)
+    const painel = painelDe(page, professor.nome)
+    await expect(painel).toBeVisible()
+    // O endereço leva só o id do usuário, nunca o nome nem o e-mail (regra 20, item 9).
+    await expect(page).toHaveURL(new RegExp(`/coordenacao/professores\\?professor=${professor.usuarioId}$`))
+    expect(page.url()).not.toContain(encodeURIComponent(professor.nome))
+    expect(page.url()).not.toContain(professor.email)
+    await expect(painel).toContainText(TEXTO_DO_ESTADO.vencido)
+    await expect(acoesDoPainel(painel)).toHaveText([...ACOES_DO_ESTADO.vencido])
+    await expect(painel.getByRole('heading', { name: 'Situação do convite' })).toBeAttached()
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+    for (const acao of ACOES_DO_ESTADO.vencido) await alvoDeToque(painel.getByRole('button', { name: acao, exact: true }), acao)
+
+    // O Esc fecha, tira o parâmetro sem passo novo no histórico, e o foco volta ao botão da linha que abriu o painel.
+    await page.keyboard.press('Escape')
+    await expect(paineisAbertos(page)).toHaveCount(0)
+    await expect(page).toHaveURL(/\/coordenacao\/professores$/)
+    await expect(botaoDaLinha(page, professor.nome)).toBeFocused()
+
+    // O Voltar não reabre o painel: fechar trocou o endereço do passo que abrir tinha empurrado.
+    await page.goBack()
+    await expect(paineisAbertos(page)).toHaveCount(0)
+    expect(page.url()).not.toContain('professor=')
+  })
+
+  test('aberto pelo endereço, sem botão que o tenha aberto: fecha com o foco no título da lista; o id de outra escola não abre nada nem diz que existe', async ({ page, hasTouch }) => {
+    test.slow()
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const outraEscola = await criarEquipeComSenha('coordenador')
+    const professor = await convidarProfessorNoBanco(coordenadora.escolaId, 'pendente', 'Zoé')
+    const deOutra = await convidarProfessorNoBanco(outraEscola.escolaId, 'pendente', 'Yan')
+    await abrirProfessores(page, coordenadora, hasTouch)
+    await expect(linhaDe(page, professor.nome)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+
+    await page.goto(`/coordenacao/professores?professor=${professor.usuarioId}`)
+    const painel = painelDe(page, professor.nome)
+    await expect(painel).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(painel).toContainText(TEXTO_DO_ESTADO.pendente)
+    await tocar(painel, 'Fechar', hasTouch)
+    await expect(paineisAbertos(page)).toHaveCount(0)
+    await expect(page).toHaveURL(/\/coordenacao\/professores$/)
+    await expect(tituloDaLista(page)).toBeFocused()
+
+    // O id de um professor de outra escola, na mão: a tela não abre painel nenhum e não deixa ver que o id existe (regra 10, item 6).
+    await page.goto(`/coordenacao/professores?professor=${deOutra.usuarioId}`)
+    await expect(linhaDe(page, professor.nome)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(paineisAbertos(page)).toHaveCount(0)
+    await expect(page.locator('body')).not.toContainText(deOutra.nome)
+    expect(await violacoesGraves(page)).toEqual([])
   })
 })

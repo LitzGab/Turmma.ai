@@ -58,6 +58,8 @@ import {
   type SecaoDaTela,
   type TipoDeDialogoDoPainel,
 } from './AnoEDisciplinas'
+import { enderecoComParametro } from './endereco-da-tela'
+import { textoDaListaCurta } from './lista-curta'
 import { NOME_DO_TURNO } from './nome-do-turno'
 import { oQueFaltaDaEscola, passosDoRoteiro } from './o-que-falta-da-escola'
 import { PainelDoQueFalta, Roteiro } from './OQueFalta'
@@ -65,11 +67,9 @@ import { ordenarSeries } from './ordem'
 import { AvisoDeListaIncompleta } from './pecas-da-lista'
 import {
   agruparPorSerie,
-  enderecoComParametro,
   NOME_NAO_CARREGADO,
   painelDoEndereco,
   situacaoDoEndereco,
-  textoDosProfessores,
   turmasDaTabela,
   type PainelDaEstrutura,
   type SituacaoDasTurmas,
@@ -111,7 +111,7 @@ function colunasDasTurmas(aoEscolher: (turma: Turma, acao: 'renomear' | 'excluir
     {
       chave: 'professores',
       titulo: 'Professores',
-      celula: ({ professores }) => textoDosProfessores(professores),
+      celula: ({ professores }) => textoDaListaCurta(professores),
     },
     {
       chave: 'situacao',

@@ -13,7 +13,10 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo
 
 const sinoDe = (page: Page): Locator => page.getByRole('button', { name: /^Esperando você/ })
 const listaDe = (page: Page): Locator => page.getByRole('dialog', { name: 'Esperando você' })
-const noDialogo = (page: Page): Locator => page.getByRole('dialog')
+/** O diálogo de cima: o do convite, aberto sobre o painel do professor (`data-painel-lado`), que fica por baixo. */
+const noDialogo = (page: Page): Locator => page.locator('dialog[open]:not([data-painel-lado])')
+/** O painel do professor (X2, 6.0), pelo nome dele no título. */
+const painelDe = (page: Page, nome: string): Locator => page.getByRole('dialog', { name: nome })
 
 async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
   if (hasTouch) await alvo.tap()
@@ -82,14 +85,19 @@ test.describe('do sino à tela', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Escola' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(listaDe(page)).toHaveCount(0)
 
+    // O item abre o painel daquele professor (6.0), e é nele que está o "Refazer convite" do vencido.
+    await expect(painelDe(page, professor.nome)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     // Refeito o convite, o professor deixa de estar vencido e o item sai da lista, sem recarregar a página.
-    await tocar(page.getByRole('listitem').filter({ hasText: professor.nome }), `Refazer o convite de ${professor.nome}`, hasTouch)
+    await tocar(painelDe(page, professor.nome), 'Refazer convite', hasTouch)
     await tocar(noDialogo(page), 'Refazer convite', hasTouch)
     await expect(noDialogo(page).getByRole('heading', { name: 'Copie o link do convite' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await tocar(noDialogo(page), 'Copiar link', hasTouch)
     await expect(noDialogo(page).getByRole('status').filter({ hasText: 'Link copiado.' })).toBeVisible()
     await tocar(noDialogo(page), 'Fechar', hasTouch)
     await expect(noDialogo(page)).toHaveCount(0)
+    // O painel fica aberto por baixo, e a página atrás dele, o sino com ela, só volta quando ele fecha.
+    await tocar(painelDe(page, professor.nome), 'Fechar', hasTouch)
+    await expect(painelDe(page, professor.nome)).toHaveCount(0)
     await expect(sino).toHaveAccessibleName('Esperando você, nada', { timeout: PRAZO_DA_ENTRADA_MS })
     await acionar(sino, hasTouch)
     await expect(listaDe(page).getByText('Tudo em dia')).toBeVisible()
