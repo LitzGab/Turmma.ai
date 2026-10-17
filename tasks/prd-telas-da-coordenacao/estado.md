@@ -1,12 +1,18 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero (17/10 ~16h40):** linha 1, `Implementador` (com a `Mesa`): o `RELATÓRIO` da **correção
-  `material-processando-estoura-o-prazo`**, 1ª tentativa, partida às ~16h40. A esteira de `5ecda3f` (39054499168) caiu
-  só em `e2e/material.spec.ts:180` [chromebook] (prazo de 30 s no `waitForTimeout` da linha 214; 1 de 179), teste da
-  8.0. Guardião ditado: `frontend-reviewer`. Linha 2 **ociosa**. Com o encontro da correção: ler a esteira de
-  `91d4722` (encontro da 11.0); vermelho ali é outra correção. Sem correção pendente: o commit "antes da validação"
-  e o `Validador` (passo 8); o `linhas.ts fechar` só no fechamento.
+- **Espero (17/10 ~17h05):** duas correções da esteira de `91d4722` (39062201162, vermelha só nestes dois; 180 de 181
+  em cada job), ambas 1ª tentativa, guardiões ditados no PEDIDO:
+  - linha 1, `Implementador` (com a `Mesa`): **`w2-carregando-estoura-o-prazo`**, `e2e/areas.spec.ts:316`
+    [chromebook]: 30 s estourados em `paginaNaoRola` (`e2e/__fixtures__/coordenacao.ts:98`, a espera pelo
+    "Carregando" que a 11.0 pôs). Da 11.0. Guardião: `frontend-reviewer`.
+  - linha 2, `Implementador 2` (com a `Mesa 2`): **`troca-de-escola-sem-ir-para-a-entrada`**,
+    `e2e/painel-da-coordenacao.spec.ts:187` [chromebook]: 90 s esperando o link "Ir para a entrada" (linha 203);
+    verde até `5ecda3f`, primeiro vermelho depois da 11.0. Guardiões: `frontend-reviewer`, `privacy-guardian`.
+  Com os dois encontros: ler a esteira de `41600a2` (39064583848) e a dos encontros; sem vermelho, o commit
+  "antes da validação" e o `Validador` reiniciado no andar (passo 8).
+- **Encontrada às ~16h57:** a correção `material-processando-estoura-o-prazo` (`74cee48`, encontro em `41600a2`):
+  `test.slow()` no caso de `e2e/material.spec.ts`; o caso somava ~31 s contra os 30 s do Playwright.
 - **Encontrada às ~16h35:** a 11.0 (`492175f`, encontro em `91d4722`), a última: 14 de 14. Escalada do
   `test-engineer` resolvida com o diagnóstico do `Arquiteto` (`.processo/ordens/diagnostico-11.md`, na linha 1):
   `useEnvioUnico` soltava a trava pelo `onSettled` do `mutate`, que o `reset()` desliga.
@@ -87,6 +93,7 @@
 | correção casca-carregando-estoura-o-goto | `5734676` | Sonnet 5.5 | 1 | linha 2, ~12h40–13h45; sem vermelho determinístico (50 de 50 antes); traço da esteira: JS/CSS sem resposta no Fast 3G, hipótese não confirmada; depois 60 de 60 no caso e 132 de 132 no spec; `frontend-reviewer` e `test-engineer` aprovaram na r1; 2 recomendações para o `/retro`; encontro em `c0993ac` |
 | 8.0 | `652932f` | Sonnet 5.5 | 2 | linha 1, ~12h50–14h40; `frontend-reviewer`, `privacy-guardian`, `test-engineer` e `revisor-geral` aprovaram na r2; corrigiu defeito real (o cancelar do seletor de arquivo fechava o diálogo e apagava o formulário); 53 mutações vermelhas; recomendações no documento e no `TODO.md` (X2, 8.0), com o corte a 360 px de "De quem é o material"; tabela com linhas e painel vistos só pelo e2e; encontro em `5ecda3f` |
 | 11.0 | `492175f` | Sonnet 5.5 | 3 | linha 1, ~14h36–16h35; `test-engineer` reprovou na r1 e na r2 (na r2, defeito real: o `reset()` da retomada deixava o `useEnvioUnico` travado) → `ESCALADA` da Mesa, diagnóstico do `Arquiteto` (`diagnostico-11.md`: soltar a trava pela promessa do `mutateAsync`), par reiniciado; os quatro revisores aprovaram na r3; 18 fotos; tabela "Sem aplicar" (r1 + r3) no documento; encontro em `91d4722` |
+| correção material-processando-estoura-o-prazo | `74cee48` | Sonnet 5.5 | 1 | linha 1, ~16h23–16h57; vermelho da esteira de `5ecda3f` em `e2e/material.spec.ts:180` (chromebook): o caso somava ~31 s (preparo 21 s, troca 5,5 s, espera 4 s) contra 30 s; só `test.slow()`; vermelho 4/4 com 18 s antes, 20/20 depois; `test-engineer` e `frontend-reviewer` aprovaram na r1, e o `test-engineer` de novo na r2 (16h55); encontro em `41600a2` |
 
 ## Esperando o Joaquim
 ## O que falhou

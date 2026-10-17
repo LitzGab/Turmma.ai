@@ -314,6 +314,10 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
   ]
 
   test('a coordenação abre no Painel, vê Painel, Analista, Escola e Registros (na barra de baixo a 360 px), e cada tela de hoje fica a até dois cliques; Empresas e Incidentes, a três', async ({ page, hasTouch }) => {
+    // O caso entra com segundo fator, percorre os quatro lugares e, depois, as onze telas, e em cada uma `paginaNaoRola` espera a
+    // leitura terminar (de 0,8 a 1,3 s na rede e na CPU do perfil). Na esteira isso soma mais que os 30 s do relógio padrão, sem
+    // que nenhuma tela trave (trace da esteira 39062201162): é o tempo da medida verdadeira, não da tela. Por isso o relógio é o triplo.
+    test.slow()
     const coordenadora = await criarEquipeComSenha('coordenador')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
