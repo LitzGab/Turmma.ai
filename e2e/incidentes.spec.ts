@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import type { Browser, BrowserContext, BrowserContextOptions, Locator, Page, Route } from '@playwright/test'
 import { TEXTO_DO_PRAZO_LEGAL_DO_INCIDENTE } from '../packages/shared/src/privacidade/incidente.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarGovernanca, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarPainel, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { campoCodigo } from './__fixtures__/segundo-fator.ts'
 import { codigoDoAutenticador, confirmacaoDoIncidenteNoBanco, criarCoordenadoraNaEscola, criarEquipeComSenha, criarIncidenteNoBanco } from './__fixtures__/sessao.ts'
@@ -95,8 +96,7 @@ async function entrar(page: Page, hasTouch: boolean, pessoa: Parameters<typeof e
 
 /** Abre a aba Incidentes pela navegação da lateral e pela aba. */
 async function abrirAAba(page: Page, hasTouch: boolean): Promise<void> {
-  await irPelaNavegacao(page, 'Privacidade', hasTouch)
-  await acionar(page.getByRole('tab', { name: NOME_DA_ABA, exact: true }), hasTouch)
+  await irPelaCoordenacao(page, 'Incidentes', hasTouch)
   await expect(page).toHaveURL(ENDERECO_DA_ABA, { timeout: PRAZO_DA_ENTRADA_MS })
 }
 
@@ -194,7 +194,7 @@ test.describe('Aviso de incidente: o diálogo ao entrar', () => {
     const lida = page.waitForResponse((resposta) => ehLeituraDosIncidentes(new URL(resposta.url()), resposta.request().method()))
     await page.reload()
     await lida
-    await esperarGovernanca(page)
+    await esperarPainel(page)
     await expect(aviso(page)).toHaveCount(0)
     await expect(faixa(page)).toHaveCount(0)
   })
@@ -242,7 +242,7 @@ test.describe('Aviso de incidente: o diálogo ao entrar', () => {
     await expect(sair).toBeEnabled()
 
     // A faixa acompanha a coordenação por outra tela, e andar pela navegação não lê de novo.
-    await irPelaNavegacao(page, 'Estrutura', hasTouch)
+    await irPelaCoordenacao(page, 'Turmas', hasTouch)
     await expect(page).toHaveURL(/\/coordenacao\/estrutura$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(aFaixa).toBeVisible()
     // Voltar à aba do navegador, um minuto depois, também não lê: a leitura é uma por sessão.
@@ -536,7 +536,7 @@ test.describe('Incidentes: os quatro estados da aba', () => {
 
     await entrar(page, hasTouch, coordenadora)
     await abrirAAba(page, hasTouch)
-    await expect(page.getByRole('tab', { name: NOME_DA_ABA, exact: true })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('radio', { name: NOME_DA_ABA, exact: true })).toHaveAttribute('aria-checked', 'true')
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     expect(await larguraExcedente(page)).toBe(0)
 

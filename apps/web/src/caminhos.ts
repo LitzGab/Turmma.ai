@@ -81,7 +81,9 @@ export const ROTAS_DA_COORDENACAO = {
   material: '/material',
   /** "Seus dados e a lei", no grupo Conformidade: as abas da Privacidade ficam no endereço (F3, 6.0; `docs/interface.md` 3). */
   privacidade: '/privacidade',
-  /** Uma aba da Privacidade pelo endereço dela. Hoje existem `pedidos`, `retencao`, `suboperadores` e `incidentes`. */
+  /** Os pedidos de titular, a aba Pedidos de Registros (X2, 3.0). Sem este caminho, `/privacidade` redireciona para ele. */
+  pedidos: '/privacidade/pedidos',
+  /** Uma aba da Privacidade pelo endereço dela. Existem `pedidos`, `retencao`, `suboperadores` e `incidentes`. */
   privacidadeDaAba: '/privacidade/:aba',
   /** Um pedido de titular aberto, dentro da aba Pedidos da Privacidade (F3, 17.0). O id é o do pedido, nunca nome nem matrícula. */
   pedidoDoTitular: '/privacidade/pedidos/:pedidoId',
@@ -105,8 +107,17 @@ export function caminhoDoPedidoDoTitular(pedidoId: string): string {
   return ROTAS_DA_COORDENACAO.pedidoDoTitular.replace(':pedidoId', encodeURIComponent(pedidoId))
 }
 
-/** A aba que a Privacidade abre sem aba no endereço, ou com uma que não existe. É a primeira de `ABAS_DA_PRIVACIDADE`. */
-export const ABA_INICIAL_DA_PRIVACIDADE = 'pedidos'
+/**
+ * As três telas que a aba Privacidade de Registros escolhe num seletor (X2, 3.0): os prazos de guarda, as empresas que recebem
+ * dados e os incidentes, cada uma no endereço que já tinha (`/privacidade/<id>`). Os pedidos são a aba ao lado e não entram.
+ */
+export const TELAS_DO_SELETOR_DA_PRIVACIDADE = ['retencao', 'suboperadores', 'incidentes'] as const
+export type TelaDoSeletorDaPrivacidade = (typeof TELAS_DO_SELETOR_DA_PRIVACIDADE)[number]
+
+/** O valor do endereço é uma das três telas do seletor? */
+export function ehTelaDoSeletorDaPrivacidade(valor: string): valor is TelaDoSeletorDaPrivacidade {
+  return (TELAS_DO_SELETOR_DA_PRIVACIDADE as readonly string[]).includes(valor)
+}
 
 /** As rotas da área do aluno, relativas à base dela. */
 export const ROTAS_DO_ALUNO = {

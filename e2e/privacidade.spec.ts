@@ -1,11 +1,12 @@
 import type { Locator, Page, Route } from '@playwright/test'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, escolherNoSeletor, esperarGovernanca, irPelaNavegacao, lateral, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, escolherNoSeletor, esperarPainel, lateral, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ajustarRetencaoDaEscola, cadastrarSuboperadorDeTeste, codigoDoAutenticador, criarEquipeComSenha, criarEscolaSintetica, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
- * A Privacidade da coordenação, na aba "Por quanto tempo guardamos" (F3, 6.0; RF20; `docs/interface.md` 3): o prazo que
+ * A Privacidade da coordenação, na tela "Prazos de guarda" do seletor da aba Privacidade de Registros (F3, 6.0; X2, 3.0; RF20; `docs/interface.md` 3): o prazo que
  * vale para cada dado da escola, de onde ele vem, e os prazos fixos. Contra a API real, nos projetos `chromebook` e
  * `celular`. A escola de cada teste tem o ajuste que o teste precisa, e o segundo dado é o que torna cada cláusula visível.
  */
@@ -16,7 +17,7 @@ const ENDERECO_DOS_PEDIDOS = /\/coordenacao\/privacidade\/pedidos$/
 const NOME_DA_ABA_DOS_PEDIDOS = 'Pedidos'
 const AJUSTADO = 'Ajustado pela escola'
 const CARREGANDO = 'Carregando os prazos de guarda…'
-const NOME_DA_ABA = 'Por quanto tempo guardamos'
+const NOME_DA_ABA = 'Prazos de guarda'
 const NOME_DAS_CATEGORIAS = 'O que a escola guarda, e por quanto tempo'
 
 const principal = (page: Page) => page.getByRole('main')
@@ -46,12 +47,11 @@ async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
 }
 
 /**
- * A Privacidade abre na aba dos pedidos (F3, 16.0), que é o que a coordenação faz ali: a retenção é a segunda aba. Quem
- * quer a retenção a abre pelo nome, e o endereço dela passa a ser o da aba.
+ * Registros abre na aba dos pedidos (F3, 16.0), que é o que a coordenação faz ali: os prazos de guarda são uma tela do seletor da
+ * aba Privacidade. Quem quer os prazos a abre pelo nome, e o endereço dela passa a ser o da tela.
  */
 async function abrirARetencao(page: Page, hasTouch: boolean): Promise<void> {
-  await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
-  await acionar(page.getByRole('tab', { name: NOME_DA_ABA }), hasTouch)
+  await irPelaCoordenacao(page, 'Prazos de guarda', hasTouch)
   await expect(page).toHaveURL(ENDERECO_DA_RETENCAO, { timeout: PRAZO_DA_ENTRADA_MS })
 }
 
@@ -59,8 +59,7 @@ async function abrirARetencao(page: Page, hasTouch: boolean): Promise<void> {
 async function entrarNaPrivacidade(page: Page, hasTouch: boolean, pessoa: EquipeDeTeste): Promise<void> {
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, pessoa, hasTouch)
-  await esperarGovernanca(page)
-  await irPelaNavegacao(page, 'Privacidade', hasTouch)
+  await esperarPainel(page)
   await abrirARetencao(page, hasTouch)
 }
 
@@ -71,9 +70,9 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await ajustarRetencaoDaEscola(coordenadora.escolaId, 'conversa_professor', 3)
     await entrarNaPrivacidade(page, hasTouch, coordenadora)
 
-    await expect(page).toHaveTitle('Privacidade · Turmma')
-    await expect(page.getByRole('heading', { level: 1, name: 'Privacidade' })).toBeVisible()
-    await expect(page.getByRole('tab', { name: NOME_DA_ABA })).toHaveAttribute('aria-selected', 'true')
+    await expect(page).toHaveTitle('Registros: privacidade · Turmma')
+    await expect(page.getByRole('heading', { level: 1, name: 'Registros' })).toBeVisible()
+    await expect(page.getByRole('radio', { name: NOME_DA_ABA })).toHaveAttribute('aria-checked', 'true')
 
     // O ajuste da escola aparece, na linha da categoria dele, com o prazo e a origem ditos.
     const doAluno = linhaDa(page, 'Conversa do aluno com o Tutor')
@@ -102,7 +101,7 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     const coordenadora = await criarEquipeComSenha('coordenador')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarGovernanca(page)
+    await esperarPainel(page)
 
     await page.goto('/coordenacao/privacidade')
     await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
@@ -126,8 +125,8 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await ajustarRetencaoDaEscola(coordenadora.escolaId, 'conversa_tutor', 6)
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarGovernanca(page)
-    await irPelaNavegacao(page, 'Privacidade', hasTouch)
+    await esperarPainel(page)
+    await irPelaCoordenacao(page, 'Pedidos', hasTouch)
     await abrirARetencao(page, hasTouch)
 
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -177,8 +176,8 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await new Promise((resolver) => setTimeout(resolver, Math.max(0, proximaVirada + 1_000 - Date.now())))
     await page.getByLabel('Código do aplicativo').fill(codigoDoAutenticador(segredo, PASSO_MS / 1_000))
     await acionar(page.getByRole('button', { name: /^Entrar$|Entrando/ }), hasTouch)
-    await esperarGovernanca(page)
-    await irPelaNavegacao(page, 'Privacidade', hasTouch)
+    await esperarPainel(page)
+    await irPelaCoordenacao(page, 'Pedidos', hasTouch)
     await abrirARetencao(page, hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText(AJUSTADO)
@@ -209,8 +208,8 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
       },
     )
     await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
-    await esperarGovernanca(page)
-    await irPelaNavegacao(page, 'Privacidade', hasTouch)
+    await esperarPainel(page)
+    await irPelaCoordenacao(page, 'Pedidos', hasTouch)
     await abrirARetencao(page, hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText(AJUSTADO)
@@ -226,7 +225,7 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
  * é global e o banco acumula, então toda empresa de teste tem nome único, e a tela se confere só pelos nomes que o teste
  * criou: o vazio, que o banco não produz, vem de `rota.fulfill`.
  */
-const NOME_DA_ABA_DAS_EMPRESAS = 'Empresas que recebem dados'
+const NOME_DA_ABA_DAS_EMPRESAS = 'Empresas'
 const ENDERECO_DAS_EMPRESAS = /\/coordenacao\/privacidade\/suboperadores$/
 const CARREGANDO_AS_EMPRESAS = 'Carregando as empresas que recebem dados…'
 const SECAO_DAS_VIGENTES = 'Empresas que recebem dado da escola hoje'
@@ -243,10 +242,8 @@ async function abrirAsEmpresas(page: Page, hasTouch: boolean, pessoa: EquipeDeTe
   // Direto da aba dos pedidos, que é a que a Privacidade abre: passar antes pela retenção leria a retenção à toa.
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, pessoa, hasTouch)
-  await esperarGovernanca(page)
-  await irPelaNavegacao(page, 'Privacidade', hasTouch)
-  await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
-  await acionar(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS }), hasTouch)
+  await esperarPainel(page)
+  await irPelaCoordenacao(page, 'Empresas', hasTouch)
   await expect(page).toHaveURL(ENDERECO_DAS_EMPRESAS, { timeout: PRAZO_DA_ENTRADA_MS })
 }
 
@@ -265,7 +262,7 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
     await cadastrarSuboperadorDeTeste({ nome: deOutraEscola, escolas: [outra.escolaId] })
     await abrirAsEmpresas(page, hasTouch, coordenadora)
 
-    await expect(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS })).toHaveAttribute('aria-selected', 'true')
+    await expect(page.getByRole('radio', { name: NOME_DA_ABA_DAS_EMPRESAS })).toHaveAttribute('aria-checked', 'true')
     await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(hospedagem, { timeout: PRAZO_DA_ENTRADA_MS })
 
     const daHospedagem = linhaDaEmpresa(page, hospedagem)
@@ -305,10 +302,10 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
     await page.reload()
     // Recarregar abre o aplicativo de novo (casca, renovação da sessão, área e sino): é o prazo da entrada, não os 5 s do `expect`.
     await expect(page).toHaveURL(ENDERECO_DAS_EMPRESAS, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS })).toHaveAttribute('aria-selected', 'true', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByRole('radio', { name: NOME_DA_ABA_DAS_EMPRESAS })).toHaveAttribute('aria-checked', 'true', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(nome, { timeout: PRAZO_DA_ENTRADA_MS })
 
-    await acionar(page.getByRole('tab', { name: NOME_DA_ABA }), hasTouch)
+    await irPelaCoordenacao(page, 'Prazos de guarda', hasTouch)
     await expect(page).toHaveURL(ENDERECO_DA_RETENCAO)
     await expect(categorias(page)).toBeVisible()
     await expect(principal(page)).not.toContainText(nome)
@@ -384,9 +381,8 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
       },
     )
     await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
-    await esperarGovernanca(page)
-    await irPelaNavegacao(page, 'Privacidade', hasTouch)
-    await acionar(page.getByRole('tab', { name: NOME_DA_ABA_DAS_EMPRESAS }), hasTouch)
+    await esperarPainel(page)
+    await irPelaCoordenacao(page, 'Empresas', hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO_AS_EMPRESAS })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText(daPrimeira)
 

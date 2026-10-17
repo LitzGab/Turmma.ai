@@ -6,7 +6,7 @@ import { Ladrilho } from './Ladrilho'
 
 /**
  * Quantos lugares cabem na barra de baixo do celular (`docs/interface.md` 11.1, R1): quatro, a 90 px cada um nos 360 px da
- * janela mais estreita. O papel que passa disso (a coordenação, com sete, até a X2) mantém os itens na gaveta.
+ * janela mais estreita. O papel que passa disso mantém os itens na gaveta (a coordenação tinha sete, até a X2).
  */
 export const MAXIMO_NA_BARRA = 4
 

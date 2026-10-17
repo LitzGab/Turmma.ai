@@ -10,7 +10,7 @@ import { Icone } from '../Icone'
 import { DESENHO_DO_LUGAR, NOMES_DOS_LUGARES, type NomeDoLugar } from './lugares'
 
 /**
- * Os quatro ícones ilustrados dos lugares (`docs/interface.md` 9.4; Tech Spec da X1, seções 7c e 9): o que cada desenho
+ * Os ícones ilustrados dos lugares (`docs/interface.md` 9.4; Tech Spec da X1, seções 7c e 9; os quatro da coordenação, na X2): o que cada desenho
  * pode ter, a cor que ele lê, e o peso. Que o `fill` do papel seja `#EFEFEF` no claro e `#37464F` no escuro é do e2e da
  * galeria (`e2e/pecas-marca-icones.spec.ts`), que lê o estilo calculado; aqui está o que o arquivo e o HTML dizem.
  */
@@ -36,8 +36,8 @@ const tokenDa = (classe: string) => classe.replace(/^fill-/, '')
 const NEUTROS = ['icone-papel', 'icone-linha']
 
 describe('os ícones dos lugares', () => {
-  it('são os quatro da X1, e cada nome tem um desenho', () => {
-    expect([...NOMES_DOS_LUGARES]).toEqual(['inicio', 'turmas', 'tarefas', 'ferramentas'])
+  it('são os quatro da X1 e os quatro da coordenação (X2), e cada nome tem um desenho', () => {
+    expect([...NOMES_DOS_LUGARES]).toEqual(['inicio', 'turmas', 'tarefas', 'ferramentas', 'painel', 'ia', 'escola', 'registros'])
     expect(Object.keys(DESENHO_DO_LUGAR).sort()).toEqual([...NOMES_DOS_LUGARES].sort())
     for (const nome of NOMES_DOS_LUGARES) expect(formasDe(nome).length, nome).toBeGreaterThan(0)
   })
@@ -87,6 +87,11 @@ describe('os ícones dos lugares', () => {
     expect(classesDe('turmas')).toEqual(['fill-icone-linha', 'fill-icone-linha', 'fill-icone-linha', 'fill-icone-linha', 'fill-turquesa', 'fill-turquesa'])
     expect(classesDe('tarefas')).toEqual(['fill-azul', 'fill-icone-papel', 'fill-icone-linha', 'fill-azul', 'fill-azul'])
     expect(classesDe('ferramentas')).toEqual(['fill-laranja', 'fill-azul', 'fill-verde', 'fill-roxo'])
+    // X2: o painel e a IA em anil, a escola em azul e os registros em amarelo, com a família de cada lugar (9.4).
+    expect(classesDe('painel')).toEqual(['fill-anil', 'fill-icone-papel', 'fill-anil', 'fill-anil', 'fill-anil'])
+    expect(classesDe('ia')).toEqual(['fill-anil', 'fill-icone-papel', 'fill-icone-papel', 'fill-icone-papel'])
+    expect(classesDe('escola')).toEqual(['fill-icone-linha', 'fill-azul', 'fill-azul', 'fill-icone-papel', 'fill-icone-papel', 'fill-icone-papel'])
+    expect(classesDe('registros')).toEqual(['fill-amarelo', 'fill-icone-papel', 'fill-icone-linha', 'fill-icone-linha', 'fill-icone-linha'])
   })
 
   it('as ferramentas são os quatro quadradinhos, laranja, azul, verde e roxo, nessa ordem de leitura', () => {
@@ -119,10 +124,15 @@ describe('os ícones dos lugares', () => {
     expect(new Set(formas).size).toBe(NOMES_DOS_LUGARES.length)
   })
 
-  it('o peso: o HTML dos quatro, em brotli, cabe nos 3 kB que a entrada reserva (de 4 kB; a Tech Spec, seção 7c)', () => {
+  it('o peso: o HTML dos oito, em brotli, cabe nos 3 kB que a entrada reserva (de 4 kB; a Tech Spec, seção 7c)', () => {
     const html = NOMES_DOS_LUGARES.map((nome) => renderToStaticMarkup(<Icone nome={nome} tamanho={48} />)).join('')
     const bytes = brotliCompressSync(Buffer.from(html)).length
     expect(bytes).toBeGreaterThan(200)
     expect(bytes).toBeLessThanOrEqual(3_000)
+  })
+
+  it('o peso dos quatro da coordenação: até 1 kB em brotli, que é o que a Tech Spec da X2 (seção 7c) dá para eles ficarem ilustrados', () => {
+    const html = (['painel', 'ia', 'escola', 'registros'] as const).map((nome) => renderToStaticMarkup(<Icone nome={nome} tamanho={48} />)).join('')
+    expect(brotliCompressSync(Buffer.from(html)).length).toBeLessThanOrEqual(1_000)
   })
 })

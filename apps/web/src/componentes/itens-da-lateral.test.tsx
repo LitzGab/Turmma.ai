@@ -48,7 +48,7 @@ describe('ItemDaLateral', () => {
     }
   })
 
-  it('o ícone ilustrado é de Início, Ferramentas, Turmas e Atividades, e o `lucide` num ladrilho é dos outros', () => {
+  it('o ícone ilustrado é de Início, Ferramentas, Turmas, Atividades e dos quatro lugares da coordenação, e o `lucide` num ladrilho é dos outros', () => {
     const ilustrados = new Map<string, string>()
     const ladrilhos = new Map<string, string>()
     const porPapel = new Map<string, string>()
@@ -66,23 +66,20 @@ describe('ItemDaLateral', () => {
       ['Ferramentas', 'ferramentas'],
       ['Turmas', 'turmas'],
       ['Atividades', 'tarefas'],
+      ['Painel', 'painel'],
+      ['Analista', 'ia'],
+      ['Escola', 'escola'],
+      ['Registros', 'registros'],
     ])
     // A família de cada um (a divergência de `12_task.md`): por função, nunca a cor do estado (`ok`, `erro`, `pendente`).
     expect(Object.fromEntries([...porPapel].sort(([a], [b]) => a.localeCompare(b)))).toEqual({
       'aluno: Minha turma': 'turquesa',
       'aluno: Privacidade': 'verde',
       'aluno: Tutor': 'laranja',
-      'coordenador: Agentes': 'anil',
-      'coordenador: Analista': 'anil',
-      'coordenador: Estrutura': 'azul',
-      'coordenador: Governança': 'anil',
-      'coordenador: Material': 'azul',
-      'coordenador: Privacidade': 'amarelo',
-      'coordenador: Professores': 'azul',
       'professor: Meus dados': 'verde',
     })
     // Cada um dos outros tem a família dele, e a do ladrilho chega ao DOM.
-    expect([...ladrilhos.keys()].sort()).toEqual(['Agentes', 'Analista', 'Estrutura', 'Governança', 'Material', 'Meus dados', 'Minha turma', 'Privacidade', 'Professores', 'Tutor'].sort())
+    expect([...ladrilhos.keys()].sort()).toEqual(['Meus dados', 'Minha turma', 'Privacidade', 'Tutor'].sort())
     const tutor = NAVEGACAO.aluno.find((item) => item.rotulo === 'Tutor')
     if (tutor === undefined) throw new Error('faltou o Tutor')
     render(noEndereco('/', <ul><ItemDaLateral item={tutor} trilho={false} /></ul>))

@@ -5,9 +5,10 @@ import type { ReactElement } from 'react'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { prepararTela, renderizarTela } from '../__fixtures__/tela'
 import { MinhaTurma } from './aluno/MinhaTurma'
-import { ListaDaTurma } from './coordenacao/ListaDaTurma'
-import { Estrutura } from './coordenacao/Estrutura'
-import { Professores } from './coordenacao/Professores'
+import Escola from './coordenacao/Escola'
+import Estrutura from './coordenacao/Estrutura'
+import ListaDaTurma from './coordenacao/ListaDaTurma'
+import Professores from './coordenacao/Professores'
 import TutorDoAluno from './aluno/Tutor'
 import Conversa from './professor/Conversa'
 import Home from './professor/Home'
@@ -131,8 +132,13 @@ const CAMINHO_DA_TURMA = `/v1/turmas/${UUID_DA_TURMA}`
 
 describe('o título das seis telas que passaram à Tela', () => {
   provar('Estrutura', {
-    tela: () => <Estrutura />,
-    titulo: 'Estrutura',
+    // X2 (3.0): a Estrutura é a aba Turmas de Escola, e o `h1` é o da moldura.
+    tela: () => (
+      <Escola aba="turmas">
+        <Estrutura />
+      </Escola>
+    ),
+    titulo: 'Escola',
     carregando: { rotas: { '/v1/anos-letivos': 'segurar' }, aparece: () => screen.findByText('Carregando a estrutura da escola…') },
     erro: { rotas: { '/v1/anos-letivos': FALHA } },
     vazio: { rotas: { '/v1/anos-letivos': LISTA_VAZIA }, aparece: () => screen.findByText('Comece pelo ano letivo') },
@@ -140,8 +146,12 @@ describe('o título das seis telas que passaram à Tela', () => {
   })
 
   provar('Professores', {
-    tela: () => <Professores />,
-    titulo: 'Professores',
+    tela: () => (
+      <Escola aba="professores">
+        <Professores />
+      </Escola>
+    ),
+    titulo: 'Escola',
     carregando: { rotas: { '/v1/professores': 'segurar' }, aparece: () => screen.findByText('Carregando os professores…') },
     erro: { rotas: { '/v1/professores': FALHA } },
     vazio: { rotas: { '/v1/professores': LISTA_VAZIA }, aparece: () => screen.findByText('Nenhum professor ainda') },
@@ -201,9 +211,13 @@ describe('o título das seis telas que passaram à Tela', () => {
 })
 
 describe('o título de quem recebe o foco', () => {
-  it('Professores: o `h1` entra na ordem de foco por código (`tabindex` -1), que é o que o foco de reserva do diálogo usa', async () => {
+  it('Professores: o `h1` da moldura entra na ordem de foco por código (`tabindex` -1), que é o que o foco de reserva do diálogo usa', async () => {
     redePorCaminho({ '/v1/professores': { status: 200, corpo: { itens: [PROFESSORA] } } })
-    renderizarTela(<Professores />)
+    renderizarTela(
+      <Escola aba="professores">
+        <Professores />
+      </Escola>,
+    )
     await screen.findByRole('heading', { name: 'Professores da escola' })
     expect(titulos()[0]?.getAttribute('tabindex')).toBe('-1')
   })

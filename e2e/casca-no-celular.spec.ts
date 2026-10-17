@@ -9,8 +9,8 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from '.
 
 /**
  * A casca da escola no celular (X1, 13.0; `docs/interface.md` 11.1; D80; RF14, RF15): a barra de topo de 56 px, a barra de
- * baixo de 68 px com os itens do professor e do aluno, e a gaveta com o resto. A coordenação, com sete itens, mantém os
- * dela na gaveta. A 360 px, a janela mais estreita (D51). A gaveta modal, o foco e a troca de largura estão em
+ * baixo de 68 px com os itens do professor e do aluno, e a gaveta com o resto. A coordenação, com quatro lugares, também usa a
+ * barra (X2). A 360 px, a janela mais estreita (D51). A gaveta modal, o foco e a troca de largura estão em
  * `casca.spec.ts`; aqui é o que a barra de baixo reserva e o que cabe nela.
  */
 
@@ -198,25 +198,27 @@ test.describe('a casca da escola no celular', () => {
     expect(await larguraExcedente(page)).toBe(0)
   })
 
-  test('a coordenação, com sete itens, não tem barra de baixo: os itens ficam só na gaveta, de 44 px', async ({ page, hasTouch }) => {
+  test('a coordenação tem os quatro lugares na barra de baixo, à vista sem abrir nada, de 44 px, e a gaveta nem abre', async ({ page, hasTouch }) => {
     test.slow()
     await page.setViewportSize({ width: LARGURA, height: ALTURA_DA_JANELA })
     const coordenadora = await criarEquipeComSenha('coordenador')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
 
-    // Sem barra (A90): nada com o nome `Seções` na página, e o conteúdo não reserva o lugar dela.
-    await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(0)
-    await expect(page.locator('html')).not.toHaveAttribute('data-barra-de-baixo', '')
-    // E a reserva vale zero: o `<main>` guarda só os 32 px de sempre, e não os 68 px de uma barra que não existe.
-    expect(await reservaDaBarraDeBaixo(page)).toEqual({ variavel: '0px', paddingDoMain: '32px' })
-
-    await acionar(page.getByRole('button', { name: 'Abrir o menu' }), hasTouch)
-    await expect(gaveta(page)).toBeVisible()
-    const itens = secoes(page).getByRole('link')
-    await expect(itens).toHaveText(['Governança', 'Agentes', 'Analista', 'Estrutura', 'Professores', 'Material', 'Privacidade'])
+    // Com quatro itens a coordenação cabe na barra (X2, RF1): `Seções` é uma só, à vista, e a gaveta continua fechada.
     await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(1)
-    for (let indice = 0; indice < 7; indice++) await esperarAlvoDe44(itens.nth(indice), `item ${String(indice)}`)
+    await expect(gaveta(page)).toBeHidden()
+    const itens = secoes(page).getByRole('link')
+    await expect(itens).toHaveText(['Painel', 'Analista', 'Escola', 'Registros'])
+    await expect(secoes(page).getByRole('link', { name: 'Painel' })).toHaveAttribute('aria-current', 'page')
+
+    // A barra: fixa no pé da janela, com 68 px, e o conteúdo reserva o lugar dela.
+    const barra = await caixaDe(secoes(page), 'a barra de baixo')
+    expect(Math.round(barra.height)).toBe(ALTURA_DA_BARRA_PX)
+    expect(Math.round(barra.y + barra.height)).toBe(ALTURA_DA_JANELA)
+    expect(Math.round(barra.width)).toBe(LARGURA)
+    expect((await reservaDaBarraDeBaixo(page)).paddingDoMain).toBe(`${String(ALTURA_DA_BARRA_PX + 32)}px`)
+    for (let indice = 0; indice < 4; indice++) await esperarAlvoDe44(itens.nth(indice), `item ${String(indice)}`)
     expect(await larguraExcedente(page)).toBe(0)
   })
 

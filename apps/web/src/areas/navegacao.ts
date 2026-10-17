@@ -1,5 +1,5 @@
 import { NOMES_DOS_AGENTES, type Agente, type PapelDeUsuario } from '@educa/shared'
-import { Blocks, BookOpen, Bot, ChartColumn, FolderLock, GraduationCap, Lock, MessageCircleQuestion, MessagesSquare, School, ShieldCheck, type LucideIcon } from 'lucide-react'
+import { FolderLock, Lock, MessageCircleQuestion, MessagesSquare, School, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 // Só tipos, que o compilador apaga: o `Contador` e os ícones ilustrados são peças da entrada ou fora dela, e este arquivo
 // não importa nenhuma (o item 4 do guia acima). O que ele diz é qual ícone e qual família, e a casca é quem desenha.
@@ -39,23 +39,22 @@ export interface ItemDaNavegacao {
 /**
  * A navegação de cada papel (D73; `docs/interface.md` 11.1), numa tabela só. **Cada item nasce com a tela dele**, e
  * nenhum antes: item que leva a tela inexistente é o que o W2 reprova. A tarefa que entrega a tela acrescenta a linha
- * aqui — "Minha turma" do aluno veio na 12.0, "Estrutura" da coordenação na 13.0 e "Professores" na 14.0 — e na lista
- * do papel em `e2e/areas.spec.ts`, que o W2 percorre.
+ * aqui — "Minha turma" do aluno veio na 12.0 e os quatro lugares da coordenação, na X2 — e na lista do papel em
+ * `e2e/areas.spec.ts`, que o W2 percorre.
  *
  * É só o que a tela mostra. Quem decide o que cada papel alcança é a API, pela matriz de permissão: esconder um item não
  * protege nada (regra 00, item 1).
  */
 export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao[]>> = {
-  // A5: Governança, onde a coordenação abre (11.1), Agentes e Analista vêm antes da montagem da escola. F3 (6.0):
-  // Privacidade, do grupo Conformidade, no fim da lista, com a aba de retenção.
+  // X2 (D80; `docs/interface.md` 11.1): quatro lugares, Painel, Analista, Escola e Registros. O Painel é onde a coordenação abre.
+  // Escola e Registros são molduras com abas (`areas/coordenacao/Escola.tsx` e `Registros.tsx`) que ficam nos endereços de
+  // hoje: o lugar fica aceso por `caminho` e `tambemEm`, e nenhum endereço mudou. A Estrutura abre a lista da turma abaixo
+  // dela, e a Governança é a aba IA de Registros; os Agentes ficam acesos em Registros.
   coordenador: [
-    { rotulo: 'Governança', caminho: ROTAS.governanca, icone: { lucide: ShieldCheck, familia: 'anil' } },
-    { rotulo: 'Agentes', caminho: ROTAS.agentes, icone: { lucide: Bot, familia: 'anil' } },
-    { rotulo: 'Analista', caminho: ROTAS.analista, icone: { lucide: ChartColumn, familia: 'anil' } },
-    { rotulo: 'Estrutura', caminho: ROTAS.estrutura, icone: { lucide: Blocks, familia: 'azul' } },
-    { rotulo: 'Professores', caminho: ROTAS.professores, icone: { lucide: GraduationCap, familia: 'azul' } },
-    { rotulo: 'Material', caminho: ROTAS.material, icone: { lucide: BookOpen, familia: 'azul' } },
-    { rotulo: 'Privacidade', caminho: ROTAS.privacidade, icone: { lucide: Lock, familia: 'amarelo' } },
+    { rotulo: 'Painel', caminho: ROTAS.painel, icone: { lugar: 'painel' } },
+    { rotulo: 'Analista', caminho: ROTAS.analista, icone: { lugar: 'ia' } },
+    { rotulo: 'Escola', caminho: ROTAS.estrutura, icone: { lugar: 'escola' }, tambemEm: [ROTAS.professores, ROTAS.material] },
+    { rotulo: 'Registros', caminho: ROTAS.governanca, icone: { lugar: 'registros' }, tambemEm: [ROTAS.agentes, ROTAS.privacidade] },
   ],
   // A2 (D73): Início, Ferramentas e Turmas. Calendário nasce com a grade (F8) e Histórico, com o F5: nenhum aparece antes da
   // tela dele. X1 (12.0): "Nova conversa" virou "Início", no mesmo endereço, com os ícones ilustrados da D80.

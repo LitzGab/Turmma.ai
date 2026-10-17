@@ -177,14 +177,16 @@ describe('onde ficam os itens de navegação em cada largura (RF14)', () => {
     expect(within(gaveta).getByRole('navigation', { name: 'Rodapé', hidden: true })).toBeTruthy()
   })
 
-  it('abaixo de 768 px, a coordenação, com sete itens, mantém a navegação na gaveta e não tem barra de baixo', async () => {
+  it('abaixo de 768 px, a coordenação, com os quatro lugares da X2, tem a barra de baixo e a gaveta fica sem a navegação', async () => {
     const rede = redeFalsa()
     await abrirCasca(rede, 'coordenador', 'estreita', ROTAS.estrutura)
 
-    expect(screen.queryByRole('navigation', { name: 'Seções' })).toBeNull()
-    expect(document.documentElement.hasAttribute('data-barra-de-baixo')).toBe(false)
-    const itens = gavetaDaPagina().querySelectorAll('nav[aria-label="Seções"] a')
-    expect(Array.from(itens).map((item) => item.textContent)).toEqual(['Governança', 'Agentes', 'Analista', 'Estrutura', 'Professores', 'Material', 'Privacidade'])
+    const barra = screen.getByRole('navigation', { name: 'Seções' })
+    expect(within(barra).getAllByRole('link').map((link) => link.textContent)).toEqual(['Painel', 'Analista', 'Escola', 'Registros'])
+    // A Estrutura é a aba Turmas de Escola: o lugar aceso é o dela.
+    expect(within(barra).getByRole('link', { name: 'Escola' }).getAttribute('aria-current')).toBe('page')
+    expect(document.documentElement.hasAttribute('data-barra-de-baixo')).toBe(true)
+    expect(gavetaDaPagina().querySelector('nav[aria-label="Seções"]')).toBeNull()
     expect(classesDo(screen.getByRole('main')).has('pb-[calc(var(--barra-baixo,0px)+2rem)]')).toBe(true)
   })
 

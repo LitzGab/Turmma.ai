@@ -17,6 +17,11 @@ interface PropsDasAbas {
   readonly abas: readonly Aba[]
   readonly ativa: string
   readonly aoMudar: (id: string) => void
+  /**
+   * Classes a mais no painel da aba ativa. É por aqui que uma moldura faz só o miolo rolar (X2, 3.0): o painel já é uma região
+   * com nome e `tabIndex={0}`, e por isso a rolagem dele se alcança pelo teclado.
+   */
+  readonly classeDoPainel?: string
   /** O conteúdo da aba ativa. */
   readonly children: ReactNode
 }
@@ -41,7 +46,7 @@ interface PropsDasAbas {
  * 44 px de altura em todo tamanho de tela, no computador também: é a das abas da página (`AbasDaPagina` do mockup), que
  * levam o número, e é a que a 10.2 pede. Os 48 px são os da linha de abas solta do mockup, que esta peça não desenha.
  */
-export function Abas({ rotulo, abas, ativa, aoMudar, children }: PropsDasAbas) {
+export function Abas({ rotulo, abas, ativa, aoMudar, classeDoPainel = '', children }: PropsDasAbas) {
   const base = useId()
   const lista = useRef<HTMLDivElement>(null)
   const idDaAba = (id: string) => `${base}-aba-${id}`
@@ -84,7 +89,7 @@ export function Abas({ rotulo, abas, ativa, aoMudar, children }: PropsDasAbas) {
           )
         })}
       </div>
-      <div role="tabpanel" id={idDoPainel} {...(ativaExiste ? { 'aria-labelledby': idDaAba(ativa) } : { 'aria-label': rotulo })} tabIndex={0} className="min-w-0">
+      <div role="tabpanel" id={idDoPainel} {...(ativaExiste ? { 'aria-labelledby': idDaAba(ativa) } : { 'aria-label': rotulo })} tabIndex={0} className={`min-w-0 ${classeDoPainel}`.trim()}>
         {children}
       </div>
     </div>

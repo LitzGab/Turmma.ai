@@ -2,6 +2,9 @@ import { MOTIVOS_DE_SUSPENSAO, NOME_DO_MOTIVO_DE_SUSPENSAO, type Agente, type Fu
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { aplicarFuncao, consultaFuncoesDaGovernanca, retomarFuncao, suspenderFuncao } from '../../api/governanca'
+import { ArrowLeft } from 'lucide-react'
+import { Link } from 'wouter'
+import { ROTAS_DA_COORDENACAO } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
 import { Cartao } from '../../componentes/Cartao'
 import { DialogoDeConfirmacao } from '../../componentes/DialogoDeConfirmacao'
@@ -62,23 +65,31 @@ export default function Agentes() {
     onError: () => void cliente.invalidateQueries({ queryKey: consultaFuncoesDaGovernanca.queryKey }),
   })
 
+  // "‹ Registros" (X2, 3.0): Agentes fica dentro de Registros, que continua aceso na lateral. A 11.0 faz dela a página "Como cada IA trabalha".
+  const voltar = (
+    <Link to={ROTAS_DA_COORDENACAO.governanca} aria-label="Voltar para Registros" className="inline-flex min-h-11 items-center gap-2 self-start text-caramelo-texto underline">
+      <ArrowLeft aria-hidden="true" size={18} />
+      Registros
+    </Link>
+  )
+
   if (funcoes.isPending) {
     return (
-      <Tela titulo="Agentes">
+      <Tela titulo="Agentes" antes={voltar}>
         <EstadoCarregando rotulo="Carregando os agentes…" />
       </Tela>
     )
   }
   if (funcoes.isError) {
     return (
-      <Tela titulo="Agentes">
+      <Tela titulo="Agentes" antes={voltar}>
         <EstadoErro erro={funcoes.error} tentando={funcoes.isFetching} aoTentarDeNovo={() => void funcoes.refetch({ cancelRefetch: false })} />
       </Tela>
     )
   }
 
   return (
-    <Tela titulo="Agentes">
+    <Tela titulo="Agentes" antes={voltar}>
       <p className="max-w-prose text-apoio">
         São três agentes, um para cada pessoa da escola. Cada função diz aqui o que faz sozinha e o que espera uma pessoa. A escola pode suspender uma função sem desligar as outras.
       </p>

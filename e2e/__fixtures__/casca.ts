@@ -6,7 +6,7 @@ import { codigoDoAutenticador, criarEquipeComSenha, type EquipeDeTeste } from '.
 /**
  * A casca da escola pela tela (A1, tarefa 11.0; X1, 13.0): abaixo de 768 px a lateral é uma gaveta que abre pelo botão do
  * menu, e os itens do professor e do aluno ficam na **barra de baixo**, sempre à vista; no computador a lateral já está
- * aberta. A coordenação, com sete itens, mantém os dela na gaveta. Os specs que andam pela navegação passam por aqui, para
+ * aberta. A coordenação tem os quatro lugares dela na barra de baixo, como o professor e o aluno. Os specs que andam pela navegação passam por aqui, para
  * o mesmo teste valer nos projetos `chromebook` e `celular` (D51).
  */
 
@@ -176,36 +176,36 @@ export async function entrarComoProfessora(page: Page, hasTouch: boolean): Promi
 }
 
 /**
- * A coordenação abre em Governança (MVP, A5; `docs/interface.md` 11.1: é a tela que fecha a venda), e não mais em
- * Estrutura: o endereço e a tela. O endereço vem da página inicial, na entrada; a tela, do pedaço dela, que a área
- * carrega por `import()`, e por isso o teste que segura o chunk da área confere só o endereço.
+ * A coordenação abre no Painel (telas da coordenação, 3.0; D80; `docs/interface.md` 11.1), e não mais em Governança: o endereço e a
+ * tela. O endereço vem da página inicial, na entrada; a tela, do pedaço dela, que a área carrega por `import()`, e por isso o teste
+ * que segura o chunk da área confere só o endereço. **É o único lugar** que diz onde a coordenação abre.
  */
-export async function esperarGovernanca(page: Page): Promise<void> {
-  await expect(page).toHaveURL(/\/coordenacao\/governanca$/, { timeout: PRAZO_DA_ENTRADA_MS })
-  await expect(page.getByRole('heading', { level: 1, name: 'Governança' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
+export async function esperarPainel(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/coordenacao\/painel$/, { timeout: PRAZO_DA_ENTRADA_MS })
+  await expect(page.getByRole('heading', { level: 1, name: 'Painel' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
 }
 
-/** A Estrutura da coordenação aberta (A1, 13.0): o endereço e a tela. */
+/** A Estrutura da coordenação aberta (A1, 13.0), que é a aba Turmas de Escola: o endereço e a moldura. */
 export async function esperarEstrutura(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/coordenacao\/estrutura$/, { timeout: PRAZO_DA_ENTRADA_MS })
-  await expect(page.getByRole('heading', { level: 1, name: 'Estrutura' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
+  await expect(page.getByRole('heading', { level: 1, name: 'Escola' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
 }
 
 /**
- * A coordenação que acabou de entrar vai à Estrutura: **confere que abriu em Governança** e segue pela navegação da
- * lateral, sem recarregar a página. É o caminho de quem monta a escola desde a A5.
+ * A coordenação que acabou de entrar vai à Estrutura: **confere que abriu no Painel** e segue pelo lugar Escola da lateral,
+ * sem recarregar a página, que abre em Turmas. É o caminho de quem monta a escola.
  */
 export async function abrirEstrutura(page: Page, hasTouch: boolean): Promise<void> {
-  await esperarGovernanca(page)
-  await irPelaNavegacao(page, 'Estrutura', hasTouch)
+  await esperarPainel(page)
+  await irPelaNavegacao(page, 'Escola', hasTouch)
   await esperarEstrutura(page)
 }
 
 /**
  * A coordenadora no primeiro acesso, a partir da tela de entrada já aberta e sem recarregar a página: configura o
  * segundo fator do jeito sem celular, volta à entrada e entra com o código. Sem recarga, o que o teste afirma sobre o
- * cache da pessoa anterior na mesma aba continua valendo. Termina com a aba no endereço da Governança, onde a coordenação
- * abre (A5); quem precisa da tela chama `esperarGovernanca`, e quem vai montar a escola, `abrirEstrutura`.
+ * cache da pessoa anterior na mesma aba continua valendo. Termina com a aba no endereço do Painel, onde a coordenação
+ * abre; quem precisa da tela chama `esperarPainel`, e quem vai montar a escola, `abrirEstrutura`.
  */
 export async function entrarComoCoordenacaoNaMesmaAba(page: Page, coordenadora: EquipeDeTeste, hasTouch: boolean): Promise<void> {
   const respostaDoSegredo = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/conta/mfa/configurar')
@@ -219,7 +219,7 @@ export async function entrarComoCoordenacaoNaMesmaAba(page: Page, coordenadora: 
   await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   await campoCodigo(page).fill(codigoDoAutenticador(segredo, PASSO_SEGUINTE_SEGUNDOS))
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-  await expect(page).toHaveURL(/\/coordenacao\/governanca$/, { timeout: PRAZO_DA_ENTRADA_MS })
+  await expect(page).toHaveURL(/\/coordenacao\/painel$/, { timeout: PRAZO_DA_ENTRADA_MS })
 }
 
 /** O título da aba na tela em que o aluno abre. */

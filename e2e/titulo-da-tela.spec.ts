@@ -4,7 +4,7 @@ import {
   entrarComoAluno,
   entrarComoCoordenacaoNaMesmaAba,
   entrarComoProfessora,
-  esperarGovernanca,
+  esperarPainel,
   irPelaNavegacao,
   PRAZO_DA_ENTRADA_MS,
 } from './__fixtures__/casca.ts'
@@ -29,14 +29,12 @@ const ITENS_DO_PROFESSOR = [
   { rotulo: 'Ferramentas', escondido: false },
   { rotulo: 'Turmas', escondido: false },
 ] as const
+/** Os quatro lugares da coordenação (X2): Escola e Registros abrem na primeira aba, e a aba do navegador diz de onde a tela é. */
 const ITENS_DA_COORDENACAO = [
-  { rotulo: 'Governança', escondido: false },
-  { rotulo: 'Agentes', escondido: false },
+  { rotulo: 'Painel', escondido: false },
   { rotulo: 'Analista', escondido: false },
-  { rotulo: 'Estrutura', escondido: false },
-  { rotulo: 'Professores', escondido: false },
-  { rotulo: 'Material', escondido: false },
-  { rotulo: 'Privacidade', escondido: false },
+  { rotulo: 'Escola', escondido: false, titulo: 'Escola: turmas' },
+  { rotulo: 'Registros', escondido: false, titulo: 'Registros: IA' },
 ] as const
 const ITENS_DO_ALUNO = [
   { rotulo: 'Tutor', escondido: true },
@@ -48,6 +46,8 @@ interface Item {
   readonly rotulo: string
   /** A conversa: o `h1` existe só para o leitor de tela. */
   readonly escondido: boolean
+  /** A aba do navegador, quando não é o rótulo ("Escola: turmas"). */
+  readonly titulo?: string
 }
 
 interface CaixaDoTitulo {
@@ -111,7 +111,7 @@ function conferirTituloEscondido(caixa: CaixaDoTitulo, texto: string): void {
 async function percorrer(page: Page, itens: readonly Item[], hasTouch: boolean): Promise<void> {
   for (const item of itens) {
     await irPelaNavegacao(page, item.rotulo, hasTouch)
-    await expect(page).toHaveTitle(`${item.rotulo} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page).toHaveTitle(`${item.titulo ?? item.rotulo} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
     const caixa = await caixaDoTitulo(page)
     if (item.escondido) conferirTituloEscondido(caixa, item.rotulo)
     else conferirTituloVisivel(caixa, item.rotulo)
@@ -126,12 +126,12 @@ test.describe('o título de cada item da lateral', () => {
     await percorrer(page, ITENS_DO_PROFESSOR, hasTouch)
   })
 
-  test('coordenação: os sete itens mostram o título, e a aba diz a tela ("Governança · Turmma" e os demais)', async ({ page, hasTouch }) => {
+  test('coordenação: os quatro lugares mostram o título, e a aba diz a tela ("Painel · Turmma" e os demais)', async ({ page, hasTouch }) => {
     const coordenadora = await criarEquipeComSenha('coordenador')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarGovernanca(page)
-    await expect(page).toHaveTitle('Governança · Turmma')
+    await esperarPainel(page)
+    await expect(page).toHaveTitle('Painel · Turmma')
     await percorrer(page, ITENS_DA_COORDENACAO, hasTouch)
   })
 

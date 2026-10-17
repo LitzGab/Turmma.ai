@@ -1,0 +1,84 @@
+import { createContext, Suspense, useCallback, useContext, useRef, type ReactNode } from 'react'
+import { useLocation } from 'wouter'
+import { Abas, type Aba } from '../../componentes/Abas'
+import { EstadoCarregando } from '../../componentes/estado'
+import { Tela } from '../../componentes/Tela'
+import { useTituloDaTela } from '../../titulo'
+
+/** Uma aba de moldura: o que o `Abas` pede, mais o endereço **de hoje** dela, relativo à área. */
+export interface AbaDaMoldura extends Aba {
+  readonly caminho: string
+}
+
+/**
+ * Quem leva o foco ao título da moldura (o `h1` "Escola" ou "Registros"). A tela de dentro perdeu a `Tela` dela, e o `h1` onde
+ * o foco cai quando o botão que abriu um diálogo saiu da tela (`Professores`) é o da moldura.
+ */
+const ContextoDoTituloDaMoldura = createContext<(() => void) | undefined>(undefined)
+
+/** O foco no título da moldura em que a tela está. Fora de uma moldura (a tela sozinha, num teste) não faz nada. */
+export function useFocarOTituloDaMoldura(): () => void {
+  return useContext(ContextoDoTituloDaMoldura) ?? semMoldura
+}
+function semMoldura(): void {
+  return undefined
+}
+
+/**
+ * Quanto a casca e a moldura gastam fora do miolo a partir de 768 px, medido a 1366 × 768: o miolo começa a 226 px do alto
+ * (a margem de cima de 20 px, a faixa do sino, o título de 64 px e as abas de 46 px, com os vãos entre eles) e a margem de baixo
+ * do `main` é de 32 px, o que dá 258 px, ou 16,1 rem. Com 17 rem sobra uma folga para um título com descrição, e o miolo ocupa o
+ * resto da janela e **só ele** rola (Tech Spec da X2, seção 9, "Altura"; RF23). Quem prova a conta é `paginaNaoRola`, em
+ * `e2e/areas.spec.ts`: a string não prova nada. `md:relative` prende o que for posicionado (os `sr-only`) dentro do miolo, para
+ * não aumentar a página por fora dele. Abaixo de 768 px a página rola, como qualquer outra.
+ */
+const O_MIOLO_QUE_ROLA = 'md:relative md:max-h-[calc(100dvh-17rem)] md:overflow-y-auto'
+
+interface Props {
+  /** O `h1` da moldura: "Escola" ou "Registros". */
+  readonly titulo: string
+  /** A aba do navegador: "Escola: turmas", "Registros: IA". */
+  readonly tituloDaAba: string
+  /** O nome da lista de abas para o leitor de tela. */
+  readonly rotuloDasAbas: string
+  readonly abas: readonly AbaDaMoldura[]
+  /** O `id` da aba do endereço. */
+  readonly ativa: string
+  readonly children: ReactNode
+}
+
+/**
+ * A moldura de um lugar que tem abas (D80; Tech Spec da X2, seção 9, "Molduras"): o `Tela` com o título do lugar, as `Abas` com
+ * a do endereço e, dentro, a tela que já existia, sem a `Tela` dela. **A aba é o endereço**: trocar de aba navega para o
+ * endereço de hoje daquela tela, e o `rotas.tsx` é quem diz qual aba é a de cada endereço. A moldura não lê consulta nenhuma e
+ * não sabe o que há dentro.
+ *
+ * - **Um `h1` só**, o da moldura, que recebe o foco (`tabIndex={-1}`) quando a tela de dentro pede (`useFocarOTituloDaMoldura`).
+ * - **A tela de dentro é `lazy()`**: o `Suspense` é daqui, para a moldura e as abas ficarem na tela enquanto o pedaço chega.
+ * - **Só o miolo rola** a partir de 768 px, numa região com nome e `tabIndex={0}` (o painel da aba).
+ */
+export function Moldura({ titulo, tituloDaAba, rotuloDasAbas, abas, ativa, children }: Props) {
+  useTituloDaTela(tituloDaAba)
+  const [, navegar] = useLocation()
+  const tituloRef = useRef<HTMLHeadingElement>(null)
+  const focarOTitulo = useCallback(() => tituloRef.current?.focus(), [])
+
+  return (
+    <ContextoDoTituloDaMoldura value={focarOTitulo}>
+      <Tela titulo={titulo} refDoTitulo={tituloRef}>
+        <Abas
+          rotulo={rotuloDasAbas}
+          abas={abas}
+          ativa={ativa}
+          aoMudar={(id) => {
+            const aba = abas.find((candidata) => candidata.id === id)
+            if (aba !== undefined) navegar(aba.caminho)
+          }}
+          classeDoPainel={O_MIOLO_QUE_ROLA}
+        >
+          <Suspense key={ativa} fallback={<EstadoCarregando rotulo="Carregando…" />}>{children}</Suspense>
+        </Abas>
+      </Tela>
+    </ContextoDoTituloDaMoldura>
+  )
+}

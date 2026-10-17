@@ -1,5 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
-import { entrarComoCoordenacaoNaMesmaAba, esperarGovernanca, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './casca.ts'
+import { entrarComoCoordenacaoNaMesmaAba, esperarPainel, PRAZO_DA_ENTRADA_MS } from './casca.ts'
+import { irPelaCoordenacao } from './coordenacao.ts'
 import { expect } from './perfis.ts'
 import type { EquipeDeTeste } from './sessao.ts'
 
@@ -76,8 +77,8 @@ export async function doisCliquesNoMesmoInstante(botao: Locator): Promise<void> 
 export async function entrarNosPedidos(page: Page, hasTouch: boolean, pessoa: EquipeDeTeste): Promise<void> {
   await page.goto('/entrar')
   await entrarComoCoordenacaoNaMesmaAba(page, pessoa, hasTouch)
-  await esperarGovernanca(page)
-  await irPelaNavegacao(page, 'Privacidade', hasTouch)
+  await esperarPainel(page)
+  await irPelaCoordenacao(page, 'Pedidos', hasTouch)
   await expect(page).toHaveURL(ENDERECO_DA_ABA, {
     timeout: PRAZO_DA_ENTRADA_MS,
   })

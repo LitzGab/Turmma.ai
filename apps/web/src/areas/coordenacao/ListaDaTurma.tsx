@@ -55,7 +55,7 @@ function textoDosAprovados(aprovados: number, mostrados: number, haMais: boolean
 }
 
 /** A turma que a API não acha para a coordenação: saiu do ano em curso, ou foi excluída por outra pessoa. */
-const TEXTO_DA_TURMA_FORA_DO_ANO = 'Esta turma não está no ano letivo em curso: ela pode ter sido excluída. Volte para Estrutura e abra a turma de novo.'
+const TEXTO_DA_TURMA_FORA_DO_ANO = 'Esta turma não está no ano letivo em curso: ela pode ter sido excluída. Volte para Escola › Turmas e abra a turma de novo.'
 
 const EXEMPLO_DA_LISTA = 'nome; matrícula\nAna Souza; 2026001\nBruno Lima; 2026002'
 
@@ -98,7 +98,7 @@ interface PreviaDoTexto {
  *   abrir a turma e depois de cada escrita, a decisão de um pedido inclusive, e não ao voltar para a aba.
  * - **A turma que sai com a tela aberta** (a leitura dos pedidos deixa de achá-la) tira a página, com o foco no aviso.
  */
-export function ListaDaTurma({ turmaId }: { turmaId: string }) {
+export default function ListaDaTurma({ turmaId }: { turmaId: string }) {
   const turma = useQuery(consultaTurmaAberta(turmaId))
   // A leitura dos pedidos deixou de achar a turma: a página diz isso, como quando é a leitura da turma que não a acha.
   const [perdida, definirPerdida] = useState(false)
@@ -109,9 +109,9 @@ export function ListaDaTurma({ turmaId }: { turmaId: string }) {
 
   const voltar = (
     // Relativo à área: o `Route` aninhado em `/coordenacao` resolve o `to` a partir da base dela.
-    <Link to={ROTAS_DA_COORDENACAO.estrutura} className="inline-flex min-h-11 items-center gap-2 self-start text-caramelo-texto underline">
+    <Link to={ROTAS_DA_COORDENACAO.estrutura} aria-label="Voltar para Escola" className="inline-flex min-h-11 items-center gap-2 self-start text-caramelo-texto underline">
       <ArrowLeft aria-hidden="true" size={18} />
-      Voltar para Estrutura
+      Escola
     </Link>
   )
 
@@ -401,7 +401,7 @@ function SubirLista({ turmaId, aoGravar, recarregarNomes }: { turmaId: string; a
     ? textoDaFalha(pedirPrevia.mutacao.error, {
         [CodigoDeErro.ENTRADA_INVALIDA]:
           'Não deu para ler a lista. Confira se cada linha tem o nome e a matrícula, se há ao menos um aluno e se ela não passa de 200 nomes.',
-        [CodigoDeErro.NAO_ENCONTRADO]: 'Esta turma não está mais no ano letivo em curso. Volte para Estrutura.',
+        [CodigoDeErro.NAO_ENCONTRADO]: 'Esta turma não está mais no ano letivo em curso. Volte para Escola › Turmas.',
       })
     : undefined
   const falhaDaGravacao =

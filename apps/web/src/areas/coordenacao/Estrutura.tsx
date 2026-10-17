@@ -49,9 +49,7 @@ import { AlertaDaFalha, Anuncio, ConfirmacaoDePerigo, DialogoDeFormulario, useEn
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { CLASSES_DO_SELETOR } from '../../componentes/seletor'
 import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
-import { Tela } from '../../componentes/Tela'
 import { formatarData } from '../../formatar'
-import { useTituloDaTela } from '../../titulo'
 import { Alocacao } from './Alocacao'
 import { passosDoRoteiro, type PassoDoRoteiro } from './o-que-falta-da-escola'
 import { ordenarPeloNome, ordenarSeries, ordenarTurmas } from './ordem'
@@ -140,8 +138,7 @@ function Secao({ titulo, tituloRef, anuncio, acao, children }: PropsDaSecao) {
  * O que a API decide, a tela não refaz: "5º ano" nem aparece na escolha de série, mas quem recusa é a API (E1). As
  * escritas passam por diálogos, um por vez; cada abertura nasce vazia.
  */
-export function Estrutura() {
-  useTituloDaTela('Estrutura')
+export default function Estrutura() {
   const cliente = useQueryClient()
   const anos = useQuery(consultaAnosLetivos)
   const anoEmCurso = anos.data?.itens.find((ano) => ano.situacao === 'em_curso')
@@ -171,19 +168,9 @@ export function Estrutura() {
     dialogo.abrir(tipo, item)
   }
 
-  if (anos.isPending)
-    return (
-      <Tela titulo="Estrutura">
-        <EstadoCarregando rotulo="Carregando a estrutura da escola…" />
-      </Tela>
-    )
+  if (anos.isPending) return <EstadoCarregando rotulo="Carregando a estrutura da escola…" />
 
-  if (anos.isError)
-    return (
-      <Tela titulo="Estrutura">
-        <EstadoErro erro={anos.error} tentando={anos.isFetching} aoTentarDeNovo={() => void anos.refetch({ cancelRefetch: false })} />
-      </Tela>
-    )
+  if (anos.isError) return <EstadoErro erro={anos.error} tentando={anos.isFetching} aoTentarDeNovo={() => void anos.refetch({ cancelRefetch: false })} />
 
   const alocaveis = professores.data?.itens.filter((professor) => (ESTADOS_DO_PROFESSOR_ALOCAVEIS as readonly EstadoDoProfessor[]).includes(professor.estado))
   // Turmas e vínculos são do ano em curso: sem ele não há leitura a esperar, e o passo falta de fato.
@@ -201,7 +188,6 @@ export function Estrutura() {
   )
 
   return (
-    <Tela titulo="Estrutura">
       <section className="flex min-w-0 flex-col gap-8">
         {anos.data.itens.length === 0 ? (
           <>
@@ -466,7 +452,6 @@ export function Estrutura() {
           />
         )}
       </section>
-    </Tela>
   )
 }
 

@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test'
-import { abrirSeletorDeEscola, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarGovernanca, linhaDoSeletor, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirSeletorDeEscola, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarPainel, linhaDoSeletor, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { campoCodigo } from './__fixtures__/segundo-fator.ts'
 import { codigoDoAutenticador, convidarProfessorNoBanco, criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
@@ -47,7 +47,7 @@ test.describe('do sino à tela', () => {
     const professor = await convidarProfessorNoBanco(coordenadora.escolaId, 'vencido')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarGovernanca(page)
+    await esperarPainel(page)
 
     // O sino está em toda tela da coordenação, e conta o convite vencido.
     const sino = sinoDe(page)
@@ -79,7 +79,7 @@ test.describe('do sino à tela', () => {
     await acionar(sino, hasTouch)
     await acionar(item, hasTouch)
     await expect(page).toHaveURL(new RegExp(`/coordenacao/professores\\?professor=${professor.usuarioId}$`))
-    await expect(page.getByRole('heading', { level: 1, name: 'Professores' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByRole('heading', { level: 1, name: 'Escola' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(listaDe(page)).toHaveCount(0)
 
     // Refeito o convite, o professor deixa de estar vencido e o item sai da lista, sem recarregar a página.
@@ -101,7 +101,7 @@ test.describe('do sino à tela', () => {
     const coordenadora = await criarEquipeComSenha('coordenador')
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarGovernanca(page)
+    await esperarPainel(page)
 
     const sino = sinoDe(page)
     await expect(sino).toHaveAccessibleName('Esperando você, nada', { timeout: PRAZO_DA_ENTRADA_MS })
@@ -124,7 +124,7 @@ test.describe('do sino à tela', () => {
     page.on('request', (pedido) => pedidos.push(new URL(pedido.url()).pathname))
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarGovernanca(page)
+    await esperarPainel(page)
 
     const sino = sinoDe(page)
     await expect(sino).toHaveAccessibleName('Esperando você, nada', { timeout: PRAZO_DA_ENTRADA_MS })
@@ -146,14 +146,14 @@ test.describe('recomeço: a pessoa seguinte na mesma aba', () => {
 
     await page.goto('/entrar')
     await entrarComoCoordenacaoNaMesmaAba(page, primeira, hasTouch)
-    await esperarGovernanca(page)
+    await esperarPainel(page)
     await expect(sinoDe(page)).toHaveAccessibleName('Esperando você, 1', { timeout: PRAZO_DA_ENTRADA_MS })
 
     // "Sair" a um toque, e a outra pessoa entra na mesma aba: o sino dela não traz o item da primeira, nem enquanto carrega.
     await acionar(page.getByRole('button', { name: 'Sair' }).first(), hasTouch)
     await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
-    await esperarGovernanca(page)
+    await esperarPainel(page)
     await expect(sinoDe(page)).toHaveAccessibleName('Esperando você, nada', { timeout: PRAZO_DA_ENTRADA_MS })
     await acionar(sinoDe(page), hasTouch)
     await expect(listaDe(page).getByText('Tudo em dia')).toBeVisible()
@@ -185,7 +185,7 @@ test.describe('recomeço: a troca de escola pelo seletor', () => {
     await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await campoCodigo(page).fill(codigoDoAutenticador(segredo))
     await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-    await esperarGovernanca(page)
+    await esperarPainel(page)
     await expect(sinoDe(page)).toHaveAccessibleName('Esperando você, 1', { timeout: PRAZO_DA_ENTRADA_MS })
 
     // Daqui em diante, o sino registra cada nome que teve, na ordem.
@@ -204,7 +204,7 @@ test.describe('recomeço: a troca de escola pelo seletor', () => {
     await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await campoCodigo(page).fill(codigoDoAutenticador(segredo, 30))
     await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-    await esperarGovernanca(page)
+    await esperarPainel(page)
     await expect(page.locator('body')).toContainText(emB.escolaNome)
 
     await expect(sinoDe(page)).toHaveAccessibleName('Esperando você, nada', { timeout: PRAZO_DA_ENTRADA_MS })
