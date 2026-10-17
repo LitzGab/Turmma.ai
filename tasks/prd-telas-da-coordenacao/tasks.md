@@ -53,7 +53,7 @@ e a operação) e 10.0 a 13.0 (Registros).
   - [ ] 5.7 Sem ano letivo e sem ano em curso: os vazios de hoje
   - [ ] 5.8 Testes: o e2e `estrutura` sem perder asserção; a 360 px; professor com duas disciplinas na mesma turma
 
-- [ ] **6.0 — Escola › Professores em tabela, com o painel do professor**
+- [x] **6.0 — Escola › Professores em tabela, com o painel do professor**
   - [ ] 6.1 `professores-da-escola.ts` (puro): por professor, as turmas e as disciplinas
   - [ ] 6.2 A tabela, sem e-mail, sem busca e sem ordem por uso
   - [ ] 6.3 A linha abre o painel do professor, só com as ações que o estado permite

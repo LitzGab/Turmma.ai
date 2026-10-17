@@ -1,19 +1,25 @@
 import type { ProfessorDaEscola } from '@educa/shared'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useSearch } from 'wouter'
+import { consultaAnosLetivos, consultaVinculos } from '../../api/estrutura'
 import { consultaProfessores, mutacaoDoCadastroDeProfessor, mutacaoDoRefazerConviteDoProfessor, revogarConviteDoProfessor } from '../../api/professores'
 import { aoTrocarDeSessao } from '../../api/sessao'
+import { PARAMETRO_DO_PROFESSOR } from '../../caminhos'
+import { Aviso } from '../../componentes/Aviso'
 import { Botao } from '../../componentes/Botao'
-import { CLASSES_DO_BOTAO_PERIGO, CLASSES_DO_BOTAO_SECUNDARIO } from '../../componentes/botao-secundario'
 import { Dialogo } from '../../componentes/Dialogo'
 import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
 import { DialogoDeConviteNovo, DialogoDeConviteRefeito } from '../../componentes/DialogoDoConvite'
-import { Anuncio, ConfirmacaoDePerigo } from '../../componentes/dialogos'
+import { ConfirmacaoDePerigo } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
+import { Estado } from '../../componentes/SeloDeEstado'
+import { Tabela, type ColunaDaTabela } from '../../componentes/Tabela'
 import {
-  acoesDoConviteDeProfessor,
   falhaDoCadastroDeProfessor,
   falhaDoRefazerConviteDeProfessor,
+  FAMILIA_DO_ESTADO_DO_PROFESSOR,
   pedidoDeProfessor,
   temHomonimo,
   TEXTO_DA_VALIDADE_DO_CONVITE,
@@ -22,9 +28,12 @@ import {
   TEXTO_DO_NOME_REPETIDO,
   TEXTOS_DO_CONVITE_QUE_MUDOU,
 } from './convite-de-professor'
-import { ordenarPeloNome } from './ordem'
+import { enderecoComParametro } from './endereco-da-tela'
+import { textoDaListaCurta } from './lista-curta'
 import { useFocarOTituloDaMoldura } from './moldura'
-import { AvisoDeListaIncompleta, Linha } from './pecas-da-lista'
+import { AvisoDeListaIncompleta } from './pecas-da-lista'
+import { PainelDoProfessor } from './PainelDoProfessor'
+import { contagemDeProfessores, professorDoEndereco, professoresDaTabela, type ProfessorDaTabela } from './professores-da-escola'
 
 /** Os diálogos da tela, um por vez. O refazer e o revogar levam o professor da linha, fotografado na abertura. */
 type TipoDeDialogo = 'cadastrar' | 'refazer' | 'revogar'
@@ -51,167 +60,239 @@ function mandeOLinkA(nome: string, email?: string) {
   )
 }
 
+/** O botão do nome do professor se estende pela linha toda (`after:inset-0`, sobre o `relative` da linha da `Tabela`), com o anel do foco por dentro dela. */
+const CLASSES_DO_BOTAO_DA_LINHA =
+  "inline-flex min-h-11 max-w-full items-center gap-1 text-left font-semibold text-tinta after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:rounded-linha focus-visible:after:outline-3 focus-visible:after:-outline-offset-3 focus-visible:after:outline-foco"
+
+function colunasDosProfessores(aoAbrir: (usuarioId: string) => void): readonly [ColunaDaTabela<ProfessorDaTabela>, ...ColunaDaTabela<ProfessorDaTabela>[]] {
+  return [
+    {
+      chave: 'nome',
+      titulo: 'Nome',
+      celula: ({ professor }) => (
+        // O nome acessível é o nome da pessoa; o "›" só diz, a quem enxerga, que a linha abre algo ao lado.
+        <button type="button" aria-haspopup="dialog" onClick={() => aoAbrir(professor.usuarioId)} className={CLASSES_DO_BOTAO_DA_LINHA}>
+          <span className="min-w-0 break-words">{professor.nome}</span>
+          <ChevronRight aria-hidden="true" size={16} strokeWidth={2.5} className="shrink-0 text-sutil" />
+        </button>
+      ),
+    },
+    { chave: 'disciplinas', titulo: 'Disciplinas', celula: ({ disciplinas }) => textoDaListaCurta(disciplinas) },
+    { chave: 'turmas', titulo: 'Turmas', celula: ({ turmas }) => textoDaListaCurta(turmas) },
+    {
+      chave: 'situacao',
+      titulo: 'Situação',
+      celula: ({ professor }) => <Estado familia={FAMILIA_DO_ESTADO_DO_PROFESSOR[professor.estado]}>{TEXTO_DO_ESTADO_DO_PROFESSOR[professor.estado]}</Estado>,
+    },
+  ]
+}
+
 /**
- * Professores (A1, 14.0; `docs/interface.md` 3 e 11.1; RF6): a coordenação cadastra o professor com o nome e o e-mail de
- * login, copia o link do convite, que aparece uma vez, e refaz ou revoga o convite em aberto. Não há envio de e-mail: o
- * link sai da escola pela mão da coordenação.
+ * Escola › Professores (A1, 14.0; X2, 6.0; `docs/interface.md` 3 e 11.1; RF6, RF13 e RF22): a coordenação cadastra o professor com o
+ * nome e o e-mail de login, copia o link do convite, que aparece uma vez, e refaz ou revoga o convite em aberto. Não há envio de
+ * e-mail: o link sai da escola pela mão da coordenação.
  *
- * Os quatro estados (W4): carregando; erro com "Tentar de novo"; vazio, "Nenhum professor ainda", com o Cadastrar; e com
- * dado, a lista pelo nome, com o estado do convite em texto e só as ações que o estado permite (as matrizes de
- * `@educa/shared`, as mesmas do servidor). A lista não traz e-mail nem diz se a conta do e-mail já existia (E11).
+ * Os professores estão numa tabela (Nome, Disciplinas, Turmas e Situação), pelo nome, e a linha inteira abre o painel dele ao lado
+ * (`?professor=<usuarioId>`), onde ficam a situação e as ações que o estado permite. "Cadastrar professor" é o único botão cheio.
+ * Sem e-mail, sem busca e sem ordem que não seja a do nome (regra 70, item 9; D64): a tabela diz o que a escola alocou, e nunca uso.
  *
- * O diálogo do convite é o de `componentes/DialogoDoConvite.tsx`, o mesmo da operação: o link vive só na mutação da
- * abertura que o pediu, sai do cache ao fechar (`gcTime: 0` e `reset()`), e fechar sem copiar pergunta antes. Quando a
- * sessão desta aba deixa de ser a mesma — venceu, ou outra pessoa entrou —, o diálogo aberto sai com o link: ele é
- * credencial do professor, e não fica na tela atrás do login por cima (regra 20, item 8).
+ * - **Quatro estados** (W4): carregando; erro com "Tentar de novo"; vazio, "Nenhum professor ainda", com o Cadastrar; e com dado, o
+ *   estado de cada convite em texto. A lista não traz e-mail nem diz se a conta do e-mail já existia (E11). As turmas e as
+ *   disciplinas vêm dos vínculos do ano em curso, lidos à parte: se não vieram, a célula diz "—" e um aviso diz por quê, e a tabela
+ *   continua em pé.
+ * - **O diálogo do convite** é o de `componentes/DialogoDoConvite.tsx`, o mesmo da operação, aberto da tela (Cadastrar) ou do painel
+ *   (refazer e revogar): o link vive só na mutação da abertura que o pediu, sai do cache ao fechar (`gcTime: 0` e `reset()`), e
+ *   fechar sem copiar pergunta antes. Quando a sessão desta aba deixa de ser a mesma — venceu, ou outra pessoa entrou —, o
+ *   diálogo aberto sai com o link: ele é credencial do professor, e não fica na tela atrás do login por cima (regra 20, item 8).
+ * - **O que abre por cima fica no endereço**, só com o id: abrir é um passo no histórico, e fechar troca o endereço, sem passo novo.
+ *   O id que a lista da escola não tem não abre nada (regra 10, item 6).
  */
 export default function Professores() {
   const cliente = useQueryClient()
+  const [caminho, navegar] = useLocation()
+  const busca = useSearch()
   const professores = useQuery(consultaProfessores)
+  // Turmas e disciplinas são dos vínculos do ano em curso: sem ele a API responde como inexistente, e a tela nem pergunta.
+  const anos = useQuery(consultaAnosLetivos)
+  const vinculos = useQuery({ ...consultaVinculos, enabled: anos.data?.itens.some((ano) => ano.situacao === 'em_curso') === true })
   const dialogo = useDialogoDaTela<TipoDeDialogo, ProfessorDaLinha>()
   const aberta = dialogo.aberta
   const fechar = dialogo.fechar
   // O professor da linha, fotografado na abertura: os diálogos de refazer e de revogar só existem com ele.
   const alvo = aberta?.alvo
-  const [anuncio, definirAnuncio] = useState('')
+  // O anúncio é de um professor só: o painel de outro não repete o que a coordenação fez com este.
+  const [anuncio, definirAnuncio] = useState<{ usuarioId: string; texto: string } | undefined>(undefined)
   const focarOTituloDaMoldura = useFocarOTituloDaMoldura()
   const tituloDaLista = useRef<HTMLHeadingElement>(null)
+  const tituloDaSituacao = useRef<HTMLHeadingElement>(null)
+
+  const dados = professores.data
+  const doPainel = dados === undefined ? undefined : professorDoEndereco(busca, dados.itens)
+  const painelAberto = doPainel !== undefined
 
   const recarregar = useCallback(() => cliente.invalidateQueries({ queryKey: consultaProfessores.queryKey }), [cliente])
   // O foco quando o botão que abriu o diálogo saiu da tela: o "Cadastrar" do vazio, ou a ação que o estado novo não tem.
   // Sem a lista na tela (a releitura caiu com ela ainda vazia), vai para o título da tela, e não para o `body`.
   const focarNaLista = useCallback(() => (tituloDaLista.current === null ? focarOTituloDaMoldura() : tituloDaLista.current.focus()), [focarOTituloDaMoldura])
+  // Os diálogos abertos do painel: o "Refazer" e o "Revogar" saem do rodapé quando o estado muda, e o foco fica no painel, e não na página inerte atrás.
+  const focarNoPainel = useCallback(() => (tituloDaSituacao.current === null ? focarNaLista() : tituloDaSituacao.current.focus()), [focarNaLista])
 
   useEffect(() => aoTrocarDeSessao(fechar), [fechar])
 
+  // O painel aberto já pelo endereço (o link do sino, ou o Voltar do histórico) não tem botão que o tenha aberto: o foco devolvido a
+  // "quem abriu" cai no `body`. Quando o painel fecha e o foco está no `body`, vai ao título da lista, e não se perde.
+  useEffect(() => {
+    const titulo = tituloDaLista.current
+    return () => {
+      if (document.activeElement === document.body) titulo?.focus()
+    }
+  }, [painelAberto])
+
   /** Abrir um diálogo apaga o anúncio da ação anterior: o que ele dizia já não é o que a pessoa está fazendo. */
   function abrir(tipo: TipoDeDialogo, professor?: ProfessorDaLinha): void {
-    definirAnuncio('')
+    definirAnuncio(undefined)
     dialogo.abrir(tipo, professor)
   }
 
-  const dados = professores.data
+  const abrirPainel = (usuarioId: string): void => navegar(enderecoComParametro(caminho, busca, PARAMETRO_DO_PROFESSOR, usuarioId))
+  const fecharPainel = (): void => navegar(enderecoComParametro(caminho, busca, PARAMETRO_DO_PROFESSOR, undefined), { replace: true })
+
   const erroDaLeitura = <EstadoErro erro={professores.error} tentando={professores.isFetching} aoTentarDeNovo={() => void professores.refetch({ cancelRefetch: false })} />
+  // Os anos ou os vínculos que não vieram: a tabela continua com o que tem, e o aviso diz por que as células de turma e disciplina estão em "—".
+  const turmasComFalha = anos.isError || vinculos.isError
+  const lerTurmasDeNovo = () => void (anos.isError ? anos : vinculos).refetch({ cancelRefetch: false })
+  const lendoTurmas = anos.isFetching || vinculos.isFetching
 
   return (
-      <section className="flex min-w-0 flex-col gap-6" aria-label="Professores">
-        {professores.isPending ? (
-          <EstadoCarregando rotulo="Carregando os professores…" />
-        ) : dados === undefined ? (
+    <section className="flex min-w-0 flex-col gap-6" aria-label="Professores">
+      {professores.isPending ? (
+        <EstadoCarregando rotulo="Carregando os professores…" />
+      ) : dados === undefined ? (
+        erroDaLeitura
+      ) : dados.itens.length === 0 ? (
+        // A releitura que cai com a lista ainda vazia (logo depois do primeiro cadastro) não afirma o vazio: a lista de
+        // antes já não vale, e "Nenhum professor ainda" negaria o cadastro que acabou de acontecer.
+        professores.isError ? (
           erroDaLeitura
-        ) : dados.itens.length === 0 ? (
-          // A releitura que cai com a lista ainda vazia (logo depois do primeiro cadastro) não afirma o vazio: a lista de
-          // antes já não vale, e "Nenhum professor ainda" negaria o cadastro que acabou de acontecer.
-          professores.isError ? (
-            erroDaLeitura
-          ) : (
-            <EstadoVazio
-              titulo="Nenhum professor ainda"
-              descricao="Cadastre cada professor com o nome e o e-mail dele. O link do convite aparece uma vez, para você copiar e mandar; a pessoa abre o link e cria a senha."
-              acao={{ rotulo: 'Cadastrar professor', aoAcionar: () => abrir('cadastrar') }}
-            />
-          )
         ) : (
-          <>
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <EstadoVazio
+            titulo="Nenhum professor ainda"
+            descricao="Cadastre cada professor com o nome e o e-mail dele. O link do convite aparece uma vez, para você copiar e mandar; a pessoa abre o link e cria a senha."
+            acao={{ rotulo: 'Cadastrar professor', aoAcionar: () => abrir('cadastrar') }}
+          />
+        )
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-baseline gap-x-3">
               <h2 ref={tituloDaLista} tabIndex={-1} className="text-lg font-semibold text-tinta">
                 Professores da escola
               </h2>
-              <Botao onClick={() => abrir('cadastrar')}>Cadastrar professor</Botao>
+              <p className="t-apoio text-sutil">{contagemDeProfessores(dados.itens.length)}</p>
             </div>
-            <Anuncio texto={anuncio} />
-            {professores.isError && erroDaLeitura}
-            <ul className="flex flex-col gap-3" aria-label="Professores da escola">
-              {ordenarPeloNome(dados.itens).map((professor) => (
-                <Linha key={professor.usuarioId} titulo={professor.nome} detalhe={TEXTO_DO_ESTADO_DO_PROFESSOR[professor.estado]}>
-                  {acoesDoConviteDeProfessor(professor.estado).map((acao) =>
-                    acao === 'refazer' ? (
-                      <button key={acao} type="button" onClick={() => abrir('refazer', professor)} className={CLASSES_DO_BOTAO_SECUNDARIO}>
-                        Refazer<span className="sr-only"> o convite de {professor.nome}</span>
-                      </button>
-                    ) : (
-                      <button key={acao} type="button" onClick={() => abrir('revogar', professor)} className={CLASSES_DO_BOTAO_PERIGO}>
-                        Revogar<span className="sr-only"> o convite de {professor.nome}</span>
-                      </button>
-                    ),
-                  )}
-                </Linha>
-              ))}
-            </ul>
-            <AvisoDeListaIncompleta completa={dados.completa} />
-          </>
-        )}
+            <Botao onClick={() => abrir('cadastrar')}>Cadastrar professor</Botao>
+          </div>
+          {professores.isError && erroDaLeitura}
+          {turmasComFalha && (
+            <Aviso
+              tom="atencao"
+              acao={
+                <Botao variante="secundario" disabled={lendoTurmas} onClick={lerTurmasDeNovo}>
+                  {lendoTurmas ? 'Tentando de novo…' : 'Tentar de novo'}
+                </Botao>
+              }
+            >
+              As turmas e as disciplinas dos professores não carregaram
+            </Aviso>
+          )}
+          <Tabela rotulo="Professores da escola" colunas={colunasDosProfessores(abrirPainel)} linhas={professoresDaTabela(dados.itens, vinculos.data)} chaveDaLinha={(linha) => linha.professor.usuarioId} />
+          <AvisoDeListaIncompleta completa={dados.completa} />
+        </>
+      )}
 
-        {/* O cadastro e o refazer não fecham sozinhos: a resposta deles só preenche o diálogo que a pediu. */}
-        {aberta?.tipo === 'cadastrar' && (
-          <DialogoDeConviteNovo
-            key={aberta.numero}
-            Moldura={Dialogo}
-            titulo="Cadastrar professor"
-            apresentacao="O nome e o e-mail com que a pessoa vai entrar. Você copia o link do convite e manda a ela, que cria a senha ao abrir."
-            rotulos={{ nome: 'Nome do professor', email: 'E-mail do professor' }}
-            validar={pedidoDeProfessor}
-            tituloDaRevisao="Confira antes de cadastrar"
-            resumo={(pedido) => [
-              { rotulo: 'Nome do professor', valor: pedido.nome },
-              { rotulo: 'E-mail', valor: pedido.email },
-            ]}
-            avisos={[TEXTO_DA_VALIDADE_DO_CONVITE, TEXTO_DO_LINK_UMA_VEZ]}
-            avisosDoPedido={(pedido) => (temHomonimo(dados?.itens ?? [], pedido.nome) ? [TEXTO_DO_NOME_REPETIDO] : [])}
-            acao={{ confirmar: 'Cadastrar e gerar o link', confirmando: 'Cadastrando…', anuncio: 'Cadastrando o professor…' }}
-            // A lista muda, dê certo ou não. As opções são as de `api/professores.ts`, sem nada por cima: é lá que o
-            // `gcTime: 0` tira o token do cache.
-            mutacao={mutacaoDoCadastroDeProfessor(recarregar)}
-            falha={falhaDoCadastroDeProfessor}
-            mandePara={(pedido) => mandeOLinkA(pedido.nome, pedido.email)}
-            link={TEXTOS_DO_LINK}
-            aoFechar={fechar}
-            focoDeReserva={focarNaLista}
-          />
-        )}
-        {aberta?.tipo === 'refazer' && alvo !== undefined && (
-          <DialogoDeConviteRefeito
-            key={aberta.numero}
-            Moldura={Dialogo}
-            titulo="Refazer o convite"
-            confirmacao={
-              <>
-                Um link novo para <span className="font-medium text-tinta wrap-anywhere">{alvo.nome}</span>. O link mandado antes para de valer na hora.
-              </>
-            }
-            avisos={[TEXTO_DA_VALIDADE_DO_CONVITE, TEXTO_DO_LINK_UMA_VEZ]}
-            acao={{ confirmar: 'Refazer convite', confirmando: 'Refazendo…', anuncio: 'Refazendo o convite…' }}
-            mutacao={mutacaoDoRefazerConviteDoProfessor(alvo.usuarioId, recarregar)}
-            falha={falhaDoRefazerConviteDeProfessor}
-            mandePara={mandeOLinkA(alvo.nome)}
-            link={TEXTOS_DO_LINK}
-            aoFechar={fechar}
-            focoDeReserva={focarNaLista}
-          />
-        )}
-        {aberta?.tipo === 'revogar' && alvo !== undefined && (
-          <ConfirmacaoDePerigo
-            key={aberta.numero}
-            titulo="Revogar o convite"
-            texto={
-              <>
-                O convite de <span className="font-medium text-tinta wrap-anywhere">{alvo.nome}</span> deixa de valer na hora: o link mandado não entra mais. As
-                turmas já alocadas a essa pessoa continuam esperando. Para convidar de novo, cadastre o mesmo e-mail.
-              </>
-            }
-            rotuloDaAcao="Revogar convite"
-            rotuloEmAndamento="Revogando…"
-            acao={() => revogarConviteDoProfessor(alvo.usuarioId)}
-            aoFechar={fechar}
-            aoConcluir={() => {
-              definirAnuncio(`Convite de ${alvo.nome} revogado.`)
-              dialogo.fecharSeAinda(aberta)
-            }}
-            aoTerminar={recarregar}
-            textosDaFalha={TEXTOS_DO_CONVITE_QUE_MUDOU}
-            focoDeReserva={focarNaLista}
-          />
-        )}
-      </section>
+      {doPainel !== undefined && (
+        <PainelDoProfessor
+          key={doPainel.usuarioId}
+          professor={doPainel}
+          aoFechar={fecharPainel}
+          aoRefazer={() => abrir('refazer', doPainel)}
+          aoRevogar={() => abrir('revogar', doPainel)}
+          anuncio={anuncio?.usuarioId === doPainel.usuarioId ? anuncio.texto : ''}
+          tituloDaSituacao={tituloDaSituacao}
+          focoDeReserva={focarNaLista}
+        />
+      )}
+
+      {/* O cadastro e o refazer não fecham sozinhos: a resposta deles só preenche o diálogo que a pediu. */}
+      {aberta?.tipo === 'cadastrar' && (
+        <DialogoDeConviteNovo
+          key={aberta.numero}
+          Moldura={Dialogo}
+          titulo="Cadastrar professor"
+          apresentacao="O nome e o e-mail com que a pessoa vai entrar. Você copia o link do convite e manda a ela, que cria a senha ao abrir."
+          rotulos={{ nome: 'Nome do professor', email: 'E-mail do professor' }}
+          validar={pedidoDeProfessor}
+          tituloDaRevisao="Confira antes de cadastrar"
+          resumo={(pedido) => [
+            { rotulo: 'Nome do professor', valor: pedido.nome },
+            { rotulo: 'E-mail', valor: pedido.email },
+          ]}
+          avisos={[TEXTO_DA_VALIDADE_DO_CONVITE, TEXTO_DO_LINK_UMA_VEZ]}
+          avisosDoPedido={(pedido) => (temHomonimo(dados?.itens ?? [], pedido.nome) ? [TEXTO_DO_NOME_REPETIDO] : [])}
+          acao={{ confirmar: 'Cadastrar e gerar o link', confirmando: 'Cadastrando…', anuncio: 'Cadastrando o professor…' }}
+          // A lista muda, dê certo ou não. As opções são as de `api/professores.ts`, sem nada por cima: é lá que o
+          // `gcTime: 0` tira o token do cache.
+          mutacao={mutacaoDoCadastroDeProfessor(recarregar)}
+          falha={falhaDoCadastroDeProfessor}
+          mandePara={(pedido) => mandeOLinkA(pedido.nome, pedido.email)}
+          link={TEXTOS_DO_LINK}
+          aoFechar={fechar}
+          focoDeReserva={focarNaLista}
+        />
+      )}
+      {aberta?.tipo === 'refazer' && alvo !== undefined && (
+        <DialogoDeConviteRefeito
+          key={aberta.numero}
+          Moldura={Dialogo}
+          titulo="Refazer o convite"
+          confirmacao={
+            <>
+              Um link novo para <span className="font-medium text-tinta wrap-anywhere">{alvo.nome}</span>. O link mandado antes para de valer na hora.
+            </>
+          }
+          avisos={[TEXTO_DA_VALIDADE_DO_CONVITE, TEXTO_DO_LINK_UMA_VEZ]}
+          acao={{ confirmar: 'Refazer convite', confirmando: 'Refazendo…', anuncio: 'Refazendo o convite…' }}
+          mutacao={mutacaoDoRefazerConviteDoProfessor(alvo.usuarioId, recarregar)}
+          falha={falhaDoRefazerConviteDeProfessor}
+          mandePara={mandeOLinkA(alvo.nome)}
+          link={TEXTOS_DO_LINK}
+          aoFechar={fechar}
+          focoDeReserva={focarNoPainel}
+        />
+      )}
+      {aberta?.tipo === 'revogar' && alvo !== undefined && (
+        <ConfirmacaoDePerigo
+          key={aberta.numero}
+          titulo="Revogar o convite"
+          texto={
+            <>
+              O convite de <span className="font-medium text-tinta wrap-anywhere">{alvo.nome}</span> deixa de valer na hora: o link mandado não entra mais. As turmas já
+              alocadas a essa pessoa continuam esperando. Para convidar de novo, cadastre o mesmo e-mail.
+            </>
+          }
+          rotuloDaAcao="Revogar convite"
+          rotuloEmAndamento="Revogando…"
+          acao={() => revogarConviteDoProfessor(alvo.usuarioId)}
+          aoFechar={fechar}
+          aoConcluir={() => {
+            definirAnuncio({ usuarioId: alvo.usuarioId, texto: `Convite de ${alvo.nome} revogado.` })
+            dialogo.fecharSeAinda(aberta)
+          }}
+          aoTerminar={recarregar}
+          textosDaFalha={TEXTOS_DO_CONVITE_QUE_MUDOU}
+          focoDeReserva={focarNoPainel}
+        />
+      )}
+    </section>
   )
 }

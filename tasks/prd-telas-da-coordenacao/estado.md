@@ -1,7 +1,15 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero:** linha 1, `Implementador` (reiniciado com a `Mesa` em 17/10 ~01h25): o `RELATÓRIO` da **correção
+- **Espero (17/10 09h45, retomada depois da queda do Maestri):** o Maestri caiu por volta das 03h13 e voltou às
+  09h36 com as sessões zeradas. Linha 1, `Implementador` (reiniciado com a `Mesa`, checkout da L1): `RELATÓRIO` da
+  **tarefa 6.0**, 1ª tentativa; a 1ª rodada reprovou (`revisor-geral` e `test-engineer`, ordem em
+  `.processo/ordens/6_task-r1.md`), a ordem estava sendo aplicada na árvore, sem portão. Linha 2, `Implementador 2`
+  (reiniciado com a `Mesa 2`, checkout da L2): `RELATÓRIO` da **tarefa 13.0**, 1ª tentativa; a 1ª rodada reprovou
+  (`test-engineer`, ordem em `.processo/ordens/13_task-r1.md`), ordem em aplicação na árvore, sem portão. As duas
+  partiram às 02h12 com a observação da 9.0 e o achado da `pagina-rola`. Esteira de `77f80e6` (39005178313) a ler no
+  próximo encontro; a de `80a4bf8` deu verde.
+- **Histórico desta seção (já encontrado):** linha 1, o `RELATÓRIO` da **correção
   `2026-10-17-pagina-rola-depois-da-12`**: `e2e/areas.spec.ts:316` (W2, chromebook) falha isolado e sempre, "a página
   inteira rola a partir de 768 px: só o miolo deveria"; verde em `f279dde` (38996200178), e entre ele e `c325472` só
   entrou a 12.0 (`18ba26f`, que pôs `relative` no tr e no li de `Tabela.tsx`), 1ª tentativa. Guardiões ditados:
@@ -100,3 +108,7 @@
   10 a 24 (Playwright da linha 1); falhou nos dois portões da 2ª ordem, passa isolado. Pelo passo 6, virou correção na
   linha 2 antes de retomar a tarefa, com o par reiniciado e os arquivos da 4.0 fora dela; ditei só `test-engineer` e
   `revisor-geral` (`privacy-guardian` se a asserção ou o logger mudar), porque o que muda é o tempo
+
+- **17/10 10h10, vigia:** o `Implementador 2` (13.0) esperava desde 09h40 num laço `while pgrep -f "tools/ci/e2e.ts|portao-local.ts"`,
+  que casava com a própria shell e nunca terminaria; ele achava que outra linha usava o `educa-teste-2`. Matei o laço e mandei
+  repetir os e2e (a L2 é o ambiente 2, a L1 o 1). Também: a queda das 03h13 foi reinício da máquina, não só do Maestri.

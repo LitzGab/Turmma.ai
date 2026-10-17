@@ -512,6 +512,18 @@ para o staging".
       prazo diz "até 29/10/2026" (`textoDoPrazo`, em `apps/web/src/areas/coordenacao/privacidade/textos-do-pedido.ts`). O
       formato curto é o do prazo em toda a Privacidade, e mudar o texto mexe nos testes e nos e2e que o afirmam. Na próxima
       tarefa que mexer em `textos-do-pedido.ts` (dono: Joaquim)
+- [ ] **(X2, 6.0) Três recomendações que a tarefa deixou para depois:** (a) o selo da situação na tabela de Professores diz a
+      frase inteira de `TEXTO_DO_ESTADO_DO_PROFESSOR`; selos curtos ("Ativo", "Convite em aberto", "Convite vencido"), com
+      a frase no painel, mudam o texto de tela e o que o e2e confere, e a 6.2 manda esse texto na tabela (o Arquiteto decide
+      com o mockup 3.6); (b) a barra de abas de `Estrutura.tsx` a 360 px derruba "Material" para a segunda linha; (c) o
+      clique duplo no nome da linha pode empilhar dois passos iguais no histórico (`abrirPainel` em `Professores.tsx`),
+      risco baixo, cobertura extra; (d) no caso dos homônimos de `Professores.test.tsx` o id sai de
+      `localizacao.history?.at(-1) ?? ''`, e com o histórico vazio o teste falha sem dizer por quê: uma asserção de que o
+      endereço contém `professor=` antes de ler o id (na próxima tarefa que tocar o arquivo, a 7.0); (e)
+      `e2e/lista-da-turma.spec.ts:646` devia conferir que o painel daquele professor abre antes do `goBack`, já que o
+      link da turma passou a levar ao painel (spec da 9.0); (f) `e2e/professores.spec.ts:1108`: o `toHaveCount(0)` logo
+      depois do `goBack` pode passar antes de um painel reabrir, e uma espera curta pelo título da lista deixaria a
+      intenção clara (dono: Joaquim)
 - [ ] **(F3, validação, m7) `IA_LATENCIA_FALSA_MS` obrigatória sem aviso no `README.md`:** `infra/compose.yml:211` exige a
       variável, e quem sobe o compose pela primeira vez não é avisado. Uma linha no `README.md` (dono: Joaquim)
 - [ ] **(F3, validação, m8) A vitrine não semeia nada da Privacidade:** `tools/vitrine/escola.ts` monta a escola sem pedido,

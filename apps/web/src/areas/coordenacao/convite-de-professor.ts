@@ -9,12 +9,13 @@ import {
 } from '@educa/shared'
 import type { FalhaDoConvite } from '../../componentes/DialogoDoConvite'
 import { pedidoDeConvitePelo, type ValidacaoDoConvite } from '../../componentes/pedido-de-convite'
+import type { FamiliaDeEstado } from '../../componentes/SeloDeEstado'
 import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
 import { TEXTO_DO_CONVITE_QUE_MUDOU, TEXTO_DO_CONVITE_QUE_NAO_VALE } from '../../componentes/textos-do-convite'
 
 /**
  * O convite do professor na tela Professores (A1, 14.0; RF6): o que a lista diz de cada estado, as ações que cada estado
- * oferece, o pedido do cadastro e o texto de cada falha. Sem React aqui, para a regra ter teste de unidade.
+ * oferece no painel dele (X2, 6.0), o pedido do cadastro e o texto de cada falha. Sem React aqui, para a regra ter teste de unidade.
  */
 
 /**
@@ -32,11 +33,24 @@ export const TEXTO_DO_ESTADO_DO_PROFESSOR: Readonly<Record<EstadoDoProfessor, st
   desativado: 'Desativado. Para convidar de novo, cadastre o mesmo e-mail.',
 }
 
-/** As duas ações do convite na linha do professor. Cadastrar é da tela, e não de uma linha. */
+/**
+ * A família do selo de cada estado (X2, 6.0; `docs/interface.md` 9.1): o que espera a pessoa é `pendente`, o convite vencido é `erro`, quem
+ * entrou é `ok`, e o convite revogado e o professor desativado são `info`, sem urgência. O texto do selo é o de cima: a cor nunca diz sozinha.
+ */
+export const FAMILIA_DO_ESTADO_DO_PROFESSOR: Readonly<Record<EstadoDoProfessor, FamiliaDeEstado>> = {
+  pendente: 'pendente',
+  vencido: 'erro',
+  revogado: 'info',
+  aceito: 'ok',
+  ativo: 'ok',
+  desativado: 'info',
+}
+
+/** As duas ações do convite do professor, no painel dele. Cadastrar é da tela, e não de um professor. */
 export type AcaoDoConviteDeProfessor = 'refazer' | 'revogar'
 
 /**
- * As ações que a linha do professor oferece, na ordem em que aparecem, pelas matrizes de `@educa/shared` — as mesmas
+ * As ações que o painel do professor oferece, na ordem em que aparecem, pelas matrizes de `@educa/shared` — as mesmas
  * pelas quais o servidor decide. Quem recusa é o servidor; a tela só não oferece o que ele recusaria.
  */
 export function acoesDoConviteDeProfessor(estado: EstadoDoProfessor): readonly AcaoDoConviteDeProfessor[] {
