@@ -8,13 +8,15 @@
   - linha 1: o `RELATÓRIO` do `Implementador`, correção **C3** `2026-10-17-painel-pelo-endereco-cobre-o-aviso`
     (partida ~19h), 1ª tentativa. A C1+C2 e o conflito do `TODO.md` se encontraram em `97506c7` (spec em `732cd2b`).
     Guardiões: `frontend-reviewer`;
-  - linha 2: o `RELATÓRIO` do `Implementador 2`, correção `2026-10-17-agentes-carregando-estoura-o-prazo`, 1ª tentativa:
-    `e2e/agentes.spec.ts:164` [celular] 30,2 s, vermelho em 39066733762, 39066820938 e 39066847388. Guardiões:
-    `frontend-reviewer`.
+  - linha 2: o `RELATÓRIO` do `Implementador 2`, correção `2026-10-17-agentes-tres-funcoes-perto-do-prazo` (partida
+    ~19h15), 1ª tentativa: o achado à parte da correção anterior, `e2e/agentes.spec.ts:186` ("três funções no
+    Assistente…") a 25,5 s no celular, único caso do arquivo sem `test.slow()`; ainda não caiu, corrijo antes de cair no
+    fechamento. Guardiões: `frontend-reviewer`.
 - **Devo ainda:**
-  - a esteira: em ~19h a última lida foi VERMELHA em `f01ecbd` (39066847388, e2e 4/6: o `agentes:164`, cuja correção
-    está na linha 2); `732cd2b` rodava. Ler de novo no próximo encontro;
-  - C4 e o Maior já corrigidos (`ed03046`), C1+C2 em `c2e3398`; com a C3 e o `agentes:164` encontrados: a
+  - a esteira: em ~19h10 a última lida foi VERMELHA em `b022543` (39068217314, e2e 4/6: o `agentes:164`, já corrigido em
+    `4a3835f`, encontro em `c85c5c8`, cuja esteira 39073976956 está na fila). Ler de novo no próximo encontro;
+  - C4 e o Maior já corrigidos (`ed03046`), C1+C2 em `c2e3398`, o `agentes:164` em `4a3835f`; com a C3 e o `agentes:186`
+    encontrados: a
     revalidação (o `Validador` reiniciado, rodada 2 no topo do `validacao.md`, só esses pontos e a esteira);
   - no fechamento, levar ao `TODO.md`: as 2 recomendações do `frontend-reviewer` da correção
     `troca-de-escola-sem-ir-para-a-entrada` (título do incidente truncado a 360 px no cartão do Painel; texto de incidente
@@ -27,7 +29,7 @@
     em `1477850`): não retomar sem a palavra dele.
 - **Maestri:** depois do reinício da máquina, o `maestri` não está no PATH do terminal do Orquestrador: usar
   `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
-- **Base:** `spec/telas-da-coordenacao` em `8642275`, com a `develop` de `2029703` juntada.
+- **Base:** `spec/telas-da-coordenacao` em `c85c5c8`, com a `develop` de `2029703` juntada.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -59,6 +61,7 @@
 | correção w2-carregando-estoura-o-prazo | `fb78e67` | Sonnet 5.5 | 1 | linha 1, ~17h01–17h12; vermelho da esteira de `91d4722` em `e2e/areas.spec.ts:316` (chromebook): MFA e onze telas esperando o "Carregando" real (0,8–1,3 s cada) passavam dos 30 s; só `test.slow()`; vermelho 4/4 a 22 s antes, 4/4 verde depois, 20/20 a 24,7–27,4 s; `frontend-reviewer` e `test-engineer` aprovaram na r1; encontro em `3246cdc` |
 | correção troca-de-escola-sem-ir-para-a-entrada | `a59b3dd` | Sonnet 5.5 | 2 | linha 2, ~17h01–17h40; vermelho da esteira de `91d4722` em `e2e/painel-da-coordenacao.spec.ts:187` (chromebook): o POST /mfa/ativar chegou 249 ms depois da virada do passo, 401; defeito do teste (código do passo anterior), mesmo defeito no `sino-da-coordenacao:188`; teste de unidade com relógio falso vermelho antes, verde depois; 40/40 verdes; 2 mutações vermelhas; `frontend-reviewer`, `privacy-guardian` e `test-engineer` aprovaram (o `test-engineer` na r1 e na r2); 2 recomendações sem aplicar |
 | correção vazio-durante-a-leitura | `ed03046` | Sonnet 5.5 | 2 | linha 2, ~17h47–18h04; C4 e o Maior da validação rodada 1: carregando e erro conferiam a ausência da tabela, não do texto do vazio; `interface.md` §3 no estado de antes da X2; sem defeito de produção, prova por 21 mutações vermelhas; `frontend-reviewer` aprovou na r1, `revisor-geral` e `test-engineer` na r2; 2 linhas novas no `TODO.md` (ramo isError de Professores; título truncado de `Linha.tsx`) |
+| correção agentes-carregando-estoura-o-prazo | `4a3835f` | Sonnet 5.5 | 1 | linha 2, ~18h39–19h10; vermelho da esteira em `e2e/agentes.spec.ts:164` [celular] 30,2 s (39066733762, 39066820938, 39066847388, 39068217314): entrar 14 s + 5 s deliberados de `paginaNaoRola` + carregar passavam dos 30 s; só `test.slow()`; vermelho 4/4 a 22 s antes, 4/4 verde depois, 20/20 no relógio normal; `frontend-reviewer` e `test-engineer` aprovaram na r1 (a Mesa pediu 3 ajustes de texto na r1); achado à parte: `agentes:186` a 25,5 s virou correção própria; encontro em `c85c5c8` |
 
 ## Esperando o Joaquim
 ## O que falhou
@@ -124,3 +127,4 @@
   repetir os e2e (a L2 é o ambiente 2, a L1 o 1). Também: a queda das 03h13 foi reinício da máquina, não só do Maestri.
 - **17/10 10h30:** com a correção do `estrutura:765` já em curso na linha 1, parti a 7.0 na linha 2, como o quadro pediu, em vez de esperar o encontro da correção (o passo 6 pede a correção antes da partida, e ela já partiu). A 7.0 não toca a lista de nomes da 5.0.
 - **17/10 10h37:** o commit da 13.0 (`a81d2e0`) não marcou a tarefa no `tasks.md`, e o quadro a dava sem linha. Revisões dela aprovadas na r2 e encontro feito em `7bfd99e`: marquei a 13.0 e as subtarefas num commit de documento meu, em vez de reabrir a linha 2, que está na 7.0.
+- **17/10 19h15:** o achado à parte do `Implementador 2` (`agentes:186`, 25,5 s no celular, sem `test.slow()`) virou a correção `2026-10-17-agentes-tres-funcoes-perto-do-prazo` na linha 2, ociosa, em paralelo com a C3 da linha 1, que não toca o mesmo arquivo. Mais barato que um quinto vermelho do mesmo tipo derrubando a esteira do fechamento depois da revalidação.
