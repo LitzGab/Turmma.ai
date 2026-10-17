@@ -290,6 +290,19 @@ describe('os quatro estados da tela', () => {
     expect(item.className).toContain('relative')
   })
 
+  it.each([1366, 360])('o link da linha é um alvo de toque de 44 px, na tabela e na lista de 360 px (%i px)', async (largura) => {
+    // O jsdom não mede altura: as classes são a aproximação, e a medida é a do W12 (`estrutura.spec.ts`). Sem `inline-flex` o `min-h-11` não vale num `<a>` inline.
+    janelaDe(largura)
+    instalar(redeFalsa())
+    await montarEEsperar()
+    const classes = (await turmas().findByRole('link', { name: 'Lista de nomes da turma 7ºA' })).className.split(/\s+/)
+    expect(classes).toContain('inline-flex')
+    expect(classes).toContain('min-h-11')
+    expect(classes).toContain('items-center')
+    // Em `inline-flex` o nome comprido e sem espaço não quebra sozinho: sem isto o cartão de 360 px estoura (o W12 mediu 13 px).
+    expect(classes).toContain('wrap-anywhere')
+  })
+
   it('"Nova turma" é o único botão cheio da aba, e a alocação já não mora nela: sem a seção e sem o "Alocar" (ela é o "Acrescentar turma" do painel do professor, 7.0)', async () => {
     instalar(redeFalsa())
     await montarEEsperar()

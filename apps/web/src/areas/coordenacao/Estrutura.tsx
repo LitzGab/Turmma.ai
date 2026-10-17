@@ -82,7 +82,7 @@ type TipoDeDialogo = TipoDeDialogoDoPainel | 'turma' | 'renomear_turma' | 'exclu
  * anel do foco do teclado é desenhado por dentro dela, e não só em volta do nome.
  */
 const CLASSES_DO_LINK_DA_LINHA =
-  "font-semibold text-tinta after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:rounded-linha focus-visible:after:outline-3 focus-visible:after:-outline-offset-3 focus-visible:after:outline-foco"
+  "inline-flex min-h-11 max-w-full min-w-0 items-center font-semibold wrap-anywhere text-tinta after:absolute after:inset-0 after:content-[''] hover:underline focus-visible:outline-none focus-visible:after:rounded-linha focus-visible:after:outline-3 focus-visible:after:-outline-offset-3 focus-visible:after:outline-foco"
 
 const ITENS_DO_MENU_DA_TURMA = [
   { id: 'renomear', rotulo: 'Renomear' },
