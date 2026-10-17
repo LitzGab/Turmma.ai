@@ -8,9 +8,7 @@
   - linha 1: o `RELATÓRIO` do `Implementador`, correção `2026-10-17-painel-e-pedido-rolam-a-pagina` (C1 e C2: o Painel
     com a faixa de incidente e o detalhe do pedido rolam a página a 1366 × 768), 1ª tentativa. Guardiões ditados:
     `frontend-reviewer`;
-  - linha 2: o `RELATÓRIO` do `Implementador 2`, correção `2026-10-17-vazio-durante-a-leitura` (C4: as asserções do vazio
-    no carregando e no erro de seis telas e do consumo do Painel; e o Maior: `docs/interface.md` §3 e a tabela "O que cada
-    papel vê"), 1ª tentativa. Guardiões ditados: `frontend-reviewer`.
+  - linha 2: ociosa. A correção `2026-10-17-vazio-durante-a-leitura` (C4 e o Maior) se encontrou em `ed03046` (17/10 ~21h04).
 - **Devo ainda:**
   - a correção de **C3** (o painel lateral aberto pelo endereço fica por cima do aviso de incidente; e2e que entra com
     incidente pendente direto num endereço com painel), na **linha 1, depois do encontro da correção dela** (as duas
@@ -18,7 +16,7 @@
   - a esteira: `41600a2` (39064583848) deu vermelho no `areas:316` (corrigido pela `w2-carregando`, em `3246cdc`) e no
     **`agentes.spec.ts:164` (celular, 30 s)**, que não tinha caído antes. Ler a de `3246cdc` (39066733762), `6f86343`
     (39066820938) e `f01ecbd` (39066847388): se o `agentes:164` cair de novo, é correção (com `test.slow()` só se o
-    traço mostrar leitura lenta e não trava);
+    traço mostrar leitura lenta e não trava). Às 21h05 as três ainda rodavam, e a de `ed03046` (39069356834) na fila;
   - no fechamento, levar ao `TODO.md`: as 2 recomendações do `frontend-reviewer` da correção
     `troca-de-escola-sem-ir-para-a-entrada` (título do incidente truncado a 360 px no cartão do Painel; texto de incidente
     da vitrine pouco realista); o sino da 1.0 que faz 6 leituras a cada recarga de página da coordenação; e os Menores da
@@ -30,7 +28,7 @@
     em `1477850`): não retomar sem a palavra dele.
 - **Maestri:** depois do reinício da máquina, o `maestri` não está no PATH do terminal do Orquestrador: usar
   `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
-- **Base:** `spec/telas-da-coordenacao` em `f01ecbd`, com a `develop` de `2029703` juntada.
+- **Base:** `spec/telas-da-coordenacao` em `ed03046`, com a `develop` de `2029703` juntada.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -61,6 +59,7 @@
 | correção material-processando-estoura-o-prazo | `74cee48` | Sonnet 5.5 | 1 | linha 1, ~16h23–16h57; vermelho da esteira de `5ecda3f` em `e2e/material.spec.ts:180` (chromebook): o caso somava ~31 s (preparo 21 s, troca 5,5 s, espera 4 s) contra 30 s; só `test.slow()`; vermelho 4/4 com 18 s antes, 20/20 depois; `test-engineer` e `frontend-reviewer` aprovaram na r1, e o `test-engineer` de novo na r2 (16h55); encontro em `41600a2` |
 | correção w2-carregando-estoura-o-prazo | `fb78e67` | Sonnet 5.5 | 1 | linha 1, ~17h01–17h12; vermelho da esteira de `91d4722` em `e2e/areas.spec.ts:316` (chromebook): MFA e onze telas esperando o "Carregando" real (0,8–1,3 s cada) passavam dos 30 s; só `test.slow()`; vermelho 4/4 a 22 s antes, 4/4 verde depois, 20/20 a 24,7–27,4 s; `frontend-reviewer` e `test-engineer` aprovaram na r1; encontro em `3246cdc` |
 | correção troca-de-escola-sem-ir-para-a-entrada | `a59b3dd` | Sonnet 5.5 | 2 | linha 2, ~17h01–17h40; vermelho da esteira de `91d4722` em `e2e/painel-da-coordenacao.spec.ts:187` (chromebook): o POST /mfa/ativar chegou 249 ms depois da virada do passo, 401; defeito do teste (código do passo anterior), mesmo defeito no `sino-da-coordenacao:188`; teste de unidade com relógio falso vermelho antes, verde depois; 40/40 verdes; 2 mutações vermelhas; `frontend-reviewer`, `privacy-guardian` e `test-engineer` aprovaram (o `test-engineer` na r1 e na r2); 2 recomendações sem aplicar |
+| correção vazio-durante-a-leitura | `ed03046` | Sonnet 5.5 | 2 | linha 2, ~18h20–21h04; C4 e o Maior da validação rodada 1: carregando e erro conferiam a ausência da tabela, não do texto do vazio; `interface.md` §3 no estado de antes da X2; sem defeito de produção, prova por 21 mutações vermelhas; `frontend-reviewer` aprovou na r1, `revisor-geral` e `test-engineer` na r2; 2 linhas novas no `TODO.md` (ramo isError de Professores; título truncado de `Linha.tsx`) |
 
 ## Esperando o Joaquim
 ## O que falhou
