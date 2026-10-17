@@ -3,10 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useRef } from 'react'
 import { consultaIncidentes } from '../../../api/privacidade'
 import { Botao } from '../../../componentes/Botao'
+import { Cartao } from '../../../componentes/Cartao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../../componentes/estado'
 import { Faixa } from '../../../componentes/Faixa'
 import { Estado } from '../../../componentes/SeloDeEstado'
-import { CabecalhoDeSecao } from '../../../componentes/Tela'
 import { useConfirmarIncidente } from './confirmar-o-incidente'
 import { DetalhesDoIncidente } from './DetalhesDoIncidente'
 import { TEXTO_DO_QUE_CONFIRMAR_FAZ, textoDaConfirmacao, textoDoConhecimento } from './textos-dos-incidentes'
@@ -20,46 +20,50 @@ interface PropsDoCartao {
   readonly aoConfirmar: (id: string) => Promise<boolean>
 }
 
-/** Um incidente da escola: o estado, todos os campos e, se espera a confirmação, o botão que a dá. */
+/**
+ * Um incidente da escola, num `Cartao` (X2, 13.0): o estado, todos os campos e, se espera a confirmação, o botão oficial que a
+ * dá. O cartão é uma região com o nome do aviso (`h3`), e é o título que recebe o foco quando o aviso passa a "confirmado".
+ */
 function CartaoDoIncidente({ incidente, confirmando, falha, aoConfirmar }: PropsDoCartao) {
   const titulo = useRef<HTMLHeadingElement>(null)
   const pendente = incidente.confirmadoEm === null
   const esteConfirmando = confirmando === incidente.id
   return (
-    <article className="flex min-w-0 flex-col gap-4 rounded-cartao border border-linha bg-superficie p-4" aria-labelledby={`incidente-${incidente.id}`}>
-      <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <h3 id={`incidente-${incidente.id}`} ref={titulo} tabIndex={-1} className="text-base leading-snug font-semibold break-words text-tinta">
-          Incidente conhecido em {textoDoConhecimento(incidente)}
-        </h3>
-        <Estado familia={pendente ? 'pendente' : 'ok'}>{textoDaConfirmacao(incidente)}</Estado>
-      </div>
-      <DetalhesDoIncidente incidente={incidente} />
-      {pendente && (
-        <div className="flex min-w-0 flex-col gap-3">
-          <p className="text-apoio">{TEXTO_DO_QUE_CONFIRMAR_FAZ}</p>
-          <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro empty:hidden">
-            {falha?.id === incidente.id ? falha.texto : ''}
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <Botao
-              variante="oficial"
-              disabled={confirmando !== undefined}
-              onClick={() =>
-                void aoConfirmar(incidente.id).then((confirmou) => {
-                  // O cartão continua na tela, mudado de "esperando" para "confirmado": o foco vai para o título dele, e não se perde com o botão que saiu.
-                  if (confirmou) titulo.current?.focus()
-                })
-              }
-            >
-              {esteConfirmando ? 'Confirmando…' : 'Confirmo que recebi'}
-            </Botao>
-            <span role="status" className="sr-only">
-              {esteConfirmando ? 'Confirmando…' : ''}
-            </span>
+    <Cartao
+      titulo={`Incidente conhecido em ${textoDoConhecimento(incidente)}`}
+      nivel={3}
+      refDoTitulo={titulo}
+      acao={<Estado familia={pendente ? 'pendente' : 'ok'}>{textoDaConfirmacao(incidente)}</Estado>}
+    >
+      <div className="flex min-w-0 flex-col gap-4">
+        <DetalhesDoIncidente incidente={incidente} />
+        {pendente && (
+          <div className="flex min-w-0 flex-col gap-3">
+            <p className="text-apoio">{TEXTO_DO_QUE_CONFIRMAR_FAZ}</p>
+            <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro empty:hidden">
+              {falha?.id === incidente.id ? falha.texto : ''}
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Botao
+                variante="oficial"
+                disabled={confirmando !== undefined}
+                onClick={() =>
+                  void aoConfirmar(incidente.id).then((confirmou) => {
+                    // O cartão continua na tela, mudado de "esperando" para "confirmado": o foco vai para o título dele, e não se perde com o botão que saiu.
+                    if (confirmou) titulo.current?.focus()
+                  })
+                }
+              >
+                {esteConfirmando ? 'Confirmando…' : 'Confirmo que recebi'}
+              </Botao>
+              <span role="status" className="sr-only">
+                {esteConfirmando ? 'Confirmando…' : ''}
+              </span>
+            </div>
           </div>
-        </div>
-      )}
-    </article>
+        )}
+      </div>
+    </Cartao>
   )
 }
 
@@ -82,12 +86,7 @@ export function Incidentes() {
 
   const { incidentes, prazoLegal } = consulta.data
   return (
-    <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-dos-incidentes">
-      <CabecalhoDeSecao
-        id="titulo-dos-incidentes"
-        titulo="Incidentes de segurança que afetaram a escola"
-        apoio="O que a Turmma registrou, só sobre a sua escola. Aqui a coordenação confirma que recebeu cada aviso."
-      />
+    <div className="flex min-w-0 flex-col gap-3">
       <Faixa>{prazoLegal}</Faixa>
       {incidentes.length === 0 ? (
         <EstadoVazio titulo="Nenhum incidente afetou esta escola" descricao="Se a Turmma registrar um incidente de segurança que alcance dados da escola, o aviso aparece aqui e ao entrar." />
@@ -100,6 +99,6 @@ export function Incidentes() {
           ))}
         </ul>
       )}
-    </section>
+    </div>
   )
 }

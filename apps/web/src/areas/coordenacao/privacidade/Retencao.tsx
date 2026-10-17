@@ -22,7 +22,7 @@ const COLUNAS_DOS_PRAZOS_FIXOS: readonly [ColunaDaTabela<LinhaDoPrazoFixo>, ...C
 ]
 
 /**
- * A aba "Por quanto tempo guardamos" (F3, 6.0; RF20): o prazo que vale hoje para cada dado da escola, de onde ele vem, e
+ * A tela "Por quanto tempo guardamos", do seletor da Privacidade (F3, 6.0; X2, 13.0; RF20): o prazo que vale hoje para cada dado da escola, de onde ele vem, e
  * os prazos fixos, que a escola não ajusta. Só leitura: o ajuste é da operação, por comando (`ops:retencao`).
  *
  * Não tem estado vazio: toda escola tem todas as categorias, com o padrão quando não há ajuste. Os outros três estados
@@ -41,6 +41,7 @@ export function Retencao() {
       <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-das-categorias">
         <CabecalhoDeSecao
           id="titulo-das-categorias"
+          nivel={3}
           titulo="O que a escola guarda, e por quanto tempo"
           apoio="O prazo que vale hoje para cada dado de pessoa da escola, e de onde ele vem. É por esse prazo que o sistema apaga o dado."
         />
@@ -49,6 +50,7 @@ export function Retencao() {
       <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-dos-prazos-fixos">
         <CabecalhoDeSecao
           id="titulo-dos-prazos-fixos"
+          nivel={3}
           titulo="Prazos que não mudam"
           apoio="Vêm da lei ou de outra fase do sistema, e a escola não os ajusta. Aparecem aqui para a coordenação saber o que existe."
         />

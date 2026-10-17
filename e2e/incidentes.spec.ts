@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { Browser, BrowserContext, BrowserContextOptions, Locator, Page, Route } from '@playwright/test'
 import { TEXTO_DO_PRAZO_LEGAL_DO_INCIDENTE } from '../packages/shared/src/privacidade/incidente.ts'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, esperarPainel, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
-import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
+import { irPelaCoordenacao, paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { campoCodigo } from './__fixtures__/segundo-fator.ts'
 import { codigoDoAutenticador, confirmacaoDoIncidenteNoBanco, criarCoordenadoraNaEscola, criarEquipeComSenha, criarIncidenteNoBanco } from './__fixtures__/sessao.ts'
@@ -30,8 +30,8 @@ const principal = (page: Page) => page.getByRole('main')
 const aviso = (page: Page) => page.getByRole('alertdialog', { name: TITULO_DO_AVISO, exact: true })
 /** A faixa que fica depois do "Ver depois". */
 const faixa = (page: Page) => page.getByRole('region', { name: TITULO_DO_AVISO, exact: true })
-/** O cartão de um incidente na aba, achado pela marca do texto dele. */
-const cartaoDa = (page: Page, marca: string) => principal(page).getByRole('article').filter({ hasText: marca })
+/** O cartão de um incidente na aba (uma região com o nome do aviso), achado pela marca do texto dele. */
+const cartaoDa = (page: Page, marca: string) => principal(page).getByRole('region', { name: /^Incidente conhecido em/ }).filter({ hasText: marca })
 const botao = (lugar: Locator, nome: string) => lugar.getByRole('button', { name: nome, exact: true })
 const marca = () => `Marca ${randomUUID().slice(0, 8)}`
 
@@ -566,7 +566,64 @@ test.describe('Incidentes: os quatro estados da aba', () => {
     await expect(cartao).toContainText('Aguardando a confirmação da coordenação', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByText(VAZIO)).toHaveCount(0)
     await expect(botao(cartao, CONFIRMAR)).toBeVisible()
-    expect(await larguraExcedente(page)).toBe(0)
+    // O título por extenso da tela e o cartão do aviso, um `h3` abaixo dele.
+    await expect(principal(page).getByRole('heading', { level: 2, name: 'Incidentes' })).toBeVisible()
+    await expect(cartao.getByRole('heading', { level: 3 })).toBeVisible()
+    await paginaNaoRola(page)
     expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('com seis avisos longos esperando: a página não rola, o miolo se alcança pelo teclado, e os botões que confirmam têm a mesma altura de 44 px ou mais', async ({ page, hasTouch }) => {
+    test.setTimeout(90_000)
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    const marcas = Array.from({ length: 6 }, () => marca())
+    for (const m of marcas) {
+      await criarIncidenteNoBanco({ escolas: [coordenadora.escolaId], circunstancias: textoLongo(m), contencao: textoLongo('Contenção'), correcao: textoLongo('Correção') })
+    }
+
+    await entrar(page, hasTouch, coordenadora)
+    await expect(aviso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await acionar(botao(aviso(page), VER_DEPOIS), hasTouch)
+    await abrirAAba(page, hasTouch)
+    for (const m of marcas) await expect(cartaoDa(page, m)).toContainText('Aguardando a confirmação da coordenação', { timeout: PRAZO_DA_ENTRADA_MS })
+
+    // Com seis cartões compridos a tela passa da janela: a página não rola a 1366 × 768, e nada rola de lado a 360 px.
+    await paginaNaoRola(page)
+    if ((page.viewportSize()?.width ?? 0) >= 768) {
+      const miolo = principal(page).getByRole('tabpanel')
+      expect(await miolo.evaluate((elemento) => elemento.scrollHeight > elemento.clientHeight)).toBe(true)
+      // A rolagem é do miolo, que recebe foco: quem usa só o teclado rola por ele.
+      await expect(miolo).toHaveAttribute('tabindex', '0')
+    }
+    // Os seis botões são iguais e têm o alvo de toque da ação principal (regra 50, item 2a).
+    const botoes = principal(page).getByRole('button', { name: CONFIRMAR, exact: true })
+    await expect(botoes).toHaveCount(6)
+    const alturas = await botoes.evaluateAll((elementos) => elementos.map((elemento) => elemento.getBoundingClientRect().height))
+    expect(new Set(alturas).size).toBe(1)
+    expect(alturas[0]).toBeGreaterThanOrEqual(44)
+    expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('com o aviso adiado, a Analista, que não tem abas, também mantém a página sem rolar: a faixa não pode somar altura ao miolo dela', async ({ page, hasTouch }) => {
+    test.setTimeout(60_000)
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    await criarIncidenteNoBanco({ escolas: [coordenadora.escolaId], circunstancias: marca() })
+
+    await entrar(page, hasTouch, coordenadora)
+    await expect(aviso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await acionar(botao(aviso(page), VER_DEPOIS), hasTouch)
+    await expect(faixa(page)).toBeVisible()
+    await irPelaCoordenacao(page, 'Analista', hasTouch)
+    await expect(page.getByRole('heading', { level: 1, name: 'Analista' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(faixa(page)).toBeVisible()
+
+    const largura = page.viewportSize()?.width ?? 0
+    // Uma janela baixa garante que o conteúdo da Analista passa do miolo: sem isso a página poderia não rolar por ser curta, e a conta da faixa não seria posta à prova.
+    if (largura >= 768) await page.setViewportSize({ width: largura, height: 600 })
+    if (largura >= 768) {
+      const resumo = principal(page).getByRole('region', { name: 'Resumo do Analista' })
+      expect(await resumo.evaluate((elemento) => elemento.scrollHeight > elemento.clientHeight)).toBe(true)
+    }
+    await paginaNaoRola(page)
   })
 })

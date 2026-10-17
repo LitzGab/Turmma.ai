@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react'
+import { useId, type ReactNode, type Ref } from 'react'
 import type { NivelDoTitulo } from './Tela'
 
 interface PropsDoCartao {
@@ -6,6 +6,12 @@ interface PropsDoCartao {
   readonly titulo?: string
   /** O nível do título. Sem ele, 2; dentro de uma seção que já tem `h2`, 3. */
   readonly nivel?: NivelDoTitulo
+  /**
+   * O título em si, para quem precisa levar o foco a ele (o cartão que muda de "esperando" para "confirmado" e perde o botão
+   * que tinha o foco). Com a ref, o título passa a ser focável por programa (`tabIndex={-1}`), e não entra na ordem do Tab.
+   * Sem `titulo` não há título a focar, e a ref é ignorada.
+   */
+  readonly refDoTitulo?: Ref<HTMLHeadingElement>
   /** Uma ação à direita do título. */
   readonly acao?: ReactNode
   readonly children: ReactNode
@@ -20,7 +26,7 @@ interface PropsDoCartao {
  *
  * O cartão clicável é a `Linha`; aqui só se lê.
  */
-export function Cartao({ titulo, nivel = 2, acao, children, className = '' }: PropsDoCartao) {
+export function Cartao({ titulo, nivel = 2, refDoTitulo, acao, children, className = '' }: PropsDoCartao) {
   const idDoTitulo = useId()
   const Titulo = `h${nivel}` as const
   const classes = `min-w-0 rounded-cartao border-2 border-borda bg-superficie p-4 lg:p-5 ${className}`
@@ -28,7 +34,7 @@ export function Cartao({ titulo, nivel = 2, acao, children, className = '' }: Pr
   return (
     <section aria-labelledby={idDoTitulo} className={classes}>
       <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <Titulo id={idDoTitulo} className="t-cartao min-w-0 break-words text-tinta">
+        <Titulo id={idDoTitulo} ref={refDoTitulo} tabIndex={refDoTitulo === undefined ? undefined : -1} className="t-cartao min-w-0 break-words text-tinta">
           {titulo}
         </Titulo>
         {acao}

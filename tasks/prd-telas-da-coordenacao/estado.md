@@ -1,14 +1,16 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero (17/10 09h45, retomada depois da queda do Maestri):** o Maestri caiu por volta das 03h13 e voltou às
-  09h36 com as sessões zeradas. Linha 1, `Implementador` (reiniciado com a `Mesa`, checkout da L1): `RELATÓRIO` da
-  **tarefa 6.0**, 1ª tentativa; a 1ª rodada reprovou (`revisor-geral` e `test-engineer`, ordem em
-  `.processo/ordens/6_task-r1.md`), a ordem estava sendo aplicada na árvore, sem portão. Linha 2, `Implementador 2`
-  (reiniciado com a `Mesa 2`, checkout da L2): `RELATÓRIO` da **tarefa 13.0**, 1ª tentativa; a 1ª rodada reprovou
-  (`test-engineer`, ordem em `.processo/ordens/13_task-r1.md`), ordem em aplicação na árvore, sem portão. As duas
-  partiram às 02h12 com a observação da 9.0 e o achado da `pagina-rola`. Esteira de `77f80e6` (39005178313) a ler no
-  próximo encontro; a de `80a4bf8` deu verde.
+- **Espero (17/10 10h40):** linha 1, `Implementador` (reiniciado com a `Mesa`): o `RELATÓRIO` da **correção
+  `2026-10-17-lista-de-nomes-com-41-px`** (esteira 39005178313 em `77f80e6`: `e2e/estrutura.spec.ts:765`, W12, nos dois
+  projetos, o alvo "Lista de nomes" com 41 px, mínimo 44; da tarefa 5.0), 1ª tentativa; guardião ditado:
+  `frontend-reviewer`. Linha 2, `Implementador 2`: o `RELATÓRIO` da **tarefa 13.0**, 1ª tentativa, depois da 1ª rodada
+  reprovada (`test-engineer`), portão a rodar. Esteira de `00bc6ec` (6.0) rodando: ler no próximo encontro (o
+  vermelho do `estrutura:765` nela é esperado até a correção).
+- **Maestri:** depois do reinício da máquina, o `maestri` não está no PATH do terminal do Orquestrador: usar
+  `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
+- **Depois do encontro da correção:** o quadro pede a linha 3 para a 10.0 e a linha 1 parte a 7.0. Não abrir tarefa
+  antes de a correção se encontrar.
 - **Histórico desta seção (já encontrado):** linha 1, o `RELATÓRIO` da **correção
   `2026-10-17-pagina-rola-depois-da-12`**: `e2e/areas.spec.ts:316` (W2, chromebook) falha isolado e sempre, "a página
   inteira rola a partir de 768 px: só o miolo deveria"; verde em `f279dde` (38996200178), e entre ele e `c325472` só
@@ -56,6 +58,7 @@
 | 5.0 | `738c3c4` | Sonnet | 2 | linha 2, ~23h41–02h03; `frontend-reviewer` aprovou na r1, `test-engineer` e `revisor-geral` reprovaram na r1 e aprovaram na r2; 14 fotos da Mesa; também viu o areas:316 (Analista, +10 px), que é a correção em curso na linha 1; encontro em CONFLITO no `TODO.md` (correção `encontro-5`) |
 | correção pagina-rola-depois-da-12 | `74dcace` | Sonnet | 2 | linha 1, 01h28–02h10; a causa não era a 12.0: a Analista não tinha miolo e rolava inteira com a fonte local (778 × 768); `frontend-reviewer` aprovou na r1, `test-engineer` na r2; duas linhas no `TODO.md` (sombra do miolo, texto do areas:347) |
 | correção encontro-5 | `76a1f1f` | Sonnet | 1 | linha 2, 02h04–02h09; as três linhas do fim do `TODO.md` mantidas; `test-engineer` e `revisor-geral` aprovaram na r1 |
+| 6.0 | `290b7cb` | Sonnet 5.5 | 2 | 1ª rodada reprovada (`revisor-geral`, `test-engineer`: e2e do sino com o botão antigo, mutação do `replace`); retomada depois da queda das 03h13 |
 
 ## Esperando o Joaquim
 ## O que falhou

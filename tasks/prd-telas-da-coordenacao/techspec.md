@@ -14,6 +14,7 @@ Só `apps/web` e `e2e/`. A navegação passa a quatro lugares; **Escola** e **Re
 |---|---|---|
 | `apps/web/src/componentes/sino/` | novo | `Sino` |
 | `apps/web/src/componentes/CascaDaEscola.tsx` | alterado | a âncora do sino, vazia |
+| `apps/web/src/componentes/Cartao.tsx` | alterado | `refDoTitulo` (opcional): o foco no título do aviso de incidente confirmado (13.0) |
 | `apps/web/src/areas/navegacao.ts`, `caminhos.ts`, `paginas/Inicio.tsx` | alterado | os quatro lugares, `/painel`, onde a coordenação abre |
 | `apps/web/src/areas/coordenacao/` | novo e alterado | `Painel`, `Escola`, `Registros`, a fila, e as telas recompostas |
 | `apps/web/src/operacao/paginas/`, `operacao/componentes/` | alterado | a página com abas e as tabelas |
@@ -106,7 +107,7 @@ Nenhuma chamada nova.
 
 **Molduras.** `Escola` e `Registros`: `Tela` com o título, `Abas` com a aba do endereço (`aoMudar` navega) e o miolo. As telas de dentro perdem a `Tela` delas: o `h1` é "Escola" ou "Registros", e a aba do navegador diz "Escola: turmas", "Registros: IA" e assim por diante.
 
-**Altura.** A partir de 768 px só o miolo rola, numa região com nome e `tabIndex={0}`; abaixo, rola a página.
+**Altura.** A partir de 768 px só o miolo rola, numa região com nome e `tabIndex={0}`; abaixo, rola a página. **Como ficou na 13.0:** a faixa do aviso de incidente (depois de "Ver depois") fica acima da tela, fora do miolo; enquanto ela existe, mede a si mesma e grava a altura mais o vão de 24 px do `main` em `--faixa-de-incidente` na raiz, e as constantes do miolo (`miolo-que-rola.ts`) a descontam (`var(--faixa-de-incidente,0px)`). Sem isso a página rolava 84 px a 1366 × 768 em toda tela da coordenação com um aviso adiado.
 
 **Painel** (`grade`): a faixa do incidente é a de hoje, acima da tela; função suspensa (`Aviso`, com link para Agentes); quatro `NumeroPainel` e o consumo, com "Ver em Registros"; "Esperando você" (a fila) e a porta "Pedidos dos titulares"; "Para terminar a escola" (`o-que-falta-da-escola.ts`, extraído da Estrutura).
 
@@ -117,7 +118,7 @@ Nenhuma chamada nova.
 **Material:** `Tabela`; `Dialogo` "Enviar material" com o formulário de hoje (`material-envio.ts` não muda); `PainelLado` do material.
 **Lista da turma:** duas colunas a partir de 1024 px (os nomes; os professores da turma e os pedidos).
 
-**Registros › IA:** números, `Segmentado` de estado, a tabela de hoje, o consumo ao lado. **Pedidos:** `Tabela` com a coluna "Prazo" (`prazoDoPedido`, que já existe). **Privacidade:** `Segmentado` no lugar das abas. **Agentes:** `Segmentado` "Qual IA" e um agente por vez.
+**Registros › IA:** números, `Segmentado` de estado, a tabela de hoje, o consumo ao lado. **Pedidos:** `Tabela` com a coluna "Prazo" (`prazoDoPedido`, que já existe). **Privacidade:** `Segmentado` no lugar das abas. **Como ficou na 13.0:** a tela escolhida abre com o nome que a aba tinha, por extenso, num `h2` que `Privacidade.tsx` desenha (o rótulo do seletor é curto), à vista também enquanto ela carrega e quando a leitura falha: "Por quanto tempo guardamos", "Empresas que recebem dados" e "Incidentes". As seções de dentro (as duas dos prazos, as duas das empresas) descem para `h3`, com os títulos e as regiões de hoje. Os incidentes não têm mais a seção com título: o que ela dizia vai para a frase de apoio do `h2`, e cada aviso é um `Cartao` (`h3`, uma região com o nome "Incidente conhecido em <data>", no lugar do `article`) com o selo de estado em `acao` e "Confirmo que recebi" em botão `oficial`. O `Cartao` ganha a prop opcional `refDoTitulo`, que dá `tabIndex={-1}` ao título e deixa o foco ir a ele quando o aviso passa a confirmado (o botão que tinha o foco sai da tela); sem a prop nada muda nos outros cartões. A ordem dos avisos (os sem confirmação primeiro) é da API (`IncidenteDaEscolaRepository.daEscola`). **Agentes:** `Segmentado` "Qual IA" e um agente por vez.
 
 **Operação:** o título "Operação" à vista, com a frase fixa de que a operação não vê dado de pessoa, e a navegação "Operação" desenhada como abas (continuam links), tudo dentro do `main`. A Escolas usa a `Tabela` (Escola com o endereço, Rede, Coordenação com o estado em `Estado` e a ação do convite, Uso). O Uso mantém a tabela dele, com o dia e o mês de referência como grupos de três colunas no cabeçalho, porque a `Tabela` não agrupa colunas: é a de hoje, na pele da peça (moldura de 2 px, cabeçalho de 44 px, linha de 64 px), e a lista de cartões abaixo de 768 px. As duas telas ficam numa `RegiaoDaLista`: a partir de 768 px a lista rola por dentro, com as páginas presas no pé e o foco na região só quando ela rola (RF23); o vazio do Uso é o `EstadoVazio`, com um botão para a Escolas no lugar do link; o vazio da Escolas é o `EstadoVazio` sem ação, porque o "Nova rede" do topo já é o convite (um só primário por tela). O erro das duas telas continua no `ErroDaOperacao`, a peça da operação, na pele do `EstadoErro` (borda de 2 px, `t-apoio`): a mensagem vem de `textoDaFalha`, no chunk da operação, e o `EstadoErro` a escreve pelo catálogo da entrada, que não carrega os textos da operação.
 

@@ -1,12 +1,45 @@
 import { useQuery } from '@tanstack/react-query'
 import { TriangleAlert } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import { consultaIncidentes } from '../../../api/privacidade'
 import { Botao } from '../../../componentes/Botao'
 import { Dialogo } from '../../../componentes/Dialogo'
 import { useConfirmarIncidente } from './confirmar-o-incidente'
 import { DetalhesDoIncidente } from './DetalhesDoIncidente'
 import { TEXTO_DO_QUE_CONFIRMAR_FAZ, textoDaFaixa, textoDaFila } from './textos-dos-incidentes'
+
+/** O vão entre a faixa e a tela que vem depois dela: o `gap-6` do `main` da casca. */
+const VAO_DA_FAIXA_PX = 24
+
+/**
+ * A faixa de depois do "Ver depois". Ela fica acima da tela, fora do miolo que rola, e por isso diz a altura que ocupa em
+ * `--faixa-de-incidente` (`miolo-que-rola.ts`): o miolo encolhe por ela e a página continua sem rolar (RF23). A variável sai com a faixa.
+ */
+function FaixaDoIncidente({ pendentes, botao, aoVer }: { readonly pendentes: number; readonly botao: RefObject<HTMLButtonElement | null>; readonly aoVer: () => void }) {
+  const faixa = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const elemento = faixa.current
+    if (elemento === null) return
+    const raiz = document.documentElement
+    const medir = () => raiz.style.setProperty('--faixa-de-incidente', `${String(elemento.offsetHeight + VAO_DA_FAIXA_PX)}px`)
+    medir()
+    const observador = new ResizeObserver(medir)
+    observador.observe(elemento)
+    return () => {
+      observador.disconnect()
+      raiz.style.removeProperty('--faixa-de-incidente')
+    }
+  }, [])
+  return (
+    <div ref={faixa} role="region" aria-label="Aviso de incidente de segurança" className="flex min-w-0 flex-wrap items-center gap-3 rounded-controle border border-pendente bg-pendente-cx p-3 text-pendente">
+      <TriangleAlert aria-hidden="true" size={18} strokeWidth={1.75} className="shrink-0" />
+      <p className="min-w-0 flex-1 basis-60 break-words">{textoDaFaixa(pendentes)}</p>
+      <Botao ref={botao} variante="secundario" onClick={aoVer}>
+        Ver o aviso
+      </Botao>
+    </div>
+  )
+}
 
 /**
  * O aviso de incidente da coordenação (F3, 10.0; RF9; Tech Spec do F3, seções 5 e 9). Vive na área da coordenação, e por isso
@@ -66,15 +99,7 @@ export default function AvisoDeIncidente() {
   const fila = textoDaFila(pendentes.length)
 
   if (adiado) {
-    return (
-      <div role="region" aria-label="Aviso de incidente de segurança" className="flex min-w-0 flex-wrap items-center gap-3 rounded-controle border border-pendente bg-pendente-cx p-3 text-pendente">
-        <TriangleAlert aria-hidden="true" size={18} strokeWidth={1.75} className="shrink-0" />
-        <p className="min-w-0 flex-1 basis-60 break-words">{textoDaFaixa(pendentes.length)}</p>
-        <Botao ref={botaoDaFaixa} variante="secundario" onClick={() => definirAdiado(false)}>
-          Ver o aviso
-        </Botao>
-      </div>
-    )
+    return <FaixaDoIncidente pendentes={pendentes.length} botao={botaoDaFaixa} aoVer={() => definirAdiado(false)} />
   }
 
   return (

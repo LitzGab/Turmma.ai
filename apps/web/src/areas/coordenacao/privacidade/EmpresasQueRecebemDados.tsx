@@ -20,7 +20,7 @@ const COLUNAS: readonly [ColunaDaTabela<SuboperadorDaEscola>, ...ColunaDaTabela<
 const chaveDaLinha = (linha: SuboperadorDaEscola): string => `${linha.chave}@${linha.inicio}`
 
 /**
- * A aba "Empresas que recebem dados" (F3, 8.0; RF7 e RF20): os suboperadores da escola, as empresas por onde o dado dela
+ * A tela "Empresas que recebem dados", do seletor da Privacidade (F3, 8.0; X2, 13.0; RF7 e RF20): os suboperadores da escola, as empresas por onde o dado dela
  * passa, vigentes e passadas, para a coordenação responder ao responsável e ao titular (LGPD, art. 18, VII). Só leitura: o
  * cadastro e o encerramento são da operação, por comando (`ops:suboperador`).
  *
@@ -42,6 +42,7 @@ export function EmpresasQueRecebemDados() {
       <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-das-vigentes">
         <CabecalhoDeSecao
           id="titulo-das-vigentes"
+          nivel={3}
           titulo="Empresas que recebem dado da escola hoje"
           apoio="Por onde o dado passa para o sistema funcionar: o que cada empresa faz, o que recebe, onde processa e o que o contrato diz sobre treinar IA."
         />
@@ -55,6 +56,7 @@ export function EmpresasQueRecebemDados() {
         <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-das-passadas">
           <CabecalhoDeSecao
             id="titulo-das-passadas"
+            nivel={3}
             titulo="Empresas que já receberam dado da escola"
             apoio="Ficam aqui depois de encerradas: se o responsável perguntar por onde o dado passou, a resposta inclui estas."
           />
