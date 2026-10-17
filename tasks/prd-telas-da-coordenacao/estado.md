@@ -1,9 +1,10 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Espero (17/10 ~17h40):** nada das linhas (as duas ociosas, 14 de 14). A ler: a esteira de `41600a2`
-  (39064583848), a de `3246cdc` (39066733762) e a do encontro da linha 2; o vermelho de `91d4722` (39062201162) é o
-  das duas correções. Sem vermelho novo, o commit "antes da validação" e o `Validador` reiniciado no andar (passo 8).
+- **Espero (17/10 ~17h45):** o `RELATÓRIO` do `Validador` (1ª rodada, funcionalidade completa, commit `6f86343`),
+  reiniciado no andar. Enquanto ele valida, ninguém usa o ambiente de teste 0. No fechamento, a esteira tem de
+  estar verde no último commit que alterou código: ler a de `41600a2` (39064583848), a de `3246cdc` (39066733762) e a
+  de `6f86343` (encontro da linha 2); o vermelho de `91d4722` (39062201162) é o das duas correções já encontradas.
 - **Devo ainda (fechamento):** as 2 recomendações do `frontend-reviewer` sem aplicar da correção
   `troca-de-escola-sem-ir-para-a-entrada` (título do incidente truncado a 360 px no cartão do Painel; texto de
   incidente da vitrine pouco realista), em "Recomendações sem aplicar" do documento dela: levar ao `TODO.md`.
