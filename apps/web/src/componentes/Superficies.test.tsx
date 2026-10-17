@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react'
+import { createRef } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { classesDo } from '../__fixtures__/cor-das-classes'
 import { BarraPresa } from './BarraPresa'
@@ -64,6 +65,27 @@ describe('Cartao', () => {
     expect(classesDo(titulo).has('t-cartao')).toBe(true)
     // A ação fica ao lado do título, dentro do cartão.
     expect(regiao.contains(screen.getByRole('button', { name: 'Ver todas' }))).toBe(true)
+  })
+
+  it('o título só é focável por programa quando quem usa pede a ref, e então recebe o foco sem entrar no Tab', () => {
+    const ref = createRef<HTMLHeadingElement>()
+    render(
+      <>
+        <Cartao titulo="Sem ref">conteúdo</Cartao>
+        <Cartao titulo="Com ref" refDoTitulo={ref}>
+          conteúdo
+        </Cartao>
+      </>,
+    )
+    // Sem a ref o título é só texto: não vira parada no Tab nem aceita foco.
+    const semRef = screen.getByRole('heading', { name: 'Sem ref' })
+    expect(semRef.hasAttribute('tabindex')).toBe(false)
+    // Com ela, `tabindex=-1` (alcançável por `focus()`, fora da ordem do Tab) e a ref é o próprio título.
+    const comRef = screen.getByRole('heading', { name: 'Com ref' })
+    expect(comRef.getAttribute('tabindex')).toBe('-1')
+    expect(ref.current).toBe(comRef)
+    ref.current?.focus()
+    expect(document.activeElement).toBe(comRef)
   })
 
   it('o `className` de quem usa se soma à caixa, sem trocar a borda', () => {

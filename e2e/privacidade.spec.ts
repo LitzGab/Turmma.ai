@@ -1,9 +1,9 @@
 import type { Locator, Page, Route } from '@playwright/test'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, escolherNoSeletor, esperarPainel, lateral, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
-import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
+import { irPelaCoordenacao, paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ajustarRetencaoDaEscola, cadastrarSuboperadorDeTeste, codigoDoAutenticador, criarEquipeComSenha, criarEscolaSintetica, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
-import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * A Privacidade da coordenação, na tela "Prazos de guarda" do seletor da aba Privacidade de Registros (F3, 6.0; X2, 3.0; RF20; `docs/interface.md` 3): o prazo que
@@ -73,6 +73,10 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await expect(page).toHaveTitle('Registros: privacidade · Turmma')
     await expect(page.getByRole('heading', { level: 1, name: 'Registros' })).toBeVisible()
     await expect(page.getByRole('radio', { name: NOME_DA_ABA })).toHaveAttribute('aria-checked', 'true')
+    // O rótulo do seletor é curto; a tela escolhida diz o nome por extenso, num `h2`, e as duas seções de dentro vêm em `h3`.
+    await expect(principal(page).getByRole('heading', { level: 2, name: 'Por quanto tempo guardamos' })).toBeVisible()
+    await expect(principal(page).getByRole('heading', { level: 3, name: NOME_DAS_CATEGORIAS })).toBeVisible()
+    await expect(principal(page).getByRole('heading', { level: 3, name: 'Prazos que não mudam' })).toBeVisible()
 
     // O ajuste da escola aparece, na linha da categoria dele, com o prazo e a origem ditos.
     const doAluno = linhaDa(page, 'Conversa do aluno com o Tutor')
@@ -93,7 +97,45 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await expect(fixos).toContainText('Registro de acesso')
     await expect(fixos).toContainText('6 meses')
 
-    expect(await larguraExcedente(page)).toBe(0)
+    // A 1366 × 768 a página não rola: quem rola é o miolo da moldura (RF23). A 360 px nada rola de lado.
+    await paginaNaoRola(page)
+    expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('o seletor da Privacidade: uma parada no Tab, as setas trocam de tela e de endereço, e o alvo tem o tamanho do toque', async ({ page, hasTouch }) => {
+    test.setTimeout(60_000)
+    const coordenadora = await criarEquipeComSenha('coordenador')
+    await entrarNaPrivacidade(page, hasTouch, coordenadora)
+    const prazos = page.getByRole('radio', { name: 'Prazos de guarda' })
+    const empresas = page.getByRole('radio', { name: 'Empresas' })
+    const incidentes = page.getByRole('radio', { name: 'Incidentes' })
+
+    // Uma parada só no Tab: a opção marcada. As outras só se alcançam pelas setas.
+    await expect(prazos).toHaveAttribute('tabindex', '0')
+    await expect(empresas).toHaveAttribute('tabindex', '-1')
+    await expect(incidentes).toHaveAttribute('tabindex', '-1')
+    // Os três alvos têm a altura do toque: 44 px no celular e 36 px no computador (regra 50, item 2a).
+    const minimo = (page.viewportSize()?.width ?? 0) < 768 ? 44 : 36
+    for (const opcao of [prazos, empresas, incidentes]) expect((await opcao.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(minimo)
+
+    await prazos.focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(page).toHaveURL(/\/coordenacao\/privacidade\/suboperadores$/, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(empresas).toBeFocused()
+    await expect(empresas).toHaveAttribute('aria-checked', 'true')
+    await expect(principal(page).getByRole('heading', { level: 2, name: 'Empresas que recebem dados' })).toBeVisible()
+    await page.keyboard.press('ArrowRight')
+    await expect(page).toHaveURL(/\/coordenacao\/privacidade\/incidentes$/, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(incidentes).toBeFocused()
+    await expect(principal(page).getByRole('heading', { level: 2, name: 'Incidentes' })).toBeVisible()
+    // Do último volta ao primeiro, e a escolha fica no endereço: recarregar abre a mesma tela.
+    await page.keyboard.press('ArrowRight')
+    await expect(page).toHaveURL(ENDERECO_DA_RETENCAO, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(prazos).toBeFocused()
+    // O Tab sai do seletor, e não passa pelas outras opções.
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('radio').and(page.locator(':focus'))).toHaveCount(0)
+    await paginaNaoRola(page)
     expect(await violacoesGraves(page)).toEqual([])
   })
 
@@ -263,6 +305,8 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
     await abrirAsEmpresas(page, hasTouch, coordenadora)
 
     await expect(page.getByRole('radio', { name: NOME_DA_ABA_DAS_EMPRESAS })).toHaveAttribute('aria-checked', 'true')
+    await expect(principal(page).getByRole('heading', { level: 2, name: 'Empresas que recebem dados' })).toBeVisible()
+    await expect(principal(page).getByRole('heading', { level: 3, name: SECAO_DAS_VIGENTES })).toBeVisible()
     await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(hospedagem, { timeout: PRAZO_DA_ENTRADA_MS })
 
     const daHospedagem = linhaDaEmpresa(page, hospedagem)
@@ -287,8 +331,9 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
     await expect(principal(page)).not.toContainText(deOutraEscola)
     await expect(principal(page)).not.toContainText('DPA-E2E')
     await expect(principal(page)).not.toContainText('equipe-de-teste')
+    await expect(principal(page).getByRole('heading', { level: 3, name: SECAO_DAS_PASSADAS })).toBeVisible()
 
-    expect(await larguraExcedente(page)).toBe(0)
+    await paginaNaoRola(page)
     expect(await violacoesGraves(page)).toEqual([])
   })
 
