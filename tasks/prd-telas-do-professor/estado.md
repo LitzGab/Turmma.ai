@@ -38,7 +38,8 @@
      (`2026-10-18-vitrine-lista-telas-que-rolam`), conferida em 18/10. Aprovada na 2ª rodada (o `test-engineer`
      reprovou na 1ª)
   **As oito feitas.** **Espero:** a esteira da branch em `0aea52e` (execução 39140116448, em `gh run watch` em
-  segundo plano). Verde: **parada do pouso** na `develop`, com a palavra do Joaquim. Vermelha: correção na branch.
+  segundo plano). Verde: **pouso** na `develop` e push — o Joaquim deu a palavra no meu terminal em 18/10 ("pode pousar quando a
+  esteira ficar verde"). Vermelha: correção na branch, e a palavra não cobre o pouso de outro commit.
   Cada uma: `Implementador` e `Mesa` reiniciados, `PEDIDO` de correção. Depois da 8ª: esteira verde na branch, **pouso
   na `develop` (parada, palavra do Joaquim)**, merge da `develop` na `spec/telas-do-professor` (traz também `720beac`),
   e só então a partida da 2.0.
