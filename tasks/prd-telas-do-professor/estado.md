@@ -1,50 +1,17 @@
 # Estado da execução — telas-do-professor
 
 ## Agora
-- **Abertura (17/10, ~21h20):** o Joaquim disse no meu terminal "pode pousar e depois continuar com a x3". A X2 pousou
-  na `develop` (`7092ee6`); a X3 abre a partir dela, com o sino da X2 já em `apps/web/src/componentes/sino/` (a 1.1
-  manda reusá-lo).
-- **Linha 1** (`spec/telas-do-professor--l1`, ambiente de teste 1): ociosa. A 2.0 é a próxima no quadro, mas **não
-  parte** antes da correção de processo M1 a M5 pousar e a `develop` entrar na spec (decisão do Joaquim, 18/10).
-- **Esteira da spec:** 39129521729 em `93e787e` (depois da 1.0); o veredito se lê no próximo encontro.
-- **Retrospectiva da X2:** feita, `720beac` na `develop`, sem push (`tasks/prd-telas-da-coordenacao/retro.md`).
-  Aplicadas T1 (`flock`), T2 e T3; M1 a M5 no `TODO.md`, com o destino "antes da primeira tarefa da X3". O andar da X3
-  está em `7092ee6` e ainda não tem esse commit (o `flock` das skills só chega com o merge da `develop`).
-- **Correção de processo M1 a M5** (`TODO.md`, "(X1, retrospectiva) Código de processo", letras (a) a (f)): andar
-  "correcao 2026-10-18-codigo-de-processo" (branch `correcao/2026-10-18-codigo-de-processo`, saída de `720beac`,
-  checkout `~/Documentos/git/.maestri/floors/educaia--correcao2026-10-18-codigo-de-processo`, ambiente 0), com o
-  `Implementador` e a `Mesa` reiniciados lá. **Uma correção por execução** (`corrigir`), em sequência no mesmo andar, e
-  um pouso só no fim. Ordem (decidi sem perguntar: primeiro o que acelera as seguintes):
-  1. (f) `flock` dentro do `portao-local.ts` e do `tools/ci/e2e.ts` — guardiões `infra-guardian`, `revisor-geral` —
-     **feita:** `cd4cecb` (`2026-10-18-fila-de-carga-no-codigo`), conferida em 18/10
-  2. (c) `tools/ci/e2e.ts` repassa `--repeat-each` e `--workers` — `infra-guardian`, `revisor-geral` — **feita:**
-     `dee9051` (`2026-10-18-e2e-repassa-repeat-each-e-workers`), conferida em 18/10. Deixou a letra (g) no `TODO.md`
-     (o `e2e.ts` recusar a opção que descarta), para a próxima correção que tocar `opcoesDoPlaywright`
-  3. (a) o portão mede a duração do e2e alterado (acima de 15 s, vermelho) — `infra-guardian`, `revisor-geral` —
-     **feita:** `4723044` (`2026-10-18-duracao-do-e2e-no-portao`), conferida em 18/10. O portão completo não mede;
-     limites na letra (a) do `TODO.md`
-  4. (d) o portão roda os e2e que citam um literal que o diff tirou de `apps/web/src` — `revisor-geral` —
-     **feita:** `6810b60` (`2026-10-18-e2e-que-cita-literal-removido`), conferida em 18/10. Deixou a "correção seguinte
-     desta letra" no `TODO.md` (classe do Tailwind, teste da linha de log, `__fixtures__` da web, comentário do módulo)
-  5. (c) `linhas.ts conferir` aceita correção feita na branch da spec — `revisor-geral` — **feita:** `910ca41`
-     (`2026-10-18-conferir-aceita-correcao-na-spec`), conferida em 18/10. Teve escalada da Mesa (2 reprovações do
-     `revisor-geral`) e diagnóstico do `Arquiteto` (`--remerge-diff`); aprovada na 3ª rodada. Deixou quatro "a rever" no `TODO.md`
-  6. (c) `mutacoes.ts` roda o caso de e2e no projeto que ele declara — `revisor-geral` — **feita:** `ba3f109`
-     (`2026-10-18-mutacao-de-e2e-no-projeto-declarado`), conferida em 18/10. Aprovada na 2ª rodada
-  7. (b) o hook conta as rodadas pelo `achados/`, não pela seção "Revisões" — `revisor-geral` — **feita:** `adca33b`
-     (`2026-10-18-rodada-conta-pelos-achados`), conferida em 18/10. Aprovada na 2ª rodada; deixou limites e os itens
-     (i) a (iii) na letra (b) do `TODO.md`
-  8. (e) a vitrine lista as telas que rolam a 1366 × 768 — `revisor-geral` — **feita:** `0aea52e`
-     (`2026-10-18-vitrine-lista-telas-que-rolam`), conferida em 18/10. Aprovada na 2ª rodada (o `test-engineer`
-     reprovou na 1ª)
-  **As oito feitas.** **Espero:** a esteira da branch em `0aea52e` (execução 39140116448, em `gh run watch` em
-  segundo plano). Verde: **pouso** na `develop` e push — o Joaquim deu a palavra no meu terminal em 18/10 ("pode pousar quando a
-  esteira ficar verde"). Vermelha: correção na branch, e a palavra não cobre o pouso de outro commit.
-  Cada uma: `Implementador` e `Mesa` reiniciados, `PEDIDO` de correção. Depois da 8ª: esteira verde na branch, **pouso
-  na `develop` (parada, palavra do Joaquim)**, merge da `develop` na `spec/telas-do-professor` (traz também `720beac`),
-  e só então a partida da 2.0.
-- **Devo ainda:** o que está na lista acima. A X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em
-  `1477850`): não retomar sem a palavra do Joaquim.
+- **Espero:** o `RELATÓRIO` do `Implementador` (linha 1) da correção `2026-10-18-textos-da-turma-indisponivel-diferem`,
+  1ª tentativa, pedida em 18/10 ~16h10; `DIVERGÊNCIA` (portão) às ~13h20: o caso `acesso-da-turma.spec.ts:257`
+  leva 61–66 s e o portão novo corta em 15 s. Mandei dividi-lo nesta mesma correção (`PEDIDO de retomada`). Depois:
+  `linhas.ts encontro 1` e `esteira.ts`.
+- **Devo ainda:** (1) a segunda correção da esteira vermelha da 1.0 (execução 39129521729, em `93e787e`):
+  `e2e/areas.spec.ts:204` [celular], "o professor no endereço da coordenação e do aluno cai em não encontrada",
+  estourou 30 s. Guardiões: `frontend-reviewer`. Sobe na linha 1 depois do encontro desta, **antes** da 2.0;
+  (2) só então a partida da 2.0 (grande); (3) a X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0
+  em `1477850`): não retomar sem a palavra do Joaquim.
+- **Base:** `spec/telas-do-professor` em `2e814f1` (merge da `develop` em `0aea52e`, que trouxe a correção de processo
+  M1 a M5 e a retrospectiva da X2).
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
 
 ## Concluídas
@@ -71,3 +38,16 @@ Recomendo: terminar a 1.0; falta um teste, e M1 a M5 não muda a revisão dela. 
 ## O que falhou
 
 ## O que decidi sem perguntar
+- 18/10: `DIVERGÊNCIA` de portão na correção `2026-10-18-textos-da-turma-indisponivel-diferem`: o limite de 15 s
+  do e2e alterado (correção de processo (a)) reprovou o caso `acesso-da-turma.spec.ts:257`, que tem `test.slow()`
+  (90 s) e leva 61–66 s na máquina e 72 s no runner. Não há liberação no portão; mandei dividir o caso na própria
+  correção. **Para a retrospectiva:** o `duracao-do-e2e.ts` ignora o `test.slow()`, e o arquivo tem nove casos com ele:
+  tocar qualquer um obriga a dividi-lo.
+- 18/10: a correção de processo M1 a M5 (oito correções, `cd4cecb` a `0aea52e`, andar
+  "correcao 2026-10-18-codigo-de-processo") pousou na `develop` com a esteira verde em `0aea52e` (39140116448) e a
+  palavra do Joaquim ("pode pousar quando a esteira ficar verde"); push da `develop` feito; a `develop` entrou na spec
+  em `2e814f1`.
+- 18/10: a esteira da spec depois da 1.0 (39129521729, `93e787e`) ficou vermelha em dois e2e. Eu tinha dado a partida
+  da 2.0 antes de ler o veredito; desfiz a partida no `.processo/linhas.json` (a linha não tinha começado) e abri as
+  correções antes, uma por e2e. A de `acesso-da-turma.spec.ts:418` (os textos de `main` das duas turmas indisponíveis
+  diferem: esperava 1, recebeu 2) é da 1.0, que pôs o sino em `main` e mexeu nesse spec.
