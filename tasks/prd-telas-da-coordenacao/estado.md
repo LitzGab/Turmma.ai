@@ -1,28 +1,17 @@
 # Estado da execução — telas-da-coordenacao
 
 ## Agora
-- **Validação, rodada 1 (17/10 ~18h15): REPROVADA**, sobre `f01ecbd` (`validacao.md`, seção 4). Quatro críticos e um
-  maior; nenhum é regra de negócio. O caminho, o do Validador: três correções, e depois revalidação só desses pontos e da
-  esteira (o `Validador` reiniciado, rodada 2 no topo do `validacao.md`).
-- **Espero (17/10 ~19h50):** o `RELATÓRIO` do `Validador`, **revalidação, rodada 2**, sobre `8397171` (só os achados da
-  rodada 1 e o que as correções mudaram). As duas linhas estão ociosas; ninguém usa o ambiente 0 enquanto ele valida.
-- **Devo ainda:**
-  - a esteira: em ~19h50 a última lida foi VERMELHA em `54faa82` (39069424594, e2e 4/6: o `agentes:164`, anterior à
-    correção `4a3835f`). A fila do GitHub segue lenta; no fechamento, `esteira.ts --fechamento` sobre `2919d08`/`8397171`;
-  - C1+C2 (`c2e3398`), C3 (`2919d08`), C4 e o Maior (`ed03046`), `agentes:164` (`4a3835f`) e `agentes:186` (`2884140`)
-    estão todas na spec. Com a validação APROVADA: o fechamento (passo 8);
-  - no fechamento, levar ao `TODO.md`: as 2 recomendações do `frontend-reviewer` da correção
-    `troca-de-escola-sem-ir-para-a-entrada` (título do incidente truncado a 360 px no cartão do Painel; texto de incidente
-    da vitrine pouco realista); o sino da 1.0 que faz 6 leituras a cada recarga de página da coordenação; e os Menores da
-    validação que não forem corrigidos (lista na seção 4 do `validacao.md`);
-  - dizer ao Joaquim no fechamento (achado da 10.0, para ele com o `infra-guardian`): o EXPLAIN de `?estado=rejeitada` em
-    Registros › IA levou 30,2 s com 60 mil entregas (subconsulta quadrática da A5); está em `10_task.md` e no `TODO.md`.
-    E o achado do RF3: o detalhe de um pedido passou de 2 para 3 cliques por Registros (do Painel continua 2);
-  - a X3 e a X4 continuam paradas por pedido do Joaquim (a X4 no andar "X4 telas-do-aluno-e-primeiro-acesso", com a 1.0
-    em `1477850`): não retomar sem a palavra dele.
-- **Maestri:** depois do reinício da máquina, o `maestri` não está no PATH do terminal do Orquestrador: usar
-  `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
-- **Base:** `spec/telas-da-coordenacao` em `8397171`, com a `develop` de `2029703` juntada.
+- **X2 fechada (17/10, ~21h):** validação rodada 2 APROVADA sobre `adf4dfe`, esteira verde nele (39076770582), linhas
+  fechadas (`linhas.ts fechar`), ROADMAP `[x]`, Tech Spec "implementada em 17/10/2026", Menores das duas rodadas e as
+  recomendações sem destino no `TODO.md`. Commit de fechamento com push na `spec/telas-da-coordenacao`.
+- **Espero:** a palavra do Joaquim para o pouso (parada 6, em "Esperando o Joaquim"). A `develop` do GitHub não andou
+  (`2029703`, já dentro da spec); nenhum merge antes do pouso.
+- **Devo ainda, depois do pouso:** `git push origin develop` e a esteira da `develop`; desfazer os andares das linhas
+  (`maestri floor delete` de L1 e L2; o `maestri` está em `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`, se existir);
+  com a esteira da `develop` verde, a retrospectiva pelo `Arquiteto`. A X3 e a X4 continuam paradas por pedido do
+  Joaquim: não retomar sem a palavra dele.
+- **Já dito ao Joaquim no pedido de pouso:** o EXPLAIN de 30,2 s de `?estado=rejeitada` (10.0, no `TODO.md`) e o RF3 a
+  3 cliques por Registros.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -59,6 +48,12 @@
 | correção painel-pelo-endereco-cobre-o-aviso (C3) | `2919d08` | Sonnet 5.5 | 2 | linha 1, ~18h50–19h45; o último modal a abrir ficava por cima, e o `PainelLado` aberto pelo endereço não sabia do aviso de incidente; e2e em `incidentes.spec.ts` vermelho antes nos dois projetos, unidade em `PainelLado.test.tsx` e `dialogo-prioritario.test.ts`; 9 mutações vermelhas; `frontend-reviewer` aprovou na r1, `revisor-geral` e `test-engineer` na r2; encontro em `8397171` |
 
 ## Esperando o Joaquim
+## 17/10/2026 ~21h — X2 pouso
+Decisão: pousar a `spec/telas-da-coordenacao` na `develop` e fazer o push?
+Contexto: validação APROVADA (rodada 2, `validacao.md`), esteira verde em `adf4dfe`, fechamento commitado; a `develop` do GitHub não andou.
+Opções: pousar agora | esperar
+Recomendo: pousar agora; nada pendente bloqueia, e os Menores estão no `TODO.md`.
+
 ## O que falhou
 - 17/10 ~18h45 — CONFLITO no encontro da linha 1 (C1+C2, `c2e3398`) só no `TODO.md`, com a linha 2 (`ed03046`) que também
   tinha escrito nele: correção `encontro-…` na linha 1.

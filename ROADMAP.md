@@ -312,7 +312,8 @@ piscar; cada papel navega pela lateral nova e, no celular, pela barra de baixo q
 nela; nenhum endereço muda; "Sair" está a um clique em toda tela; o primeiro carregamento continua
 dentro do teto; e o e2e inteiro que existia continua verde, nos projetos `chromebook` e `celular`.
 
-## X2 — `telas-da-coordenacao` [~]
+## X2 — `telas-da-coordenacao` [x]
+Concluída em 17/10/2026, validada em tasks/prd-telas-da-coordenacao/validacao.md.
 **Depende de:** X1
 
 As telas da coordenação e da operação, recompostas como no mockup, com o que o produto já sabe.

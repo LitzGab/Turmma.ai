@@ -1,5 +1,124 @@
 # Validação — telas-da-coordenacao (X2)
 
+## Rodada 2 — 17/10/2026 (revalidação)
+
+**Escopo:** funcionalidade completa, revalidação: os achados da rodada 1 (seção 4 dela) e o que as correções mudaram
+**Commit validado:** `adf4dfe` (o último commit com código é o merge `8397171`; `adf4dfe` só muda o `estado.md`)
+**Veredito: APROVADA**
+
+Como foi feita: li a rodada 1, o `git diff b022543..adf4dfe` inteiro (37 arquivos), os cinco documentos de correção e o
+`achados/indice.md`, e o código e os testes de cada correção por completo. Rodei isolados os testes de unidade e os casos de e2e que
+servem de evidência, fiz três provas de mutação e fotografei as telas corrigidas. O e2e e as fotos rodaram no **ambiente de teste 0**
+(o que o Orquestrador reservou para a validação), construído por `node tools/ci/e2e.ts --manter-ambiente` a partir de `adf4dfe`. A
+vitrine deste andar foi remontada no ambiente 0 (`.processo/vitrine.json`; a do ambiente 2 está guardada no scratchpad da sessão) e
+recebeu, sintético: um professor convidado, uma estrutura "9V", um material que falhou, uma aluna com um pedido de titular "recebido"
+e um incidente sem confirmação. A operação, que a vitrine não alcança, foi fotografada por um Playwright de fora do repositório
+(config no scratchpad, fixtures `criarOperadorComSegundoFator` e `semearPainel`, removidas no fim).
+
+### 1. Os achados da rodada 1
+
+| Achado | Correção | Situação | Código | Teste e foto |
+|---|---|---|---|---|
+| **C1** — o Painel rolava 97 px a 1366 × 768 com a faixa de incidente | `c2e3398` | **resolvido** | `Painel.tsx:44`: o Painel inteiro passa a ser uma `section` "O Painel da escola" com `O_MIOLO_SEM_ABAS_QUE_ROLA` (`miolo-que-rola.ts:27`, desconta `--faixa-de-incidente`), `tabIndex 0` só a partir de 768 px | e2e `incidentes.spec.ts:654` (com a faixa: `paginaNaoRola`, o miolo rola de fato numa janela de 600 px, foco visível e `End` rola o miolo) ✅ chromebook e celular; `Painel.test.tsx:198`. Mutação 3. Foto `coordenacao--coordenacao-painel--button-name-Ver-depois--computador.png`: 768 px de altura (era 865) |
+| **C2** — o detalhe do pedido rolava 88 px (186 com a faixa) | `c2e3398` | **resolvido** | `privacidade/DetalheDoPedido.tsx:173`: a coluna vira a `section` "Tudo sobre este pedido" com `O_MIOLO_QUE_ROLA`; os três cartões e as ações ficam todos dentro dela, então o estado mais longo também cabe | e2e `pedido-do-titular.spec.ts:141` (sem a faixa) e `incidentes.spec.ts:687` (com a faixa, foco e rolagem pelo teclado) ✅ nos dois perfis; `DetalheDoPedido.test.tsx:106`. Foto `coordenacao--coordenacao-privacidade-pedidos-01a14c14-…--button-name-Ver-depois--computador.png`: 768 px (a da rodada 1 tinha 954) |
+| **C3** — o painel lateral aberto pelo endereço cobria o aviso de incidente | `2919d08` | **resolvido** | `componentes/dialogo-prioritario.ts` (novo: o aviso se registra; quem espera abre quando o último sai); `dialogo-modal.ts:100` (`cedeAoPrioritario` adia o `showModal`, e só devolve o foco se tiver aberto); `PainelLado.tsx:48`; `AvisoDeIncidente.tsx:123` | e2e `incidentes.spec.ts:756` (os três endereços: o painel montado não abre, um só `dialog[open]`, confirma pelo aviso, o painel abre com o foco no miolo e o endereço intacto), `:796` ("Ver depois" abre o painel por cima da faixa; Esc devolve o foco ao título), `:823` (painel já aberto: o aviso abre por cima e recebe o toque) ✅ nos dois perfis; `PainelLado.test.tsx` (6 casos), `dialogo-prioritario.test.ts` (5). A ordem é forçada segurando o pedaço da tela (`segurarATelaDoPainel`), não deixada à rede. Mutação 1. Fotos `coordenacao--coordenacao-professores--computador.png`, `coordenacao--coordenacao-material--celular.png`, `coordenacao--coordenacao-estrutura--computador.png` (o aviso por cima e legível nos três) e `coordenacao--coordenacao-professores--button-name-Ver-depois--computador.png` (depois de "Ver depois", o painel do professor abre sobre a faixa) |
+| **C4** — "o vazio só com a leitura terminada e sem erro" sem asserção em seis telas e no consumo do Painel | `ed03046` | **resolvido** | sem mudança de produção | `Estrutura.test.tsx:164-166`, `:176-178`; `privacidade/Pedidos.test.tsx:93-94`, `:107`; `operacao/paginas/Escolas.test.tsx:48-49`, `:67`; `Uso.test.tsx:41-42`, `:60`; `Professores.test.tsx:159-160` (o carregando, que era o apontado); `ListaDaTurma.test.tsx:185-188`, `:202-205`; `Painel.test.tsx:538`, `:548` (consumo carregando e em erro, com o alerta esperado antes de conferir). Mutação 2 |
+| **Maior** — `docs/interface.md` ainda com os sete itens e "abre em Governança" | `ed03046` | **resolvido** | `docs/interface.md:302-305` (os quatro lugares chegaram com a X2), `:1522` (linha da coordenação), `:1525` ("A coordenação abre no Painel (X2); Governança é a aba IA de Registros") | conferido por leitura; nenhuma outra menção ao desenho antigo na seção 3 nem na tabela |
+
+As outras duas correções do período (`4a3835f`, `2884140`) só põem `test.slow()` em dois casos de `e2e/agentes.spec.ts` que
+estouravam os 30 s no celular; não tocam asserção. A Tech Spec registrou a C3 (`techspec.md:18-19`, `:56`); a C1 e a C2 só levam o
+Painel e o detalhe à regra que a §9 "Altura" já dava ("a partir de 768 px só o miolo rola"), então não há desvio a registrar.
+
+### 2. RF a RF depois das correções
+
+Só mudam os RF que a rodada 1 deixou abaixo de ATENDIDO; os outros 17 seguem como lá, e nenhuma correção tocou o código deles (o
+`PainelLado`, que mudou, é o mesmo do sino, e o sino só o abre por toque, sem aviso na tela).
+
+| RF | Rodada 1 | Rodada 2 | Por quê |
+|---|---|---|---|
+| RF12, RF13, RF14, RF15 | PARCIAL | **ATENDIDO** | C3 resolvido, provado nos três endereços e visto nas fotos. O complemento da contestação continua provado só no componente, como a 7.0 registrou |
+| RF21 | ATENDIDO sem foto | **ATENDIDO, com foto lida** | Pela regra, RF com tela sem foto lida é no máximo PARCIAL, e a rodada 1 o deixou sem. Fotos agora (scratchpad da sessão, `foto-operacao/`): `chromebook-operacao.png` e `chromebook-operacao-uso.png` (tabela, paginação "Página 1 de 131", a frase fixa "a operação não vê dado de aluno nem de professor", estado da coordenação em selo com a ação ao lado; a página não rola, medido 0 px) e `celular-operacao.png` / `celular-operacao-uso.png` (a tabela vira cartões, sem rolagem lateral, 0 px) |
+| RF22 | PARCIAL | **ATENDIDO** | C4 resolvido |
+| RF23 | PARCIAL | **ATENDIDO** | C1 e C2 resolvidos; nas 13 telas da rodada 1 nada mudou que somasse altura |
+
+**Resultado:** 24 de 24 ATENDIDOS.
+
+Provas de mutação (aplicada, rodado só o teste citado, restaurada com `git checkout --`; árvore limpa no fim):
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF12–RF15 (C3) | `PainelLado.tsx:48`: `cedeAoPrioritario: true` → `false` | `PainelLado.test.tsx`: 5 de 6 vermelhos ("com prioritário, não abre ao montar…", "o painel desmontado enquanto esperava não abre depois", "quem abriu é quem tem o foco quando o painel de fato abre…" e mais dois) |
+| RF22 (C4) | `privacidade/Pedidos.tsx:103`: o carregando passa a mostrar também o `EstadoVazio` "Nenhum pedido registrado" | `Pedidos.test.tsx` "carregando: diz o que espera, e a tabela ainda não existe" (e o caso do vazio, pelo texto duplicado): 2 vermelhos |
+| RF23 (C1) | `miolo-que-rola.ts:27`: `-var(--faixa-de-incidente,0px)` tirado de `O_MIOLO_SEM_ABAS_QUE_ROLA` (web reconstruída no ambiente 0) | e2e `incidentes.spec.ts:654` [chromebook]: "a página inteira rola a partir de 768 px: só o miolo deveria — Expected ≤ 0, Received 86". Restaurado, o ambiente 0 foi reconstruído e o mesmo caso voltou verde |
+
+### 3. Critério de pronto e portão
+
+| Item | Situação |
+|---|---|
+| Pronto: cada tela cabe em 1366 × 768 sem rolar e funciona a 360 px | **cumprido** (era o item faltando): Painel e detalhe do pedido com e sem a faixa, por e2e e foto; a 360 px, sem rolagem lateral nas fotos novas |
+| Pronto: os demais itens | cumpridos, como na rodada 1; "e2e da A0b, A1, A5 e F3 provando as mesmas regras" é da esteira, conferida no fechamento. Nenhum `.skip`/`.only`/`.fixme` nem teste apagado no diff |
+
+Esteira: conferida no fechamento.
+
+| Portão | Resultado |
+|---|---|
+| Suítes inteiras | não rodadas aqui, por ordem do escopo (D79) |
+| Unidade e componente de evidência | ✅ `Painel`, `DetalheDoPedido`, `PainelLado`, `dialogo-prioritario`, `Estrutura`, `ListaDaTurma`, `Professores`, `Pedidos`, `AvisoDeIncidente`, `operacao/Escolas`, `operacao/Uso`: 11 arquivos, 184 casos verdes |
+| e2e de evidência (ambiente 0, de `adf4dfe`) | ✅ 18 de 18 (`incidentes.spec.ts:631`, `:654`, `:687`, `:756` ×3, `:796`, `:823` e `pedido-do-titular.spec.ts:120`, nos projetos `chromebook` e `celular`), em 1,1 min |
+| Dependências | `node_modules` em dia com o `package-lock.json`; `npm ci` não foi preciso |
+| Revisões das correções | ✅ as cinco correções e o encontro têm rodada de todo revisor obrigatório, e a última de cada um é APROVADO (`painel-e-pedido` e `painel-pelo-endereco` reprovadas na 1ª, aprovadas na 2ª) |
+| Commits sem marca | ✅ os sete commits sem `(correção …)` desde `b022543` só mudam `tasks/prd-telas-da-coordenacao/estado.md` |
+
+### 4. Achados
+
+**Críticos:** nenhum.
+
+**Maiores:** nenhum.
+
+**Menores** (novos nesta rodada):
+
+- `TODO.md`, linha "O título do cartão 'Incidente de segurança…' corta com reticências a 360 px": diz "tratar junto da correção do
+  Painel dos achados C1 a C3", e essa correção já foi feita sem tratar. Na foto do Painel a 1366 px os dois itens também cortam
+  ("Incidente de segurança sem confirm…", "O material "Capítulo da validação sem texto" não f…"). Correção: dar à linha um destino
+  que ainda exista (a próxima tarefa que tocar `componentes/Linha.tsx` ou o Painel, ou a X3, que reusa o sino).
+- `Painel.tsx:65` (`LISTA_QUE_ROLA`): a 1366 × 768 com a faixa, "Esperando você" fica com 144 px e mostra dois itens e meio, rolando
+  dentro do miolo que também rola. Funciona e já está no `TODO.md` (frontend-reviewer da correção C1+C2); registro aqui porque se vê
+  na foto.
+- `tasks/correcoes/2026-10-17-painel-pelo-endereco-cobre-o-aviso.md:115`: a recomendação "uma linha de texto 'O painel abre depois do
+  aviso'" ficou "para o Joaquim" sem linha no `TODO.md`. Levar ao `TODO.md` no fechamento, com as outras.
+
+**Menores da rodada 1 que seguem abertos:** nenhum foi tratado pelas correções (não eram o escopo delas), e o `estado.md` já os
+leva ao `TODO.md` no fechamento: a asserção decorativa de `SinoDaCoordenacao.test.tsx:152-156`; `fila-da-coordenacao.test.ts:111`
+tautológico; nenhum teste exclui busca em Registros › IA; o texto da retomada no RF19 e na §9; o detalhe do pedido a 3 cliques por
+Registros; a frase do teto de linhas e o `retryOnMount` na Tech Spec (§9, §7c) e a frase do e2e `governanca` (§10); o vazio dos
+Prazos de guarda; a linha do `7_task.md`; as mutações antigas da 1.0 e da 3.0; as abas de Escola em duas linhas a 360 px; as
+recomendações sem destino; `larguraExcedenteDoDialogo` medindo só o diálogo de cima.
+
+**Positivos:**
+
+- O e2e da C3 força a ordem do defeito (segura o pedaço da tela até o aviso estar na tela) em vez de esperar que a rede a repita: o
+  caso prova a corrida, não a sorte.
+- Os casos de altura da C1 e da C2 baixam a janela para 600 px antes de medir, para o conteúdo passar do miolo de verdade: sem isso o
+  `paginaNaoRola` poderia passar só por a tela ser curta.
+
+### 5. Conclusão
+
+APROVADA. Os quatro críticos e o maior da rodada 1 estão corrigidos, provados por teste que pega a remoção (três mutações vermelhas,
+uma delas no e2e) e vistos nas fotos: o Painel e o detalhe do pedido cabem em 1366 × 768 com a faixa de incidente, o aviso de
+incidente fica por cima de qualquer painel aberto pelo endereço, e o vazio não aparece durante a leitura nem junto do erro. O RF21,
+que a rodada 1 aprovou sem foto, agora tem as fotos da operação lidas. Os 24 RF estão atendidos e o critério de pronto, cumprido; o
+que fica é a esteira do commit validado, que o Orquestrador confere no fechamento, e os menores, que vão ao `TODO.md`.
+
+### 6. Pendências herdadas
+
+- Os menores das duas rodadas: ao `TODO.md`, no fechamento (o `estado.md` já os lista).
+- `?estado=rejeitada` em Registros › IA a 30,2 s com 60 mil entregas (achado da 10.0): já no `TODO.md`, para o Joaquim com o
+  `infra-guardian`.
+- A vitrine não entra como operador: as fotos da operação desta rodada vieram de um script fora do repositório. Destino: `TODO.md`,
+  junto da ferramenta da vitrine (como a 14.0 já registrou).
+- O ambiente de teste 0 ficou de pé com a web de `adf4dfe` e a vitrine deste andar aponta para ele, com o dado sintético semeado
+  acima; `vitrine.ts montar` recria a vitrine limpa.
+
 ## Rodada 1 — 17/10/2026
 
 **Escopo:** funcionalidade completa

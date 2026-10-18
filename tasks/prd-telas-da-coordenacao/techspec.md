@@ -1,7 +1,7 @@
 # Tech Spec — Telas da coordenação
 
 **PRD:** `tasks/prd-telas-da-coordenacao/prd.md`
-**Status:** revisada pelos guardiões em 13/10/2026 (rodada 4, `revisao-spec.md`) e aprovada por delegação do Joaquim; ele revê ao ler
+**Status:** implementada em 17/10/2026 (revisada pelos guardiões em 13/10/2026, rodada 4, `revisao-spec.md`, e aprovada por delegação do Joaquim; ele revê ao ler)
 **Tamanho:** acima do teto de 2.000 palavras, com aceite por delegação do Joaquim (13/10/2026). Motivo: a revisão dos guardiões exigiu por escrito os casos de releitura, de retry por chave exata, de lista truncada, de ano letivo ausente, de vínculo encerrado, de permissão do sino e de troca de escola
 
 ## 1. Resumo da abordagem
