@@ -470,7 +470,10 @@ describe('hooks sobre um repositório de verdade', () => {
       // o controle negativo viraria recusa e o vermelho pareceria do produto (`test-engineer`).
       writeFileSync(join(raiz, '.gitignore'), 'node_modules/\n')
       const noInicio = instantaneoDe(alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
-      const saida = spawnSync('node', [script, ...flags], { env: { ...process.env, CLAUDE_PROJECT_DIR: raiz, EDUCA_BANCO_NOVO: '1' }, encoding: 'utf8' })
+      // A fila de carga é de um arquivo à parte, fora da raiz (que o portão lê como código): o teste não pode ficar preso à
+      // trava de verdade da máquina quando outra linha está no portão ou no e2e (`tools/ci/fila-de-carga.ts`).
+      const fila = join(mkdtempSync(join(tmpdir(), 'fila-')), 'carga.lock')
+      const saida = spawnSync('node', [script, ...flags], { env: { ...process.env, CLAUDE_PROJECT_DIR: raiz, EDUCA_BANCO_NOVO: '1', EDUCA_FILA_DE_CARGA: fila }, encoding: 'utf8' })
       return { raiz, noInicio, saida }
     }
 

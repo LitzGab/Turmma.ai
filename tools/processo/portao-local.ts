@@ -14,6 +14,7 @@ import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
+import { garantirFilaDeCarga } from '../ci/fila-de-carga.ts'
 import { avaliarMutacoes, conferirMutacoes, comandoDoTeste, impressaoDasMutacoes, lerMutacoes, pedeReconstrucao, rodarCalado } from './mutacoes.ts'
 import {
   alteracoesDeCodigo,
@@ -89,6 +90,10 @@ if (argumentos[0] === 'revisores') {
   process.stdout.write(bloqueios.length > 0 ? `${bloqueios.map((bloqueio) => `- ${bloqueio}`).join('\n')}\n` : `nada pendente: ${linhaResumo}\n`)
   process.exit(bloqueios.length > 0 ? 1 : 0)
 }
+
+// Daqui em diante o portão roda suíte, e a máquina é uma só: sem o lugar na fila ele espera a vez, em vez de depender de
+// quem digita `flock` (`tools/ci/fila-de-carga.ts`). `conferir` e `revisores`, acima, só leem e não entram na fila.
+await garantirFilaDeCarga()
 
 const inicio = new Date().toISOString()
 // O conteúdo de agora é o que as suítes vão rodar, e é ele que vai para o instantâneo. Ler no fim faria arquivo

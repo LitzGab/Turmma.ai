@@ -946,7 +946,9 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       janela), no relatório que a Mesa e o Validador leem: na X2 o "só o miolo rola" (RF23) só foi visto pela altura das
       fotos, contada à mão, e escapou em duas telas até a validação (C1, C2);
       (f) **o `flock /tmp/educa-carga.lock` dentro do `portao-local.ts` e do `tools/ci/e2e.ts`**, para a fila de carga entre
-      as linhas não depender de quem digita o comando (o texto do `executar-task` e do `/seguir` vale até lá)
+      as linhas não depender de quem digita o comando (o texto do `executar-task` e do `/seguir` vale até lá).
+      **Feita** na correção `2026-10-18-fila-de-carga-no-codigo` (`tools/ci/fila-de-carga.ts`); as letras (a) a (e) seguem abertas. Limites conhecidos da (f): o aviso de espera não diz quem segura a fila (o pid já sai de
+      `donosDoTravamento`), e matar o comando de fora com `kill -9` deixa o relançado segurando a vez até acabar; e a pasta `fila-` que `tools/processo/revisoes.test.ts` cria em `/tmp` a cada execução nunca é apagada (apagar junto com a `raiz` na próxima correção que tocar esse teste)
 - [ ] **A vitrine não fotografa troca do Tutor do aluno** (validação da X1, rodada 1): ela não digita, e a escola
       sintética não tem troca do Tutor, então o balão com a assinatura não sai em foto. Destino: antes da X4, que mexe
       na tela do Tutor do aluno

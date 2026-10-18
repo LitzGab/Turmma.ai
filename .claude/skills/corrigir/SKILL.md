@@ -73,7 +73,7 @@ Corrija o mínimo. Rode o teste isolado até ficar verde (os comandos estão no 
 `.claude/skills/executar-task/SKILL.md`). Depois o portão da tarefa, uma vez, que grava o carimbo:
 
 ```bash
-flock /tmp/educa-carga.lock node tools/processo/portao-local.ts --tarefa tasks/correcoes/<AAAA-MM-DD>-<slug>.md
+node tools/processo/portao-local.ts --tarefa tasks/correcoes/<AAAA-MM-DD>-<slug>.md
 ```
 
 Cláusula que a correção acrescenta ganha o seu bloco `mutacao` no documento, numa seção "Mutações"

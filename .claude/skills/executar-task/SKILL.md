@@ -150,15 +150,17 @@ portão inteiro, de uns 30 minutos.</critical>
 ```bash
 npx vitest run --project unidade <arquivo.test.ts>
 npx vitest run --project integracao <arquivo.int.test.ts>      # sobe o compose de teste
-flock /tmp/educa-carga.lock node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts   # constrói a web, sobe o ambiente e roda só esse arquivo
+node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts                               # constrói a web, sobe o ambiente e roda só esse arquivo (entra na fila de carga sozinho)
 flock /tmp/educa-carga.lock npx playwright test e2e/<arquivo>.spec.ts                      # de novo, com o ambiente de pé e só o spec alterado
 ```
 
-**O e2e e o portão rodam sempre com `flock /tmp/educa-carga.lock`.** Cada linha tem o seu ambiente,
-mas a máquina é uma só: o e2e de duas linhas ao mesmo tempo estoura os 30 s (X2, carga de 9 a 24). O
-`flock` faz quem chega esperar a vez sozinho. **Nunca escreva laço de espera com `pgrep`**: o padrão
-casa com a linha de comando do próprio laço, e o laço não sai. Na X2 foram cinco, perto de 4 h de
-linha parada.
+**A fila de carga é do comando.** Cada linha tem o seu ambiente, mas a máquina é uma só: o e2e de duas
+linhas ao mesmo tempo estoura os 30 s (X2, carga de 9 a 24). O `portao-local.ts` e o `tools/ci/e2e.ts`
+tomam o `flock /tmp/educa-carga.lock` sozinhos (`tools/ci/fila-de-carga.ts`): quem chega espera a vez e
+avisa que está esperando, e você não digita `flock` neles. Só o `npx playwright test` direto, que não
+passa por eles, continua com `flock /tmp/educa-carga.lock` na frente. **Nunca escreva laço de espera
+com `pgrep`**: o padrão casa com a linha de comando do próprio laço, e o laço não sai. Na X2 foram
+cinco, perto de 4 h de linha parada.
 
 Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
@@ -197,7 +199,7 @@ e, na segunda falha, um diagnóstico do Arquiteto com o ponto exato.
 ### Com os testes da tarefa verdes: o portão, uma vez
 
 ```bash
-flock /tmp/educa-carga.lock node tools/processo/portao-local.ts --tarefa tasks/prd-<funcionalidade>/<N>_task.md
+node tools/processo/portao-local.ts --tarefa tasks/prd-<funcionalidade>/<N>_task.md
 ```
 
 Ele roda os tipos, o lint, as duas guardas da esteira que não são teste (segredo commitado e

@@ -286,8 +286,9 @@ Arquiteto autorizou e os arquivos previstos.
     commit fica na linha e segue com o da tarefa. Registre em "O que decidi sem perguntar".
 
 Cada linha tem o seu ambiente de teste, mas a máquina é uma só: o e2e e o portão de duas linhas ao
-mesmo tempo estouram os 30 s (X2, carga de 9 a 24). Por isso todo e2e e todo portão rodam com
-`flock /tmp/educa-carga.lock <comando>` (`executar-task`, passo 4), e quem chega espera a vez sozinho.
+mesmo tempo estouram os 30 s (X2, carga de 9 a 24). Por isso o `portao-local.ts` e o `tools/ci/e2e.ts`
+tomam o `flock /tmp/educa-carga.lock` sozinhos (`tools/ci/fila-de-carga.ts`; só o `npx playwright test` direto leva o
+`flock` digitado, `executar-task`, passo 4), e quem chega espera a vez e avisa.
 **Não mande uma linha esperar a outra com laço de `pgrep`**: ele casa com a própria linha de comando e
 não sai (cinco vezes na X2, perto de 4 h de linha parada). No andar da spec e no térreo, que dividem o
 ambiente 0, um por vez.
