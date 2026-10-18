@@ -66,6 +66,25 @@ const ITENS_DO_ALUNO = [
   { rotulo: 'Minha turma', caminho: '/aluno/minha-turma' },
 ] as const
 
+/** Os endereços da coordenação que têm tela: a Governança, onde ela abre (A5), uma turma aberta na Estrutura (13.0), Professores (14.0) e o Painel (telas da coordenação, 2.0). */
+const ENDERECOS_DA_COORDENACAO = [
+  { nome: 'Governança', endereco: '/coordenacao/governanca' },
+  // O id é de uma turma que ninguém criou, de propósito: o que se prova é a guarda de papel, e não a turma.
+  { nome: 'uma turma da Estrutura', endereco: `/coordenacao/estrutura/turmas/${randomUUID()}` },
+  { nome: 'Professores', endereco: '/coordenacao/professores' },
+  { nome: 'Painel', endereco: '/coordenacao/painel' },
+] as const
+
+/**
+ * A professora entra pela API (`POST /v1/sessao/email`, o cookie fica na própria aba), sem passar pela tela de entrada nem
+ * por "Início": quem chama abre o endereço que quer, e a página carrega uma vez só. A entrada pela tela é provada em outros casos.
+ */
+async function entrarPelaApi(page: Page): Promise<void> {
+  const professora = await criarEquipeComSenha()
+  const resposta = await page.request.post('/v1/sessao/email', { data: { email: professora.email, senha: professora.senha } })
+  expect(resposta.ok(), 'a entrada pela API').toBe(true)
+}
+
 /** Os pedidos de JS que a página fez, pelo caminho: é por eles que o teste sabe qual área foi baixada. */
 function registrarChunks(page: Page): string[] {
   const pedidos: string[] = []
@@ -201,23 +220,13 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(apagado.locator('[data-filete]')).toHaveCount(0)
   })
 
-  test('o professor no endereço da coordenação e do aluno cai em "não encontrada", sem baixar a área deles', async ({ page, hasTouch }) => {
+  test('o professor no endereço do aluno cai em "não encontrada", sem baixar a área dele nem a da coordenação', async ({ page }) => {
+    // Um caso por endereço (este e os quatro de baixo), e cada um entra pela API: as seis cargas de página do caso único (a entrada,
+    // quatro endereços da coordenação e o do aluno) passavam dos 30 s da esteira no Chromebook de teste (CPU ×4, Fast 3G), onde cada
+    // carga leva uns 4 s e a entrada pela tela, uns 9 s (esteira `39129521729`). As asserções são as de antes.
     const pedidos = registrarChunks(page)
-    await entrarComoProfessora(page, hasTouch)
+    await entrarPelaApi(page)
 
-    // Os endereços da coordenação que têm tela: a Governança, onde ela abre (A5), uma turma aberta na Estrutura (13.0),
-    // Professores (14.0) e o Painel (telas da coordenação, 2.0).
-    for (const endereco of ['/coordenacao/governanca', `/coordenacao/estrutura/turmas/${randomUUID()}`, '/coordenacao/professores', '/coordenacao/painel']) {
-      await page.goto(endereco)
-      await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-      await expect(page.getByRole('heading', { name: 'Governança' })).toHaveCount(0)
-      await expect(page.getByRole('heading', { name: 'Estrutura' })).toHaveCount(0)
-      await expect(page.getByRole('heading', { name: 'Professores' })).toHaveCount(0)
-      await expect(page.getByRole('heading', { name: 'Painel' })).toHaveCount(0)
-    }
-    await expect(page).toHaveTitle('Página não encontrada · Turmma')
-    // A casca continua: a pessoa sai dali pela lateral, e não por um beco sem saída.
-    await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible()
     await page.goto('/aluno/minha-turma')
     await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     // A área do aluno responderia "não encontrada" para o professor também sem a guarda (a "Minha turma" é só do aluno
@@ -225,7 +234,24 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     expect(pedidos.filter((caminho) => CHUNK_DA_COORDENACAO.test(caminho) || CHUNK_DO_ALUNO.test(caminho))).toEqual([])
   })
 
-  // Separado do anterior só pelo prazo: as cinco entradas de página por `page.goto`, no perfil de rede lenta e com o
+  for (const { nome, endereco } of ENDERECOS_DA_COORDENACAO) {
+    test(`o professor no endereço da coordenação em ${nome} cai em "não encontrada", sem baixar a área dela nem a do aluno`, async ({ page }) => {
+      const pedidos = registrarChunks(page)
+      await entrarPelaApi(page)
+
+      await page.goto(endereco)
+      await expect(naoEncontrada(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+      for (const titulo of ['Governança', 'Estrutura', 'Professores', 'Painel']) {
+        await expect(page.getByRole('heading', { name: titulo })).toHaveCount(0)
+      }
+      await expect(page).toHaveTitle('Página não encontrada · Turmma')
+      // A casca continua: a pessoa sai dali pela lateral, e não por um beco sem saída.
+      await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible()
+      expect(pedidos.filter((caminho) => CHUNK_DA_COORDENACAO.test(caminho) || CHUNK_DO_ALUNO.test(caminho))).toEqual([])
+    })
+  }
+
+  // Separado dos casos acima só pelo prazo: as cinco entradas de página por `page.goto`, no perfil de rede lenta e com o
   // servidor do e2e sem compressão nem cache, passavam dos 30 s juntas (esteira `37245636814`). As asserções são as
   // mesmas de antes; cada teste começa da entrada da professora.
   test('o endereço que não existe na área do professor responde igual ao de outro papel, e "página inicial" volta ao Início', async ({ page, hasTouch }) => {
