@@ -5,15 +5,16 @@
 //
 //   node tools/processo/portao-local.ts --tarefa [documento.md] [testes...]
 //                                                               o portão da tarefa: tipos, lint, unidade, os testes alterados
+//                                                               (o caso de e2e alterado que passa de 15 s fica vermelho: tools/ci/duracao-do-e2e.ts)
 //                                                               e as mutações do documento (tools/processo/mutacoes.ts)
 //   node tools/processo/portao-local.ts --e2e --infra           o portão completo, na máquina: o que a esteira roda a cada push
 //   node tools/processo/portao-local.ts conferir <documento>     diz se o carimbo vale para o código atual
 //   node tools/processo/portao-local.ts conferir --completo      diz se o portão completo vale para o código atual
 //   node tools/processo/portao-local.ts revisores <documento>    diz o que o commit ainda encontraria: quem falta, reprovou ou caducou
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { arquivoDoRelatorioDoE2e, motivoDaDuracaoDoE2e, VARIAVEL_DO_RELATORIO_DO_E2E } from '../ci/duracao-do-e2e.ts'
 import { garantirFilaDeCarga } from '../ci/fila-de-carga.ts'
 import { avaliarMutacoes, conferirMutacoes, comandoDoTeste, impressaoDasMutacoes, lerMutacoes, pedeReconstrucao, rodarCalado } from './mutacoes.ts'
 import {
@@ -139,16 +140,35 @@ function comandoDaSuite(suite: string): string[] {
   ]
 }
 
+// A duração dos casos de e2e que o portão da tarefa roda: o Playwright deixa o relatório neste arquivo, e o portão o lê
+// depois da corrida verde (`tools/ci/duracao-do-e2e.ts`). O de uma corrida anterior sai antes: relatório velho não mede nada.
+const relatorioDoE2e = arquivoDoRelatorioDoE2e(raiz)
+if (daTarefa) {
+  rmSync(relatorioDoE2e, { force: true })
+  mkdirSync(dirname(relatorioDoE2e), { recursive: true })
+}
+/** O ambiente do comando: o da suíte e, no e2e da tarefa, o arquivo onde o Playwright grava a duração dos casos. */
+function ambienteDoComando(comando: string, suite: string): NodeJS.ProcessEnv {
+  const ambiente = ambienteDaSuite(comando.includes('--project integracao') ? 'test' : suite)
+  return daTarefa && comando.includes('tools/ci/e2e.ts') ? { ...ambiente, [VARIAVEL_DO_RELATORIO_DO_E2E]: relatorioDoE2e } : ambiente
+}
+
 // Com node_modules anterior ao lock (um pull que trouxe dependência nova), o typecheck falha com TS2307
 // sem dizer que falta instalar.
 const dependencias = rodar('[ -f node_modules/.package-lock.json ] && [ ! package-lock.json -nt node_modules/.package-lock.json ] || npm ci')
 // Só o primeiro comando que sobe o compose começa do banco limpo (`ambienteDaSuite`): no alvo, é a integração.
 const falhou = !dependencias
   ? 'dependências'
-  : suites.find((suite) => !comandoDaSuite(suite).every((comando) => rodar(comando, ambienteDaSuite(comando.includes('--project integracao') ? 'test' : suite))))
+  : suites.find((suite) => !comandoDaSuite(suite).every((comando) => rodar(comando, ambienteDoComando(comando, suite))))
 
 if (falhou) {
   process.stdout.write(`\n✗ portão local vermelho em ${falhou}. Nenhum carimbo gravado.\n`)
+  process.exit(1)
+}
+// O caso de e2e alterado que levou mais de 15 s aqui estoura os 30 s do runner: vermelho já, e não uma correção depois da validação.
+const duracaoDoE2e = daTarefa && alvos.e2e.length > 0 ? motivoDaDuracaoDoE2e(raiz, relatorioDoE2e) : null
+if (duracaoDoE2e !== null) {
+  process.stdout.write(`\n✗ portão local vermelho na duração do e2e: ${duracaoDoE2e}\nNenhum carimbo gravado.\n`)
   process.exit(1)
 }
 // As mutações do documento, depois das suítes: só com os testes verdes um teste vermelho quer dizer que a cláusula tem

@@ -926,7 +926,8 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       correção própria
 - [ ] **(X1, retrospectiva) Código de processo que a X1 pediu** (`tasks/prd-pele-e-casca/retro.md`, M1 a M3). Correção
       própria, com teste e revisão; mexe em `tools/processo/` e `tools/ci/`:
-      (a) **o portão da tarefa mede a duração do e2e que roda**: caso alterado que passa de 15 s na máquina fica vermelho,
+      (a) **o portão da tarefa mede a duração do e2e que roda** (**feito** em 18/10/2026 na correção `2026-10-18-duracao-do-e2e-no-portao`,
+      `tools/ci/duracao-do-e2e.ts`: repórter `json` ligado pelo portão, caso alterado pelo diff do git; o portão completo não mede; **limites conhecidos**: o caso vai do `test(` até a linha antes do `test(` seguinte, então um `beforeEach` ou ajudante entre dois `describe` é cobrado do último caso de cima e os de baixo passam sem cobrança, e o que fica fora de todo caso (importação, ajudante ou `beforeEach` acima do primeiro caso, `e2e/__fixtures__/`) que ficar mais lento não é cobrado de caso nenhum; caso pulado some das fronteiras, e `.skip` é proibido pela regra 40; **a rever** se aparecer na esteira caso lento por esses caminhos: tratar mudança fora de qualquer caso como mudança no arquivo inteiro, o que muda o contrato do portão): caso alterado que passa de 15 s na máquina fica vermelho,
       porque o runner leva perto do dobro e o prazo é 30 s. Na X1, os casos que caíram na esteira levavam de 19 a 29 s aqui,
       e custaram duas correções e duas rodadas de validação depois da validação aprovada;
       (b) **o hook conta as rodadas pelo `achados/`**, e não pelas linhas da seção "Revisões" (`tools/processo/revisoes.ts`,
@@ -948,7 +949,7 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       fotos, contada à mão, e escapou em duas telas até a validação (C1, C2);
       (f) **o `flock /tmp/educa-carga.lock` dentro do `portao-local.ts` e do `tools/ci/e2e.ts`**, para a fila de carga entre
       as linhas não depender de quem digita o comando (o texto do `executar-task` e do `/seguir` vale até lá).
-      **Feita** na correção `2026-10-18-fila-de-carga-no-codigo` (`tools/ci/fila-de-carga.ts`); as letras (a) a (e) seguem abertas, salvo a primeira frase da (c), feita na correção acima. Limites conhecidos da (f): o aviso de espera não diz quem segura a fila (o pid já sai de
+      **Feita** na correção `2026-10-18-fila-de-carga-no-codigo` (`tools/ci/fila-de-carga.ts`); seguem abertas a (b), a (d), a (e), a (g) e as duas últimas frases da (c) (`linhas.ts conferir` e o projeto da mutação de e2e); a primeira frase da (c) foi feita na correção acima, e a (a), na `2026-10-18-duracao-do-e2e-no-portao`. Limites conhecidos da (f): o aviso de espera não diz quem segura a fila (o pid já sai de
       `donosDoTravamento`), e matar o comando de fora com `kill -9` deixa o relançado segurando a vez até acabar; e a pasta `fila-` que `tools/processo/revisoes.test.ts` cria em `/tmp` a cada execução nunca é apagada (apagar junto com a `raiz` na próxima correção que tocar esse teste)
       (g) **o `tools/ci/e2e.ts` recusa, ou ao menos avisa, a opção que descarta**: opção com `-` fora da lista de
       `opcoesDoPlaywright` (`--headed`) some sem aviso, e o valor solto (`--workers 1`, `--repeat-each 10`, `--grep nome`) é lido como

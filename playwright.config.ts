@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 import { PERFIL_CELULAR, PERFIL_CHROMEBOOK, type OpcoesDoPerfil } from './e2e/__fixtures__/perfis.ts'
 import { lerAmbienteDeTeste, valorObrigatorio } from './tools/ci/compose.ts'
+import { relatoriosDoPlaywright, VARIAVEL_DO_RELATORIO_DO_E2E } from './tools/ci/duracao-do-e2e.ts'
 
 // O e2e roda contra o compose de teste (`npm run test:e2e` ou `npm run ci:e2e`), nunca contra servidor de dev.
 const ambienteDeTeste = lerAmbienteDeTeste()
@@ -27,7 +28,8 @@ export default defineConfig<OpcoesDoPerfil>({
   fullyParallel: true,
   forbidOnly: process.env['CI'] === 'true',
   retries: 0,
-  reporter: process.env['CI'] === 'true' ? [['list'], ['github']] : 'list',
+  // Com `EDUCA_RELATORIO_DO_E2E`, o portão da tarefa também recebe a duração de cada caso (`tools/ci/duracao-do-e2e.ts`).
+  reporter: relatoriosDoPlaywright(process.env['CI'] === 'true', process.env[VARIAVEL_DO_RELATORIO_DO_E2E]),
   use: {
     baseURL: urlBase,
     locale: 'pt-BR',

@@ -162,6 +162,14 @@ passa por eles, continua com `flock /tmp/educa-carga.lock` na frente. **Nunca es
 com `pgrep`**: o padrão casa com a linha de comando do próprio laço, e o laço não sai. Na X2 foram
 cinco, perto de 4 h de linha parada.
 
+**O portão mede os casos de e2e que a tarefa alterou.** Caso de e2e cujas linhas o diff tocou e que passa de **15 s** na máquina
+deixa o portão vermelho, antes das mutações e sem carimbo: o runner da esteira leva perto do dobro e o prazo é 30 s (X1: casos de 19 a
+29 s aqui; X2: quatro dos sete casos de prazo já passavam de 15 s). O caso lento que você não tocou não conta, e a mensagem diz arquivo,
+linha, projeto e segundos. Olhe a duração que o `list` do Playwright já imprime no e2e isolado, e encurte antes do portão (semeie o dado
+pela API em vez de pela tela, tire a espera que não prova nada) ou divida o caso. Dois avisos: o relatório só é lido quando a corrida passa,
+então e2e vermelho reprova o portão pela falha e não diz quais casos estavam lentos; e um caso perto de 15 s oscila de uma corrida para
+outra, por isso confira o isolado com folga (uns 12 s), e não no limite.
+
 Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
 (`run_in_background`), e você espera a notificação do fim; não use `sleep`.
