@@ -187,6 +187,12 @@ painel ao lado vira folha de baixo, e a barra presa de Aprovar fica acima da bar
 **A separação dos specs** (tarefa 2.0) move casos sem mudar título nem asserção: a contagem de `test(` em `e2e/` é
 conferida antes e depois.
 
+**Duração do e2e na separação** (divergência da 2.0, decidida pelo Joaquim em 18/10/2026, alternativa 1): a régua do
+portão (`tools/ci/duracao-do-e2e.ts`) passa a ser metade do prazo declarado do caso, e só vale o prazo que já estava
+no HEAD (no padrão de 30 s, continua 15 s). A mudança da régua é correção de processo à parte, antes de a 2.0 retomar.
+A regra acima não muda; a 2.0 só encurta ou divide `casca:468` e `areas:151`, os dois casos editados acima de 15 s sem
+prazo próprio.
+
 ## 11. Conformidade com as regras
 
 | Regra | Como é atendida | Desvio e justificativa | Documento que registra o desvio |
