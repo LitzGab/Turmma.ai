@@ -5,7 +5,7 @@
 //
 //   node tools/processo/portao-local.ts --tarefa [documento.md] [testes...]
 //                                                               o portão da tarefa: tipos, lint, unidade, os testes alterados
-//                                                               (o caso de e2e alterado que passa de 15 s fica vermelho: tools/ci/duracao-do-e2e.ts)
+//                                                               (o caso de e2e alterado que passa de metade do prazo dele, 15 s sem prazo próprio, fica vermelho: tools/ci/duracao-do-e2e.ts)
 //                                                               e as mutações do documento (tools/processo/mutacoes.ts)
 //   node tools/processo/portao-local.ts --e2e --infra           o portão completo, na máquina: o que a esteira roda a cada push
 //   node tools/processo/portao-local.ts conferir <documento>     diz se o carimbo vale para o código atual
@@ -170,7 +170,7 @@ if (falhou) {
   process.stdout.write(`\n✗ portão local vermelho em ${falhou}. Nenhum carimbo gravado.\n`)
   process.exit(1)
 }
-// O caso de e2e alterado que levou mais de 15 s aqui estoura os 30 s do runner: vermelho já, e não uma correção depois da validação.
+// O caso de e2e alterado que levou mais de metade do prazo dele aqui (15 s sem prazo próprio) estoura o prazo no runner: vermelho já, e não uma correção depois da validação.
 const duracaoDoE2e = daTarefa && alvos.e2e.length > 0 ? motivoDaDuracaoDoE2e(raiz, relatorioDoE2e) : null
 if (duracaoDoE2e !== null) {
   process.stdout.write(`\n✗ portão local vermelho na duração do e2e: ${duracaoDoE2e}\nNenhum carimbo gravado.\n`)

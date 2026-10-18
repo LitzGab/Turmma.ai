@@ -164,13 +164,15 @@ passa por eles, continua com `flock /tmp/educa-carga.lock` na frente. **Nunca es
 com `pgrep`**: o padrão casa com a linha de comando do próprio laço, e o laço não sai. Na X2 foram
 cinco, perto de 4 h de linha parada.
 
-**O portão mede os casos de e2e que a tarefa alterou.** Caso de e2e cujas linhas o diff tocou e que passa de **15 s** na máquina
-deixa o portão vermelho, antes das mutações e sem carimbo: o runner da esteira leva perto do dobro e o prazo é 30 s (X1: casos de 19 a
-29 s aqui; X2: quatro dos sete casos de prazo já passavam de 15 s). O caso lento que você não tocou não conta, e a mensagem diz arquivo,
-linha, projeto e segundos. Olhe a duração que o `list` do Playwright já imprime no e2e isolado, e encurte antes do portão (semeie o dado
+**O portão mede os casos de e2e que a tarefa alterou.** Caso de e2e cujas linhas o diff tocou e que passa de **metade do prazo** dele na máquina
+deixa o portão vermelho, antes das mutações e sem carimbo: o runner da esteira leva perto do dobro e o prazo é 30 s, o que dá **15 s**
+(X1: casos de 19 a 29 s aqui; X2: quatro dos sete casos de prazo já passavam de 15 s). O caso que já declarava `test.slow()` (90 s) ou
+`test.setTimeout(n)` no HEAD é medido contra a metade desse prazo, também quando muda de arquivo; o prazo que você põe agora **não conta**
+(`test.slow()` num caso novo, ou num que o HEAD tinha sem prazo, mede 15 s do mesmo jeito), e só `test.slow()` e `test.setTimeout(n)`
+de corpo de caso são lidos. O caso lento que você não tocou não conta, e a mensagem diz arquivo, linha, projeto, segundos e limite. Olhe a duração que o `list` do Playwright já imprime no e2e isolado, e encurte antes do portão (semeie o dado
 pela API em vez de pela tela, tire a espera que não prova nada) ou divida o caso. Dois avisos: o relatório só é lido quando a corrida passa,
-então e2e vermelho reprova o portão pela falha e não diz quais casos estavam lentos; e um caso perto de 15 s oscila de uma corrida para
-outra, por isso confira o isolado com folga (uns 12 s), e não no limite.
+então e2e vermelho reprova o portão pela falha e não diz quais casos estavam lentos; e um caso perto do limite oscila de uma corrida para
+outra, por isso confira o isolado com folga (uns 12 s para o de 15 s), e não no limite.
 
 **O portão roda também o e2e que cita um texto que a sua tarefa tirou da web.** Texto removido de `apps/web/src` (um título, um
 rótulo, um aviso, um `data-testid`) que algum `e2e/*.spec.ts` ainda cita, sem diferenciar maiúscula, põe esse spec nos alvos, mesmo

@@ -1,14 +1,34 @@
 // A duração dos casos de e2e que o portão da tarefa roda (retrospectiva da X1, M1; da X2, M1).
 //
-// O prazo de um caso é 30 s no runner da esteira, que leva perto do dobro da máquina de quem implementa. Um caso que passa
-// de 15 s aqui estoura lá. Na X1 os casos que caíram na esteira levavam de 19 a 29 s na máquina; na X2, quatro dos sete casos
+// O prazo de um caso sem prazo próprio é 30 s no runner da esteira, que leva perto do dobro da máquina de quem implementa. Um
+// caso desses que passa de 15 s aqui estoura lá. Na X1 os casos que caíram na esteira levavam de 19 a 29 s na máquina; na X2, quatro dos sete casos
 // de prazo já passavam de 15 s aqui (`material:180` a 18 s, `areas:316` a 22, `agentes:164` a 22 e `agentes:186` a 21). Cada
 // um custou uma correção e uma rodada de validação depois da validação aprovada, porque o portão da tarefa só olhava se o
 // caso passava, e nunca em quanto tempo.
 //
 // Como funciona: o portão da tarefa liga a variável `EDUCA_RELATORIO_DO_E2E` na corrida do e2e; o `playwright.config.ts`
-// então acrescenta o repórter `json` (`relatoriosDoPlaywright`), que grava a duração de cada caso em cada projeto. Com a
-// corrida verde, o portão lê o relatório (`motivoDaDuracaoDoE2e`) e reprova o caso **alterado** que passou de 15 s.
+// então acrescenta o repórter `json` (`relatoriosDoPlaywright`), que grava a duração e o prazo de cada caso em cada projeto.
+// Com a corrida verde, o portão lê o relatório (`motivoDaDuracaoDoE2e`) e reprova o caso **alterado** que passou da metade
+// do prazo dele.
+//
+// O prazo do caso é o que ele declara (`test.slow()` dá 90 s; `test.setTimeout(n)` dá n) e, sem declarar nada, 30 s: a metade
+// é 15 s, o limite de antes. Caso que declara prazo próprio é caso que sabe que é longo (o roteiro da demonstração, o fluxo de
+// ponta a ponta da A2 e da A3-A4), e medi-lo contra 15 s o obrigaria a deixar de ser de ponta a ponta (correção
+// `2026-10-18-duracao-do-e2e-le-o-prazo-declarado`). Mas só vale o prazo que **já estava no HEAD**: `test.slow()` posto agora num caso
+// que estourou a régua seria a saída mais curta para escapar dela, e o que o prazo maior encobre é justamente o caso que se tornou lento.
+// O prazo do HEAD se acha pelo título do caso, em qualquer spec (o caso movido para outro arquivo leva o prazo que tinha); caso
+// que não existia, ou cujo título o HEAD não escreve por extenso, conta 30 s.
+//
+// O que a leitura do HEAD não faz, e por isso o caso conta 30 s (cobra mais, nunca menos): ler `test.slow(condição)`, `describe.configure`
+// e `test.setTimeout(ident)` cuja constante não é só números e `*` no mesmo arquivo; e distinguir dois casos de mesmo título em specs
+// diferentes (vale o de menor prazo, mas um caso novo que repete o título de um lento herda o prazo dele). `test.slow()` posto no nível
+// do `describe`, fora do corpo de qualquer caso, não é lido: se um dia aparecer, é um corte a mais em `FIM_DE_CASO`. A constante só é
+// lida na coluna 0, fora de função, e terminada sem `;`; e `test.setTimeout( n )`, com espaço dentro dos parênteses, não é lido (o
+// prettier não o escreve): nos dois o caso conta 30 s.
+//
+// O leitor de comentários (`semComentarios`) não entende expressão regular literal: nem a que tem aspa dentro, nem a que tem `\/` antes
+// do fecho (`e2e/operacao-convite.spec.ts:152`, `/^otpauth:\/\/totp\//`, onde o `\//` final é lido como comentário e some só um `/)`,
+// sem dano). Trocá-lo pelo `ts.createScanner` acabaria com o limite e está no `TODO.md`.
 //
 // "Alterado" é o caso cujas linhas o diff tocou, e não todo caso do arquivo: quem altera um caso do `material.spec.ts` não
 // herda os casos lentos que já estavam lá (cada um tem a sua correção). O caso vai da linha do `test(` até a linha antes
@@ -19,8 +39,10 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ReporterDescription } from '@playwright/test'
 
-/** O prazo do caso no runner é 30 s e o runner leva perto do dobro: aqui, o que passa de 15 s fica vermelho. */
-export const LIMITE_DO_CASO_DE_E2E_MS = 15_000
+/** O prazo de um caso que não declara nenhum: o `timeout` padrão do Playwright, que o `playwright.config.ts` não muda. */
+export const PRAZO_PADRAO_DO_CASO_DE_E2E_MS = 30_000
+/** O runner leva perto do dobro da máquina: aqui, o caso sem prazo próprio que passa de 15 s (metade dos 30 s) fica vermelho. */
+export const LIMITE_DO_CASO_DE_E2E_MS = PRAZO_PADRAO_DO_CASO_DE_E2E_MS / 2
 /** Quando posta, o Playwright grava o relatório de duração neste arquivo. Só o portão da tarefa a posta. */
 export const VARIAVEL_DO_RELATORIO_DO_E2E = 'EDUCA_RELATORIO_DO_E2E'
 export const CAMINHO_DO_RELATORIO_DO_E2E = '.processo/e2e-duracao.json'
@@ -42,6 +64,8 @@ interface ResultadoDoRelatorio {
   duration?: number
 }
 interface TesteDoRelatorio {
+  /** O prazo do caso, com `test.slow()` e `test.setTimeout()` já aplicados. */
+  timeout?: number
   projectName?: string
   status?: string
   results?: ResultadoDoRelatorio[]
@@ -69,6 +93,8 @@ export interface CasoMedido {
   titulo: string
   projeto: string
   duracaoMs: number
+  /** O prazo que a corrida deu ao caso: 30 s, ou o que ele declarou. */
+  prazoMs: number
 }
 
 function caminhoDoSpec(arquivo: string): string {
@@ -93,6 +119,7 @@ export function casosMedidos(relatorio: RelatorioDoPlaywright): CasoMedido[] {
           titulo: [...caminho, caso.title ?? ''].join(' › '),
           projeto: teste.projectName ?? '',
           duracaoMs,
+          prazoMs: teste.timeout ?? PRAZO_PADRAO_DO_CASO_DE_E2E_MS,
         })
       }
     }
@@ -144,21 +171,156 @@ export function casosAlterados(casos: readonly CasoMedido[], alteracaoDe: (arqui
   })
 }
 
+/**
+ * O título que o spec escreve por extenso, sem as barras de escape. `null` quando é um modelo com `${}`: o título só existe
+ * quando o código roda, e o HEAD não o diz.
+ */
+function tituloLiteral(corpo: string): string | null {
+  return corpo.includes('${') ? null : corpo.replace(/\\(.)/g, '$1')
+}
+
+/**
+ * O texto sem os comentários de linha e de bloco, deixando intacto o que está entre aspas (`'http://…'` não é comentário). Quem lê o
+ * prazo não pode tomar por declaração um `test.slow()` citado num comentário (`e2e/lista-da-turma.spec.ts` tem um).
+ */
+export function semComentarios(texto: string): string {
+  let saida = ''
+  let aspa: string | null = null
+  let i = 0
+  while (i < texto.length) {
+    const c = texto.charAt(i)
+    const seguinte = texto.charAt(i + 1)
+    if (aspa !== null) {
+      saida += c
+      if (c === '\\') {
+        saida += seguinte
+        i += 2
+        continue
+      }
+      if (c === aspa) aspa = null
+      i++
+      continue
+    }
+    if (c === '/' && seguinte === '/') {
+      const quebra = texto.indexOf('\n', i + 2)
+      i = quebra === -1 ? texto.length : quebra
+      continue
+    }
+    if (c === '/' && seguinte === '*') {
+      const fim = texto.indexOf('*/', i + 2)
+      i = fim === -1 ? texto.length : fim + 2
+      continue
+    }
+    if (c === "'" || c === '"' || c === '`') aspa = c
+    saida += c
+    i++
+  }
+  return saida
+}
+
+/** As constantes do spec que são só números e `*` (`const PRAZO_DO_ROTEIRO_MS = 8 * 60_000`), para o `test.setTimeout(PRAZO_DO_ROTEIRO_MS)`. */
+function constantesNumericas(texto: string): Map<string, number> {
+  const constantes = new Map<string, number>()
+  for (const declaracao of texto.matchAll(/^(?:export\s+)?const\s+(\w+)\s*=\s*([\d_]+(?:\s*\*\s*[\d_]+)*)\s*$/gm)) {
+    const fatores = (declaracao[2] ?? '').split('*').map((fator) => Number(fator.replaceAll('_', '')))
+    constantes.set(declaracao[1] ?? '', fatores.reduce((produto, fator) => produto * fator, 1))
+  }
+  return constantes
+}
+
+/** Onde começa um caso (`test('título'`, com o título na mesma linha ou na seguinte) e o que, além dele, encerra o texto do caso anterior. */
+const INICIO_DE_CASO = /\btest(?:\.(?:only|fixme))?\(\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1/g
+const FIM_DE_CASO = /\btest\.(?:describe|beforeEach|afterEach|beforeAll|afterAll|use)\b/
+
+/**
+ * O prazo que cada caso de um spec declara no corpo, na ordem em que o Playwright o aplica: `test.setTimeout(n)` troca o prazo
+ * por `n` e `test.slow()` o triplica (`setTimeout(100_000)` e depois `slow()` dá 300 s; `slow()` e depois `setTimeout(100_000)`, 100 s).
+ * O `n` é um número ou uma constante do mesmo arquivo feita só de números e `*`, escrita na coluna 0, fora de função, sem `;`. Comentário
+ * não conta (mas a leitura dele não entende expressão regular literal: nem a que tem aspa dentro, nem a que tem `\/` antes do fecho).
+ * Só estas duas formas: `test.slow(condição)`, `describe.configure({ timeout })` e `test.setTimeout( n )` com espaço dentro dos
+ * parênteses não são lidos, e o caso conta 30 s, que erra para o lado de cobrar mais.
+ */
+export function prazosDosCasos(textoBruto: string): { titulo: string; prazoMs: number }[] {
+  const texto = semComentarios(textoBruto)
+  const constantes = constantesNumericas(texto)
+  const inicios = [...texto.matchAll(INICIO_DE_CASO)]
+  const casos: { titulo: string; prazoMs: number }[] = []
+  for (const [indice, inicio] of inicios.entries()) {
+    const titulo = tituloLiteral(inicio[2] ?? '')
+    if (titulo === null) continue
+    const comeco = (inicio.index ?? 0) + inicio[0].length
+    const proximo = inicios[indice + 1]?.index ?? texto.length
+    const corpo = texto.slice(comeco, proximo)
+    const fim = corpo.search(FIM_DE_CASO)
+    const doCaso = fim === -1 ? corpo : corpo.slice(0, fim)
+    let prazoMs = PRAZO_PADRAO_DO_CASO_DE_E2E_MS
+    for (const declaracao of doCaso.matchAll(/\btest\.setTimeout\((\w+)\)|\btest\.slow\(\)/g)) {
+      if (declaracao[1] === undefined) {
+        prazoMs *= 3
+        continue
+      }
+      const declarado = /^\d/.test(declaracao[1]) ? Number(declaracao[1].replaceAll('_', '')) : constantes.get(declaracao[1])
+      if (declarado !== undefined) prazoMs = declarado
+    }
+    casos.push({ titulo, prazoMs })
+  }
+  return casos
+}
+
+/**
+ * O prazo que cada título de caso declarava no HEAD, em qualquer spec de `e2e/`. Título repetido em dois specs fica com o menor
+ * prazo. Sem HEAD (repositório sem commit), vazio: nenhum caso tem prazo próprio.
+ */
+export function prazosDoHead(raiz: string): Map<string, number> {
+  const prazos = new Map<string, number>()
+  try {
+    const arquivos = execFileSync('git', ['ls-tree', '-r', '--name-only', 'HEAD', '--', 'e2e/'], { cwd: raiz, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .split('\n')
+      .filter((arquivo) => arquivo.endsWith('.spec.ts'))
+    for (const arquivo of arquivos) {
+      const texto = execFileSync('git', ['show', `HEAD:${arquivo}`], { cwd: raiz, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] })
+      for (const { titulo, prazoMs } of prazosDosCasos(texto)) prazos.set(titulo, Math.min(prazos.get(titulo) ?? prazoMs, prazoMs))
+    }
+  } catch {
+    return new Map()
+  }
+  return prazos
+}
+
+/**
+ * O prazo com que o caso é medido: o que a corrida lhe deu, mas, acima dos 30 s, nunca mais que o declarado no HEAD. O prazo posto
+ * agora não conta, só o que o caso já tinha; e um prazo de 30 s ou menos vale como está, porque não há o que escapar. Declaração
+ * menor que 30 s no HEAD não aperta o caso que a tirou: o piso é o prazo padrão.
+ */
+export function prazoContado(caso: CasoMedido, prazosDoHeadPorTitulo: ReadonlyMap<string, number>): number {
+  const titulo = caso.titulo.split(' › ').at(-1) ?? caso.titulo
+  const doHead = prazosDoHeadPorTitulo.get(titulo) ?? PRAZO_PADRAO_DO_CASO_DE_E2E_MS
+  return Math.min(caso.prazoMs, Math.max(PRAZO_PADRAO_DO_CASO_DE_E2E_MS, doHead))
+}
+
+/** O limite do caso: metade do prazo com que é medido, porque o runner leva perto do dobro. */
+export function limiteDoCaso(caso: CasoMedido, prazosDoHeadPorTitulo: ReadonlyMap<string, number>): number {
+  return prazoContado(caso, prazosDoHeadPorTitulo) / 2
+}
+
 /** Os que passaram do limite, do mais lento para o mais rápido. Exatamente no limite ainda cabe. */
-export function casosLentos(casos: readonly CasoMedido[], limiteMs: number = LIMITE_DO_CASO_DE_E2E_MS): CasoMedido[] {
-  return casos.filter((caso) => caso.duracaoMs > limiteMs).sort((a, b) => b.duracaoMs - a.duracaoMs)
+export function casosLentos(casos: readonly CasoMedido[], limiteDe: (caso: CasoMedido) => number = () => LIMITE_DO_CASO_DE_E2E_MS): CasoMedido[] {
+  return casos.filter((caso) => caso.duracaoMs > limiteDe(caso)).sort((a, b) => b.duracaoMs - a.duracaoMs)
 }
 
 function segundos(ms: number): string {
   return (ms / 1000).toFixed(1).replace('.', ',')
 }
 
-export function avisoDosCasosLentos(lentos: readonly CasoMedido[]): string {
-  const linhas = lentos.map((caso) => `  ${caso.arquivo}:${String(caso.linha)} (${caso.projeto}) levou ${segundos(caso.duracaoMs)} s — ${caso.titulo}`)
+export function avisoDosCasosLentos(lentos: readonly CasoMedido[], limiteDe: (caso: CasoMedido) => number): string {
+  const linhas = lentos.map(
+    (caso) => `  ${caso.arquivo}:${String(caso.linha)} (${caso.projeto}) levou ${segundos(caso.duracaoMs)} s (limite ${segundos(limiteDe(caso))} s) — ${caso.titulo}`,
+  )
   return (
-    `${String(lentos.length)} caso(s) de e2e alterado(s) acima de ${segundos(LIMITE_DO_CASO_DE_E2E_MS)} s nesta máquina; no runner da esteira ` +
-    `eles levam perto do dobro, e o prazo é 30 s:\n${linhas.join('\n')}\n` +
-    'Encurte o caso (semeie o dado pela API em vez de pela tela, tire a espera que não prova nada) ou divida-o em dois.'
+    `${String(lentos.length)} caso(s) de e2e alterado(s) acima da metade do prazo nesta máquina; no runner da esteira ` +
+    `eles levam perto do dobro, e o prazo é de 30 s no caso sem prazo próprio:\n${linhas.join('\n')}\n` +
+    'Encurte o caso (semeie o dado pela API em vez de pela tela, tire a espera que não prova nada) ou divida-o em dois. ' +
+    'O prazo declarado só vale se já estava no HEAD: `test.slow()` posto agora não aumenta o limite.'
   )
 }
 
@@ -176,8 +338,12 @@ export function motivoDaDuracaoDoE2e(raiz: string, caminhoDoRelatorio: string): 
   } catch {
     return `o relatório de duração ${caminhoDoRelatorio} não é um JSON legível: o portão não mediu os casos de e2e.`
   }
-  const lentos = casosLentos(casosAlterados(casosMedidos(relatorio), (arquivo) => alteracoesDoArquivo(raiz, arquivo)))
-  return lentos.length === 0 ? null : avisoDosCasosLentos(lentos)
+  const alterados = casosAlterados(casosMedidos(relatorio), (arquivo) => alteracoesDoArquivo(raiz, arquivo))
+  // O HEAD só se lê quando algum caso alterado tem prazo declarado: sem isso todos medem 15 s e não há o que procurar.
+  const doHead = alterados.some((caso) => caso.prazoMs > PRAZO_PADRAO_DO_CASO_DE_E2E_MS) ? prazosDoHead(raiz) : new Map<string, number>()
+  const limiteDe = (caso: CasoMedido) => limiteDoCaso(caso, doHead)
+  const lentos = casosLentos(alterados, limiteDe)
+  return lentos.length === 0 ? null : avisoDosCasosLentos(lentos, limiteDe)
 }
 
 /** O arquivo do relatório que o portão passa ao Playwright, dentro da árvore dele. */
