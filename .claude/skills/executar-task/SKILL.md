@@ -170,6 +170,17 @@ pela API em vez de pela tela, tire a espera que não prova nada) ou divida o cas
 então e2e vermelho reprova o portão pela falha e não diz quais casos estavam lentos; e um caso perto de 15 s oscila de uma corrida para
 outra, por isso confira o isolado com folga (uns 12 s), e não no limite.
 
+**O portão roda também o e2e que cita um texto que a sua tarefa tirou da web.** Texto removido de `apps/web/src` (um título, um
+rótulo, um aviso, um `data-testid`) que algum `e2e/*.spec.ts` ainda cita, sem diferenciar maiúscula, põe esse spec nos alvos, mesmo
+que você não o tenha alterado; o portão escreve `▶ e2e/<arquivo> entra nos alvos: cita "<texto>"`. Foi o que faltou na X2: o W12 da
+casca ("Governança") e o sino da 6.0 ("Refazer o convite de") quebraram fora do diff, na esteira. Rode esse spec isolado antes do
+portão e **atualize o texto no e2e**: o spec entra para rodar, e o caso lento que já estava lá não é cobrado de você (a duração só vale
+para o caso que o diff tocou). Limites: o portão não acha (i) o spec que cita só um **pedaço** do texto removido (tirar "Governança da
+escola" não puxa o spec que procura `/governança/i`), (ii) o texto de JSX que continua na linha de baixo começando em minúscula, nem o
+template que atravessa linhas, e (iii) o texto citado só num ajudante de `e2e/__fixtures__/`, que não puxa os specs que o importam. Ao
+contrário, o texto curto e comum ("Professor", "Estrutura") puxa todo spec que o cita: num diff de 40 commits (`3be23c9`) foram 24 dos 59
+specs. Troca de texto da tela: procure você mesmo, com `grep -rn` em `e2e/`, o pedaço que o e2e usa.
+
 Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
 (`run_in_background`), e você espera a notificação do fim; não use `sleep`.

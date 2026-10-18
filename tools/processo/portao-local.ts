@@ -15,6 +15,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { arquivoDoRelatorioDoE2e, motivoDaDuracaoDoE2e, VARIAVEL_DO_RELATORIO_DO_E2E } from '../ci/duracao-do-e2e.ts'
+import { e2eDosLiteraisRemovidos } from '../ci/e2e-que-cita-literal.ts'
 import { garantirFilaDeCarga } from '../ci/fila-de-carga.ts'
 import { avaliarMutacoes, conferirMutacoes, comandoDoTeste, impressaoDasMutacoes, lerMutacoes, pedeReconstrucao, rodarCalado } from './mutacoes.ts'
 import {
@@ -117,7 +118,11 @@ function documentoDasMutacoes(): string | null {
     .filter((arquivo) => readFileSync(join(raiz, arquivo), 'utf8').includes('```mutacao'))
   return candidatos.length === 1 ? (candidatos[0] ?? null) : null
 }
-const alvos = alvosDoPortao([...arquivosAlterados(raiz), ...extras])
+// Os e2e que citam um texto que o diff tirou de `apps/web/src` também rodam: o texto é o único elo entre a tela e o spec, e o
+// spec que não foi alterado quebrava na esteira (`tools/ci/e2e-que-cita-literal.ts`). Só no portão da tarefa: o completo roda todos.
+const citados = daTarefa ? e2eDosLiteraisRemovidos(raiz) : []
+for (const citado of citados) process.stdout.write(`▶ ${citado.arquivo} entra nos alvos: cita ${citado.literais.map((literal) => `"${literal}"`).join(', ')}, que o diff tirou de apps/web/src\n`)
+const alvos = alvosDoPortao([...arquivosAlterados(raiz), ...extras, ...citados.map((citado) => citado.arquivo)])
 const suites = daTarefa
   ? [...SUITES_DO_PORTAO_DA_TAREFA]
   : ['typecheck', 'lint', 'segredo', 'dependencias', 'test', ...(argumentos.includes('--e2e') ? ['e2e'] : []), ...(argumentos.includes('--infra') ? ['infra'] : [])]

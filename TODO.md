@@ -943,13 +943,23 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       antes da primeira tarefa da X3**, numa correção só, junto com o que a X2 acrescentou:
       (d) **o portão roda também os e2e que citam um texto que o diff tirou de `apps/web/src`** (um literal removido que
       aparece em `e2e/`): o W12 da casca (a 3.0 trocou "Governança", `casca.spec.ts:673`, vermelho em cinco execuções da
-      esteira) e o sino da 6.0 ("Refazer o convite de", `sino-da-coordenacao.spec.ts:86`) quebraram fora do diff;
+      esteira) e o sino da 6.0 ("Refazer o convite de", `sino-da-coordenacao.spec.ts:86`) quebraram fora do diff
+      (**feito** em 18/10/2026 na correção `2026-10-18-e2e-que-cita-literal-removido`, `tools/ci/e2e-que-cita-literal.ts`: do
+      `git diff -U0 HEAD -- apps/web/src` saem os literais removidos que o diff não recolocou, e o `e2e/*.spec.ts` que cita algum,
+      sem diferenciar maiúscula, entra nos alvos do portão da tarefa; **limites conhecidos**: o spec que cita só um pedaço do texto removido não entra (tirar "Governança da escola" não puxa
+      `/governança/i`); o texto de JSX que continua em linha de baixo começando em minúscula, e o template que atravessa linhas, não
+      viram literal; o literal citado só num ajudante de `e2e/__fixtures__/` não puxa os specs que o importam; e o literal curto e comum
+      ("Professor", "Estrutura") puxa todo spec que o cita, o que **não é pouco**: num diff de 40 commits (`3be23c9`) foram 24 dos 59
+      specs. **Correção seguinte desta letra** (recomendações sem aplicar da `2026-10-18-e2e-que-cita-literal-removido`): (1) descartar o
+      literal que vem de `className=`/`class=` (classe do Tailwind, "sr-only", conta como texto de tela e no `290b7cb` puxou quatro specs
+      sem relação); (2) teste da linha de log `▶ <spec> entra nos alvos: cita "<texto>"` do portão, que roda o portão; (3) excluir
+      `apps/web/src/__fixtures__/` como o `.test.tsx`; (4) o comentário de cabeçalho de `tools/ci/e2e-que-cita-literal.ts` ainda diz "o que só custa minutos" e cita só os limites antigos (copiar os quatro de `executar-task`); e talvez um aviso do portão quando o número de specs puxados passar de um teto);
       (e) **a vitrine lista as telas cuja página rola a 1366 × 768** (a altura medida em `tools/vitrine/foto.ts` passa da
       janela), no relatório que a Mesa e o Validador leem: na X2 o "só o miolo rola" (RF23) só foi visto pela altura das
       fotos, contada à mão, e escapou em duas telas até a validação (C1, C2);
       (f) **o `flock /tmp/educa-carga.lock` dentro do `portao-local.ts` e do `tools/ci/e2e.ts`**, para a fila de carga entre
       as linhas não depender de quem digita o comando (o texto do `executar-task` e do `/seguir` vale até lá).
-      **Feita** na correção `2026-10-18-fila-de-carga-no-codigo` (`tools/ci/fila-de-carga.ts`); seguem abertas a (b), a (d), a (e), a (g) e as duas últimas frases da (c) (`linhas.ts conferir` e o projeto da mutação de e2e); a primeira frase da (c) foi feita na correção acima, e a (a), na `2026-10-18-duracao-do-e2e-no-portao`. Limites conhecidos da (f): o aviso de espera não diz quem segura a fila (o pid já sai de
+      **Feita** na correção `2026-10-18-fila-de-carga-no-codigo` (`tools/ci/fila-de-carga.ts`); seguem abertas a (b), a (e), a (g) e as duas últimas frases da (c) (`linhas.ts conferir` e o projeto da mutação de e2e); a primeira frase da (c) foi feita na correção acima, e a (a), na `2026-10-18-duracao-do-e2e-no-portao`. Limites conhecidos da (f): o aviso de espera não diz quem segura a fila (o pid já sai de
       `donosDoTravamento`), e matar o comando de fora com `kill -9` deixa o relançado segurando a vez até acabar; e a pasta `fila-` que `tools/processo/revisoes.test.ts` cria em `/tmp` a cada execução nunca é apagada (apagar junto com a `raiz` na próxima correção que tocar esse teste)
       (g) **o `tools/ci/e2e.ts` recusa, ou ao menos avisa, a opção que descarta**: opção com `-` fora da lista de
       `opcoesDoPlaywright` (`--headed`) some sem aviso, e o valor solto (`--workers 1`, `--repeat-each 10`, `--grep nome`) é lido como
