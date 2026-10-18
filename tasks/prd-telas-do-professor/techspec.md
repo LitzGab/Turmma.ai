@@ -15,7 +15,8 @@ tela antes de qualquer tela mudar, para as tarefas correrem em linhas.
 
 | Módulo | Novo ou alterado | O quê |
 |---|---|---|
-| `apps/web/src/componentes/sino/` | novo (a peça, se a X2 não a criou) | o sino, a fila do professor e a montagem por papel |
+| `apps/web/src/componentes/sino/` | alterado | a peça da X2 ganha `grupo` no item e três props opcionais (`textoDoVazio`, `avisoDaLeituraParcial`, `faltaPara`); `leitura-do-sino.ts` guarda as opções de leitura e o tipo da leitura que o sino da coordenação e o da professora dividem |
+| `apps/web/src/areas/professor/` (sino) | novo | `fila-do-professor.ts` (a fila e o gancho que a lê) e `SinoDoProfessor.tsx`, carregado por `lazy()` acima do `Switch` da área |
 | `CascaDaEscola.tsx`, `itens-da-lateral.tsx`, `areas/navegacao.ts` | alterado | o sino; os quatro lugares; "Seu time" sai |
 | `apps/web/src/areas/professor/` | alterado e novo | todas as telas; `Criados`, `TurmaHoje`, `AtividadesDaTurma`, `AlunosDaTurma`, `ConvidarAlunos`, `Folha` |
 | `apps/web/src/api/` | alterado | `artefatos.ts` (filtro de turma), `pedidos.ts` (contagem), `alunos-da-turma.ts` (novo) |
@@ -41,6 +42,7 @@ de pedidos por turma confirmada, e devolve os itens, agrupados por turma, em ord
 | Item | De onde vem | Destino |
 |---|---|---|
 | Correção para revisar | entrega `lote_de_correcao` pendente | `/professor/aprovar/:atividadeAplicadaId` |
+| Correção para revisar, sem atividade aplicada | entrega `lote_de_correcao` pendente com `atividadeAplicadaId` nulo (o contrato admite) | `/professor/time/assistente`: sem a atividade não há tela de correção, e a decisão fica no Assistente |
 | Versão adaptada para decidir | entrega `versao_adaptada` pendente | `/professor/time/assistente` |
 | Pedidos de nome, com a quantidade | contagem maior que zero na turma | `/professor/turmas/:turmaId?aba=alunos` |
 | Confirme sua turma | vínculo `pendente` (o contestado espera a coordenação e não conta) | `/professor/turmas` |
@@ -50,11 +52,28 @@ sino lê ao entrar na área e quando uma decisão invalida a chave. **Não relê
 e abrir a lista não faz leitura: os observadores de `entregas`, `meus-vinculos` e da contagem usam `staleTime` de 5
 min, `refetchInterval: false`, `refetchOnWindowFocus: false` e `refetchOnReconnect: false`, como na X2 (§5 e §7c).
 "Atualizar" e "Tentar de novo" releem só pela chave exata, nunca por prefixo. Leitura que falha, recusa por limite ou
-turma além do teto marcam a fila como `incompleto`: o sino mostra o que leu e diz o que não leu, e nunca "Tudo em
+turma além do teto marcam a fila como `parcial`: o sino mostra o que leu e diz o que não leu, e nunca "Tudo em
 dia". "Não relê por tempo" vale só para o sino: a aba Hoje tem a regra da §7b.
 
-**Montagem.** `sino-do-papel.ts` é um mapa de papel para componente carregado por `lazy()`; a casca só importa o
-mapa. Com a X2 pousada, o mapa e a peça já existem, e a X3 acrescenta a linha dela.
+**A série vale em toda leitura que não vem de um clique.** Quantas turmas já foram liberadas é estado do conjunto de turmas
+que ela lê: quando o conjunto muda (sessão nova, troca de escola, vínculo novo), a série recomeça na primeira. A contagem que
+já respondeu (com dado ou com erro) fica **desligada** (`enabled: false`): o `resetQueries` da troca de sessão e o
+`invalidateQueries` da volta da API (`main.tsx`) só relêem consulta ligada, e com todas ligadas as 12 contagens sairiam juntas,
+sem a série e sem a parada no limite. Quem relê uma contagem já lida é o clique ("Atualizar", "Tentar de novo", por
+`fetchQuery`, em série) e a decisão de um pedido (`invalidarAContagem`, que relê só a da turma). Por isso a invalidação global
+não relê a contagem: a hora de "Atualizado às" diz a idade do dado.
+
+**Montagem.** Como na X2, cada área monta o sino dela: `SinoDoProfessor` é carregado por `lazy()` em `areas/professor/rotas.tsx`,
+acima do `Switch`, e se desenha por `createPortal` na âncora que a casca deixa (`ancora-do-sino.ts`). **Não existe
+`sino-do-papel.ts`**: a casca não importa nada de nenhuma área, nem mapa, e o aluno e a coordenação nunca carregam o sino
+do professor. A peça é a da X2, sem mudar o que ela já tinha: ganhou `grupo` no item (o título do grupo, por turma; sem ele,
+"Da escola") e as props opcionais `textoDoVazio`, `avisoDaLeituraParcial` e `faltaPara` (sem ele, o vazio não leva ao "falta
+para a escola", que é da coordenação). As opções de leitura (`SEM_LEITURA_SOZINHA`, `LEITURA_DA_FILA`) e o tipo
+`LeituraDaFila` saíram de `fila-da-coordenacao.ts` para `componentes/sino/leitura-do-sino.ts`, porque uma área não importa
+módulo de outra. **Sem ano letivo em curso** a professora não lê o ano (só a coordenação): `meus-vinculos` responde como
+inexistente (`NAO_ENCONTRADO`), e é por essa resposta que o sino sabe, não chama nenhuma turma e diz que não há ano em curso.
+**A contagem tem `gcTime: 0`**: a chave leva o id da turma, e sem observador a consulta sai do cache, para a troca de escola
+ou a pessoa seguinte não herdarem o id de uma turma que não é delas.
 
 **Abas no endereço.** A turma aberta, o documento e Aprovar leem `?aba=`; trocar de aba usa `replace`, valor
 desconhecido cai na primeira, e o painel ao lado também fica no endereço (`?ver=`, `?atividade=`).
@@ -109,7 +128,7 @@ pontuação) é estendido aos textos novos.
 | Está no caminho quente? | nenhum do servidor é novo; o sino lê em toda tela do professor |
 | Carga na manhã de segunda | por professor que abre a casca: 2 leituras de hoje (entregas e vínculos) e 1 por turma confirmada (pedidos), até 12, em ordem de nome. Com 30 professores e 6 turmas, 240 leituras curtas, contra 400 logins de alunos; no teto, 14 por leitura (cerca de 28 por minuto contra 120 do limite), mais a leitura de Hoje (4 por minuto com a aba à vista, pausada escondida) |
 | Fila, limite por escola, índices, migration | não se aplicam |
-| Rate limit | nenhuma rota nova. As leituras por turma saem **em série**, as 12 primeiras por nome, e param na primeira recusa por limite. A turma além da 12ª e as não lidas após a recusa marcam `incompleto`; em Turmas aparecem como "não lida" |
+| Rate limit | nenhuma rota nova. As leituras por turma saem **em série**, as 12 primeiras por nome, e param na primeira recusa por limite. A turma além da 12ª e as não lidas após a recusa marcam `parcial`; em Turmas aparecem como "não lida" |
 | Corridas de concorrência | nenhuma nova: decidir entrega, aprovar lote e gerar acesso mantêm o envio único e o tratamento de `ENTREGA_JA_DECIDIDA` e `CONFLITO` |
 | Quando cada dependência cai | a tela mostra `EstadoErro` com "Tentar de novo"; o sino diz o que não leu e não afirma "Tudo em dia" |
 | Métrica, alerta e cenário de carga | o teto do `size-limit` e o teste do build; cenário inalterado |
@@ -161,7 +180,7 @@ painel ao lado vira folha de baixo, e a barra presa de Aprovar fica acima da bar
 | Camada | O que será testado |
 |---|---|
 | Unidade | `filaDoProfessor`, tipo a tipo, com o contestado, as duas disciplinas na mesma turma e "100 ou mais"; filtros de Criados; estado da atividade aplicada; "Como vai sair"; vocabulário; a aba pelo endereço |
-| Componente (jsdom, `__fixtures__/tela.tsx`) | por tela: carregando, vazio, erro, com dado e o foco depois de cada ação; o oficial desligado até `podeAprovar`. O sino, contando as chamadas: leitura parcial; recusa na 3ª leitura; 14 turmas em `incompleto`; dois tempos com o `focusManager` e o `onlineManager` (zero chamadas, e o controle relê); retry e "Atualizar" por chave exata; `JSON.stringify` do `QueryCache` sem nome. Hoje: aos 15 s sai nova leitura; recém-aberta, sem nome no DOM; sem `?ver=tutor`, nenhuma rota nominal além dos sinais |
+| Componente (jsdom, `__fixtures__/tela.tsx`) | por tela: carregando, vazio, erro, com dado e o foco depois de cada ação; o oficial desligado até `podeAprovar`. O sino, contando as chamadas: leitura parcial; recusa na 3ª leitura; 14 turmas em `parcial`; dois tempos com o `focusManager` e o `onlineManager` (zero chamadas, e o controle relê); retry e "Atualizar" por chave exata; `JSON.stringify` do `QueryCache` sem nome. Hoje: aos 15 s sai nova leitura; recém-aberta, sem nome no DOM; sem `?ver=tutor`, nenhuma rota nominal além dos sinais |
 | E2E | um spec por tela, nos dois projetos, com axe e largura; entrega decidida em outra aba; a coordenação na mesma aba sem leituras da professora; Hoje sem nome; "Acesso gerado" sem nome nem acerto legível; os fluxos `a2-assistente`, `a3-a4-professor` e `roteiro-da-demonstracao`, por fixtures de tela |
 | Isolamento | os de hoje, mais o sino na troca de escola e na segunda pessoa; Criados com artefato na turma de B (o título dele não aparece com `?turma=` de B) |
 
@@ -179,8 +198,9 @@ conferida antes e depois.
 
 ## 12. Premissas não verificadas
 
-- `⚠️ NÃO VERIFICADO` — o nome e as props da peça do sino da X2, escrita em paralelo. Saída: a 1.0 procura a peça
-  em `componentes/`; não achando, cria `componentes/sino/Sino.tsx`, com a lista por prop
+- `✅ VERIFICADO na 1.0` — o nome e as props da peça do sino da X2: `componentes/sino/Sino.tsx`, com a lista por prop. Ela
+  não tinha agrupamento por turma nem vazio próprio, e a 1.0 acrescentou três props opcionais e `grupo` no item, sem mudar
+  nenhuma que existia; a montagem é por área, e não por mapa (seção 5, "Montagem")
 - `⚠️ NÃO VERIFICADO` — as props das peças novas da X1, que não existem neste checkout. Saída: cada tarefa lê a
   peça antes de usar e registra a divergência
 - `⚠️ NÃO VERIFICADO` — a web nunca leu `GET /v1/turmas/:id/alunos` como professor, e a API devolve em ordem de

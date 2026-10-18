@@ -198,8 +198,9 @@ test.describe('W13: o seletor no formato de espaço de trabalho', () => {
     await expect(lateral(page)).not.toContainText(professora.redeNome)
     await expect(botaoDoSeletor(page)).toHaveCount(0)
     await expect(lateral(page).getByRole('list', { name: 'Suas escolas' })).toHaveCount(0)
-    // Nada ali abre: o nome é texto, e não um controle.
-    await expect(lateral(page).locator('[aria-expanded]')).toHaveCount(0)
+    // Nada ali abre: o nome é texto, e não um controle. O sino "Esperando você" (X3) também tem `aria-expanded` e, no computador,
+    // `lateral` é a página inteira: ele é de outra peça, e fica de fora da conta.
+    await expect(lateral(page).locator('[aria-expanded]:not([aria-label^="Esperando você"])')).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
   })
 })

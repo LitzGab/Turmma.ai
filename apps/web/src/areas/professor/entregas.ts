@@ -1,4 +1,4 @@
-import { FUNCOES, NOME_DO_TIPO_DE_ENTREGA, ROTULOS_DA_ADAPTACAO, TAMANHO_MAXIMO_DA_JUSTIFICATIVA, TAMANHO_MINIMO_DA_JUSTIFICATIVA, type AdaptacaoAplicada, type ChaveDeFuncao, type Entrega } from '@educa/shared'
+import { FUNCOES, NOME_DO_TIPO_DE_ENTREGA, ROTULOS_DA_ADAPTACAO, TAMANHO_MAXIMO_DA_JUSTIFICATIVA, TAMANHO_MINIMO_DA_JUSTIFICATIVA, type AdaptacaoAplicada, type Entrega } from '@educa/shared'
 import type { Aprovacao } from '../../componentes/ia/aprovacao'
 
 /**
@@ -76,42 +76,6 @@ export function podeRenomear(entrega: { readonly estado: Entrega['estado'] } | n
 
 /** O aviso do título e do tema: os dois vão para o modelo, e não são lugar de escrever sobre aluno (regra 20, item 3). */
 export const AVISO_DE_TEXTO_SEM_ALUNO = 'Não escreva nome nem condição de aluno.'
-
-/** Um cartão de "Esperando você", na Home: a função que fez, o que foi feito e de que turma. */
-export interface ItemEsperando {
-  readonly id: string
-  readonly funcao: ChaveDeFuncao
-  /** O nome da função do Assistente: "Adaptação", "Correção de objetiva". */
-  readonly nomeDaFuncao: string
-  /** O que espera a professora: "Versão adaptada", "Correção da turma". */
-  readonly titulo: string
-  /** De quê e de que turma: "Atividade de estequiometria · 2ºB". */
-  readonly detalhe: string
-  /** A atividade aplicada do lote de correção: é por ela que "Revisar" chega à tela de aprovar. Nula na versão adaptada. */
-  readonly atividadeAplicadaId: string | null
-}
-
-/**
- * O que aparece em "Esperando você" (`docs/interface.md` 11.2): **só as entregas pendentes**, da mais antiga para a mais
- * nova, que é a ordem em que a professora deve olhar. A aprovada e a rejeitada não esperam ninguém, e sem pendência a
- * lista é vazia: a tela não põe nada no lugar.
- */
-export function esperandoVoce(entregas: readonly Entrega[], nomesDasTurmas: Readonly<Record<string, string>>): ItemEsperando[] {
-  return entregas
-    .filter((entrega) => entrega.estado === 'pendente')
-    .sort((a, b) => a.criadaEm.localeCompare(b.criadaEm))
-    .map((entrega) => {
-      const turma = nomesDasTurmas[entrega.turmaId]
-      return {
-        id: entrega.id,
-        funcao: entrega.funcao,
-        nomeDaFuncao: FUNCOES[entrega.funcao].nome,
-        titulo: NOME_DO_TIPO_DE_ENTREGA[entrega.tipo],
-        detalhe: turma === undefined ? entrega.titulo : `${entrega.titulo} · ${turma}`,
-        atividadeAplicadaId: entrega.tipo === 'lote_de_correcao' ? entrega.atividadeAplicadaId : null,
-      }
-    })
-}
 
 /** Os filtros da conversa do Assistente no Seu time (11.4; P14): tudo, o que espera a professora, e por função. */
 export const FILTROS_DO_TIME = [

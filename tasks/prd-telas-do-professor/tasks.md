@@ -9,13 +9,13 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
 
 ## Lista
 
-- [ ] **1.0 — O sino mostra à professora o que espera por ela**
-  - [ ] 1.1 A peça `Sino`: a da X2, se já existir em `componentes/`; senão, criada com a lista por prop
-  - [ ] 1.2 `fila-do-professor.ts`: os quatro tipos de item, agrupados por turma; `esperandoVoce` muda de casa
-  - [ ] 1.3 `consultaContagemDePedidos`, que guarda só o número; as leituras por turma em série, até 12 por nome, e o `incompleto` além disso
-  - [ ] 1.3a A releitura do sino como na X2: sem foco, reconexão nem tempo; "Atualizar" e "Tentar de novo" por chave exata
-  - [ ] 1.4 `SinoDoProfessor` e o mapa `sino-do-papel.ts`, montados na casca por `lazy()`; a seção da galeria
-  - [ ] 1.5 Testes: a conta, tipo a tipo; os estados e a leitura parcial; nenhuma releitura por tempo, foco ou reconexão; mais de 12 turmas; recusa por limite; permissão; entrega decidida em outra aba; contador sem animação; troca de escola e segunda pessoa
+- [x] **1.0 — O sino mostra à professora o que espera por ela**
+  - [x] 1.1 A peça `Sino`: a da X2, se já existir em `componentes/`; senão, criada com a lista por prop
+  - [x] 1.2 `fila-do-professor.ts`: os quatro tipos de item, agrupados por turma; `esperandoVoce` muda de casa
+  - [x] 1.3 `consultaContagemDePedidos`, que guarda só o número; as leituras por turma em série, até 12 por nome, e o `incompleto` além disso
+  - [x] 1.3a A releitura do sino como na X2: sem foco, reconexão nem tempo; "Atualizar" e "Tentar de novo" por chave exata
+  - [x] 1.4 `SinoDoProfessor` e o mapa `sino-do-papel.ts`, montados na casca por `lazy()`; a seção da galeria
+  - [x] 1.5 Testes: a conta, tipo a tipo; os estados e a leitura parcial; nenhuma releitura por tempo, foco ou reconexão; mais de 12 turmas; recusa por limite; permissão; entrega decidida em outra aba; contador sem animação; troca de escola e segunda pessoa
 
 - [ ] **2.0 — A lateral do professor fica com Início, Turmas e Ferramentas, e "Seu time" sai dela**
   - [ ] 2.1 `navegacao.ts`: a ordem da D80 e `SEU_TIME` vazio; a casca e `itens-da-lateral` sem o grupo

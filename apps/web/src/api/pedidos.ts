@@ -59,6 +59,40 @@ export function consultaPedidosDaTurma(turmaId: string, quem: DecisorDaReivindic
   })
 }
 
+/** A chave da contagem de pedidos de uma turma, a do sino do professor: **outra** que a da lista nominal, e nunca a mesma por prefixo. */
+const CHAVE_DA_CONTAGEM_DE_PEDIDOS = [...CHAVE_DOS_PEDIDOS, 'contagem'] as const
+
+/** O que o sino do professor guarda dos pedidos de uma turma: quantos esperam e se há mais que a página trouxe. Nenhum nome. */
+export interface ContagemDePedidos {
+  readonly quantidade: number
+  /** A página veio cheia e há outra: o sino diz "100 ou mais", e não um número que não sabe. */
+  readonly haMais: boolean
+}
+
+/**
+ * Só a contagem dos pedidos pendentes da turma, para o sino "Esperando você" do professor (telas do professor, 1.0; Tech Spec,
+ * seções 5 e 7). É a mesma rota da lista nominal (`GET /v1/turmas/:id/reivindicacoes`), mas **a lista é descartada na própria
+ * leitura, antes do cache**: o que fica guardado é `{ quantidade, haMais }`, sem o nome de nenhum aluno (regra 20; D34). O
+ * `select` não serviria: ele roda depois de o cache guardar o dado inteiro.
+ *
+ * `gcTime: 0`, como nas nominais, por outro motivo: a chave leva o id da turma, e a consulta que sobrasse depois da troca de
+ * escola ou da pessoa seguinte deixaria no cache da aba o id de uma turma de quem saiu (W3). Sem observador, ela some.
+ *
+ * A chave (`['pedidos-da-turma', 'contagem', turmaId]`) é distinta da lista nominal (`[...CHAVE_DOS_PEDIDOS, turmaId, quem]`):
+ * decidir um pedido a invalida por chave exata (`aplicarDecisao`), e a releitura do sino nunca alcança a lista aberta na tela.
+ * Só o professor lê assim: a leitura da coordenação é auditada e pede finalidade (`consultaPedidosDaTurma`).
+ */
+export function consultaContagemDePedidos(turmaId: string) {
+  return queryOptions({
+    queryKey: [...CHAVE_DA_CONTAGEM_DE_PEDIDOS, turmaId],
+    queryFn: async ({ signal }): Promise<ContagemDePedidos> => {
+      const lista = await buscarComSessao(`/v1/turmas/${encodeURIComponent(turmaId)}/reivindicacoes?limite=${String(PEDIDOS_POR_LEITURA)}`, esquemaRespostaPedidosDaTurma, signal)
+      return { quantidade: lista.itens.length, haMais: lista.proxima !== undefined }
+    },
+    gcTime: 0,
+  })
+}
+
 /** `POST /v1/reivindicacoes/decidir`: aprova ou recusa os pedidos dados, e diz o que aconteceu com cada um. */
 export function decidirPedidos(pedido: PedidoDecidirReivindicacoes): Promise<RespostaDecisao> {
   return chamarComSessao('/v1/reivindicacoes/decidir', esquemaRespostaDecisao, { metodo: 'POST', corpo: pedido })
@@ -76,6 +110,23 @@ export async function aplicarDecisao(cliente: QueryClient, turmaId: string, quem
   const fechados = new Set(resposta.resultados.map((resultado) => resultado.id))
   cliente.setQueryData<RespostaPedidosDaTurma>(queryKey, (lista) => (lista === undefined ? undefined : { ...lista, itens: lista.itens.filter((pedido) => !fechados.has(pedido.id)) }))
   void cliente.invalidateQueries({ queryKey })
+  invalidarAContagem(cliente, turmaId, quem)
+}
+
+/**
+ * A contagem do sino do professor, depois de uma decisão dele: ela fica velha, e o sino a relê (o item some quando os pedidos
+ * acabam). **Só a da turma, por chave exata, e só com `quem === 'professor'`**: a coordenação não tem contagem (o sino dela
+ * não lê pedidos, e a leitura dela é auditada), e as outras turmas e a lista nominal não são tocadas.
+ */
+function invalidarAContagem(cliente: QueryClient, turmaId: string, quem: DecisorDaReivindicacao): void {
+  if (quem !== 'professor') return
+  const consulta = consultaContagemDePedidos(turmaId)
+  void cliente.invalidateQueries({ queryKey: consulta.queryKey, exact: true, refetchType: 'none' })
+  // A invalidação só marca a contagem velha, para o `fetchQuery` abaixo não devolver o dado guardado (o `staleTime` do cliente);
+  // quem lê é ele, por isso `refetchType: 'none'`. Só relê se o sino observa a turma: a contagem lida fica desligada, mas o
+  // observador continua inscrito. Sem observador (turma além do teto, ou sem ler depois de um 429) nada é lido, e com
+  // `gcTime: 0` não há o que guardar: o teto e a parada no limite valem também aqui (regra 80).
+  if ((cliente.getQueryCache().find({ queryKey: consulta.queryKey, exact: true })?.getObserversCount() ?? 0) > 0) void cliente.fetchQuery(consulta).catch(() => undefined)
 }
 
 /**
@@ -86,6 +137,7 @@ export async function aplicarDecisao(cliente: QueryClient, turmaId: string, quem
  */
 export async function descartarListaDepoisDaFalha(cliente: QueryClient, turmaId: string, quem: DecisorDaReivindicacao): Promise<void> {
   const { queryKey } = consultaPedidosDaTurma(turmaId, quem)
+  invalidarAContagem(cliente, turmaId, quem)
   if (quem === 'professor') await cliente.invalidateQueries({ queryKey })
   else await cliente.resetQueries({ queryKey, exact: true })
 }

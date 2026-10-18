@@ -15,6 +15,19 @@ const TURMAS: ItemDoSino = {
   contador: { n: 3, oQueConta: 'turmas sem professor' },
 }
 
+/** Os itens da professora: agrupados pela turma, sem nome de aluno (regra 20; D34). */
+const CORRECAO: ItemDoSino = { id: 'e', titulo: 'Correção para revisar', detalhe: 'Atividade de estequiometria', urgente: false, para: '/galeria#sino', grupo: '1º A' }
+const PEDIDOS: ItemDoSino = {
+  id: 'f',
+  titulo: 'Pedidos de nome para decidir',
+  detalhe: '3 pedidos esperando a decisão',
+  urgente: false,
+  para: '/galeria#sino',
+  grupo: '1º A',
+  contador: { n: 3, oQueConta: 'pedidos de nome' },
+}
+const CONFIRME: ItemDoSino = { id: 'g', titulo: 'Confirme sua turma', detalhe: 'Química', urgente: false, para: '/galeria#sino', grupo: '2º B' }
+
 const SEM_FUNCAO = () => undefined
 const FALTA_PARA = '/galeria#sino'
 
@@ -28,8 +41,8 @@ function Exemplo({ rotulo, children }: { readonly rotulo: string; readonly child
 }
 
 /**
- * O sino da coordenação nos estados dele (telas da coordenação, 1.0): com itens, vazio ("Tudo em dia", sem mascote),
- * lendo, parcial e com erro. Cada botão abre a lista no painel ao lado, com dado inventado; nada aqui lê a API.
+ * O sino nos estados dele (telas da coordenação, 1.0, e telas do professor, 1.0): com itens, vazio ("Tudo em dia", sem mascote),
+ * lendo, parcial e com erro, e a forma da professora, com os itens agrupados por turma. Cada botão abre a lista no painel ao lado, com dado inventado; nada aqui lê a API.
  */
 export default function SecoesDoSino() {
   return (
@@ -49,6 +62,23 @@ export default function SecoesDoSino() {
         </Exemplo>
         <Exemplo rotulo="Erro: nada carregou">
           <Sino itens={[]} situacao="erro" erro={new Error('sem rede')} aoTentarDeNovo={SEM_FUNCAO} aoAtualizar={SEM_FUNCAO} faltaPara={FALTA_PARA} />
+        </Exemplo>
+        <Exemplo rotulo="Da professora: itens agrupados por turma">
+          <Sino itens={[CORRECAO, PEDIDOS, CONFIRME]} situacao="pronta" aoTentarDeNovo={SEM_FUNCAO} aoAtualizar={SEM_FUNCAO} atualizadoEm={new Date(2026, 9, 16, 9, 30)} textoDoVazio="Nada espera a sua decisão agora." />
+        </Exemplo>
+        <Exemplo rotulo="Da professora: vazio, sem o link da escola">
+          <Sino itens={[]} situacao="pronta" aoTentarDeNovo={SEM_FUNCAO} aoAtualizar={SEM_FUNCAO} atualizadoEm={new Date(2026, 9, 16, 9, 30)} textoDoVazio="Nada espera a sua decisão agora." />
+        </Exemplo>
+        <Exemplo rotulo="Da professora: parcial, dizendo o que não leu">
+          <Sino
+            itens={[CORRECAO]}
+            situacao="parcial"
+            aoTentarDeNovo={SEM_FUNCAO}
+            aoAtualizar={SEM_FUNCAO}
+            atualizadoEm={new Date(2026, 9, 16, 9, 30)}
+            textoDoVazio="Nada espera a sua decisão agora."
+            avisoDaLeituraParcial="Parte da lista não carregou. Não foi possível ler os pedidos de nome de 2 turmas."
+          />
         </Exemplo>
       </div>
     </Secao>

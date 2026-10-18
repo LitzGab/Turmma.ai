@@ -2,7 +2,7 @@ import { esquemaPedidoDecidirEntrega, type Entrega } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { textoDaAprovacao, motivoDaRejeicao } from '../../componentes/ia/aprovacao'
 import { problemaDoTexto } from '../../componentes/texto-longo'
-import { aprovacaoDaEntrega, avisoDaFuncaoSuspensa, decideAqui, podeRenomear, saidaEmPdf, entregasDoFiltro, esperandoVoce, falaDaEntrega, LIMITES_DA_JUSTIFICATIVA, resumoDaAprovacao, textoDaAdaptacao } from './entregas'
+import { aprovacaoDaEntrega, avisoDaFuncaoSuspensa, decideAqui, podeRenomear, saidaEmPdf, entregasDoFiltro, falaDaEntrega, LIMITES_DA_JUSTIFICATIVA, resumoDaAprovacao, textoDaAdaptacao } from './entregas'
 
 const TURMA = '0190f5a0-0000-7000-8000-00000000002b'
 const AGORA = new Date('2026-10-05T12:00:00.000Z')
@@ -51,29 +51,6 @@ describe('o texto de cada estado da entrega (regra 70, itens 3 e 6)', () => {
 
   it('a decidida sem data não é afirmada como aprovada', () => {
     expect(aprovacaoDaEntrega(entrega('05', { estado: 'aprovada', decididaPor: CAMILA }))).toEqual({ estado: 'pendente' })
-  })
-})
-
-describe('"Esperando você" (11.2)', () => {
-  it('só as pendentes aparecem, da mais antiga para a mais nova, com a função, o que é e a turma', () => {
-    const itens = esperandoVoce(
-      [
-        entrega('02', { criadaEm: '2026-10-05T14:00:00.000Z', titulo: 'Lista 3' }),
-        entrega('03', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA }),
-        entrega('01', { tipo: 'lote_de_correcao', funcao: 'correcao_de_objetiva', titulo: 'Atividade de estequiometria', artefatoId: null, atividadeAplicadaId: '0190f5a0-0000-7000-8000-0000000000b1', criadaEm: '2026-10-05T09:00:00.000Z' }),
-        entrega('04', { estado: 'rejeitada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA, justificativa: 'Faltou a questão 2.' }),
-      ],
-      { [TURMA]: '2ºB' },
-    )
-    expect(itens).toEqual([
-      { id: '0190f5a0-0000-7000-8000-000000000001', funcao: 'correcao_de_objetiva', nomeDaFuncao: 'Correção de objetiva', titulo: 'Correção da turma', detalhe: 'Atividade de estequiometria · 2ºB', atividadeAplicadaId: '0190f5a0-0000-7000-8000-0000000000b1' },
-      { id: '0190f5a0-0000-7000-8000-000000000002', funcao: 'adaptacao', nomeDaFuncao: 'Adaptação', titulo: 'Versão adaptada', detalhe: 'Lista 3 · 2ºB', atividadeAplicadaId: null },
-    ])
-  })
-
-  it('sem pendência a lista é vazia, e a turma que a tela não conhece não vira "undefined"', () => {
-    expect(esperandoVoce([entrega('03', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA })], {})).toEqual([])
-    expect(esperandoVoce([entrega('01')], {})[0]?.detalhe).toBe('Atividade de estequiometria (versão adaptada)')
   })
 })
 

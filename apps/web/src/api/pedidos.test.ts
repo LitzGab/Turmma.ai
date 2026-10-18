@@ -239,3 +239,97 @@ describe('a decisão e a lista depois dela (A1, 16.0)', () => {
     cliente.unmount()
   })
 })
+
+describe('a contagem de pedidos do sino do professor (telas do professor, 1.0)', () => {
+  const OUTRA = '0192a4c0-5b1e-7c3d-8e4f-a0b1c2d3e4f6'
+  const CONTADA = { quantidade: 2, haMais: false }
+
+  it('lê a mesma rota da lista e guarda só { quantidade, haMais }: a lista com os nomes não chega ao cache', async () => {
+    const cliente = clienteDeTeste()
+    fila.push({ status: 200, corpo: { itens: [ANA, BRUNO] } })
+    const lida = await cliente.fetchQuery(m.pedidos.consultaContagemDePedidos(TURMA))
+    expect(lida).toEqual(CONTADA)
+    expect(chamadas.map(({ caminho, metodo, autorizacao }) => ({ caminho, metodo, comSessao: autorizacao !== undefined }))).toEqual([{ caminho: `/v1/turmas/${TURMA}/reivindicacoes?limite=100`, metodo: 'GET', comSessao: true }])
+    expect(JSON.stringify(cliente.getQueryData(m.pedidos.consultaContagemDePedidos(TURMA).queryKey))).not.toContain('sintética')
+    expect(cliente.getQueryCache().getAll().map((consulta) => JSON.stringify(consulta.state.data)).join('')).not.toContain('sintética')
+  })
+
+  it('página com outra depois diz que há mais, e a chave é a da contagem, distinta da lista nominal', async () => {
+    const cliente = clienteDeTeste()
+    fila.push({ status: 200, corpo: { itens: [ANA], proxima: ANA.id } })
+    expect(await cliente.fetchQuery(m.pedidos.consultaContagemDePedidos(TURMA))).toEqual({ quantidade: 1, haMais: true })
+    const contagem = m.pedidos.consultaContagemDePedidos(TURMA).queryKey
+    expect(contagem).toEqual(['pedidos-da-turma', 'contagem', TURMA])
+    expect(contagem).not.toEqual(m.pedidos.consultaPedidosDaTurma(TURMA, 'professor').queryKey)
+  })
+
+  it('sem ninguém olhando, a contagem sai do cache: a chave leva o id da turma, e ele não fica na aba da pessoa seguinte', async () => {
+    const cliente = clienteDeTeste()
+    cliente.mount()
+    fila.push({ status: 200, corpo: { itens: [ANA] } })
+    const observador = new QueryObserver(cliente, m.pedidos.consultaContagemDePedidos(TURMA))
+    const largar = observador.subscribe(() => undefined)
+    await vi.waitFor(() => expect(observador.getCurrentResult().data).toEqual({ quantidade: 1, haMais: false }))
+    expect(cliente.getQueryCache().findAll({ queryKey: ['pedidos-da-turma'] })).toHaveLength(1)
+    largar()
+    await vi.waitFor(() => expect(cliente.getQueryCache().findAll({ queryKey: ['pedidos-da-turma'] })).toHaveLength(0))
+    cliente.unmount()
+  })
+
+  it('decidir como professor invalida a contagem da turma por chave exata: a de outra turma e a lista nominal não são tocadas por ela', async () => {
+    const cliente = clienteDeTeste()
+    cliente.setQueryData(m.pedidos.consultaContagemDePedidos(TURMA).queryKey, CONTADA)
+    cliente.setQueryData(m.pedidos.consultaContagemDePedidos(OUTRA).queryKey, CONTADA)
+    cliente.setQueryData(m.pedidos.consultaPedidosDaTurma(OUTRA, 'professor').queryKey, { itens: [BRUNO] })
+    await m.pedidos.aplicarDecisao(cliente, TURMA, 'professor', { resultados: [{ id: ANA.id, resultado: 'decidida' }] })
+    expect(cliente.getQueryState(m.pedidos.consultaContagemDePedidos(TURMA).queryKey)?.isInvalidated).toBe(true)
+    expect(cliente.getQueryState(m.pedidos.consultaContagemDePedidos(OUTRA).queryKey)?.isInvalidated).toBe(false)
+    // A lista nominal da outra turma, com o nome do aluno, também não é tocada pela invalidação da contagem.
+    expect(cliente.getQueryState(m.pedidos.consultaPedidosDaTurma(OUTRA, 'professor').queryKey)?.isInvalidated).toBe(false)
+  })
+
+  it('decidir sem o sino olhando não lê a contagem: nem a guardada sem observador, nem a da turma que nunca foi lida', async () => {
+    const cliente = clienteDeTeste()
+    // TURMA: contagem no cache sem observador (a turma saiu da tela). OUTRA: nenhuma consulta, como a 13ª turma.
+    cliente.setQueryData(m.pedidos.consultaContagemDePedidos(TURMA).queryKey, CONTADA)
+    await m.pedidos.aplicarDecisao(cliente, TURMA, 'professor', { resultados: [{ id: ANA.id, resultado: 'decidida' }] })
+    await m.pedidos.aplicarDecisao(cliente, OUTRA, 'professor', { resultados: [{ id: BRUNO.id, resultado: 'decidida' }] })
+    await vi.waitFor(() => expect(cliente.isFetching()).toBe(0))
+    expect(chamadas.filter((chamada) => chamada.caminho.includes('/reivindicacoes'))).toEqual([])
+    expect(cliente.getQueryState(m.pedidos.consultaContagemDePedidos(TURMA).queryKey)?.isInvalidated).toBe(true)
+  })
+
+  it('dois cliques em decidir, com o sino olhando: uma releitura só da contagem', async () => {
+    const cliente = clienteDeTeste()
+    cliente.mount()
+    fila.push({ status: 200, corpo: { itens: [ANA] } })
+    const observador = new QueryObserver(cliente, m.pedidos.consultaContagemDePedidos(TURMA))
+    const largar = observador.subscribe(() => undefined)
+    await vi.waitFor(() => expect(observador.getCurrentResult().data).toEqual({ quantidade: 1, haMais: false }))
+    observador.setOptions({ ...m.pedidos.consultaContagemDePedidos(TURMA), enabled: false })
+    fila.push({ status: 200, corpo: { itens: [] } })
+    const decisao = { resultados: [{ id: ANA.id, resultado: 'decidida' as const }] }
+    await Promise.all([m.pedidos.aplicarDecisao(cliente, TURMA, 'professor', decisao), m.pedidos.aplicarDecisao(cliente, TURMA, 'professor', decisao)])
+    await vi.waitFor(() => expect(observador.getCurrentResult().data).toEqual({ quantidade: 0, haMais: false }))
+    expect(chamadas.filter((chamada) => chamada.caminho.includes('/reivindicacoes'))).toHaveLength(2)
+    largar()
+    cliente.unmount()
+  })
+
+  it('a coordenação não tem contagem: a decisão dela não invalida a do sino', async () => {
+    const cliente = clienteDeTeste()
+    cliente.setQueryData(m.pedidos.consultaContagemDePedidos(TURMA).queryKey, CONTADA)
+    await m.pedidos.aplicarDecisao(cliente, TURMA, 'coordenacao', { resultados: [{ id: ANA.id, resultado: 'decidida' }] })
+    expect(cliente.getQueryState(m.pedidos.consultaContagemDePedidos(TURMA).queryKey)?.isInvalidated).toBe(false)
+  })
+
+  it('a decisão que falha no meio do lote também invalida a contagem da turma (e só a dela), mas só para o professor', async () => {
+    const cliente = clienteDeTeste()
+    for (const turma of [TURMA, OUTRA]) cliente.setQueryData(m.pedidos.consultaContagemDePedidos(turma).queryKey, CONTADA)
+    await m.pedidos.descartarListaDepoisDaFalha(cliente, TURMA, 'coordenacao')
+    expect(cliente.getQueryState(m.pedidos.consultaContagemDePedidos(TURMA).queryKey)?.isInvalidated).toBe(false)
+    await m.pedidos.descartarListaDepoisDaFalha(cliente, TURMA, 'professor')
+    expect(cliente.getQueryState(m.pedidos.consultaContagemDePedidos(TURMA).queryKey)?.isInvalidated).toBe(true)
+    expect(cliente.getQueryState(m.pedidos.consultaContagemDePedidos(OUTRA).queryKey)?.isInvalidated).toBe(false)
+  })
+})

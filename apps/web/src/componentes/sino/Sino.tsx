@@ -15,8 +15,13 @@ export interface ItemDoSino {
   readonly id: string
   readonly titulo: string
   readonly detalhe: string
-  /** Vai para o grupo "Urgente"; os outros vão para "Da escola". */
+  /** Vai para o grupo "Urgente"; os outros vão para o grupo deles (`grupo`) ou, sem ele, para "Da escola". */
   readonly urgente: boolean
+  /**
+   * O título do grupo do item que não é urgente: a turma, no sino do professor (X3). Os itens de mesmo `grupo` ficam juntos,
+   * e os grupos seguem a ordem em que o primeiro item de cada um aparece em `itens`. Sem ele, o item é "Da escola".
+   */
+  readonly grupo?: string
   /** O endereço da tela que resolve o item, relativo à área onde o sino está. */
   readonly para: string
   /** Um número que o item carrega (as turmas sem professor), com o que ele conta, em texto, para o leitor de tela. */
@@ -37,8 +42,29 @@ interface Props {
   readonly atualizando?: boolean
   /** Quando a lista foi lida pela última vez. Só muda quando quem usa a peça muda: ela não tem relógio. */
   readonly atualizadoEm?: Date | undefined
-  /** Para onde "Ver o que falta para a escola" leva, no vazio. */
-  readonly faltaPara: string
+  /** Para onde "Ver o que falta para a escola" leva, no vazio. Sem ele, o vazio não tem o link (o sino do professor, X3). */
+  readonly faltaPara?: string
+  /** A frase do vazio, abaixo de "Tudo em dia". Sem ela, a da coordenação: o sino do professor diz a dele (X3). */
+  readonly textoDoVazio?: string
+  /** O que o aviso da lista lida em parte diz. Sem ele, "Parte da lista não carregou"; o do professor diz o que não leu (X3). */
+  readonly avisoDaLeituraParcial?: string
+}
+
+/** O grupo dos itens que não dizem de que grupo são, e o aviso e o vazio de quem não troca o texto: os da coordenação (X2). */
+const GRUPO_DA_ESCOLA = 'Da escola'
+const AVISO_PARCIAL_PADRAO = 'Parte da lista não carregou'
+const VAZIO_PADRAO = 'Nada espera a coordenação agora.'
+
+/** Os itens agrupados pelo `grupo`, na ordem em que o primeiro de cada grupo aparece: a ordem dos itens é de quem monta a fila. */
+function agruparPorGrupo(itens: readonly ItemDoSino[]): readonly { readonly titulo: string; readonly itens: readonly ItemDoSino[] }[] {
+  const grupos = new Map<string, ItemDoSino[]>()
+  for (const item of itens) {
+    const titulo = item.grupo ?? GRUPO_DA_ESCOLA
+    const grupo = grupos.get(titulo)
+    if (grupo === undefined) grupos.set(titulo, [item])
+    else grupo.push(item)
+  }
+  return [...grupos].map(([titulo, doGrupo]) => ({ titulo, itens: doGrupo }))
 }
 
 const HORA = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' })
@@ -84,12 +110,14 @@ function GrupoDeItens({ titulo, itens }: { readonly titulo: string; readonly ite
  *
  * - **Não pisca, não soa e não anima**: o número é um `Contador` parado, e o botão não muda por tempo (D59). **Abrir a lista
  *   não faz leitura**; só "Tentar de novo" e "Atualizar" pedem (RF5).
- * - **Nunca diz "Tudo em dia" sem ter lido tudo**: a lista parcial mostra o que veio, com "Parte da lista não carregou" e
- *   "Tentar de novo". O vazio é ícone ilustrado, sem mascote (a onça de corpo inteiro é decisão do Joaquim, seção 12).
+ * - **Nunca diz "Tudo em dia" sem ter lido tudo**: a lista parcial mostra o que veio, com o aviso (por padrão, "Parte da lista
+ *   não carregou"; o sino do professor diz o que não leu) e "Tentar de novo". O vazio é ícone ilustrado, sem mascote (a onça de corpo inteiro é decisão do Joaquim, seção 12).
  * - **A lista fecha ao se ir a um item**: o painel é modal, e a tela de destino nasce sem nada por cima dela.
  * - "Atualizado às HH:MM" é o que quem usa a peça entrega; a peça não tem temporizador.
+ * - **Os dois sinos usam esta peça** (coordenação, X2; professor, X3). As três props opcionais do fim (`faltaPara`, `textoDoVazio`,
+ *   `avisoDaLeituraParcial`) e o `grupo` do item existem para o professor, e sem elas a peça é a da X2.
  */
-export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = false, aoAtualizar, atualizando = false, atualizadoEm, faltaPara }: Props) {
+export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = false, aoAtualizar, atualizando = false, atualizadoEm, faltaPara, textoDoVazio = VAZIO_PADRAO, avisoDaLeituraParcial = AVISO_PARCIAL_PADRAO }: Props) {
   // O endereço em que a lista foi aberta. Ir a um item muda o endereço (o caminho ou só a consulta), e o painel modal sai da
   // frente da tela de destino; voltar a ele depois não o reabre.
   const [caminho] = useLocation()
@@ -101,7 +129,7 @@ export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = f
   const definirAberto = (valor: boolean) => definirAbertoEm(valor ? endereco : null)
 
   const urgentes = itens.filter((item) => item.urgente)
-  const daEscola = itens.filter((item) => !item.urgente)
+  const gruposDosDemais = agruparPorGrupo(itens.filter((item) => !item.urgente))
   const nome = nomeDoBotao(itens.length, situacao)
 
   return (
@@ -139,23 +167,27 @@ export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = f
                   </Botao>
                 }
               >
-                Parte da lista não carregou
+                {avisoDaLeituraParcial}
               </Aviso>
             )}
             {(situacao === 'pronta' || situacao === 'parcial') && (
               <>
                 <GrupoDeItens titulo="Urgente" itens={urgentes} />
-                <GrupoDeItens titulo="Da escola" itens={daEscola} />
+                {gruposDosDemais.map((grupo) => (
+                  <GrupoDeItens key={grupo.titulo} titulo={grupo.titulo} itens={grupo.itens} />
+                ))}
               </>
             )}
             {situacao === 'pronta' && itens.length === 0 && (
               <div data-vazio-do-sino="" className="flex flex-col items-center gap-2 rounded-cartao border-2 border-dashed border-borda-campo bg-superficie px-4 py-10 text-center">
                 <Icone nome="inicio" tamanho={48} />
                 <p className="t-secao text-tinta">Tudo em dia</p>
-                <p className="t-apoio max-w-prose text-apoio">Nada espera a coordenação agora.</p>
-                <Link to={faltaPara} className={CLASSES_DO_LINK_SECUNDARIO}>
-                  Ver o que falta para a escola
-                </Link>
+                <p className="t-apoio max-w-prose text-apoio">{textoDoVazio}</p>
+                {faltaPara !== undefined && (
+                  <Link to={faltaPara} className={CLASSES_DO_LINK_SECUNDARIO}>
+                    Ver o que falta para a escola
+                  </Link>
+                )}
               </div>
             )}
           </div>

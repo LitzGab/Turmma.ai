@@ -117,6 +117,7 @@ export const PECAS_FORA_DA_ENTRADA = [
   'PainelLado',
   'Selecao',
   'SeloDeEstado',
+  'sino/leitura-do-sino',
   'sino/Sino',
   'Tabela',
   'teclado-das-abas',

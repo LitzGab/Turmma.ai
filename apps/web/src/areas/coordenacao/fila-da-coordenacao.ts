@@ -6,8 +6,14 @@ import { consultaMateriais } from '../../api/material'
 import { consultaIncidentes } from '../../api/privacidade'
 import { consultaProfessores } from '../../api/professores'
 import { caminhoDoProfessor } from '../../caminhos'
+import { LEITURA_DA_FILA, SEM_LEITURA_SOZINHA, type LeituraDaFila } from '../../componentes/sino/leitura-do-sino'
 import type { ItemDoSino, SituacaoDoSino } from '../../componentes/sino/Sino'
 import { formatarDiaDoInstante } from '../../formatar'
+
+// As opções de leitura e o tipo da leitura são dos dois sinos (o do professor é da X3) e moram em `componentes/sino/leitura-do-sino.ts`;
+// quem já os importava daqui continua importando.
+export { SEM_LEITURA_SOZINHA }
+export type { LeituraDaFila }
 
 /**
  * A fila "Esperando você" da coordenação (Tech Spec das telas da coordenação, seção 5, "A fila"; RF4, RF5 e RF7): uma função
@@ -23,13 +29,6 @@ export type TipoDeItemDaFila = (typeof TIPOS_DA_FILA)[number]
 export interface ItemDaFila extends ItemDoSino {
   readonly tipo: TipoDeItemDaFila
 }
-
-/** O que uma consulta devolve à fila: ainda lendo, falhou, foi lida (inteira ou truncada) ou nem se aplica. */
-export type LeituraDaFila<Dado> =
-  | { readonly estado: 'carregando' }
-  | { readonly estado: 'erro'; readonly erro: unknown }
-  | { readonly estado: 'lida'; readonly dado: Dado; readonly completa: boolean }
-  | { readonly estado: 'nao-se-aplica' }
 
 export interface EntradaDaFila {
   readonly anos: LeituraDaFila<readonly AnoLetivo[]>
@@ -171,23 +170,6 @@ export function montarFila(entrada: EntradaDaFila): FilaDaCoordenacao {
 export function anoEmCurso(anos: LeituraDaFila<readonly AnoLetivo[]>): AnoLetivo | undefined {
   return lida(anos)?.find((ano) => ano.situacao === 'em_curso')
 }
-
-/**
- * As opções de leitura da fila (Tech Spec, seção 7c, "Releitura"): cinco minutos de frescor e **nenhuma leitura por tempo,
- * por foco ou por rede**. `consultaMateriais` traz o `refetchInterval` de 1,5 s da tela Material, e sem o `false` um
- * material `processando` faria cerca de 40 leituras por minuto por aba (regra 80). O Painel (2.0) lê com as mesmas opções: o
- * mesmo frescor, para as duas telas não lerem de novo uma a leitura da outra.
- */
-export const SEM_LEITURA_SOZINHA = { staleTime: 5 * 60_000, refetchInterval: false, refetchOnWindowFocus: false, refetchOnReconnect: false } as const
-
-/**
- * As opções dos seis observadores da fila: as de cima, mais **nenhuma releitura de consulta que já falhou só porque o sino
- * montou**. O sino é `lazy()` e chega depois da tela: se a consulta dos anos já falhou ali, a releitura da montagem a refaz
- * sem ninguém tocar, e o erro e o "Tentar de novo" da tela somem debaixo do dedo (esteira de 16/10/2026, "Tentar de novo"
- * da Estrutura no celular). Quem relê o que falhou é o "Tentar de novo" do sino ou o da tela. Consulta que ainda não
- * existe carrega normalmente: `retryOnMount` só vale para a que já está em erro.
- */
-const LEITURA_DA_FILA = { ...SEM_LEITURA_SOZINHA, retryOnMount: false } as const
 
 function leituraDe<Dado>(consulta: UseQueryResult<ListaDaEstrutura<Dado>>, aplica = true): LeituraDaFila<readonly Dado[]> {
   if (!aplica) return { estado: 'nao-se-aplica' }

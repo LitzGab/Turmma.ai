@@ -28,10 +28,11 @@ const TURMAS: ItemDoSino = { id: 'c', titulo: 'Turmas sem professor', detalhe: '
 
 type PropsDoSino = Parameters<typeof Sino>[0]
 
-function desenhar(sobre: Partial<PropsDoSino> = {}, caminho = '/painel') {
+function desenhar(sobre: Partial<PropsDoSino> & { readonly semFaltaPara?: boolean } = {}, caminho = '/painel') {
+  const { semFaltaPara = false, ...resto } = sobre
   const funcoes = { aoTentarDeNovo: vi.fn(), aoAtualizar: vi.fn() }
   const localizacao = memoryLocation({ path: caminho, record: true })
-  const props: PropsDoSino = { itens: [], situacao: 'pronta', faltaPara: '/estrutura?painel=falta', ...funcoes, ...sobre }
+  const props: PropsDoSino = { itens: [], situacao: 'pronta', ...(semFaltaPara ? {} : { faltaPara: '/estrutura?painel=falta' }), ...funcoes, ...resto }
   render(
     <Router hook={localizacao.hook}>
       <Sino {...props} />
@@ -177,5 +178,53 @@ describe('a lista "Esperando você"', () => {
     expect(within(painel).getByText('Atualizado às 14:32')).toBeTruthy()
     await usuario.click(within(painel).getByRole('button', { name: 'Atualizar' }))
     expect(aoAtualizar).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('o sino do professor, pelas props opcionais (telas do professor, 1.0)', () => {
+  const NA_TURMA_A: ItemDoSino = { id: 'p', titulo: 'Correção para revisar', detalhe: 'Atividade de estequiometria', urgente: false, para: '/aprovar/1', grupo: '1º A' }
+  const NA_TURMA_B: ItemDoSino = { id: 'q', titulo: 'Confirme sua turma', detalhe: 'Química', urgente: false, para: '/turmas', grupo: '2º B' }
+  const NA_TURMA_A_DE_NOVO: ItemDoSino = { id: 'r', titulo: 'Pedidos de nome para decidir', detalhe: '2 pedidos esperando a decisão', urgente: false, para: '/turmas/1', grupo: '1º A' }
+
+  it('o item com `grupo` aparece no grupo dele, na ordem em que o grupo apareceu, e não em "Da escola"', async () => {
+    const usuario = userEvent.setup()
+    desenhar({ itens: [NA_TURMA_A, NA_TURMA_B, NA_TURMA_A_DE_NOVO], semFaltaPara: true })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, 3' }))
+    const painel = screen.getByRole('dialog', { name: 'Esperando você' })
+    expect(within(painel).queryByRole('region', { name: 'Da escola' })).toBeNull()
+    const turmaA = within(within(painel).getByRole('region', { name: '1º A' }))
+    expect(turmaA.getAllByRole('link').map((link) => link.textContent)).toEqual([expect.stringContaining('Correção para revisar'), expect.stringContaining('Pedidos de nome para decidir')])
+    expect(within(within(painel).getByRole('region', { name: '2º B' })).getAllByRole('link')).toHaveLength(1)
+    const titulos = within(painel)
+      .getAllByRole('heading', { level: 3 })
+      .map((titulo) => titulo.textContent)
+    expect(titulos).toEqual(['1º A', '2º B'])
+  })
+
+  it('o item sem `grupo` continua em "Da escola"', async () => {
+    const usuario = userEvent.setup()
+    desenhar({ itens: [NA_TURMA_A, CONVITE] })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, 2' }))
+    expect(within(within(screen.getByRole('dialog', { name: 'Esperando você' })).getByRole('region', { name: 'Da escola' })).getByRole('link', { name: /Refazer o convite/ })).toBeTruthy()
+  })
+
+  it('o vazio da professora tem o texto dela e nenhum link "Ver o que falta para a escola"', async () => {
+    const usuario = userEvent.setup()
+    desenhar({ itens: [], situacao: 'pronta', semFaltaPara: true, textoDoVazio: 'Nada espera a sua decisão agora.' })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, nada' }))
+    const painel = screen.getByRole('dialog', { name: 'Esperando você' })
+    expect(within(painel).getByText('Tudo em dia')).toBeTruthy()
+    expect(within(painel).getByText('Nada espera a sua decisão agora.')).toBeTruthy()
+    expect(within(painel).queryByText('Nada espera a coordenação agora.')).toBeNull()
+    expect(within(painel).queryByText('Ver o que falta para a escola')).toBeNull()
+  })
+
+  it('o aviso da leitura parcial pode dizer o que não foi lido; sem ele, a frase de sempre', async () => {
+    const usuario = userEvent.setup()
+    desenhar({ itens: [NA_TURMA_A], situacao: 'parcial', avisoDaLeituraParcial: 'Parte da lista não carregou. Não foi possível ler os pedidos de nome de 2 turmas.' })
+    await usuario.click(screen.getByRole('button', { name: 'Esperando você, 1' }))
+    const painel = screen.getByRole('dialog', { name: 'Esperando você' })
+    expect(within(painel).getByText('Parte da lista não carregou. Não foi possível ler os pedidos de nome de 2 turmas.')).toBeTruthy()
+    expect(within(painel).queryByText('Tudo em dia')).toBeNull()
   })
 })

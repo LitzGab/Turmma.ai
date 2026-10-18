@@ -10,8 +10,9 @@ import { prepararTela, redeFalsa, type RedeFalsa } from './__fixtures__/tela'
 import { Rotas } from './rotas'
 
 /**
- * O sino é só da coordenação (telas da coordenação, 1.0; Tech Spec, seção 5, "O sino"): a área do professor e a do aluno
- * não o montam, e nenhuma leitura da fila sai delas. É a app inteira de verdade (as rotas, a casca e a área de cada papel,
+ * Cada área monta o sino dela, e só ele (telas da coordenação, 1.0, e telas do professor, 1.0): a coordenação lê a fila
+ * dela, o professor lê a dele (`/v1/entregas` e `/v1/meus-vinculos`, sem nenhuma das leituras da coordenação), e o aluno não
+ * tem sino nem lê fila nenhuma. É a app inteira de verdade (as rotas, a casca e a área de cada papel,
  * por `import()`), com a rede falsa. A coordenação, no mesmo cenário, é o controle: sem ele, "não há sino" passaria também
  * com o sino quebrado em todo lugar.
  */
@@ -61,23 +62,32 @@ describe('o sino só existe na área da coordenação', () => {
     await waitFor(() => {
       for (const leitura of LEITURAS_DA_FILA) expect(caminhosDe(rede)).toContain(leitura)
     })
+    // A coordenação não recebe o `SinoDoProfessor`: nenhuma leitura da fila da professora sai na área dela.
+    expect(caminhosDe(rede)).not.toContain('/v1/entregas')
+    expect(caminhosDe(rede)).not.toContain('/v1/meus-vinculos')
   })
 
-  for (const [papel, caminho, titulo] of [
-    ['professor', '/professor/turmas', 'Turmas'],
-    ['aluno', '/aluno/atividades', 'Atividades'],
-  ] as const) {
-    it(`${papel}: nenhum "Esperando você" da coordenação, e nenhuma chamada a /v1/vinculos, /v1/professores nem /v1/privacidade/incidentes`, async () => {
-      const rede = abrir(papel, caminho)
-      await screen.findByText('Camila Souza')
-      // A área do papel monta e lê o que é dela: só então a ausência do sino quer dizer alguma coisa.
-      await waitFor(() => expect(caminhosDe(rede).filter((chamada) => chamada !== '/v1/eu').length).toBeGreaterThan(0))
-      // O título da área na tela: a área terminou de montar. O sino é `lazy()`, e o título não prova que um sino montado por
-      // engano já teria pedido a fila: por isso a espera invertida, com prazo, sobre cada leitura da fila.
-      await screen.findByRole('heading', { level: 1, name: titulo })
-      await expect(waitFor(() => expect(LEITURAS_DA_FILA.some((leitura) => caminhosDe(rede).includes(leitura))).toBe(true), { timeout: 300 })).rejects.toThrow()
-      expect(screen.queryByRole('button', { name: /^Esperando você/ })).toBeNull()
-      for (const leitura of LEITURAS_DA_FILA) expect(caminhosDe(rede)).not.toContain(leitura)
+  it('professor: o sino é o dele, e lê as entregas e os vínculos dele, e nenhuma das leituras da coordenação', async () => {
+    const rede = abrir('professor', '/professor/turmas')
+    expect(await screen.findByRole('button', { name: /^Esperando você/ }, { timeout: 5_000 })).toBeTruthy()
+    await waitFor(() => {
+      expect(caminhosDe(rede)).toContain('/v1/entregas')
+      expect(caminhosDe(rede)).toContain('/v1/meus-vinculos')
     })
-  }
+    for (const leitura of LEITURAS_DA_FILA) expect(caminhosDe(rede)).not.toContain(leitura)
+  })
+
+  it('aluno: nenhum "Esperando você", e nenhuma chamada a /v1/vinculos, /v1/professores, /v1/privacidade/incidentes, /v1/entregas nem /v1/meus-vinculos', async () => {
+    const rede = abrir('aluno', '/aluno/atividades')
+    await screen.findByText('Camila Souza')
+    // A área do papel monta e lê o que é dela: só então a ausência do sino quer dizer alguma coisa.
+    await waitFor(() => expect(caminhosDe(rede).filter((chamada) => chamada !== '/v1/eu').length).toBeGreaterThan(0))
+    // O título da área na tela: a área terminou de montar. O sino é `lazy()`, e o título não prova que um sino montado por
+    // engano já teria pedido a fila: por isso a espera invertida, com prazo, sobre cada leitura da fila.
+    await screen.findByRole('heading', { level: 1, name: 'Atividades' })
+    const todas = [...LEITURAS_DA_FILA, '/v1/entregas', '/v1/meus-vinculos']
+    await expect(waitFor(() => expect(todas.some((leitura) => caminhosDe(rede).includes(leitura))).toBe(true), { timeout: 300 })).rejects.toThrow()
+    expect(screen.queryByRole('button', { name: /^Esperando você/ })).toBeNull()
+    for (const leitura of todas) expect(caminhosDe(rede)).not.toContain(leitura)
+  })
 })

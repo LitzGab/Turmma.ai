@@ -801,20 +801,30 @@ export async function contestarVinculosNoBanco(escolaId: string, vinculoIds: rea
 }
 
 /**
- * Uma coordenadora a mais na escola de alguém que o teste já criou, com conta e senha próprias: é a segunda pessoa da
- * **mesma** escola na mesma aba, a que alcança a mesma turma por outro papel (16.0). O nome leva uma marca única.
+ * Uma pessoa de equipe a mais na escola de alguém que o teste já criou, com conta e senha próprias: é a segunda pessoa da
+ * **mesma** escola na mesma aba. O nome leva uma marca única.
  */
-export async function criarCoordenadoraNaEscola(escola: Pick<EquipeDeTeste, 'escolaId' | 'escolaNome' | 'redeNome' | 'slug'>): Promise<EquipeDeTeste> {
+async function criarPessoaNaEscola(escola: Pick<EquipeDeTeste, 'escolaId' | 'escolaNome' | 'redeNome' | 'slug'>, papel: 'professor' | 'coordenador'): Promise<EquipeDeTeste> {
   const marca = randomUUID()
-  const nome = `Coordenadora sintética ${marca.slice(0, 8)}`
-  const email = `coordenador-${marca}@educa.invalid`
+  const nome = `${papel === 'professor' ? 'Professora' : 'Coordenadora'} sintética ${marca.slice(0, 8)}`
+  const email = `${papel}-${marca}@educa.invalid`
   const senha = `senha-sintetica-${marca}`
   const senhaHash = await hashDaSenha(senha)
   return comBanco(async (banco) => {
     const contaId = await id(banco, 'insert into conta (email, senha_hash) values ($1, $2) returning id', [email, senhaHash])
-    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'coordenador', $3) returning id", [escola.escolaId, contaId, nome])
+    const usuarioId = await id(banco, 'insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, $3, $4) returning id', [escola.escolaId, contaId, papel, nome])
     return { escolaId: escola.escolaId, escolaNome: escola.escolaNome, redeNome: escola.redeNome, slug: escola.slug, contaId, usuarioId, nome, email, senha }
   })
+}
+
+/** Uma coordenadora a mais na escola: a segunda pessoa da mesma escola na mesma aba, a que alcança a mesma turma por outro papel (16.0). */
+export function criarCoordenadoraNaEscola(escola: Pick<EquipeDeTeste, 'escolaId' | 'escolaNome' | 'redeNome' | 'slug'>): Promise<EquipeDeTeste> {
+  return criarPessoaNaEscola(escola, 'coordenador')
+}
+
+/** Uma professora a mais na escola, sem turma nem vínculo: a segunda professora que entra na aba depois da primeira (telas do professor, 1.0). */
+export function criarProfessoraNaEscola(escola: Pick<EquipeDeTeste, 'escolaId' | 'escolaNome' | 'redeNome' | 'slug'>): Promise<EquipeDeTeste> {
+  return criarPessoaNaEscola(escola, 'professor')
 }
 
 /** Um pedido de nome pendente, como a página pública da sala o deixa (6.0): o id dele e o do nome da lista. */

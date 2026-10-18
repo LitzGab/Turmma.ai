@@ -408,7 +408,8 @@ test.describe('W4 (Acesso): os quatro estados', () => {
       })
       for (const nome of [pendente.turmaNome, encerrada.turmaNome]) await expect(principal(page)).not.toContainText(nome)
       await expect(principal(page).getByRole('heading', { name: 'Acesso dos alunos' })).toHaveCount(0)
-      await expect(principal(page).getByRole('button')).toHaveCount(0)
+      // O sino "Esperando você" (X3) mora em main no computador: ele não é botão da tela da turma.
+      await expect(principal(page).getByRole('button', { name: /^(?!Esperando você)/ })).toHaveCount(0)
       await expect(page).toHaveTitle('Turma · Turmma')
       // Na página que já abre sem a turma, o aviso não puxa o foco: ele fica antes do "Voltar para Turmas".
       await expect(principal(page).getByRole('status').filter({ hasText: 'Esta turma não está disponível' })).not.toBeFocused()
