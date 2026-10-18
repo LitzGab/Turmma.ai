@@ -1,22 +1,18 @@
 # Estado da execução — telas-do-professor
 
 ## Agora
-- **Espero:** o `RELATÓRIO` do `Implementador` (linha 1) da correção `2026-10-18-textos-da-turma-indisponivel-diferem`,
-  1ª tentativa, pedida em 18/10 ~16h10; `DIVERGÊNCIA` (portão) às ~13h20: o caso `acesso-da-turma.spec.ts:257`
-  leva 61–66 s e o portão novo corta em 15 s. Mandei dividi-lo nesta mesma correção (`PEDIDO de retomada`). Depois:
-  `linhas.ts encontro 1` e `esteira.ts`.
-- **Devo ainda:** (1) a segunda correção da esteira vermelha da 1.0 (execução 39129521729, em `93e787e`):
-  `e2e/areas.spec.ts:204` [celular], "o professor no endereço da coordenação e do aluno cai em não encontrada",
-  estourou 30 s. Guardiões: `frontend-reviewer`. Sobe na linha 1 depois do encontro desta, **antes** da 2.0;
-  (2) só então a partida da 2.0 (grande); (3) a X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0
-  em `1477850`): não retomar sem a palavra do Joaquim.
-- **Base:** `spec/telas-do-professor` em `2e814f1` (merge da `develop` em `0aea52e`, que trouxe a correção de processo
-  M1 a M5 e a retrospectiva da X2).
+- **Espero:** o `RELATÓRIO` do `Implementador` (linha 1) da correção `2026-10-18-professor-em-area-alheia-estoura-o-prazo`
+  (`e2e/areas.spec.ts:204` [celular], estourou 30 s na esteira 39129521729), 1ª tentativa, pedida em 18/10 ~14h.
+  Depois: `linhas.ts encontro 1` e `esteira.ts` (a 39147219460, em `b12056f`, ainda corria).
+- **Devo ainda:** (1) a partida da 2.0 (grande) depois do encontro desta correção; (2) a X4 continua parada (andar
+  "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em `1477850`): não retomar sem a palavra do Joaquim.
+- **Base:** `spec/telas-do-professor` em `b12056f`.
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
+| correção `2026-10-18-textos-da-turma-indisponivel-diferem` | `61dba8c` | Sonnet | 2 | esteira vermelha da 1.0; o caso W4 de `acesso-da-turma.spec.ts` dividido em 8 pelo portão (15 s) |
 | 1.0 | `cb209b5` | Sonnet | 3 | escalada do `test-engineer` (r1, r2); diagnóstico do `Arquiteto` (`diagnostico-1.md`), aprovado na r3 |
 
 ## Esperando o Joaquim
