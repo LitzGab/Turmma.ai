@@ -97,7 +97,8 @@ reprovações na A1). Sem nenhuma, escreva "nenhuma".
 Preenchida por quem implementa (`/executar-task`, passo 2): um bloco por cláusula que o diff
 acrescenta, inclusive as que a tabela de testes não cita e as cópias da mesma regra em outro arquivo.
 O portão da tarefa aplica cada bloco, roda o teste citado e exige vermelho. Linha com `-` sai, com
-`+` entra, com espaço é contexto. Sem cláusula nova, escreva "nenhuma".
+`+` entra, com espaço é contexto. Cláusula que só vale no celular leva a linha `projeto: celular` depois de
+`teste:` (só em teste de e2e; sem ela o caso roda no `chromebook`). Sem cláusula nova, escreva "nenhuma".
 
 ```mutacao
 arquivo: [caminho do arquivo que tem a cláusula]

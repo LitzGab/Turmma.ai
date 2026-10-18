@@ -74,9 +74,11 @@ fazer, e as dos guardiões marcados:
   ````
 
   Linha que começa com `-` sai, com `+` entra, e com espaço é contexto: fica, e serve para o trecho
-  existir uma vez só no arquivo. O portão da tarefa aplica cada bloco, roda o teste citado, exige
-  vermelho e restaura (`tools/processo/mutacoes.ts`). Bloco cujo teste continua verde reprova o portão:
-  falta o teste, e não o bloco. Trava se prova pelo efeito (dois registros), não pela espera. No F3,
+  existir uma vez só no arquivo. Cláusula que só vale no celular (o ramo de toque, o menu de baixo)
+  acrescenta ao cabeçalho a linha `projeto: celular`; ela só vale para teste de e2e, e sem ela o caso
+  roda no `chromebook`, onde essa cláusula não é alcançada. O portão da tarefa aplica cada bloco, roda
+  o teste citado, exige vermelho e restaura (`tools/processo/mutacoes.ts`). Bloco cujo teste continua
+  verde reprova o portão: falta o teste, e não o bloco. Trava se prova pelo efeito (dois registros), não pela espera. No F3,
   17 reprovações foram cláusula sem teste que falhe sem ela, e em cinco a seção afirmava um vermelho
   que não acontecia.
 - **O cenário tem o segundo dado que torna a cláusula observável?** Foi a maior causa técnica de
