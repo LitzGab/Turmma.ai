@@ -931,7 +931,8 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       e custaram duas correções e duas rodadas de validação depois da validação aprovada;
       (b) **o hook conta as rodadas pelo `achados/`**, e não pelas linhas da seção "Revisões" (`tools/processo/revisoes.ts`,
       `acrescentarRevisao`): a seção sumiu duas vezes na X1 e a contagem recomeçou do 1;
-      (c) `tools/ci/e2e.ts` repassa `--repeat-each` e `--workers` ao Playwright (hoje viram filtro e o e2e inteiro roda);
+      (c) `tools/ci/e2e.ts` repassa `--repeat-each` e `--workers` ao Playwright (eram descartados sem aviso e o arquivo rodava uma vez;
+      **feito** em 18/10/2026 na correção `2026-10-18-e2e-repassa-repeat-each-e-workers`: `opcoesDoPlaywright` passa as duas, sempre com `=`);
       `tools/processo/linhas.ts conferir` aceita a correção feita na branch da spec (hoje para no primeiro `(tarefa N.0)`);
       e `tools/processo/mutacoes.ts` roda o caso de e2e no projeto que ele declara, e não sempre no `chromebook`, para a
       cláusula que só vale no celular se provar.
@@ -947,8 +948,13 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       fotos, contada à mão, e escapou em duas telas até a validação (C1, C2);
       (f) **o `flock /tmp/educa-carga.lock` dentro do `portao-local.ts` e do `tools/ci/e2e.ts`**, para a fila de carga entre
       as linhas não depender de quem digita o comando (o texto do `executar-task` e do `/seguir` vale até lá).
-      **Feita** na correção `2026-10-18-fila-de-carga-no-codigo` (`tools/ci/fila-de-carga.ts`); as letras (a) a (e) seguem abertas. Limites conhecidos da (f): o aviso de espera não diz quem segura a fila (o pid já sai de
+      **Feita** na correção `2026-10-18-fila-de-carga-no-codigo` (`tools/ci/fila-de-carga.ts`); as letras (a) a (e) seguem abertas, salvo a primeira frase da (c), feita na correção acima. Limites conhecidos da (f): o aviso de espera não diz quem segura a fila (o pid já sai de
       `donosDoTravamento`), e matar o comando de fora com `kill -9` deixa o relançado segurando a vez até acabar; e a pasta `fila-` que `tools/processo/revisoes.test.ts` cria em `/tmp` a cada execução nunca é apagada (apagar junto com a `raiz` na próxima correção que tocar esse teste)
+      (g) **o `tools/ci/e2e.ts` recusa, ou ao menos avisa, a opção que descarta**: opção com `-` fora da lista de
+      `opcoesDoPlaywright` (`--headed`) some sem aviso, e o valor solto (`--workers 1`, `--repeat-each 10`, `--grep nome`) é lido como
+      arquivo. Recusar com erro, como `fatiaDosArgumentos` faz com `--shard`, ou no mínimo uma linha no log com o que foi descartado.
+      Destino: a próxima correção que tocar `opcoesDoPlaywright` (recomendação dos três revisores da correção
+      `2026-10-18-e2e-repassa-repeat-each-e-workers`)
 - [ ] **A vitrine não fotografa troca do Tutor do aluno** (validação da X1, rodada 1): ela não digita, e a escola
       sintética não tem troca do Tutor, então o balão com a assinatura não sai em foto. Destino: antes da X4, que mexe
       na tela do Tutor do aluno
