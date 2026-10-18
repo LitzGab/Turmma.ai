@@ -205,7 +205,9 @@ entrada sozinho, abre cada endereço e grava a página inteira em `.processo/vit
 (1366 px) e no celular (360 px); página comprida sai em pedaços, e o que foi clicado entra no nome do
 arquivo. Leia **cada** arquivo com a ferramenta de leitura, como imagem, e corrija antes do portão o
 que o `frontend-reviewer` reprovaria (a lista está em `.claude/agents/frontend-reviewer.md`, "É
-bloqueante o que se vê e se mede").
+bloqueante o que se vê e se mede"). O comando termina com as **telas cuja página rola a 1366 × 768**
+(a altura medida passa de 768 px): se o PRD diz que só o miolo rola, tela nessa lista é defeito seu, e
+você a vê antes da Mesa.
 
 A foto mostra o que o último `tools/ci/e2e.ts` construiu: mudou a web depois dele, reconstrua antes de
 fotografar. A vitrine usa o banco de teste: não fotografe com teste rodando. Se a foto falhar, siga e

@@ -967,10 +967,16 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       `apps/web/src/__fixtures__/` como o `.test.tsx`; (4) o comentário de cabeçalho de `tools/ci/e2e-que-cita-literal.ts` ainda diz "o que só custa minutos" e cita só os limites antigos (copiar os quatro de `executar-task`); e talvez um aviso do portão quando o número de specs puxados passar de um teto);
       (e) **a vitrine lista as telas cuja página rola a 1366 × 768** (a altura medida em `tools/vitrine/foto.ts` passa da
       janela), no relatório que a Mesa e o Validador leem: na X2 o "só o miolo rola" (RF23) só foi visto pela altura das
-      fotos, contada à mão, e escapou em duas telas até a validação (C1, C2);
+      fotos, contada à mão, e escapou em duas telas até a validação (C1, C2)
+      (**feito** em 18/10/2026 na correção `2026-10-18-vitrine-lista-telas-que-rolam`: o `foto` termina com `relatorioDeRolagem`,
+      uma linha por tela do computador cuja altura medida passa de 768 px, ou "Nenhuma tela rola a 1366 × 768", e a Mesa a repassa
+      aos revisores na linha `Rolam a 1366 × 768`; **limites**: só diz que rola, não se rola por desenho (tabela comprida) ou por
+      defeito, e quem decide é quem lê o PRD; a altura é a da página inteira (`scrollHeight`), então um miolo com `overflow` próprio
+      cabe na janela e não aparece; só o computador, no celular toda tela rola; a ligação do `vitrine.ts` ao relatório não tem teste
+      sem a web de pé, só `linhasDoResultado` tem; a `medida` que `fotografar` monta (`alturaDaPagina: altura`) e passa a `fotosDaTela` também só se prova com a web de pé: `fotosDaTela` e o relatório têm teste, a troca de `altura` por outro número ali não; a página redirecionada (`parouEm` diferente de `caminho`) entra no relatório com o endereço pedido e a altura da página onde parou, e as linhas de arquivo avisam do redirecionamento; no `catch` de `fotografar` a altura é a medida antes da foto, e se a página cresceu depois ela fica velha);
       (f) **o `flock /tmp/educa-carga.lock` dentro do `portao-local.ts` e do `tools/ci/e2e.ts`**, para a fila de carga entre
       as linhas não depender de quem digita o comando (o texto do `executar-task` e do `/seguir` vale até lá).
-      **Feita** na correção `2026-10-18-fila-de-carga-no-codigo` (`tools/ci/fila-de-carga.ts`); seguem abertas a (b), a (e), a (g) e a última frase da (c) (o projeto da mutação de e2e; o `linhas.ts conferir` foi feito na correção `2026-10-18-conferir-aceita-correcao-na-spec`); a primeira frase da (c) foi feita na correção acima, e a (a), na `2026-10-18-duracao-do-e2e-no-portao`. Limites conhecidos da (f): o aviso de espera não diz quem segura a fila (o pid já sai de
+      **Feita** na correção `2026-10-18-fila-de-carga-no-codigo` (`tools/ci/fila-de-carga.ts`); seguem abertas a (b), a (g) e a última frase da (c) (o projeto da mutação de e2e; o `linhas.ts conferir` foi feito na correção `2026-10-18-conferir-aceita-correcao-na-spec`); a primeira frase da (c) foi feita na correção acima, e a (a), na `2026-10-18-duracao-do-e2e-no-portao`. Limites conhecidos da (f): o aviso de espera não diz quem segura a fila (o pid já sai de
       `donosDoTravamento`), e matar o comando de fora com `kill -9` deixa o relançado segurando a vez até acabar; e a pasta `fila-` que `tools/processo/revisoes.test.ts` cria em `/tmp` a cada execução nunca é apagada (apagar junto com a `raiz` na próxima correção que tocar esse teste)
       (g) **o `tools/ci/e2e.ts` recusa, ou ao menos avisa, a opção que descarta**: opção com `-` fora da lista de
       `opcoesDoPlaywright` (`--headed`) some sem aviso, e o valor solto (`--workers 1`, `--repeat-each 10`, `--grep nome`) é lido como
