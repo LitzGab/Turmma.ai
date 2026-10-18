@@ -4,14 +4,9 @@
 - **Abertura (17/10, ~21h20):** o Joaquim disse no meu terminal "pode pousar e depois continuar com a x3". A X2 pousou
   na `develop` (`7092ee6`); a X3 abre a partir dela, com o sino da X2 já em `apps/web/src/componentes/sino/` (a 1.1
   manda reusá-lo).
-- **Linha 1** (`spec/telas-do-professor--l1`, ambiente de teste 1, `Implementador` e `Mesa`): **1.0** (porte grande,
-  Sonnet), pedida em 17/10 ~21h30, tentativa 1. **ESCALADA da Mesa** às 23h48 (`test-engineer` reprovou nas rodadas
-  1 e 2; ordem `.processo/ordens/1_task-r2.md`). Em 18/10 ~00h05 pedi o diagnóstico ao `Arquiteto`,
-  reiniciado no checkout da linha 1. Diagnóstico pronto (18/10 01h47, `.processo/ordens/diagnostico-1.md`): o desenho está
-  certo, falta o teste do lado negativo da condição de `pedidos.ts:127`; produção muda só o comentário. O Joaquim
-  disse ao `Arquiteto` "faça o necessário", e ele provou o diagnóstico numa cópia fora do andar (seção "Já provado"). Em 18/10
-  enviei o `PEDIDO de retomada` ao `Implementador` (ordem r2 + diagnóstico; rodada 3, só o `test-engineer`), conferido
-  trabalhando. **Espero:** o `RELATÓRIO` do `Implementador`.
+- **Linha 1** (`spec/telas-do-professor--l1`, ambiente de teste 1): ociosa. A 2.0 é a próxima no quadro, mas **não
+  parte** antes da correção de processo M1 a M5 pousar e a `develop` entrar na spec (decisão do Joaquim, 18/10).
+- **Esteira da spec:** 39129521729 em `93e787e` (depois da 1.0); o veredito se lê no próximo encontro.
 - **Retrospectiva da X2:** feita, `720beac` na `develop`, sem push (`tasks/prd-telas-da-coordenacao/retro.md`).
   Aplicadas T1 (`flock`), T2 e T3; M1 a M5 no `TODO.md`, com o destino "antes da primeira tarefa da X3". O andar da X3
   está em `7092ee6` e ainda não tem esse commit (o `flock` das skills só chega com o merge da `develop`).
@@ -23,6 +18,9 @@
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
 
 ## Concluídas
+| Tarefa | Commit | Modelo | Rodadas | Observação |
+|---|---|---|---|---|
+| 1.0 | `cb209b5` | Sonnet | 3 | escalada do `test-engineer` (r1, r2); diagnóstico do `Arquiteto` (`diagnostico-1.md`), aprovado na r3 |
 
 ## Esperando o Joaquim
 
