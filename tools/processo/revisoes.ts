@@ -358,12 +358,27 @@ export function revisoresObrigatorios(conteudoTarefa: string, tipo: TipoDocument
   return [...new Set([...marcados, ...sempre])]
 }
 
-export function acrescentarRevisao(conteudoTarefa: string, revisao: Omit<Revisao, 'rodada'>, nota?: string): string {
+/**
+ * A maior rodada que o hook já guardou para o revisor no arquivo de achados do documento (`achados/<documento>.md`).
+ *
+ * É a segunda fonte da contagem: a tabela "Revisões" mora no documento, e quem o reescreve inteiro a apaga (a X1
+ * perdeu a seção duas vezes e a contagem recomeçou do 1). O arquivo de achados é só do hook. Limite: só guarda a rodada
+ * que exigiu algo, então a aprovada limpa não está aqui.
+ */
+export function ultimaRodadaNosAchados(conteudoAchados: string, revisor: string): number {
+  const rodadas = [...conteudoAchados.matchAll(/^## (\S+) · (\d+)ª rodada · [^·\n]+ · \d{4}-/gm)]
+    .filter((achado) => achado[1] === revisor)
+    .map((achado) => Number(achado[2]))
+  return Math.max(0, ...rodadas)
+}
+
+export function acrescentarRevisao(conteudoTarefa: string, revisao: Omit<Revisao, 'rodada'>, nota?: string, achadosDoDocumento = ''): string {
   let conteudo = conteudoTarefa.endsWith('\n') ? conteudoTarefa : `${conteudoTarefa}\n`
   if (!conteudo.includes(`\n${TITULO_SECAO}\n`)) {
     conteudo += `\n${TITULO_SECAO}\n\n${TEXTO_SECAO}\n\n${nota ? `${nota}\n\n` : ''}${CABECALHO_TABELA}\n`
   }
-  const rodada = lerRevisoes(conteudo).filter((anterior) => anterior.revisor === revisao.revisor).length + 1
+  const naTabela = lerRevisoes(conteudo).filter((anterior) => anterior.revisor === revisao.revisor).length
+  const rodada = Math.max(naTabela, ultimaRodadaNosAchados(achadosDoDocumento, revisao.revisor)) + 1
   return `${conteudo}| ${revisao.inicio} | ${revisao.fim} | \`${revisao.revisor}\` | ${rodada} | ${revisao.veredito} | ${revisao.agente} |\n`
 }
 
@@ -698,13 +713,20 @@ export function registrar(entrada: EntradaHook, raiz: string, agora = new Date()
   const caminho = join(raiz, relativo)
   if (!existsSync(caminho)) return null
   comTrava(caminho, () => {
-    const atualizado = acrescentarRevisao(readFileSync(caminho, 'utf8'), {
-      inicio: formatarHora(transcript.inicioDaRodada ?? agora),
-      fim: formatarHora(agora),
-      revisor: entrada.agent_type ?? '',
-      veredito: extrairVeredito(mensagemFinal) ?? 'SEM VEREDITO',
-      agente: entrada.agent_id ?? '',
-    })
+    const caminhoAchado = join(raiz, caminhoDoAchado(relativo))
+    const achadosAnteriores = existsSync(caminhoAchado) ? readFileSync(caminhoAchado, 'utf8') : ''
+    const atualizado = acrescentarRevisao(
+      readFileSync(caminho, 'utf8'),
+      {
+        inicio: formatarHora(transcript.inicioDaRodada ?? agora),
+        fim: formatarHora(agora),
+        revisor: entrada.agent_type ?? '',
+        veredito: extrairVeredito(mensagemFinal) ?? 'SEM VEREDITO',
+        agente: entrada.agent_id ?? '',
+      },
+      undefined,
+      achadosAnteriores,
+    )
     writeFileSync(caminho, atualizado)
     const revisao = lerRevisoes(atualizado).at(-1)
     // O conteúdo que esta rodada viu. Mutação com restauração (o teste de mutação que se pede ao
@@ -712,10 +734,8 @@ export function registrar(entrada: EntradaHook, raiz: string, agora = new Date()
     if (revisao) gravarInstantaneo(raiz, chaveDaRodada(relativo, revisao.revisor, revisao.rodada), alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
     const achado = revisao ? achadoDaRodada(revisao, mensagemFinal) : null
     if (achado && revisao) {
-      const caminhoAchado = join(raiz, caminhoDoAchado(relativo))
       mkdirSync(dirname(caminhoAchado), { recursive: true })
-      const anterior = existsSync(caminhoAchado) ? readFileSync(caminhoAchado, 'utf8') : ''
-      writeFileSync(caminhoAchado, acrescentarAchado(anterior, relativo, achado))
+      writeFileSync(caminhoAchado, acrescentarAchado(achadosAnteriores, relativo, achado))
       // Trava própria, dentro da do documento: o índice é da pasta, e dois documentos a compartilham.
       // A ordem é sempre documento e depois índice, então não há ciclo.
       const caminhoIndice = join(raiz, caminhoDoIndice(relativo))

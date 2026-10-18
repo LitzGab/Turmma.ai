@@ -41,6 +41,7 @@ import {
   SUITES_DO_PORTAO_DA_TAREFA,
   type Carimbo,
   type Revisao,
+  ultimaRodadaNosAchados,
 } from './revisoes.ts'
 
 const TAREFA = `# Tarefa 9.0 — Exemplo
@@ -134,6 +135,49 @@ describe('seção Revisões', () => {
       ['test-engineer', 1, 'APROVADO'],
       ['infra-guardian', 2, 'APROVADO'],
     ])
+  })
+
+  it('a rodada não recomeça do 1 quando a seção some', () => {
+    // O Implementador reescreveu o documento inteiro: a tabela voltou vazia, mas o hook já tinha guardado a reprovação.
+    const achados =
+      '# Achados das revisões — `tasks/prd-exemplo/9_task.md`\n\n' +
+      '## revisor-geral · 1ª rodada · REPROVADO · 2026-09-13 10:00:00 · `tasks/prd-exemplo/9_task.md`\n\nBloqueantes:\n- x\n\n' +
+      '## test-engineer · 1ª rodada · APROVADO · 2026-09-13 10:01:00 · `tasks/prd-exemplo/9_task.md`\n\nRecomendações:\n- y\n\n' +
+      '## revisor-geral · 2ª rodada · REPROVADO · 2026-09-13 10:30:00 · `tasks/prd-exemplo/9_task.md`\n\nBloqueantes:\n- z\n'
+    const semASecao = acrescentarRevisao(TAREFA, rodada('revisor-geral', 'APROVADO', '2026-09-13 11:00:00'), undefined, achados)
+    expect(lerRevisoes(semASecao).map((revisao) => [revisao.revisor, revisao.rodada])).toEqual([['revisor-geral', 3]])
+    // Quem não tem bloco nos achados continua do que a tabela diz, e o outro revisor não empresta a contagem.
+    const outro = acrescentarRevisao(semASecao, rodada('infra-guardian', 'APROVADO', '2026-09-13 11:01:00'), undefined, achados)
+    expect(lerRevisoes(outro).map((revisao) => [revisao.revisor, revisao.rodada])).toEqual([
+      ['revisor-geral', 3],
+      ['infra-guardian', 1],
+    ])
+    // Com a tabela intacta e maior que os achados (rodada aprovada limpa não deixa bloco), vale a tabela.
+    const intacta = tarefaCom(
+      rodada('test-engineer', 'REPROVADO', '2026-09-13 09:00:00'),
+      rodada('test-engineer', 'APROVADO', '2026-09-13 09:30:00'),
+    )
+    const seguinte = acrescentarRevisao(intacta, rodada('test-engineer', 'APROVADO', '2026-09-13 10:00:00'), undefined, achados)
+    expect(lerRevisoes(seguinte).map((revisao) => revisao.rodada)).toEqual([1, 2, 3])
+  })
+
+  it('limite conhecido: a seção que some depois de uma aprovação limpa perde essa rodada, porque ela não deixa bloco nos achados', () => {
+    // A aprovada limpa não é guardada em `achados/` (`achadoDaRodada`), então a tabela é a única que a conhece.
+    // Isto fixa o limite escrito no documento da correção e no TODO.md; se a contagem passar a achá-la, o teste muda.
+    const achadosSemBlocos = '# Achados das revisões — `tasks/prd-exemplo/9_task.md`\n'
+    const semASecao = acrescentarRevisao(TAREFA, rodada('revisor-geral', 'APROVADO', '2026-09-13 11:00:00'), undefined, achadosSemBlocos)
+    expect(lerRevisoes(semASecao).map((revisao) => revisao.rodada)).toEqual([1])
+  })
+
+  it('o cabeçalho de seção dentro do texto do revisor não conta como rodada', () => {
+    const achados =
+      '## revisor-geral · 1ª rodada · REPROVADO · 2026-09-13 10:00:00 · `tasks/prd-exemplo/9_task.md`\n\n' +
+      '## revisor-geral · 7ª rodada · da outra tarefa, citada como exemplo\n\n' +
+      '## frontend-reviewer · 4ª rodada · AJUSTES NECESSÁRIOS · 2026-09-13 10:30:00 · `tasks/prd-exemplo/9_task.md`\n'
+    expect(ultimaRodadaNosAchados(achados, 'revisor-geral')).toBe(1)
+    // O veredito de duas palavras também é lido.
+    expect(ultimaRodadaNosAchados(achados, 'frontend-reviewer')).toBe(4)
+    expect(ultimaRodadaNosAchados('', 'revisor-geral')).toBe(0)
   })
 
   it('obrigatórios são só os revisores, não o pesquisador, e toda tarefa tem revisor-geral', () => {
@@ -1002,6 +1046,18 @@ describe('achados separados por documento, com índice', () => {
     writeFileSync(caminhoTranscript, JSON.stringify({ type: 'user', timestamp: new Date(fim).toISOString(), message: { content: `Tarefa: ${documento}` } }))
     registrar({ agent_type: revisor, agent_id: 'a1', agent_transcript_path: caminhoTranscript, last_assistant_message: mensagem }, raiz, new Date(fim))
   }
+
+  it('a rodada continua dos achados quando o documento é reescrito sem a seção', () => {
+    const raiz = repositorio()
+    const documento = 'tasks/prd-exemplo/6_task.md'
+    rodada(raiz, documento, 'revisor-geral', 'VEREDITO: REPROVADO\n\nBloqueantes:\n- falta o caso das duas turmas', '2026-09-13T10:00:00')
+    // O Implementador reescreve o documento inteiro (Write): a seção "Revisões" some.
+    writeFileSync(join(raiz, documento), `# ${documento}\n\n**Subagentes obrigatórios:** \`revisor-geral\`\n`)
+    rodada(raiz, documento, 'revisor-geral', 'VEREDITO: APROVADO\n\nBloqueantes: nenhum\nRecomendações: nenhuma', '2026-09-13T11:00:00')
+
+    const revisoes = lerRevisoes(readFileSync(join(raiz, documento), 'utf8'))
+    expect(revisoes.map((revisao) => [revisao.revisor, revisao.rodada, revisao.veredito])).toEqual([['revisor-geral', 2, 'APROVADO']])
+  })
 
   it('guarda o achado no arquivo do documento, não num arquivo único da pasta', () => {
     const raiz = repositorio()
