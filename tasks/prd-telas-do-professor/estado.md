@@ -10,10 +10,39 @@
 - **Retrospectiva da X2:** feita, `720beac` na `develop`, sem push (`tasks/prd-telas-da-coordenacao/retro.md`).
   Aplicadas T1 (`flock`), T2 e T3; M1 a M5 no `TODO.md`, com o destino "antes da primeira tarefa da X3". O andar da X3
   está em `7092ee6` e ainda não tem esse commit (o `flock` das skills só chega com o merge da `develop`).
-- **Devo ainda:** com a 1.0 encontrada, **antes da 2.0**: a correção de processo M1 a M5 (`TODO.md`, "(X1,
-  retrospectiva) Código de processo"; `tasks/prd-telas-da-coordenacao/retro.md`, linha 179) em andar
-  `correcao/<data>-<slug>`, com o `Implementador` e a `Mesa`; o pouso dela na `develop` (parada); depois o merge da
-  `develop` na `spec/telas-do-professor` (traz também `720beac`, com o `flock`), e só então a partida da 2.0. A X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em
+- **Correção de processo M1 a M5** (`TODO.md`, "(X1, retrospectiva) Código de processo", letras (a) a (f)): andar
+  "correcao 2026-10-18-codigo-de-processo" (branch `correcao/2026-10-18-codigo-de-processo`, saída de `720beac`,
+  checkout `~/Documentos/git/.maestri/floors/educaia--correcao2026-10-18-codigo-de-processo`, ambiente 0), com o
+  `Implementador` e a `Mesa` reiniciados lá. **Uma correção por execução** (`corrigir`), em sequência no mesmo andar, e
+  um pouso só no fim. Ordem (decidi sem perguntar: primeiro o que acelera as seguintes):
+  1. (f) `flock` dentro do `portao-local.ts` e do `tools/ci/e2e.ts` — guardiões `infra-guardian`, `revisor-geral` —
+     **feita:** `cd4cecb` (`2026-10-18-fila-de-carga-no-codigo`), conferida em 18/10
+  2. (c) `tools/ci/e2e.ts` repassa `--repeat-each` e `--workers` — `infra-guardian`, `revisor-geral` — **feita:**
+     `dee9051` (`2026-10-18-e2e-repassa-repeat-each-e-workers`), conferida em 18/10. Deixou a letra (g) no `TODO.md`
+     (o `e2e.ts` recusar a opção que descarta), para a próxima correção que tocar `opcoesDoPlaywright`
+  3. (a) o portão mede a duração do e2e alterado (acima de 15 s, vermelho) — `infra-guardian`, `revisor-geral` —
+     **feita:** `4723044` (`2026-10-18-duracao-do-e2e-no-portao`), conferida em 18/10. O portão completo não mede;
+     limites na letra (a) do `TODO.md`
+  4. (d) o portão roda os e2e que citam um literal que o diff tirou de `apps/web/src` — `revisor-geral` —
+     **feita:** `6810b60` (`2026-10-18-e2e-que-cita-literal-removido`), conferida em 18/10. Deixou a "correção seguinte
+     desta letra" no `TODO.md` (classe do Tailwind, teste da linha de log, `__fixtures__` da web, comentário do módulo)
+  5. (c) `linhas.ts conferir` aceita correção feita na branch da spec — `revisor-geral` — **feita:** `910ca41`
+     (`2026-10-18-conferir-aceita-correcao-na-spec`), conferida em 18/10. Teve escalada da Mesa (2 reprovações do
+     `revisor-geral`) e diagnóstico do `Arquiteto` (`--remerge-diff`); aprovada na 3ª rodada. Deixou quatro "a rever" no `TODO.md`
+  6. (c) `mutacoes.ts` roda o caso de e2e no projeto que ele declara — `revisor-geral` — **feita:** `ba3f109`
+     (`2026-10-18-mutacao-de-e2e-no-projeto-declarado`), conferida em 18/10. Aprovada na 2ª rodada
+  7. (b) o hook conta as rodadas pelo `achados/`, não pela seção "Revisões" — `revisor-geral` — **feita:** `adca33b`
+     (`2026-10-18-rodada-conta-pelos-achados`), conferida em 18/10. Aprovada na 2ª rodada; deixou limites e os itens
+     (i) a (iii) na letra (b) do `TODO.md`
+  8. (e) a vitrine lista as telas que rolam a 1366 × 768 — `revisor-geral` — **feita:** `0aea52e`
+     (`2026-10-18-vitrine-lista-telas-que-rolam`), conferida em 18/10. Aprovada na 2ª rodada (o `test-engineer`
+     reprovou na 1ª)
+  **As oito feitas.** **Espero:** a esteira da branch em `0aea52e` (execução 39140116448, em `gh run watch` em
+  segundo plano). Verde: **parada do pouso** na `develop`, com a palavra do Joaquim. Vermelha: correção na branch.
+  Cada uma: `Implementador` e `Mesa` reiniciados, `PEDIDO` de correção. Depois da 8ª: esteira verde na branch, **pouso
+  na `develop` (parada, palavra do Joaquim)**, merge da `develop` na `spec/telas-do-professor` (traz também `720beac`),
+  e só então a partida da 2.0.
+- **Devo ainda:** o que está na lista acima. A X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em
   `1477850`): não retomar sem a palavra do Joaquim.
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
 
