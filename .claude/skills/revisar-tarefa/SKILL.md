@@ -100,7 +100,9 @@ tela pela regra dele. A vitrine usa o banco de teste, e por isso vem antes de al
 
    O comando imprime cada arquivo de `.processo/vitrine/`, no computador (1366 px) e no celular
    (360 px), e avisa quando a página parou em outro endereço. Confira que cada foto é da tela pedida,
-   e não da entrada nem de uma tela de erro: abra uma delas como imagem.
+   e não da entrada nem de uma tela de erro: abra uma delas como imagem. O comando termina com as
+   **telas cuja página rola a 1366 × 768** (a altura medida passa de 768 px), uma linha por tela, ou
+   com "Nenhuma tela rola": guarde-a, ela vai no prompt (abaixo).
 
 Em rodada nova depois de uma correção que mexeu em `apps/web`, fotografe de novo: o portão do
 Implementador reconstruiu a web, e as fotos da rodada anterior são da tela antiga.
@@ -136,7 +138,13 @@ Em tarefa com tela, o prompt de **cada** revisor termina com as fotos, uma linha
 Fotos da tela (leia cada arquivo como imagem):
 <papel>, <endereço>[, depois de clicar em <o quê>], escola cheia: <arquivos>
 <papel>, <endereço>[, …], escola vazia: <arquivos>
+Rolam a 1366 × 768: <as linhas que o comando imprimiu no fim, ou "nenhuma">
 ```
+
+A linha "Rolam" é o que o `frontend-reviewer` cruza com o PRD: tela que o PRD diz que só o miolo rola
+(a X2 passou com duas que rolavam a página inteira, C1 e C2) e aparece nela é defeito. Você roda o `foto`
+mais de uma vez (escola cheia e vazia, papéis diferentes), e cada chamada termina com a sua lista, que pode
+ser "Nenhuma tela rola": a linha "Rolam" **junta as listas de todas as chamadas**, e não só a da última.
 
 ## 4. Depois da rodada
 

@@ -285,8 +285,13 @@ Arquiteto autorizou e os arquivos previstos.
     revisão, e o commit da correção leva só os arquivos dela. Ela não tem encontro próprio: o
     commit fica na linha e segue com o da tarefa. Registre em "O que decidi sem perguntar".
 
-Cada linha tem o seu ambiente de teste, e as linhas rodam portão ao mesmo tempo. No andar da spec e
-no térreo, que dividem o ambiente 0, um por vez.
+Cada linha tem o seu ambiente de teste, mas a máquina é uma só: o e2e e o portão de duas linhas ao
+mesmo tempo estouram os 30 s (X2, carga de 9 a 24). Por isso o `portao-local.ts` e o `tools/ci/e2e.ts`
+tomam o `flock /tmp/educa-carga.lock` sozinhos (`tools/ci/fila-de-carga.ts`; só o `npx playwright test` direto leva o
+`flock` digitado, `executar-task`, passo 4), e quem chega espera a vez e avisa.
+**Não mande uma linha esperar a outra com laço de `pgrep`**: ele casa com a própria linha de comando e
+não sai (cinco vezes na X2, perto de 4 h de linha parada). No andar da spec e no térreo, que dividem o
+ambiente 0, um por vez.
 
 ## 7. As paradas
 

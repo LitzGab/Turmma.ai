@@ -10,6 +10,7 @@ import {
   impressaoDasMutacoes,
   lerMutacoes,
   pedeReconstrucao,
+  PROJETOS_DO_E2E,
   tipoDoTeste,
   type Mutacao,
 } from './mutacoes.ts'
@@ -147,6 +148,62 @@ describe('o comando que roda o teste de uma mutação', () => {
     const deFixture = mutacao({ arquivo: 'e2e/__fixtures__/sessao.ts', teste: 'e2e/areas.spec.ts' })
     expect(pedeReconstrucao(deFixture)).toBe(false)
     expect(comandoDoTeste(deFixture)).toEqual(['npx', 'playwright', 'test', 'e2e/areas.spec.ts', '--project=chromebook'])
+  })
+
+  it('o projeto do e2e vem do bloco; sem a linha "projeto:", é o chromebook', () => {
+    const escrito = (...cabecalho: string[]) =>
+      lerMutacoes(bloco('arquivo: apps/web/src/Tela.tsx', 'teste: e2e/areas.spec.ts › o aluno acha', ...cabecalho, '- <Menu />', '+ <Nada />'))
+    const doCelular = escrito('projeto: celular')
+    expect(doCelular.erros).toEqual([])
+    expect(doCelular.mutacoes[0]?.projeto).toBe('celular')
+    expect(comandoDoTeste(doCelular.mutacoes[0] as Mutacao)).toEqual(['node', 'tools/ci/e2e.ts', '--manter-ambiente', 'e2e/areas.spec.ts', '--grep=o aluno acha', '--project=celular'])
+    const semLinha = escrito()
+    expect(semLinha.mutacoes[0]).not.toHaveProperty('projeto')
+    expect(comandoDoTeste(semLinha.mutacoes[0] as Mutacao)).toContain('--project=chromebook')
+    // Sem reconstrução (fixture do próprio e2e), o projeto também é o do bloco.
+    expect(comandoDoTeste(mutacao({ arquivo: 'e2e/__fixtures__/sessao.ts', teste: 'e2e/areas.spec.ts', projeto: 'celular' }))).toEqual(['npx', 'playwright', 'test', 'e2e/areas.spec.ts', '--project=celular'])
+  })
+
+  it('a linha "projeto:" só vale em e2e e só com um projeto que o Playwright tem; o resto é erro do bloco', () => {
+    const { mutacoes, erros } = lerMutacoes(
+      [
+        bloco('arquivo: a.ts', 'teste: e2e/a.spec.ts', 'projeto: tablet', '- x'),
+        bloco('arquivo: a.ts', 'teste: apps/api/test/a.int.test.ts', 'projeto: celular', '- x'),
+        bloco('arquivo: a.ts', 'teste: e2e/a.spec.ts', 'projeto: chromebook', '- x'),
+        bloco('teste: e2e/a.spec.ts', 'projeto: tablet', '- x'),
+      ].join('\n\n'),
+    )
+    // O primeiro erro do bloco é o que vale: projeto inválido não esconde a linha que falta.
+    expect(erros).toEqual(['mutação 1: projeto "tablet" não existe (chromebook ou celular)', 'mutação 2: "projeto:" só vale para teste de e2e', 'mutação 4: falta a linha "arquivo:"'])
+    expect(mutacoes.map((m) => m.projeto)).toEqual(['chromebook'])
+  })
+
+  it('os projetos que o bloco aceita são os do playwright.config.ts', () => {
+    const configuracao = readFileSync(join(import.meta.dirname, '../../playwright.config.ts'), 'utf8')
+    const projetos = [...configuracao.matchAll(/^\s*name: '([a-z]+)',/gm)].map((achado) => achado[1])
+    expect([...PROJETOS_DO_E2E]).toEqual(projetos)
+  })
+
+  it('a mesma mutação em dois projetos tem cada uma a sua corrida limpa e a sua corrida mutada', () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'mutacoes-projeto-'))
+    for (const [arquivo, conteudo] of Object.entries({ 'e2e/__fixtures__/sessao.ts': 'const menu = 1\n', 'e2e/areas.spec.ts': '// teste\n' })) {
+      mkdirSync(dirname(join(raiz, arquivo)), { recursive: true })
+      writeFileSync(join(raiz, arquivo), conteudo)
+    }
+    const base = { arquivo: 'e2e/__fixtures__/sessao.ts', teste: 'e2e/areas.spec.ts', antes: ['const menu = 1'], depois: ['const menu = 0'] }
+    const corridas: string[] = []
+    const avisos: string[] = []
+    const resultados = conferirMutacoes(raiz, [mutacao({ ...base, projeto: 'celular' }), mutacao({ ...base, projeto: 'chromebook' })], (comando) => {
+      const mutado = readFileSync(join(raiz, base.arquivo), 'utf8').includes('menu = 0')
+      corridas.push(`${comando.at(-1) ?? ''}${mutado ? ' mutado' : ''}`)
+      // A cláusula só importa no celular: lá o teste cai com ela fora, no computador continua verde.
+      return !(mutado && comando.at(-1) === '--project=celular')
+    }, (texto) => avisos.push(texto))
+    expect(corridas).toEqual(['--project=celular', '--project=celular mutado', '--project=chromebook', '--project=chromebook mutado'])
+    expect(resultados.map((resultado) => resultado.veredito)).toEqual(['vermelho', 'verde'])
+    // O rótulo diz o projeto: as duas linhas não saem iguais, e dá para saber qual reprovou.
+    expect(avisos[0]).toMatch(/^✓ .*\[celular\]: vermelho/)
+    expect(avisos[1]).toMatch(/^✗ .*\[chromebook\]: o teste continuou verde/)
   })
 })
 

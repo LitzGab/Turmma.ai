@@ -402,6 +402,202 @@ describe('partida, encontro e fechamento, em repositórios de verdade', () => {
     expect(conferir(andar, { emCurso: true }).texto).toMatch(/árvore com 1 arquivo\(s\) da tarefa em curso e push feito/)
   })
 
+  describe('conferir na branch da spec', () => {
+    const REVISOES = '\n\nRevisões: test-engineer APROVADO (1ª rodada), revisor-geral APROVADO (1ª rodada)'
+
+    /** Um andar de spec com a `develop` no GitHub, e o que o Implementador faz nele: o commit, com ou sem marca e revisões. */
+    function andarDaSpec(branch = 'spec/exemplo') {
+      const base = mkdtempSync(join(tmpdir(), 'conferir-spec-'))
+      pastas.push(base)
+      const [origem, andar] = [join(base, 'origem.git'), join(base, 'andar')]
+      const git = (...args: string[]) => execFileSync('git', args, { cwd: andar, encoding: 'utf8', stdio: 'pipe' }).trim()
+      execFileSync('git', ['init', '-q', '--bare', '-b', 'develop', origem])
+      execFileSync('git', ['clone', '-q', origem, andar], { stdio: 'pipe' })
+      git('config', 'user.name', 'teste')
+      git('config', 'user.email', 'teste@exemplo.invalid')
+      git('commit', '-q', '--allow-empty', '-m', 'base')
+      git('push', '-q', 'origin', 'HEAD:develop')
+      git('checkout', '-q', '-b', branch)
+      const commit = (arquivo: string, titulo: string, corpo = REVISOES) => {
+        mkdirSync(join(andar, 'apps'), { recursive: true })
+        writeFileSync(join(andar, 'apps', arquivo), `${titulo}\n`)
+        git('add', '-A')
+        git('commit', '-q', '-m', `${titulo}${corpo}`)
+      }
+      return { andar, git, commit, enviar: () => git('push', '-q', '-u', 'origin', 'HEAD') }
+    }
+
+    it('aceita a correção que vem depois das tarefas da spec, que a develop ainda não tem', () => {
+      const { andar, commit, enviar } = andarDaSpec()
+      commit('a.ts', 'Entrega a tela A (tarefa 2.0)')
+      commit('b.ts', 'Entrega a tela B (tarefa 3.0)')
+      commit('conserto.ts', 'Corrige o conserto (correção 2026-10-18-conserto)')
+      enviar()
+      const resultado = conferir(andar)
+      expect(resultado.codigo, resultado.texto).toBe(0)
+      expect(resultado.texto).toContain('árvore limpa e push feito')
+    })
+
+    it('recusa quando o último commit com código é de tarefa, e não a correção que se esperava', () => {
+      const { andar, commit, enviar } = andarDaSpec()
+      commit('conserto.ts', 'Corrige o conserto (correção 2026-10-18-conserto)')
+      commit('a.ts', 'Entrega a tela A (tarefa 2.0)')
+      enviar()
+      expect(conferir(andar).texto).toMatch(/falta o commit com \(correção <slug>\) no título, e ele tem de ser o último com código/)
+    })
+
+    it('um commit de documento depois do código não esconde que o último commit com código era de tarefa', () => {
+      const { andar, commit, enviar, git } = andarDaSpec()
+      commit('a.ts', 'Entrega a tela A (tarefa 2.0)')
+      mkdirSync(join(andar, 'tasks'))
+      writeFileSync(join(andar, 'tasks', 'estado.md'), 'estado\n')
+      git('add', '-A')
+      git('commit', '-q', '-m', 'Registra o estado')
+      enviar()
+      expect(conferir(andar).texto).toMatch(/falta o commit com \(correção <slug>\) no título, e ele tem de ser o último com código/)
+    })
+
+    it('commit com código sem marca, ou sem a linha Revisões, continua recusado na spec', () => {
+      const semMarca = andarDaSpec()
+      semMarca.commit('a.ts', 'Entrega a tela A (tarefa 2.0)')
+      semMarca.commit('solto.ts', 'Conserta sem marca')
+      semMarca.commit('conserto.ts', 'Corrige o conserto (correção 2026-10-18-conserto)')
+      semMarca.enviar()
+      expect(conferir(semMarca.andar).texto).toMatch(/leva código sem \(tarefa N\.0\) nem \(correção <slug>\) no título: "Conserta sem marca"/)
+
+      const semRevisoes = andarDaSpec()
+      semRevisoes.commit('a.ts', 'Entrega a tela A (tarefa 2.0)', '')
+      semRevisoes.commit('conserto.ts', 'Corrige o conserto (correção 2026-10-18-conserto)')
+      semRevisoes.enviar()
+      expect(conferir(semRevisoes.andar).texto).toMatch(/não tem a linha "Revisões:"/)
+    })
+
+    it('uma spec só com documento e um commit sem marca é recusada: não há commit com código, e portanto nenhuma correção', () => {
+      const { andar, git, enviar } = andarDaSpec()
+      mkdirSync(join(andar, 'tasks'))
+      writeFileSync(join(andar, 'tasks', 'prd.md'), 'prd\n')
+      git('add', '-A')
+      git('commit', '-q', '-m', 'Abre o PRD')
+      enviar()
+      expect(conferir(andar).texto).toBe('RECUSADO: falta o commit com (correção <slug>) no título, e ele tem de ser o último com código')
+    })
+
+    it('o merge do encontro não é cobrado pelo código que trouxe do outro lado, mas o que ele resolveu à mão é', () => {
+      const lado = (marca: string) => {
+        const spec = andarDaSpec()
+        spec.commit('a.ts', 'Entrega a tela A (tarefa 2.0)')
+        spec.git('checkout', '-q', '-b', 'lado', 'develop')
+        spec.commit('a.ts', 'Entrega a tela B (tarefa 3.0)')
+        spec.git('checkout', '-q', 'spec/exemplo')
+        expect(() => spec.git('merge', '--no-edit', 'lado')).toThrow()
+        writeFileSync(join(spec.andar, 'apps', 'a.ts'), 'resolvido\n')
+        spec.git('add', '-A')
+        spec.git('commit', '-q', '-m', `Junta as telas${marca}${marca === '' ? '' : REVISOES}`)
+        spec.commit('conserto.ts', 'Corrige o conserto (correção 2026-10-18-conserto)')
+        spec.enviar()
+        return spec.andar
+      }
+      expect(conferir(lado('')).texto).toMatch(/leva código sem \(tarefa N\.0\) nem \(correção <slug>\) no título: "Junta as telas"/)
+      const marcado = conferir(lado(' (correção 2026-10-18-encontro-3)'))
+      expect(marcado.codigo, marcado.texto).toBe(0)
+    })
+
+    it('o merge que resolve o conflito ficando com um lado é cobrado, porque descartou o código do outro', () => {
+      const spec = andarDaSpec()
+      spec.commit('a.ts', 'Entrega a tela A (tarefa 2.0)')
+      spec.git('checkout', '-q', '-b', 'lado', 'develop')
+      spec.commit('a.ts', 'Entrega a tela B (tarefa 3.0)')
+      spec.git('checkout', '-q', 'spec/exemplo')
+      expect(() => spec.git('merge', '--no-edit', 'lado')).toThrow()
+      spec.git('checkout', '--ours', 'apps/a.ts')
+      spec.git('add', '-A')
+      spec.git('commit', '-q', '-m', 'Junta as telas')
+      spec.commit('conserto.ts', 'Corrige o conserto (correção 2026-10-18-conserto)')
+      spec.enviar()
+      expect(conferir(spec.andar).texto).toMatch(/leva código sem \(tarefa N\.0\) nem \(correção <slug>\) no título: "Junta as telas"/)
+    })
+
+    it('com duas linhas que mexem em trechos diferentes do mesmo arquivo, o merge limpo do encontro não é cobrado', () => {
+      const { spec, entregar, git, escrever } = andares()
+      const base = mkdtempSync(join(tmpdir(), 'conferir-linhas-'))
+      pastas.push(base)
+      execFileSync('git', ['init', '-q', '--bare', '-b', 'spec/exemplo', join(base, 'origem.git')])
+      // O arquivo comum entra antes da `develop`, e por isso o `conferir` não o vê; a partida leva o arquivo às linhas.
+      // Há espaço entre os trechos: mudança em linhas vizinhas vira conflito, e aqui o merge tem de ser limpo.
+      const comum = (trocas: Record<number, string> = {}) =>
+        `${Array.from({ length: 12 }, (_, i) => trocas[i + 1] ?? `linha ${String(i + 1)}`).join('\n')}\n`
+      escrever(spec, 'apps/web/comum.ts', comum())
+      git(spec, 'add', '-A')
+      git(spec, 'commit', '-q', '-m', 'Abre o comum')
+      git(spec, 'branch', 'develop')
+      git(spec, 'remote', 'add', 'origin', join(base, 'origem.git'))
+      expect(partida(spec, 1, '2').codigo).toBe(0)
+      expect(partida(spec, 2, '3').codigo).toBe(0)
+      entregar(1, 2, { 'apps/web/comum.ts': comum({ 2: 'da linha 1' }) })
+      entregar(2, 3, { 'apps/web/comum.ts': comum({ 9: 'da linha 2' }) })
+      expect(encontro(spec, 1, { push: false }).codigo).toBe(0)
+      expect(encontro(spec, 2, { push: false }).codigo).toBe(0)
+      // O encontro da linha 2 é um merge que juntou o arquivo sozinho, e o conflito do tasks.md ele resolveu.
+      expect(git(spec, 'rev-list', '--merges', 'develop..HEAD')).not.toBe('')
+      expect(readFileSync(join(spec, 'apps/web/comum.ts'), 'utf8')).toBe(comum({ 2: 'da linha 1', 9: 'da linha 2' }))
+      escrever(spec, 'apps/web/conserto.ts', 'c\n')
+      git(spec, 'add', '-A')
+      git(spec, 'commit', '-q', '-m', 'Corrige o conserto (correção 2026-10-18-conserto)\n\nRevisões: test-engineer APROVADO (1ª rodada), revisor-geral APROVADO (1ª rodada)')
+      git(spec, 'push', '-q', '-u', 'origin', 'spec/exemplo')
+      const resultado = conferir(spec)
+      expect(resultado.codigo, resultado.texto).toBe(0)
+    })
+
+    it('com duas linhas, o merge que o encontro faz não derruba a conferência da correção que vem depois', () => {
+      const { spec, entregar, git, escrever } = andares()
+      const base = mkdtempSync(join(tmpdir(), 'conferir-linhas-'))
+      pastas.push(base)
+      execFileSync('git', ['init', '-q', '--bare', '-b', 'spec/exemplo', join(base, 'origem.git')])
+      git(spec, 'branch', 'develop')
+      git(spec, 'remote', 'add', 'origin', join(base, 'origem.git'))
+      expect(partida(spec, 1, '2').codigo).toBe(0)
+      expect(partida(spec, 2, '3').codigo).toBe(0)
+      entregar(1, 2, { 'apps/web/a.ts': 'a\n' })
+      entregar(2, 3, { 'apps/web/b.ts': 'b\n' })
+      expect(encontro(spec, 1, { push: false }).codigo).toBe(0)
+      expect(encontro(spec, 2, { push: false }).codigo).toBe(0)
+      // O histórico de verdade: o encontro da linha 2 é um merge, cujo primeiro pai é a linha, sem o código da linha 1.
+      expect(git(spec, 'rev-list', '--merges', 'develop..HEAD')).not.toBe('')
+      escrever(spec, 'apps/web/conserto.ts', 'c\n')
+      git(spec, 'add', '-A')
+      git(spec, 'commit', '-q', '-m', 'Corrige o conserto (correção 2026-10-18-conserto)\n\nRevisões: test-engineer APROVADO (1ª rodada), revisor-geral APROVADO (1ª rodada)')
+      git(spec, 'push', '-q', '-u', 'origin', 'spec/exemplo')
+      const resultado = conferir(spec)
+      expect(resultado.codigo, resultado.texto).toBe(0)
+    })
+
+    it('fora da spec, na correção avulsa, a marca de tarefa continua não valendo', () => {
+      const { andar, commit, enviar } = andarDaSpec('correcao/2026-10-18-conserto')
+      commit('a.ts', 'Entrega a tela A (tarefa 2.0)')
+      commit('conserto.ts', 'Corrige o conserto (correção 2026-10-18-conserto)')
+      enviar()
+      expect(conferir(andar).texto).toMatch(/leva código sem \(correção <slug>\) no título: "Entrega a tela A \(tarefa 2\.0\)"/)
+
+      // Nem o merge limpo é isentado lá: a isenção é do merge do encontro, que só existe na spec.
+      const comMerge = andarDaSpec('correcao/2026-10-18-com-merge')
+      comMerge.commit('conserto.ts', 'Corrige o conserto (correção 2026-10-18-com-merge)')
+      comMerge.git('checkout', '-q', '-b', 'lado', 'develop')
+      comMerge.commit('outro.ts', 'Corrige o outro (correção 2026-10-18-com-merge)')
+      comMerge.git('checkout', '-q', 'correcao/2026-10-18-com-merge')
+      comMerge.git('merge', '--no-edit', 'lado')
+      comMerge.enviar()
+      expect(conferir(comMerge.andar).texto).toMatch(/leva código sem \(correção <slug>\) no título: "Merge branch 'lado'/)
+
+      // E a ausência da correção, lá, não pede que ela seja a última com código: só que exista.
+      const semCorrecao = andarDaSpec('correcao/2026-10-18-outro')
+      writeFileSync(join(semCorrecao.andar, 'nota.md'), 'nota\n')
+      semCorrecao.git('add', '-A')
+      semCorrecao.git('commit', '-q', '-m', 'Registra a nota')
+      semCorrecao.enviar()
+      expect(conferir(semCorrecao.andar).texto).toBe('RECUSADO: falta o commit com (correção <slug>) no título')
+    })
+  })
+
   it('fechar só com tudo encontrado, e desfaz o quadro', () => {
     const { spec, entregar } = andares([1])
     partida(spec, 1, '2')

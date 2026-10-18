@@ -19,6 +19,10 @@
 // Depois das duas linhas de cabeçalho vem um pedaço de diff: linha que começa com `-` sai, com `+` entra, e com espaço
 // é contexto, que fica e serve para o trecho existir uma vez só no arquivo. O espaço do começo e do fim de cada linha
 // não conta. Em `teste:`, o nome do caso depois de ` › ` é opcional: sem ele roda o arquivo inteiro.
+//
+// Uma terceira linha de cabeçalho, `projeto: celular`, é opcional e só vale para teste de e2e: diz em que projeto do
+// Playwright o caso roda. Sem ela é o `chromebook`. A cláusula que só existe no celular (o ramo de toque, o menu de baixo)
+// não é alcançada no computador, e o teste ficaria verde sem ela; o bloco diz onde ela se prova.
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
@@ -29,6 +33,8 @@ export interface Mutacao {
   teste: string
   /** O nome do caso, ou um pedaço dele. `null`: o arquivo de teste inteiro. */
   caso: string | null
+  /** O projeto do Playwright onde o caso de e2e roda. Ausente: `chromebook`. Só o bloco que declara a linha o tem. */
+  projeto?: ProjetoDoE2e
   /** O que tem de estar no arquivo hoje: contexto e linhas que saem, na ordem. */
   antes: string[]
   /** O que fica no lugar: contexto e linhas que entram, na ordem. */
@@ -40,6 +46,10 @@ export interface Leitura {
   /** Bloco que não deu para ler: o portão recusa antes de rodar qualquer coisa. */
   erros: string[]
 }
+
+/** Os projetos de `playwright.config.ts`. O primeiro é o que vale quando o bloco não diz. */
+export const PROJETOS_DO_E2E = ['chromebook', 'celular'] as const
+export type ProjetoDoE2e = (typeof PROJETOS_DO_E2E)[number]
 
 const BLOCO = /^```mutacao[ \t]*\r?\n([\s\S]*?)^```[ \t]*$/gm
 
@@ -53,16 +63,18 @@ export function lerMutacoes(documento: string): Leitura {
     const linhas = (bloco[1] ?? '').split(/\r?\n/)
     let arquivo: string | null = null
     let teste: string | null = null
+    let projeto: string | null = null
     const antes: string[] = []
     const depois: string[] = []
     let saiAlguma = false
     let erro: string | null = null
     for (const linha of linhas) {
       if (linha.trim() === '') continue
-      const cabecalho = /^(arquivo|teste):\s*(.+?)\s*$/.exec(linha)
+      const cabecalho = /^(arquivo|teste|projeto):\s*(.+?)\s*$/.exec(linha)
       if (cabecalho && antes.length === 0 && depois.length === 0) {
         if (cabecalho[1] === 'arquivo') arquivo = cabecalho[2] ?? null
-        else teste = cabecalho[2] ?? null
+        else if (cabecalho[1] === 'teste') teste = cabecalho[2] ?? null
+        else projeto = cabecalho[2] ?? null
         continue
       }
       const marca = linha[0]
@@ -83,12 +95,24 @@ export function lerMutacoes(documento: string): Leitura {
     if (!erro && !teste) erro = 'falta a linha "teste:"'
     if (!erro && !saiAlguma) erro = 'nenhuma linha começa com "-": a mutação precisa tirar ou trocar um trecho que existe'
     if (!erro && antes.join('\n') === depois.join('\n')) erro = 'o que entra é igual ao que sai'
+    if (!erro && projeto !== null) {
+      if (!PROJETOS_DO_E2E.some((nome) => nome === projeto)) erro = `projeto "${projeto}" não existe (${PROJETOS_DO_E2E.join(' ou ')})`
+      else if (tipoDoTeste((teste ?? '').split(' › ')[0]?.trim() ?? '') !== 'e2e') erro = '"projeto:" só vale para teste de e2e'
+    }
     if (erro || !arquivo || !teste) {
       erros.push(`mutação ${String(numero)}: ${erro ?? 'bloco incompleto'}`)
       continue
     }
     const [caminhoDoTeste = '', ...caso] = teste.split(' › ')
-    mutacoes.push({ arquivo, teste: caminhoDoTeste.trim(), caso: caso.length > 0 ? caso.join(' › ').trim() : null, antes, depois })
+    const doBloco = PROJETOS_DO_E2E.find((nome) => nome === projeto)
+    mutacoes.push({
+      arquivo,
+      teste: caminhoDoTeste.trim(),
+      caso: caso.length > 0 ? caso.join(' › ').trim() : null,
+      ...(doBloco ? { projeto: doBloco } : {}),
+      antes,
+      depois,
+    })
   }
   return { mutacoes, erros }
 }
@@ -140,12 +164,15 @@ export function pedeReconstrucao(mutacao: Mutacao): boolean {
   return tipoDoTeste(mutacao.teste) === 'e2e' && /^(apps|packages)\//.test(mutacao.arquivo)
 }
 
-/** O comando que roda o teste de uma mutação. No e2e, um projeto só: a mutação prova a regra, não o perfil de máquina. */
+/**
+ * O comando que roda o teste de uma mutação. No e2e, um projeto só, o que o bloco declara (`chromebook` sem a linha): a
+ * mutação prova a regra, não o perfil de máquina, mas a regra que só vale no celular só cai lá.
+ */
 export function comandoDoTeste(mutacao: Mutacao): string[] | null {
   const tipo = tipoDoTeste(mutacao.teste)
   if (tipo === null) return null
   if (tipo === 'e2e') {
-    const filtro = [...(mutacao.caso ? [`--grep=${mutacao.caso}`] : []), '--project=chromebook']
+    const filtro = [...(mutacao.caso ? [`--grep=${mutacao.caso}`] : []), `--project=${mutacao.projeto ?? PROJETOS_DO_E2E[0]}`]
     return pedeReconstrucao(mutacao)
       ? ['node', 'tools/ci/e2e.ts', '--manter-ambiente', mutacao.teste, ...filtro]
       : ['npx', 'playwright', 'test', mutacao.teste, ...filtro]
@@ -176,7 +203,7 @@ export function conferirMutacoes(
   const limpos = new Map<string, boolean>()
   const resultados: Resultado[] = []
   for (const [indice, mutacao] of mutacoes.entries()) {
-    const rotulo = `mutação ${String(indice + 1)} de ${String(mutacoes.length)} (${mutacao.arquivo} → ${mutacao.teste}${mutacao.caso ? ` › ${mutacao.caso}` : ''})`
+    const rotulo = `mutação ${String(indice + 1)} de ${String(mutacoes.length)} (${mutacao.arquivo} → ${mutacao.teste}${mutacao.caso ? ` › ${mutacao.caso}` : ''})${mutacao.projeto ? ` [${mutacao.projeto}]` : ''}`
     const recusar = (motivo: string) => {
       avisar(`✗ ${rotulo}: ${motivo}\n`)
       resultados.push({ mutacao, veredito: 'recusada', motivo })

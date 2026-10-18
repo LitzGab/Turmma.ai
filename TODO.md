@@ -926,15 +926,63 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       correção própria
 - [ ] **(X1, retrospectiva) Código de processo que a X1 pediu** (`tasks/prd-pele-e-casca/retro.md`, M1 a M3). Correção
       própria, com teste e revisão; mexe em `tools/processo/` e `tools/ci/`:
-      (a) **o portão da tarefa mede a duração do e2e que roda**: caso alterado que passa de 15 s na máquina fica vermelho,
+      (a) **o portão da tarefa mede a duração do e2e que roda** (**feito** em 18/10/2026 na correção `2026-10-18-duracao-do-e2e-no-portao`,
+      `tools/ci/duracao-do-e2e.ts`: repórter `json` ligado pelo portão, caso alterado pelo diff do git; o portão completo não mede; **limites conhecidos**: o caso vai do `test(` até a linha antes do `test(` seguinte, então um `beforeEach` ou ajudante entre dois `describe` é cobrado do último caso de cima e os de baixo passam sem cobrança, e o que fica fora de todo caso (importação, ajudante ou `beforeEach` acima do primeiro caso, `e2e/__fixtures__/`) que ficar mais lento não é cobrado de caso nenhum; caso pulado some das fronteiras, e `.skip` é proibido pela regra 40; **a rever** se aparecer na esteira caso lento por esses caminhos: tratar mudança fora de qualquer caso como mudança no arquivo inteiro, o que muda o contrato do portão): caso alterado que passa de 15 s na máquina fica vermelho,
       porque o runner leva perto do dobro e o prazo é 30 s. Na X1, os casos que caíram na esteira levavam de 19 a 29 s aqui,
       e custaram duas correções e duas rodadas de validação depois da validação aprovada;
       (b) **o hook conta as rodadas pelo `achados/`**, e não pelas linhas da seção "Revisões" (`tools/processo/revisoes.ts`,
-      `acrescentarRevisao`): a seção sumiu duas vezes na X1 e a contagem recomeçou do 1;
-      (c) `tools/ci/e2e.ts` repassa `--repeat-each` e `--workers` ao Playwright (hoje viram filtro e o e2e inteiro roda);
-      `tools/processo/linhas.ts conferir` aceita a correção feita na branch da spec (hoje para no primeiro `(tarefa N.0)`);
+      `acrescentarRevisao`): a seção sumiu duas vezes na X1 e a contagem recomeçou do 1
+      (**feito** em 18/10/2026 na correção `2026-10-18-rodada-conta-pelos-achados`: a rodada é o maior entre as linhas da tabela
+      e a maior rodada do revisor em `achados/<documento>.md` (`ultimaRodadaNosAchados`), mais um; **limite**: o arquivo de achados só
+      guarda a rodada que exigiu algo, então a seção que some depois de uma aprovação limpa ainda perde essa rodada, o que `revisoes.test.ts` fixa num `it`; **a rever**: (i) a contagem
+      de reprovações seguidas da Mesa (`.claude/skills/revisar-tarefa/SKILL.md`, passo 4) ainda sai das linhas da tabela, e com a seção apagada ela vê uma
+      linha só e não escala quando devia: contar também pelos cabeçalhos de `achados/<documento>.md` muda o comportamento da skill; (ii) o regex de
+      `ultimaRodadaNosAchados` lê cabeçalho com data em qualquer ponto do arquivo, então um cabeçalho completo colado no texto do revisor, de outra
+      tarefa ou de rodada futura, faz a contagem pular números; ancorá-lo no fim da linha muda o regex; (iii) `acrescentarRevisao(..., undefined, achadosAnteriores)`
+      recebe a nota e os achados por posição: um objeto de opções na próxima tarefa que tocar a função);
+      (c) `tools/ci/e2e.ts` repassa `--repeat-each` e `--workers` ao Playwright (eram descartados sem aviso e o arquivo rodava uma vez;
+      **feito** em 18/10/2026 na correção `2026-10-18-e2e-repassa-repeat-each-e-workers`: `opcoesDoPlaywright` passa as duas, sempre com `=`);
+      `tools/processo/linhas.ts conferir` aceita a correção feita na branch da spec (**feito** em 18/10/2026 na correção `2026-10-18-conferir-aceita-correcao-na-spec`: na branch `spec/…` vale a marca `(tarefa N.0)` de qualquer tarefa, com `Revisões:`, e o último commit com código tem de ser o da correção; o merge do encontro só é cobrado pelo que resolveu à mão; **a rever**: a correção só de documento feita na spec, depois do último commit de tarefa, é recusada pelo `conferir`, e na correção avulsa passa; aceitá-la muda o comportamento do comando; **a rever também**: o "último commit com código" do `conferir` na spec vem da ordem do `rev-list --reverse`, que segue a data do commit, e o `conferir` rodado depois de um encontro que veio depois da correção poderia ver o commit de tarefa da linha por último e recusar sem razão; **a rever também** (3ª rodada da correção `2026-10-18-conferir-aceita-correcao-na-spec`): (i) `--remerge-diff` pede git 2.36 ou mais novo (a máquina tem 2.56, a esteira 2.43 ou mais); num git antigo o `git()` lança e o `conferir` cai com stack trace, e vale uma frase no comentário de `arquivosDoCommit` ou uma checagem de versão; (ii) conflito que não é de conteúdo (apagado de um lado e alterado do outro, renomeado) pode fazer o `--remerge-diff --name-only` imprimir linha "remerge CONFLICT" que não é caminho e seria lida como código: verificar com caso real e, se for o caso, filtrar só o que é caminho; (iii) falta um `it` do merge que acrescenta código novo sem conflito (cobrado, o que está certo), a montar junto de (ii); (iv) a frase do documento da correção sobre o `it` de "trechos diferentes" cita o diff contra o primeiro pai, cuja mutação está no `it` de duas linhas com `a.ts` e `b.ts`);
       e `tools/processo/mutacoes.ts` roda o caso de e2e no projeto que ele declara, e não sempre no `chromebook`, para a
-      cláusula que só vale no celular se provar
+      cláusula que só vale no celular se provar (**feito** em 18/10/2026 na correção `2026-10-18-mutacao-de-e2e-no-projeto-declarado`:
+      o bloco `mutacao` ganha a linha opcional `projeto: celular|chromebook`, só para teste de e2e, e sem ela o projeto é o
+      `chromebook`; a corrida limpa e a mutada são por projeto; **limite**: a lista de projetos é `PROJETOS_DO_E2E`, em
+      `mutacoes.ts`, conferida contra o `playwright.config.ts` por um teste, e projeto novo nele pede a linha ali; **a rever**: o parser de `lerMutacoes` aceita duas linhas `projeto:`, `arquivo:` ou `teste:` no mesmo bloco e vale a última, sem aviso; "linha repetida" seria erro do bloco nos três campos, o que muda o comportamento do parser).
+      **Ficou sem fazer, e a X2 pagou de novo** (`tasks/prd-telas-da-coordenacao/retro.md`): sete correções de e2e acima dos
+      30 s na esteira, quatro delas de casos que já passavam de 15 s na máquina (`material:180`, `areas:316`, `agentes:164`
+      e `:186`), e 33 min perdidos na 2.0 com o `e2e.ts` rodando a suíte inteira. **Destino que o Joaquim deu em 18/10/2026:
+      antes da primeira tarefa da X3**, numa correção só, junto com o que a X2 acrescentou:
+      (d) **o portão roda também os e2e que citam um texto que o diff tirou de `apps/web/src`** (um literal removido que
+      aparece em `e2e/`): o W12 da casca (a 3.0 trocou "Governança", `casca.spec.ts:673`, vermelho em cinco execuções da
+      esteira) e o sino da 6.0 ("Refazer o convite de", `sino-da-coordenacao.spec.ts:86`) quebraram fora do diff
+      (**feito** em 18/10/2026 na correção `2026-10-18-e2e-que-cita-literal-removido`, `tools/ci/e2e-que-cita-literal.ts`: do
+      `git diff -U0 HEAD -- apps/web/src` saem os literais removidos que o diff não recolocou, e o `e2e/*.spec.ts` que cita algum,
+      sem diferenciar maiúscula, entra nos alvos do portão da tarefa; **limites conhecidos**: o spec que cita só um pedaço do texto removido não entra (tirar "Governança da escola" não puxa
+      `/governança/i`); o texto de JSX que continua em linha de baixo começando em minúscula, e o template que atravessa linhas, não
+      viram literal; o literal citado só num ajudante de `e2e/__fixtures__/` não puxa os specs que o importam; e o literal curto e comum
+      ("Professor", "Estrutura") puxa todo spec que o cita, o que **não é pouco**: num diff de 40 commits (`3be23c9`) foram 24 dos 59
+      specs. **Correção seguinte desta letra** (recomendações sem aplicar da `2026-10-18-e2e-que-cita-literal-removido`): (1) descartar o
+      literal que vem de `className=`/`class=` (classe do Tailwind, "sr-only", conta como texto de tela e no `290b7cb` puxou quatro specs
+      sem relação); (2) teste da linha de log `▶ <spec> entra nos alvos: cita "<texto>"` do portão, que roda o portão; (3) excluir
+      `apps/web/src/__fixtures__/` como o `.test.tsx`; (4) o comentário de cabeçalho de `tools/ci/e2e-que-cita-literal.ts` ainda diz "o que só custa minutos" e cita só os limites antigos (copiar os quatro de `executar-task`); e talvez um aviso do portão quando o número de specs puxados passar de um teto);
+      (e) **a vitrine lista as telas cuja página rola a 1366 × 768** (a altura medida em `tools/vitrine/foto.ts` passa da
+      janela), no relatório que a Mesa e o Validador leem: na X2 o "só o miolo rola" (RF23) só foi visto pela altura das
+      fotos, contada à mão, e escapou em duas telas até a validação (C1, C2)
+      (**feito** em 18/10/2026 na correção `2026-10-18-vitrine-lista-telas-que-rolam`: o `foto` termina com `relatorioDeRolagem`,
+      uma linha por tela do computador cuja altura medida passa de 768 px, ou "Nenhuma tela rola a 1366 × 768", e a Mesa a repassa
+      aos revisores na linha `Rolam a 1366 × 768`; **limites**: só diz que rola, não se rola por desenho (tabela comprida) ou por
+      defeito, e quem decide é quem lê o PRD; a altura é a da página inteira (`scrollHeight`), então um miolo com `overflow` próprio
+      cabe na janela e não aparece; só o computador, no celular toda tela rola; a ligação do `vitrine.ts` ao relatório não tem teste
+      sem a web de pé, só `linhasDoResultado` tem; a `medida` que `fotografar` monta (`alturaDaPagina: altura`) e passa a `fotosDaTela` também só se prova com a web de pé: `fotosDaTela` e o relatório têm teste, a troca de `altura` por outro número ali não; a página redirecionada (`parouEm` diferente de `caminho`) entra no relatório com o endereço pedido e a altura da página onde parou, e as linhas de arquivo avisam do redirecionamento; no `catch` de `fotografar` a altura é a medida antes da foto, e se a página cresceu depois ela fica velha);
+      (f) **o `flock /tmp/educa-carga.lock` dentro do `portao-local.ts` e do `tools/ci/e2e.ts`**, para a fila de carga entre
+      as linhas não depender de quem digita o comando (o texto do `executar-task` e do `/seguir` vale até lá).
+      **Feita** na correção `2026-10-18-fila-de-carga-no-codigo` (`tools/ci/fila-de-carga.ts`); seguem abertas a (b), a (g) e a última frase da (c) (o projeto da mutação de e2e; o `linhas.ts conferir` foi feito na correção `2026-10-18-conferir-aceita-correcao-na-spec`); a primeira frase da (c) foi feita na correção acima, e a (a), na `2026-10-18-duracao-do-e2e-no-portao`. Limites conhecidos da (f): o aviso de espera não diz quem segura a fila (o pid já sai de
+      `donosDoTravamento`), e matar o comando de fora com `kill -9` deixa o relançado segurando a vez até acabar; e a pasta `fila-` que `tools/processo/revisoes.test.ts` cria em `/tmp` a cada execução nunca é apagada (apagar junto com a `raiz` na próxima correção que tocar esse teste)
+      (g) **o `tools/ci/e2e.ts` recusa, ou ao menos avisa, a opção que descarta**: opção com `-` fora da lista de
+      `opcoesDoPlaywright` (`--headed`) some sem aviso, e o valor solto (`--workers 1`, `--repeat-each 10`, `--grep nome`) é lido como
+      arquivo. Recusar com erro, como `fatiaDosArgumentos` faz com `--shard`, ou no mínimo uma linha no log com o que foi descartado.
+      Destino: a próxima correção que tocar `opcoesDoPlaywright` (recomendação dos três revisores da correção
+      `2026-10-18-e2e-repassa-repeat-each-e-workers`)
 - [ ] **A vitrine não fotografa troca do Tutor do aluno** (validação da X1, rodada 1): ela não digita, e a escola
       sintética não tem troca do Tutor, então o balão com a assinatura não sai em foto. Destino: antes da X4, que mexe
       na tela do Tutor do aluno

@@ -38,7 +38,9 @@ por ela ter saído bem feita, e isso só se sabe olhando.
 O prompt traz `Fotos da tela`, com os arquivos de cada tela que a tarefa criou ou alterou: no
 computador (1366 px) e no celular (360 px), na escola **cheia** (com dado) e na **vazia** (sem dado
 nenhum, como a escola nova no primeiro dia). **Leia todas, como imagem, antes de abrir o código.**
-Página comprida vem em pedaços numerados, e você lê todos.
+Página comprida vem em pedaços numerados, e você lê todos. A linha `Rolam a 1366 × 768` lista as telas
+cuja página passa da janela, com a altura medida: tela que o PRD ou o mockup diz que só o miolo rola
+e que está nela é bloqueante (X2: C1 e C2, que só se viu pela altura das fotos).
 
 Faltou uma aba, um diálogo, um passo do fluxo ou um papel? Fotografe você:
 

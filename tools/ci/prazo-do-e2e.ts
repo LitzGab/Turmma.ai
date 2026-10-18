@@ -75,12 +75,6 @@ export function fatiaDosArgumentos(argumentos: readonly string[]): string | null
 }
 
 /**
- * A etapa dos testes do e2e, na fatia pedida, com o aviso do prazo ligado ao fim dela. O teto chegou duas vezes
- * seguidas sem aviso, porque execução verde perto dele não chama ninguém. Na esteira, o aviso vira anotação da
- * execução (`::warning`), que aparece no resumo dela; na máquina, uma linha no log. Avisa também quando a etapa
- * fica vermelha: lentidão e falha juntas são justamente o caso em que o prazo mais importa.
- */
-/**
  * Os arquivos de teste pedidos na linha de comando (`node tools/ci/e2e.ts --manter-ambiente e2e/x.spec.ts`): o que não é
  * opção. Sem nenhum, o e2e roda inteiro. Existe para o portão da tarefa rodar só o que a tarefa alterou: na 6.0 do F3
  * cada tentativa de acertar um teste custou o e2e inteiro, uns 30 minutos, porque não havia como pedir um arquivo.
@@ -90,14 +84,22 @@ export function arquivosDosArgumentos(argumentos: readonly string[]): string[] {
 }
 
 /**
- * As opções do Playwright que passam adiante: o caso (`--grep=<nome>`) e o projeto (`--project=<nome>`). Com elas o
- * portão da tarefa reconstrói a web e roda um caso só, que é o que a conferência de uma mutação de tela pede
- * (`tools/processo/mutacoes.ts`). Sempre com `=`: o valor solto seria lido como arquivo.
+ * As opções do Playwright que passam adiante: o caso (`--grep=<nome>`), o projeto (`--project=<nome>`), a repetição
+ * (`--repeat-each=<n>`) e o número de trabalhadores (`--workers=<n>`). Com as duas primeiras o portão da tarefa
+ * reconstrói a web e roda um caso só, que é o que a conferência de uma mutação de tela pede
+ * (`tools/processo/mutacoes.ts`); com as duas últimas se prova a estabilidade de um teste no ambiente que este comando
+ * sobe. Sempre com `=`: o valor solto seria lido como arquivo.
  */
 export function opcoesDoPlaywright(argumentos: readonly string[]): string[] {
-  return argumentos.filter((argumento) => /^--(grep|project)=./.test(argumento))
+  return argumentos.filter((argumento) => /^--(grep|project|repeat-each|workers)=./.test(argumento))
 }
 
+/**
+ * A etapa dos testes do e2e, na fatia pedida, com o aviso do prazo ligado ao fim dela. O teto chegou duas vezes
+ * seguidas sem aviso, porque execução verde perto dele não chama ninguém. Na esteira, o aviso vira anotação da
+ * execução (`::warning`), que aparece no resumo dela; na máquina, uma linha no log. Avisa também quando a etapa
+ * fica vermelha: lentidão e falha juntas são justamente o caso em que o prazo mais importa.
+ */
 export function etapaDosTestesDoE2e(
   fatia: string | null,
   teto: number,

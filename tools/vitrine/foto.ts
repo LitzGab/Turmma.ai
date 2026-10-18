@@ -24,6 +24,14 @@ export const TELAS = [
   { nome: 'celular', largura: 360, altura: 800 },
 ] as const
 
+/** A janela do computador: a página que passa dela rola. */
+const JANELA = `${String(TELAS[0].largura)} × ${String(TELAS[0].altura)}`
+
+/** Se a página, com aquela altura, rola na janela do computador (1366 × 768). Página que cabe mede exatamente a janela. */
+export function rolaNaJanela(alturaDaPagina: number): boolean {
+  return alturaDaPagina > TELAS[0].altura
+}
+
 export const PASTA_DAS_FOTOS = '.processo/vitrine'
 
 /**
@@ -136,6 +144,46 @@ export interface Foto {
   readonly arquivo: string
   /** Onde a página parou: diferente do pedido quando a web redirecionou (sem permissão, endereço que não existe). */
   readonly parouEm: string
+  /** A altura da página quando ela parou de mudar, a que serviu para cortar os pedaços. */
+  readonly alturaDaPagina: number
+  /** O que foi clicado antes da foto: a mesma lista das fotos daquela chamada. */
+  readonly cliques: readonly string[]
+}
+
+/**
+ * As `Foto` de uma tela: uma por arquivo, todas com a mesma altura medida e os mesmos cliques. É por aqui que a medida chega
+ * ao relatório de rolagem, tanto na foto em pedaços quanto na inteira que o `catch` de `fotografar` grava.
+ */
+export function fotosDaTela(tela: Omit<Foto, 'arquivo'>, arquivos: readonly string[]): Foto[] {
+  return arquivos.map((arquivo) => ({ ...tela, arquivo }))
+}
+
+/**
+ * As linhas do relatório de rolagem de uma chamada: as telas cuja página passa da janela de 1366 × 768, uma linha por tela,
+ * mesmo que ela tenha saído em pedaços. É o que mostra o "só o miolo rola" que a foto sozinha esconde (X2: C1 e C2). A do
+ * celular não entra: nele toda tela rola. Sem foto do computador, não há o que dizer.
+ */
+export function relatorioDeRolagem(fotos: readonly Foto[], vazia: boolean): string[] {
+  const doComputador = fotos.filter((foto) => foto.tela === 'computador')
+  if (doComputador.length === 0) return []
+  const marca = vazia ? ' (escola vazia)' : ''
+  const rolam = new Map<string, Foto>()
+  for (const foto of doComputador) if (rolaNaJanela(foto.alturaDaPagina)) rolam.set(foto.caminho, foto)
+  if (rolam.size === 0) return [`Nenhuma tela rola a ${JANELA}.${marca}`]
+  return [
+    `Telas cuja página rola a ${JANELA}${marca}, com a altura medida:`,
+    ...[...rolam.values()].map(
+      (foto) => `  ${foto.caminho}${foto.cliques.length === 0 ? '' : `, depois de clicar ${foto.cliques.join(' e ')}`}: ${String(foto.alturaDaPagina)} px`,
+    ),
+  ]
+}
+
+/** O que o comando `foto` imprime: um arquivo por linha, o aviso de redirecionamento e, no fim, o relatório de rolagem. */
+export function linhasDoResultado(fotos: readonly Foto[], urlDaWeb: string, vazia: boolean): string[] {
+  return [
+    ...fotos.map((foto) => `${foto.arquivo}${foto.parouEm === new URL(foto.caminho, urlDaWeb).pathname ? '' : `   (a página parou em ${foto.parouEm})`}`),
+    ...relatorioDeRolagem(fotos, vazia),
+  ]
 }
 
 /**
@@ -189,8 +237,9 @@ export async function fotografar(
         for (const tela of TELAS) {
           await page.setViewportSize({ width: tela.largura, height: tela.altura })
           await assentar(page)
-          const partes = pedacos(await alturaDaPagina(page))
-          const parouEm = new URL(page.url()).pathname
+          const altura = await alturaDaPagina(page)
+          const partes = pedacos(altura)
+          const medida = { caminho, tela: tela.nome, parouEm: new URL(page.url()).pathname, alturaDaPagina: altura, cliques }
           const base = baseDaFoto(papel, caminho, tela.nome, cliques, vazia, escuro)
           // A foto de antes sai antes da nova: a página que encolheu deixaria pedaços velhos ao lado dos novos.
           for (const velha of fotosAnteriores(readdirSync(pasta), base)) rmSync(join(pasta, velha))
@@ -201,13 +250,13 @@ export async function fotografar(
               await page.screenshot({ path: arquivo, fullPage: true, clip: { x: 0, y: parte.y, width: tela.largura, height: parte.altura } })
               arquivos.push(arquivo)
             }
-            fotos.push(...arquivos.map((arquivo) => ({ caminho, tela: tela.nome, arquivo, parouEm })))
+            fotos.push(...fotosDaTela(medida, arquivos))
           } catch {
             // A página mudou de altura entre a medida e a foto (conteúdo que chega depois): o recorte caiu fora dela. A foto
             // inteira, numa peça só, vale mais que foto nenhuma.
             const arquivo = join(pasta, nomeDaFoto(base))
             await page.screenshot({ path: arquivo, fullPage: true })
-            fotos.push({ caminho, tela: tela.nome, arquivo, parouEm })
+            fotos.push(...fotosDaTela(medida, [arquivo]))
           }
         }
       }

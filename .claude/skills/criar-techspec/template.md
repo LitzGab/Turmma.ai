@@ -89,6 +89,14 @@ Telas, estados, componentes reaproveitados. Como fica em Chromebook fraco, com t
 
 Medida, token e estado de uma peça moram num lugar só, o `docs/interface.md`; aqui e no `cenarios.md` cite a seção, sem repetir o número. Na X1 a mesma regra estava na Tech Spec, no `cenarios.md`, no `docs/interface.md` e no `mockup.md`, e cada decisão de tarefa tinha de chegar aos quatro.
 
+**Altura.** Se a tela tem limite de altura ("a 1366 × 768 a página não rola, só o miolo"), diga qual peça
+é dona dela, de preferência a casca (coluna flexível, e a região que rola com `min-h-0`), e que nenhuma
+tela calcula a própria altura com `calc(100dvh − N rem)`. Diga também que alvo de toque e altura não
+dependem da métrica da fonte: a fonte é a do sistema (D72) e muda entre a esteira, a máquina local e o
+Chromebook. Na X2, cada tela tinha a sua constante (17, 13 e 21 rem, mais a faixa de incidente), e isso
+custou 3 reprovações, duas correções e dois críticos da validação; o link da Estrutura media 41 px na
+esteira e 44 na máquina local.
+
 ## 10. Testes
 
 | Camada | O que será testado |

@@ -310,43 +310,66 @@ export function partida(raiz: string, numero: number, alvo: string, opcoes: Opco
 }
 
 const MARCA_DE_CORRECAO = /\(correção [a-z0-9-]+\)/
+const MARCA_DE_TAREFA = /\(tarefa \d+\.0\)/
 const soDocumento = (arquivos: string[]) => arquivos.every((arquivo) => arquivo.startsWith('tasks/') || arquivo.endsWith('.md'))
+
+/**
+ * Os arquivos que um commit traz. Fora da spec, o diff contra o primeiro pai, como sempre. Na spec, o que o commit mesmo
+ * fez: num commit comum dá o mesmo; num merge, `--remerge-diff` compara o que ele gravou com o que o git juntaria sozinho,
+ * e sobra só a resolução de conflito, inclusive a que ficou com um lado só. O merge limpo não traz nada.
+ */
+function arquivosDoCommit(checkout: string, sha: string, naSpec: boolean): string[] {
+  const saida = naSpec
+    ? git(checkout, 'show', '--remerge-diff', '--format=', '--name-only', sha)
+    : git(checkout, 'diff', '--name-only', `${sha}^1`, sha)
+  return saida.split('\n').filter((arquivo) => arquivo !== '')
+}
 
 /**
  * O que os commits que a `base` não tem precisam ter para entrar nela: todo commit que leva código com a marca de
  * tarefa ou de correção no título e a linha `Revisões:` no corpo, e, numa tarefa, o commit dela entre eles. Vale para
  * mais de um commit: a correção no meio da tarefa, e o merge que conserta um conflito de encontro. `null` quando tudo
  * confere. O hook já barrou cada um ao nascer; isto barra o que chegou à linha sem passar por ele.
+ *
+ * `naSpec`: a conferência de uma correção feita na branch da spec. Contra a `develop`, ali estão também os commits das
+ * tarefas já feitas, que o encontro de cada linha conferiu: a marca `(tarefa N.0)` de qualquer uma vale (e a linha
+ * `Revisões:` continua cobrada), o merge do encontro só é cobrado pelo que ele mesmo resolveu, e o último commit com código
+ * tem de ser o da correção, que é o que se confere.
  */
-export function conferirEntrega(checkout: string, base: string, tarefa: number | null): string | null {
+export function conferirEntrega(checkout: string, base: string, tarefa: number | null, opcoes: { naSpec?: boolean } = {}): string | null {
+  const naSpec = opcoes.naSpec ?? false
   const novos = git(checkout, 'rev-list', '--reverse', `${base}..HEAD`).split('\n').filter((sha) => sha !== '')
   if (novos.length === 0) return 'nenhum commit novo'
   const marcaDaTarefa = tarefa === null ? null : `(tarefa ${String(tarefa)}.0)`
   let temADaTarefa = false
   let temMarca = false
+  let ultimoCorrige = false
   for (const sha of novos) {
     const [titulo = '', ...corpo] = git(checkout, 'log', '-1', '--format=%B', sha).split('\n')
     const curto = sha.slice(0, 7)
     const daTarefa = marcaDaTarefa !== null && titulo.includes(marcaDaTarefa)
-    const marcado = daTarefa || MARCA_DE_CORRECAO.test(titulo)
+    const corrige = MARCA_DE_CORRECAO.test(titulo)
+    const marcado = daTarefa || corrige || (naSpec && MARCA_DE_TAREFA.test(titulo))
     temADaTarefa ||= daTarefa
     temMarca ||= marcado
-    if (soDocumento(git(checkout, 'diff', '--name-only', `${sha}^1`, sha).split('\n').filter((arquivo) => arquivo !== ''))) continue
-    if (!marcado) return `o commit ${curto} leva código sem ${marcaDaTarefa ?? '(correção <slug>)'} no título: "${titulo}"`
+    if (soDocumento(arquivosDoCommit(checkout, sha, naSpec))) continue
+    if (!marcado) return `o commit ${curto} leva código sem ${marcaDaTarefa ?? (naSpec ? '(tarefa N.0) nem (correção <slug>)' : '(correção <slug>)')} no título: "${titulo}"`
     if (!corpo.some((linha) => linha.startsWith('Revisões: '))) return `o commit ${curto} não tem a linha "Revisões:"`
+    ultimoCorrige = corrige
   }
   if (marcaDaTarefa !== null && !temADaTarefa) return `falta o commit com ${marcaDaTarefa} no título`
-  if (!temMarca) return 'falta o commit com (correção <slug>) no título'
+  if (naSpec ? !ultimoCorrige : !temMarca) return `falta o commit com (correção <slug>) no título${naSpec ? ', e ele tem de ser o último com código' : ''}`
   return null
 }
 
 /**
- * A conferência de um checkout que não é linha: a correção avulsa, no andar dela. O mesmo que o encontro confere,
- * contra a branch do GitHub: os commits que a `develop` não tem, a árvore limpa e o push feito.
+ * A conferência de um checkout que não é linha: a correção avulsa, no andar dela, ou a correção feita na branch da spec.
+ * O mesmo que o encontro confere, contra a branch do GitHub: os commits que a `develop` não tem, a árvore limpa e o push
+ * feito.
  */
 export function conferir(raiz: string, opcoes: { emCurso?: boolean } = {}): Resultado {
   const branch = branchDe(raiz)
-  const entrega = conferirEntrega(raiz, 'develop', null)
+  const entrega = conferirEntrega(raiz, 'develop', null, { naSpec: branch.startsWith(PREFIXO_DA_BRANCH_DE_SPEC) })
   if (entrega !== null) return recusa(entrega)
   const alterados = sujeira(raiz)
   if (alterados.length > 0 && !(opcoes.emCurso ?? false)) return recusa(`a árvore não está limpa: o commit não levou tudo.\n${alterados.join('\n')}`)

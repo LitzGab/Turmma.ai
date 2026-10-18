@@ -74,9 +74,11 @@ fazer, e as dos guardiões marcados:
   ````
 
   Linha que começa com `-` sai, com `+` entra, e com espaço é contexto: fica, e serve para o trecho
-  existir uma vez só no arquivo. O portão da tarefa aplica cada bloco, roda o teste citado, exige
-  vermelho e restaura (`tools/processo/mutacoes.ts`). Bloco cujo teste continua verde reprova o portão:
-  falta o teste, e não o bloco. Trava se prova pelo efeito (dois registros), não pela espera. No F3,
+  existir uma vez só no arquivo. Cláusula que só vale no celular (o ramo de toque, o menu de baixo)
+  acrescenta ao cabeçalho a linha `projeto: celular`; ela só vale para teste de e2e, e sem ela o caso
+  roda no `chromebook`, onde essa cláusula não é alcançada. O portão da tarefa aplica cada bloco, roda
+  o teste citado, exige vermelho e restaura (`tools/processo/mutacoes.ts`). Bloco cujo teste continua
+  verde reprova o portão: falta o teste, e não o bloco. Trava se prova pelo efeito (dois registros), não pela espera. No F3,
   17 reprovações foram cláusula sem teste que falhe sem ela, e em cinco a seção afirmava um vermelho
   que não acontecia.
 - **O cenário tem o segundo dado que torna a cláusula observável?** Foi a maior causa técnica de
@@ -150,9 +152,36 @@ portão inteiro, de uns 30 minutos.</critical>
 ```bash
 npx vitest run --project unidade <arquivo.test.ts>
 npx vitest run --project integracao <arquivo.int.test.ts>      # sobe o compose de teste
-node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts   # constrói a web, sobe o ambiente e roda só esse arquivo
-npx playwright test e2e/<arquivo>.spec.ts                      # de novo, com o ambiente de pé e só o spec alterado
+node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts                               # constrói a web, sobe o ambiente e roda só esse arquivo (entra na fila de carga sozinho)
+flock /tmp/educa-carga.lock npx playwright test e2e/<arquivo>.spec.ts                      # de novo, com o ambiente de pé e só o spec alterado
 ```
+
+**A fila de carga é do comando.** Cada linha tem o seu ambiente, mas a máquina é uma só: o e2e de duas
+linhas ao mesmo tempo estoura os 30 s (X2, carga de 9 a 24). O `portao-local.ts` e o `tools/ci/e2e.ts`
+tomam o `flock /tmp/educa-carga.lock` sozinhos (`tools/ci/fila-de-carga.ts`): quem chega espera a vez e
+avisa que está esperando, e você não digita `flock` neles. Só o `npx playwright test` direto, que não
+passa por eles, continua com `flock /tmp/educa-carga.lock` na frente. **Nunca escreva laço de espera
+com `pgrep`**: o padrão casa com a linha de comando do próprio laço, e o laço não sai. Na X2 foram
+cinco, perto de 4 h de linha parada.
+
+**O portão mede os casos de e2e que a tarefa alterou.** Caso de e2e cujas linhas o diff tocou e que passa de **15 s** na máquina
+deixa o portão vermelho, antes das mutações e sem carimbo: o runner da esteira leva perto do dobro e o prazo é 30 s (X1: casos de 19 a
+29 s aqui; X2: quatro dos sete casos de prazo já passavam de 15 s). O caso lento que você não tocou não conta, e a mensagem diz arquivo,
+linha, projeto e segundos. Olhe a duração que o `list` do Playwright já imprime no e2e isolado, e encurte antes do portão (semeie o dado
+pela API em vez de pela tela, tire a espera que não prova nada) ou divida o caso. Dois avisos: o relatório só é lido quando a corrida passa,
+então e2e vermelho reprova o portão pela falha e não diz quais casos estavam lentos; e um caso perto de 15 s oscila de uma corrida para
+outra, por isso confira o isolado com folga (uns 12 s), e não no limite.
+
+**O portão roda também o e2e que cita um texto que a sua tarefa tirou da web.** Texto removido de `apps/web/src` (um título, um
+rótulo, um aviso, um `data-testid`) que algum `e2e/*.spec.ts` ainda cita, sem diferenciar maiúscula, põe esse spec nos alvos, mesmo
+que você não o tenha alterado; o portão escreve `▶ e2e/<arquivo> entra nos alvos: cita "<texto>"`. Foi o que faltou na X2: o W12 da
+casca ("Governança") e o sino da 6.0 ("Refazer o convite de") quebraram fora do diff, na esteira. Rode esse spec isolado antes do
+portão e **atualize o texto no e2e**: o spec entra para rodar, e o caso lento que já estava lá não é cobrado de você (a duração só vale
+para o caso que o diff tocou). Limites: o portão não acha (i) o spec que cita só um **pedaço** do texto removido (tirar "Governança da
+escola" não puxa o spec que procura `/governança/i`), (ii) o texto de JSX que continua na linha de baixo começando em minúscula, nem o
+template que atravessa linhas, e (iii) o texto citado só num ajudante de `e2e/__fixtures__/`, que não puxa os specs que o importam. Ao
+contrário, o texto curto e comum ("Professor", "Estrutura") puxa todo spec que o cita: num diff de 40 commits (`3be23c9`) foram 24 dos 59
+specs. Troca de texto da tela: procure você mesmo, com `grep -rn` em `e2e/`, o pedaço que o e2e usa.
 
 Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
@@ -176,7 +205,9 @@ entrada sozinho, abre cada endereço e grava a página inteira em `.processo/vit
 (1366 px) e no celular (360 px); página comprida sai em pedaços, e o que foi clicado entra no nome do
 arquivo. Leia **cada** arquivo com a ferramenta de leitura, como imagem, e corrija antes do portão o
 que o `frontend-reviewer` reprovaria (a lista está em `.claude/agents/frontend-reviewer.md`, "É
-bloqueante o que se vê e se mede").
+bloqueante o que se vê e se mede"). O comando termina com as **telas cuja página rola a 1366 × 768**
+(a altura medida passa de 768 px): se o PRD diz que só o miolo rola, tela nessa lista é defeito seu, e
+você a vê antes da Mesa.
 
 A foto mostra o que o último `tools/ci/e2e.ts` construiu: mudou a web depois dele, reconstrua antes de
 fotografar. A vitrine usa o banco de teste: não fotografe com teste rodando. Se a foto falhar, siga e
@@ -229,7 +260,8 @@ aparece ali uma tarefa depois, e volta como correção. A consequência é sua: 
 da tarefa só é provada pelos testes que estão entre os alvos.
 
 Spec de e2e criado ou alterado roda também repetido, com os trabalhadores da esteira, sobre o
-ambiente de pé: `npx playwright test <specs da tarefa> --repeat-each 3 --workers 2`. A máquina roda o
+ambiente de pé: `flock /tmp/educa-carga.lock npx playwright test <specs da tarefa> --repeat-each 3 --workers 2`
+(o `npx playwright test` direto: o `tools/ci/e2e.ts` ainda não repassa essas opções e roda a suíte inteira). A máquina roda o
 e2e com 6 trabalhadores e a esteira com 2. O W6 da 16.0 da A1 passou em três portões locais e caiu na
 esteira por uma ordem de entrega que só a máquina lenta produziu.
 

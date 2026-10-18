@@ -78,7 +78,9 @@ node tools/vitrine/vitrine.ts foto <coordenacao|professora|aluno> <endereço>…
 
 Se a web do ambiente de teste não responder, suba-a com um spec de e2e da funcionalidade
 (`node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts`), em segundo plano, e monte de novo.
-As fotos ficam em `.processo/vitrine/`, no computador (1366 px) e no celular (360 px).
+As fotos ficam em `.processo/vitrine/`, no computador (1366 px) e no celular (360 px). O comando termina com
+as **telas cuja página rola a 1366 × 768** (a altura medida passa de 768 px): RF que diz que só o miolo
+rola e cuja tela está nessa lista é **NÃO ATENDIDO**, com a linha do comando ao lado da foto.
 
 Na foto você confere o critério de aceite como a pessoa o vê, e os defeitos que
 `.claude/agents/frontend-reviewer.md` lista em "É bloqueante o que se vê e se mede". No relatório, a

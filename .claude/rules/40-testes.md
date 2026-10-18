@@ -95,7 +95,10 @@ Há dois, e o que muda entre eles é o quanto roda e quem espera (D78, D79).
 **O portão da tarefa**, em toda tarefa e em toda correção:
 `node tools/processo/portao-local.ts --tarefa <documento>`. Roda os tipos, o lint, as duas guardas da
 esteira que não são teste (`guarda:segredo`, o gitleaks, e `guarda:dependencias`, o `npm audit`), a
-unidade inteira, os testes de integração, de e2e e de infra **que a árvore alterou**, e as **mutações**
+unidade inteira, os testes de integração, de e2e e de infra **que a árvore alterou**, mais os e2e que citam um texto
+que o diff tirou de `apps/web/src` (`tools/ci/e2e-que-cita-literal.ts`); o caso de e2e cujas linhas o
+diff tocou, e só ele, fica vermelho se passar de **15 s** na máquina: o runner leva perto do dobro e o prazo é 30 s
+(`tools/ci/duracao-do-e2e.ts`). Depois vêm as **mutações**
 que o documento declara: aplica cada uma, roda o teste citado, exige vermelho e restaura
 (`tools/processo/mutacoes.ts`). Grava o carimbo que o hook exige antes do commit (D53). Leva minutos.
 Enquanto um teste não passa, ele se roda isolado; o portão não é ferramenta de depuração.
