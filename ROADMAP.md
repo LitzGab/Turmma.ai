@@ -332,7 +332,7 @@ professor nem contagem de grupo pequeno que o servidor já não mostrasse (D45, 
 1366 × 768 sem rolar a página e funciona a 360 px; e o e2e da A0b, da A1, da A5 e do F3 continua
 provando as mesmas regras.
 
-## X3 — `telas-do-professor` [ ]
+## X3 — `telas-do-professor` [~]
 **Depende de:** X1 · **pode correr em paralelo com X2**
 
 As telas do professor, recompostas como no mockup. **Início**: a saudação com a onça, a caixa de
