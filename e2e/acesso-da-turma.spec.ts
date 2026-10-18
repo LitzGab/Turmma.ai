@@ -30,6 +30,8 @@ const CONFLITO = JSON.stringify({ erro: { codigo: 'CONFLITO', mensagem: 'texto q
 
 const TEXTO_DA_TURMA_INDISPONIVEL =
   'Esta turma não está disponível para você agora: o seu vínculo com ela pode não estar confirmado, ou ela saiu do ano letivo em curso. Volte para Turmas; se ela deveria estar lá, fale com a coordenação.'
+/** Tudo o que `main` diz na turma indisponível, sem o sino: o aviso e o link de volta (a tela é a mesma nos três endereços). */
+const TELA_DA_TURMA_INDISPONIVEL = `Voltar para TurmasTurma${TEXTO_DA_TURMA_INDISPONIVEL}`
 const TEXTO_DO_ACESSO_NOVO = 'O link da sala e o código da turma levam os alunos à lista de nomes desta turma, onde cada um pede o próprio nome. Quem aprova é você.'
 const TEXTO_DO_ACESSO_QUE_CAI =
   'O link e o código de agora deixam de valer na hora, também se quem gerou foi outro professor ou outra professora da turma. Os nomes que ficaram travados por tentativas com a matrícula errada destravam.'
@@ -61,6 +63,7 @@ const ehOAcesso = (url: URL) => /^\/v1\/turmas\/[^/]+\/acesso$/.test(url.pathnam
 const ehORevogar = (url: URL) => /^\/v1\/turmas\/[^/]+\/acesso\/revogar$/.test(url.pathname)
 const ehATurma = (url: URL) => /^\/v1\/turmas\/[^/]+$/.test(url.pathname)
 const ehOEu = (url: URL) => url.pathname === '/v1/eu'
+const ehOsMeusVinculos = (url: URL) => url.pathname === '/v1/meus-vinculos'
 const ehOGerar = (pedido: Request) => pedido.method() === 'POST' && ehOAcesso(new URL(pedido.url()))
 
 async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
@@ -94,6 +97,15 @@ function portao(): { aberta: Promise<void>; abrir: () => void } {
 }
 
 const principal = (page: Page) => page.getByRole('main')
+/** O botão do sino "Esperando você": o nome dele diz se a lista carregou e quantos esperam. */
+const sinoDaProfessora = (page: Page) => page.getByRole('button', { name: /^Esperando você/ })
+/** O texto de `main` sem o sino, que mora nele no computador: o que a tela diz, e não o que o sino leu até agora. */
+const textoDaTelaSemOSino = (page: Page) =>
+  principal(page).evaluate((elemento: HTMLElement) => {
+    const copia = elemento.cloneNode(true) as HTMLElement
+    copia.querySelectorAll('button[aria-label^="Esperando você"]').forEach((sino) => sino.remove())
+    return copia.textContent ?? ''
+  })
 /** Os `dialog` abertos, pelo elemento e não pelo papel: a gaveta fechada da casca também é um `dialog`, abaixo de 768 px. */
 const dialogosAbertos = (page: Page) => page.locator('dialog[open]')
 /** Os `dialog` da turma aberta, abertos ou não: ela os desenha dentro do conteúdo, e só enquanto estão abertos. */
@@ -197,6 +209,17 @@ async function abrirATurma(page: Page, { professora, turma }: Cenario, hasTouch:
   await abrirAbaAlunos(page, hasTouch)
 }
 
+/**
+ * A professora entra pela API (`POST /v1/sessao/email`, o cookie fica na própria aba) e abre o endereço dado: a página
+ * carrega uma vez só, sem passar pela tela de entrada. No Chromebook de teste (CPU ×4, Fast 3G) cada carga leva uns 7 s, e o
+ * portão da tarefa reprova caso de e2e alterado que passa de 15 s. A entrada pela tela é provada em outros casos; aqui ela é só o meio.
+ */
+async function abrirJaEntrando(page: Page, professora: EquipeDeTeste, endereco: string): Promise<void> {
+  const resposta = await page.request.post('/v1/sessao/email', { data: { email: professora.email, senha: professora.senha } })
+  expect(resposta.ok(), 'a entrada pela API').toBe(true)
+  await page.goto(endereco)
+}
+
 /** Abre o diálogo pelo botão da seção e gera, com a validade dada (ou a que o diálogo propõe). Devolve o que a API respondeu. */
 async function gerarPelaTela(page: Page, botaoDaSecao: 'Gerar acesso' | 'Gerar novo', hasTouch: boolean, dias?: string): Promise<RespostaAcessoGerado> {
   await tocar(secao(page), botaoDaSecao, hasTouch)
@@ -254,10 +277,13 @@ function vigiarAba(page: Page) {
 }
 
 test.describe('W4 (Acesso): os quatro estados', () => {
-  test('a turma abre pelo cartão do vínculo confirmado, e só por ele; carregando; "Sem acesso ativo" com o Gerar; o erro com "Tentar de novo", também logo depois de gerar; e com dado, só a validade', async ({
-    page,
-    hasTouch,
-  }) => {
+  /*
+   * Os quatro estados do acesso, em casos separados: o portão da tarefa reprova caso de e2e alterado que passa de 15 s
+   * (`tools/ci/duracao-do-e2e.ts`), e o caso único dos quatro estados levava mais de 60 s (correção
+   * 2026-10-18-textos-da-turma-indisponivel-diferem). Cada caso começa do seu próprio cenário, e o que um deixava de pé para o
+   * seguinte (o acesso gerado, a leitura que falha) é semeado no banco ou preparado no começo do caso.
+   */
+  test('a turma abre pelo cartão do vínculo confirmado, e só por ele; com o título, o nome, a série e "Turmas" ainda selecionado', async ({ page, hasTouch }) => {
     test.slow()
     // Duas disciplinas na mesma turma: Matemática confirmada, História contestada. Outra turma, só pendente. E uma
     // terceira, que ela confirmou e a coordenação encerrou depois.
@@ -268,19 +294,7 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     const encerrada = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId, ['Artes'])
     await confirmarVinculosNoBanco(professora.escolaId, encerrada.vinculoIds)
     await encerrarVinculosNoBanco(professora.escolaId, encerrada.turmaId, professora.usuarioId)
-    // A leitura do acesso, segurada na primeira vez (o carregando) e recusada quando o teste pede (o erro).
-    const segurada = portao()
-    let falhar = false
-    await page.route(ehOAcesso, async (rota: Route) => {
-      if (rota.request().method() !== 'GET') return rota.fallback()
-      await segurada.aberta
-      if (falhar) return rota.fulfill({ status: 503, contentType: 'application/json', body: INDISPONIVEL })
-      return rota.fallback()
-    })
-    await page.goto('/entrar')
-    await entrarPorEmail(page, professora, hasTouch)
-    await esperarNovaConversa(page, professora.nome)
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    await abrirJaEntrando(page, professora, '/professor/turmas')
 
     // Só o cartão do vínculo confirmado leva à turma: os que esperam a decisão e o encerrado não oferecem o que a API
     // recusaria.
@@ -306,6 +320,22 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     await expect(principal(page)).toContainText(SERIE_DA_TURMA)
     // A turma abre na Visão Geral (A3); o acesso dos alunos está na aba "Alunos".
     await expect(page.getByRole('tab')).toHaveText(['Visão Geral', 'Alunos'])
+    await abrirAbaAlunos(page, hasTouch)
+    await expect(secoes(page).getByRole('link', { name: 'Turmas' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  test('carregando; "Sem acesso ativo" com o Gerar, sem link nem código; e o diálogo do primeiro acesso diz o que ele faz, com 7 dias já escolhidos', async ({ page, hasTouch }) => {
+    test.slow()
+    const cenario = await criarProfessoraComTurma()
+    const { professora, turma } = cenario
+    // A leitura do acesso, segurada na primeira vez (o carregando).
+    const segurada = portao()
+    await page.route(ehOAcesso, async (rota: Route) => {
+      if (rota.request().method() !== 'GET') return rota.fallback()
+      await segurada.aberta
+      return rota.fallback()
+    })
+    await abrirJaEntrando(page, professora, `/professor/turmas/${turma.turmaId}`)
     await abrirAbaAlunos(page, hasTouch)
 
     // Carregando.
@@ -335,6 +365,22 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     await expect(validade(page, '30 dias')).not.toBeChecked()
     await conferirDialogo(page)
     expect(await acessosVigentesDaTurma(professora.escolaId, turma.turmaId)).toBe(0)
+  })
+
+  test('o erro logo depois de gerar mostra "Tentar de novo" e não afirma falta de acesso', async ({ page, hasTouch }) => {
+    test.slow()
+    const cenario = await criarProfessoraComTurma()
+    const { professora, turma } = cenario
+    // A leitura do acesso, recusada quando o teste pede (o erro).
+    let falhar = false
+    await page.route(ehOAcesso, (rota: Route) =>
+      rota.request().method() === 'GET' && falhar ? rota.fulfill({ status: 503, contentType: 'application/json', body: INDISPONIVEL }) : rota.fallback(),
+    )
+    await abrirJaEntrando(page, professora, `/professor/turmas/${turma.turmaId}`)
+    await abrirAbaAlunos(page, hasTouch)
+    await expect(semAcesso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await tocar(secao(page), 'Gerar acesso', hasTouch)
+    await expect(page.getByRole('dialog', { name: 'Gerar acesso' })).toBeVisible()
 
     // O erro logo depois de gerar: o gerar dá certo, e a releitura depois dele cai. A seção não afirma "Sem acesso
     // ativo", que negaria o acesso que acabou de nascer: mostra o erro, com "Tentar de novo".
@@ -358,6 +404,22 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     expect(await violacoesGraves(page)).toEqual([])
     falhar = false
     await tocar(secao(page), 'Tentar de novo', hasTouch)
+    await expect(acessoAtivo(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    // O erro sai com o "Tentar de novo": a seção não fica com o alerta de antes.
+    await expect(secao(page).getByRole('alert')).toHaveCount(0)
+    expect(await acessosVigentesDaTurma(professora.escolaId, turma.turmaId)).toBe(1)
+  })
+
+  test('com dado, a seção mostra só até quando o acesso vale e as duas ações; o link e o código não voltam', async ({ page, hasTouch }) => {
+    test.slow()
+    const cenario = await criarProfessoraComTurma()
+    const { professora, turma } = cenario
+    await abrirJaEntrando(page, professora, `/professor/turmas/${turma.turmaId}`)
+    await abrirAbaAlunos(page, hasTouch)
+    await expect(semAcesso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    const gerado = await gerarPelaTela(page, 'Gerar acesso', hasTouch)
+    expect(diasAte(gerado.expiraEm)).toBe(7)
+    await fecharSemCopiar(page, hasTouch)
 
     // Com dado: só até quando vale, e as duas ações. O link e o código não voltam.
     await expect(acessoAtivo(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -372,11 +434,21 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     expect(await acessosVigentesDaTurma(professora.escolaId, turma.turmaId)).toBe(1)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
+  })
 
-    // Erro na primeira leitura, com a página recarregada: a seção mostra o erro, sem afirmar acesso nem falta dele.
-    falhar = true
-    await page.reload()
-    // A página recarregada abre a turma na Visão Geral: o acesso está na aba "Alunos".
+  test('o erro na primeira leitura não afirma acesso nem falta dele, e "Tentar de novo" traz a validade', async ({ page, hasTouch }) => {
+    test.slow()
+    const cenario = await criarProfessoraComTurma()
+    const { professora, turma } = cenario
+    // O acesso que o caso anterior deixava de pé, semeado: o que interessa aqui é a leitura que cai.
+    await gerarAcessoNoBanco(professora.escolaId, turma.turmaId, 7)
+    // A leitura do acesso falha desde a primeira vez: a página abre já sem saber se há acesso.
+    let falhar = true
+    await page.route(ehOAcesso, (rota: Route) =>
+      rota.request().method() === 'GET' && falhar ? rota.fulfill({ status: 503, contentType: 'application/json', body: INDISPONIVEL }) : rota.fallback(),
+    )
+    await abrirJaEntrando(page, professora, `/professor/turmas/${turma.turmaId}`)
+    // A turma abre na Visão Geral: o acesso está na aba "Alunos".
     await abrirAbaAlunos(page, hasTouch)
     await expect(secao(page).getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(acessoAtivo(page)).toHaveCount(0)
@@ -384,11 +456,19 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     falhar = false
     await tocar(secao(page), 'Tentar de novo', hasTouch)
     await expect(acessoAtivo(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(secao(page)).toContainText('Vale até')
+    // O erro sai com o "Tentar de novo": a seção não fica com o alerta de antes.
+    await expect(secao(page).getByRole('alert')).toHaveCount(0)
+  })
 
-    // A turma que não chega: o erro no lugar da tela, com "Tentar de novo", e a turma volta.
+  test('a turma que não chega tem o erro no lugar da tela, com "Tentar de novo", e a turma volta', async ({ page, hasTouch }) => {
+    test.slow()
+    const cenario = await criarProfessoraComTurma()
+    const { professora, turma } = cenario
+    await gerarAcessoNoBanco(professora.escolaId, turma.turmaId, 7)
     let derrubarATurma = true
     await page.route(ehATurma, (rota: Route) => (derrubarATurma ? rota.fulfill({ status: 503, contentType: 'application/json', body: INDISPONIVEL }) : rota.fallback()))
-    await page.reload()
+    await abrirJaEntrando(page, professora, `/professor/turmas/${turma.turmaId}`)
     await expect(principal(page).getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('heading', { name: 'Acesso dos alunos' })).toHaveCount(0)
     await expect(principal(page).getByRole('link', { name: 'Voltar para Turmas' })).toBeVisible()
@@ -397,12 +477,38 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     await expect(principal(page).getByRole('heading', { level: 1, name: `Turma ${turma.turmaNome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await abrirAbaAlunos(page, hasTouch)
     await expect(acessoAtivo(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  })
 
-    // A turma com o vínculo ainda pendente, a do vínculo encerrado e a que não existe respondem igual, pelo endereço: a tela diz a quem
-    // recorrer, sem o nome da turma, sem seção de acesso e sem "Tentar de novo".
-    const textos: string[] = []
-    for (const turmaId of [pendente.turmaId, encerrada.turmaId, crypto.randomUUID()]) {
-      await page.goto(`/professor/turmas/${turmaId}`)
+  /*
+   * A turma com o vínculo ainda pendente, a do vínculo encerrado e a que não existe respondem igual, pelo endereço: a tela diz a
+   * quem recorrer, sem o nome da turma, sem seção de acesso e sem "Tentar de novo". Cada endereço é um caso (uma carga de página
+   * cada, e o portão reprova caso de e2e alterado acima de 15 s), e os três têm de dar o **mesmo** texto de tela,
+   * `TELA_DA_TURMA_INDISPONIVEL`, escrito por extenso: dois endereços que dessem textos diferentes não passariam os dois por ele.
+   *
+   * O sino "Esperando você" (X3) carrega por conta própria e, no computador, mora em `main`: o primeiro endereço abre com a
+   * leitura dos vínculos presa (o sino diz "carregando") e os outros com ela terminada (o sino diz quantos esperam). A tela
+   * tem de ser a mesma nos dois estados do sino, e por isso o texto comparado é o da tela, sem o sino.
+   */
+  for (const [endereco, sinoSegurado] of [
+    ['com o vínculo pendente', true],
+    ['com o vínculo encerrado', false],
+    ['que não existe', false],
+  ] as const) {
+    test(`a turma ${endereco} responde com o aviso da turma indisponível, igual às outras, ${sinoSegurado ? 'com o sino ainda carregando' : 'com o sino já lido'}`, async ({ page, hasTouch }) => {
+      test.slow()
+      const professora = await criarEquipeComSenha()
+      const pendente = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId, ['Ciências'])
+      const encerrada = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId, ['Artes'])
+      await confirmarVinculosNoBanco(professora.escolaId, encerrada.vinculoIds)
+      await encerrarVinculosNoBanco(professora.escolaId, encerrada.turmaId, professora.usuarioId)
+      const turmaId = endereco === 'com o vínculo pendente' ? pendente.turmaId : endereco === 'com o vínculo encerrado' ? encerrada.turmaId : crypto.randomUUID()
+      const leituraDoSino = portao()
+      await page.route(ehOsMeusVinculos, async (rota: Route) => {
+        if (!sinoSegurado) return rota.fallback()
+        await leituraDoSino.aberta
+        await rota.fallback().catch(() => undefined)
+      })
+      await abrirJaEntrando(page, professora, `/professor/turmas/${turmaId}`)
       await expect(principal(page).getByRole('status').filter({ hasText: 'Esta turma não está disponível' })).toHaveText(TEXTO_DA_TURMA_INDISPONIVEL, {
         timeout: PRAZO_DA_ENTRADA_MS,
       })
@@ -413,13 +519,15 @@ test.describe('W4 (Acesso): os quatro estados', () => {
       await expect(page).toHaveTitle('Turma · Turmma')
       // Na página que já abre sem a turma, o aviso não puxa o foco: ele fica antes do "Voltar para Turmas".
       await expect(principal(page).getByRole('status').filter({ hasText: 'Esta turma não está disponível' })).not.toBeFocused()
-      textos.push(await principal(page).innerText())
-    }
-    expect(new Set(textos).size).toBe(1)
-    expect(await violacoesGraves(page)).toEqual([])
-    await acionar(principal(page).getByRole('link', { name: 'Voltar para Turmas' }), hasTouch)
-    await expect(page).toHaveURL(/\/professor\/turmas$/)
-  })
+      if (sinoSegurado) await expect(sinoDaProfessora(page)).toHaveAccessibleName('Esperando você, carregando')
+      else await expect(sinoDaProfessora(page)).toHaveAccessibleName(/^Esperando você, \d+$/)
+      expect(await textoDaTelaSemOSino(page)).toBe(TELA_DA_TURMA_INDISPONIVEL)
+      leituraDoSino.abrir()
+      expect(await violacoesGraves(page)).toEqual([])
+      await acionar(principal(page).getByRole('link', { name: 'Voltar para Turmas' }), hasTouch)
+      await expect(page).toHaveURL(/\/professor\/turmas$/)
+    })
+  }
 })
 
 test.describe('W7: gerar, projetar, copiar, compartilhar e trocar o acesso', () => {
