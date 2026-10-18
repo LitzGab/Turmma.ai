@@ -150,9 +150,15 @@ portão inteiro, de uns 30 minutos.</critical>
 ```bash
 npx vitest run --project unidade <arquivo.test.ts>
 npx vitest run --project integracao <arquivo.int.test.ts>      # sobe o compose de teste
-node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts   # constrói a web, sobe o ambiente e roda só esse arquivo
-npx playwright test e2e/<arquivo>.spec.ts                      # de novo, com o ambiente de pé e só o spec alterado
+flock /tmp/educa-carga.lock node tools/ci/e2e.ts --manter-ambiente e2e/<arquivo>.spec.ts   # constrói a web, sobe o ambiente e roda só esse arquivo
+flock /tmp/educa-carga.lock npx playwright test e2e/<arquivo>.spec.ts                      # de novo, com o ambiente de pé e só o spec alterado
 ```
+
+**O e2e e o portão rodam sempre com `flock /tmp/educa-carga.lock`.** Cada linha tem o seu ambiente,
+mas a máquina é uma só: o e2e de duas linhas ao mesmo tempo estoura os 30 s (X2, carga de 9 a 24). O
+`flock` faz quem chega esperar a vez sozinho. **Nunca escreva laço de espera com `pgrep`**: o padrão
+casa com a linha de comando do próprio laço, e o laço não sai. Na X2 foram cinco, perto de 4 h de
+linha parada.
 
 Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
@@ -191,7 +197,7 @@ e, na segunda falha, um diagnóstico do Arquiteto com o ponto exato.
 ### Com os testes da tarefa verdes: o portão, uma vez
 
 ```bash
-node tools/processo/portao-local.ts --tarefa tasks/prd-<funcionalidade>/<N>_task.md
+flock /tmp/educa-carga.lock node tools/processo/portao-local.ts --tarefa tasks/prd-<funcionalidade>/<N>_task.md
 ```
 
 Ele roda os tipos, o lint, as duas guardas da esteira que não são teste (segredo commitado e
@@ -229,7 +235,8 @@ aparece ali uma tarefa depois, e volta como correção. A consequência é sua: 
 da tarefa só é provada pelos testes que estão entre os alvos.
 
 Spec de e2e criado ou alterado roda também repetido, com os trabalhadores da esteira, sobre o
-ambiente de pé: `npx playwright test <specs da tarefa> --repeat-each 3 --workers 2`. A máquina roda o
+ambiente de pé: `flock /tmp/educa-carga.lock npx playwright test <specs da tarefa> --repeat-each 3 --workers 2`
+(o `npx playwright test` direto: o `tools/ci/e2e.ts` ainda não repassa essas opções e roda a suíte inteira). A máquina roda o
 e2e com 6 trabalhadores e a esteira com 2. O W6 da 16.0 da A1 passou em três portões locais e caiu na
 esteira por uma ordem de entrega que só a máquina lenta produziu.
 

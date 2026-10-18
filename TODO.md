@@ -934,7 +934,19 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       (c) `tools/ci/e2e.ts` repassa `--repeat-each` e `--workers` ao Playwright (hoje viram filtro e o e2e inteiro roda);
       `tools/processo/linhas.ts conferir` aceita a correção feita na branch da spec (hoje para no primeiro `(tarefa N.0)`);
       e `tools/processo/mutacoes.ts` roda o caso de e2e no projeto que ele declara, e não sempre no `chromebook`, para a
-      cláusula que só vale no celular se provar
+      cláusula que só vale no celular se provar.
+      **Ficou sem fazer, e a X2 pagou de novo** (`tasks/prd-telas-da-coordenacao/retro.md`): sete correções de e2e acima dos
+      30 s na esteira, quatro delas de casos que já passavam de 15 s na máquina (`material:180`, `areas:316`, `agentes:164`
+      e `:186`), e 33 min perdidos na 2.0 com o `e2e.ts` rodando a suíte inteira. **Destino que o Joaquim deu em 18/10/2026:
+      antes da primeira tarefa da X3**, numa correção só, junto com o que a X2 acrescentou:
+      (d) **o portão roda também os e2e que citam um texto que o diff tirou de `apps/web/src`** (um literal removido que
+      aparece em `e2e/`): o W12 da casca (a 3.0 trocou "Governança", `casca.spec.ts:673`, vermelho em cinco execuções da
+      esteira) e o sino da 6.0 ("Refazer o convite de", `sino-da-coordenacao.spec.ts:86`) quebraram fora do diff;
+      (e) **a vitrine lista as telas cuja página rola a 1366 × 768** (a altura medida em `tools/vitrine/foto.ts` passa da
+      janela), no relatório que a Mesa e o Validador leem: na X2 o "só o miolo rola" (RF23) só foi visto pela altura das
+      fotos, contada à mão, e escapou em duas telas até a validação (C1, C2);
+      (f) **o `flock /tmp/educa-carga.lock` dentro do `portao-local.ts` e do `tools/ci/e2e.ts`**, para a fila de carga entre
+      as linhas não depender de quem digita o comando (o texto do `executar-task` e do `/seguir` vale até lá)
 - [ ] **A vitrine não fotografa troca do Tutor do aluno** (validação da X1, rodada 1): ela não digita, e a escola
       sintética não tem troca do Tutor, então o balão com a assinatura não sai em foto. Destino: antes da X4, que mexe
       na tela do Tutor do aluno
