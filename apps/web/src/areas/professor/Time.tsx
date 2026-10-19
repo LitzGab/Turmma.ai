@@ -39,6 +39,7 @@ import {
   VERBO_DA_ENTREGA,
   type FiltroDoTime,
 } from './entregas'
+import { O_MIOLO_DO_DOCUMENTO, useTopoDoPainel } from './miolo-do-documento'
 import { nomesDasTurmas, turmasDaProfessora } from './turmas-da-professora'
 
 /** De quanto em quanto a conversa do Assistente relê as entregas, com a aba à vista: não há WebSocket nesta fatia. */
@@ -122,6 +123,8 @@ export default function Time() {
   // Em ordem de conversa: a mais antiga em cima, a de agora embaixo.
   const todas = (entregas.data?.pages.flatMap((pagina) => pagina.itens) ?? []).sort((a, b) => a.criadaEm.localeCompare(b.criadaEm))
   const esperando = entregasDoFiltro(todas, 'esperando')
+  // A conversa é o miolo: a faixa, o filtro e o cabeçalho ficam parados e só ela rola, a partir de 768 px (RF22).
+  const topoDoPainel = useTopoDoPainel(todas.length > 0)
   const visiveis = entregasDoFiltro(todas, filtro)
   const assistente = agenteDoTime(time.data, 'assistente_de_ensino')
 
@@ -268,8 +271,8 @@ export default function Time() {
       {todas.length > 0 && (
         <>
           {esperando.length > 0 && (
-            // Presa no alto enquanto a conversa rola: abaixo da barra do topo no celular (56 px), no alto no computador.
-            <section aria-labelledby={idDaFaixa} data-faixa-esperando="" className="sticky top-14 z-10 flex min-w-0 flex-col gap-2 rounded-cartao border border-pendente bg-pendente-cx p-3 md:top-0">
+            // No celular a página rola e a faixa fica presa abaixo da barra do topo (56 px). A partir de 768 px a página não rola: a faixa fica parada acima da conversa.
+            <section aria-labelledby={idDaFaixa} data-faixa-esperando="" className="sticky top-14 z-10 flex min-w-0 flex-col gap-2 rounded-cartao border border-pendente bg-pendente-cx p-3">
               <h2 id={idDaFaixa} className="sr-only">
                 Esperando você
               </h2>
@@ -296,70 +299,75 @@ export default function Time() {
             </section>
           )}
 
-          <Abas
-            rotulo="Filtro por função"
-            abas={FILTROS_DO_TIME.map((item) => ({ id: item.id, rotulo: item.rotulo, ...(item.id === 'esperando' ? { contador: esperando.length } : {}) }))}
-            ativa={filtro}
-            aoMudar={(id) => {
-              if (ehFiltroDoTime(id)) definirFiltro(id)
-            }}
-          >
-            {visiveis.length === 0 ? (
-              <p className="rounded-cartao border border-dashed border-borda-campo bg-superficie p-4 text-apoio">Nada neste filtro. Em "Tudo" está o que o Assistente já fez.</p>
-            ) : (
-              <Conversa rotulo="O que o Assistente de ensino fez">
-                {visiveis.map((entrega) => {
-                  const suspensao = avisoDaFuncaoSuspensa(entrega, funcaoSuspensa(time.data, entrega.funcao))
-                  return (
-                  <div key={entrega.id} id={idDoCartao(entrega.id)} tabIndex={-1} data-entrega={entrega.estado} className="flex min-w-0 scroll-mt-48 flex-col gap-1 rounded-cartao">
-                    <p className="text-[13px] text-sutil">{formatarDataHora(entrega.criadaEm)}</p>
-                    <MensagemIA
-                      variante="balao"
-                      funcao={entrega.funcao}
-                      aprovacao={{ aprovacao: aprovacaoDaEntrega(entrega), verbo: VERBO_DA_ENTREGA }}
-                      acoes={
-                        <>
-                          {entrega.artefatoId !== null && (
-                            // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
-                            <Link to={caminhoDoArtefatoDoProfessor(entrega.artefatoId)} className={CLASSES_DA_ACAO}>
-                              Abrir a versão<span className="sr-only">: {entrega.titulo}</span>
-                            </Link>
-                          )}
-                          {/* O lote de correção não se aprova de dentro do balão: "Revisar" leva à tela dos destaques. */}
-                          {entrega.tipo === 'lote_de_correcao' && entrega.atividadeAplicadaId !== null && (
-                            <Link to={caminhoDaCorrecaoDoProfessor(entrega.atividadeAplicadaId)} className={entrega.estado === 'pendente' ? classesDoBotao({ variante: 'secundario' }).replaceAll('enabled:', '') : CLASSES_DA_ACAO}>
-                              {entrega.estado === 'pendente' ? 'Revisar' : 'Ver a correção'}
-                              <span className="sr-only">: {entrega.titulo}</span>
-                            </Link>
-                          )}
-                          {decideAqui(entrega) && (
-                            <>
-                              <Botao variante="oficial" onClick={() => abrir(entrega, 'aprovar')}>
-                                Aprovar<span className="sr-only"> {entrega.titulo}</span>
-                              </Botao>
-                              <Botao variante="perigo" onClick={() => abrir(entrega, 'rejeitar')}>
-                                Rejeitar…<span className="sr-only"> {entrega.titulo}</span>
-                              </Botao>
-                            </>
-                          )}
-                        </>
-                      }
-                    >
-                      {falaDaEntrega(entrega, nomes[entrega.turmaId])}
-                    </MensagemIA>
-                    {suspensao !== undefined && <AvisoNaEntregaDeFuncaoSuspensa texto={suspensao} />}
-                  </div>
-                  )
-                })}
-              </Conversa>
-            )}
-          </Abas>
-
-          {entregas.hasNextPage && (
-            <Botao variante="secundario" onClick={() => void entregas.fetchNextPage()} disabled={entregas.isFetchingNextPage} className="self-center">
-              {entregas.isFetchingNextPage ? 'Carregando…' : 'Ver mais entregas'}
-            </Botao>
-          )}
+          <div ref={topoDoPainel} className="min-w-0">
+            <Abas
+              classeDoPainel={O_MIOLO_DO_DOCUMENTO}
+              rotulo="Filtro por função"
+              abas={FILTROS_DO_TIME.map((item) => ({ id: item.id, rotulo: item.rotulo, ...(item.id === 'esperando' ? { contador: esperando.length } : {}) }))}
+              ativa={filtro}
+              aoMudar={(id) => {
+                if (ehFiltroDoTime(id)) definirFiltro(id)
+              }}
+            >
+              {visiveis.length === 0 ? (
+                <p className="rounded-cartao border border-dashed border-borda-campo bg-superficie p-4 text-apoio">Nada neste filtro. Em "Tudo" está o que o Assistente já fez.</p>
+              ) : (
+                <Conversa rotulo="O que o Assistente de ensino fez">
+                  {visiveis.map((entrega) => {
+                    const suspensao = avisoDaFuncaoSuspensa(entrega, funcaoSuspensa(time.data, entrega.funcao))
+                    return (
+                    <div key={entrega.id} id={idDoCartao(entrega.id)} tabIndex={-1} data-entrega={entrega.estado} className="flex min-w-0 scroll-mt-48 flex-col gap-1 rounded-cartao">
+                      <p className="text-[13px] text-sutil">{formatarDataHora(entrega.criadaEm)}</p>
+                      <MensagemIA
+                        variante="balao"
+                        funcao={entrega.funcao}
+                        aprovacao={{ aprovacao: aprovacaoDaEntrega(entrega), verbo: VERBO_DA_ENTREGA }}
+                        acoes={
+                          <>
+                            {entrega.artefatoId !== null && (
+                              // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
+                              <Link to={caminhoDoArtefatoDoProfessor(entrega.artefatoId)} className={CLASSES_DA_ACAO}>
+                                Abrir a versão<span className="sr-only">: {entrega.titulo}</span>
+                              </Link>
+                            )}
+                            {/* O lote de correção não se aprova de dentro do balão: "Revisar" leva à tela dos destaques. */}
+                            {entrega.tipo === 'lote_de_correcao' && entrega.atividadeAplicadaId !== null && (
+                              <Link to={caminhoDaCorrecaoDoProfessor(entrega.atividadeAplicadaId)} className={entrega.estado === 'pendente' ? classesDoBotao({ variante: 'secundario' }).replaceAll('enabled:', '') : CLASSES_DA_ACAO}>
+                                {entrega.estado === 'pendente' ? 'Revisar' : 'Ver a correção'}
+                                <span className="sr-only">: {entrega.titulo}</span>
+                              </Link>
+                            )}
+                            {decideAqui(entrega) && (
+                              <>
+                                <Botao variante="oficial" onClick={() => abrir(entrega, 'aprovar')}>
+                                  Aprovar<span className="sr-only"> {entrega.titulo}</span>
+                                </Botao>
+                                <Botao variante="perigo" onClick={() => abrir(entrega, 'rejeitar')}>
+                                  Rejeitar…<span className="sr-only"> {entrega.titulo}</span>
+                                </Botao>
+                              </>
+                            )}
+                          </>
+                        }
+                      >
+                        {falaDaEntrega(entrega, nomes[entrega.turmaId])}
+                      </MensagemIA>
+                      {suspensao !== undefined && <AvisoNaEntregaDeFuncaoSuspensa texto={suspensao} />}
+                    </div>
+                    )
+                  })}
+                </Conversa>
+              )}
+              {/* Dentro do miolo: fora dele, a página passaria da janela (RF22). */}
+              {entregas.hasNextPage && (
+                <div className="flex justify-center pt-4">
+                  <Botao variante="secundario" onClick={() => void entregas.fetchNextPage()} disabled={entregas.isFetchingNextPage}>
+                    {entregas.isFetchingNextPage ? 'Carregando…' : 'Ver mais entregas'}
+                  </Botao>
+                </div>
+              )}
+            </Abas>
+          </div>
         </>
       )}
 

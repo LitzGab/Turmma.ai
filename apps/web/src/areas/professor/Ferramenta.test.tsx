@@ -2,7 +2,7 @@
 import { MENSAGENS_DE_ERRO, montarTime, type ChaveDeFuncao, type Ferramenta as NomeDeFerramenta } from '@educa/shared'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { prepararTela, redeFalsa, renderizarTela, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
@@ -106,6 +106,77 @@ describe('"Como vai sair" ao lado do formulário', () => {
     const grade = bloco.parentElement
     expect(grade?.contains(formulario)).toBe(true)
     expect(formulario.contains(bloco)).toBe(false)
+  })
+
+  it.each(['atividade_objetiva', 'plano_de_aula', 'adaptacao'] as const)('%s: a grade do formulário é o miolo que rola a partir de 768 px, com o título fora dela e a medida do topo gravada nela', async (ferramenta: NomeDeFerramenta) => {
+    const rede = redeFalsa()
+    instalar(rede)
+    montar(ferramenta)
+    await waitFor(() => expect(document.querySelector('[data-motor="formulario"]')).not.toBeNull())
+    const miolo = document.querySelector('[data-miolo-da-ferramenta]') as HTMLElement
+    expect(miolo).not.toBeNull()
+    // O formulário e "Como vai sair" estão dentro; o título e o "Voltar", fora: ficam parados enquanto a grade rola.
+    expect(miolo.contains(document.querySelector('[data-cartao-de-ferramenta]'))).toBe(true)
+    expect(miolo.contains(comoVaiSair())).toBe(true)
+    expect(miolo.contains(screen.getByRole('heading', { level: 1 }))).toBe(false)
+    expect(miolo.contains(screen.getByRole('link', { name: 'Voltar para Ferramentas' }))).toBe(false)
+    // Rola por dentro só a partir de 768 px, limitada pela janela menos o topo medido; abaixo disso a página rola inteira.
+    expect(miolo.className).toContain('md:overflow-y-auto')
+    expect(miolo.className).toContain('md:max-h-[calc(100dvh-var(--topo-do-painel,24.5rem)-2.5rem)]')
+    expect(miolo.className).toContain('md:relative')
+    // O respiro de baixo: sem ele a borda do cartão fica colada no corte do miolo.
+    expect(miolo.className).toContain('md:pb-1')
+    expect(miolo.className.split(/\s+/).filter((classe) => /overflow|max-h/.test(classe) && !classe.startsWith('md:'))).toEqual([])
+    // O topo é medido no próprio miolo (o `jsdom` não tem layout, e a medida é 0), e a variável sai com a tela.
+    expect(miolo.style.getPropertyValue('--topo-do-painel')).toBe('0px')
+    cleanup()
+    expect(miolo.style.getPropertyValue('--topo-do-painel')).toBe('')
+  })
+
+  it('o topo do miolo é medido de novo quando a janela muda e quando a tela por cima muda de altura, e nenhuma das duas medidas sobrevive à tela', async () => {
+    const observados: Element[] = []
+    let avisar: () => void = () => undefined
+    let desligado = false
+    // O `jsdom` não tem `ResizeObserver`: o teste põe o dele, que guarda o que foi observado e deixa chamar o aviso.
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(aviso: () => void) {
+          avisar = aviso
+        }
+        observe(no: Element): void {
+          observados.push(no)
+        }
+        disconnect(): void {
+          desligado = true
+        }
+      },
+    )
+    try {
+      const rede = redeFalsa()
+      instalar(rede)
+      montar('adaptacao')
+      await waitFor(() => expect(document.querySelector('[data-motor="formulario"]')).not.toBeNull())
+      const miolo = document.querySelector('[data-miolo-da-ferramenta]') as HTMLElement
+      let topo = 120
+      miolo.getBoundingClientRect = () => ({ top: topo }) as DOMRect
+      // A janela muda de tamanho: o título pode quebrar, e o miolo começa em outro ponto.
+      window.dispatchEvent(new Event('resize'))
+      expect(miolo.style.getPropertyValue('--topo-do-painel')).toBe('120px')
+      // A tela por cima muda de altura (a descrição, o aviso): quem avisa é o observador da tela, e não a janela.
+      expect(observados).toEqual([document.querySelector('[data-tela]')])
+      topo = 200
+      avisar()
+      expect(miolo.style.getPropertyValue('--topo-do-painel')).toBe('200px')
+      // Ao sair, o observador se desliga e a janela deixa de ser ouvida: a variável não volta.
+      cleanup()
+      expect(desligado).toBe(true)
+      topo = 300
+      window.dispatchEvent(new Event('resize'))
+      expect(miolo.style.getPropertyValue('--topo-do-painel')).toBe('')
+    } finally {
+      Reflect.deleteProperty(globalThis, 'ResizeObserver')
+    }
   })
 
   it('sem prévia: o texto é o mesmo antes de preencher, ao preencher e enquanto gera', async () => {

@@ -8,6 +8,7 @@ import { useTituloDaTela } from '../../titulo'
 import { CartaoDeFerramenta } from './CartaoDeFerramenta'
 import { COMO_VAI_SAIR, ehFerramenta, ferramentaDoCatalogo } from './ferramentas'
 import { esquecerGeracaoTerminada } from './memoria-do-professor'
+import { O_MIOLO_DO_DOCUMENTO, useTopoDoMiolo } from './miolo-do-documento'
 
 /** Um id de artefato tem a forma de UUID: o que vier diferente no endereço não vira escolha no formulário. */
 const FORMA_DE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -21,6 +22,7 @@ function Formulario({ ferramenta }: { ferramenta: Parameters<typeof ferramentaDo
   useLayoutEffect(() => esquecerGeracaoTerminada(ferramenta), [ferramenta])
   // "Pedir versão adaptada", no artefato, traz a atividade de origem no endereço: só o id dela, e nada sobre aluno.
   const origem = new URLSearchParams(useSearch()).get(PARAMETRO_DA_ORIGEM)
+  const miolo = useTopoDoMiolo<HTMLDivElement>()
   const iniciais = ferramenta === 'adaptacao' && origem !== null && FORMA_DE_ID.test(origem) ? { origem } : undefined
   return (
     <Tela
@@ -36,8 +38,12 @@ function Formulario({ ferramenta }: { ferramenta: Parameters<typeof ferramentaDo
         </Link>
       }
     >
-      {/* A partir de 1024 px o formulário e, ao lado, "Como vai sair"; abaixo, uma coluna, com "Como vai sair" depois do formulário. */}
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+      {/*
+        A partir de 1024 px o formulário e, ao lado, "Como vai sair"; abaixo, uma coluna, com "Como vai sair" depois do formulário.
+        A grade é o miolo: a partir de 768 px o título fica parado e só ela rola, e a página tem a altura da janela (RF22). O `md:pb-1` é o
+        respiro de baixo: sem ele a borda do cartão fica colada no corte do miolo, sem pista de que há o que rolar.
+      */}
+      <div ref={miolo} data-miolo-da-ferramenta="" className={`grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start md:pb-1 ${O_MIOLO_DO_DOCUMENTO}`}>
         <div className="min-w-0 rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
           {/* O título da ferramenta já é o `h1` da tela: o do formulário vem um nível abaixo. */}
           <CartaoDeFerramenta ferramenta={ferramenta} nivel={2} {...(iniciais === undefined ? {} : { iniciais })} />
