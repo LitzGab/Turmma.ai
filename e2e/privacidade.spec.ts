@@ -1,7 +1,8 @@
-import type { Locator, Page, Route } from '@playwright/test'
+import type { APIRequestContext, Locator, Page, Route } from '@playwright/test'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, escolherNoSeletor, esperarPainel, lateral, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { irPelaCoordenacao, paginaNaoRola } from './__fixtures__/coordenacao.ts'
-import { expect, test } from './__fixtures__/perfis.ts'
+import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
+import { configurarSegundoFatorPelaApi } from './__fixtures__/segundo-fator.ts'
 import { ajustarRetencaoDaEscola, cadastrarSuboperadorDeTeste, codigoDoAutenticador, criarEquipeComSenha, criarEscolaSintetica, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -61,6 +62,23 @@ async function entrarNaPrivacidade(page: Page, hasTouch: boolean, pessoa: Equipe
   await entrarComoCoordenacaoNaMesmaAba(page, pessoa, hasTouch)
   await esperarPainel(page)
   await abrirARetencao(page, hasTouch)
+}
+
+/**
+ * A coordenadora entra pela API, com o segundo fator já configurado, e abre o endereço: o cookie de renovação fica no contexto e a
+ * aplicação restaura a sessão a partir dele, como num retorno à aba. É o atalho do caso que prova só o endereço (a entrada pela tela
+ * tem os casos dela), e que com o argon2 e a CPU ×4 do perfil pagava dois logins e a configuração do segundo fator só para chegar à tela.
+ */
+async function entrarPelaApiComSegundoFator(page: Page, request: APIRequestContext, coordenadora: EquipeDeTeste): Promise<void> {
+  const { segredo } = await configurarSegundoFatorPelaApi(request, coordenadora)
+  const pedidos = page.context().request
+  const entrada = await pedidos.post('/v1/sessao/email', { data: { email: coordenadora.email, senha: coordenadora.senha } })
+  const { etapa, desafio } = (await entrada.json()) as { etapa?: string; desafio?: string }
+  if (etapa !== 'mfa' || desafio === undefined) throw new Error(`a entrada pela API não pediu o segundo fator: ${String(entrada.status())} ${String(etapa)}`)
+  // A ativação gastou o passo de agora: o código que o servidor aceita é o do passo seguinte.
+  const segundo = await pedidos.post('/v1/sessao/mfa', { headers: { Authorization: `Bearer ${desafio}` }, data: { codigo: codigoDoAutenticador(segredo, 30) } })
+  const { etapa: depois } = (await segundo.json()) as { etapa?: string }
+  if (depois !== 'pronta') throw new Error(`o segundo fator pela API não abriu a sessão: ${String(segundo.status())} ${String(depois)}`)
 }
 
 test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
@@ -139,16 +157,19 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
-  test('o endereço sem aba, e um endereço com aba que não existe, abrem a aba dos pedidos', async ({ page, hasTouch }) => {
+  test('o endereço sem aba, e um endereço com aba que não existe, abrem a aba dos pedidos', async ({ page, request }) => {
     const coordenadora = await criarEquipeComSenha('coordenador')
-    await page.goto('/entrar')
-    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarPainel(page)
+    await entrarPelaApiComSegundoFator(page, request, coordenadora)
 
-    await page.goto('/coordenacao/privacidade')
-    await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
-    await page.goto('/coordenacao/privacidade/nao-existe')
-    await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
+    // As cargas frias de página rodam sem a rede lenta do perfil: o caso prova para onde o endereço leva, não o quanto a rede custa.
+    await carregarSemRedeLenta(page, async () => {
+      await page.goto('/coordenacao/privacidade')
+      await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
+    })
+    await carregarSemRedeLenta(page, async () => {
+      await page.goto('/coordenacao/privacidade/nao-existe')
+      await expect(page).toHaveURL(ENDERECO_DOS_PEDIDOS, { timeout: PRAZO_DA_ENTRADA_MS })
+    })
     await expect(page.getByRole('tab', { name: NOME_DA_ABA_DOS_PEDIDOS, exact: true })).toHaveAttribute('aria-selected', 'true')
   })
 
