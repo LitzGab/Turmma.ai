@@ -1,11 +1,16 @@
-import { useQuery } from '@tanstack/react-query'
-import { useId, useRef } from 'react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { useEffect, useId, useRef, useState } from 'react'
+import { consultaAlunosDaTurma } from '../../api/alunos-da-turma'
 import { consultaDesempenhoDaTurma } from '../../api/atividades'
-import { EstadoCarregando, EstadoErro } from '../../componentes/estado'
+import { Botao } from '../../componentes/Botao'
+import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { ListaDePedidos } from '../../componentes/pedidos/ListaDePedidos'
 import { Tabela } from '../../componentes/Tabela'
 import { CabecalhoDeSecao } from '../../componentes/Tela'
+import { formatarQuantidade } from '../../formatar'
+import { turmaIndisponivel } from './acesso-da-turma'
 import { AcessoDaTurma } from './AcessoDaTurma'
+import { montarLinhas, textoDosAcertos, textoPorHabilidade, type LeituraDosAcertos } from './alunos-da-turma'
 
 type EscolaDaSessao = Parameters<typeof AcessoDaTurma>[0]['escola']
 
@@ -13,23 +18,70 @@ interface PropsDosAlunos {
   readonly turmaId: string
   readonly turmaNome: string
   readonly escola: EscolaDaSessao
-  /** A leitura dos pedidos deixou de achar a turma: a página inteira sai, e quem a tira é a `Turma` (regra 10, item 6). */
+  /** A leitura dos pedidos ou a da lista de nomes deixou de achar a turma: a página inteira sai, e quem a tira é a `Turma` (regra 10, item 6). */
   readonly aoPerderATurma: () => void
 }
 
 /**
- * A aba Alunos da turma aberta (`docs/interface.md` 11.1; D34, D46, D69): o acesso da sala, os pedidos de nome que a
- * professora aprova ou recusa e os acertos de cada aluno nas correções aprovadas, em ordem de nome. É o que a Visão Geral e a
- * aba Alunos de antes mostravam, **sem mudar** (telas do professor, 10.0); a lista de nomes da turma chega com a 12.0 e o
- * diálogo do acesso, com a 13.0, e nenhuma das duas altera `Turma.tsx`.
+ * A aba Alunos da turma aberta (`docs/interface.md` 11.1; telas do professor, 12.0; RF18, RF21; D34, D46, D69): o acesso da sala, os
+ * pedidos de nome que a professora aprova ou recusa e, abaixo, **os alunos da turma em ordem de nome, com os acertos de cada um nas
+ * correções aprovadas**. O diálogo do acesso chega com a 13.0, e nenhuma das duas altera `Turma.tsx`.
  *
- * Os alunos vêm em ordem de nome, como a API os entrega: **não é ranking**, e a tela não ordena por acerto.
+ * - **A lista de nomes** é `GET /v1/turmas/:id/alunos`, lida de cem em cem. A API a entrega em ordem de id, e a tela reordena por
+ *   nome **tudo o que já foi lido**, também depois de "Ver mais". Dois alunos com o mesmo nome são duas linhas.
+ * - **Os acertos** são os do desempenho, só de lote aprovado. O aluno sem correção aprovada diz isso ("Sem correção aprovada"), e
+ *   não "0 de 0". Quem saiu da turma entre as duas leituras (transferido, ou com o acesso desativado) aparece como "Saiu da turma",
+ *   sem número, e só quando a lista foi lida até o fim: antes disso ele pode estar numa página que não chegou.
+ * - **Não é ranking, e a tela não ordena por acerto**: não há controle de ordem, nem situação, nem média, nem busca por nome, nem
+ *   selo de adaptação por aluno, nem a conversa dele (F6, D35, D64, D70).
+ * - A falha dos acertos não tira os nomes da tela: a lista é o que a professora veio ver, e o erro dos acertos vem sozinho, com o
+ *   seu "Tentar de novo".
  */
 export default function AlunosDaTurma({ turmaId, turmaNome, escola, aoPerderATurma }: PropsDosAlunos) {
   const tituloDoAcesso = useRef<HTMLHeadingElement>(null)
+  const alunos = useInfiniteQuery(consultaAlunosDaTurma(turmaId))
   const desempenho = useQuery(consultaDesempenhoDaTurma(turmaId))
   const idDosAlunos = useId()
-  const dados = desempenho.data
+  const botaoDeVerMais = useRef<HTMLButtonElement>(null)
+  const fimDaLista = useRef<HTMLParagraphElement>(null)
+  // "Ver mais" já está no ar: o segundo clique no mesmo instante, antes de o botão desligar, não pede a mesma página outra vez.
+  const lendoMais = useRef(false)
+  // O que acorda o efeito do foco: só existe depois da leitura da página seguinte.
+  const [pedidoDeFoco, definirPedidoDeFoco] = useState(0)
+
+  const lidos = alunos.data?.pages.flatMap((pagina) => pagina.itens) ?? []
+  const listaLida = alunos.data !== undefined
+  const listaCompleta = listaLida && !alunos.hasNextPage
+  const linhas = montarLinhas(lidos, desempenho.data, listaCompleta)
+  const leituraDosAcertos: LeituraDosAcertos = desempenho.data !== undefined ? 'lida' : desempenho.isError ? 'falhou' : 'lendo'
+
+  // A lista de nomes deixou de achar a turma: vale como a leitura dos pedidos que deixa de achá-la.
+  const semATurma = turmaIndisponivel(alunos.error)
+  useEffect(() => {
+    if (semATurma) aoPerderATurma()
+  }, [semATurma, aoPerderATurma])
+
+  // "Ver mais" troca o botão por ele mesmo, ou pelo fim da lista: o foco não pode ficar no que saiu da tela (regra 50, item 11).
+  // Na montagem ainda não há botão nem frase: não há o que focar.
+  useEffect(() => {
+    if (document.activeElement !== null && document.activeElement !== document.body) return
+    ;(botaoDeVerMais.current ?? fimDaLista.current)?.focus()
+  }, [pedidoDeFoco])
+
+  async function verMais(): Promise<void> {
+    if (lendoMais.current) return
+    lendoMais.current = true
+    try {
+      await alunos.fetchNextPage()
+    } finally {
+      lendoMais.current = false
+      definirPedidoDeFoco((n) => n + 1)
+    }
+  }
+
+  // Os acertos só vão a um vazio quando chegaram: o aluno que o desempenho traz e a lista não pode ainda estar a caminho.
+  const vazio = listaCompleta && linhas.length === 0 && !desempenho.isPending
+  const quemSaiu = linhas.filter((linha) => linha.situacao === 'fora_da_turma').length
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -45,26 +97,47 @@ export default function AlunosDaTurma({ turmaId, turmaNome, escola, aoPerderATur
         aoPerderATurma={aoPerderATurma}
       />
 
-      {desempenho.isPending && <EstadoCarregando rotulo="Carregando os acertos da turma…" />}
-      {desempenho.isError && dados === undefined && <EstadoErro erro={desempenho.error} tentando={desempenho.isFetching} aoTentarDeNovo={() => void desempenho.refetch({ cancelRefetch: false })} />}
-      {dados !== undefined && dados.lotesAprovados > 0 && dados.alunos.length > 0 && (
+      {alunos.isPending && <EstadoCarregando rotulo="Carregando os alunos da turma…" />}
+      {alunos.isError && !listaLida && <EstadoErro erro={alunos.error} tentando={alunos.isFetching} aoTentarDeNovo={() => void alunos.refetch({ cancelRefetch: false })} />}
+      {vazio && (
+        <EstadoVazio
+          titulo="A lista ainda não chegou"
+          descricao="Os alunos aparecem aqui quando entram na turma e você aprova o nome deles. Se a coordenação ainda não montou a lista da turma, peça a ela."
+        />
+      )}
+
+      {listaLida && linhas.length > 0 && (
         <section aria-labelledby={idDosAlunos} className="flex min-w-0 flex-col gap-3">
-          <CabecalhoDeSecao id={idDosAlunos} titulo="Por aluno" apoio="Os acertos de cada aluno nas correções aprovadas, em ordem de nome." />
+          <CabecalhoDeSecao
+            id={idDosAlunos}
+            titulo="Por aluno"
+            apoio={`${formatarQuantidade(linhas.length, 'aluno', 'alunos')}${listaCompleta ? '' : ' até aqui'}, em ordem de nome. Os acertos são os das correções aprovadas.`}
+          />
+          {desempenho.isError && desempenho.data === undefined && (
+            <EstadoErro erro={desempenho.error} tentando={desempenho.isFetching} aoTentarDeNovo={() => void desempenho.refetch({ cancelRefetch: false })} />
+          )}
           <Tabela
             rotulo="Acertos por aluno"
             colunas={[
-              { chave: 'nome', titulo: 'Aluno', celula: (aluno) => aluno.nome },
-              // O aluno que ainda não tem correção aprovada vem zerado: a tela diz isso, em vez de "0 de 0".
-              { chave: 'acertos', titulo: 'Acertos', celula: (aluno) => (aluno.total === 0 ? 'Sem correção aprovada' : `${String(aluno.acertos)} de ${String(aluno.total)}`) },
-              {
-                chave: 'habilidades',
-                titulo: 'Por habilidade',
-                celula: (aluno) => aluno.porHabilidade.map((item) => `${item.habilidade.codigo}: ${String(item.acertos)} de ${String(item.total)}`).join(' · '),
-              },
+              { chave: 'nome', titulo: 'Aluno', celula: (linha) => linha.nome },
+              // O aluno que ainda não tem correção aprovada vem sem número: a tela diz isso, em vez de "0 de 0".
+              { chave: 'acertos', titulo: 'Acertos', celula: (linha) => textoDosAcertos(linha, leituraDosAcertos) },
+              { chave: 'habilidades', titulo: 'Por habilidade', celula: (linha) => textoPorHabilidade(linha) },
             ]}
-            linhas={dados.alunos}
-            chaveDaLinha={(aluno) => aluno.alunoId}
+            linhas={linhas}
+            chaveDaLinha={(linha) => linha.usuarioId}
           />
+          {quemSaiu > 0 && <p className="t-apoio text-sutil">Quem saiu da turma (transferido, ou com o acesso desativado) aparece sem acertos.</p>}
+          {alunos.hasNextPage ? (
+            <Botao ref={botaoDeVerMais} variante="secundario" onClick={() => void verMais()} disabled={alunos.isFetchingNextPage} className="self-start">
+              {alunos.isFetchingNextPage ? 'Carregando…' : 'Ver mais'}
+            </Botao>
+          ) : (
+            <p ref={fimDaLista} tabIndex={-1} className="t-apoio text-sutil">
+              Todos os alunos da turma estão na lista.
+            </p>
+          )}
+          {alunos.isFetchNextPageError && <EstadoErro erro={alunos.error} tentando={alunos.isFetchingNextPage} aoTentarDeNovo={() => void verMais()} />}
         </section>
       )}
     </div>

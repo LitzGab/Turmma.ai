@@ -72,10 +72,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [ ] 11.2 Encerrar pelo painel; "Aplicar uma atividade" leva a Criados com a turma
   - [ ] 11.3 Testes: o estado de cada linha; encerrar com a confirmação; os quatro estados
 
-- [ ] **12.0 — Turma › Alunos**
-  - [ ] 12.1 `api/alunos-da-turma.ts` e `AlunosDaTurma.tsx`: os alunos em ordem de nome, com os acertos
-  - [ ] 12.2 Os pedidos de nome no alto, com as regras de hoje
-  - [ ] 12.3 Testes: a ordem de nome; aluno sem correção aprovada; os estados; a lista não fica no cache
+- [x] **12.0 — Turma › Alunos**
+  - [x] 12.1 `api/alunos-da-turma.ts` e `AlunosDaTurma.tsx`: os alunos em ordem de nome, com os acertos
+  - [x] 12.2 Os pedidos de nome no alto, com as regras de hoje
+  - [x] 12.3 Testes: a ordem de nome; aluno sem correção aprovada; os estados; a lista não fica no cache
 
 - [ ] **13.0 — "Convidar alunos" num diálogo**
   - [ ] 13.1 `ConvidarAlunos.tsx`: o acesso da turma em passos de um diálogo só

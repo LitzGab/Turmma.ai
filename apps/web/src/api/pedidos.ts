@@ -9,6 +9,7 @@ import {
   type RespostaPedidosDaTurma,
 } from '@educa/shared'
 import { queryOptions, type QueryClient } from '@tanstack/react-query'
+import { CHAVE_DOS_ALUNOS_DA_TURMA } from './alunos-da-turma'
 import { buscarComSessao, chamarComSessao } from './sessao'
 
 /**
@@ -111,6 +112,16 @@ export async function aplicarDecisao(cliente: QueryClient, turmaId: string, quem
   cliente.setQueryData<RespostaPedidosDaTurma>(queryKey, (lista) => (lista === undefined ? undefined : { ...lista, itens: lista.itens.filter((pedido) => !fechados.has(pedido.id)) }))
   void cliente.invalidateQueries({ queryKey })
   invalidarAContagem(cliente, turmaId, quem)
+  invalidarOsAlunos(cliente, turmaId)
+}
+
+/**
+ * A lista de nomes da turma, depois de uma decisão (telas do professor, 12.0): aprovar um pedido põe o aluno na turma, e a lista
+ * da aba Alunos, aberta ao lado dos pedidos, deixou de valer. **Só a da turma**, pela chave (`['alunos-da-turma', turmaId]`): a
+ * decisão não alcança as listas de outras turmas. Sem observador ela só fica velha, e a leitura seguinte a refaz.
+ */
+function invalidarOsAlunos(cliente: QueryClient, turmaId: string): void {
+  void cliente.invalidateQueries({ queryKey: [...CHAVE_DOS_ALUNOS_DA_TURMA, turmaId] })
 }
 
 /**
@@ -138,6 +149,7 @@ function invalidarAContagem(cliente: QueryClient, turmaId: string, quem: Decisor
 export async function descartarListaDepoisDaFalha(cliente: QueryClient, turmaId: string, quem: DecisorDaReivindicacao): Promise<void> {
   const { queryKey } = consultaPedidosDaTurma(turmaId, quem)
   invalidarAContagem(cliente, turmaId, quem)
+  invalidarOsAlunos(cliente, turmaId)
   if (quem === 'professor') await cliente.invalidateQueries({ queryKey })
   else await cliente.resetQueries({ queryKey, exact: true })
 }

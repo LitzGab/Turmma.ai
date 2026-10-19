@@ -7,7 +7,7 @@ import { caixa as caixaDoPedido } from './__fixtures__/fluxo-do-professor.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { irPara } from './__fixtures__/professor/cena.ts'
 import { entrarNaCena, esperarSino, listaDoSino, peDoSino, portao, prepararCena, semAnimacao, sinoDe, TITULO_DA_CORRECAO, TITULO_DA_VERSAO } from './__fixtures__/professor/sino.ts'
-import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarCoordenadoraNaEscola, criarProfessoraNaEscola, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
+import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarCoordenadoraNaEscola, criarProfessoraNaEscola, criarUsuarioEmOutraEscola, matricularAlunosNaTurmaNoBanco } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -253,6 +253,13 @@ test.describe('do sino à tela', () => {
     const cena = await prepararCena(page)
     await entrarNaCena(page, cena, hasTouch)
     await esperarSino(page, 'Esperando você, 4')
+    // A primeira abre a aba Alunos da turma A (telas do professor, 12.0): a lista de nomes e os pedidos de nome. A segunda, na mesma
+    // aba, não encontra nenhum dos dois, nem na tela nem no cache.
+    const alunoDaPrimeira = `Aluno da primeira ${randomUUID().slice(0, 8)}`
+    await matricularAlunosNaTurmaNoBanco(cena.professora.escolaId, cena.turmaA.turmaId, [alunoDaPrimeira])
+    await irPara(page, `/professor/turmas/${cena.turmaA.turmaId}?aba=alunos`)
+    await expect(page.getByRole('region', { name: 'Por aluno' })).toContainText(alunoDaPrimeira, { timeout: PRAZO_DA_TELA_MS })
+    await expect(page.getByRole('region', { name: 'Pedidos de nome' })).toContainText('Ana Sintética do sino', { timeout: PRAZO_DA_TELA_MS })
     // A primeira deixa também uma conversa lida e um cartão aberto na conversa (telas do professor, 4.0): a segunda, na mesma
     // aba, não encontra nenhum dos dois. Volta ao Início sem recarregar, porque recarregar esvaziaria a memória da aba.
     cena.api.conversa = [mensagemDela('pedido da primeira professora', cena.turmaA.turmaId, randomUUID())]
@@ -293,8 +300,17 @@ test.describe('do sino à tela', () => {
     await expect(page.locator('body')).not.toContainText(cena.turmaA.turmaNome)
     await expect(page.locator('body')).not.toContainText(cena.professora.nome)
     await expect(page.locator('body')).not.toContainText('rascunho da primeira professora')
-    const cache = semAcessosDaConta(await cacheDeConsultas(page))
-    for (const daPrimeira of [cena.professora.usuarioId, cena.turmaA.turmaId, cena.turmaA.turmaNome, cena.turmaB.turmaNome, 'pedido da primeira professora', ...cena.turmaA.vinculoIds, ...cena.turmaB.vinculoIds]) expect(cache).not.toContain(daPrimeira)
+    await expect(page.locator('body')).not.toContainText(alunoDaPrimeira)
+    const consultas = await cacheDeConsultas(page)
+    const cache = semAcessosDaConta(consultas)
+    // A turma que a primeira abriu deixa, na troca de sessão, a chave de duas consultas da navegação (`estrutura/turma/<id>` e
+    // `acesso-da-turma/<id>`), esvaziadas e sem dado: o id opaco da turma, e mais nada. Só essas duas chaves, e só sem dado, ficam fora da
+    // conta; em qualquer outra consulta, ou com dado, o id da turma da primeira é herança.
+    const daNavegacao = (chave: unknown): boolean => Array.isArray(chave) && ((chave[0] === 'estrutura' && chave[1] === 'turma') || chave[0] === 'acesso-da-turma')
+    const comOIdDaTurma = semAcessosDaConta(consultas.filter((consulta) => !(daNavegacao(consulta.chave) && consulta.dado === undefined)))
+    expect(comOIdDaTurma).not.toContain(cena.turmaA.turmaId)
+    for (const daPrimeira of [cena.professora.usuarioId, cena.turmaA.turmaNome, cena.turmaB.turmaNome, 'pedido da primeira professora', alunoDaPrimeira, 'Ana Sintética do sino', ...cena.turmaA.vinculoIds, ...cena.turmaB.vinculoIds])
+      expect(cache).not.toContain(daPrimeira)
     // A conversa que a primeira leu e o cartão que deixou aberto não estão na conversa da segunda.
     await irPara(page, '/professor/conversa')
     await expect(page.getByText('Nenhuma conversa ainda')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
