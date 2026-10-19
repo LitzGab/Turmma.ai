@@ -19,6 +19,7 @@ import { Tabela } from '../../componentes/Tabela'
 import { CabecalhoDeSecao } from '../../componentes/Tela'
 import { formatarDiaEHora } from '../../formatar'
 import { textoDeAlunos } from './aprovar'
+import { turmaIndisponivel } from './acesso-da-turma'
 import { enderecoComOPainelDoTutor, painelDoTutorPedido } from './endereco-da-turma'
 import {
   emQueEstava,
@@ -55,10 +56,11 @@ type SinalDeTrabalho = Exclude<Sinal, { tipo: 'atencao_humana' }>
  * - **Os sinais são relidos aos 15 s, só com esta aba à vista.** A aba que sai da tela desmonta esta leitura, e a janela
  *   escondida a pausa (`refetchIntervalInBackground: false`). O aviso que chega entra sem piscar, sem som e sem mover o foco,
  *   em `aria-live="polite"` (D59).
+ * - **O 404 da releitura** (o vínculo encerrado com a aba aberta) tira a página da turma, como a aba Alunos faz.
  * - **O acerto por habilidade** é só de lotes aprovados. As barras são neutras: nenhuma fica vermelha, e o número está no
  *   texto (D46, D69).
  */
-export default function TurmaHoje({ turmaId }: { turmaId: string }) {
+export default function TurmaHoje({ turmaId, aoPerderATurma }: { turmaId: string; aoPerderATurma: () => void }) {
   const [caminho, navegar] = useLocation()
   const busca = useSearch()
   const painelAberto = painelDoTutorPedido(busca)
@@ -78,6 +80,13 @@ export default function TurmaHoje({ turmaId }: { turmaId: string }) {
   const titulosDasAtividades = Object.fromEntries((atividades.data?.itens ?? []).map((atividade) => [atividade.id, atividade.titulo]))
   const tutor = agenteDoTime(time.data, 'tutor')
   const dados = desempenho.data
+  // A releitura dos sinais deixou de achar a turma (o vínculo encerrado com a tela aberta): vale como a releitura da turma que deixa de
+  // achá-la, e a página sai inteira, com os nomes que o painel "Ver quem" tinha aberto (regra 20, item 18). Só o 404 vale: rede e servidor
+  // com o dado na tela não desmontam nada.
+  const semATurma = turmaIndisponivel(sinais.error)
+  useEffect(() => {
+    if (semATurma) aoPerderATurma()
+  }, [semATurma, aoPerderATurma])
   // As duas leituras da aba caíram juntas: um erro só, e "Tentar de novo" lê as duas (um botão principal por tela).
   const caiuTudo = sinais.isError && sinais.data === undefined && desempenho.isError && dados === undefined
 

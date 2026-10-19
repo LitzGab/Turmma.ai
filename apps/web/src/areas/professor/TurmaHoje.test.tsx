@@ -9,6 +9,7 @@ import { memoryLocation } from 'wouter/memory-location'
 import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
 import { formatarDiaEHora } from '../../formatar'
 import { CHAVE_DO_USO_DO_TUTOR } from '../../api/chaves-do-professor'
+import { consultaSinais } from '../../api/tutor-da-turma'
 import { prepararTela, redeFalsa, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
 import TurmaHoje from './TurmaHoje'
 
@@ -94,13 +95,13 @@ const semConsulta = (caminho: string) => caminho.split('?')[0] ?? caminho
 const caminhosDe = (rede: RedeFalsa) => rede.chamadas.map((chamada) => semConsulta(chamada.caminho))
 const vezesQue = (rede: RedeFalsa, caminho: string) => caminhosDe(rede).filter((chamado) => chamado === caminho).length
 
-function montar(busca = 'aba=hoje') {
+function montar(busca = 'aba=hoje', aoPerderATurma: () => void = () => undefined) {
   const cliente: QueryClient = criarClienteDeConsultas()
   const localizacao = memoryLocation({ path: `/turmas/${TURMA}`, searchPath: busca, record: true })
   const tela = render(
     <QueryClientProvider client={cliente}>
       <Router hook={localizacao.hook} searchHook={localizacao.searchHook}>
-        <TurmaHoje turmaId={TURMA} />
+        <TurmaHoje turmaId={TURMA} aoPerderATurma={aoPerderATurma} />
       </Router>
     </QueryClientProvider>,
   )
@@ -371,6 +372,71 @@ describe('Hoje lê os sinais aos 15 s, só com a aba à vista', () => {
       await vi.advanceTimersByTimeAsync(16_000)
     })
     await waitFor(() => expect(vezesQue(rede, '/v1/sinais')).toBeGreaterThan(antes))
+  })
+})
+
+describe('Hoje e a turma que sai do alcance com a aba aberta (PRD §7, "Vínculo encerrado com a turma aberta")', () => {
+  async function passarOsQuinzeSegundos(): Promise<void> {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_500)
+    })
+  }
+  // A leitura dos sinais já chegou ao estado da consulta (a chamada ao `fetch` conta antes da resposta): só depois disso as
+  // asserções "não avisou" valem, e não passam só porque a falha ainda estava a caminho.
+  const falhaDosSinaisChegou = (cliente: QueryClient) => waitFor(() => expect(cliente.getQueryState(consultaSinais(TURMA).queryKey)?.status).toBe('error'))
+
+  it('o 404 da releitura dos 15 s avisa a página que a turma saiu do alcance, uma vez só, também nas releituras seguintes', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let leituras = 0
+    const rede = redeFalsa()
+    instalar(rede, { sinais: () => ((leituras += 1) === 1 ? sinais([atencao(CAIO, 1)]) : erro(404, 'NAO_ENCONTRADO')) })
+    const aoPerderATurma = vi.fn()
+    montar('aba=hoje', aoPerderATurma)
+    await waitFor(() => expect(aviso()).not.toBeNull())
+    expect(aoPerderATurma).not.toHaveBeenCalled()
+
+    await passarOsQuinzeSegundos()
+    await waitFor(() => expect(vezesQue(rede, '/v1/sinais')).toBe(2))
+    await waitFor(() => expect(aoPerderATurma).toHaveBeenCalledTimes(1))
+
+    // Uma terceira releitura, também 404: a página já saiu, e o aviso não se repete.
+    await passarOsQuinzeSegundos()
+    await waitFor(() => expect(vezesQue(rede, '/v1/sinais')).toBe(3))
+    expect(aoPerderATurma).toHaveBeenCalledTimes(1)
+  })
+
+  it('a primeira leitura dos sinais já com 404 (a página abre sem o vínculo) também avisa a página', async () => {
+    const rede = redeFalsa()
+    instalar(rede, { sinais: erro(404, 'NAO_ENCONTRADO') })
+    const aoPerderATurma = vi.fn()
+    montar('aba=hoje', aoPerderATurma)
+    await waitFor(() => expect(aoPerderATurma).toHaveBeenCalledTimes(1))
+  })
+
+  it('o controle: a releitura que cai por limite ou servidor, com o dado na tela, não avisa nada e o aviso fica', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let leituras = 0
+    const rede = redeFalsa()
+    instalar(rede, { sinais: () => ((leituras += 1) === 1 ? sinais([atencao(CAIO, 1)]) : FALHA) })
+    const aoPerderATurma = vi.fn()
+    const { cliente } = montar('aba=hoje', aoPerderATurma)
+    await waitFor(() => expect(aviso()).not.toBeNull())
+
+    await passarOsQuinzeSegundos()
+    await waitFor(() => expect(vezesQue(rede, '/v1/sinais')).toBe(2))
+    await falhaDosSinaisChegou(cliente)
+    expect(aoPerderATurma).not.toHaveBeenCalled()
+    expect(aviso()).not.toBeNull()
+  })
+
+  it('o controle: a primeira leitura que cai por limite, sem dado, mostra o erro e não avisa a página', async () => {
+    const rede = redeFalsa()
+    instalar(rede, { sinais: FALHA })
+    const aoPerderATurma = vi.fn()
+    const { cliente } = montar('aba=hoje', aoPerderATurma)
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    await falhaDosSinaisChegou(cliente)
+    expect(aoPerderATurma).not.toHaveBeenCalled()
   })
 })
 
