@@ -32,7 +32,10 @@ const CANAL_DE_ATIVIDADE = 'educa-atividade'
 
 const campoEmail = (page: Page) => page.getByLabel('E-mail')
 const campoSenha = (page: Page) => page.getByLabel('Senha')
-const dialogo = (page: Page) => page.getByRole('dialog')
+/** O login por cima. Só ele: a contestação de Turmas também é um `dialog`, aberto por baixo dele. */
+const dialogo = (page: Page) => page.getByRole('dialog', { name: 'Sua sessão expirou' })
+/** A contestação de Turmas, no painel ao lado: é onde a professora escreve (9.0). */
+const painelDaContestacao = (page: Page) => page.getByRole('dialog', { name: 'Contestar a turma' })
 
 /** Toque no celular, clique no Chromebook: a mesma ação pela entrada que cada aparelho tem. */
 async function acionar(page: Page, nome: string | RegExp, hasTouch: boolean, papel: 'button' | 'link' = 'button'): Promise<void> {
@@ -45,6 +48,17 @@ async function entrarPorEmail(page: Page, equipe: EquipeDeTeste, hasTouch: boole
   await campoEmail(page).fill(equipe.email)
   await campoSenha(page).fill(equipe.senha)
   await acionar(page, /^Entrar$/, hasTouch)
+}
+
+/**
+ * A professora entra pela API (o cookie fica na aba) e abre o endereço: uma carga só, sem passar pela tela de entrada nem por
+ * "Início". Cada carga custa uns 7 s no Chromebook de teste, e o portão reprova caso alterado que passa de 15 s; a entrada pela
+ * tela é provada em outros casos, e aqui ela é só o meio.
+ */
+async function abrirJaEntrando(page: Page, professora: EquipeDeTeste, endereco: string): Promise<void> {
+  const resposta = await page.request.post('/v1/sessao/email', { data: { email: professora.email, senha: professora.senha } })
+  expect(resposta.ok(), 'a entrada pela API').toBe(true)
+  await page.goto(endereco)
 }
 
 /** A professora na tela em que ela abre, "Nova conversa" (A2; D73): a sessão dela vale. */
@@ -69,23 +83,20 @@ test.describe('inatividade e login por cima da tela', () => {
     // O relógio da aba é simulado: ninguém espera meia hora no e2e, e o servidor continua no tempo real.
     await page.clock.install()
 
-    await page.goto('/entrar')
-    await entrarPorEmail(page, professora, hasTouch)
-    await esperarAreaAutenticada(page, professora.nome)
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    await abrirJaEntrando(page, professora, '/professor/turmas')
 
     const historia = page.getByRole('listitem').filter({ hasText: 'História' })
     await expect(historia).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     if (hasTouch) await historia.getByRole('button', { name: 'Contestar' }).tap()
     else await historia.getByRole('button', { name: 'Contestar' }).click()
-    await historia.getByRole('radio', { name: NOME_DA_CONTESTACAO.turma_errada }).check()
+    await painelDaContestacao(page).getByRole('radio', { name: NOME_DA_CONTESTACAO.turma_errada }).check()
     const escrito = 'A turma que eu pego é a da tarde, e não esta.'
-    await historia.getByRole('textbox').fill(escrito)
+    await painelDaContestacao(page).getByRole('textbox').fill(escrito)
 
     // Um minuto antes do limite que a escola configurou, a sessão ainda vale: ninguém é interrompido antes da hora.
     await page.clock.fastForward(minutos(INATIVIDADE_CONFIGURADA_MIN - 1))
     await expect(dialogo(page)).toBeHidden()
-    await expect(historia.getByRole('textbox')).toHaveValue(escrito)
+    await expect(painelDaContestacao(page).getByRole('textbox')).toHaveValue(escrito)
 
     // Passado o limite, com a folga do relógio, a sessão vence sozinha. Com um número fixo no lugar do valor da
     // escola, este é o passo que não aconteceria.
@@ -113,7 +124,7 @@ test.describe('inatividade e login por cima da tela', () => {
     await page.keyboard.press('Tab')
     expect(await dialogo(page).evaluate((elemento) => elemento.contains(document.activeElement))).toBe(true)
     expect(await larguraExcedente(page)).toBe(0)
-    expect(await violacoesGraves(page)).toEqual([])
+    // A acessibilidade do login por cima é provada no caso do aluno (mesmo diálogo): o axe custa mais de 1 s no Chromebook de teste.
 
     // A mesma pessoa volta: a tela continua onde estava, com o rascunho inteiro (regra 80, item 6).
     await campoEmail(page).fill(professora.email)
@@ -122,8 +133,8 @@ test.describe('inatividade e login por cima da tela', () => {
 
     await expect(dialogo(page)).toBeHidden({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveURL(/\/professor\/turmas$/)
-    await expect(historia.getByRole('textbox')).toHaveValue(escrito, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(historia.getByRole('radio', { name: NOME_DA_CONTESTACAO.turma_errada })).toBeChecked()
+    await expect(painelDaContestacao(page).getByRole('textbox')).toHaveValue(escrito, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(painelDaContestacao(page).getByRole('radio', { name: NOME_DA_CONTESTACAO.turma_errada })).toBeChecked()
   })
 
   test('aba esquecida não renova nada: só ponteiro e teclado avisam atividade, e no máximo uma vez a cada 5 minutos', async ({ page, hasTouch }) => {
@@ -175,7 +186,7 @@ test.describe('inatividade e login por cima da tela', () => {
     if (hasTouch) await historia.getByRole('button', { name: 'Contestar' }).tap()
     else await historia.getByRole('button', { name: 'Contestar' }).click()
     const escrito = 'rascunho de quem estava aqui antes'
-    await historia.getByRole('textbox').fill(escrito)
+    await painelDaContestacao(page).getByRole('textbox').fill(escrito)
 
     await page.clock.fastForward(minutos(INATIVIDADE_CONFIGURADA_MIN + 1))
     await expect(dialogo(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -314,17 +325,14 @@ test.describe('inatividade e login por cima da tela', () => {
     await definirInatividadeDaEscola(primeira.escolaId, { equipe: INATIVIDADE_CONFIGURADA_MIN })
     await page.clock.install()
 
-    await page.goto('/entrar')
-    await entrarPorEmail(page, primeira, hasTouch)
-    await esperarAreaAutenticada(page, primeira.nome)
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    await abrirJaEntrando(page, primeira, '/professor/turmas')
 
     const historia = page.getByRole('listitem').filter({ hasText: 'História' })
     await expect(historia).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     if (hasTouch) await historia.getByRole('button', { name: 'Contestar' }).tap()
     else await historia.getByRole('button', { name: 'Contestar' }).click()
     const escrito = 'rascunho da professora anterior'
-    await historia.getByRole('textbox').fill(escrito)
+    await painelDaContestacao(page).getByRole('textbox').fill(escrito)
 
     await page.clock.fastForward(minutos(INATIVIDADE_CONFIGURADA_MIN + 1))
     await expect(dialogo(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -334,9 +342,10 @@ test.describe('inatividade e login por cima da tela', () => {
     await campoSenha(page).fill(segunda.senha)
     await acionar(page, /^Entrar$/, hasTouch)
 
-    await esperarAreaAutenticada(page, segunda.nome)
-    // Ela não fica na tela da anterior (Turmas, com a contestação aberta): é levada para onde o professor abre.
-    expect(new URL(page.url()).pathname).toBe('/professor/nova-conversa')
+    // Ela não fica na tela da anterior (Turmas, com a contestação aberta): é levada para onde o professor abre. Quem entrou é a
+    // segunda (o nome dela na casca), sem esperar a conversa montar: o que se prova aqui é a troca de pessoa, e a "Nova conversa" tem caso próprio.
+    await expect(page).toHaveURL(/\/professor\/nova-conversa$/, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.locator('body')).toContainText(segunda.nome, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText(escrito)
     await expect(page.locator('body')).not.toContainText(primeira.nome)
     await expect(page.locator('body')).not.toContainText(primeira.escolaNome)

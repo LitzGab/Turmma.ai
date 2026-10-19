@@ -27,6 +27,10 @@ export interface ItemDaFilaDoProfessor extends ItemDoSino {
   readonly tipo: TipoDeItemDoProfessor
   /** A turma, que é o grupo do item no sino. */
   readonly grupo: string
+  /** O id da turma do item: é por ele que o cartão de Turmas soma o que espera naquela turma, sem refazer a conta (9.0). */
+  readonly turmaId: string
+  /** Só nos pedidos de nome: a página veio cheia e há outra, e o número é "ou mais". */
+  readonly haMais?: boolean
 }
 
 /** A turma que o item não sabe nomear (a entrega de uma turma que a lista de vínculos lida não traz) vai para este grupo, por último. */
@@ -58,7 +62,12 @@ export interface FilaDoProfessor {
   readonly naoLeu: readonly string[]
   /** A escola não tem ano letivo em curso: a professora não lê os anos (só a coordenação), e a API responde como inexistente. */
   readonly semAnoLetivo: boolean
+  /** O quanto o sino já leu de cada turma confirmada, pelo id (9.0): é o que impede o cartão de dizer "Em dia" sem ter lido. */
+  readonly leituraPorTurma: ReadonlyMap<string, LeituraDaTurma>
 }
+
+/** `lida`: entregas e pedidos da turma foram lidos inteiros. `lendo`: ainda falta resposta. `nao-lida`: falhou, foi recusada, veio truncada ou passou das 12. */
+export type LeituraDaTurma = 'lida' | 'lendo' | 'nao-lida'
 
 function lida<Dado>(leitura: LeituraDaFila<Dado>): Dado | undefined {
   return leitura.estado === 'lida' ? leitura.dado : undefined
@@ -92,13 +101,14 @@ function itensDeEntrega(entregas: readonly Entrega[], nomes: Readonly<Record<str
           id: `entrega-${entrega.id}`,
           tipo: 'correcao',
           grupo,
+          turmaId: entrega.turmaId,
           titulo: 'Correção para revisar',
           detalhe: entrega.titulo,
           urgente: false,
           // O lote sem atividade aplicada (o contrato admite `null`) não tem tela de correção: a decisão fica no Assistente.
           para: entrega.atividadeAplicadaId === null ? ROTAS_DO_PROFESSOR.timeDoAssistente : caminhoDaCorrecaoDoProfessor(entrega.atividadeAplicadaId),
         }
-      return { id: `entrega-${entrega.id}`, tipo: 'versao-adaptada', grupo, titulo: 'Versão adaptada para decidir', detalhe: entrega.titulo, urgente: false, para: ROTAS_DO_PROFESSOR.timeDoAssistente }
+      return { id: `entrega-${entrega.id}`, tipo: 'versao-adaptada', grupo, turmaId: entrega.turmaId, titulo: 'Versão adaptada para decidir', detalhe: entrega.titulo, urgente: false, para: ROTAS_DO_PROFESSOR.timeDoAssistente }
     })
 }
 
@@ -117,6 +127,7 @@ function itensDeConfirmacao(vinculos: readonly Vinculo[]): ItemDaFilaDoProfessor
       id: `vinculo-${vinculo.id}`,
       tipo: 'confirme-sua-turma',
       grupo: vinculo.turma.nome,
+      turmaId: vinculo.turma.id,
       titulo: 'Confirme sua turma',
       detalhe: vinculo.disciplina?.nome ?? 'A coordenação alocou você nesta turma',
       urgente: false,
@@ -150,6 +161,8 @@ export function filaDoProfessor({ entregas, vinculos, contagens }: EntradaDaFila
       id: `pedidos-${turma.turmaId}`,
       tipo: 'pedidos-de-nome',
       grupo: turma.nome,
+      turmaId: turma.turmaId,
+      haMais: leitura.dado.haMais,
       titulo: 'Pedidos de nome para decidir',
       detalhe: frases.detalhe,
       urgente: false,
@@ -162,10 +175,11 @@ export function filaDoProfessor({ entregas, vinculos, contagens }: EntradaDaFila
   const grupoDoItem = (item: ItemDaFilaDoProfessor) => (item.grupo === GRUPO_DA_TURMA_SEM_NOME ? '￿' : item.grupo)
   itens.sort((a, b) => porNome(grupoDoItem(a), grupoDoItem(b)) || TIPOS_DA_FILA_DO_PROFESSOR.indexOf(a.tipo) - TIPOS_DA_FILA_DO_PROFESSOR.indexOf(b.tipo))
 
+  const leituraPorTurma = leituraDeCadaTurma(entregas, turmas, contagens)
   const lendo = entregas.estado === 'carregando' || vinculos.estado === 'carregando' || leituras.some(({ leitura }) => leitura.estado === 'carregando')
-  if (lendo) return { itens, situacao: 'carregando', naoLeu: [], semAnoLetivo: false }
-  if (semAnoLetivo) return { itens, situacao: 'parcial', naoLeu: [], semAnoLetivo: true }
-  if (entregas.estado === 'erro' && vinculos.estado === 'erro') return { itens, situacao: 'erro', erro: entregas.erro, naoLeu: [], semAnoLetivo: false }
+  if (lendo) return { itens, situacao: 'carregando', naoLeu: [], semAnoLetivo: false, leituraPorTurma }
+  if (semAnoLetivo) return { itens, situacao: 'parcial', naoLeu: [], semAnoLetivo: true, leituraPorTurma }
+  if (entregas.estado === 'erro' && vinculos.estado === 'erro') return { itens, situacao: 'erro', erro: entregas.erro, naoLeu: [], semAnoLetivo: false, leituraPorTurma }
 
   const naoLeu: string[] = []
   if (entregas.estado === 'erro') naoLeu.push('as correções e as versões adaptadas')
@@ -174,7 +188,48 @@ export function filaDoProfessor({ entregas, vinculos, contagens }: EntradaDaFila
   else if (vinculos.estado === 'lida' && !vinculos.completa) naoLeu.push('parte das suas turmas')
   const semLeitura = leituras.filter(({ leitura }) => leitura.estado !== 'lida').length + alemDoTeto.length
   if (semLeitura > 0) naoLeu.push(semLeitura === 1 ? 'os pedidos de nome de 1 turma' : `os pedidos de nome de ${String(semLeitura)} turmas`)
-  return { itens, situacao: naoLeu.length > 0 ? 'parcial' : 'pronta', naoLeu, semAnoLetivo: false }
+  return { itens, situacao: naoLeu.length > 0 ? 'parcial' : 'pronta', naoLeu, semAnoLetivo: false, leituraPorTurma }
+}
+
+/**
+ * O quanto se leu de cada turma confirmada. Turma só é `lida` com as entregas lidas **inteiras** e a contagem de pedidos dela
+ * respondida: a que não tem leitura no mapa (além das 12, ou parada pela recusa por limite) é `nao-lida`, e é por isso que o cartão
+ * dela nunca diz "Em dia".
+ */
+function leituraDeCadaTurma(
+  entregas: LeituraDaFila<readonly Entrega[]>,
+  turmas: readonly { readonly turmaId: string }[],
+  contagens: ReadonlyMap<string, LeituraDaContagem>,
+): ReadonlyMap<string, LeituraDaTurma> {
+  const dasEntregas: LeituraDaTurma = entregas.estado === 'carregando' ? 'lendo' : entregas.estado === 'lida' && entregas.completa ? 'lida' : 'nao-lida'
+  return new Map(
+    turmas.map(({ turmaId }) => {
+      const dosPedidos = contagens.get(turmaId)?.estado
+      const leitura: LeituraDaTurma = dasEntregas === 'nao-lida' || dosPedidos === undefined || dosPedidos === 'erro' || dosPedidos === 'nao-lida' ? 'nao-lida' : dasEntregas === 'lendo' || dosPedidos === 'carregando' ? 'lendo' : 'lida'
+      return [turmaId, leitura]
+    }),
+  )
+}
+
+/** O que espera a professora numa turma, para o selo do cartão de Turmas (9.0). */
+export interface EsperaNaTurma {
+  /** Entregas pendentes e pedidos de nome da turma. O vínculo a confirmar não conta: ele é a faixa, não o cartão. */
+  readonly n: number
+  /** O número é um piso: a página de pedidos veio cheia, ou a turma não foi lida inteira. */
+  readonly ouMais: boolean
+  readonly leitura: LeituraDaTurma
+}
+
+/**
+ * A soma que o cartão da turma mostra, tirada **dos itens que o sino já tem**: nenhuma leitura a mais (Tech Spec, seção 9, "Cartão da
+ * turma"). Dois cartões da mesma turma (duas disciplinas) leem a mesma soma, porque a fila conta a turma uma vez só. A turma que não
+ * está no mapa de leitura (não confirmada) é `nao-lida`.
+ */
+export function esperaNaTurma(fila: Pick<FilaDoProfessor, 'itens' | 'leituraPorTurma'>, turmaId: string): EsperaNaTurma {
+  const dela = fila.itens.filter((item) => item.turmaId === turmaId && item.tipo !== 'confirme-sua-turma')
+  const n = dela.reduce((soma, item) => soma + (item.tipo === 'pedidos-de-nome' ? (item.contador?.n ?? 0) : 1), 0)
+  const leitura = fila.leituraPorTurma.get(turmaId) ?? 'nao-lida'
+  return { n, ouMais: leitura !== 'lida' || dela.some((item) => item.haMais === true), leitura }
 }
 
 /** Um cartão de "Esperando você", na Home: a função que fez, o que foi feito e de que turma. */

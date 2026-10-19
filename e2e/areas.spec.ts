@@ -22,7 +22,7 @@ import {
 } from './__fixtures__/casca.ts'
 import { cliquesAte, irPelaCoordenacao, paginaNaoRola, type TelaDaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { colocarAlunoNaTurma, criarAlocacaoDoProfessor, criarAlunoComMatricula, criarEquipeComSenha, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
+import { colocarAlunoNaTurma, criarAlocacaoDoProfessor, criarAlunoComMatricula, criarEquipeComSenha, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
@@ -79,10 +79,11 @@ const ENDERECOS_DA_COORDENACAO = [
  * A professora entra pela API (`POST /v1/sessao/email`, o cookie fica na própria aba), sem passar pela tela de entrada nem
  * por "Início": quem chama abre o endereço que quer, e a página carrega uma vez só. A entrada pela tela é provada em outros casos.
  */
-async function entrarPelaApi(page: Page): Promise<void> {
-  const professora = await criarEquipeComSenha()
-  const resposta = await page.request.post('/v1/sessao/email', { data: { email: professora.email, senha: professora.senha } })
+async function entrarPelaApi(page: Page, professora?: EquipeDeTeste): Promise<EquipeDeTeste> {
+  const entrando = professora ?? (await criarEquipeComSenha())
+  const resposta = await page.request.post('/v1/sessao/email', { data: { email: entrando.email, senha: entrando.senha } })
   expect(resposta.ok(), 'a entrada pela API').toBe(true)
+  return entrando
 }
 
 /** Os pedidos de JS que a página fez, pelo caminho: é por eles que o teste sabe qual área foi baixada. */
@@ -447,39 +448,41 @@ test.describe('W5: a fronteira do import() de cada área', () => {
 })
 
 test.describe('W4: os estados de "Turmas"', () => {
-  test('vazio e erro com a rota interceptada, só pendente e com as confirmadas', async ({ page, hasTouch }) => {
-    let resposta: 'vazia' | 'falha' | 'real' = 'vazia'
-    await page.route(ROTA_MEUS_VINCULOS, async (rota: Route) => {
-      if (resposta === 'vazia') return rota.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [] }) })
-      if (resposta === 'falha')
-        return rota.fulfill({
-          status: 503,
-          contentType: 'application/json',
-          body: JSON.stringify({ erro: { codigo: 'INDISPONIVEL_TENTE_DE_NOVO', mensagem: 'texto que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } }),
-        })
-      return rota.continue()
-    })
-    const professora = await entrarComoProfessora(page, hasTouch)
+  test('vazio com a rota interceptada: diz que quem aloca é a coordenação, com o próximo passo', async ({ page }) => {
+    // A professora entra pela API e abre o endereço: cada carga custa uns 7 s no Chromebook de teste, e dois estados no mesmo caso passam de 15 s.
+    await page.route(ROTA_MEUS_VINCULOS, (rota: Route) => rota.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [] }) }))
+    await entrarPelaApi(page)
+    await page.goto('/professor/turmas')
 
-    // Vazio: quem aloca é a coordenação, e o vazio diz isso e o próximo passo.
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByText('A coordenação ainda não alocou você')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('main')).toContainText('fale com ela')
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
+  })
 
-    // Erro: a mensagem do catálogo, com "Tentar de novo", e nenhum código na tela.
-    resposta = 'falha'
-    await page.reload()
+  test('erro com a rota interceptada: a mensagem do catálogo, com "Tentar de novo", e nenhum código na tela', async ({ page }) => {
+    await page.route(ROTA_MEUS_VINCULOS, (rota: Route) =>
+      rota.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ erro: { codigo: 'INDISPONIVEL_TENTE_DE_NOVO', mensagem: 'texto que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } }),
+      }),
+    )
+    await entrarPelaApi(page)
+    await page.goto('/professor/turmas')
+
     await expect(page.getByRole('alert')).toContainText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('button', { name: 'Tentar de novo' })).toBeVisible()
     for (const proibido of [codigoCru('503'), 'INDISPONIVEL_TENTE_DE_NOVO']) await expect(page.locator('body')).not.toContainText(proibido)
+  })
+
+  test('só pendente e com as confirmadas: a confirmada passa para "Suas turmas", a contestada vira cartão sem link, e a faixa some', async ({ page, hasTouch }) => {
+    const professora = await criarEquipeComSenha()
+    const alocacao = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId, ['Matemática', 'História'])
+    await entrarPelaApi(page, professora)
+    await page.goto('/professor/turmas')
 
     // Só pendente: "Confirme suas turmas", com as duas disciplinas, e nenhuma "Suas turmas" ainda.
-    const alocacao = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId, ['Matemática', 'História'])
-    resposta = 'real'
-    if (hasTouch) await page.getByRole('button', { name: 'Tentar de novo' }).tap()
-    else await page.getByRole('button', { name: 'Tentar de novo' }).click()
     const paraConfirmar = page.getByRole('region', { name: 'Confirme suas turmas', exact: true })
     const decididas = page.getByRole('region', { name: 'Suas turmas', exact: true })
     await expect(paraConfirmar.getByRole('listitem')).toHaveCount(2, { timeout: PRAZO_DA_ENTRADA_MS })
@@ -500,15 +503,18 @@ test.describe('W4: os estados de "Turmas"', () => {
     // A confirmada não oferece decidir de novo.
     await expect(decididas.getByRole('button')).toHaveCount(0)
 
-    // A contestada continua esperando a decisão, no grupo de cima: ela ainda não dá acesso à turma.
+    // A contestada espera a coordenação, e não mais a professora: sai da faixa e vira cartão, que não abre a turma.
     const historia = paraConfirmar.getByRole('listitem').filter({ hasText: 'História' })
     if (hasTouch) await historia.getByRole('button', { name: 'Contestar' }).tap()
     else await historia.getByRole('button', { name: 'Contestar' }).click()
-    await historia.getByRole('radio', { name: NOME_DA_CONTESTACAO.nao_leciono }).check()
-    if (hasTouch) await historia.getByRole('button', { name: 'Enviar a contestação' }).tap()
-    else await historia.getByRole('button', { name: 'Enviar a contestação' }).click()
-    await expect(paraConfirmar.getByRole('listitem').filter({ hasText: 'História' })).toContainText(NOME_DO_ESTADO_DE_VINCULO.contestado, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(decididas.getByRole('listitem')).toHaveCount(1)
+    const painel = page.getByRole('dialog', { name: 'Contestar a turma' })
+    await painel.getByRole('radio', { name: NOME_DA_CONTESTACAO.nao_leciono }).check()
+    if (hasTouch) await painel.getByRole('button', { name: 'Enviar a contestação' }).tap()
+    else await painel.getByRole('button', { name: 'Enviar a contestação' }).click()
+    await expect(decididas.getByRole('listitem')).toHaveCount(2, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(decididas.getByRole('listitem').filter({ hasText: 'História' })).toContainText(NOME_DO_ESTADO_DE_VINCULO.contestado)
+    await expect(decididas.getByRole('listitem').filter({ hasText: 'História' }).getByRole('link')).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Confirme suas turmas', exact: true })).toHaveCount(0)
   })
 })
 
