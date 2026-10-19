@@ -15,7 +15,7 @@ tela antes de qualquer tela mudar, para as tarefas correrem em linhas.
 
 | Módulo | Novo ou alterado | O quê |
 |---|---|---|
-| `apps/web/src/componentes/sino/` | alterado | a peça da X2 ganha `grupo` no item e três props opcionais (`textoDoVazio`, `avisoDaLeituraParcial`, `faltaPara`); `leitura-do-sino.ts` guarda as opções de leitura e o tipo da leitura que o sino da coordenação e o da professora dividem |
+| `apps/web/src/componentes/sino/` | alterado | a peça da X2 ganha `grupo` no item e quatro props opcionais (`textoDoVazio`, `avisoDaLeituraParcial`, `faltaPara` e `pe`, o pé da lista, registrado na divergência da 2.0); `leitura-do-sino.ts` guarda as opções de leitura e o tipo da leitura que o sino da coordenação e o da professora dividem |
 | `apps/web/src/areas/professor/` (sino) | novo | `fila-do-professor.ts` (a fila e o gancho que a lê) e `SinoDoProfessor.tsx`, carregado por `lazy()` acima do `Switch` da área |
 | `CascaDaEscola.tsx`, `itens-da-lateral.tsx`, `areas/navegacao.ts` | alterado | o sino; os quatro lugares; "Seu time" sai |
 | `apps/web/src/areas/professor/` | alterado e novo | todas as telas; `Criados`, `TurmaHoje`, `AtividadesDaTurma`, `AlunosDaTurma`, `ConvidarAlunos`, `Folha` |
@@ -67,8 +67,9 @@ não relê a contagem: a hora de "Atualizado às" diz a idade do dado.
 acima do `Switch`, e se desenha por `createPortal` na âncora que a casca deixa (`ancora-do-sino.ts`). **Não existe
 `sino-do-papel.ts`**: a casca não importa nada de nenhuma área, nem mapa, e o aluno e a coordenação nunca carregam o sino
 do professor. A peça é a da X2, sem mudar o que ela já tinha: ganhou `grupo` no item (o título do grupo, por turma; sem ele,
-"Da escola") e as props opcionais `textoDoVazio`, `avisoDaLeituraParcial` e `faltaPara` (sem ele, o vazio não leva ao "falta
-para a escola", que é da coordenação). As opções de leitura (`SEM_LEITURA_SOZINHA`, `LEITURA_DA_FILA`) e o tipo
+"Da escola") e as props opcionais `textoDoVazio`, `avisoDaLeituraParcial`, `faltaPara` (sem ele, o vazio não leva ao "falta
+para a escola", que é da coordenação) e `pe` (o pé da lista: um título e os links de acompanhamento, que não são item, não
+entram no número e aparecem em toda situação da leitura; sem ele, ou sem link, a lista não tem pé, e a coordenação não o usa). As opções de leitura (`SEM_LEITURA_SOZINHA`, `LEITURA_DA_FILA`) e o tipo
 `LeituraDaFila` saíram de `fila-da-coordenacao.ts` para `componentes/sino/leitura-do-sino.ts`, porque uma área não importa
 módulo de outra. **Sem ano letivo em curso** a professora não lê o ano (só a coordenação): `meus-vinculos` responde como
 inexistente (`NAO_ENCONTRADO`), e é por essa resposta que o sino sabe, não chama nenhuma turma e diz que não há ano em curso.
@@ -206,7 +207,7 @@ prazo próprio.
 
 - `✅ VERIFICADO na 1.0` — o nome e as props da peça do sino da X2: `componentes/sino/Sino.tsx`, com a lista por prop. Ela
   não tinha agrupamento por turma nem vazio próprio, e a 1.0 acrescentou três props opcionais e `grupo` no item, sem mudar
-  nenhuma que existia; a montagem é por área, e não por mapa (seção 5, "Montagem")
+  nenhuma que existia (a 2.0 acrescentou a quarta, `pe`, para o pé da seção 5, "Seu time"); a montagem é por área, e não por mapa (seção 5, "Montagem")
 - `⚠️ NÃO VERIFICADO` — as props das peças novas da X1, que não existem neste checkout. Saída: cada tarefa lê a
   peça antes de usar e registra a divergência
 - `⚠️ NÃO VERIFICADO` — a web nunca leu `GET /v1/turmas/:id/alunos` como professor, e a API devolve em ordem de
