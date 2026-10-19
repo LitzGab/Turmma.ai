@@ -6,7 +6,7 @@ import { PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { cacheDeConsultas } from './__fixtures__/consultas.ts'
 import { principal } from './__fixtures__/fluxo-do-professor.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { irPara, VOCABULARIO_DE_NOTA } from './__fixtures__/professor/cena.ts'
+import { irPara, soOPainelDaAbaRola, VOCABULARIO_DE_NOTA } from './__fixtures__/professor/cena.ts'
 import {
   confirmarVinculosNoBanco,
   criarAlocacaoDoProfessor,
@@ -202,6 +202,13 @@ test.describe('Alunos na turma aberta: a lista de nomes e os acertos', () => {
     await expect.poll(async () => JSON.stringify(await cacheDeConsultas(page)), { timeout: 5_000 }).not.toContain(`Aluno da primeira ${marca}`)
     await expect(principal(page)).not.toContainText(`Aluno da primeira ${marca}`)
     expect(await nomesNaTela(page)).toEqual([`Aluno da segunda ${marca}`])
+  })
+
+  test('1366 × 768: a página fica parada com um aluno na lista, e quem rola é o painel da aba', async ({ page }) => {
+    const { professora, turma, alunos } = await prepararCenario(page, [`Ana Sintética ${randomUUID().slice(0, 8)}`])
+    await abrirJaEntrando(page, professora, enderecoDaAba(turma))
+    await expect(linhaDe(page, alunos[0]?.nome ?? '')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await soOPainelDaAbaRola(page)
   })
 
   test('360 px: a lista vira linhas sem rolar de lado, cada uma com ao menos 56 px, e o nome comprido quebra', async ({ page }) => {

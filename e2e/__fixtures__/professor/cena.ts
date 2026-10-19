@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { expect, type Locator, type Page } from '@playwright/test'
 import { entregaDoLote, loteSintetico, simularAssistente, type ApiDoAssistente } from '../assistente.ts'
 import { entrarPorEmail, esperarNovaConversa, PRAZO_DA_ENTRADA_MS } from '../casca.ts'
+import { paginaNaoRola } from '../coordenacao.ts'
 import { acionar } from '../fluxo-do-professor.ts'
 import { sinoDe } from './sino.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarEquipeComSenha, type EquipeDeTeste } from '../sessao.ts'
@@ -104,4 +105,27 @@ export function comLote(api: ApiDoAssistente, turmaId: string): { atividadeId: s
     { id: aplicada.id, artefatoId: randomUUID(), turmaId, titulo: aplicada.titulo, avaliativa: true, estado: 'encerrada', questoes: 2, aplicadaEm: '2026-10-05T13:00:00.000Z', encerradaEm: '2026-10-05T13:50:00.000Z', participacao: { alunos: 30, iniciaram: 28, enviaram: 26 }, entrega: lote.entrega },
   ]
   return { atividadeId: aplicada.id, titulo: aplicada.titulo }
+}
+
+/**
+ * A turma aberta mantém a página parada e deixa só o painel da aba rolar (RF22; `mockup.md` 10.2: "a página não rola, rola a mesa"),
+ * medido a 1366 × 768 com a aba já lida: a página não passa da janela (`paginaNaoRola`), o painel tem mais do que mostra e chega ao pé da
+ * janela, e o título e as abas ficam onde estavam com o painel rolado até o fim. Abaixo de 768 px a página rola inteira, e só a largura se mede.
+ */
+export async function soOPainelDaAbaRola(page: Page): Promise<void> {
+  await paginaNaoRola(page)
+  if ((page.viewportSize()?.width ?? 0) < 768) return
+  const painel = page.getByRole('tabpanel')
+  expect(await painel.evaluate((elemento) => elemento.scrollHeight - elemento.clientHeight), 'o painel da aba rola por dentro').toBeGreaterThan(0)
+  // O painel vai até o pé da janela (menos os 2,5rem de margem e folga): `--topo-do-painel`, medido, é o que o faz ocupar o resto dela.
+  // Sem a medida vale o `24,5rem` de reserva, que é mais baixo que o cabeçalho da turma, e o painel termina uns 100 px acima do pé.
+  const caixa = await painel.boundingBox()
+  const altura = page.viewportSize()?.height ?? 0
+  expect((caixa?.y ?? 0) + (caixa?.height ?? 0), 'o painel da aba chega ao pé da janela').toBeGreaterThanOrEqual(altura - 48)
+  const abas = page.getByRole('tab', { selected: true })
+  const antes = await abas.boundingBox()
+  expect(antes, 'as abas têm caixa antes de o painel rolar').not.toBeNull()
+  await painel.evaluate((elemento) => elemento.scrollTo(0, elemento.scrollHeight))
+  expect((await abas.boundingBox())?.y, 'as abas não saem do lugar com o painel rolando').toBe(antes?.y)
+  await paginaNaoRola(page)
 }
