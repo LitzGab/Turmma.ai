@@ -2,7 +2,7 @@ import { AVISO_DO_SEGUNDO_FATOR_CONSUMIDO, mensagemDoSegundoFator } from '../pac
 import { QUANTIDADE_DE_CODIGOS_DE_RECUPERACAO } from '../packages/shared/src/sessao/mfa.ts'
 import { esperarPainel } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { campoCodigo, configurarSegundoFator, entrarComSenha } from './__fixtures__/segundo-fator.ts'
+import { campoCodigo, configurarSegundoFator, configurarSegundoFatorPelaApi, entrarComSenha, gastarCodigoDeRecuperacaoPelaApi } from './__fixtures__/segundo-fator.ts'
 import { codigoDoAutenticador, criarEquipeComSenha } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -82,12 +82,12 @@ test.describe('segundo fator da coordenação, sem celular', () => {
     await esperarPainel(page)
   })
 
-  test('código de recuperação entra sem o aplicativo, e o mesmo código não passa de novo', async ({ page }) => {
+  test('código de recuperação entra sem o aplicativo', async ({ page, request }) => {
+    // A conta já nasce com o segundo fator, pela API: a tela de configuração é provada no primeiro caso do arquivo, e aqui custaria uns 8 s.
     const renata = await criarEquipeComSenha('coordenador')
-    const { codigosDeRecuperacao } = await configurarSegundoFator(page, renata)
-    const [primeiro, segundo] = codigosDeRecuperacao
+    const { codigosDeRecuperacao } = await configurarSegundoFatorPelaApi(request, renata)
+    const [primeiro] = codigosDeRecuperacao
     expect(primeiro).toBeDefined()
-    expect(segundo).toBeDefined()
 
     await entrarComSenha(page, renata)
     await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -96,11 +96,20 @@ test.describe('segundo fator da coordenação, sem celular', () => {
     await page.getByRole('button', { name: /^Entrar$/ }).click()
     // A coordenação abre em Governança (A5).
     await esperarPainel(page)
+  })
 
-    // Sai e tenta o mesmo código: ele valeu uma vez só (RF12).
-    await page.getByRole('button', { name: 'Sair' }).click()
-    await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
+  test('o código de recuperação já usado não passa de novo, e um ainda não usado entra', async ({ page, request }) => {
+    const renata = await criarEquipeComSenha('coordenador')
+    const { codigosDeRecuperacao } = await configurarSegundoFatorPelaApi(request, renata)
+    const [primeiro, segundo] = codigosDeRecuperacao
+    expect(primeiro).toBeDefined()
+    expect(segundo).toBeDefined()
+
+    // O primeiro valeu uma vez, gasto pela API: a aba só vê o que vem depois (RF12).
+    await gastarCodigoDeRecuperacaoPelaApi(request, renata, primeiro ?? '')
+
     await entrarComSenha(page, renata)
+    await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await page.getByRole('button', { name: 'Usar um código de recuperação' }).click()
     await page.getByLabel('Código de recuperação').fill(primeiro ?? '')
     await page.getByRole('button', { name: /^Entrar$/ }).click()
