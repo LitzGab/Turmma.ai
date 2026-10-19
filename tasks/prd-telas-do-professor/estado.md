@@ -1,26 +1,28 @@
 # Estado da execução — telas-do-professor
 
 ## Agora
-- **Espero:** o `RELATÓRIO` do `Implementador` (linha 1, par reiniciado 18/10 ~19h43) da **2.0**, retomada na 1ª tentativa:
-  restaurar da `.processo/backup-2.0/` da linha só os 43 arquivos da 2.0 (não os de `tools/ci/`, `tools/processo/` e
-  `.claude/`, que a correção substitui), encurtar ou dividir `casca:468` e `areas:151`, portão e Mesa. Depois:
-  `linhas.ts encontro 1` e `esteira.ts`.
-  A correção `2026-10-18-duracao-do-e2e-le-o-prazo-declarado` está em `75f94a3` na linha 1 (4 rodadas, destravada pelo
-  Joaquim), sem encontro próprio: segue com o da 2.0.
-- **Devo ainda:** (1) ler a esteira de `0650af0` (as duas correções da esteira vermelha da 1.0 juntas): a de
-  `b12056f` (39147219460) e a de `2e814f1` (39143125529, vermelha só no `areas.spec.ts:204`) já estão cobertas pela
-  `43067f8`. Vermelha em outra coisa: correção antes da próxima partida; (2) ficar de olho em `e2e/areas.spec.ts:231`
-  (não tocado): 19–21 s na máquina, 23,8 s na esteira, folga curta para os 30 s. Se cair, correção como a `:204`;
-  (3) a X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em `1477850`): não retomar sem a palavra
-  do Joaquim.
-- **Base:** `spec/telas-do-professor` em `23e8794`; linha 1 em `75f94a3`.
-- **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
+- **Espero:** o `RELATÓRIO` de cada linha, retomadas em 19/10 ~03h depois da correção do detector (`8afb24d`, na spec por
+  fast-forward), cada uma com `git merge --no-edit spec/telas-do-professor` e **um portão por vez**:
+  - linha 1 (`Implementador`/`Mesa`, reiniciados na L1): **3.0**, pequena; código e testes prontos na árvore;
+  - linha 2 (`Implementador 2`/`Mesa 2`): **9.0**, pequena; e2e isolado da tarefa feito ou rodando;
+  - linha 3 (`Implementador 3`/`Mesa 3`): **10.0**, grande; os 2 specs de "Visão Geral" entram com razão.
+  A cada `RELATÓRIO`: `linhas.ts encontro <n>` e `esteira.ts`. A correção `2026-10-19-detector-de-literal-compara-com-a-web`
+  ficou fora do `linhas.ts conferir` (ele só conhece correção na branch `spec/` ou contra a `develop`): conferi com
+  `conferirEntrega(…, 'spec/telas-do-professor')`, OK.
+- **Devo ainda:** (0) feito, 19/10 ~00h20: o `Implementador 3` sabe que a Turma vira lazy (30 kB) e a fachada fica em 8 kB; (1) ficar de olho em `e2e/areas.spec.ts:231` (19–21 s na máquina, 23,8 s na esteira); se cair,
+  correção como a `:204`; (2) a X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em `1477850`): não
+  retomar sem a palavra do Joaquim; (3) as esteiras de `0650af0` e `23e8794` foram verdes: nada pendente da 1.0.
+- **Base:** `spec/telas-do-professor` em `8afb24d` (2.0 em `7ad636e`, com a correção `75f94a3`).
+- **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri` com
+  `MAESTRI_SOCKET=/tmp/maestri-309bb7f3/maestri.sock`.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
 | correção `2026-10-18-professor-em-area-alheia-estoura-o-prazo` | `43067f8` | Sonnet | 1 | esteira vermelha da 1.0; o caso `areas.spec.ts:204` (seis cargas, 30 s na esteira) virou cinco casos de 4 s, entrando pela API |
 | correção `2026-10-18-textos-da-turma-indisponivel-diferem` | `61dba8c` | Sonnet | 2 | esteira vermelha da 1.0; o caso W4 de `acesso-da-turma.spec.ts` dividido em 8 pelo portão (15 s) |
+| correção `2026-10-19-detector-de-literal-compara-com-a-web` | `8afb24d` | Sonnet | 2 | diagnóstico 3 do `Arquiteto`: o detector puxava quase toda a suíte nas três linhas; andar próprio saído da spec, fast-forward |
+| 2.0 | `7ad636e` | Sonnet | 2 | divergência de desenho (régua do e2e × §10), parada, alt. 1 do Joaquim; `test-engineer` reprovou na 1ª; trabalho guardado fora da árvore durante a correção e restaurado |
 | correção `2026-10-18-duracao-do-e2e-le-o-prazo-declarado` | `75f94a3` | Sonnet | 4 | divergência da 2.0 (alt. 1); `test-engineer` escalou (r2), diagnóstico do `Arquiteto`, 3ª reprovação destravada pelo Joaquim; sem encontro próprio |
 | 1.0 | `cb209b5` | Sonnet | 3 | escalada do `test-engineer` (r1, r2); diagnóstico do `Arquiteto` (`diagnostico-1.md`), aprovado na r3 |
 
@@ -55,8 +57,16 @@ Recomendo: destravar; o código foi aprovado, e o que falta são duas mutações
 **Respondida (18/10 ~20h):** "pode destravar, segue com a 1", no meu terminal. A contagem do `test-engineer` recomeça.
 
 ## O que falhou
+- 19/10: `linhas.ts conferir` recusa correção em branch `correcao/` saída da spec (compara com a `develop`). Para a retro.
+- 19/10, 00h–02h: com as três linhas abertas, o portão de cada tarefa leva 30 a 46 min (puxa até 53 specs) e cai em
+  specs de outra área por carga (L1: 27 no celular; L3: `material.spec.ts`, 30 s estourados no axe, com 1159 verdes);
+  as linhas fazem fila no `flock` e a 3.0 (pequena) passou de 3 h sem a 1ª rodada, com o portão na 3ª vez. Para a
+  retrospectiva: portão da tarefa sob três linhas.
 
 ## O que decidi sem perguntar
+- 19/10 ~02h30: a correção do detector (`diagnostico-3.md`) corre num andar próprio, saído da spec, e não numa
+  linha: as três estão no meio de tarefa, e a correção com o trabalho na árvore repetiria o backup da 2.0. O terminal da
+  linha 1 faz a correção, porque a 3.0 já esperava. Matei os órfãos e o ambiente `educa-teste` parado, pelo Ponto 2.
 - 18/10: a correção da régua do e2e (alternativa 1 da parada da 2.0) corre na linha 1, como correção de portão no meio
   da tarefa (passo 6), e não em andar avulso: a ferramenta pousa com a spec. Contra o risco do `test.slow()` posto para
   escapar, vale só o prazo declarado que já estava no HEAD. Guardiões: só `test-engineer` e `revisor-geral`.
