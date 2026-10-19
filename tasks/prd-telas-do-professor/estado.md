@@ -1,7 +1,7 @@
 # Estado da execução — telas-do-professor
 
 ## Agora
-- **Espero:** a palavra do Joaquim para o pouso da X3 na `develop` (parada 6). Esteira verde em `773cc92` (39333509201); validação rodada 2 APROVADA; linhas fechadas; commit de fechamento feito. A `develop` do GitHub não andou: o pouso não pede merge.
+- **Espero:** a esteira da `develop` depois do pouso da X3 ("pode" do Joaquim, 19/10).
 - **Devo ainda:** depois do pouso, desfazer os andares L1, L2 e L3 e pedir a retrospectiva; a X4 continua parada, sem a palavra do Joaquim; "Acerto médio" (`aprovar.ts:236`) e a frase do `?ver=` na linha do `Referrer-Policy` do `TODO.md` ficam para o Joaquim.
 - **Base:** `spec/telas-do-professor` em `9f08b6c` (correção `docs-sem-seu-time` em `bfd3715`; correção `interface-parte-a` em `48316e2`; correção `privacidade-endereco-estoura-o-prazo` em `fc6eaba`; correção `hoje-vinculo-encerrado` em `d3a8a63`; correção `alunos-dois-botoes-cheios` em `fe92bd6`; correção `formulario-e-assistente-rolam-a-pagina` em `6a44d8e`; correção `turma-aberta-rola-a-pagina` em `9dc5613`; correção `sino-cem-ou-mais` em `ea8b9f7`; correção `criados-data-sem-teste` em `27e95d9`; correção `sino-sem-a-correcao-aprovada` em `f3c06b1`; 13.0 em `64bb2aa`, merge da correção `encontro-13` em `5724d6d`; correção `a2-assistente` em `42187ee`; 11.0 em `e8915a2`; correção `acesso-suspenso` em `363cdf0`; 6.0 em `5762f90`, merge da correção `encontro-6` em `b90c204`; 8.0 em `9d6bcb5`; 12.0 em `03806c1`; 7.0 em `ebff7f6`; correção `pecas-sobrepor` em `c5bcb52`; 5.0 em `9fde9be`; 14.0 em `b0ba717`, merge da correção `encontro-14`; 10.0 em `8cf865e`, merge da correção `encontro-10`; 4.0 em `a7d86a8`; correção do mfa em `907d546`; 9.0 em `d13cb69`) (2.0 em `7ad636e`, com a correção `75f94a3`).
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri` com
@@ -48,6 +48,7 @@ Decisão: pousar `spec/telas-do-professor` na `develop` e fazer o push?
 Contexto: validação rodada 2 APROVADA (`tasks/prd-telas-do-professor/validacao.md`), esteira verde em `773cc92`, `develop` sem commit novo no GitHub.
 Opções: pousar agora | esperar
 Recomendo: pousar agora; não há nada pendente que o pouso mude.
+Respondida 19/10: "pode" (Joaquim, no terminal do Orquestrador). Pouso e push da `develop`.
 
 ## 17/10 23:48 — X3 1.0 (escalada da Mesa)
 Decisão: liberar o `Arquiteto` para o diagnóstico da 1.0, que ele só pode fazer depois de você responder à retrospectiva da X2.
