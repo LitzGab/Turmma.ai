@@ -174,6 +174,30 @@ test.describe('o Tutor em Hoje (11.4, X3)', () => {
     await expect(page).toHaveURL(/\?aba=hoje&ver=tutor$/)
   })
 
+  test('o vínculo encerrado com Hoje aberta: o 404 da releitura dos 15 s tira a página inteira, com o painel "Ver quem" e os nomes dele', async ({ page, hasTouch }) => {
+    const { api, turmaId } = await entrar(page, hasTouch)
+    comSinaisEUso(api, turmaId)
+    // O relógio é simulado antes de Hoje abrir: a releitura dos 15 s (o intervalo nasce com a aba) anda quando o teste manda.
+    await page.clock.install()
+    await irPara(page, `/professor/turmas/${turmaId}?aba=hoje&ver=tutor`)
+    await expect(painelDoTutor(page)).toContainText(CAIO.nome, { timeout: PRAZO_DA_TELA_MS })
+    // A página sai pela releitura dos sinais, e não pela releitura da turma (foco e visibilidade, 30 s): a turma não é lida de novo.
+    const leiturasDaTurma: string[] = []
+    page.on('request', (pedido) => {
+      if (pedido.method() === 'GET' && new URL(pedido.url()).pathname === `/v1/turmas/${turmaId}`) leiturasDaTurma.push(pedido.url())
+    })
+
+    // A coordenação encerrou o vínculo: a releitura seguinte dos sinais já não acha a turma.
+    api.trocar('sinais', () => erroDaApi(404, 'NAO_ENCONTRADO'))
+    await page.clock.fastForward('00:16')
+    await expect(principal(page).getByRole('status').filter({ hasText: 'Esta turma não está disponível' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(painelDoTutor(page)).toHaveCount(0)
+    await expect(page.getByRole('tab')).toHaveCount(0)
+    await expect(page).toHaveTitle('Turma · Turmma')
+    for (const nome of NOMES) await expect(page.locator('body')).not.toContainText(nome)
+    expect(leiturasDaTurma).toEqual([])
+  })
+
   test('as funções do Tutor e o bloco "Quando o Tutor avisa você" estão em Hoje, e os do Assistente continuam pelo sino', async ({ page, hasTouch }) => {
     const { turmaId } = await entrar(page, hasTouch)
     await irPara(page, `/professor/turmas/${turmaId}?aba=hoje`)

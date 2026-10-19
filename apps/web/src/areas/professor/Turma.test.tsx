@@ -21,11 +21,12 @@ const id = (n: number) => `0197a1c0-0000-7000-8000-${String(n).padStart(12, '0')
 const TURMA = id(100)
 const SERIE = { id: id(110), etapa: 'ef_anos_finais', ano: 7 }
 const ok = (corpo: unknown): RespostaFalsa => ({ status: 200, corpo })
+const erro = (status: number, codigo: string): RespostaFalsa => ({ status, corpo: { erro: { codigo, mensagem: 'x', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } } })
 
-function instalar(rede: RedeFalsa): void {
+function instalar(rede: RedeFalsa, sinais?: () => RespostaFalsa): void {
   rede.responderPor(`/v1/turmas/${TURMA}`, ok({ id: TURMA, nome: '7º A', serie: SERIE }))
   rede.responderPor('/v1/eu', ok({ usuarioId: id(1), papel: 'professor', nome: 'Professora sintética', escola: { id: id(2), nome: 'Escola sintética', slug: 'escola-sintetica' }, inatividadeMin: 30, acessos: [] }))
-  rede.responderPor('/v1/sinais', ok({ itens: [{ id: id(300), tipo: 'atencao_humana', aluno: { id: id(901), nome: 'Caio Sintético' }, criadoEm: '2026-10-05T13:40:00.000Z' }], grupos: [] }))
+  rede.responderPor('/v1/sinais', sinais ?? (() => ok({ itens: [{ id: id(300), tipo: 'atencao_humana', aluno: { id: id(901), nome: 'Caio Sintético' }, criadoEm: '2026-10-05T13:40:00.000Z' }], grupos: [] })))
   rede.responderPor('/v1/tutor/uso', ok({ turmaId: TURMA, limiteDoDia: 60, trocasDaTurmaNoMes: 0, pacoteDaTurmaNoMes: 0, alunos: [] }))
   rede.responderPor(`/v1/turmas/${TURMA}/desempenho`, ok({ turmaId: TURMA, lotesAprovados: 0, porHabilidade: [], alunos: [] }))
   rede.responderPor('/v1/atividades-aplicadas', ok({ itens: [] }))
@@ -192,5 +193,34 @@ describe('Hoje só lê os sinais com Hoje à vista', () => {
       await avancar(46_000)
       expect(vezesQue(rede, '/v1/sinais'), aba).toBe(antes)
     }
+  })
+})
+
+describe('o vínculo encerrado com a turma aberta em Hoje', () => {
+  it.each([
+    ['com o painel "Ver quem" aberto', 'aba=hoje&ver=tutor'],
+    ['com o painel fechado', 'aba=hoje'],
+  ])('o 404 da releitura dos sinais tira a página inteira, %s, sem o nome de aluno nenhum, e deixa só o aviso e o caminho de volta', async (_quando, busca) => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    let leituras = 0
+    const rede = redeFalsa()
+    const sinaisComNome = ok({ itens: [{ id: id(300), tipo: 'atencao_humana', aluno: { id: id(901), nome: 'Caio Sintético' }, criadoEm: '2026-10-05T13:40:00.000Z' }], grupos: [] })
+    // A primeira leitura traz o aluno; a releitura dos 15 s já não acha a turma.
+    instalar(rede, () => ((leituras += 1) === 1 ? sinaisComNome : erro(404, 'NAO_ENCONTRADO')))
+    montar(busca)
+    // Com o painel fechado o nome não está na tela: o aviso de atenção é o que mostra que a turma foi lida.
+    if (busca.includes('ver=tutor')) expect((await screen.findByRole('dialog', { name: 'O que o Tutor viu' })).textContent).toContain('Caio Sintético')
+    else await screen.findByRole('region', { name: 'Um aluno precisa de um adulto' })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_500)
+    })
+    await waitFor(() => expect(vezesQue(rede, '/v1/sinais')).toBe(2))
+    expect(await screen.findByText(/Esta turma não está disponível para você agora/)).toBeTruthy()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('tab')).toBeNull()
+    expect(document.body.textContent).not.toContain('Caio Sintético')
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Turma')
+    expect(screen.getByRole('link', { name: 'Voltar para Turmas' })).toBeTruthy()
   })
 })

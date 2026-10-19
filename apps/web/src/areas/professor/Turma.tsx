@@ -46,8 +46,8 @@ const BAIXAR_A_ABA = { hoje: baixarHoje, atividades: baixarAtividades, alunos: b
  * começa. Abaixo de 768 px a página rola inteira.
  *
  * A turma que sai do alcance com a tela aberta tira a página inteira, com um aviso só: pela releitura da turma, ou pela
- * leitura dos pedidos (aba Alunos), que se repete sozinha e é a primeira a saber (`perdida`). Hoje também se relê aos 15 s, mas a
- * releitura que cai com o dado na tela não tira a página.
+ * leitura dos pedidos (aba Alunos) ou a dos sinais (aba Hoje, aos 15 s), que se repetem sozinhas e são as primeiras a saber (`perdida`).
+ * Só o 404 tira a página: a releitura que cai por rede ou servidor, com o dado na tela, não tira.
  */
 export default function Turma({ turmaId }: { turmaId: string }) {
   const turma = useQuery(consultaTurmaAberta(turmaId))
@@ -108,7 +108,7 @@ export default function Turma({ turmaId }: { turmaId: string }) {
           <Abas rotulo="Seções da turma" abas={ABAS_DA_TURMA} ativa={aba} aoMudar={(id) => navegar(enderecoDaAba(caminho, abaDoId(id)), { replace: true })} classeDoPainel={O_MIOLO_DO_DOCUMENTO}>
             {/* Só a aba à vista existe: a que sai da tela leva com ela as leituras dela, e Hoje, a que se repete a cada 15 s. */}
             <Suspense fallback={<EstadoCarregando rotulo="Carregando a aba…" />}>
-              {aba === 'hoje' && <TurmaHoje turmaId={turmaId} />}
+              {aba === 'hoje' && <TurmaHoje turmaId={turmaId} aoPerderATurma={perderATurma} />}
               {aba === 'atividades' && <AtividadesDaTurma turmaId={turmaId} />}
               {aba === 'alunos' && <AlunosDaTurma turmaId={turmaId} turmaNome={turma.data.nome} escola={eu.data.escola} aoPerderATurma={perderATurma} />}
             </Suspense>
