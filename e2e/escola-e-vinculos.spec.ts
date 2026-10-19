@@ -11,8 +11,8 @@ import {
   ligarContaExterna,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, esperarPainel, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor, esperarNovaConversa, esperarAtividades, secoes } from './__fixtures__/casca.ts'
-import { expect, test } from './__fixtures__/perfis.ts'
+import { abrirNavegacao, abrirSeletorDeEscola, botaoDoSeletor, entrarPelaApi, esperarPainel, irPelaNavegacao, lateral, linhaDoSeletor, nomeNoSeletor, esperarNovaConversa, esperarAtividades, secoes } from './__fixtures__/casca.ts'
+import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 const ROTA_MEUS_VINCULOS = '**/v1/meus-vinculos*'
@@ -420,13 +420,24 @@ test.describe('vínculos do professor', () => {
     expect(confirmacoes).toBe(1)
   })
 
-  test('os quatro estados: carregando, erro com nova tentativa, vazio convidando a falar com a coordenação, e a lista', async ({ page, hasTouch }) => {
+  /** A professora entra pela API e abre as Turmas; a primeira carga não afirma nada sobre o tempo de baixar (`carregarSemRedeLenta`). */
+  async function abrirTurmasDaProfessora(page: Page, professora: EquipeDeTeste, hasTouch: boolean): Promise<void> {
+    await carregarSemRedeLenta(page, async () => {
+      await entrarPelaApi(page, professora, '/professor/nova-conversa')
+      await esperarEscola(page, professora.nome, professora.escolaNome)
+    })
+    await irPelaNavegacao(page, 'Turmas', hasTouch)
+  }
+
+  // Os quatro estados em dois casos: com a entrada pela tela, a leitura segurada e as varreduras do axe, um só levava 23 s
+  // (chromebook) e 24,7 s (celular) aqui, contra os 30 s que o runner da esteira leva em dobro.
+  test('os estados sem lista: carregando, erro com nova tentativa e vazio convidando a falar com a coordenação', async ({ page, hasTouch }) => {
     const professora = await criarEquipeComSenha()
 
     let segurar = true
     let falhar = false
     let liberar: () => void = () => undefined
-    let segurada = new Promise<void>((resolver) => (liberar = resolver))
+    const segurada = new Promise<void>((resolver) => (liberar = resolver))
     await page.route(ROTA_MEUS_VINCULOS, async (rota: Route) => {
       if (segurar) await segurada
       if (falhar) {
@@ -439,10 +450,7 @@ test.describe('vínculos do professor', () => {
       return rota.continue()
     })
 
-    await page.goto('/entrar')
-    await entrarPorEmail(page, professora, hasTouch)
-    await esperarEscola(page, professora.nome, professora.escolaNome)
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    await abrirTurmasDaProfessora(page, professora, hasTouch)
 
     // Carregando.
     await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -463,12 +471,21 @@ test.describe('vínculos do professor', () => {
     await tabAte(page, page.getByRole('button', { name: 'Sair' }), 'o "Sair" da casca')
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
+  })
 
-    // Com dado: a coordenação alocou, e a lista aparece na busca seguinte.
+  test('o estado com a lista: carregando a leitura das turmas e depois a turma alocada pela coordenação', async ({ page, hasTouch }) => {
+    const professora = await criarEquipeComSenha()
+    // A coordenação alocou antes de a professora abrir as Turmas: a lista vem na primeira busca.
     const alocacao = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId)
-    segurar = true
-    segurada = new Promise<void>((resolver) => (liberar = resolver))
-    await page.reload()
+
+    let liberar: () => void = () => undefined
+    const segurada = new Promise<void>((resolver) => (liberar = resolver))
+    await page.route(ROTA_MEUS_VINCULOS, async (rota: Route) => {
+      await segurada
+      return rota.continue()
+    })
+
+    await abrirTurmasDaProfessora(page, professora, hasTouch)
     await expect(page.getByText('Carregando as suas turmas…')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     liberar()
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
