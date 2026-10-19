@@ -205,7 +205,7 @@ para o documento cai em Conteúdo, pelo mesmo caminho do valor desconhecido. (3)
 decidiu, o texto do PDF) ficam **acima das abas**, à vista em todas: a decisão sobre a saída de IA não depende da aba aberta (regra 70, itens 3 e
 6). (4) A `Folha` é a coluna de 760 px sobre a `mesa`; **abaixo de 768 px não há mesa nem borda**, como o celular do mockup. O sumário lateral e
 o "Lado a lado" são do F7. (5) `EncerramentoDaAtividade` leva o botão, o diálogo e a trava do envio único; "Corrigir de novo" (a atividade
-já encerrada, sem confirmação) ganha mutation própria em `AplicacaoDoArtefato`. (6) A seção "Na turma" só é lida com a aba aberta, e por isso
+já encerrada, sem confirmação) ganha mutation própria, que a 11.0 moveu para o gancho `useCorrigirDeNovo` (item (5) de "Atividades na pele nova"). (6) A seção "Na turma" só é lida com a aba aberta, e por isso
 os e2e que aplicam a atividade (`a3-a4-professor`, `roteiro-da-demonstracao`) clicam na aba antes. (7) O documento aberto acende **Criados** na navegação do professor (`areas/navegacao.ts`: `tambemEm` passa de Ferramentas para
 Criados), e a recarga do recomeço "recarregar mantém a aba" é feita dentro do caso lento que já existia (`os quatro estados; …`), e não num caso novo:
 a recarga custa perto de 9 s sob a CPU ×4, e um caso novo com ela passava de 15 s. (8) **A página não rola, rola a mesa** (`mockup.md` 10.2; RF22): do
@@ -257,6 +257,26 @@ abrem direto na aba, porque o portão mede 15 s; o link e o código que aparecem
 link e o código, como em toda abertura (o caso de recomeço de `acesso-da-turma.spec.ts`); o `convidar=1` continua no endereço porque
 ninguém fechou o diálogo, e a turma que monta de novo depois do login o abre no passo que a leitura pede ("Vigente", ou "Gerar acesso"
 sem acesso), sem link nem código. É aceitável e fica assim.
+
+**Atividades na pele nova** (divergências da 11.0): (1) A linha é a `Linha` da X1 e é **botão**: abre o painel da atividade em
+`?atividade=<id>`. Os links "Abrir a atividade" e "Revisar a correção" / "Ver a correção" moram no rodapé do painel, e não mais na linha;
+o caso do `professor-turma-aberta.spec.ts` que os procurava na lista clica a linha antes. (2) **O que a linha diz** é a situação de hoje
+(`situacaoDaAplicacao`, que já traz "N de M alunos enviaram") e o selo do estado em texto: Aberta, Correção para revisar, Correção
+aprovada, Correção rejeitada, Sem correção. Não há Prazo, Tipo, barra de entregas nem ladrilho da matéria (atividade é só objetiva, D55, e a
+API não tem prazo); o ícone da linha é o da atividade objetiva (`IconeDeFerramenta`). (3) **O filtro** "Todas · Abertas · Para revisar ·
+Encerradas" (o mockup dizia "Para aprovar · Corrigidas") só existe com mais de oito linhas, é estado da aba, não vai ao endereço e não
+fecha o painel aberto. (4) **"Corrigir de novo" aparece quando a atividade encerrou sem correção que valha**: a função suspensa **e** o lote
+rejeitado, o mesmo critério do documento aberto (`semCorrecao`), e não só quando "não há lote". (5) **Peças que passam a ser de dois
+lugares**: o pedido de "Corrigir de novo" e o aviso que ele deixa saem de `AplicacaoDoArtefato` para o gancho `useCorrigirDeNovo`
+(`corrigir-de-novo.ts`), e a frase da avaliativa aberta vira `AVISO_DA_AVALIATIVA_ABERTA` (`aprovar.ts`); o documento aberto usa as duas
+sem mudar o que diz nem o que faz. Uma só mudança no comportamento: "Aplicar" e "Corrigir de novo" dividiam a mesma trava do envio único
+(`decidindo`), e agora cada um tem a sua; o efeito para a professora é nulo, porque um é diálogo e o outro é botão de linha. (6) **O nome da turma** da confirmação de encerrar vem de `consultaTurmaAberta`, que a moldura da
+página já leu: é leitura do cache enquanto vale (30 s de `staleTime`); se a aba abre depois desse prazo, a turma é relida uma vez, a mesma
+leitura que a moldura faria. (7) **Trocar de turma recomeça a aba** (`key`), e por isso
+o filtro, o pedido de encerrar no ar e o aviso da correção são da turma que a professora saiu. (8) **O foco**: ao fechar o painel aberto pelo
+endereço, o foco vai à linha dele; ao encerrar ou corrigir de novo, o botão que tinha o foco sai e o foco vai ao bloco "O que fazer"
+do painel, quando ele acabaria no corpo da página. (9) **"Aplicar uma atividade"** é um link para Criados com `?tipo=atividade_objetiva&turma=<id>`;
+sem atividade na turma ele mora no vazio, como o botão do `EstadoVazio`, e não nos dois lugares. (10) **Os dois casos de e2e que saíram**: "recarregar mantém o painel" e "a segunda pessoa não vê a lista". O primeiro fica em componente (`?atividade=<id>` abre o painel), porque a segunda carga completa da página leva o caso a 20 s e a régua do portão reprova o que passa de 15 s (§10, "Duração do e2e na separação"); o segundo é um trecho do caso de recomeço de `professor-sino.spec.ts`, que já declara `test.slow()`: a lista e o painel da primeira professora não estão na tela nem no cache da segunda, e a chave `atividades-aplicadas/<id>`, sem dado, entra na exceção das chaves da navegação. (11) **O selo "Encerrada" não existe sozinho**: a subtarefa 11.1 o lista, mas a atividade encerrada sempre tem um destes estados (correção para revisar, aprovada, rejeitada ou sem correção), e o selo diz o que a professora faz; "Encerrada" aparece na frase da situação, junto de "prática" ou "avaliativa".
 
 **`data-esperando-voce`** (divergência da 3.0): o item do sino da 1.0 não leva o atributo, e a 3.0 não o acrescenta. O
 Início não tem o atributo nem o que ele marcava, e o e2e prova que o sino tem a entrega pelo nome do botão ("Esperando você,

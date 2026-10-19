@@ -67,10 +67,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 10.3 `Tutor.tsx` vira redirecionamento; a fixture `professor/tutor.ts` aponta para Hoje
   - [x] 10.4 Testes: a aba pelo endereço; os estados de Hoje; Hoje relê aos 15 s e não mostra nome; sem painel, sem rota nominal; nada abre conversa de aluno; o endereço antigo do Tutor
 
-- [ ] **11.0 — Turma › Atividades**
-  - [ ] 11.1 `AtividadesDaTurma.tsx`: as linhas com estado, o filtro e o painel da atividade
-  - [ ] 11.2 Encerrar pelo painel; "Aplicar uma atividade" leva a Criados com a turma
-  - [ ] 11.3 Testes: o estado de cada linha; encerrar com a confirmação; os quatro estados
+- [x] **11.0 — Turma › Atividades**
+  - [x] 11.1 `AtividadesDaTurma.tsx`: as linhas com estado, o filtro e o painel da atividade
+  - [x] 11.2 Encerrar pelo painel; "Aplicar uma atividade" leva a Criados com a turma
+  - [x] 11.3 Testes: o estado de cada linha; encerrar com a confirmação; os quatro estados
 
 - [x] **12.0 — Turma › Alunos**
   - [x] 12.1 `api/alunos-da-turma.ts` e `AlunosDaTurma.tsx`: os alunos em ordem de nome, com os acertos

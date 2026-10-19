@@ -162,14 +162,18 @@ test.describe('acesso suspenso pela eliminação agendada', () => {
     await expect(page.locator('body')).not.toContainText(anterior.nome)
   })
 
-  test('a professora suspensa na escola A e ativa na B recarrega e vê a tela; o segundo F5 cai na entrada, e o e-mail entra em B, sem A no seletor', async ({ page, hasTouch }) => {
+  test('a professora suspensa na escola A e ativa na B recarrega e vê a tela; o segundo F5 cai na entrada, e não na tela outra vez', async ({ page }) => {
     const emA = await criarEquipeComSenha()
-    const emB = await criarUsuarioEmOutraEscola(emA.contaId)
-    await page.goto('/entrar')
-    await entrarPorEmail(page, emA, hasTouch)
-    await expect(page).toHaveURL(/\/escolher-escola$/, { timeout: PRAZO_DA_ENTRADA_MS })
-    await acionar(page.getByRole('button', { name: `${emA.escolaNome} · professor` }), hasTouch)
-    await esperarNovaConversa(page, emA.nome)
+    await criarUsuarioEmOutraEscola(emA.contaId)
+    // A entrada é só o ponto de partida: sai pela API, com a escola A escolhida, e abre em Ferramentas, que não lê nada
+    // além do que a casca já lê. A primeira carga da página não afirma nada sobre o tempo de baixar (`carregarSemRedeLenta`);
+    // as recargas, que são o que o caso prova, ficam na rede do perfil. Com a entrada pela tela, a saudação do Início e as
+    // duas recargas na rede lenta, o caso inteiro levava 25,7 s (chromebook) e 27,4 s (celular), contra os 30 s que o
+    // runner da esteira leva em dobro. A entrada pela tela e o seletor ausente ficam no caso seguinte.
+    await carregarSemRedeLenta(page, async () => {
+      await entrarPelaApi(page, emA, '/professor/ferramentas', emA.usuarioId)
+      await expect(tituloDeFerramentas(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    })
 
     await agendarEliminacaoNoBanco(emA.usuarioId)
     await page.reload()
@@ -187,10 +191,19 @@ test.describe('acesso suspenso pela eliminação agendada', () => {
     await page.reload()
     await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(tituloDaTela(page)).toHaveCount(0)
+  })
 
-    // A conta continua valendo em B: o e-mail entra direto nela, e a escola suspensa não é oferecida.
+  test('a professora suspensa na escola A e ativa na B entra pelo e-mail direto em B, sem A no seletor', async ({ page, hasTouch }) => {
+    const emA = await criarEquipeComSenha()
+    const emB = await criarUsuarioEmOutraEscola(emA.contaId)
+    await agendarEliminacaoNoBanco(emA.usuarioId)
+
+    // Sem sessão nenhuma, como a aba que o segundo F5 deixou na entrada: a conta continua valendo em B, o e-mail entra
+    // direto nela, e a escola suspensa não é oferecida.
+    await carregarSemRedeLenta(page, () => page.goto('/entrar'))
     await entrarPorEmail(page, emA, hasTouch)
     await esperarNovaConversa(page, 'Professora sintética na outra escola', { escolaNome: emB.escolaNome })
+    await expect(page).not.toHaveURL(/\/escolher-escola$/)
     await expect(page.locator('body')).not.toContainText(emA.escolaNome)
     await expect(page.getByRole('button', { name: /^Escola: / })).toHaveCount(0)
   })

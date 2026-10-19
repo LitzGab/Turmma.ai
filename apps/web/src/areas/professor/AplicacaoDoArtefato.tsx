@@ -2,7 +2,7 @@ import { CodigoDeErro, type AtividadeAplicada, type RespostaArtefato } from '@ed
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useId, useRef, useState } from 'react'
 import { Link } from 'wouter'
-import { aplicarAtividade, consultaAtividadesAplicadas, encerrarAtividade, recarregarAtividades } from '../../api/atividades'
+import { aplicarAtividade, consultaAtividadesAplicadas, recarregarAtividades } from '../../api/atividades'
 import { textoDaFalha } from '../../componentes/texto-da-falha'
 import { caminhoDaCorrecaoDoProfessor } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
@@ -10,7 +10,8 @@ import { DialogoDeConfirmacao } from '../../componentes/DialogoDeConfirmacao'
 import { EstadoCarregando } from '../../componentes/estado'
 import { CabecalhoDeSecao } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
-import { EFEITO_DE_APLICAR, ESCOLHA_DE_AVALIATIVA, semCorrecao, situacaoDaAplicacao, TEXTO_SEM_CORRECAO } from './aprovar'
+import { AVISO_DA_AVALIATIVA_ABERTA, EFEITO_DE_APLICAR, ESCOLHA_DE_AVALIATIVA, semCorrecao, situacaoDaAplicacao, TEXTO_SEM_CORRECAO } from './aprovar'
+import { useCorrigirDeNovo } from './corrigir-de-novo'
 import { EncerramentoDaAtividade } from './EncerramentoDaAtividade'
 
 /** O que a tela diz quando a API recusa aplicar: a que já está aberta, e a versão adaptada que ainda não foi aprovada. */
@@ -43,6 +44,10 @@ interface PropsDaAplicacao {
  * As duas são decisões da professora, registradas com quem e quando, e por isso passam pela confirmação que diz o que
  * vai acontecer antes (regra 50, item 8): aplicar mostra a atividade, a turma e o efeito da escolha; encerrar diz que as
  * respostas param, que a correção é feita e que ela fica esperando a professora. A versão adaptada só aplica aprovada.
+ *
+ * A trava do envio único é de cada ação: "Aplicar" tem a sua (`decidindo`, aqui), e "Corrigir de novo" a do gancho `useCorrigirDeNovo`, que o
+ * painel da turma também usa. Elas já não eram a mesma coisa que o usuário percebesse (um é diálogo, o outro é botão de linha), e uma não
+ * segura a outra.
  */
 export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao) {
   const cliente = useQueryClient()
@@ -50,7 +55,6 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
   const [aplicando, definirAplicando] = useState(false)
   const [escolha, definirEscolha] = useState<Escolha | undefined>(undefined)
   const [tentou, definirTentou] = useState(false)
-  const [aviso, definirAviso] = useState('')
   const decidindo = useRef(false)
   const secao = useRef<HTMLElement>(null)
   const idDoTitulo = useId()
@@ -68,14 +72,7 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
     onSettled: () => (decidindo.current = false),
   })
   // Encerrar de novo uma atividade que já está encerrada (a correção que não nasceu): sem confirmação, porque nada muda para os alunos.
-  const corrigir = useMutation({
-    mutationFn: (id: string) => encerrarAtividade(id),
-    onSuccess: async () => {
-      recarregarAtividades(cliente)
-      await cliente.invalidateQueries({ queryKey: consultaAtividadesAplicadas(artefato.turmaId).queryKey })
-    },
-    onSettled: () => (decidindo.current = false),
-  })
+  const { corrigirDeNovo, aviso, falha: falhaDaCorrecao, corrigindo } = useCorrigirDeNovo(artefato.turmaId)
 
   function abrirAplicar(): void {
     aplicar.reset()
@@ -90,16 +87,6 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
     if (escolhida === undefined || decidindo.current) return
     decidindo.current = true
     aplicar.mutate(escolhida.avaliativa)
-  }
-
-  /** A atividade já está encerrada: pedir a correção de novo não muda nada para os alunos, e não passa pelo diálogo. */
-  function corrigirDeNovo(aplicada: AtividadeAplicada): void {
-    if (decidindo.current) return
-    decidindo.current = true
-    definirAviso('')
-    corrigir.mutate(aplicada.id, {
-      onSuccess: ({ atividade }) => definirAviso(atividade.entrega === null ? TEXTO_SEM_CORRECAO[semCorrecao(atividade) ?? 'correcao_suspensa'] : 'Correção feita. Ela está esperando você revisar.'),
-    })
   }
 
   const turma = nomeDaTurma ?? 'Turma da atividade'
@@ -138,9 +125,9 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
       <p role="status" className="rounded-controle bg-info-cx p-3 break-words text-info empty:hidden">
         {aviso}
       </p>
-      {corrigir.isError && (
+      {falhaDaCorrecao !== undefined && (
         <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro">
-          {textoDaFalha(corrigir.error)}
+          {textoDaFalha(falhaDaCorrecao)}
         </p>
       )}
       {esperaAprovacao && <p className="min-w-0 text-sm break-words text-sutil">Esta versão adaptada só pode ser aplicada à turma depois que você aprovar.</p>}
@@ -156,7 +143,7 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
                   {turma} · aplicada em {formatarDataHora(aplicada.aplicadaEm)}
                   {aplicada.encerradaEm !== null && ` · encerrada em ${formatarDataHora(aplicada.encerradaEm)}`}
                 </p>
-                {aplicada.avaliativa && aplicada.estado === 'aberta' && <p className="text-sm break-words text-sutil">É avaliativa: o Tutor está pausado para a turma até você encerrar.</p>}
+                {aplicada.avaliativa && aplicada.estado === 'aberta' && <p className="text-sm break-words text-sutil">{AVISO_DA_AVALIATIVA_ABERTA}</p>}
                 {motivo !== undefined && (
                   <p data-sem-correcao={motivo} className="text-sm break-words text-sutil">
                     {TEXTO_SEM_CORRECAO[motivo]}
@@ -172,8 +159,8 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
               )}
               {/* Encerrada sem lote que valha (função suspensa, ou lote rejeitado): encerrar de novo corrige de novo. */}
               {(motivo === 'correcao_suspensa' || motivo === 'lote_rejeitado') && (
-                <Botao variante="secundario" disabled={corrigir.isPending} onClick={() => corrigirDeNovo(aplicada)}>
-                  {corrigir.isPending && corrigir.variables === aplicada.id ? 'Corrigindo…' : 'Corrigir de novo'}
+                <Botao variante="secundario" disabled={corrigindo !== undefined} onClick={() => corrigirDeNovo(aplicada)}>
+                  {corrigindo === aplicada.id ? 'Corrigindo…' : 'Corrigir de novo'}
                 </Botao>
               )}
             </li>

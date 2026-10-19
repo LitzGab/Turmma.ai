@@ -78,7 +78,9 @@ test.describe('a turma aberta em três abas (D69)', () => {
     await irPara(page, `/professor/turmas/${turmaId}?aba=atividades`)
     const atividades = page.getByRole('region', { name: 'Atividades da turma' })
     await expect(atividades).toContainText('Encerrada · avaliativa · 26 de 30 alunos enviaram', { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(atividades.getByRole('link', { name: /^Revisar a correção/ })).toBeVisible()
+    // A linha abre o painel da atividade (11.0), e é nele que mora o caminho para a correção.
+    await acionar(atividades.getByRole('button', { name: /Atividade de estequiometria/ }), hasTouch)
+    await expect(page.getByRole('dialog', { name: 'Atividade de estequiometria' }).getByRole('link', { name: 'Revisar a correção' })).toBeVisible()
   })
   // Alunos, com lote aprovado (ordem de nome, acertos, sem nota nem ranking), é de `professor-turma-alunos.spec.ts` (telas do professor, 12.0): a lista
   // de nomes vem da API de verdade, e o caso paga a entrada da professora uma vez só.

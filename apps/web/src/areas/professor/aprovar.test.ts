@@ -87,7 +87,9 @@ describe('aprovar a correção: os textos', () => {
 
   it('a atividade aplicada diz se está aberta, se é avaliativa e quantos enviaram, sem nome de ninguém', () => {
     expect(situacaoDaAplicacao({ estado: 'aberta', avaliativa: true, participacao: { alunos: 30, iniciaram: 20, enviaram: 12 } })).toBe('Aberta para a turma · avaliativa · 12 de 30 alunos enviaram')
-    expect(situacaoDaAplicacao({ estado: 'encerrada', avaliativa: false, participacao: { alunos: 1, iniciaram: 1, enviaram: 1 } })).toBe('Encerrada · prática · 1 de 1 aluno enviaram')
+    expect(situacaoDaAplicacao({ estado: 'encerrada', avaliativa: false, participacao: { alunos: 1, iniciaram: 1, enviaram: 1 } })).toBe('Encerrada · prática · 1 de 1 aluno enviou')
+    expect(situacaoDaAplicacao({ estado: 'aberta', avaliativa: false, participacao: { alunos: 30, iniciaram: 1, enviaram: 1 } })).toBe('Aberta para a turma · prática · 1 de 30 alunos enviou')
+    expect(situacaoDaAplicacao({ estado: 'aberta', avaliativa: false, participacao: { alunos: 30, iniciaram: 0, enviaram: 0 } })).toBe('Aberta para a turma · prática · 0 de 30 alunos enviaram')
   })
 
   it('o motivo do destaque é dito como fato do trabalho, e não como juízo sobre o aluno', () => {
