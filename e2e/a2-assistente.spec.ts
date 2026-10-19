@@ -83,7 +83,8 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     await acionar(resultado.getByRole('link', { name: 'Abrir o artefato' }), hasTouch)
     await expect(page.getByRole('heading', { level: 1, name: 'Atividade — Estequiometria' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).toContainText(`Atividade objetiva · ${turmaNome} · ${DISCIPLINA}`)
-    await expect(page.getByText('Gabarito', { exact: true })).toHaveCount(5)
+    // Dentro da folha: o rótulo do interruptor "Gabarito", acima dela, não é o selo da alternativa certa.
+    await expect(page.locator('[data-folha]').getByText('Gabarito', { exact: true })).toHaveCount(5)
     await expect(principal(page).locator('[data-selo-ia]')).toHaveCount(1)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])

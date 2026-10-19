@@ -429,3 +429,4 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-19 12:42:34 | `test-engineer` | 1ª | APROVADO | `encontro-6` | O "Teste que reproduz" de `tasks/correcoes/encontro-6.md` diz que a prova é "o arquivo sem marcador". Vale escrever também a conferência objetiva: o que está… |
 | 2026-10-19 12:42:37 | `revisor-geral` | 1ª | APROVADO | `encontro-6` | Em `tasks/prd-telas-do-professor/tasks.md:51`, a 7.0 está marcada como feita, mas a 7.1 e a 7.2 continuam desmarcadas. Isso veio assim da… |
 | 2026-10-19 12:44:03 | `frontend-reviewer` | 1ª | APROVADO | `encontro-6` | , para o `/validar` e o `/retro`: |
+| 2026-10-19 15:14:27 | `frontend-reviewer` | 1ª | APROVADO | `2026-10-19-a2-assistente-conta-um-gabarito-a-mais` | Em `Artefato.tsx:269-270`, o `<span>Gabarito</span>` visível e o `rotulo="Gabarito"` do `Interruptor` repetem o texto dentro do mesmo `<label>`. Isso pode… |
