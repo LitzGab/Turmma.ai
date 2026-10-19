@@ -82,10 +82,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [ ] 13.2 `?convidar=1` e o convite depois de confirmar a turma
   - [ ] 13.3 Testes: os nove casos do acesso, pelo diálogo; o link e o código uma vez; nada legível atrás de "Acesso gerado"
 
-- [ ] **14.0 — Aprovar na pele nova**
-  - [ ] 14.1 `Aprovar.tsx`: os números, as abas e o destaque no painel ao lado
-  - [ ] 14.2 A barra presa com o oficial, visível nas três abas
-  - [ ] 14.3 Testes: o oficial desligado até `podeAprovar`; abrir registra uma vez; a confirmação; nenhum botão laranja
+- [x] **14.0 — Aprovar na pele nova**
+  - [x] 14.1 `Aprovar.tsx`: os números, as abas e o destaque no painel ao lado
+  - [x] 14.2 A barra presa com o oficial, visível nas três abas
+  - [x] 14.3 Testes: o oficial desligado até `podeAprovar`; abrir registra uma vez; a confirmação; nenhum botão laranja
 
 ## Dependências e paralelismo
 

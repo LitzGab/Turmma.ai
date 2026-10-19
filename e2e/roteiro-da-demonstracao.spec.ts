@@ -13,6 +13,7 @@ import { CAMINHO_DO_PDF_DE_DEMONSTRACAO, materiaisNoBanco, recusasNaAuditoria } 
 import { criarOperadorComSegundoFator, removerOperador } from './__fixtures__/operacao.ts'
 import { idDaEscolaComOEndereco, nomeQueVemPrimeiro } from './__fixtures__/painel.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
+import { abrirODestaque, fecharOPainel } from './__fixtures__/professor/aprovar.ts'
 import { abrirSinaisDoTutor } from './__fixtures__/professor/tutor.ts'
 import {
   alunoDaMatricula,
@@ -482,7 +483,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await revisar.click({ timeout: PRAZO_DA_ENTRADA_MS })
       await expect(professora).toHaveURL(new RegExp(`/professor/aprovar/${primeiraAplicadaId}$`))
 
-      await expect(principal(professora)).toContainText('3 alunos responderam · 3 na turma hoje', { timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(professora.getByRole('group', { name: 'Números da correção' })).toContainText('Na turma hoje: 3', { timeout: PRAZO_DA_ENTRADA_MS })
       const doEmBranco = professora.locator('[data-destaque]').filter({ hasText: carla.nome })
       await expect(doEmBranco).toContainText('Em branco')
       const barra = professora.getByRole('group', { name: 'Aprovação do lote' })
@@ -493,7 +494,8 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       for (let aberto = 0; aberto < quantos; aberto += 1) {
         // O botão só liga depois do último destaque aberto (D56).
         await expect(aprovar).toBeDisabled()
-        await fechados.first().getByRole('button', { name: /^Abrir/ }).click()
+        await abrirODestaque(professora, fechados.first(), hasTouch, PRAZO_DA_ENTRADA_MS)
+        await fecharOPainel(professora, hasTouch, PRAZO_DA_ENTRADA_MS)
         await expect(professora.locator('[data-destaque="aberto"]')).toHaveCount(aberto + 1, { timeout: PRAZO_DA_ENTRADA_MS })
       }
       await expect(aprovar).toBeEnabled()

@@ -177,6 +177,16 @@ existia; o `CartaoDeFerramenta` a liga com `comIcone`, que só a Conversa passa 
 fim" é a frase a 24 px do pé da barra (12 px da `BarraPresa` mais `pb-3` do filho; a barra de Aprovar não muda). O "vão de 24"
 entre mensagens é o `gap-6` do `log`. O cartão ganha a borda de 2 px (`border-2 border-borda`) da pele nova.
 
+**Aprovar na pele nova** (divergências da 14.0): (1) o painel de um destaque que o endereço traz (`?ver=<alunoId>`) lê as respostas
+pela **mesma rota que abre** (`POST …/correcao/destaques/:alunoId/abrir`), que a API já define como idempotente (devolve o mesmo, com a
+primeira hora, e não registra outra abertura): não existe rota só de leitura, e a §4 não admite uma nova. Isso só vale para o destaque
+que o lote **já traz aberto**: `?ver=` de um destaque fechado, ou de um id que o lote não tem (outra turma, outra escola), não abre
+painel e não chama a rota, igual em todo caso (regra 10, item 6). (2) A frase que explica o motivo ("Nenhuma questão foi respondida.")
+sai da linha e fica no painel; a linha diz o motivo e os acertos. (3) A lista de Outras é ordenada por nome **na tela** (a API não
+promete ordem), com o id como desempate, e nunca por acerto. (4) As abas não levam contador: o número de destaques que faltam está na
+faixa e na barra presa. (5) A tela passa de `formulario` para `leitura` (880 px), que é o tipo da tabela acima. (6) O lote já decidido
+não abre o destaque que ficou fechado (não há mais o que registrar), e só mostra o que já estava aberto.
+
 **`data-esperando-voce`** (divergência da 3.0): o item do sino da 1.0 não leva o atributo, e a 3.0 não o acrescenta. O
 Início não tem o atributo nem o que ele marcava, e o e2e prova que o sino tem a entrega pelo nome do botão ("Esperando você,
 1") e pelo link do item ("Versão adaptada para decidir…", "Correção para revisar…").
@@ -190,7 +200,9 @@ atividade", "Exportar em PDF", "Pedir versão adaptada"; e todos os `data-*` do 
 `data-contador-do-time`, que vira `data-contador-do-sino`, e `data-esperando-voce`, que sai do Início e não passa ao item do sino (divergência da 3.0).
 **Nomes que mudam:** as abas da turma; "Voltar para Ferramentas", no documento, vira "Voltar para Criados"; "Voltar
 para o Seu time" vira "Voltar para a turma"; "Ver e decidir em Seu time" vira "Ver e decidir"; o `h1` das telas
-do time perde "Seu time: ".
+do time perde "Seu time: ". Em Aprovar (14.0): o botão "Rejeitar…" da barra vira "Rejeitar a correção"; o "Abrir" e o "Ver de novo" de cada
+destaque somem, porque a linha inteira é o botão (o nome acessível dele é o do aluno, o motivo e o estado); o número "Média de
+acertos" vira "Acerto médio", porque a palavra "média" fica fora das telas do professor (RF21).
 
 **Cartão da turma.** Tudo vem do `Vinculo` de `meus-vinculos` e da fila do sino: o ladrilho da disciplina, "7ºA ·
 Matemática" (turma e disciplina), o estado em texto (`NOME_DO_ESTADO_DE_VINCULO`) e o selo do que espera. **A série

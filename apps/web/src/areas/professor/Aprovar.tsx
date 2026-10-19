@@ -1,12 +1,14 @@
 import { CodigoDeErro, type Destaque, type RespostaDestaqueAberto } from '@educa/shared'
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { useId, useRef, useState } from 'react'
-import { Link } from 'wouter'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useSearch } from 'wouter'
 import { abrirDestaque, aprovarLote, consultaCorrecaoDoLote, recarregarDepoisDoLote } from '../../api/atividades'
 import { ErroDaApi, mensagemDoErro } from '../../api/cliente'
 import { consultaEntregas, decidirEntrega } from '../../api/entregas'
 import { consultaMeusVinculos } from '../../api/vinculos'
+import { Abas } from '../../componentes/Abas'
+import { Aviso } from '../../componentes/Aviso'
 import { BarraPresa } from '../../componentes/BarraPresa'
 import { BarraRotulada } from '../../componentes/BarraRotulada'
 import { Botao } from '../../componentes/Botao'
@@ -15,29 +17,41 @@ import { DialogoDeConfirmacao } from '../../componentes/DialogoDeConfirmacao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { AssinaturaIA } from '../../componentes/ia/AssinaturaIA'
 import { LinhaAprovacao } from '../../componentes/ia/LinhaAprovacao'
+import { Linha } from '../../componentes/Linha'
 import { NumeroPainel } from '../../componentes/NumeroPainel'
+import { PainelLado } from '../../componentes/PainelLado'
 import { Estado } from '../../componentes/SeloDeEstado'
 import { Tabela } from '../../componentes/Tabela'
 import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { problemaDoTexto } from '../../componentes/texto-longo'
 import { useTituloDaTela } from '../../titulo'
 import {
+  ABAS_DA_CORRECAO,
+  abaDoEndereco,
   acertosDoAluno,
+  APOIO_DAS_OUTRAS,
   AVISO_DA_REJEICAO_DO_LOTE,
+  AVISO_DO_GABARITO,
   caminhoDeVoltaDaCorrecao,
   contadorDosDestaques,
+  destaqueDoEndereco,
   EFEITO_DE_APROVAR_O_LOTE,
   EFEITO_DE_REJEITAR_O_LOTE,
+  enderecoDaCorrecao,
   estadoDoDestaque,
   explicacoesDoDestaque,
   letraDaAlternativa,
   motivosDoDestaque,
+  numerosDoLote,
+  outrasEmOrdemDeNome,
   resumoDoLote,
   rotuloDaFaixa,
+  ROTULO_DAS_ABAS_DA_CORRECAO,
+  ROTULO_DE_REJEITAR_O_LOTE,
   rotuloDeAprovar,
-  textoDaMedia,
   textoDeAlunos,
-  textoDosCorrigidos,
+  tituloDasOutras,
+  tituloDosDestaques,
 } from './aprovar'
 import { aprovacaoDaEntrega, AUTOR_QUE_SAIU, LIMITES_DA_JUSTIFICATIVA, VERBO_DA_ENTREGA } from './entregas'
 import { nomesDasTurmas } from './turmas-da-professora'
@@ -57,10 +71,18 @@ const AVISO_DA_DECISAO: Partial<Record<CodigoDeErro, string>> = {
   [CodigoDeErro.TEMPO_ESGOTADO]: 'Não foi possível registrar a decisão agora, e nada foi aprovado. Confira a correção e tente de novo em instantes.',
 }
 
-/** O que a abertura de um destaque mostra: as respostas do aluno, questão a questão, e o acerto dele nos lotes aprovados antes. */
+/**
+ * O que o painel ao lado mostra de um destaque aberto: por que ele foi destacado (em texto, como fato do trabalho), as
+ * respostas do aluno questão a questão e o acerto dele nos lotes aprovados antes.
+ */
 function DestaqueAberto({ aberto }: { aberto: RespostaDestaqueAberto }) {
   return (
-    <div data-destaque-aberto="" className="flex min-w-0 flex-col gap-3 border-t border-linha pt-3">
+    <div data-destaque-aberto="" className="flex min-w-0 flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-1">
+        <p className="text-sm font-medium break-words text-apoio">{motivosDoDestaque(aberto.destaque)}</p>
+        <p className="text-sm break-words text-apoio">{explicacoesDoDestaque(aberto.destaque)}</p>
+        <p className="text-sm break-words text-sutil">{acertosDoAluno(aberto.destaque)}</p>
+      </div>
       <Tabela
         rotulo={`Respostas de ${aberto.destaque.nome}`}
         colunas={[
@@ -95,12 +117,16 @@ function DestaqueAberto({ aberto }: { aberto: RespostaDestaqueAberto }) {
  * a supervisão humana não pode virar clique reflexo. O Assistente corrigiu pelo gabarito; quem faz o resultado valer é a
  * professora, depois de olhar o que precisa ser olhado.
  *
- * - **O resumo do lote**, assinado pela função com o selo de IA: quantos têm correção, a média de acertos, a distribuição,
- *   o acerto por habilidade e por questão. **É diagnóstico, não nota**: a tela fala em acertos e habilidades.
- * - **"Abra estes N antes de aprovar"**: cada destaque com o motivo em texto, fechado como pendente e aberto como ok, com
- *   a hora. Abrir chama a rota que registra a abertura: é a tela mostrando o que o registro da validação vai guardar.
- * - **O botão de aprovar é o único `oficial` da tela**, preso embaixo, e fica desligado até o último destaque ser aberto,
- *   com o contador ao lado dizendo por quê. Quem libera é a API (`podeAprovar`).
+ * - **A faixa de números** abre a tela: quantas correções, quantos destaques já abertos e o acerto médio em questões.
+ *   **É diagnóstico, não nota**: a tela fala em acertos e habilidades.
+ * - **Três abas no endereço** (`?aba=destaques|outras|resumo`; trocar usa `replace`, e o que não é aba cai em Destaques):
+ *   Destaques, com o "Abra estes N antes de aprovar"; Outras, em ordem de nome; Resumo, com a distribuição, o acerto por
+ *   habilidade e por questão. A assinatura da função com o selo de IA fica no alto, fora das abas.
+ * - **Abrir um destaque** chama a rota que registra a abertura (uma vez, mesmo com dois cliques) e mostra as respostas num
+ *   painel ao lado (`?ver=<alunoId>`). O painel só abre pelo endereço para destaque **já aberto**: recarregar com `?ver=` de um
+ *   destaque fechado não abre nada e não registra nada (D56).
+ * - **O botão de aprovar é o único `oficial` da tela**, na barra presa, **fora das abas**: está nas três e fica desligado até
+ *   o último destaque ser aberto, com o contador ao lado dizendo por quê. Quem libera é a API (`podeAprovar`).
  * - **Confirmar diz o que vai acontecer**: a atividade, a turma, quantas correções, e que o diagnóstico chega aos alunos.
  *   Depois, a tela mostra "Validação registrada por … · quando". **Rejeitar** é `perigo` e pede justificativa.
  *
@@ -109,6 +135,8 @@ function DestaqueAberto({ aberto }: { aberto: RespostaDestaqueAberto }) {
 export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: string }) {
   useTituloDaTela('Revisar a correção')
   const cliente = useQueryClient()
+  const [caminho, navegar] = useLocation()
+  const busca = useSearch()
   const correcao = useQuery(consultaCorrecaoDoLote(atividadeAplicadaId))
   const entregas = useInfiniteQuery(consultaEntregas)
   const vinculos = useInfiniteQuery(consultaMeusVinculos)
@@ -118,20 +146,55 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
   const [tentouRejeitar, definirTentouRejeitar] = useState(false)
   const [aviso, definirAviso] = useState('')
   const decidindo = useRef(false)
+  // A abertura que está no ar: o segundo clique, ou o endereço relido, não manda outra (regra 80, item 7).
+  const emAbertura = useRef(new Set<string>())
   const situacao = useRef<HTMLDivElement>(null)
   const idDosDestaques = useId()
   const idDasOutras = useId()
   const idDoContador = useId()
   const dados = correcao.data
+  const aba = abaDoEndereco(busca)
+  const abertosAgora = useMemo(() => new Set(Object.keys(abertos)), [abertos])
+  const doPainel = dados === undefined ? undefined : destaqueDoEndereco(busca, dados.destaques, abertosAgora)
+  const verId = doPainel?.alunoId
+  const doAberto = verId === undefined ? undefined : abertos[verId]
 
   const abrir = useMutation({
     mutationFn: (alunoId: string) => abrirDestaque(atividadeAplicadaId, alunoId),
-    onSuccess: async (aberto) => {
+    onSuccess: (aberto) => {
       definirAbertos((atuais) => ({ ...atuais, [aberto.destaque.alunoId]: aberto }))
-      // A abertura ficou registrada: a tela relê o lote, que traz a hora e libera o botão quando for a última.
-      await cliente.invalidateQueries({ queryKey: consultaCorrecaoDoLote(atividadeAplicadaId).queryKey })
+      // A abertura ficou registrada: a tela relê o lote, que traz a hora e libera o botão quando for a última. O painel não espera por isso.
+      void cliente.invalidateQueries({ queryKey: consultaCorrecaoDoLote(atividadeAplicadaId).queryKey })
+    },
+    onSettled: (_resposta, _erro, alunoId) => {
+      emAbertura.current.delete(alunoId)
     },
   })
+  const lerAbertura = abrir.mutate
+
+  /** Abre o destaque: registra a abertura (a primeira vez) e depois mostra o painel. O que já foi lido nesta tela não chama a API de novo. */
+  function abrirOuMostrar(alunoId: string): void {
+    // O destaque que o endereço já mostra não ganha outro passo no histórico (o "Tentar de novo" do painel cai aqui).
+    const mostrar = () => (verId === alunoId ? undefined : navegar(enderecoDaCorrecao(caminho, busca, { ver: alunoId })))
+    if (abertos[alunoId] !== undefined) return mostrar()
+    if (emAbertura.current.size > 0) return
+    emAbertura.current.add(alunoId)
+    abrir.mutate(alunoId, { onSuccess: mostrar })
+  }
+
+  // O endereço de um destaque que a lista já tem aberto, mas que esta tela ainda não leu (recarregar, ou o link): lê as respostas
+  // de novo. A API devolve o mesmo e a primeira hora, e não registra outra abertura.
+  useEffect(() => {
+    if (verId === undefined || abertos[verId] !== undefined || emAbertura.current.size > 0) return
+    emAbertura.current.add(verId)
+    lerAbertura(verId)
+  }, [verId, abertos, lerAbertura])
+
+  const fecharPainel = (): void => navegar(enderecoDaCorrecao(caminho, busca, { ver: null }), { replace: true })
+  const trocarAba = (id: string): void => {
+    const nova = ABAS_DA_CORRECAO.find((candidata) => candidata.id === id)
+    if (nova !== undefined) navegar(enderecoDaCorrecao(caminho, busca, { aba: nova.id }), { replace: true })
+  }
 
   const fechar = () => definirDecisao(undefined)
   const decidir = useMutation({
@@ -174,7 +237,7 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
   if (dados === undefined) {
     const naoEncontrada = correcao.error instanceof ErroDaApi && correcao.error.codigo === CodigoDeErro.NAO_ENCONTRADO
     return (
-      <Tela titulo="Revisar a correção" largura="formulario" antes={voltar}>
+      <Tela titulo="Revisar a correção" largura="leitura" antes={voltar}>
         {correcao.isPending ? (
           <EstadoCarregando rotulo="Carregando a correção…" />
         ) : naoEncontrada ? (
@@ -213,40 +276,31 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
 
   function linhaDoDestaque(destaque: Destaque) {
     const estado = estadoDoDestaque(destaque)
-    const aberto = abertos[destaque.alunoId]
     const abrindo = abrir.isPending && abrir.variables === destaque.alunoId
+    // Abrir é o que fica registrado (D56). O já aberto pode ser visto de novo: a hora registrada continua a primeira. Lote já
+    // decidido não abre o que ficou fechado: não há mais o que registrar.
+    const acionavel = estado.aberto || pendente
     return (
-      <li key={destaque.alunoId} id={idDoDestaque(destaque.alunoId)} data-destaque={estado.aberto ? 'aberto' : 'fechado'} className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4">
-        <div className="flex min-w-0 flex-wrap items-start justify-between gap-x-4 gap-y-2">
-          <div className="flex min-w-0 flex-1 basis-56 flex-col gap-1">
-            <p className="font-medium break-words text-tinta">{destaque.nome}</p>
-            <p className="text-sm font-medium break-words text-apoio">{motivosDoDestaque(destaque)}</p>
-            <p className="text-sm break-words text-apoio">{explicacoesDoDestaque(destaque)}</p>
-            <p className="text-sm break-words text-sutil">{acertosDoAluno(destaque)}</p>
-          </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
-            {estado.aberto ? <Estado familia="ok">{estado.texto}</Estado> : <Estado familia="pendente">{estado.texto}</Estado>}
-            {/* Abrir é o que fica registrado (D56). O já aberto pode ser visto de novo: a hora registrada continua a primeira. */}
-            {(estado.aberto ? aberto === undefined : pendente) && (
-              <Botao variante="secundario" disabled={abrir.isPending} onClick={() => abrir.mutate(destaque.alunoId)}>
-                {abrindo ? 'Abrindo…' : estado.aberto ? 'Ver de novo' : 'Abrir'}
-                <span className="sr-only"> a correção de {destaque.nome}</span>
-              </Botao>
-            )}
-          </div>
-        </div>
-        {abrir.isError && abrir.variables === destaque.alunoId && (
-          <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro">
+      <li key={destaque.alunoId} id={idDoDestaque(destaque.alunoId)} data-destaque={estado.aberto ? 'aberto' : 'fechado'} className="flex min-w-0 flex-col">
+        <Linha
+          titulo={destaque.nome}
+          abaixo={`${motivosDoDestaque(destaque)} · ${acertosDoAluno(destaque)}`}
+          fim={abrindo ? <Estado familia="pendente">Abrindo…</Estado> : estado.aberto ? <Estado familia="ok">{estado.texto}</Estado> : <Estado familia="pendente">{estado.texto}</Estado>}
+          {...(acionavel ? { aoAcionar: () => abrirOuMostrar(destaque.alunoId) } : {})}
+        />
+        {abrir.isError && abrir.variables === destaque.alunoId && doPainel?.alunoId !== destaque.alunoId && (
+          <p role="alert" className="mx-4 mb-3 rounded-controle bg-erro-cx p-3 break-words text-erro">
             {mensagemDoErro(abrir.error)}
           </p>
         )}
-        {aberto !== undefined && <DestaqueAberto aberto={aberto} />}
       </li>
     )
   }
 
+  const outrasEmOrdem = outrasEmOrdemDeNome(outras)
+
   return (
-    <Tela titulo="Revisar a correção" largura="formulario" objeto descricao={turma === undefined ? dados.titulo : `${dados.titulo} · ${turma}`} antes={voltar}>
+    <Tela titulo="Revisar a correção" largura="leitura" objeto descricao={turma === undefined ? dados.titulo : `${dados.titulo} · ${turma}`} antes={voltar}>
       <div className="flex min-w-0 flex-col gap-2">
         {/* A correção é saída de IA: leva a assinatura da função e o selo, como toda saída de IA do produto. */}
         <AssinaturaIA funcao="correcao_de_objetiva" />
@@ -271,70 +325,81 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
         {aviso}
       </p>
 
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        <NumeroPainel rotulo="Correções" valor={textoDosCorrigidos(resumo)} apoio="Quem não abriu a atividade não tem correção." />
-        <NumeroPainel rotulo="Média de acertos" valor={textoDaMedia(resumo)} />
-        <NumeroPainel rotulo="Destaques para abrir" valor={String(destaques.length)} apoio="Correções que pedem o seu olhar antes de aprovar." />
+      <div role="group" aria-label="Números da correção" className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        {numerosDoLote(dados).map((numero) => (
+          <NumeroPainel key={numero.rotulo} rotulo={numero.rotulo} valor={numero.valor} apoio={numero.apoio} />
+        ))}
       </div>
 
-      <section aria-labelledby={idDosDestaques} className="flex min-w-0 flex-col gap-3">
-        <CabecalhoDeSecao
-          id={idDosDestaques}
-          titulo={destaques.length === 0 ? 'Nenhuma correção para abrir antes de aprovar' : destaques.length === 1 ? 'Abra este antes de aprovar' : `Abra estes ${String(destaques.length)} antes de aprovar`}
-          apoio={destaques.length === 0 ? 'Nenhuma correção deste lote ficou fora do esperado. Confira o resumo e aprove.' : 'São as correções fora da curva. Abrir cada uma fica registrado, com a hora.'}
-        />
-        {destaques.length > 0 && <ul className="flex min-w-0 flex-col gap-3">{destaques.map(linhaDoDestaque)}</ul>}
-      </section>
+      <Abas rotulo={ROTULO_DAS_ABAS_DA_CORRECAO} abas={ABAS_DA_CORRECAO} ativa={aba} aoMudar={trocarAba}>
+        {aba === 'destaques' && (
+          <section aria-labelledby={idDosDestaques} className="flex min-w-0 flex-col gap-3">
+            <CabecalhoDeSecao
+              id={idDosDestaques}
+              titulo={tituloDosDestaques(destaques.length)}
+              apoio={destaques.length === 0 ? 'Nenhuma correção deste lote ficou fora do esperado. Confira o resumo e aprove.' : 'São as correções fora da curva. Abrir cada uma fica registrado, com a hora.'}
+            />
+            {destaques.length > 0 && <ul className="m-0 flex min-w-0 list-none flex-col divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda bg-superficie p-0">{destaques.map(linhaDoDestaque)}</ul>}
+          </section>
+        )}
 
-      <section className="flex min-w-0 flex-col gap-3" aria-label="Distribuição dos acertos">
-        <CabecalhoDeSecao titulo="Distribuição dos acertos" apoio="Quantos alunos ficaram em cada faixa de acertos." />
-        <div className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4">
-          {resumo.distribuicao.map((faixa) => (
-            <BarraRotulada key={`${String(faixa.de)}-${String(faixa.ate)}`} rotulo={rotuloDaFaixa(faixa)} valor={faixa.alunos} maximo={Math.max(resumo.corrigidos, 1)} texto={textoDeAlunos(faixa.alunos)} />
-          ))}
-        </div>
-      </section>
+        {aba === 'outras' && (
+          <section aria-labelledby={idDasOutras} className="flex min-w-0 flex-col gap-3">
+            <CabecalhoDeSecao id={idDasOutras} titulo={tituloDasOutras(outras.length)} apoio={outras.length === 0 ? 'Todas as correções deste lote estão nos destaques.' : APOIO_DAS_OUTRAS} />
+            {outras.length > 0 && (
+              <Tabela
+                rotulo="As outras correções"
+                colunas={[
+                  { chave: 'nome', titulo: 'Aluno', celula: (aluno) => aluno.nome },
+                  { chave: 'acertos', titulo: 'Acertos', celula: (aluno) => acertosDoAluno(aluno) },
+                ]}
+                linhas={outrasEmOrdem}
+                chaveDaLinha={(aluno) => aluno.alunoId}
+              />
+            )}
+          </section>
+        )}
 
-      <section className="flex min-w-0 flex-col gap-3" aria-label="Acerto por habilidade">
-        <CabecalhoDeSecao titulo="Acerto por habilidade" apoio="As respostas certas da turma em cada habilidade, somadas." />
-        <div className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4">
-          {resumo.porHabilidade.map((item) => (
-            <BarraRotulada key={item.habilidade.codigo} rotulo={`${item.habilidade.codigo} · ${item.habilidade.descricao}`} valor={item.acertos} maximo={item.total} texto={`${String(item.acertos)} de ${String(item.total)}`} />
-          ))}
-        </div>
-      </section>
+        {aba === 'resumo' && (
+          <div className="flex min-w-0 flex-col gap-6">
+            <section className="flex min-w-0 flex-col gap-3" aria-label="Distribuição dos acertos">
+              <CabecalhoDeSecao titulo="Distribuição dos acertos" apoio="Quantos alunos ficaram em cada faixa de acertos." />
+              <div className="flex min-w-0 flex-col gap-3 rounded-cartao border-2 border-borda bg-superficie p-4">
+                {resumo.distribuicao.map((faixa) => (
+                  <BarraRotulada key={`${String(faixa.de)}-${String(faixa.ate)}`} rotulo={rotuloDaFaixa(faixa)} valor={faixa.alunos} maximo={Math.max(resumo.corrigidos, 1)} texto={textoDeAlunos(faixa.alunos)} />
+                ))}
+              </div>
+            </section>
 
-      <section className="flex min-w-0 flex-col gap-3" aria-label="Por questão">
-        <CabecalhoDeSecao titulo="Por questão" apoio="Uma questão em que quase todos erram a mesma alternativa pode ter o gabarito errado." />
-        <Tabela
-          rotulo="Acertos por questão"
-          colunas={[
-            { chave: 'numero', titulo: 'Questão', celula: (questao) => String(questao.numero) },
-            { chave: 'habilidade', titulo: 'Habilidade', celula: (questao) => questao.habilidade.codigo },
-            { chave: 'gabarito', titulo: 'Gabarito', celula: (questao) => letraDaAlternativa(questao.gabarito) },
-            { chave: 'acertos', titulo: 'Acertaram', celula: (questao) => `${String(questao.acertos)} de ${String(resumo.corrigidos)}` },
-            { chave: 'marcacoes', titulo: 'Marcaram', celula: (questao) => questao.porAlternativa.map((quantos, alternativa) => `${letraDaAlternativa(alternativa)}: ${String(quantos)}`).join(' · ') },
-            { chave: 'branco', titulo: 'Em branco', celula: (questao) => String(questao.emBranco) },
-          ]}
-          linhas={resumo.porQuestao}
-          chaveDaLinha={(questao) => String(questao.numero)}
-        />
-      </section>
+            <section className="flex min-w-0 flex-col gap-3" aria-label="Acerto por habilidade">
+              <CabecalhoDeSecao titulo="Acerto por habilidade" apoio="As respostas certas da turma em cada habilidade, somadas." />
+              <div className="flex min-w-0 flex-col gap-3 rounded-cartao border-2 border-borda bg-superficie p-4">
+                {resumo.porHabilidade.map((item) => (
+                  <BarraRotulada key={item.habilidade.codigo} rotulo={`${item.habilidade.codigo} · ${item.habilidade.descricao}`} valor={item.acertos} maximo={item.total} texto={`${String(item.acertos)} de ${String(item.total)}`} />
+                ))}
+              </div>
+            </section>
 
-      {outras.length > 0 && (
-        <section aria-labelledby={idDasOutras} className="flex min-w-0 flex-col gap-3">
-          <CabecalhoDeSecao id={idDasOutras} titulo={outras.length === 1 ? 'A outra correção' : `As outras ${String(outras.length)} correções`} apoio="Dentro do esperado: não precisam ser abertas uma a uma." />
-          <Tabela
-            rotulo="As outras correções"
-            colunas={[
-              { chave: 'nome', titulo: 'Aluno', celula: (aluno) => aluno.nome },
-              { chave: 'acertos', titulo: 'Acertos', celula: (aluno) => acertosDoAluno(aluno) },
-            ]}
-            linhas={outras}
-            chaveDaLinha={(aluno) => aluno.alunoId}
-          />
-        </section>
-      )}
+            <section className="flex min-w-0 flex-col gap-3" aria-label="Por questão">
+              <CabecalhoDeSecao titulo="Por questão" />
+              <Aviso tom="atencao">{AVISO_DO_GABARITO}</Aviso>
+              <Tabela
+                rotulo="Acertos por questão"
+                colunas={[
+                  { chave: 'numero', titulo: 'Questão', celula: (questao) => String(questao.numero) },
+                  { chave: 'habilidade', titulo: 'Habilidade', celula: (questao) => questao.habilidade.codigo },
+                  { chave: 'gabarito', titulo: 'Gabarito', celula: (questao) => letraDaAlternativa(questao.gabarito) },
+                  { chave: 'acertos', titulo: 'Acertaram', celula: (questao) => `${String(questao.acertos)} de ${String(resumo.corrigidos)}` },
+                  { chave: 'marcacoes', titulo: 'Marcaram', celula: (questao) => questao.porAlternativa.map((quantos, alternativa) => `${letraDaAlternativa(alternativa)}: ${String(quantos)}`).join(' · ') },
+                  { chave: 'branco', titulo: 'Em branco', celula: (questao) => String(questao.emBranco) },
+                ]}
+                linhas={resumo.porQuestao}
+                chaveDaLinha={(questao) => String(questao.numero)}
+              />
+            </section>
+          </div>
+        )}
+      </Abas>
 
       {pendente && (
         <BarraPresa
@@ -346,13 +411,32 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
           }
         >
           <Botao variante="perigo" onClick={() => abrirDecisao('rejeitar')}>
-            Rejeitar…
+            {ROTULO_DE_REJEITAR_O_LOTE}
           </Botao>
           {/* O contador diz por que o botão está desligado: o leitor de tela o lê junto do botão. */}
           <Botao variante="oficial" disabled={!dados.podeAprovar} aria-describedby={idDoContador} onClick={() => abrirDecisao('aprovar')}>
             {rotuloDeAprovar(resumo.corrigidos)}
           </Botao>
         </BarraPresa>
+      )}
+
+      {doPainel !== undefined && (
+        <PainelLado key={doPainel.alunoId} titulo={`Correção de ${doPainel.nome}`} aoFechar={fecharPainel} focoDeReserva={() => situacao.current?.focus()}>
+          {doAberto !== undefined ? (
+            <DestaqueAberto aberto={doAberto} />
+          ) : abrir.isError && abrir.variables === doPainel.alunoId ? (
+            <div className="flex min-w-0 flex-col items-start gap-3">
+              <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro">
+                {mensagemDoErro(abrir.error)}
+              </p>
+              <Botao variante="secundario" onClick={() => abrirOuMostrar(doPainel.alunoId)}>
+                Tentar de novo
+              </Botao>
+            </div>
+          ) : (
+            <EstadoCarregando rotulo="Abrindo a correção…" />
+          )}
+        </PainelLado>
       )}
 
       {decisao === 'aprovar' && (
@@ -372,11 +456,11 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
       )}
       {decisao === 'rejeitar' && (
         <DialogoDeConfirmacao
-          titulo="Rejeitar a correção"
+          titulo={ROTULO_DE_REJEITAR_O_LOTE}
           familia="perigo"
           resumo={resumoDoLote(dados, turma)}
           efeito={EFEITO_DE_REJEITAR_O_LOTE}
-          rotuloDeConfirmar="Rejeitar a correção"
+          rotuloDeConfirmar={ROTULO_DE_REJEITAR_O_LOTE}
           rotuloConfirmando="Rejeitando…"
           aoConfirmar={confirmar}
           aoFechar={fechar}
