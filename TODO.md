@@ -1125,6 +1125,10 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 
 ## Marca e interface
 
+- [ ] **A seção 1.4 de `docs/interface.md` ainda cita a "média do aluno" como critério de fora da curva** (correção
+      `2026-10-19-interface-parte-a`): é o desenho da aprovação de nota oficial, que não existe até o F6 (D46), e não
+      contradiz o RF21, que trata da turma aberta. Quem reescrever a seção 1.4 quando a nota oficial entrar confere se o
+      critério continua sendo esse, sem ranking nem média de turma por professor (D45, D64)
 - [ ] **O script do tema em linha entra por hash quando o F16 servir política de segurança de conteúdo** (X1,
       tarefa 2.0): o `apps/web/index.html` tem um `<script>` em linha, sem `type="module"`, que escreve o `data-tema`
       no `<html>` antes do primeiro quadro (`educa.aparencia`; `src/tema.ts` repete a conta). Hoje o `Caddyfile`

@@ -71,21 +71,14 @@ existe e onde nasce o que falta: a **X1** troca a pele e a casca com os itens de
   material. Tudo que existe em Ferramentas pode ser pedido por aqui. Existe desde a A2, com o
   rótulo "Nova conversa": a X1 troca o rótulo, no mesmo endereço, e a X3 recompõe a tela, com a
   saudação e os atalhos das ferramentas que existem
-- **Turmas** (D69 revista) é a lista das turmas do professor. A **turma aberta** tem três abas,
-  **Hoje, Atividades e Alunos** (D80), e mostra o desempenho da turma e de cada aluno por
-  habilidade: nasce no F6 com o diagnóstico, ganha os sinais do Tutor no F10 e a comparação da
-  série no F12. Frequência, Ranking, Recursos e Mural não entram: continuam sem fase e sem decisão
-  (seção 7). A lista existe desde a A1 e a turma aberta, desde a A3, com Visão Geral e Alunos
-  (`apps/web/src/areas/professor/Turma.tsx`); as três abas nascem na X3, com o que o produto já
-  sabe. Na A1 a turma já existe para o professor ver os alunos e aprovar quem reivindicou o
-  nome (D4, D71 revista). Ela abre pelo cartão do vínculo confirmado, em `/professor/turmas/:turmaId`, e começa pela
-  seção **Acesso dos alunos** (tarefa 15.0; Tech Spec da A1, seção 9): gerar o link da sala e o código da turma com
-  validade de 1, 7 ou 30 dias, projetar o código, copiar o link ou mandá-lo pelo WhatsApp, trocar por um novo e
-  revogar. Embaixo, a seção **Pedidos de nome** (tarefa 16.0): cada pedido com o nome, a hora e, se houve, a marca da
-  tentativa com matrícula errada; a lista se atualiza sozinha a cada 15 s, com a aba à vista; o professor marca até 40 e
-  aprova (`oficial`) ou recusa (`perigo`) depois de revisar a turma, os nomes e o efeito, e cada pedido termina com o
-  resultado em texto. Não existe "aprovar todos". Na X3 o acesso e os pedidos passam para um
-  diálogo dentro da turma, com as mesmas regras
+- **Turmas** (D69 revista) é a lista das turmas do professor e, dentro dela, a **turma aberta**, com três
+  abas: **Hoje, Atividades e Alunos** (D80). A lista existe desde a A1 e a turma aberta, desde a A3; a X3
+  (tarefas 9.0 a 13.0) recompôs as duas, e o que está construído é o da seção 1.7. Na turma aberta a
+  professora vê o que o Tutor avisou, as atividades aplicadas e os alunos com os acertos de correção
+  aprovada, e gera o acesso dos alunos pelo diálogo "Convidar alunos". O desempenho completo por habilidade
+  nasce no F6, os sinais do Tutor em modo sala, no F10, e a comparação da série, no F12. Frequência,
+  Ranking, Recursos e Mural não entram: continuam sem fase e sem decisão (seção 7). Na A1 a turma já existe
+  para o professor ver os alunos e aprovar quem reivindicou o nome (D4, D71 revista)
 - **Ferramentas** é o catálogo em quatro categorias (D74, seção 1.2), com os mesmos fluxos em
   formato de formulário para quem não quer conversar. Existe desde a A2; a X3 recompõe o catálogo
   e o formulário
@@ -205,17 +198,21 @@ não existe.
   Corretor, Planejador e Adaptador deixaram de ser agentes: são **funções do Assistente** —
   correção de objetiva, adaptação, e "seu dia e sua semana", que abre o dia com o que já existe e
   só gera plano quando o professor pede
-- **Cada agente abre a própria conversa em tela cheia, pelo pé do sino** ("Seu time" deixou de
-  ser grupo da lateral na X3, tarefa 2.0). "O que o Assistente fez" junta o que as funções
-  fizeram, com filtro: tudo · esperando você · correção · adaptação · seu dia (P14). "O que o
-  Tutor viu" mostra o que ele viu no uso da turma; a aba Hoje da turma o traz de volta nesta spec
+- **"O que o Assistente fez" abre em tela cheia, pelo pé do sino** ("Seu time" deixou de ser grupo
+  da lateral na X3, tarefa 2.0) e junta o que as funções fizeram, com filtro: tudo · esperando
+  você · correção · adaptação · seu dia (P14). **"O que o Tutor viu" deixou de ser tela**: o
+  endereço do pé do sino leva à aba Hoje da turma (seção 1.7), onde o que o Tutor viu mora desde
+  a tarefa 10.0
 - **Da X3 em diante, o que espera o professor mora no sino** (D80): uma fila só, em que cada item
-  diz o que foi feito e **o que está esperando**: "Corrigi as 32 provas do 2ºB, média 6,4.
-  Esperando você aprovar". O número do sino é o tamanho da fila; sem item, sem número. **Nada do que
-  estava em "Seu time" some**
-- **O que o Tutor viu no uso da turma** chega pela mesma fila: quem travou e onde, quem errou
-  muito, quem pediu resposta pronta, a principal dificuldade, a dúvida que se repetiu. Dentro do
-  horário útil da escola (D59)
+  diz o que foi feito e **o que está esperando**: "Correção para revisar", com o título da
+  atividade e a turma, e na conversa do Assistente: `Corrigi "Atividade de estequiometria" da
+  turma 7ºA. O diagnóstico só chega aos alunos depois que você revisar os destaques e aprovar.` Os
+  itens são quatro (correção para revisar, versão adaptada para decidir, pedidos de nome da turma
+  e turma para confirmar), sem nome de aluno. O número do sino é o tamanho da fila; sem item, sem
+  número. **Nada do que estava em "Seu time" some**
+- **O que o Tutor viu no uso da turma** (quem travou e onde, quem pediu resposta pronta, a dúvida
+  que se repetiu) **não entra no sino hoje**: ele fica na aba Hoje da turma (seção 1.7), em
+  agregado e sem nome, e o sino o recebe no F10, dentro do horário útil da escola (D59)
 - **A autonomia é mostrada por função**, em português comum ("corrigir objetiva: faz e avisa;
   diagnóstico ao aluno: espera você"), e a coordenação suspende uma função sem desligar o chat
   (D9 e D60 revistas)
@@ -248,7 +245,8 @@ O desenho da tela, com a cor própria da ação oficial, está na seção 11.5.
 
 - Mostra **sinal, não conversa**: quem travou, quem pediu resposta pronta, dúvida que se
   repetiu (regra 50, item 10)
-- Abrir a conversa de um aluno é ação explícita e fica em auditoria
+- Abrir a conversa de um aluno é ação explícita e fica em auditoria. **Essa ação não existe na fatia atual**: a aba
+  Hoje da turma mostra sinal, sem abrir conversa (seção 1.7), e o F10 é quem a reabre (regra 70, item 7)
 - Sem inferência de estado emocional (regra 70, item 7)
 - Com a busca do Tutor ligada, o professor vê o que a turma pesquisou e quais fontes foram
   abertas (D68)
@@ -259,6 +257,123 @@ O desenho da tela, com a cor própria da ação oficial, está na seção 11.5.
 - O professor vê o fato ("saiu da aba 3 vezes"), junto dos outros destaques do lote. Nada
   acontece sozinho com a prova nem com a nota
 - Não existe fora de avaliação, não vira histórico do aluno e não aparece para a coordenação
+
+### 1.7 Turmas e a turma aberta (X3, tarefas 9.0 a 13.0)
+
+**A lista** (`/professor/turmas`). O `h1` "Turmas" é visível. Os quatro estados: carregando; erro com "Tentar de
+novo"; vazio ("A coordenação ainda não alocou você", que diz que quem aloca é a coordenação); e com dado, em
+dois grupos:
+
+- **"Confirme suas turmas"**, no alto: uma faixa para cada vínculo que espera a decisão da professora, só o
+  pendente, com o texto "Confirme sua turma · 7ºA · Matemática" e dois botões, "Confirmar" (`oficial`) e
+  "Contestar" (`secundario`). O vínculo contestado espera a coordenação e sai da faixa. Só uma decisão corre
+  por vez, e dois cliques mandam uma só. A professora só confirma: o vínculo é definido pela escola (regra 60,
+  item 8a)
+- **"Suas turmas"**: a grade de cartões, em 3 colunas a partir de 1024 px, 2 a partir de 640 e 1 abaixo. Um
+  cartão por turma **e disciplina** (quem dá duas disciplinas na mesma turma tem dois, e decide cada um à
+  parte), com o ladrilho na cor da disciplina, o nome ("7ºA · Matemática") e o estado do vínculo **em texto**
+  ("Confirmado por você", "Contestado por você"…). O cartão do vínculo confirmado traz o selo do que espera e
+  "Abrir a turma"; o contestado e o encerrado não abrem a turma, e o pendente ainda está na faixa de cima.
+  A série não entra no cartão: o vínculo não a traz
+- **O selo** diz "3 esperando você" (correções para revisar, versões adaptadas para decidir e pedidos de nome da
+  turma), "Em dia", "Lendo o que espera…" (enquanto o sino ainda lê a turma) ou "Não lida". Vem das mesmas leituras do sino, nenhuma a mais. A turma que o sino não leu (a leitura
+  falhou, foi recusada, veio truncada ou passou das 12 primeiras) diz "Não lida", nunca "Em dia"; a lida pela
+  metade diz "3 ou mais"
+- **Contestar** abre num painel ao lado (folha de baixo a 360 px): o motivo em lista fechada, o complemento em
+  texto livre com o aviso de não escrever nome de aluno (regra 20) e, antes de enviar, o efeito escrito: a
+  coordenação vê, e a turma não abre até ser corrigida. O que a professora está escrevendo mora na página, e a
+  releitura da lista não o apaga
+- **Depois de confirmar**, o aviso "Turma 7ºA confirmada", com "Gerar o acesso", leva à aba Alunos com o
+  diálogo "Convidar alunos" aberto
+
+**A turma aberta** (`/professor/turmas/:turmaId`). Só abre a turma de vínculo confirmado no ano em curso. A de
+outro professor, a de outra escola, a pendente e a que não existe respondem a mesma frase ("Esta turma não
+está disponível para você agora…"), sem "Tentar de novo" (regra 10, item 6). Se o vínculo acaba com a tela
+aberta, a página inteira sai, com um aviso só, assim que a releitura da turma, dos pedidos (Alunos) ou dos
+sinais (Hoje, a cada 15 s) deixa de achá-la, e com ela saem os nomes e o link que estivessem na tela (regra 20,
+item 18). Só o "não encontrado" tira a página: a releitura que cai por rede ou servidor, com o dado na tela,
+não tira.
+
+O topo é o "Voltar para Turmas", o `h1` "Turma 7ºA" com a série embaixo e as três abas, guardadas no endereço
+(`?aba=hoje`, `atividades` ou `alunos`). Sem aba, ou com valor que não é de nenhuma (o `visao-geral` de antes),
+abre em Hoje; trocar de aba usa `replace`, sem passo no histórico. **A página não rola, rola o painel da aba**
+(RF22): do `md` para cima o topo e as abas ficam parados, e só o painel da aba ativa rola por dentro, na altura
+que sobra da janela; abaixo de 768 px a página rola inteira. Cada aba é um pedaço baixado só quando se abre, e
+a que sai da tela leva consigo as leituras dela. Só valor de lista fechada vai ao endereço (a aba, o painel
+aberto, o pedido do diálogo), nunca nome de aluno, token nem código (regra 20, item 9).
+
+**Hoje** é a aba que a professora projeta em sala, e por isso nada nela diz o nome de um aluno: sinal, não
+conversa (regra 50, item 10; D34).
+
+- No alto, quando o Tutor mandou aluno procurar um adulto (D36), o aviso "3 alunos precisam de um adulto" (ou
+  "Um aluno precisa de um adulto"), com "Aviso mais recente: <hora>", o que fazer e o botão "Ver quem".
+  **Sem nome e sem o que foi dito.** O aviso que chega aos 15 s entra sem piscar, sem som e sem mover o foco
+  (`aria-live="polite"`; D59)
+- **"Sinais da turma"**: a soma, em falas do Tutor ("8 alunos travaram na questão 3"), sem nome de ninguém. Sem
+  sinal, o vazio diz o que o Tutor avisa e quando (regra 50, item 6). Os sinais são relidos a cada 15 s, só com
+  a aba à vista (não há WebSocket nesta fatia)
+- **"O que o Tutor faz sozinho, e o que você vê aqui"**, recolhido: as funções do Tutor, cada uma com o que faz
+  sozinha e o que fica com a professora, o selo de suspensa pela coordenação, o bloco "Quando o Tutor avisa
+  você" (travou, pediu a resposta pronta, repetiu a dúvida) e a frase de que a conversa de um aluno não abre
+  ali
+- **"Acerto por habilidade"**: só de correção aprovada, em barras neutras (nenhuma fica vermelha) com o número
+  em texto ("12 de 20") e quantos alunos acertaram menos da metade da habilidade (limiar provisório: decisão em
+  aberto). Sem correção aprovada, o vazio tracejado diz que o acerto aparece depois de a professora aprovar.
+  Sem média, nota nem ranking (D46, D69)
+- **O nome chega por ação explícita**: "Ver quem" e "Ver o uso do Tutor por aluno" abrem o painel "O que o
+  Tutor viu" (`?ver=tutor`), com a atenção humana (nome e hora, sem o que foi dito), os "Sinais por aluno" e o
+  "Uso do Tutor pela turma" (as trocas do mês contra o pacote e, por aluno, as trocas de hoje, a última troca e
+  em que ele estava), **em ordem de nome** e nunca por recência. A leitura nominal do uso só existe com o painel
+  aberto e sai da memória com ele. **Nenhuma linha, botão ou link leva à conversa de um aluno**
+- O endereço antigo do Tutor (`/professor/time/tutor`) leva a Hoje, quando há uma só turma confirmada, ou a
+  Turmas
+
+**Atividades** lista as atividades aplicadas à turma, uma linha por atividade, a mais nova primeiro: o ícone da
+ferramenta, o título, a situação ("N de M enviaram") e o selo do estado em texto. Os estados são Aberta,
+Correção para revisar, Correção aprovada, Correção rejeitada e Sem correção (ninguém abriu a atividade, ou a
+coordenação suspendeu a função). Atividade é só objetiva (D55). Com mais de oito linhas, o filtro "Todas ·
+Abertas · Para revisar · Encerradas", que é da aba e não vai ao endereço. A ação da aba, "Aplicar uma
+atividade", leva a Criados já filtrado pela turma e pelo tipo; sem atividade, o convite mora no vazio, um só.
+
+- A linha abre o **painel ao lado** (`?atividade=<id>`; folha de baixo a 360 px) com o selo, a situação, a
+  turma, quando foi aplicada e encerrada, a frase do que fazer e as ações: "Abrir a atividade", "Revisar a
+  correção" (ou "Ver a correção", se já decidida), "Corrigir de novo" (só quando a atividade encerrou sem
+  correção que valha) e "Encerrar a atividade" (só na aberta, com a confirmação que diz o que acontece). O id
+  de outra turma ou inexistente não abre painel, e a lista segue (regra 10, item 6)
+- **Aprovar não é daqui**: é a tela de revisar, onde cada destaque se abre (seção 11.5). A aba não diz nota,
+  média, conceito nem pontuação, e nada ordena por acerto
+
+**Alunos**, de cima para baixo:
+
+- **"Acesso dos alunos"**, um resumo ("Sem acesso ativo", ou "Acesso ativo" com "Vale até 26/10, 10h") e o botão
+  "Convidar alunos", que abre o diálogo abaixo
+- **"Pedidos de nome"**: cada pedido com o nome, a hora e, se houve, a marca da tentativa com matrícula errada;
+  a lista se atualiza sozinha a cada 15 s, com a aba à vista; a professora marca até 40 e aprova (`oficial`) ou
+  recusa (`perigo`) depois de revisar a turma, os nomes e o efeito, e cada pedido termina com o resultado em
+  texto. Não existe "aprovar todos" (D4)
+- **"Por aluno"**: os nomes da turma em ordem de nome (dois alunos de mesmo nome são duas linhas), lidos de cem
+  em cem, com "Ver mais", e as colunas "Acertos" ("12 de 20") e "Por habilidade", só de correção aprovada. O
+  aluno sem correção aprovada diz "Sem correção aprovada", e não "0 de 0"; quem saiu da turma (transferido, ou
+  com o acesso desativado) diz "Saiu da turma", sem número. A falha dos acertos não tira os nomes. A lista não
+  fica no cache nem em armazenamento do navegador
+- **Não há** ordem por acerto, situação do aluno, média, busca por nome, selo de Adaptação por aluno nem
+  "Abrir a conversa" (D35, D64, D69)
+
+**Convidar alunos** é o acesso (gerar, gerar novo, revogar) num diálogo de 520 px, aberto pelo botão da aba
+Alunos ou por `?convidar=1`; fechar tira o parâmetro (`replace`). Os passos trocam o conteúdo, e nunca há
+diálogo dentro de diálogo:
+
+- sem acesso, **"Gerar acesso"**: a validade (1, 7 ou 30 dias, com 7 já escolhidos) e o que acontece
+- depois de gerar, **"Acesso gerado" em tela inteira**, porque é o passo que se projeta: o código da turma em
+  dois grupos, grande; o link da sala; "Copiar link", "Compartilhar pelo WhatsApp" (o texto leva só o nome da
+  escola e o link) e "Fechar". Fechar sem ter copiado pergunta antes, pelo botão e pelo Esc. **O link e o código
+  aparecem uma vez** (regra 20, item 8): a leitura do acesso não os devolve, e abrir o diálogo de novo mostra só
+  a validade
+- com acesso vigente, até quando vale, "Gerar novo acesso" e "Revogar o acesso", cada um com a pergunta que diz
+  o que acontece
+
+O envio é único (dois cliques mandam um pedido só), e a sessão que vence com o diálogo aberto leva embora o
+link e o código. O endereço nunca leva token, link nem código.
 
 ---
 
@@ -1042,8 +1157,9 @@ declarado uma vez, e não copiado em cada avatar.
 
 - **Frase curta, verbo na frente, sem ponto de exclamação e sem "Ops".** "Salvo em Criados."
   "Não foi possível salvar. Tente de novo em instantes."
-- **O agente fala na primeira pessoa da função** e diz o que fez e o que espera: "Corrigi as 32
-  provas do 2ºB, média 6,4. Esperando você aprovar." Nunca simula afeto ("senti sua falta") nem
+- **O agente fala na primeira pessoa da função** e diz o que fez e o que espera: `Corrigi
+  "Atividade de estequiometria" da turma 7ºA. O diagnóstico só chega aos alunos depois que você revisar os
+  destaques e aprovar.` Nunca simula afeto ("senti sua falta") nem
   pressa ("só hoje") (D58, D59)
 - **Botão diz o que acontece**, com o objeto: "Aprovar 32 correções", não "Confirmar"; "Exportar
   em PDF", não "OK"
@@ -1586,6 +1702,12 @@ mostrar o título e ganha as larguras novas; a composição de cada tipo chega c
 - **As abas** ficam embaixo do título, com 44 px; o endereço guarda a aba, e trocar de aba não
   empilha histórico
 
+**A turma aberta** (X3, seção 1.7) é uma página de painel com o cabeçalho de objeto: o voltar ("Voltar para
+Turmas"), o `h1` "Turma 7ºA" com a série embaixo e as três abas no endereço (`?aba=`), sem ação no alto. Do `md`
+para cima **a página não rola**: o topo e as abas ficam parados, e só o painel da aba ativa rola por dentro, na
+altura da janela menos onde ele começa (a mesma conta do documento aberto, medida em `useTopoDoPainel`);
+abaixo de 768 px a página rola inteira (RF22).
+
 Fora da casca ficam as **telas de foco**, cada uma na fase dela: a introdução (X4), a prova (F6) e
 a aula ao vivo (F10). Topo de 64 px com o sair, o miolo rolando por dentro e o rodapé preso.
 
@@ -1649,12 +1771,32 @@ professora não está no Início: está no sino.** O menu **Ferramenta** fica na
 - **As ações da resposta ficam sempre visíveis.** Enquanto o texto chega, enviar vira **Parar**.
   Fila cheia ou provedor lento vira aviso dentro da conversa, nunca erro cru (regra 80, item 4)
 
+**Turmas e a turma aberta** (X3, tarefas 9.0 a 13.0; o comportamento está na seção 1.7). As peças:
+
+- **A faixa "Confirme sua turma"** é um bloco de borda de 2 px na família `amarelo`, com o ladrilho da disciplina, o
+  texto e os dois botões ("Confirmar" `oficial`, "Contestar" `secundario`); no celular o texto e os botões
+  empilham. Os **cartões de "Suas turmas"** são de borda de 2 px em `superficie`, com o ladrilho, o nome, o
+  estado em texto e o selo ("N esperando você" em `pendente`, "Em dia" em `ok`, "Não lida" em `info`)
+- **Hoje** é uma coluna só, sem grade: o aviso de atenção humana em `pendente` (ícone e texto), os sinais como
+  falas do Tutor, o bloco recolhido "O que o Tutor faz sozinho…", as barras neutras do acerto por habilidade.
+  O painel "O que o Tutor viu" é o `PainelLado` (480 px à direita; folha de baixo a 360 px)
+- **Atividades** é uma lista de `Linha`, separadas por borda de 2 px, com o ícone da ferramenta à esquerda e o
+  selo do estado à direita; o filtro é o `Segmentado`, em duas colunas no celular; o painel da atividade é o
+  `PainelLado`, com as ações no rodapé
+- **Alunos** empilha o resumo do acesso, a lista de pedidos e a `Tabela` "Acertos por aluno" (nome, acertos e
+  por habilidade), sem coluna que ordene por acerto
+- **"Convidar alunos"** é o `Dialogo` de 520 px. O passo "Acesso gerado" usa a variante `inteira` (a janela
+  toda, no `fundo` do tema, para que nada da turma fique legível atrás do código projetado)
+- **Em nenhuma aba** há nota, média, ranking, ordem por acerto, tempo parado nem a conversa de um aluno
+  (regra 50, itens 9 e 10; D64, D69)
+
 **O que o Assistente fez e o que o Tutor viu** (era "Seu time", 11.4; pelo pé do sino desde a X3, tarefa 2.0; os
 títulos das telas, no `h1`, são "Assistente de ensino" e "Tutor"). Cada agente abre a própria conversa em tela cheia, e a entrega
-é um cartão com o que foi feito, o que está esperando e o estado em selo. A conversa do Tutor
-mostra **sinal, não conversa de aluno** (regra 50, item 10): o nome do aluno aparece só para o
-professor da turma (D34), e abrir a conversa de um aluno é ação à parte, com aviso de que fica em
-auditoria. O resto está na seção 1.3.
+é um cartão com o que foi feito, o que está esperando e o estado em selo. O que o Tutor viu
+mostra **sinal, não conversa de aluno** (regra 50, item 10) e mora na aba Hoje da turma, e não numa
+tela de agente: o nome do aluno aparece só para o professor da turma (D34), por ação dela, num
+painel ao lado, e **nada na tela abre a conversa de um aluno**. A seção 1.7 descreve a aba e a
+seção 1.3, a fila.
 
 **Aprovar** (era 11.5; X3, com a ação oficial em grafite).
 
@@ -1745,7 +1887,7 @@ sintéticos, está em `docs/roteiro-da-demonstracao.md`; o que ficou de fora de 
 | 3. Aluno responde a atividade e abre o Tutor, que recusa, conduz e cita | Área do aluno | 11.6 | A3, A4 |
 | 4. Professora recebe do Tutor que oito travaram; o Assistente avisa que corrigiu e espera | O que o Assistente fez e o que o Tutor viu, pelo pé do sino (era "Seu time") | 11.4 | A3, A4 |
 | 4. Abre os destaques e aprova, com o registro da validação | Aprovar | 11.5 | A3 |
-| 4. Vê o acerto por habilidade | Turmas › a turma aberta, com Visão Geral e Alunos (as outras abas fecham antes do PRD do F6, P28) | 1, 10.2 | A3 |
+| 4. Vê o acerto por habilidade | Turmas › a turma aberta, com **Hoje, Atividades e Alunos** (X3; na A3 eram Visão Geral e Alunos) | 1.7, 10.2 | A3, X3 |
 | 5. Coordenação abre a governança, os agentes com as funções, e o resumo do Analista | Governança e Agentes | 11.7 | A5 |
 
 Fora do MVP, com o lugar reservado no desenho: grade horária e "seu dia" (F2, F8), Calendário,
