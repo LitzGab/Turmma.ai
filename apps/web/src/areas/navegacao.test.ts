@@ -86,6 +86,16 @@ describe('navegação por papel', () => {
     expect(acesos('/coordenacao/governanca-velha')).toEqual([])
   })
 
+  it('X3 (6.0): o documento aberto acende Criados, a lista de onde ele vem, e só ela', () => {
+    const acesos = (caminho: string) => NAVEGACAO.professor.filter((item) => estaNoItem(caminho, item)).map((item) => item.rotulo)
+    const ID = '0190f5a0-0000-7000-8000-000000000001'
+    expect(acesos(`/professor/artefatos/${ID}`)).toEqual(['Criados'])
+    expect(acesos('/professor/criados')).toEqual(['Criados'])
+    expect(acesos('/professor/ferramentas/adaptacao')).toEqual(['Ferramentas'])
+    // Um endereço que só começa com as mesmas letras é outra tela.
+    expect(acesos('/professor/artefatos-velhos')).toEqual([])
+  })
+
   it('D73: cada item só aparece com a fase dele — o professor não tem Calendário nem Histórico, e os agentes não são lugar da lateral (X3, 2.0)', () => {
     const rotulos = NAVEGACAO.professor.map((item) => item.rotulo)
     expect(rotulos).not.toContain('Calendário')
@@ -111,12 +121,13 @@ describe('navegação por papel', () => {
     expect(estaNoItem('/aluno/atividades', minhaTurma)).toBe(false)
   })
 
-  it('a conversa aberta fica dentro de "Início", e o artefato aberto, dentro de "Ferramentas"', () => {
-    const [inicio, , ferramentas] = NAVEGACAO.professor
-    if (inicio === undefined || ferramentas === undefined) throw new Error('faltou item na navegação do professor')
+  it('a conversa aberta fica dentro de "Início", e o documento aberto, dentro de "Criados" (X3, 6.0)', () => {
+    const [inicio, , ferramentas, criados] = NAVEGACAO.professor
+    if (inicio === undefined || ferramentas === undefined || criados === undefined) throw new Error('faltou item na navegação do professor')
     expect(estaNoItem('/professor/conversa', inicio)).toBe(true)
     expect(estaNoItem('/professor/conversa', ferramentas)).toBe(false)
-    expect(estaNoItem('/professor/artefatos/0190f5a0-0000-7000-8000-000000000001', ferramentas)).toBe(true)
+    expect(estaNoItem('/professor/artefatos/0190f5a0-0000-7000-8000-000000000001', criados)).toBe(true)
+    expect(estaNoItem('/professor/artefatos/0190f5a0-0000-7000-8000-000000000001', ferramentas)).toBe(false)
     expect(estaNoItem('/professor/ferramentas/adaptacao', ferramentas)).toBe(true)
     expect(estaNoItem('/professor/artefatos/0190f5a0-0000-7000-8000-000000000001', inicio)).toBe(false)
     // As telas do pé do sino não são de nenhum item: a lateral não acende nada nelas.

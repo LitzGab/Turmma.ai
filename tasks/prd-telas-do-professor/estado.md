@@ -2,21 +2,23 @@
 
 ## Agora
 - **Espero:** o `RELATÓRIO` de cada linha:
-  - linha 1 (`Implementador`/`Mesa`): **12.0**, grande (partida 19/10 ~08h25; até 4 h sem a 1ª rodada, isto é, ~12h25), 1ª tentativa;
-  - linha 2 (`Implementador 2`/`Mesa 2`): **6.0**, grande, retomada 19/10 ~10h47 depois da `ESCALADA` (`test-engineer` r1 e r2), com `.processo/ordens/diagnostico-6.md` do `Arquiteto` aplicado; espero a rodada 3 e o `RELATÓRIO`. Nova reprovação do `test-engineer` na r3 é `BLOQUEIO` (parada);
-  - linha 3 (`Implementador 3`/`Mesa 3`): **8.0**, pequena (partida 19/10 ~08h50; até 2 h sem a 1ª rodada, isto é, ~10h50), 1ª tentativa.
+  - linha 1 (`Implementador`/`Mesa`): **correção `2026-10-19-acesso-suspenso-passa-do-prazo`** (partida 19/10 ~11h00): esteira vermelha em `c400e04` e `742dee0`, `e2e/acesso-suspenso.spec.ts:165` [celular] estoura 30 s; na `c400e04` também `escola-e-vinculos.spec.ts:423` [chromebook]. Guardiões ditados: `infra-guardian` (+ `frontend-reviewer` se tocar `apps/web`). Encontro como tarefa; só depois a próxima partida (13.0 espera a 6.0 pelo `tasks.md`);
+  - linha 2 (`Implementador 2`/`Mesa 2`): **correção `encontro-6`** (partida 19/10 ~12h25): a 6.0 terminou (`5762f90`, test-engineer e revisor-geral aprovaram na 3ª), mas o encontro deu CONFLITO com a spec em `techspec.md`. Guardiões ditados: só os fixos. Depois do RELATÓRIO, `linhas.ts encontro 2` de novo; aí soltam a 11.0 e a 13.0;
+  - linha 3 (`Implementador 3`/`Mesa 3`): **ociosa** desde 19/10 ~12h35 (8.0 encontrada em `9d6bcb5`); nada parte enquanto a 6.0 não se encontrar (11.0 espera a 6.0; 13.0 não corre junto dela).
   A cada `RELATÓRIO`: `linhas.ts encontro <n>` e `esteira.ts`. Esteiras: `745a550` verde; `91acc6d` vermelha, corrigida por
-  `c5bcb52` (correção `pecas-sobrepor`); `cb0af68` (5.0), `c400e04` (encontro da correção) e `742dee0` (7.0) rodando.
+  `c5bcb52` (correção `pecas-sobrepor`); `cb0af68` (5.0) verde; `c400e04` e `742dee0` vermelhas (correção na linha 1); `38242ef` (12.0) verde; `6b86cb2` (8.0) rodando.
 - **Devo ainda:** (0) feito, 19/10 ~00h20: o `Implementador 3` sabe que a Turma vira lazy (30 kB) e a fachada fica em 8 kB; (1) ficar de olho em `e2e/areas.spec.ts:231` (19–21 s na máquina, 23,8 s na esteira); se cair,
   correção como a `:204`; (2) a X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em `1477850`): não
   retomar sem a palavra do Joaquim; (3) as esteiras de `0650af0` e `23e8794` foram verdes: nada pendente da 1.0. (4) no fechamento, linha no `TODO.md`: com sete fatias, sobram ~180 casos do e2e (~1379, 197 por fatia) até precisar da oitava (ver `tools/ci/prazo-do-e2e.ts`).
-- **Base:** `spec/telas-do-professor` em `742dee0` (7.0 em `ebff7f6`; correção `pecas-sobrepor` em `c5bcb52`; 5.0 em `9fde9be`; 14.0 em `b0ba717`, merge da correção `encontro-14`; 10.0 em `8cf865e`, merge da correção `encontro-10`; 4.0 em `a7d86a8`; correção do mfa em `907d546`; 9.0 em `d13cb69`) (2.0 em `7ad636e`, com a correção `75f94a3`).
+- **Base:** `spec/telas-do-professor` em `6b86cb2` (8.0 em `9d6bcb5`; 12.0 em `03806c1`; 7.0 em `ebff7f6`; correção `pecas-sobrepor` em `c5bcb52`; 5.0 em `9fde9be`; 14.0 em `b0ba717`, merge da correção `encontro-14`; 10.0 em `8cf865e`, merge da correção `encontro-10`; 4.0 em `a7d86a8`; correção do mfa em `907d546`; 9.0 em `d13cb69`) (2.0 em `7ad636e`, com a correção `75f94a3`).
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri` com
   `MAESTRI_SOCKET=/tmp/maestri-309bb7f3/maestri.sock`.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
+| 8.0 | `9d6bcb5` | Sonnet | 2 | os quatro aprovaram na 1ª com recomendações, aplicadas na 2ª; 22 mutações; 14 fotos |
+| 12.0 | `03806c1` | Sonnet | 2 | test-engineer reprovou na 1ª e aprovou na 2ª; os outros na 1ª; 41 mutações; e2e alterados 3x, 132 verdes; divergências (techspec §9) e 12 recomendações sem aplicar no documento |
 | 7.0 | `ebff7f6` | Sonnet | 2 | frontend-reviewer, test-engineer e revisor-geral aprovaram na 2ª; `avisos.tsx` também mudou (a frase da suspensão apontava para Ferramentas, agora Criados), registrado em Divergências e na techspec §9 |
 | correção `2026-10-19-pecas-sobrepor-tema-escuro-estoura-o-prazo` | `c5bcb52` | Sonnet | 2 | esteira de `91acc6d` (depois da 14.0) vermelha só em `pecas-sobrepor.spec.ts:556` [celular], 31,7 s; um caso por peça, 4 a 5 s; frontend-reviewer na 1ª, test-engineer na 2ª |
 | 5.0 | `9fde9be` | Sonnet | 2 | `revisor-geral` e `test-engineer` reprovaram na 1ª (07h41, 3h30 depois da partida, 5+ portões antes); o Implementador avisou que `CartaoDeFerramenta.tsx:46` conflitaria com a 4.0, mas o encontro juntou sem conflito; e2e em 1 180 casos, 196-197 por fatia; a barra de baixo a 360 px corta "FERRAMEN…" (`TODO.md`) |
@@ -64,6 +66,9 @@ Recomendo: destravar; o código foi aprovado, e o que falta são duas mutações
 **Respondida (18/10 ~20h):** "pode destravar, segue com a 1", no meu terminal. A contagem do `test-engineer` recomeça.
 
 ## O que falhou
+- 19/10 ~12h25: encontro da linha 2 (6.0, `5762f90`) em CONFLITO com a spec em `techspec.md` (§9, a navegação que acende Criados); correção `encontro-6` na linha.
+- 19/10 ~11h55: a API caiu (ECONNREFUSED) e parou o turno do `Implementador` (correção `acesso-suspenso`, medindo com traço) e do `Implementador 2` (6.0, antes do portão). Rede de volta às 11h56; `PEDIDO de retomada` aos dois, na mesma sessão, e os dois retomaram. O `Implementador 3` passou sozinho (o `npm audit` falhou pela rede e ele rodou o portão de novo).
+- 19/10 ~10h55: esteiras de `c400e04` e `742dee0` vermelhas: `acesso-suspenso.spec.ts:165` [celular] passa de 30 s nas duas; `escola-e-vinculos.spec.ts:423` [chromebook] na primeira. Correção na linha 1.
 - 19/10 ~10h45: 6.0, `ESCALADA` da `Mesa 2`: `test-engineer` reprovou duas rodadas seguidas (bloqueante na r2: mutação da medida do topo do painel); diagnóstico pedido ao `Arquiteto`. O reinício dele descartou o texto não enviado que estava na caixa ("mata os dois órfãos e derruba o educa-teste").
 - 19/10 ~08h: esteira de `91acc6d` (depois da 14.0) vermelha no `pecas-sobrepor.spec.ts:556` [celular], 31,7 s; correção na linha 1.
 - 19/10 ~06h25: encontro da linha 2 (14.0) em CONFLITO com a spec em `aprovar.test.ts` e `e2e/roteiro-da-demonstracao.spec.ts`; correção `encontro-14` na linha.

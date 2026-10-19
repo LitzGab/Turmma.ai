@@ -91,8 +91,13 @@ existe e onde nasce o que falta: a **X1** troca a pele e a casca com os itens de
   e o formulário
 - **Criados** é o que a professora já gerou, por turma, com o estado de cada coisa, e o documento
   aberto em folha (P13). O lugar existe desde a tarefa 5.0 da X3, com a lista e os filtros de tipo,
-  turma e estado no endereço; o documento aberto em folha chega na 6.0 (hoje ele abre na própria
-  tela do artefato)
+  turma e estado no endereço. Desde a 6.0 o documento abre como **folha**: o voltar "Voltar para
+  Criados", o título, a linha de dados e as ações no alto; três abas no endereço (`?aba=`) —
+  Conteúdo, Versões adaptadas (só com versão) e Na turma (só a atividade objetiva) —; e, no
+  Conteúdo, a folha de 760 px sobre a `mesa` (sem mesa e sem borda abaixo de 768 px), com o
+  interruptor "Gabarito" e a página de origem de cada questão. A assinatura da IA e a situação
+  da versão adaptada ficam acima das abas. "Aplicar à turma" e "Encerrar a atividade" moram em
+  Na turma, como atos à parte da aprovação da versão adaptada (regra 70, itens 3 e 6)
 - **Conversas**, embaixo dos lugares, lista as conversas do professor, agrupadas por data (hoje,
   ontem, 7 dias, mais antigas), cada uma no próprio endereço. A coordenação nunca vê (regra 70,
   item 8; P06). O MVP tem uma conversa só por professora (decisão 19 de `docs/mvp-rapido.md`); a

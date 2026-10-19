@@ -429,6 +429,8 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await irPelaNavegacao(professora, 'Criados', hasTouch)
       await professora.locator('[data-artefato]').filter({ hasText: 'Atividade objetiva · ' }).first().click({ timeout: PRAZO_DA_ENTRADA_MS })
       await expect(professora.getByRole('heading', { level: 1, name: PRIMEIRA })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+      // Aplicar à turma mora na aba "Na turma" do documento aberto.
+      await professora.getByRole('tab', { name: 'Na turma' }).click()
       const naTurma = professora.locator('[data-aplicacao-do-artefato]')
       await naTurma.getByRole('button', { name: 'Aplicar à turma' }).click()
       const aplicar = professora.getByRole('alertdialog', { name: 'Aplicar à turma' })
@@ -551,6 +553,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(cartao.locator('[data-motor="formulario"]')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await gerarAtividade(cartao, hasTouch, '2', TEMA_DA_SEGUNDA)
       await cartao.getByRole('link', { name: 'Abrir o artefato' }).click()
+      await professora.getByRole('tab', { name: 'Na turma' }).click()
       const naTurma = professora.locator('[data-aplicacao-do-artefato]')
       await naTurma.getByRole('button', { name: 'Aplicar à turma' }).click({ timeout: PRAZO_DA_ENTRADA_MS })
       const aplicar = professora.getByRole('alertdialog', { name: 'Aplicar à turma' })

@@ -39,6 +39,8 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     await expect(cartao.locator('[data-motor="formulario"]')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await gerarAtividade(cartao, hasTouch, '2')
     await acionar(cartao.getByRole('link', { name: 'Abrir o artefato' }), hasTouch)
+    // Aplicar à turma mora na aba "Na turma" do documento aberto.
+    await acionar(page.getByRole('tab', { name: 'Na turma' }), hasTouch)
     const naTurma = page.locator('[data-aplicacao-do-artefato]')
     await acionar(naTurma.getByRole('button', { name: 'Aplicar à turma' }), hasTouch)
     const aplicar = page.getByRole('alertdialog', { name: 'Aplicar à turma' })

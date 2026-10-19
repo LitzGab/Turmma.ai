@@ -21,9 +21,15 @@ interface PropsDoConteudo {
    * etapas do plano. O artefato aberto mostra tudo: alternativas, gabarito, explicação e a miniatura da página.
    */
   readonly resumido?: boolean
+  /**
+   * O gabarito à vista (o padrão): a alternativa certa marcada, em texto e em cor, e a explicação, que o diz por extenso.
+   * O interruptor "Gabarito" do documento aberto o desliga para a professora projetar ou imprimir a atividade sem a resposta
+   * (telas do professor, 6.0). Só muda o que se vê: o conteúdo é o mesmo, e a página de origem de cada questão fica.
+   */
+  readonly comGabarito?: boolean
 }
 
-function Atividade({ conteudo, materiais, resumido }: { conteudo: ConteudoDeAtividade; materiais: TitulosDosMateriais; resumido: boolean }) {
+function Atividade({ conteudo, materiais, resumido, comGabarito }: { conteudo: ConteudoDeAtividade; materiais: TitulosDosMateriais; resumido: boolean; comGabarito: boolean }) {
   return (
     <ol className="flex min-w-0 flex-col gap-4">
       {conteudo.questoes.map((questao, indice) => (
@@ -39,7 +45,7 @@ function Atividade({ conteudo, materiais, resumido }: { conteudo: ConteudoDeAtiv
                 <>
                   <ol className="flex min-w-0 flex-col gap-1.5">
                     {questao.alternativas.map((alternativa, posicao) => {
-                      const certa = posicao === questao.gabarito
+                      const certa = comGabarito && posicao === questao.gabarito
                       return (
                         <li key={posicao} className={`flex min-w-0 items-start gap-2 rounded-linha px-2.5 py-1.5 ${certa ? 'bg-ok-cx text-ok' : 'text-apoio'}`}>
                           <span className="shrink-0 font-medium">{LETRAS[posicao] ?? String(posicao + 1)})</span>
@@ -55,10 +61,12 @@ function Atividade({ conteudo, materiais, resumido }: { conteudo: ConteudoDeAtiv
                       )
                     })}
                   </ol>
-                  <p className="min-w-0 text-sm break-words text-apoio">
-                    <span className="font-medium text-tinta">Explicação: </span>
-                    {questao.explicacao}
-                  </p>
+                  {comGabarito && (
+                    <p className="min-w-0 text-sm break-words text-apoio">
+                      <span className="font-medium text-tinta">Explicação: </span>
+                      {questao.explicacao}
+                    </p>
+                  )}
                   <p className="min-w-0 text-sm break-words text-sutil">
                     <span className="font-medium">Habilidade {questao.habilidade.codigo}: </span>
                     {questao.habilidade.descricao}
@@ -145,10 +153,10 @@ function Plano({ conteudo, materiais, resumido }: { conteudo: ConteudoDePlanoDeA
  * O texto do modelo entra como texto, com as quebras de linha dele, e nunca como HTML. A assinatura da IA é de quem usa
  * a peça: o artefato aberto e a resposta da conversa a põem em cima.
  */
-export function ConteudoDoArtefato({ conteudo, materiais, resumido = false }: PropsDoConteudo) {
+export function ConteudoDoArtefato({ conteudo, materiais, resumido = false, comGabarito = true }: PropsDoConteudo) {
   return (
     <div className="flex min-w-0 flex-col gap-3">
-      {conteudo.tipo === 'atividade_objetiva' ? <Atividade conteudo={conteudo} materiais={materiais} resumido={resumido} /> : <Plano conteudo={conteudo} materiais={materiais} resumido={resumido} />}
+      {conteudo.tipo === 'atividade_objetiva' ? <Atividade conteudo={conteudo} materiais={materiais} resumido={resumido} comGabarito={comGabarito} /> : <Plano conteudo={conteudo} materiais={materiais} resumido={resumido} />}
       <Fontes citacoes={citacoesDoConteudo(conteudo)} materiais={materiais} />
     </div>
   )

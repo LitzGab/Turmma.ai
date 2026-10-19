@@ -10,7 +10,8 @@ import { DialogoDeConfirmacao } from '../../componentes/DialogoDeConfirmacao'
 import { EstadoCarregando } from '../../componentes/estado'
 import { CabecalhoDeSecao } from '../../componentes/Tela'
 import { formatarDataHora } from '../../formatar'
-import { EFEITO_DE_APLICAR, EFEITO_DE_ENCERRAR, ESCOLHA_DE_AVALIATIVA, semCorrecao, situacaoDaAplicacao, TEXTO_SEM_CORRECAO, textoDeAlunos } from './aprovar'
+import { EFEITO_DE_APLICAR, ESCOLHA_DE_AVALIATIVA, semCorrecao, situacaoDaAplicacao, TEXTO_SEM_CORRECAO } from './aprovar'
+import { EncerramentoDaAtividade } from './EncerramentoDaAtividade'
 
 /** O que a tela diz quando a API recusa aplicar: a que já está aberta, e a versão adaptada que ainda não foi aprovada. */
 const TEXTOS_DA_APLICACAO: Partial<Record<CodigoDeErro, string>> = {
@@ -46,7 +47,7 @@ interface PropsDaAplicacao {
 export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao) {
   const cliente = useQueryClient()
   const atividades = useQuery(consultaAtividadesAplicadas(artefato.turmaId))
-  const [dialogo, definirDialogo] = useState<{ tipo: 'aplicar' } | { tipo: 'encerrar'; aplicada: AtividadeAplicada } | undefined>(undefined)
+  const [aplicando, definirAplicando] = useState(false)
   const [escolha, definirEscolha] = useState<Escolha | undefined>(undefined)
   const [tentou, definirTentou] = useState(false)
   const [aviso, definirAviso] = useState('')
@@ -56,20 +57,31 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
   const idDaEscolha = useId()
 
   const aplicadas = (atividades.data?.itens ?? []).filter((aplicada) => aplicada.artefatoId === artefato.id)
-  const fechar = () => definirDialogo(undefined)
-  const aoTerminar = async () => {
-    recarregarAtividades(cliente)
-    await cliente.invalidateQueries({ queryKey: consultaAtividadesAplicadas(artefato.turmaId).queryKey })
-    fechar()
-  }
-  const aplicar = useMutation({ mutationFn: (avaliativa: boolean) => aplicarAtividade({ artefatoId: artefato.id, turmaId: artefato.turmaId, avaliativa }), onSuccess: aoTerminar, onSettled: () => (decidindo.current = false) })
-  const encerrar = useMutation({ mutationFn: (id: string) => encerrarAtividade(id), onSuccess: aoTerminar, onSettled: () => (decidindo.current = false) })
+  const fechar = () => definirAplicando(false)
+  const aplicar = useMutation({
+    mutationFn: (avaliativa: boolean) => aplicarAtividade({ artefatoId: artefato.id, turmaId: artefato.turmaId, avaliativa }),
+    onSuccess: async () => {
+      recarregarAtividades(cliente)
+      await cliente.invalidateQueries({ queryKey: consultaAtividadesAplicadas(artefato.turmaId).queryKey })
+      fechar()
+    },
+    onSettled: () => (decidindo.current = false),
+  })
+  // Encerrar de novo uma atividade que já está encerrada (a correção que não nasceu): sem confirmação, porque nada muda para os alunos.
+  const corrigir = useMutation({
+    mutationFn: (id: string) => encerrarAtividade(id),
+    onSuccess: async () => {
+      recarregarAtividades(cliente)
+      await cliente.invalidateQueries({ queryKey: consultaAtividadesAplicadas(artefato.turmaId).queryKey })
+    },
+    onSettled: () => (decidindo.current = false),
+  })
 
   function abrirAplicar(): void {
     aplicar.reset()
     definirEscolha(undefined)
     definirTentou(false)
-    definirDialogo({ tipo: 'aplicar' })
+    definirAplicando(true)
   }
 
   function confirmarAplicar(): void {
@@ -80,18 +92,12 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
     aplicar.mutate(escolhida.avaliativa)
   }
 
-  function confirmarEncerrar(aplicada: AtividadeAplicada): void {
-    if (decidindo.current) return
-    decidindo.current = true
-    encerrar.mutate(aplicada.id)
-  }
-
   /** A atividade já está encerrada: pedir a correção de novo não muda nada para os alunos, e não passa pelo diálogo. */
   function corrigirDeNovo(aplicada: AtividadeAplicada): void {
     if (decidindo.current) return
     decidindo.current = true
     definirAviso('')
-    encerrar.mutate(aplicada.id, {
+    corrigir.mutate(aplicada.id, {
       onSuccess: ({ atividade }) => definirAviso(atividade.entrega === null ? TEXTO_SEM_CORRECAO[semCorrecao(atividade) ?? 'correcao_suspensa'] : 'Correção feita. Ela está esperando você revisar.'),
     })
   }
@@ -132,9 +138,9 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
       <p role="status" className="rounded-controle bg-info-cx p-3 break-words text-info empty:hidden">
         {aviso}
       </p>
-      {encerrar.isError && dialogo === undefined && (
+      {corrigir.isError && (
         <p role="alert" className="rounded-controle bg-erro-cx p-3 break-words text-erro">
-          {textoDaFalha(encerrar.error)}
+          {textoDaFalha(corrigir.error)}
         </p>
       )}
       {esperaAprovacao && <p className="min-w-0 text-sm break-words text-sutil">Esta versão adaptada só pode ser aplicada à turma depois que você aprovar.</p>}
@@ -157,17 +163,7 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
                   </p>
                 )}
               </div>
-              {aplicada.estado === 'aberta' && (
-                <Botao
-                  variante="oficial"
-                  onClick={() => {
-                    encerrar.reset()
-                    definirDialogo({ tipo: 'encerrar', aplicada })
-                  }}
-                >
-                  Encerrar a atividade
-                </Botao>
-              )}
+              <EncerramentoDaAtividade aplicada={aplicada} nomeDaTurma={turma} focoDeReserva={() => secao.current?.focus()} />
               {aplicada.entrega !== null && (
                 // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
                 <Link to={caminhoDaCorrecaoDoProfessor(aplicada.id)} className="inline-flex min-h-11 items-center text-caramelo-texto underline">
@@ -176,8 +172,8 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
               )}
               {/* Encerrada sem lote que valha (função suspensa, ou lote rejeitado): encerrar de novo corrige de novo. */}
               {(motivo === 'correcao_suspensa' || motivo === 'lote_rejeitado') && (
-                <Botao variante="secundario" disabled={encerrar.isPending} onClick={() => corrigirDeNovo(aplicada)}>
-                  {encerrar.isPending && encerrar.variables === aplicada.id ? 'Corrigindo…' : 'Corrigir de novo'}
+                <Botao variante="secundario" disabled={corrigir.isPending} onClick={() => corrigirDeNovo(aplicada)}>
+                  {corrigir.isPending && corrigir.variables === aplicada.id ? 'Corrigindo…' : 'Corrigir de novo'}
                 </Botao>
               )}
             </li>
@@ -186,7 +182,7 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
         </ul>
       )}
 
-      {dialogo?.tipo === 'aplicar' && (
+      {aplicando && (
         <DialogoDeConfirmacao
           titulo="Aplicar à turma"
           familia="oficial"
@@ -220,25 +216,6 @@ export function AplicacaoDoArtefato({ artefato, nomeDaTurma }: PropsDaAplicacao)
             </p>
           </fieldset>
         </DialogoDeConfirmacao>
-      )}
-      {dialogo?.tipo === 'encerrar' && (
-        <DialogoDeConfirmacao
-          titulo="Encerrar a atividade"
-          familia="oficial"
-          resumo={[
-            { rotulo: 'Atividade', valor: dialogo.aplicada.titulo },
-            { rotulo: 'Turma', valor: turma },
-            { rotulo: 'Já enviaram', valor: `${String(dialogo.aplicada.participacao.enviaram)} de ${textoDeAlunos(dialogo.aplicada.participacao.alunos)}` },
-          ]}
-          efeito={EFEITO_DE_ENCERRAR}
-          rotuloDeConfirmar="Encerrar a atividade"
-          rotuloConfirmando="Encerrando…"
-          aoConfirmar={() => confirmarEncerrar(dialogo.aplicada)}
-          aoFechar={fechar}
-          confirmando={encerrar.isPending}
-          focoDeReserva={() => secao.current?.focus()}
-          {...(encerrar.isError ? { falha: textoDaFalha(encerrar.error) } : {})}
-        />
       )}
     </section>
   )

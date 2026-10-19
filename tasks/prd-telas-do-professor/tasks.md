@@ -43,18 +43,18 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 5.3 "O que você já gerou" sai de Ferramentas; a fixture `professor/criados.ts` aponta para Criados
   - [x] 5.4 Testes: os quatro estados; filtro sem resultado; o filtro de turma vai ao servidor; o voltar devolve os filtros
 
-- [ ] **6.0 — O documento aberto em folha**
-  - [ ] 6.1 `Artefato.tsx`: cabeçalho, abas no endereço e a folha sobre a mesa
-  - [ ] 6.2 `EncerramentoDaAtividade`, extraído de `AplicacaoDoArtefato`, sem mudar comportamento
-  - [ ] 6.3 Testes: os quatro estados; aplicar e encerrar com a confirmação; a versão rejeitada não exporta; a aba pelo endereço
+- [x] **6.0 — O documento aberto em folha**
+  - [x] 6.1 `Artefato.tsx`: cabeçalho, abas no endereço e a folha sobre a mesa
+  - [x] 6.2 `EncerramentoDaAtividade`, extraído de `AplicacaoDoArtefato`, sem mudar comportamento
+  - [x] 6.3 Testes: os quatro estados; aplicar e encerrar com a confirmação; a versão rejeitada não exporta; a aba pelo endereço
 
 - [x] **7.0 — Ferramentas: o catálogo por categoria**
   - [ ] 7.1 `Ferramentas.tsx`: uma seção por categoria com ferramenta, em cartões com ícone ilustrado
   - [ ] 7.2 Testes: só as três ferramentas; categoria vazia não aparece; a função suspensa no cartão
 
-- [ ] **8.0 — O formulário da ferramenta com "Como vai sair"**
-  - [ ] 8.1 `Ferramenta.tsx` em duas colunas; o texto fixo por ferramenta, em `ferramentas.ts`
-  - [ ] 8.2 Testes: o texto por ferramenta e o vocabulário; os estados do formulário; a Adaptação sem campo de texto
+- [x] **8.0 — O formulário da ferramenta com "Como vai sair"**
+  - [x] 8.1 `Ferramenta.tsx` em duas colunas; o texto fixo por ferramenta, em `ferramentas.ts`
+  - [x] 8.2 Testes: o texto por ferramenta e o vocabulário; os estados do formulário; a Adaptação sem campo de texto
 
 - [x] **9.0 — Turmas: os cartões e "Confirme sua turma"**
   - [x] 9.1 `Turmas.tsx`: a faixa de confirmar, os cartões e o que espera em cada turma

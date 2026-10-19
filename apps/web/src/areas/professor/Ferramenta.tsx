@@ -1,12 +1,12 @@
 import { ArrowLeft } from 'lucide-react'
-import { useLayoutEffect } from 'react'
+import { useId, useLayoutEffect } from 'react'
 import { Link, useSearch } from 'wouter'
 import { PARAMETRO_DA_ORIGEM, ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { ConteudoNaoEncontrado } from '../../componentes/NaoEncontrada'
-import { Tela } from '../../componentes/Tela'
+import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
 import { CartaoDeFerramenta } from './CartaoDeFerramenta'
-import { ehFerramenta, ferramentaDoCatalogo } from './ferramentas'
+import { COMO_VAI_SAIR, ehFerramenta, ferramentaDoCatalogo } from './ferramentas'
 import { esquecerGeracaoTerminada } from './memoria-do-professor'
 
 /** Um id de artefato tem a forma de UUID: o que vier diferente no endereço não vira escolha no formulário. */
@@ -14,6 +14,7 @@ const FORMA_DE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 
 function Formulario({ ferramenta }: { ferramenta: Parameters<typeof ferramentaDoCatalogo>[0] }) {
   const item = ferramentaDoCatalogo(ferramenta)
+  const idDoComoVaiSair = useId()
   useTituloDaTela(item.nome)
   // O formulário aberto de novo começa em branco: a geração que já terminou fica em Criados, e a que ainda
   // está no ar continua aqui. Antes da primeira pintura, para o resultado antigo não piscar na tela.
@@ -35,9 +36,21 @@ function Formulario({ ferramenta }: { ferramenta: Parameters<typeof ferramentaDo
         </Link>
       }
     >
-      <div className="rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
-        {/* O título da ferramenta já é o `h1` da tela: o do formulário vem um nível abaixo. */}
-        <CartaoDeFerramenta ferramenta={ferramenta} nivel={2} {...(iniciais === undefined ? {} : { iniciais })} />
+      {/* A partir de 1024 px o formulário e, ao lado, "Como vai sair"; abaixo, uma coluna, com "Como vai sair" depois do formulário. */}
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-start">
+        <div className="min-w-0 rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
+          {/* O título da ferramenta já é o `h1` da tela: o do formulário vem um nível abaixo. */}
+          <CartaoDeFerramenta ferramenta={ferramenta} nivel={2} {...(iniciais === undefined ? {} : { iniciais })} />
+        </div>
+        {/* Fora do cartão: carregando, erro, sem turma e função suspensa não o tiram da tela. */}
+        <aside aria-labelledby={idDoComoVaiSair} data-como-vai-sair={ferramenta} className="min-w-0 rounded-cartao border border-linha bg-superficie p-4">
+          <CabecalhoDeSecao titulo="Como vai sair" id={idDoComoVaiSair} />
+          <ul className="mt-2 flex flex-col gap-2 text-sm break-words text-tinta">
+            {COMO_VAI_SAIR[ferramenta].map((linha) => (
+              <li key={linha}>{linha}</li>
+            ))}
+          </ul>
+        </aside>
       </div>
     </Tela>
   )
