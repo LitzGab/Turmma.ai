@@ -198,6 +198,23 @@ promete ordem), com o id como desempate, e nunca por acerto. (4) As abas não le
 faixa e na barra presa. (5) A tela passa de `formulario` para `leitura` (880 px), que é o tipo da tabela acima. (6) O lote já decidido
 não abre o destaque que ficou fechado (não há mais o que registrar), e só mostra o que já estava aberto.
 
+**Alunos na pele nova** (divergências da 12.0): (1) a aba lê **três** rotas, `GET /v1/turmas/:id/alunos` (nova para a web), o desempenho
+aprovado e os pedidos; a lista de nomes é a base das linhas, e os acertos entram **pelo id** (`usuarioId` da lista é o `alunoId` do
+desempenho). A leitura é de cem em cem, sem `?anoLetivoId` nem finalidade (a leitura do professor não grava auditoria; é a da
+coordenação que grava `turma.alunos_lidos`), com `gcTime: 0` e a chave `['alunos-da-turma', turmaId]`. (2) **"Transferido ou com o acesso
+desativado"**: a API devolve em `/alunos` e em `/desempenho` só quem está na turma **agora** (vínculo `confirmado`, usuário ativo), e por
+isso o estado só é observável como o aluno que o desempenho traz e a lista, lida **até o fim**, não: ele saiu entre uma leitura e a
+outra. A linha diz "Saiu da turma", sem número, e a frase não distingue um motivo do outro, porque a API também não. Com páginas por ler
+a linha não existe (o aluno pode estar na seguinte). (3) **Os "56 px" do mockup (5.3) são a peça `Tabela` da X1**, sem redefinição: no
+computador é a tabela de linhas de 64 px; a 360 px, a lista de cartões de `Tabela`, cada um com mais de 56 px e com o nome quebrando
+(`break-words`). Linha de 56 px própria seria peça nova, fora do recorte. (4) A lista ordena por nome com `localeCompare` em `pt-BR` e o id
+como desempate, **tudo o que já foi lido**, também depois de "Ver mais"; o foco depois dele fica no botão, ou vai à frase do fim da
+lista quando o botão sai. (5) **A decisão de um pedido marca como velha a lista de nomes da turma** (`aplicarDecisao` e
+`descartarListaDepoisDaFalha`, por chave `['alunos-da-turma', turmaId]`): aprovar um nome põe o aluno na turma, e a lista aberta ao lado
+dos pedidos deixaria de valer. (6) O vazio é "A lista ainda não chegou", e só aparece com a lista lida até o fim, vazia, e os acertos já
+lidos. O recomeço da segunda pessoa na mesma aba (a lista e os pedidos da anterior) fica no caso de recomeço de `professor-sino.spec.ts`
+(§10): um caso com duas entradas passa de 15 s.
+
 **`data-esperando-voce`** (divergência da 3.0): o item do sino da 1.0 não leva o atributo, e a 3.0 não o acrescenta. O
 Início não tem o atributo nem o que ele marcava, e o e2e prova que o sino tem a entrega pelo nome do botão ("Esperando você,
 1") e pelo link do item ("Versão adaptada para decidir…", "Correção para revisar…").
@@ -265,8 +282,9 @@ prazo próprio.
   nenhuma que existia (a 2.0 acrescentou a quarta, `pe`, para o pé da seção 5, "Seu time"); a montagem é por área, e não por mapa (seção 5, "Montagem")
 - `⚠️ NÃO VERIFICADO` — as props das peças novas da X1, que não existem neste checkout. Saída: cada tarefa lê a
   peça antes de usar e registra a divergência
-- `⚠️ NÃO VERIFICADO` — a web nunca leu `GET /v1/turmas/:id/alunos` como professor, e a API devolve em ordem de
-  id. Saída: a 12.0 ordena por nome e confere a rota em `apps/api/test/turma-acesso.int.test.ts`
+- `✅ VERIFICADO na 12.0` — a web nunca leu `GET /v1/turmas/:id/alunos` como professor, e a API devolve em ordem de
+  id. Conferido em `apps/api/test/turma-acesso.int.test.ts`: o professor com vínculo confirmado lê sem finalidade e sem auditoria,
+  a página é de até 100 com `proxima`, e só entra quem está confirmado e ativo agora. A 12.0 ordena por nome
 - `⚠️ NÃO VERIFICADO` — como o teste do build nomeia o pedaço de `componentes/sino/`. Saída: `PECAS_FORA_DA_ENTRADA`
 - `⚠️ NÃO VERIFICADO` — o limite por usuário das leituras do sino. Saída: a série de no máximo 12 turmas (seção 7c), a conta de cerca de 28 leituras por minuto contra 120, e a parada na primeira recusa
 - **Decisão por delegação, que o Joaquim revê:** o `conformidade-reviewer` queria o nome, a hora e o que fazer da atenção humana em Hoje sem abrir painel; o `privacy-guardian` vetou o nome em Hoje (D34, D36, art. 14). Fechou o mais restritivo: aviso sem painel, sem nome; nome só por "Ver quem". Também por delegação: o sino não relê por foco, como na X2

@@ -1,11 +1,11 @@
-import { QueryClient, QueryObserver } from '@tanstack/react-query'
+import { InfiniteQueryObserver, QueryClient, QueryObserver } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
  * Os pedidos de nome na web (A1, 16.0): a leitura de cada papel, a decisão e o que a lista faz depois dela. A rede é
  * falsa; a regra sob teste é a da web. O módulo é recarregado em cada teste, como uma aba recém-aberta.
  */
-const importar = async () => ({ sessao: await import('./sessao'), pedidos: await import('./pedidos') })
+const importar = async () => ({ sessao: await import('./sessao'), pedidos: await import('./pedidos'), alunos: await import('./alunos-da-turma') })
 type Modulos = Awaited<ReturnType<typeof importar>>
 
 interface Chamada {
@@ -331,5 +331,45 @@ describe('a contagem de pedidos do sino do professor (telas do professor, 1.0)',
     await m.pedidos.descartarListaDepoisDaFalha(cliente, TURMA, 'professor')
     expect(cliente.getQueryState(m.pedidos.consultaContagemDePedidos(TURMA).queryKey)?.isInvalidated).toBe(true)
     expect(cliente.getQueryState(m.pedidos.consultaContagemDePedidos(OUTRA).queryKey)?.isInvalidated).toBe(false)
+  })
+})
+
+describe('a lista de nomes da turma depois da decisão (telas do professor, 12.0)', () => {
+  const OUTRA = '0192a4c0-5b1e-7c3d-8e4f-a0b1c2d3e4f6'
+  const PAGINA = { pages: [{ itens: [{ usuarioId: '0192a4c0-5b1e-7c3d-8e4f-0000000000a1', nome: 'Ana sintética' }] }], pageParams: [undefined] }
+
+  it('aprovar um pedido marca como velha a lista de nomes da turma, e só a dela: a de outra turma não é tocada', async () => {
+    const cliente = clienteDeTeste()
+    cliente.setQueryData(m.alunos.consultaAlunosDaTurma(TURMA).queryKey, PAGINA)
+    cliente.setQueryData(m.alunos.consultaAlunosDaTurma(OUTRA).queryKey, PAGINA)
+    await m.pedidos.aplicarDecisao(cliente, TURMA, 'professor', { resultados: [{ id: ANA.id, resultado: 'decidida' }] })
+    expect(cliente.getQueryState(m.alunos.consultaAlunosDaTurma(TURMA).queryKey)?.isInvalidated).toBe(true)
+    expect(cliente.getQueryState(m.alunos.consultaAlunosDaTurma(OUTRA).queryKey)?.isInvalidated).toBe(false)
+  })
+
+  it('com a aba olhando, a decisão faz a lista de nomes ser lida de novo, e o aluno aprovado entra nela', async () => {
+    const cliente = clienteDeTeste()
+    cliente.mount()
+    fila.push({ status: 200, corpo: { itens: [] } })
+    const observador = new InfiniteQueryObserver(cliente, m.alunos.consultaAlunosDaTurma(TURMA))
+    const largar = observador.subscribe(() => undefined)
+    await vi.waitFor(() => expect(observador.getCurrentResult().data?.pages).toEqual([{ itens: [] }]))
+    chamadas.length = 0
+
+    fila.push({ status: 200, corpo: { itens: PAGINA.pages[0]?.itens } })
+    await m.pedidos.aplicarDecisao(cliente, TURMA, 'professor', { resultados: [{ id: ANA.id, resultado: 'decidida' }] })
+    await vi.waitFor(() => expect(observador.getCurrentResult().data?.pages).toEqual(PAGINA.pages))
+    expect(chamadas.filter((chamada) => chamada.caminho.includes('/alunos'))).toHaveLength(1)
+    largar()
+    cliente.unmount()
+  })
+
+  it('a decisão que falha no meio do lote também marca a lista de nomes da turma como velha', async () => {
+    const cliente = clienteDeTeste()
+    cliente.setQueryData(m.alunos.consultaAlunosDaTurma(TURMA).queryKey, PAGINA)
+    cliente.setQueryData(m.alunos.consultaAlunosDaTurma(OUTRA).queryKey, PAGINA)
+    await m.pedidos.descartarListaDepoisDaFalha(cliente, TURMA, 'professor')
+    expect(cliente.getQueryState(m.alunos.consultaAlunosDaTurma(TURMA).queryKey)?.isInvalidated).toBe(true)
+    expect(cliente.getQueryState(m.alunos.consultaAlunosDaTurma(OUTRA).queryKey)?.isInvalidated).toBe(false)
   })
 })

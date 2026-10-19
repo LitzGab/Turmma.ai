@@ -1,11 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import type { Page } from '@playwright/test'
-import { ALUNOS_DO_LOTE, desempenhoSintetico } from './__fixtures__/assistente.ts'
+import { desempenhoSintetico } from './__fixtures__/assistente.ts'
 import { PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { principal } from './__fixtures__/fluxo-do-professor.ts'
 import { acionar, comLote, entrar, irPara, PRAZO_DA_TELA_MS, VOCABULARIO_DE_NOTA } from './__fixtures__/professor/cena.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarEquipeComSenha, encerrarVinculosNoBanco } from './__fixtures__/sessao.ts'
-import { larguraExcedente } from './__fixtures__/verificacoes.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 
 /**
@@ -81,20 +80,8 @@ test.describe('a turma aberta em três abas (D69)', () => {
     await expect(atividades).toContainText('Encerrada · avaliativa · 26 de 30 alunos enviaram', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(atividades.getByRole('link', { name: /^Revisar a correção/ })).toBeVisible()
   })
-
-  test('com lote aprovado, Alunos mostra os alunos em ordem de nome, que não é ranking, e sem nota', async ({ page, hasTouch }) => {
-    const { api, turmaId } = await entrar(page, hasTouch)
-    api.desempenho = desempenhoSintetico(turmaId)
-    comLote(api, turmaId)
-    await irPara(page, `/professor/turmas/${turmaId}?aba=alunos`)
-    const alunos = page.getByRole('region', { name: 'Por aluno' })
-    await expect(alunos).toContainText('Sem correção aprovada', { timeout: PRAZO_DA_ENTRADA_MS })
-    // Em ordem de nome, como a API entrega. No celular a tabela empilha, e a célula leva o rótulo da coluna antes do valor.
-    const nomes = await alunos.getByText(/Sintétic[ao]$/).allInnerTexts()
-    expect(nomes.map((nome) => nome.replace(/^Aluno:\s*/, ''))).toEqual(ALUNOS_DO_LOTE.map((aluno) => aluno.nome))
-    await expect(principal(page)).not.toContainText(VOCABULARIO_DE_NOTA)
-    expect(await larguraExcedente(page)).toBe(0)
-  })
+  // Alunos, com lote aprovado (ordem de nome, acertos, sem nota nem ranking), é de `professor-turma-alunos.spec.ts` (telas do professor, 12.0): a lista
+  // de nomes vem da API de verdade, e o caso paga a entrada da professora uma vez só.
 })
 
 test.describe('a turma aberta: quem alcança e quem perde (regra 10)', () => {
