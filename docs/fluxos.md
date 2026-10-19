@@ -149,8 +149,8 @@ massa, e que melhorou em balanceamento desde março. Sabe que a turma está no c
 a Camila informou (D66). Não sabe, nem guarda, nada sobre o jeito do Enzo.
 
 Na tela da Camila, ao vivo, aparece que oito alunos travaram no mesmo ponto e que dois
-pediram resposta pronta. É o próprio Tutor que avisa, na thread dele em "Seu time" (D32
-revista).
+pediram resposta pronta. É o próprio Tutor que avisa, na voz dele, na aba Hoje da
+turma (D32 revista).
 
 Na semana do trabalho sobre a indústria química, a Camila liga a pesquisa para o 1ºC. Enzo
 pergunta onde se usa reagente limitante fora da escola; o Tutor traz duas fontes da lista

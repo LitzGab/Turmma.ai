@@ -116,7 +116,7 @@ por escolha de uma pessoa: a coordenação, quando registra, ou o professor, qua
 Fundamento: D35 (quem registra é a coordenação); D57 (sem perfil comportamental ou psicológico);
 `docs/regulacao.md`, seção 7.1 (o plano é da equipe da escola).
 Como se confere: nenhuma tela e nenhuma saída de agente propõe tipo de adaptação para um aluno a
-partir de desempenho, de conversa ou de sinal; leitura das telas de Turmas, Seu time e Tutor.
+partir de desempenho, de conversa ou de sinal; leitura das telas de Turmas, "O que o Assistente fez" e "O que o Tutor viu".
 
 **N7. Não gera o PEI, o plano de atendimento educacional especializado, o estudo de caso nem
 qualquer documento que descreva o aluno.**

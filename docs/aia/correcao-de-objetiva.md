@@ -69,7 +69,7 @@ A saída da aba (D70) não usa IA: é a contagem de quantas vezes a aba da prova
    e os **destaques** — prova em branco, resultado muito fora do histórico do aluno, item com
    padrão de erro suspeito.
 4. **Nível de autonomia 2: executa e avisa.** A correção é feita sem pedir, e o professor é
-   avisado em "Seu time". O que **vale** espera o professor: a entrega do lote nasce pendente.
+   avisado pelo sino e em "O que o Assistente fez". O que **vale** espera o professor: a entrega do lote nasce pendente.
 5. O professor abre cada destaque. Só com todos abertos o botão de aprovar o lote libera, com o
    contador dizendo quantos faltam (D33).
 6. A aprovação grava o **registro da validação**: o que foi apresentado, quais destaques foram

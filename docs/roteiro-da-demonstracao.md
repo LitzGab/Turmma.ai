@@ -177,7 +177,7 @@ vale 72 horas. O painel da operação não mostra dado de aluno nem de professor
 4. **Pedir versão adaptada** → marque **Fonte ampliada** e **Tempo adicional** → **Gerar versão adaptada**.
    **Aparece:** a versão adaptada "Esperando você". **Diga:** "Ela escolhe o **tipo** de adaptação. Não existe campo
    para escrever sobre o aluno, nem diagnóstico: só o que fazer na prova."
-5. **Ver e decidir em Seu time** → no cartão, **Aprovar** → confirme.
+5. **Ver e decidir** → no sino (**Esperando você**), no pé, **O que o Assistente fez** → no cartão, **Aprovar** → confirme.
    **Aparece:** "Aprovada por Helena Demo · dd/mm, hhhmm". **Diga:** "Nada que a IA produz chega ao aluno sem uma
    pessoa aprovar, e a aprovação fica registrada com nome e hora."
 
@@ -224,8 +224,10 @@ aluno e sugere uma nota" (a resposta explica que a IA não corrige redação nem
    resposta, conduz por perguntas, cita a página e lembra do **trabalho** do aluno, nunca da pessoa."
 4. Se quiser: **`é a B, né?`** (não confirma nem descarta) e **`você é uma pessoa?`** (diz que é uma inteligência
    artificial, D58).
-5. Professora → **Seu time** → **Tutor**. **Aparece:** em "Sinais da turma", "Pediu a resposta pronta na questão 1 de
-   “Atividade — Reagente limitante”", com o nome da Ana, e o uso do dia. **Diga:** "A professora vê **que** a aluna
+5. Professora → no sino, no pé, **O que o Tutor viu**. A professora da demonstração tem uma turma só, e por isso abre a aba
+   **Hoje** dela; com mais de uma turma, cai em Turmas e ela escolhe. **Aparece:** em "Sinais da turma", "1 aluno pediu a resposta
+   pronta na questão 1 de “Atividade — Reagente limitante”.", sem nome. Em **Ver o uso do Tutor por aluno**, o painel "O que o
+   Tutor viu" mostra a Ana com "Pediu a resposta pronta na questão 1 de …" e as trocas de hoje. **Diga:** "A professora vê **que** a aluna
    pediu a resposta pronta, não **o que** ela escreveu. Supervisão, não vigilância: sem conversa, sem tempo de tela,
    sem emoção."
 

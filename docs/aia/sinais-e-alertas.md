@@ -109,7 +109,7 @@ Cada item traz o fundamento e o jeito de conferir, por teste automatizado ou por
 "desmotivado", "distraído", "ansioso" ou parecido.
 Fundamento: D57; ECA Digital, art. 26; Decreto 12.880, art. 10; regra 70, item 7.
 Como se confere: a lista de tipos de sinal é fechada; teste que recusa tipo fora dela; leitura
-dos textos de "Seu time".
+dos textos da aba Hoje da turma e do painel "O que o Tutor viu".
 
 **N2. Não guarda texto sobre a pessoa.** O sinal traz o tipo e o fato de origem (a questão, a
 habilidade, a atividade), não uma frase sobre o aluno.
@@ -132,8 +132,8 @@ Como se confere: teste em que o registro de saída é recusado fora de avaliaç�
 classificação.
 Fundamento: D57 (pontuação social; pontuar pessoa por comportamento); nível 4 de
 `docs/agentes.md`.
-Como se confere: não existe campo nem consulta de pontuação por aluno; leitura de "Turmas" e de
-"Seu time".
+Como se confere: não existe campo nem consulta de pontuação por aluno; leitura de "Turmas" e do
+painel "O que o Tutor viu".
 
 **N6. Não decide nada e não tem consequência automática.** Um sinal não bloqueia o Tutor para o
 aluno, não muda a atividade, não gera encaminhamento e não entra em nota.
@@ -165,7 +165,7 @@ nominal pela coordenação grava auditoria; teste de isolamento da rede.
 **N11. Não mostra a conversa do aluno junto do sinal.**
 Fundamento: regra 70, item 7 (supervisão não é vigilância); `docs/fluxos.md` ("o professor vê uso
 e dificuldade, não uma janela sobre o comportamento do aluno").
-Como se confere: leitura de "Seu time": o sinal aparece sem trecho de conversa.
+Como se confere: leitura da aba Hoje da turma e do painel "O que o Tutor viu": o sinal aparece sem trecho de conversa.
 
 **N12. O sinal "precisa de atenção humana" não leva o conteúdo.** O acesso ao conteúdo, por quem
 precisa notificar, é caminho próprio e auditado.
@@ -366,7 +366,7 @@ Conforme `docs/mvp-rapido.md`, com dado 100% sintético.
 
 - quatro tipos de sinal para o professor da turma (`GET /sinais?turmaId=`): `travou`,
   `resposta_pronta`, `duvida_repetida` e `atencao_humana`, esta **sem o conteúdo**;
-- os sinais aparecem em "Seu time", na voz do Tutor, sem conversa de aluno;
+- os sinais aparecem na aba Hoje da turma, na voz do Tutor, em soma e sem nome, e por aluno no painel "O que o Tutor viu", sem conversa de aluno;
 - o resumo do Analista para a coordenação, em agregado, com grupo mínimo de dois professores no
   recorte (D45), gerado a pedido (`POST /analista/gerar`);
 - o detalhe nominal só por botão próprio, com aviso e registro em auditoria
@@ -384,7 +384,7 @@ Conforme `docs/mvp-rapido.md`, com dado 100% sintético.
 - os sinais "errou muito", "principal dificuldade" e "concluiu o que foi atribuído", e o resumo
   diário do Tutor: não constam do contrato do MVP;
 - o resumo automático de segunda de manhã e o alerta por limiar: os limiares estão em aberto;
-- o tempo real: no MVP "Seu time" consulta o servidor de tempos em tempos, sem WebSocket;
+- o tempo real: no MVP a aba Hoje relê os sinais a cada 15 s, sem WebSocket; o uso por aluno do painel "O que o Tutor viu" é lido uma vez, ao abrir;
 - o caminho auditado para a orientação ou a direção em caso de risco à vida;
 - o roteamento por soberania (D62), afrouxado enquanto o dado for sintético (D71);
 - a explicação e o caminho de contestação, e a rotina de expurgo dos sinais.

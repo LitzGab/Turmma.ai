@@ -53,7 +53,7 @@ usados. "Monitor" também não: servia a duas coisas diferentes.
 
 **Um agente para cada pessoa da escola**: o professor tem o **Assistente de ensino**, o aluno tem
 o **Tutor**, a coordenação tem o **Analista de desempenho escolar**, e a família, na fase
-posterior, o **Mensageiro**. O professor vê também o Tutor em "Seu time", porque é ele quem
+posterior, o **Mensageiro**. O professor vê também o Tutor, na aba Hoje da turma (o pé do sino, "O que o Tutor viu", leva até ela), porque é ele quem
 supervisiona o agente dos seus alunos (D8, D47).
 
 O que eram agentes do professor — Corretor, Planejador e Adaptador — viraram **funções do
@@ -64,7 +64,7 @@ persona: por isso a autonomia (D9) e a suspensão (D60) são declaradas por fun�
 | Agente | Para quem | O que é |
 |---|---|---|
 | **Assistente de ensino** | professor | A identidade do chat da Home e a cara das ferramentas (D18). Trabalha pelas funções da tabela abaixo, sempre a partir do material da escola e com a página citada |
-| **Tutor** | aluno, e o professor da turma | O tutor do aluno, socrático e supervisionado. Para o professor, é a segunda voz de "Seu time", avisando o que viu no uso |
+| **Tutor** | aluno, e o professor da turma | O tutor do aluno, socrático e supervisionado. Para o professor, avisa o que viu no uso, na aba Hoje da turma, com o painel "O que o Tutor viu" por aluno |
 | **Analista de desempenho escolar** | coordenação | O resumo semanal e o alerta da coordenação, sempre em agregado |
 | **Mensageiro da família** | professor, coordenação | A comunicação com a família. **Fase posterior** |
 
@@ -77,7 +77,7 @@ persona: por isso a autonomia (D9) e a suspensão (D60) são declaradas por fun�
 | **Assistente · correção de objetiva** | fim da atividade ou da avaliação | **Faz e avisa; a nota espera você.** Corrige objetivas, monta o diagnóstico por habilidade e o relatório por questão, e a entrega nasce pendente. **Em discursiva e redação não faz nada sobre o texto do aluno**: nem correção, nem nota, nem conceito, nem devolutiva rascunho, nem pré-correção para o professor ver (D55). Nelas organiza o lote, confere a entrega e prepara a correção cega. Quando a nota oficial existir, propõe a nota das objetivas, que só passa a existir com a validação registrada do professor (D56) | **sim**: correção de objetiva e diagnóstico por habilidade |
 | **Assistente · adaptação** | avaliação ou atividade criada para turma com aluno que tem adaptação registrada; material didático, quando o professor pede | **Prepara e espera você aprovar.** Propõe a versão adaptada da prova ou da atividade — linguagem direta para o aluno surdo, resposta escrita no lugar da oral, fonte ampliada, tempo extra, enunciado mais fácil. Recebe o **tipo de adaptação**, nunca a condição do aluno nem texto livre sobre ele (D35, D67). O aluno só recebe depois da aprovação | **sim** |
 | **Tutor · com o aluno** | o aluno pergunta | **Responde em tempo real, supervisionado, sem aprovação prévia por resposta** (D47). Detalhe abaixo | **sim** |
-| **Tutor · sinais para o professor** | por evento, e em resumo diário | **Avisa o professor da turma**, na thread dele em "Seu time": quem travou e onde, quem errou muito, quem pediu resposta pronta, qual a principal dificuldade, qual dúvida se repetiu. Aluno nomeado só para o professor da turma (D34) | **sim**: sinais e alertas sobre aluno |
+| **Tutor · sinais para o professor** | por evento, e em resumo diário | **Avisa o professor da turma**, na aba Hoje da turma, na voz dele, em soma e sem nome, e por aluno no painel "O que o Tutor viu", dentro da aba: quem travou e onde, quem errou muito, quem pediu resposta pronta, qual a principal dificuldade, qual dúvida se repetiu. Aluno nomeado só para o professor da turma (D34) | **sim**: sinais e alertas sobre aluno |
 | **Analista · resumo e alerta** | toda segunda de manhã, e por evento que passa do limiar | **Faz e avisa, em agregado.** Detalhe abaixo | **sim**: alertas sobre aluno (na AIA de sinais e alertas) |
 | **Mensageiro · comunicação à família** | evento | **Prepara e envia só depois da aprovação.** Fase posterior | — |
 

@@ -200,8 +200,9 @@ o mesmo motor nos dois.
 **Artefato** — O que uma ferramenta produz e salva na biblioteca, ligado à turma e ao
 calendário, citando material e página. Exporta em PDF, PowerPoint e Excel (D67).
 
-**Feed de agentes** — A seção "Seu time" do professor, onde cada agente é uma thread com
-não-lidos. Nunca aparece vazia para professor com turma.
+**Feed de agentes** — "O que o Assistente fez", que o professor abre pelo pé do sino: o Assistente é uma thread, com as
+entregas dele. O Tutor não tem thread: o pé do sino ("O que o Tutor viu") leva à aba Hoje da turma, onde ele fala em soma, sem
+nome, e onde o painel "O que o Tutor viu" mostra por aluno. Nunca aparece vazia para professor com turma.
 
 **Entrega** — O que um agente produziu e que aguarda decisão humana. Nasce pendente.
 
