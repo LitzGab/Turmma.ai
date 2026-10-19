@@ -1,24 +1,23 @@
 # Estado da execução — telas-do-professor
 
 ## Agora
-- **Espero:** o `RELATÓRIO` de cada linha (pares reiniciados 19/10 ~08h05):
-  - linha 1 (`Implementador`/`Mesa`): **correção `2026-10-19-pecas-sobrepor-tema-escuro-estoura-o-prazo`**, 1ª tentativa:
-    esteira de `91acc6d` (39234137170, depois da 14.0) vermelha só no `e2e/pecas-sobrepor.spec.ts:556` [celular], 31,7 s
-    (169 passaram). Guardião ditado: frontend-reviewer. **Com o RELATÓRIO:** `linhas.ts encontro 1`; depois a linha 1
-    parte o que o quadro mandar (a 12.0 estava liberada);
+- **Espero:** o `RELATÓRIO` de cada linha:
+  - linha 1 (`Implementador`/`Mesa`): **12.0**, grande (partida 19/10 ~08h25; até 4 h sem a 1ª rodada, isto é, ~12h25), 1ª tentativa;
   - linha 2 (`Implementador 2`/`Mesa 2`): **6.0**, grande (até 4 h sem a 1ª rodada, isto é, ~12h05), 1ª tentativa;
   - linha 3 (`Implementador 3`/`Mesa 3`): **7.0**, pequena (até 2 h sem a 1ª rodada, isto é, ~10h05), 1ª tentativa.
-  A cada `RELATÓRIO`: `linhas.ts encontro <n>` e `esteira.ts`. Esteiras: `745a550` verde; `91acc6d` vermelha (acima); `cb0af68` (5.0) rodando.
+  A cada `RELATÓRIO`: `linhas.ts encontro <n>` e `esteira.ts`. Esteiras: `745a550` verde; `91acc6d` vermelha, corrigida por
+  `c5bcb52` (correção `pecas-sobrepor`); `cb0af68` (5.0) e `c400e04` (encontro da correção) rodando.
 - **Devo ainda:** (0) feito, 19/10 ~00h20: o `Implementador 3` sabe que a Turma vira lazy (30 kB) e a fachada fica em 8 kB; (1) ficar de olho em `e2e/areas.spec.ts:231` (19–21 s na máquina, 23,8 s na esteira); se cair,
   correção como a `:204`; (2) a X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em `1477850`): não
   retomar sem a palavra do Joaquim; (3) as esteiras de `0650af0` e `23e8794` foram verdes: nada pendente da 1.0. (4) no fechamento, linha no `TODO.md`: com sete fatias, sobram ~180 casos do e2e (~1379, 197 por fatia) até precisar da oitava (ver `tools/ci/prazo-do-e2e.ts`).
-- **Base:** `spec/telas-do-professor` em `cb0af68` (5.0 em `9fde9be`; 14.0 em `b0ba717`, merge da correção `encontro-14`; 10.0 em `8cf865e`, merge da correção `encontro-10`; 4.0 em `a7d86a8`; correção do mfa em `907d546`; 9.0 em `d13cb69`) (2.0 em `7ad636e`, com a correção `75f94a3`).
+- **Base:** `spec/telas-do-professor` em `c400e04` (correção `pecas-sobrepor` em `c5bcb52`; 5.0 em `9fde9be`; 14.0 em `b0ba717`, merge da correção `encontro-14`; 10.0 em `8cf865e`, merge da correção `encontro-10`; 4.0 em `a7d86a8`; correção do mfa em `907d546`; 9.0 em `d13cb69`) (2.0 em `7ad636e`, com a correção `75f94a3`).
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri` com
   `MAESTRI_SOCKET=/tmp/maestri-309bb7f3/maestri.sock`.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
+| correção `2026-10-19-pecas-sobrepor-tema-escuro-estoura-o-prazo` | `c5bcb52` | Sonnet | 2 | esteira de `91acc6d` (depois da 14.0) vermelha só em `pecas-sobrepor.spec.ts:556` [celular], 31,7 s; um caso por peça, 4 a 5 s; frontend-reviewer na 1ª, test-engineer na 2ª |
 | 5.0 | `9fde9be` | Sonnet | 2 | `revisor-geral` e `test-engineer` reprovaram na 1ª (07h41, 3h30 depois da partida, 5+ portões antes); o Implementador avisou que `CartaoDeFerramenta.tsx:46` conflitaria com a 4.0, mas o encontro juntou sem conflito; e2e em 1 180 casos, 196-197 por fatia; a barra de baixo a 360 px corta "FERRAMEN…" (`TODO.md`) |
 | 14.0 | `c2b9e34` → `b0ba717` | Sonnet | 2 | `test-engineer` reprovou na 1ª; encontro em CONFLITO com a 10.0 (`aprovar.test.ts`, `roteiro-da-demonstracao.spec.ts`), resolvido pela correção `encontro-14` (2 rodadas; recomendações para o `TODO.md` e o `/validar`: fotos de "Revisar a correção" com entrega pendente) |
 | 10.0 | `2b8e78e` → `8cf865e` | Sonnet | 2 | 7ª fatia do e2e antes (correção `2026-10-19-setima-fatia-do-e2e`, `52f43fe`, 2 rodadas); encontro em CONFLITO com a 9.0 em `rotas.tsx`, resolvido pela correção `encontro-10` (1 rodada; 3 recomendações do frontend-reviewer no `TODO.md`, teste sobre os chunks do build para o `/retro`) |

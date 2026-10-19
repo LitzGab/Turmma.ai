@@ -1,64 +1,121 @@
-import { useQuery } from '@tanstack/react-query'
-import { ArrowRight } from 'lucide-react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useId } from 'react'
-import { Link } from 'wouter'
+import { useLocation } from 'wouter'
 import { consultaTime, funcaoSuspensa } from '../../api/time'
-import { caminhoDaFerramentaDoProfessor } from '../../caminhos'
+import { consultaMeusVinculos } from '../../api/vinculos'
+import { caminhoDaFerramentaDoProfessor, ROTAS_DO_PROFESSOR } from '../../caminhos'
+import { Aviso } from '../../componentes/Aviso'
+import { Botao } from '../../componentes/Botao'
+import { Linha } from '../../componentes/Linha'
 import { Estado } from '../../componentes/SeloDeEstado'
-import { Tela } from '../../componentes/Tela'
+import { CabecalhoDeSecao, Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
-import { catalogoPorCategoria } from './ferramentas'
+import { AvisoDeSuspensao } from './avisos'
+import { CATALOGO_DE_FERRAMENTAS, catalogoPorCategoria } from './ferramentas'
+import { IconeDeFerramenta } from './icones-de-ferramenta'
+import { turmasDaProfessora } from './turmas-da-professora'
+
+/** As funções que assinam alguma ferramenta do catálogo, uma vez cada: são as que a escola pode ter suspendido e que a tela explica. */
+const FUNCOES_DO_CATALOGO = [...new Set(CATALOGO_DE_FERRAMENTAS.map((item) => item.funcao))]
 
 /**
- * "Ferramentas" (D74; `docs/interface.md` 1.2): o catálogo, nas categorias da D74, **só com as ferramentas que existem**
- * (atividade objetiva, plano de aula e Adaptação; as outras do desenho não aparecem, nem desligadas). Cada ferramenta abre o
- * formulário dela, que é o mesmo motor do cartão da conversa (D18). O que a professora já gerou saiu daqui e mora em
- * Criados (telas do professor, 5.0).
+ * "Ferramentas" (D74, D80; telas do professor, 7.0; `docs/interface.md` 1.2 e 11.2): o catálogo, **uma seção por categoria da
+ * D74 que tem ferramenta**, e em cada uma um cartão por ferramenta, com o ícone ilustrado de 48 px, o nome e o que ela entrega
+ * em até três linhas. **Só existem as que o produto tem** (atividade objetiva, plano de aula e Adaptação): "Corrigir" não
+ * aparece, e nenhum cartão desligado ou "em breve" ocupa o lugar do que não existe. Cada cartão abre o formulário da
+ * ferramenta, que é o mesmo motor do cartão da conversa (D18). O que a professora já gerou mora em Criados (5.0).
  *
- * O catálogo é fixo e não lê a lista de gerados: a única leitura é a do time, para dizer a função que a coordenação suspendeu.
+ * O catálogo é fixo e não lê a lista de gerados. As duas leituras que a tela faz só **avisam**, nunca tiram um cartão:
+ * - o time, para dizer a função que a coordenação suspendeu (o selo no cartão e a frase da suspensão no alto). Se a leitura
+ *   falha, os cartões ficam e um aviso diz que não foi possível conferir, com "Tentar de novo": quem recusa de verdade é o
+ *   servidor, ao gerar;
+ * - os vínculos, para dizer que falta uma turma confirmada e levar a Turmas. O formulário de cada ferramenta tem o vazio dele.
+ *   **Se a leitura dos vínculos falha, a página fica em silêncio, de propósito**: nem aviso nem "Tentar de novo", e os cartões
+ *   ficam. Ela só serve para avisar, e dizer "falta turma" sem saber seria afirmar o que a tela não leu (o teste prova).
  */
 export default function Ferramentas() {
   useTituloDaTela('Ferramentas')
+  const [, navegar] = useLocation()
   const idDoCatalogo = useId()
   const time = useQuery(consultaTime)
+  const vinculos = useInfiniteQuery(consultaMeusVinculos)
+
+  const turmas = turmasDaProfessora(vinculos.data?.pages.flatMap((pagina) => pagina.itens) ?? [])
+  // Falhou e ainda não há resposta. Não é `time.isError`: "Tentar de novo" põe a consulta de volta em `pending` enquanto lê, e o
+  // aviso, com o botão que acabou de ser apertado, sumiria e voltaria (o foco se perderia no meio). Com a resposta, o aviso sai.
+  const leituraDoTimeFalhou = time.data === undefined && time.errorUpdateCount > 0
+  const suspensas = FUNCOES_DO_CATALOGO.filter((funcao) => funcaoSuspensa(time.data, funcao))
 
   return (
-    <Tela titulo="Ferramentas" largura="formulario">
-      <section aria-labelledby={idDoCatalogo} className="flex min-w-0 flex-col gap-4">
-        <h2 id={idDoCatalogo} className="sr-only">
-          Catálogo
-        </h2>
+    <Tela titulo="Ferramentas">
+      <div className="flex min-w-0 flex-col gap-6">
+        {leituraDoTimeFalhou && (
+          <Aviso
+            tom="atencao"
+            titulo="Não foi possível conferir se alguma ferramenta está suspensa"
+            acao={
+              <>
+                <Botao variante="secundario" tamanho="compacto" onClick={() => void time.refetch()} disabled={time.isFetching}>
+                  Tentar de novo
+                </Botao>
+                <span role="status" className="t-apoio text-sutil">
+                  {time.isFetching ? 'Tentando de novo…' : ''}
+                </span>
+              </>
+            }
+          >
+            Os cartões continuam abertos. Se a coordenação tiver suspendido uma ferramenta, o Assistente avisa na hora de gerar.
+          </Aviso>
+        )}
+        {suspensas.map((funcao) => (
+          <AvisoDeSuspensao key={funcao} funcao={funcao} />
+        ))}
+        {vinculos.data !== undefined && turmas.length === 0 && (
+          <Aviso
+            tom="info"
+            titulo="Falta uma turma confirmada"
+            acao={
+              <Botao variante="secundario" tamanho="compacto" onClick={() => navegar(ROTAS_DO_PROFESSOR.turmas)}>
+                Ir para Turmas
+              </Botao>
+            }
+          >
+            As ferramentas trabalham a partir do material de uma turma e de uma disciplina suas. Confirme as suas turmas em Turmas; se nenhuma aparece lá, quem aloca é a coordenação.
+          </Aviso>
+        )}
+
         {catalogoPorCategoria().map((categoria) => (
-          <div key={categoria.id} className="flex min-w-0 flex-col gap-2">
-            <h3 className="text-sm font-medium text-sutil">{categoria.nome}</h3>
-            <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              {categoria.ferramentas.map((item) => {
-                const Icone = item.icone
-                return (
-                  <li key={item.ferramenta} className="min-w-0">
-                    {/* Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela. */}
-                    <Link to={caminhoDaFerramentaDoProfessor(item.ferramenta)} data-ferramenta={item.ferramenta} className="flex h-full min-h-11 min-w-0 items-start gap-3 rounded-cartao border border-linha bg-superficie p-4 hover:bg-realce-suave">
-                      <span aria-hidden="true" className="inline-flex size-9 shrink-0 items-center justify-center rounded-linha bg-realce-suave text-tinta">
-                        <Icone size={18} strokeWidth={1.75} />
-                      </span>
-                      <span className="flex min-w-0 flex-1 flex-col gap-1">
-                        <span className="font-medium break-words text-tinta">{item.nome}</span>
-                        <span className="text-sm break-words text-apoio">{item.descricao}</span>
+          <section key={categoria.id} aria-labelledby={`${idDoCatalogo}-${categoria.id}`} className="flex min-w-0 flex-col gap-3">
+            <CabecalhoDeSecao id={`${idDoCatalogo}-${categoria.id}`} titulo={categoria.nome} />
+            <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {categoria.ferramentas.map((item) => (
+                // O cartão é a moldura da `Linha`: o alvo é a linha inteira (um `<a>`), e a moldura só a desenha. 108 px no mínimo, todos iguais na fileira.
+                <li key={item.ferramenta} data-ferramenta={item.ferramenta} className="min-w-0 overflow-hidden rounded-cartao border-2 border-borda bg-superficie [&>a]:h-full [&>a]:min-h-[108px]">
+                  <Linha
+                    // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
+                    para={caminhoDaFerramentaDoProfessor(item.ferramenta)}
+                    titulo={item.nome}
+                    inicio={<IconeDeFerramenta ferramenta={item.ferramenta} tamanho={48} />}
+                    abaixo={
+                      <>
+                        <span title={item.descricao} className="line-clamp-3">
+                          {item.descricao}
+                        </span>
+                        {/* Embaixo do texto, e não no `fim` da linha: a 768 px o cartão tem uns 340 px, e o selo ao lado deixaria o nome sem lugar. */}
                         {funcaoSuspensa(time.data, item.funcao) && (
-                          <span>
+                          <span className="mt-1 flex">
                             <Estado familia="info">Suspensa pela coordenação</Estado>
                           </span>
                         )}
-                      </span>
-                      <ArrowRight aria-hidden="true" size={16} strokeWidth={1.75} className="mt-1 shrink-0 text-sutil" />
-                    </Link>
-                  </li>
-                )
-              })}
+                      </>
+                    }
+                  />
+                </li>
+              ))}
             </ul>
-          </div>
+          </section>
         ))}
-      </section>
+      </div>
     </Tela>
   )
 }
