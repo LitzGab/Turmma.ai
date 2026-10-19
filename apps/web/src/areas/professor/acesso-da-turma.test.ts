@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest'
 import { ErroDaApi } from '../../api/cliente'
 import {
   codigoEmDoisGrupos,
+  convitePedido,
+  enderecoDoConvite,
+  enderecoSemOConvite,
+  PARAMETRO_DO_CONVITE,
+  TEXTO_DO_ACESSO_QUE_JA_APARECEU,
   codigoSoletrado,
   DITOS_DO_CONVITE_SEM_WHATSAPP,
   falhaDoGerarAcesso,
@@ -80,5 +85,33 @@ describe('o acesso da turma na tela do professor (A1, 15.0)', () => {
       'O link e o código aparecem uma vez só. Se fechar agora, eles não aparecem de novo, e para os alunos entrarem será preciso gerar um novo acesso.',
     )
     expect(textoDaPerguntaDeFechar(false)).not.toContain('sendo gerado')
+  })
+
+  it('o texto do acesso que já existe diz que o link e o código apareceram uma vez e que, sem eles, só gerando um novo', () => {
+    expect(TEXTO_DO_ACESSO_QUE_JA_APARECEU).toBe('O link e o código apareceram uma vez, quando foram gerados. Se eles não estão mais com você, gere um novo acesso.')
+  })
+})
+
+describe('o endereço do "Convidar alunos" (telas do professor, 13.0)', () => {
+  it('só `convidar=1` pede o diálogo, com a aba ou sem ela; qualquer outro valor, ou nenhum, não abre nada', () => {
+    expect(PARAMETRO_DO_CONVITE).toBe('convidar')
+    expect(convitePedido('convidar=1')).toBe(true)
+    expect(convitePedido('aba=alunos&convidar=1')).toBe(true)
+    expect(convitePedido('convidar=1&aba=alunos')).toBe(true)
+    for (const busca of ['', 'aba=alunos', 'convidar=0', 'convidar=true', 'convidar=', 'convidar=11', 'convidar=1x', 'outro=1']) expect(convitePedido(busca), busca).toBe(false)
+  })
+
+  it('"Gerar o acesso" leva à aba Alunos da turma com o pedido, e o endereço não tem mais nada: nenhum token, link nem código', () => {
+    const endereco = enderecoDoConvite('/turmas/0192a4c0-5b1e-7c3d-8e4f-a0b1c2d3e4f5')
+    expect(endereco).toBe('/turmas/0192a4c0-5b1e-7c3d-8e4f-a0b1c2d3e4f5?aba=alunos&convidar=1')
+    expect(convitePedido(endereco.split('?')[1] ?? '')).toBe(true)
+  })
+
+  it('fechar tira só o pedido do endereço: a aba fica, e sem outra busca o caminho vai sozinho', () => {
+    expect(enderecoSemOConvite('/turmas/abc', 'aba=alunos&convidar=1')).toBe('/turmas/abc?aba=alunos')
+    expect(enderecoSemOConvite('/turmas/abc', 'convidar=1&aba=alunos')).toBe('/turmas/abc?aba=alunos')
+    expect(enderecoSemOConvite('/turmas/abc', 'convidar=1')).toBe('/turmas/abc')
+    expect(enderecoSemOConvite('/turmas/abc', 'aba=alunos')).toBe('/turmas/abc?aba=alunos')
+    expect(convitePedido(enderecoSemOConvite('/turmas/abc', 'aba=alunos&convidar=1').split('?')[1] ?? '')).toBe(false)
   })
 })

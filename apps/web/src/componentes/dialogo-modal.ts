@@ -53,7 +53,8 @@ interface OpcoesDoDialogoModal {
   readonly focoInicial?: RefObject<HTMLElement | null> | undefined
   /**
    * Para onde o foco vai ao fechar quando quem abriu o diálogo já saiu da página: o "Revogar" da escola some quando a lista
-   * recarrega com o convite revogado. Sem isto, o foco cairia no `body` (regra 50, item 11).
+   * recarrega com o convite revogado. Vale também para o diálogo que abre sem ninguém com o foco (o `body`), como o "Convidar alunos"
+   * pedido pelo endereço. Sem isto, o foco cairia no `body` (regra 50, item 11).
    */
   readonly focoDeReserva?: (() => void) | undefined
   /**
@@ -93,7 +94,8 @@ export function useDialogoModal({ focoInicial, focoDeReserva, cedeAoPrioritario 
     desmontando.current = false
     const abrir = () => {
       abriu = true
-      quemAbriu = document.activeElement instanceof HTMLElement ? document.activeElement : undefined
+      // O `body` com o foco é ninguém: o diálogo que abre sozinho (pelo endereço) não tem a quem devolver o foco, e `body.focus()` não faz nada.
+      quemAbriu = document.activeElement instanceof HTMLElement && document.activeElement !== document.body ? document.activeElement : undefined
       if (!atual.open) atual.showModal()
       focoInicial?.current?.focus()
     }

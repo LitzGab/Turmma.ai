@@ -3,6 +3,7 @@ import { ErroDaApi } from '../../api/cliente'
 import type { DitosDaCopia } from '../../componentes/copia-unica'
 import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
 import { formatarQuantidade } from '../../formatar'
+import { enderecoDaAba } from './endereco-da-turma'
 
 /**
  * O acesso da turma na tela do professor (A1, 15.0; RF9): a validade que a tela propõe, o que cada ação diz antes de
@@ -29,6 +30,36 @@ export function codigoSoletrado(codigo: string): string {
     .split(' ')
     .map((grupo) => [...grupo].join(' '))
     .join(', ')
+}
+
+/**
+ * O que a seção e o passo "Acesso vigente" dizem do acesso que já existe: o link e o código apareceram uma vez, quando foram
+ * gerados, e a leitura não os devolve. Quem os perdeu gera um acesso novo.
+ */
+export const TEXTO_DO_ACESSO_QUE_JA_APARECEU = 'O link e o código apareceram uma vez, quando foram gerados. Se eles não estão mais com você, gere um novo acesso.'
+
+/**
+ * O parâmetro do endereço que abre o "Convidar alunos" na aba Alunos (`?aba=alunos&convidar=1`; telas do professor, 13.0; RF19). Só
+ * este valor fixo vai ao endereço: o token, o link e o código nunca (regra 20, item 8).
+ */
+export const PARAMETRO_DO_CONVITE = 'convidar'
+
+/** O endereço pede o "Convidar alunos"? Só o valor `1`: qualquer outro texto no parâmetro não abre nada. */
+export function convitePedido(busca: string): boolean {
+  return new URLSearchParams(busca).get(PARAMETRO_DO_CONVITE) === '1'
+}
+
+/** O endereço da aba Alunos de uma turma com o "Convidar alunos" pedido: para onde "Gerar o acesso" leva depois de confirmar a turma. */
+export function enderecoDoConvite(caminhoDaTurma: string): string {
+  return `${enderecoDaAba(caminhoDaTurma, 'alunos')}&${PARAMETRO_DO_CONVITE}=1`
+}
+
+/** O mesmo endereço sem o pedido, para quando o diálogo fecha: o resto da busca (a aba) fica, e sem busca nenhuma o caminho vai só. */
+export function enderecoSemOConvite(caminho: string, busca: string): string {
+  const parametros = new URLSearchParams(busca)
+  parametros.delete(PARAMETRO_DO_CONVITE)
+  const restante = parametros.toString()
+  return restante === '' ? caminho : `${caminho}?${restante}`
 }
 
 /** O que o primeiro acesso da turma faz, antes de gerar. */

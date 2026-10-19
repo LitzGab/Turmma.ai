@@ -2,7 +2,7 @@
 import { QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
 import { AUTORIZACAO_DE_TESTE, prepararTela, redeFalsa, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
 import AlunosDaTurma from './AlunosDaTurma'
@@ -42,13 +42,15 @@ const MENSAGEM_DO_FIM = 'Todos os alunos da turma estão na lista.'
 interface Leituras {
   alunos?: RespostaFalsa | ((caminho: string) => RespostaFalsa | Promise<RespostaFalsa>)
   desempenho?: RespostaFalsa | (() => RespostaFalsa | Promise<RespostaFalsa>)
+  /** O acesso da turma. `'na-fila'` não registra caminho: o teste responde na ordem dos pedidos (a leitura e o gerar são o mesmo caminho). */
+  acesso?: RespostaFalsa | (() => RespostaFalsa | Promise<RespostaFalsa>) | 'na-fila'
 }
 
-function instalar(rede: RedeFalsa, { alunos = ok({ itens: [BRUNO, CAIO, ANA] }), desempenho: acertos = desempenho([]) }: Leituras = {}): void {
+function instalar(rede: RedeFalsa, { alunos = ok({ itens: [BRUNO, CAIO, ANA] }), desempenho: acertos = desempenho([]), acesso = ok({ expiraEm: null }) }: Leituras = {}): void {
   rede.responderPor(`/v1/turmas/${TURMA}/alunos`, alunos)
   rede.responderPor(`/v1/turmas/${TURMA}/desempenho`, acertos)
   rede.responderPor(`/v1/turmas/${TURMA}/reivindicacoes`, SEM_PEDIDOS)
-  rede.responderPor(`/v1/turmas/${TURMA}/acesso`, ok({ expiraEm: null }))
+  if (acesso !== 'na-fila') rede.responderPor(`/v1/turmas/${TURMA}/acesso`, acesso)
 }
 
 function montar(aoPerderATurma: () => void = () => undefined) {
@@ -467,5 +469,147 @@ describe('Alunos: a turma, o cache e os pedidos de nome', () => {
     expect(within(pedidos).getByText('Nenhum pedido esperando')).toBeTruthy()
     expect(within(pedidos).getByRole('button', { name: 'Ver o acesso dos alunos' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Acesso dos alunos' })).toBeTruthy()
+  })
+})
+
+describe('AlunosDaTurma: o acesso é um resumo, e "Convidar alunos" abre o diálogo', () => {
+  const secao = () => screen.getByRole('region', { name: 'Acesso dos alunos' })
+  const botoesDaSecao = () => within(secao()).queryAllByRole('button').map((botao) => botao.textContent)
+  const dialogo = () => screen.getByRole('dialog')
+  const VIGENTE = { expiraEm: '2026-10-20T15:30:00.000Z' }
+  const GERADO = { token: 'AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_abcde', codigo: 'ABCD2345', expiraEm: '2026-10-09T12:00:00.000Z' }
+
+  afterEach(() => window.history.replaceState(null, '', '/'))
+
+  it('sem acesso: "Sem acesso ativo" e um botão só, "Convidar alunos"; o gerar não está mais na seção', async () => {
+    const rede = redeFalsa()
+    instalar(rede)
+    montar()
+
+    await within(await screen.findByRole('region', { name: 'Acesso dos alunos' })).findByText('Sem acesso ativo')
+    expect(botoesDaSecao()).toEqual(['Convidar alunos'])
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('com acesso: "Acesso ativo", até quando vale e o mesmo botão; "Gerar novo" e "Revogar" moram no diálogo, e o link e o código não voltam', async () => {
+    const rede = redeFalsa()
+    instalar(rede, { acesso: ok(VIGENTE) })
+    montar()
+
+    await within(await screen.findByRole('region', { name: 'Acesso dos alunos' })).findByText('Acesso ativo')
+    expect(secao().textContent).toContain('Vale até')
+    expect(botoesDaSecao()).toEqual(['Convidar alunos'])
+    expect(within(secao()).queryByRole('textbox')).toBeNull()
+  })
+
+  it('a leitura do acesso em erro tira o botão e deixa "Tentar de novo"; relida, o botão volta', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    let falha = true
+    instalar(rede, { acesso: () => (falha ? erro(503, 'INDISPONIVEL_TENTE_DE_NOVO') : ok(VIGENTE)) })
+    montar()
+
+    await within(await screen.findByRole('region', { name: 'Acesso dos alunos' })).findByRole('alert', {}, { timeout: 5_000 })
+    expect(botoesDaSecao()).toEqual(['Tentar de novo'])
+    falha = false
+    await usuario.click(within(secao()).getByRole('button', { name: 'Tentar de novo' }))
+    await within(secao()).findByText('Acesso ativo')
+    expect(botoesDaSecao()).toEqual(['Convidar alunos'])
+  })
+
+  it('o botão abre o diálogo sem mexer no endereço; "Cancelar" o fecha, e o foco volta para o botão que o abriu', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    instalar(rede)
+    montar()
+    window.history.replaceState(null, '', '/professor/turmas/x?aba=alunos')
+    // Nem uma troca de endereço: fechar o diálogo que o botão abriu não tem pedido para tirar dele.
+    const trocas = vi.spyOn(window.history, 'replaceState')
+
+    const botao = await within(await screen.findByRole('region', { name: 'Acesso dos alunos' })).findByRole('button', { name: 'Convidar alunos' })
+    await usuario.click(botao)
+    expect(await screen.findByRole('heading', { name: 'Gerar acesso' })).toBeTruthy()
+    expect(window.location.search).toBe('?aba=alunos')
+    await usuario.click(within(dialogo()).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(window.location.search).toBe('?aba=alunos')
+    expect(trocas).not.toHaveBeenCalled()
+    trocas.mockRestore()
+    expect(document.activeElement).toBe(botao)
+  })
+
+  it('`?convidar=1` abre o diálogo sozinho; fechar tira só o pedido do endereço (`replace`: nenhum passo no histórico) e a aba fica; o diálogo não volta', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    instalar(rede)
+    window.history.replaceState(null, '', '/professor/turmas/x?aba=alunos&convidar=1')
+    const passos = window.history.length
+    montar()
+
+    expect(await screen.findByRole('heading', { name: 'Gerar acesso' })).toBeTruthy()
+    await usuario.click(within(dialogo()).getByRole('button', { name: 'Cancelar' }))
+    await waitFor(() => expect(window.location.search).toBe('?aba=alunos'))
+    expect(window.history.length).toBe(passos)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    // Sem o pedido no endereço, o botão abre de novo e fechar não mexe mais no endereço.
+    await usuario.click(within(secao()).getByRole('button', { name: 'Convidar alunos' }))
+    await usuario.click(within(dialogo()).getByRole('button', { name: 'Cancelar' }))
+    expect(window.location.search).toBe('?aba=alunos')
+  })
+
+  it('só `convidar=1` abre: outro valor no endereço deixa a aba como está, sem diálogo', async () => {
+    const rede = redeFalsa()
+    instalar(rede)
+    window.history.replaceState(null, '', '/professor/turmas/x?aba=alunos&convidar=0')
+    montar()
+
+    await within(await screen.findByRole('region', { name: 'Acesso dos alunos' })).findByText('Sem acesso ativo')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(window.location.search).toBe('?aba=alunos&convidar=0')
+  })
+
+  it('gerar pelo endereço pedido: o endereço nunca ganha token, link nem código, e o diálogo fechado o deixa só com a aba', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    instalar(rede, { acesso: 'na-fila' })
+    rede.responder(ok({ expiraEm: null }))
+    rede.responder(ok(GERADO))
+    rede.responder(ok(VIGENTE))
+    window.history.replaceState(null, '', '/professor/turmas/x?aba=alunos&convidar=1')
+    montar()
+
+    await usuario.click(await screen.findByRole('button', { name: 'Gerar acesso' }))
+    await screen.findByRole('heading', { name: 'Acesso gerado' })
+    for (const segredo of [GERADO.token, GERADO.codigo, 'ABCD 2345']) expect(window.location.href).not.toContain(segredo)
+    expect(window.location.search).toBe('?aba=alunos&convidar=1')
+    await usuario.click(within(dialogo()).getByRole('button', { name: 'Fechar' }))
+    await usuario.click(within(dialogo()).getByRole('button', { name: 'Fechar sem copiar' }))
+    await waitFor(() => expect(window.location.search).toBe('?aba=alunos'))
+    for (const segredo of [GERADO.token, GERADO.codigo, 'ABCD 2345']) expect(document.body.innerHTML).not.toContain(segredo)
+    // A seção lê o acesso novo: só até quando vale.
+    await within(secao()).findByText('Acesso ativo')
+  })
+
+  it('revogar pelo diálogo pedido pelo endereço: a seção anuncia, o diálogo fecha, o pedido sai do endereço, e abrir outro diálogo apaga o anúncio', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    instalar(rede, { acesso: 'na-fila' })
+    rede.responder(ok(VIGENTE))
+    window.history.replaceState(null, '', '/professor/turmas/x?aba=alunos&convidar=1')
+    montar()
+
+    await usuario.click(await screen.findByRole('button', { name: 'Revogar o acesso' }))
+    rede.responder({ status: 204 })
+    rede.responder(ok({ expiraEm: null }))
+    await usuario.click(within(dialogo()).getByRole('button', { name: 'Revogar acesso' }))
+
+    expect(await within(secao()).findByText('Acesso revogado. O link e o código não valem mais.')).toBeTruthy()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    await waitFor(() => expect(window.location.search).toBe('?aba=alunos'))
+    await within(secao()).findByText('Sem acesso ativo')
+
+    rede.responder(ok({ expiraEm: null }))
+    await usuario.click(within(secao()).getByRole('button', { name: 'Convidar alunos' }))
+    expect(within(secao()).queryByText('Acesso revogado. O link e o código não valem mais.')).toBeNull()
   })
 })

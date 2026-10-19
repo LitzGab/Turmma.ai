@@ -232,6 +232,32 @@ dos pedidos deixaria de valer. (6) O vazio é "A lista ainda não chegou", e só
 lidos. O recomeço da segunda pessoa na mesma aba (a lista e os pedidos da anterior) fica no caso de recomeço de `professor-sino.spec.ts`
 (§10): um caso com duas entradas passa de 15 s.
 
+**O convite na pele nova** (divergências da 13.0): (1) **a caixa é a de 520 px do `Dialogo`**, e não os 560 px do mockup: o `Dialogo` tem uma
+largura só em todas as áreas (D80), e o que o passo "Gerar" e o "Vigente" precisam é ser mais estreitos que a janela, o que o e2e
+mede (`<= 520` e menor que a janela). (2) **O botão "Convidar alunos" não escreve `?convidar=1`**: só o endereço pedido (pelo aviso de
+"Turma confirmada", ou colado) o leva, e fechar o tira com `replace`, sem passo no histórico; o botão abre o diálogo sem mexer no
+endereço. O pedido do endereço vale **na montagem da aba**: `useDialogoDaTela(abertaNaMontagem)` entrega o diálogo já aberto na primeira
+renderização, sem efeito que abra depois (o efeito, com trava e rearme, não tinha como ser provado), e a aba que monta de novo com o
+endereço ainda pedindo o abre outra vez. (3) **Peças compartilhadas tocadas, fora dos arquivos previstos:** `componentes/dialogos.tsx`
+(o corpo da confirmação de perigo virou `CorpoDaConfirmacaoDePerigo`, para o passo "Revogar o acesso" viver dentro do diálogo aberto,
+sem diálogo dentro de diálogo; `ConfirmacaoDePerigo` não muda para quem a usa), `componentes/copia-unica.tsx` (`useFocoDaEtapa` ganha
+`daPrimeira`, porque o diálogo de passos não tem um alvo só na abertura), `componentes/dialogo-aberto.ts` (o parâmetro opcional acima) e
+`componentes/dialogo-modal.ts`. Nesta última, **o `body` com o foco vale como ninguém tendo aberto o diálogo**: o diálogo que abre sem
+nenhum controle focado (o do endereço) não tem a quem devolver o foco, e `body.focus()` não faz nada. **Efeito nos outros diálogos:**
+nenhum quando quem abriu foi um botão ou link (o caso de todos os outros); e, onde algum abra com o `body` focado e passe
+`focoDeReserva`, ao fechar o foco vai para a reserva, e não fica no `body` (regra 50, item 11). O "Convidar alunos" tem como reserva o
+botão da seção, e o título dela quando o botão saiu. (4) **O "toque fora" não existe no passo "Acesso gerado"**, que é a janela inteira
+(a caixa é a janela, e o toque no canto cai dentro dela): ele continua nos passos da caixa de sempre, e o e2e o prova em "Gerar novo
+acesso" (fecha sem gerar), com o W7 conferindo que no "Acesso gerado" o toque no canto nada faz (`cenarios.md` W7). (5) **Arquivos de
+teste fora dos previstos:** `e2e/escola-montada.spec.ts` e `e2e/roteiro-da-demonstracao.spec.ts` (o clique que abria o gerar na seção
+passa a abrir o diálogo) e `e2e/convidar-alunos.spec.ts`, novo (o endereço, o aviso depois de confirmar e a janela inteira): o
+`acesso-da-turma.spec.ts` mantém os mesmos 18 `test(`. Dois casos de W4 do `acesso-da-turma.spec.ts` semeiam o acesso no banco e
+abrem direto na aba, porque o portão mede 15 s; o link e o código que aparecem uma vez e não voltam seguem provados no W7
+(`semRastro`), no W12 e em `ConvidarAlunos.test.tsx`. (6) **Sessão vencida com o diálogo aberto pelo endereço:** o diálogo sai com o
+link e o código, como em toda abertura (o caso de recomeço de `acesso-da-turma.spec.ts`); o `convidar=1` continua no endereço porque
+ninguém fechou o diálogo, e a turma que monta de novo depois do login o abre no passo que a leitura pede ("Vigente", ou "Gerar acesso"
+sem acesso), sem link nem código. É aceitável e fica assim.
+
 **`data-esperando-voce`** (divergência da 3.0): o item do sino da 1.0 não leva o atributo, e a 3.0 não o acrescenta. O
 Início não tem o atributo nem o que ele marcava, e o e2e prova que o sino tem a entrega pelo nome do botão ("Esperando você,
 1") e pelo link do item ("Versão adaptada para decidir…", "Correção para revisar…").

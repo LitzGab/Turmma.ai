@@ -286,7 +286,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(principal(professora).getByText('Ainda não há correção aprovada nesta turma')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await abrirAbaAlunos(professora, hasTouch)
       const acesso = principal(professora).getByRole('region', { name: 'Acesso dos alunos' })
-      await botao(acesso, 'Gerar acesso').click()
+      await botao(acesso, 'Convidar alunos').click()
       const respostaDoGerar = professora.waitForResponse((resposta) => /^\/v1\/turmas\/[^/]+\/acesso$/.test(new URL(resposta.url()).pathname) && resposta.request().method() === 'POST')
       await botao(dialogo(professora), 'Gerar acesso').click()
       const gerado = (await (await respostaDoGerar).json()) as RespostaAcessoGerado

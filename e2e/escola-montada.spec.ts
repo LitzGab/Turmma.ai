@@ -168,7 +168,7 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
 
   // O acesso dos alunos: o código que ele projeta na lousa.
   const acesso = principal(professor).getByRole('region', { name: 'Acesso dos alunos' })
-  await acionar(botao(acesso, 'Gerar acesso'), hasTouch)
+  await acionar(botao(acesso, 'Convidar alunos'), hasTouch)
   const respostaDoGerar = professor.waitForResponse((resposta) => /^\/v1\/turmas\/[^/]+\/acesso$/.test(new URL(resposta.url()).pathname) && resposta.request().method() === 'POST')
   await acionar(botao(dialogo(professor), 'Gerar acesso'), hasTouch)
   const gerado = (await (await respostaDoGerar).json()) as RespostaAcessoGerado

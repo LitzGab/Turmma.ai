@@ -1,6 +1,6 @@
 import { CodigoDeErro } from '@educa/shared'
 import { useMutation, type UseMutationOptions } from '@tanstack/react-query'
-import { useEffect, useRef, type FormEvent, type ReactNode, type RefObject } from 'react'
+import { useEffect, useRef, type FormEvent, type ReactNode, type Ref, type RefObject } from 'react'
 import { Botao } from './Botao'
 import { CLASSES_DO_BOTAO_PERIGO_CHEIO, CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
 import { Dialogo } from './Dialogo'
@@ -146,13 +146,17 @@ interface PropsDaConfirmacao {
   readonly focoDeReserva: () => void
 }
 
+interface PropsDoCorpoDaConfirmacao extends Omit<PropsDaConfirmacao, 'titulo' | 'focoDeReserva'> {
+  /** Onde o foco começa: o texto do que vai acontecer, e não o botão que confirma (regra 50, item 8). */
+  readonly inicio: Ref<HTMLParagraphElement>
+}
+
 /**
- * A confirmação de `perigo` (excluir a turma, a disciplina, retirar o nome): o texto diz o que acontece e o que impede, o
- * foco começa nele e não no botão que exclui, e "Excluir" e "Cancelar" têm o mesmo tamanho (D59). A falha aparece aqui
- * dentro, com o foco nela; o `CONFLITO` e o `NAO_ENCONTRADO` recarregam a lista, e sobra só "Fechar".
+ * O que a confirmação de `perigo` tem dentro da caixa: o texto, a falha, os dois botões e o envio único. Separado do `Dialogo`
+ * para o passo "Revogar o acesso" do "Convidar alunos" viver dentro do diálogo que já está aberto, sem diálogo dentro de diálogo
+ * (telas do professor, 13.0).
  */
-export function ConfirmacaoDePerigo({ titulo, texto, rotuloDaAcao, rotuloEmAndamento, acao, aoFechar, aoConcluir, aoTerminar, textosDaFalha, focoDeReserva }: PropsDaConfirmacao) {
-  const inicio = useRef<HTMLParagraphElement>(null)
+export function CorpoDaConfirmacaoDePerigo({ texto, rotuloDaAcao, rotuloEmAndamento, acao, aoFechar, aoConcluir, aoTerminar, textosDaFalha, inicio }: PropsDoCorpoDaConfirmacao) {
   // Fecha com a lista já recarregada: o botão que abriu saiu com o item, e o foco vai para o `focoDeReserva`.
   const { enviar, mutacao } = useEnvioUnico({
     mutationFn: acao,
@@ -165,26 +169,38 @@ export function ConfirmacaoDePerigo({ titulo, texto, rotuloDaAcao, rotuloEmAndam
   const falha = mutacao.isError ? textoDaFalha(mutacao.error, textosDaFalha) : undefined
   const mudou = mutacao.isError && listaMudou(mutacao.error, [CodigoDeErro.CONFLITO, CodigoDeErro.NAO_ENCONTRADO])
   return (
-    <Dialogo titulo={titulo} aoFechar={aoFechar} focoInicial={inicio} focoDeReserva={focoDeReserva}>
-      <div className="mt-4 flex min-w-0 flex-col gap-4">
-        <p ref={inicio} tabIndex={-1} className="break-words text-apoio">
-          {texto}
-        </p>
-        {falha !== undefined && <AlertaDaFalha texto={falha} />}
-        <div className="flex flex-wrap justify-end gap-3">
-          {!mudou && (
-            <button type="button" onClick={() => enviar(undefined)} disabled={mutacao.isPending} className={CLASSES_DO_BOTAO_PERIGO_CHEIO}>
-              {mutacao.isPending ? rotuloEmAndamento : rotuloDaAcao}
-            </button>
-          )}
-          <button type="button" onClick={aoFechar} className={CLASSES_DO_BOTAO_SECUNDARIO}>
-            {mudou ? 'Fechar' : 'Cancelar'}
+    <div className="mt-4 flex min-w-0 flex-col gap-4">
+      <p ref={inicio} tabIndex={-1} className="break-words text-apoio">
+        {texto}
+      </p>
+      {falha !== undefined && <AlertaDaFalha texto={falha} />}
+      <div className="flex flex-wrap justify-end gap-3">
+        {!mudou && (
+          <button type="button" onClick={() => enviar(undefined)} disabled={mutacao.isPending} className={CLASSES_DO_BOTAO_PERIGO_CHEIO}>
+            {mutacao.isPending ? rotuloEmAndamento : rotuloDaAcao}
           </button>
-        </div>
-        <span role="status" className="sr-only">
-          {mutacao.isPending ? rotuloEmAndamento : ''}
-        </span>
+        )}
+        <button type="button" onClick={aoFechar} className={CLASSES_DO_BOTAO_SECUNDARIO}>
+          {mudou ? 'Fechar' : 'Cancelar'}
+        </button>
       </div>
+      <span role="status" className="sr-only">
+        {mutacao.isPending ? rotuloEmAndamento : ''}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * A confirmação de `perigo` (excluir a turma, a disciplina, retirar o nome): o texto diz o que acontece e o que impede, o
+ * foco começa nele e não no botão que exclui, e "Excluir" e "Cancelar" têm o mesmo tamanho (D59). A falha aparece aqui
+ * dentro, com o foco nela; o `CONFLITO` e o `NAO_ENCONTRADO` recarregam a lista, e sobra só "Fechar".
+ */
+export function ConfirmacaoDePerigo({ titulo, focoDeReserva, ...corpo }: PropsDaConfirmacao) {
+  const inicio = useRef<HTMLParagraphElement>(null)
+  return (
+    <Dialogo titulo={titulo} aoFechar={corpo.aoFechar} focoInicial={inicio} focoDeReserva={focoDeReserva}>
+      <CorpoDaConfirmacaoDePerigo {...corpo} inicio={inicio} />
     </Dialogo>
   )
 }

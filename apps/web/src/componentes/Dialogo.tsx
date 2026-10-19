@@ -41,7 +41,22 @@ export interface PropsDoDialogo {
   readonly papel?: 'alertdialog'
   /** O id do texto que descreve o diálogo, lido com o título ao abrir: "o que vai acontecer" na confirmação. */
   readonly descritoPor?: string
+  /**
+   * O diálogo ocupa a janela inteira (largura e altura), com o fundo `fundo` por classe de token e sem canto, borda nem degrau:
+   * é o passo "Acesso gerado" do "Convidar alunos", que a professora projeta e atrás do qual nada pode ficar legível (telas do
+   * professor, 13.0). A troca entre as duas caixas é na hora, sem transição, no mesmo `dialog`: o foco e o que está dentro
+   * não saem do lugar. O véu do `::backdrop` não muda (a guarda de cor da X1 só aceita cor lá).
+   */
+  readonly inteira?: boolean
 }
+
+/** A caixa de sempre: 520 px, canto de 16 px, a borda de 2 px e o degrau (`docs/interface.md` 9.3 e 10.2). */
+const CAIXA_DE_520 = 'max-h-[calc(100svh-2rem)] w-[min(32.5rem,calc(100%-2rem))] overflow-y-auto rounded-caixa bg-superficie p-5 text-tinta shadow-flutua sm:p-6'
+/** A janela inteira: `m-0` tira a centralização do reset, e `max-w-none` e `max-h-none`, o teto que o navegador dá ao `dialog` modal. */
+const CAIXA_INTEIRA = 'm-0 h-full max-h-none w-full max-w-none overflow-y-auto bg-fundo p-5 text-tinta sm:p-8'
+
+/** A coluna do que está dentro da janela inteira: não estica de uma borda à outra, como o código que se projeta. */
+const COLUNA_DA_INTEIRA = 'mx-auto w-full max-w-3xl'
 
 /**
  * O diálogo das telas, no padrão do `LoginPorCima` do F1: o `dialog` nativo em modo modal, que deixa o resto da página
@@ -66,7 +81,7 @@ export interface PropsDoDialogo {
  * volta sozinho pelo id, se a pessoa abrir de novo e repetir. No convite, o Esc e o clique fora vão ao `aoFechar` dele,
  * que pergunta antes de fechar sem o link copiado (tarefa 7.0).
  */
-export function Dialogo({ titulo, aoFechar, fecharAoClicarFora = false, aoFecharPeloNavegador, focoInicial, focoDeReserva, children, rodape, papel, descritoPor }: PropsDoDialogo) {
+export function Dialogo({ titulo, aoFechar, fecharAoClicarFora = false, aoFecharPeloNavegador, focoInicial, focoDeReserva, children, rodape, papel, descritoPor, inteira = false }: PropsDoDialogo) {
   const { dialogo, fechadoPeloNavegador, prender } = useDialogoModal({ focoInicial, focoDeReserva })
   // Onde o botão do mouse (ou o dedo) desceu: o "fora" só vale se começou fora. Selecionar o link arrastando e soltar
   // fora da caixa não é pedido de fechar.
@@ -102,13 +117,17 @@ export function Dialogo({ titulo, aoFechar, fecharAoClicarFora = false, aoFechar
       onMouseDown={(evento) => (comecouFora.current = foraDaCaixa(evento))}
       onClick={clicarFora}
       onKeyDown={prender}
-      className="max-h-[calc(100svh-2rem)] w-[min(32.5rem,calc(100%-2rem))] overflow-y-auto rounded-caixa bg-superficie p-5 text-tinta shadow-flutua sm:p-6"
+      className={inteira ? CAIXA_INTEIRA : CAIXA_DE_520}
     >
-      <h2 id={idDoTitulo} className="t-secao">
-        {titulo}
-      </h2>
-      {children}
-      {rodape}
+      {/* Sempre o mesmo `div`, com ou sem classe: trocar a caixa não pode remontar o que está dentro (o foco, o link copiado). Na janela
+          inteira o título e o conteúdo ficam juntos numa coluna centralizada, e não o título no canto e o resto no meio. */}
+      <div className={inteira ? COLUNA_DA_INTEIRA : undefined}>
+        <h2 id={idDoTitulo} className="t-secao">
+          {titulo}
+        </h2>
+        {children}
+        {rodape}
+      </div>
     </dialog>
   )
 }

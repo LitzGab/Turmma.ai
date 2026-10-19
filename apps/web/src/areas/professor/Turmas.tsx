@@ -5,12 +5,14 @@ import { Link } from 'wouter'
 import { mensagemDoErro } from '../../api/cliente'
 import { confirmarVinculo, consultaMeusVinculos, contestarVinculo } from '../../api/vinculos'
 import { caminhoDaTurmaDoProfessor } from '../../caminhos'
+import { Aviso } from '../../componentes/Aviso'
 import { Botao } from '../../componentes/Botao'
 import { CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { Estado } from '../../componentes/SeloDeEstado'
 import { Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
+import { enderecoDoConvite } from './acesso-da-turma'
 import { esperaNaTurma, useFilaDoProfessor, type EsperaNaTurma } from './fila-do-professor'
 import PainelDaContestacao, { type ContestacaoEmAndamento } from './PainelDaContestacao'
 import { LadrilhoDoVinculo, nomeDoVinculo } from './vinculo-na-tela'
@@ -59,6 +61,8 @@ export default function Turmas() {
   const tituloDasTurmas = useRef<HTMLHeadingElement>(null)
   const tituloDaTela = useRef<HTMLHeadingElement>(null)
   const [pedidoDeFoco, definirPedidoDeFoco] = useState(0)
+  // A turma que acabou de ser confirmada, para oferecer o acesso dos alunos. Mora na página: sai quando a professora sai de Turmas.
+  const [confirmada, definirConfirmada] = useState<Vinculo['turma'] | undefined>(undefined)
 
   // A faixa decidida sai da lista, e com ela o botão que tinha o foco. O foco vai para o título de "Suas turmas", onde o cartão
   // entrou, assim que a lista relida está na tela (regra 50, item 11).
@@ -69,9 +73,10 @@ export default function Turmas() {
   const recarregar = () => cliente.invalidateQueries({ queryKey: consultaMeusVinculos.queryKey })
 
   const confirmar = useMutation({
-    mutationFn: (id: string) => confirmarVinculo(id),
-    onSuccess: async () => {
+    mutationFn: (vinculo: Vinculo) => confirmarVinculo(vinculo.id),
+    onSuccess: async (_confirmado, vinculo) => {
       await recarregar()
+      definirConfirmada(vinculo.turma)
       definirPedidoDeFoco((n) => n + 1)
     },
   })
@@ -119,14 +124,14 @@ export default function Turmas() {
           <p className="min-w-0 font-medium break-words text-tinta">Confirme sua turma · {nomeDoVinculo(vinculo)}</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <Botao variante="oficial" onClick={() => confirmar.mutate(vinculo.id)} disabled={decidindo}>
-            {confirmar.isPending && confirmar.variables === vinculo.id ? 'Confirmando…' : 'Confirmar'}
+          <Botao variante="oficial" onClick={() => confirmar.mutate(vinculo)} disabled={decidindo}>
+            {confirmar.isPending && confirmar.variables.id === vinculo.id ? 'Confirmando…' : 'Confirmar'}
           </Botao>
           <Botao variante="secundario" onClick={() => abrirContestacao(vinculo.id)} disabled={decidindo}>
             Contestar
           </Botao>
         </div>
-        {confirmar.isError && confirmar.variables === vinculo.id && (
+        {confirmar.isError && confirmar.variables.id === vinculo.id && (
           <p role="alert" className="w-full rounded-controle border border-erro bg-erro-cx p-3 text-erro">
             {mensagemDoErro(confirmar.error)}
           </p>
@@ -165,6 +170,23 @@ export default function Turmas() {
   return (
     <Tela titulo="Turmas" idDoTitulo="titulo-turmas" refDoTitulo={tituloDaTela}>
       <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-turmas">
+        {/* A região existe antes do texto, para o leitor de tela anunciar a turma confirmada quando o aviso aparece. */}
+        <div role="status" className="empty:hidden">
+          {confirmada !== undefined && (
+            <Aviso
+              tom="certo"
+              titulo={`Turma ${confirmada.nome} confirmada`}
+              acao={
+                // Relativo à área, como o link do cartão. O endereço leva só a aba e o pedido do diálogo.
+                <Link to={enderecoDoConvite(caminhoDaTurmaDoProfessor(confirmada.id))} className={CLASSES_DO_LINK_SECUNDARIO}>
+                  Gerar o acesso
+                </Link>
+              }
+            >
+              Agora os alunos podem entrar nela: gere o link e o código para eles pedirem o nome.
+            </Aviso>
+          )}
+        </div>
         {vinculos.isPending && <EstadoCarregando rotulo="Carregando as suas turmas…" />}
         {vinculos.isError && <EstadoErro erro={vinculos.error} tentando={vinculos.isFetching} aoTentarDeNovo={() => void vinculos.refetch({ cancelRefetch: false })} />}
         {!vinculos.isPending && !vinculos.isError && itens.length === 0 && (

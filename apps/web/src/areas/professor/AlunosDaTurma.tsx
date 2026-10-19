@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useEffect, useId, useRef, useState } from 'react'
+import { useLocation, useSearch } from 'wouter'
 import { consultaAlunosDaTurma } from '../../api/alunos-da-turma'
 import { consultaDesempenhoDaTurma } from '../../api/atividades'
 import { Botao } from '../../componentes/Botao'
@@ -8,7 +9,7 @@ import { ListaDePedidos } from '../../componentes/pedidos/ListaDePedidos'
 import { Tabela } from '../../componentes/Tabela'
 import { CabecalhoDeSecao } from '../../componentes/Tela'
 import { formatarQuantidade } from '../../formatar'
-import { turmaIndisponivel } from './acesso-da-turma'
+import { convitePedido, enderecoSemOConvite, turmaIndisponivel } from './acesso-da-turma'
 import { AcessoDaTurma } from './AcessoDaTurma'
 import { montarLinhas, textoDosAcertos, textoPorHabilidade, type LeituraDosAcertos } from './alunos-da-turma'
 
@@ -23,9 +24,13 @@ interface PropsDosAlunos {
 }
 
 /**
- * A aba Alunos da turma aberta (`docs/interface.md` 11.1; telas do professor, 12.0; RF18, RF21; D34, D46, D69): o acesso da sala, os
- * pedidos de nome que a professora aprova ou recusa e, abaixo, **os alunos da turma em ordem de nome, com os acertos de cada um nas
- * correções aprovadas**. O diálogo do acesso chega com a 13.0, e nenhuma das duas altera `Turma.tsx`.
+ * A aba Alunos da turma aberta (`docs/interface.md` 11.1; telas do professor, 12.0 e 13.0; RF18, RF19, RF21; D34, D46, D69): o
+ * acesso da sala (um resumo e o botão "Convidar alunos", que abre o diálogo), os pedidos de nome que a professora aprova ou
+ * recusa e, abaixo, **os alunos da turma em ordem de nome, com os acertos de cada um nas correções aprovadas**.
+ *
+ * - **O endereço pode pedir o diálogo** (`?aba=alunos&convidar=1`, para onde "Gerar o acesso" leva depois de confirmar a turma): ele
+ *   abre uma vez, e fechar tira o pedido do endereço (`replace`), sem passo no histórico. Sem o pedido, o botão abre o diálogo e o
+ *   endereço não muda. O endereço nunca leva token, link nem código (regra 20, item 8).
  *
  * - **A lista de nomes** é `GET /v1/turmas/:id/alunos`, lida de cem em cem. A API a entrega em ordem de id, e a tela reordena por
  *   nome **tudo o que já foi lido**, também depois de "Ver mais". Dois alunos com o mesmo nome são duas linhas.
@@ -39,6 +44,8 @@ interface PropsDosAlunos {
  */
 export default function AlunosDaTurma({ turmaId, turmaNome, escola, aoPerderATurma }: PropsDosAlunos) {
   const tituloDoAcesso = useRef<HTMLHeadingElement>(null)
+  const [caminho, navegar] = useLocation()
+  const busca = useSearch()
   const alunos = useInfiniteQuery(consultaAlunosDaTurma(turmaId))
   const desempenho = useQuery(consultaDesempenhoDaTurma(turmaId))
   const idDosAlunos = useId()
@@ -85,7 +92,15 @@ export default function AlunosDaTurma({ turmaId, turmaNome, escola, aoPerderATur
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <AcessoDaTurma turmaId={turmaId} escola={escola} titulo={tituloDoAcesso} />
+      <AcessoDaTurma
+        turmaId={turmaId}
+        escola={escola}
+        titulo={tituloDoAcesso}
+        convidarPeloEndereco={convitePedido(busca)}
+        aoFecharOConvite={() => {
+          if (convitePedido(busca)) navegar(enderecoSemOConvite(caminho, busca), { replace: true })
+        }}
+      />
       <ListaDePedidos
         turma={{ id: turmaId, nome: turmaNome }}
         quem="professor"

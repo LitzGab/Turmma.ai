@@ -171,16 +171,19 @@ export function Falha({ texto, erro }: { texto: string; erro: unknown }) {
 /**
  * O foco que acompanha a etapa: a pergunta, o link, ou o começo da etapa a que se voltou. Quando a etapa volta por causa
  * de uma falha (o pedido recusado com a pergunta de fechar aberta), o foco é do alerta da falha, e não do começo da etapa.
+ *
+ * Na abertura, quem põe o foco é o diálogo (`focoInicial`, depois do `showModal`) e este gancho espera a primeira mudança de
+ * etapa. O diálogo de passos (`ConvidarAlunos`) não tem um alvo só na abertura, e por isso pede `daPrimeira`: o foco do passo
+ * em que ele abriu também é daqui, e roda depois do `showModal`, porque o efeito do filho vem antes do do pai.
  */
-export function useFocoDaEtapa(etapa: string, alvo: RefObject<HTMLElement | null>, comFalha: boolean): void {
-  const primeira = useRef(true)
+export function useFocoDaEtapa(etapa: string, alvo: RefObject<HTMLElement | null>, comFalha: boolean, daPrimeira = false): void {
+  const primeira = useRef(!daPrimeira)
   // A falha desta renderização, para o efeito da etapa: ele só roda quando a etapa muda.
   const falhou = useRef(comFalha)
   useEffect(() => {
     falhou.current = comFalha
   }, [comFalha])
   useEffect(() => {
-    // Na abertura, quem põe o foco é o diálogo (`focoInicial`), depois do `showModal`.
     if (primeira.current) {
       primeira.current = false
       return

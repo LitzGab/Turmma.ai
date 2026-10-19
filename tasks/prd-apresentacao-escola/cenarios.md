@@ -465,7 +465,9 @@ aos cenários.
   ficou na 15.0 (`e2e/acesso-da-turma.spec.ts`): a validade escolhida (1, 7 ou 30 dias, 7 já marcado) é a que vai ao
   servidor; o código aparece grande (36 px ou mais), com o endereço onde o aluno o digita, e o link, num campo de
   leitura, com o aviso de que quem tem o link ou o código vê os nomes livres; copiado, fecha sem perguntar, e sem copiar
-  pergunta pelo botão, pelo toque fora e pelo Esc; "Gerar novo" diz também que cai o acesso de outro professor da turma, e
+  pergunta pelo botão e pelo Esc (desde as telas do professor, 13.0, o acesso vive no diálogo "Convidar alunos", e o passo
+  "Acesso gerado" é a janela inteira: não tem "fora", e o toque no canto não faz nada; o toque fora fecha os passos da caixa de
+  sempre, e é provado em "Gerar novo acesso", que fecha sem gerar); "Gerar novo" diz também que cai o acesso de outro professor da turma, e
   o primeiro acesso não fala disso; o WhatsApp abre o `wa.me` numa aba nova, sem `opener`, com a escola e o link e sem
   nome da lista, da turma nem da professora; sem o WhatsApp (o navegador não abre a aba), o botão copia o texto, e sem
   área de transferência seleciona o link; revogar é `perigo` (texto em `erro` na seção, cheio só na confirmação) e diz

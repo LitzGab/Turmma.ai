@@ -77,10 +77,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 12.2 Os pedidos de nome no alto, com as regras de hoje
   - [x] 12.3 Testes: a ordem de nome; aluno sem correção aprovada; os estados; a lista não fica no cache
 
-- [ ] **13.0 — "Convidar alunos" num diálogo**
-  - [ ] 13.1 `ConvidarAlunos.tsx`: o acesso da turma em passos de um diálogo só
-  - [ ] 13.2 `?convidar=1` e o convite depois de confirmar a turma
-  - [ ] 13.3 Testes: os nove casos do acesso, pelo diálogo; o link e o código uma vez; nada legível atrás de "Acesso gerado"
+- [x] **13.0 — "Convidar alunos" num diálogo**
+  - [x] 13.1 `ConvidarAlunos.tsx`: o acesso da turma em passos de um diálogo só
+  - [x] 13.2 `?convidar=1` e o convite depois de confirmar a turma
+  - [x] 13.3 Testes: os nove casos do acesso, pelo diálogo; o link e o código uma vez; nada legível atrás de "Acesso gerado"
 
 - [x] **14.0 — Aprovar na pele nova**
   - [x] 14.1 `Aprovar.tsx`: os números, as abas e o destaque no painel ao lado

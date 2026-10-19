@@ -231,6 +231,79 @@ describe('Turmas: confirmar', () => {
   })
 })
 
+describe('Turmas: depois de confirmar, o convite dos alunos', () => {
+  it('o aviso "Turma 2º B confirmada" leva "Gerar o acesso" à aba Alunos da turma confirmada, com o diálogo pedido; antes de confirmar não há aviso, e o endereço só leva a aba e o pedido', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    const confirmadaB = vinculo(2, TURMA_B, HISTORIA, 'confirmado')
+    let confirmou = false
+    instalar(rede, {
+      vinculos: () => ok([vinculo(1, TURMA_A, MATEMATICA, 'pendente'), confirmou ? confirmadaB : { ...confirmadaB, estado: 'pendente' }]),
+      pedidos: { [TURMA_A.id]: ok([]), [TURMA_B.id]: ok([]) },
+    })
+    montar()
+    await screen.findByRole('region', { name: 'Confirme suas turmas' })
+    expect(screen.queryByRole('link', { name: 'Gerar o acesso' })).toBeNull()
+    expect(screen.queryByText(/confirmada$/)).toBeNull()
+
+    // Confirma a segunda, e não a primeira: o aviso e o endereço são da turma que foi confirmada.
+    rede.responder({ status: 200, corpo: confirmadaB })
+    confirmou = true
+    await usuario.click(within(faixaDe('História')).getByRole('button', { name: 'Confirmar' }))
+    const aviso = await screen.findByText('Turma 2º B confirmada')
+    expect(aviso.closest('[data-aviso="certo"]')).not.toBeNull()
+    const gerar = screen.getByRole('link', { name: 'Gerar o acesso' })
+    expect(gerar.getAttribute('href')).toBe(`/turmas/${TURMA_B.id}?aba=alunos&convidar=1`)
+    // O aviso mora numa região viva que já existia: o leitor de tela o anuncia quando ele aparece.
+    expect(aviso.closest('[role="status"]')).not.toBeNull()
+    // A turma que ainda espera a decisão continua com a faixa, e não ganhou aviso.
+    expect(faixaDe('Matemática')).toBeTruthy()
+    expect(screen.queryByText('Turma 1º A confirmada')).toBeNull()
+  })
+
+  it('o aviso fica na página: sair de Turmas e voltar não o traz de volta, e contestar não gera aviso', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    const confirmadaA = vinculo(1, TURMA_A, MATEMATICA, 'confirmado')
+    let confirmou = false
+    instalar(rede, { vinculos: () => ok([confirmou ? confirmadaA : { ...confirmadaA, estado: 'pendente' }]), pedidos: { [TURMA_A.id]: ok([]) } })
+    const primeira = montar()
+    await screen.findByRole('region', { name: 'Confirme suas turmas' })
+    rede.responder({ status: 200, corpo: confirmadaA })
+    confirmou = true
+    await usuario.click(within(faixaDe('Matemática')).getByRole('button', { name: 'Confirmar' }))
+    await screen.findByText('Turma 1º A confirmada')
+
+    primeira.unmount()
+    montar()
+    await screen.findByRole('region', { name: 'Suas turmas' })
+    expect(screen.queryByText('Turma 1º A confirmada')).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Gerar o acesso' })).toBeNull()
+  })
+
+  it('a confirmação que falha não mostra o aviso nem o "Gerar o acesso": a faixa fica, com o erro, e o aviso só vem depois de uma confirmação que deu certo', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    const confirmadaA = vinculo(1, TURMA_A, MATEMATICA, 'confirmado')
+    let confirmou = false
+    instalar(rede, { vinculos: () => ok([confirmou ? confirmadaA : { ...confirmadaA, estado: 'pendente' }]), pedidos: { [TURMA_A.id]: ok([]) } })
+    montar()
+    await screen.findByRole('region', { name: 'Confirme suas turmas' })
+
+    rede.responder(erro(409, 'CONFLITO'))
+    await usuario.click(within(faixaDe('Matemática')).getByRole('button', { name: 'Confirmar' }))
+    expect(await within(faixaDe('Matemática')).findByRole('alert')).toBeTruthy()
+    expect(screen.queryByText(/confirmada$/)).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Gerar o acesso' })).toBeNull()
+
+    // A tentativa seguinte dá certo: só então o aviso aparece.
+    rede.responder({ status: 200, corpo: confirmadaA })
+    confirmou = true
+    await usuario.click(within(faixaDe('Matemática')).getByRole('button', { name: 'Confirmar' }))
+    expect(await screen.findByText('Turma 1º A confirmada')).toBeTruthy()
+  })
+})
+
 describe('Turmas: contestar no painel ao lado', () => {
   async function comUmaPendente() {
     const usuario = userEvent.setup()
