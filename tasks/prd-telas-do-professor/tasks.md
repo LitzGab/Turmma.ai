@@ -48,7 +48,7 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [ ] 6.2 `EncerramentoDaAtividade`, extraído de `AplicacaoDoArtefato`, sem mudar comportamento
   - [ ] 6.3 Testes: os quatro estados; aplicar e encerrar com a confirmação; a versão rejeitada não exporta; a aba pelo endereço
 
-- [ ] **7.0 — Ferramentas: o catálogo por categoria**
+- [x] **7.0 — Ferramentas: o catálogo por categoria**
   - [ ] 7.1 `Ferramentas.tsx`: uma seção por categoria com ferramenta, em cartões com ícone ilustrado
   - [ ] 7.2 Testes: só as três ferramentas; categoria vazia não aparece; a função suspensa no cartão
 

@@ -1,7 +1,7 @@
 import { esquemaPedidoAdaptarArtefato, esquemaPedidoGerarComFerramenta, FERRAMENTAS, ROTULOS_DA_ADAPTACAO, TIPOS_DE_ADAPTACAO } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { problemaDaDescricao, validarFormulario, valoresPadrao } from '../../componentes/ia/motor-formulario'
-import { CATALOGO_DE_FERRAMENTAS, catalogoPorCategoria, descricaoDaFerramenta, ehFerramenta, iniciaisDoPedido, montarPedido, TEMPOS_EXTRAS, type OpcoesDaDescricao } from './ferramentas'
+import { CATALOGO_DE_FERRAMENTAS, CATEGORIAS_DE_FERRAMENTA, catalogoPorCategoria, descricaoDaFerramenta, ehFerramenta, iniciaisDoPedido, montarPedido, TEMPOS_EXTRAS, type OpcoesDaDescricao } from './ferramentas'
 
 const TURMA = '0190f5a0-0000-7000-8000-00000000002b'
 const DISCIPLINA = '0190f5a0-0000-7000-8000-0000000000c1'
@@ -20,6 +20,19 @@ describe('o catálogo de ferramentas (D74)', () => {
     expect(ehFerramenta('adaptacao')).toBe(true)
     // As outras do desenho não existem, nem para o endereço digitado à mão.
     expect(['prova', 'simulado', 'redacao', 'mapa-mental', ''].map(ehFerramenta)).toEqual([false, false, false, false, false])
+  })
+
+  it('as categorias saem na ordem da D74 e só as que têm ferramenta: "Corrigir" existe na lista da D74 e não aparece, porque nenhuma ferramenta dela existe', () => {
+    expect(CATEGORIAS_DE_FERRAMENTA.map((categoria) => categoria.id)).toEqual(['planejar', 'preparar', 'avaliar', 'corrigir'])
+    expect(catalogoPorCategoria().map((categoria) => categoria.id)).toEqual(['planejar', 'preparar', 'avaliar'])
+    // Nenhuma categoria sai vazia: o catálogo não desenha seção sem cartão.
+    expect(catalogoPorCategoria().every((categoria) => categoria.ferramentas.length > 0)).toBe(true)
+    // E cada ferramenta está só na categoria que declarou.
+    expect(catalogoPorCategoria().flatMap((categoria) => categoria.ferramentas.map((item) => [categoria.id, item.categoria]))).toEqual([
+      ['planejar', 'planejar'],
+      ['preparar', 'preparar'],
+      ['avaliar', 'avaliar'],
+    ])
   })
 
   it('a função que assina cada ferramenta é a que a escola suspende: a Adaptação é da função de adaptação', () => {

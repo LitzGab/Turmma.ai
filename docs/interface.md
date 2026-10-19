@@ -186,6 +186,14 @@ a descrição de campos de cada ferramenta sai de `descricaoDaFerramenta`
 (`apps/web/src/areas/professor/ferramentas.ts`), e um motor só a desenha
 (`apps/web/src/componentes/ia/motor-formulario.ts` e `MotorFormulario.tsx`).
 
+**A página de Ferramentas** (X3, tarefa 7.0) tem uma seção por categoria que tem ferramenta (hoje Planejar, Preparar a aula e
+Avaliar; "Corrigir" não aparece, porque nenhuma ferramenta dela existe) e um cartão por ferramenta: uma `Linha` de 108 px no
+mínimo, com o ícone ilustrado de 48 px, o nome, o que ela entrega em até três linhas e, se a coordenação suspendeu a função, o
+selo "Suspensa pela coordenação" (a frase da suspensão fica no alto da página). A grade tem 3 colunas a partir de 1280 px, 2 a
+partir de 768 e 1 abaixo. Dois avisos no alto **não tiram cartão**: a leitura do time que falhou ("Não foi possível conferir…",
+com "Tentar de novo") e a professora sem turma confirmada (leva a Turmas). Sem cartão desligado nem "em breve" no lugar do que
+não existe.
+
 ### 1.3 Esperando você: o que os agentes deixam para o professor (F11)
 
 - **Dois agentes trabalham para o professor: o Assistente de ensino e o Tutor** (D17, D32 revista).

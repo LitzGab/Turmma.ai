@@ -164,6 +164,17 @@ entregar: nenhuma pose da onça é desenhada aqui.
 os 44 px (36 abaixo de 768) do mockup. O `AvatarAgente` e a `CabecaOnca` só aceitam 24, 32, 40 e 48 px (`docs/interface.md`
 9.7), e um tamanho a mais é peça da X1 redefinida, fora do recorte; o 40 é o do cabeçalho de uma conversa.
 
+**Ferramentas** (divergências da 7.0): (1) o cartão é a `Linha` da X1 dentro de uma moldura de 2 px, e a `Linha` não aceita atributo, por isso o
+`data-ferramenta` mora no `<li>` do cartão (o `href` continua o do formulário, no `<a>`); o selo "Suspensa pela coordenação" desce para
+baixo da descrição, e não no `fim` da linha, porque a 768 px o cartão tem uns 340 px e o selo ao lado não deixaria lugar para o nome.
+(2) O título da categoria é `h2` (o `CabecalhoDeSecao`), e o `h2` "Catálogo" só para leitor de tela saiu; o e2e que contava `h3` conta `h2`.
+(3) A página lê, além do time, `GET /v1/meus-vinculos` (rota que já existe, a do Início), para avisar "Falta uma turma confirmada" e levar a
+Turmas; o aviso não tira cartão e não aparece enquanto os vínculos não chegam. (4) A leitura do time que falha é `time.data === undefined &&
+time.errorUpdateCount > 0`, e não `time.isError`: "Tentar de novo" põe a consulta de volta em `pending` enquanto lê, e o aviso, com o botão
+apertado, sumiria e voltaria. (5) A frase da suspensão de `conversa_e_ferramentas` (`TEXTO_DA_SUSPENSAO`) dizia que o que a professora já
+gerou "continua em Ferramentas"; desde a 5.0 mora em Criados, e a frase passou a aparecer na própria página de Ferramentas. Largura da tela:
+`grade`, como na tabela acima.
+
 **A função suspensa no Início** (divergência da 3.0): além do aviso da conversa e das ferramentas, o Início mostra o da
 **Adaptação** (`TEXTO_DA_SUSPENSAO`) quando só ela está suspensa, porque o atalho dela fica desligado e um botão desligado
 sem dizer por quê não explica nada.
