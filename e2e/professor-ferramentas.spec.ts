@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 import { ROTULOS_DA_ADAPTACAO, TIPOS_DE_ADAPTACAO } from '../packages/shared/src/assistente/conteudo.ts'
 import { atividadeSintetica, erroDaApi, simularAssistente, versaoAdaptada } from './__fixtures__/assistente.ts'
+import { paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { caixa } from './__fixtures__/fluxo-do-professor.ts'
 import { entrarPelaApi, entrarPorEmail, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { entrarEmCriados } from './__fixtures__/professor/criados.ts'
@@ -352,6 +353,40 @@ test.describe('O formulário da ferramenta com "Como vai sair" (telas do profess
     await page.setViewportSize({ width: 1024, height: 768 })
     await expect.poll(() => colunasDoFormulario(page)).toBe(2)
     expect(await larguraExcedente(page)).toBe(0)
+  })
+
+  test('a 1366 × 768 a página não rola em nenhum formulário: o cabeçalho fica parado, o formulário rola por dentro e o botão de gerar fica ao alcance (RF22, correção formulario-e-assistente-rolam-a-pagina)', async ({ page }) => {
+    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre as três ferramentas.
+    test.slow()
+    await entrarEmCriados(page, {
+      endereco: '/professor/ferramentas/adaptacao',
+      antes: ({ api, turmaId, disciplinaId }) => {
+        api.artefatos = [atividadeSintetica(turmaId, disciplinaId)]
+      },
+    })
+    const largura = page.viewportSize()?.width ?? 0
+    for (const [ferramenta, gerar] of [
+      ['adaptacao', 'Gerar versão adaptada'],
+      ['atividade_objetiva', 'Gerar atividade'],
+      ['plano_de_aula', 'Gerar plano de aula'],
+    ] as const) {
+      await irPara(page, `/professor/ferramentas/${ferramenta}`)
+      const botao = page.locator(`[data-cartao-de-ferramenta="${ferramenta}"]`).getByRole('button', { name: gerar })
+      await expect(botao).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+      expect(await larguraExcedente(page)).toBe(0)
+      // A 360 px a página rola inteira, como qualquer outra: só se mede o miolo a partir de 768 px.
+      if (largura < 768) continue
+
+      await paginaNaoRola(page)
+      const miolo = page.locator('[data-miolo-da-ferramenta]')
+      const titulo = page.getByRole('main').getByRole('heading', { level: 1 })
+      const tituloAntes = await titulo.boundingBox()
+      expect(tituloAntes, `o título de ${ferramenta} tem caixa`).not.toBeNull()
+      await miolo.evaluate((elemento) => elemento.scrollTo(0, elemento.scrollHeight))
+      expect((await titulo.boundingBox())?.y, `o título de ${ferramenta} não sai do lugar com o formulário rolando`).toBe(tituloAntes?.y)
+      await expect(botao, `o botão de gerar de ${ferramenta} chega à vista`).toBeInViewport({ ratio: 1 })
+      await paginaNaoRola(page)
+    }
   })
 
   test('o endereço de uma ferramenta que não existe responde como página não encontrada, sem formulário nem "Como vai sair"', async ({ page }) => {

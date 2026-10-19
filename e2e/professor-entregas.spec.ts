@@ -1,6 +1,7 @@
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { FUNCOES } from '../packages/shared/src/time/funcoes.ts'
 import { atividadeSintetica, erroDaApi, portao, QUEM_DECIDE, versaoAdaptada } from './__fixtures__/assistente.ts'
+import { paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { acionar, comLote, entrar, irPara, PRAZO_DA_TELA_MS, selosDeIA } from './__fixtures__/professor/cena.ts'
 import { listaDoSino, sinoDe } from './__fixtures__/professor/sino.ts'
 import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -45,6 +46,43 @@ test.describe('Seu time › Assistente de ensino (11.4)', () => {
     expect(await violacoesGraves(page)).toEqual([])
     await acionar(convite.getByRole('button', { name: 'Pedir ao Assistente' }), hasTouch)
     await expect(page).toHaveURL(/\/professor\/nova-conversa$/)
+  })
+
+  test('a 1366 × 768 a página não rola com a conversa cheia: a faixa e as abas ficam paradas e só a conversa rola por dentro (RF22, correção formulario-e-assistente-rolam-a-pagina)', async ({ page, hasTouch }) => {
+    const { api, turmaId, disciplinaId } = await entrar(page, hasTouch)
+    const origem = atividadeSintetica(turmaId, disciplinaId)
+    const versoes = [versaoAdaptada(origem), versaoAdaptada(origem), versaoAdaptada(origem), versaoAdaptada(origem, 'aprovada'), versaoAdaptada(origem, 'aprovada'), versaoAdaptada(origem, 'rejeitada')]
+    api.artefatos = [origem, ...versoes.map(({ artefato }) => artefato)]
+    api.entregas = versoes.map(({ entrega }) => entrega)
+    await irPara(page, '/professor/time/assistente')
+    await expect(page.locator('[data-entrega]')).toHaveCount(versoes.length, { timeout: PRAZO_DA_TELA_MS })
+    expect(await larguraExcedente(page)).toBe(0)
+    // A 360 px a página rola inteira, como qualquer outra: só se mede o miolo a partir de 768 px.
+    if ((page.viewportSize()?.width ?? 0) < 768) return
+
+    await paginaNaoRola(page)
+    const painel = page.getByRole('tabpanel')
+    expect(await painel.evaluate((elemento) => elemento.scrollHeight - elemento.clientHeight), 'a conversa rola por dentro').toBeGreaterThan(0)
+    // A faixa "Esperando você" e as abas não saem do lugar com a conversa rolando.
+    const abas = page.getByRole('tab', { name: 'Tudo' })
+    const faixa = page.locator('[data-faixa-esperando]')
+    const abasAntes = await abas.boundingBox()
+    const faixaAntes = await faixa.boundingBox()
+    expect(abasAntes, 'as abas têm caixa antes de a conversa rolar').not.toBeNull()
+    expect(faixaAntes, 'a faixa tem caixa antes de a conversa rolar').not.toBeNull()
+    await painel.evaluate((elemento) => elemento.scrollTo(0, elemento.scrollHeight))
+    expect((await abas.boundingBox())?.y, 'as abas não saem do lugar').toBe(abasAntes?.y)
+    expect((await faixa.boundingBox())?.y, 'a faixa não sai do lugar').toBe(faixaAntes?.y)
+    // A última entrega chegou à vista, e a página continua com a altura da janela.
+    const ultima = await page.locator('[data-entrega]').last().boundingBox()
+    const caixaDoPainel = await painel.boundingBox()
+    expect((ultima?.y ?? Infinity) + (ultima?.height ?? 0), 'a última entrega termina dentro do painel').toBeLessThanOrEqual((caixaDoPainel?.y ?? 0) + (caixaDoPainel?.height ?? 0) + 1)
+    expect((caixaDoPainel?.y ?? Infinity) + (caixaDoPainel?.height ?? 0), 'o painel termina dentro da janela').toBeLessThanOrEqual(page.viewportSize()?.height ?? 0)
+    await paginaNaoRola(page)
+    // Abrir a lista da faixa muda a altura do que está acima da conversa: a conversa encolhe e a página continua sem rolar.
+    await acionar(faixa.getByText('3 entregas esperando você'), hasTouch)
+    await expect(faixa.getByRole('listitem')).toHaveCount(3)
+    await paginaNaoRola(page)
   })
 
   test('Aprovar mostra o que vai acontecer antes de confirmar, passa pela decisão registrada uma vez só, mesmo com dois cliques, e a tela mostra quem aprovou e quando', async ({ page, hasTouch }) => {
