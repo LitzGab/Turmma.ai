@@ -1109,6 +1109,15 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       `turmas: 0`, ela diz "Sem turma ainda" e esconde a contagem de professores (e a de alunos), mesmo que haja professor com
       vínculo. Decidir o texto (só "Sem turma ainda", ou a contagem que existir) e declarar a intenção num teste
       (`test-engineer` na 14.0 da X2) (dono: Joaquim e Gabriel)
+- [ ] **A descrição de cada ferramenta e o "Como vai sair" repetem quase o mesmo** (atividade objetiva, plano de aula e
+      Adaptação): a frase de apoio abaixo do título do formulário e a primeira linha do texto fixo ao lado dizem a mesma
+      coisa. Diferenciar quando o F7 acrescentar ferramentas e o catálogo voltar à mesa
+      (`frontend-reviewer` na 8.0 da telas-do-professor; `COMO_VAI_SAIR`, em `apps/web/src/areas/professor/ferramentas.ts`)
+      (dono: Joaquim e Gabriel)
+- [ ] **A atividade objetiva vai ao aluno por "Aplicar à turma", sem entrega com rejeição e justificativa** (regra 70, item 3).
+      Decidir antes do piloto se "não aplicar" conta como a rejeição que a regra pede, ou se a atividade ganha uma entrega
+      pendente como a versão adaptada. Já existia antes da 8.0, que só passou a dizer isso na tela
+      (`conformidade-reviewer` na 8.0 da telas-do-professor; `AplicacaoDoArtefato.tsx`) (dono: Joaquim)
 - [x] ~~Definir teto de uso do tutor por aluno e orçamento de tokens~~ — D38, D39, D41
 - [x] ~~Decidir o modelo de cobrança~~ — por aluno, uso incluso, sem crédito (D40)
 - [x] ~~Decidir se o aluno acessa de casa desde o início~~ — escola decide por turma (D19)

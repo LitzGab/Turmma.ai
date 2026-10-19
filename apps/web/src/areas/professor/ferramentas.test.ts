@@ -1,7 +1,7 @@
 import { esquemaPedidoAdaptarArtefato, esquemaPedidoGerarComFerramenta, FERRAMENTAS, ROTULOS_DA_ADAPTACAO, TIPOS_DE_ADAPTACAO } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { problemaDaDescricao, validarFormulario, valoresPadrao } from '../../componentes/ia/motor-formulario'
-import { CATALOGO_DE_FERRAMENTAS, CATEGORIAS_DE_FERRAMENTA, catalogoPorCategoria, descricaoDaFerramenta, ehFerramenta, iniciaisDoPedido, montarPedido, TEMPOS_EXTRAS, type OpcoesDaDescricao } from './ferramentas'
+import { CATALOGO_DE_FERRAMENTAS, CATEGORIAS_DE_FERRAMENTA, catalogoPorCategoria, COMO_VAI_SAIR, descricaoDaFerramenta, ehFerramenta, iniciaisDoPedido, montarPedido, TEMPOS_EXTRAS, type OpcoesDaDescricao } from './ferramentas'
 
 const TURMA = '0190f5a0-0000-7000-8000-00000000002b'
 const DISCIPLINA = '0190f5a0-0000-7000-8000-0000000000c1'
@@ -148,5 +148,56 @@ describe('o que o cartão recebe do pedido escrito na caixa', () => {
 
   it('D35: a Adaptação nunca recebe o texto da caixa de pedido', () => {
     expect(iniciaisDoPedido('adaptacao', 'prova adaptada para o João, que tem TDAH', `${TURMA}:${DISCIPLINA}`)).toEqual({})
+  })
+})
+
+/** D46, RF21: nem nota, nem conceito, nem pontuação, nem média, nem ranking; e o "diagnóstico do aluno" não é o texto de uma ferramenta. */
+const VOCABULARIO_PROIBIDO = /\bnotas?\b|\bconceitos?\b|pontua|\bmédias?\b|ranking|diagn[óo]stico do aluno/i
+/** D35: a Adaptação não fala de aluno nem de condição dele. */
+const FALA_DE_ALUNO_OU_CONDICAO = /alun|laudo|diagn[óo]stic|defici|condi[çc]|transtorno|TDAH|dislex|autis|necessidade|motivo/i
+
+describe('"Como vai sair": o texto fixo de cada ferramenta (telas do professor, 8.0; RF11)', () => {
+  it('há um texto por ferramenta do catálogo, de uma a três linhas, e nenhum para ferramenta que não existe', () => {
+    expect(Object.keys(COMO_VAI_SAIR).sort()).toEqual(CATALOGO_DE_FERRAMENTAS.map((item) => item.ferramenta).sort())
+    for (const item of CATALOGO_DE_FERRAMENTAS) {
+      const linhas = COMO_VAI_SAIR[item.ferramenta]
+      expect(linhas.length, `${item.nome}: linhas`).toBeGreaterThanOrEqual(1)
+      expect(linhas.length, `${item.nome}: linhas`).toBeLessThanOrEqual(3)
+      for (const linha of linhas) expect(linha.trim(), `${item.nome}: linha vazia`).not.toBe('')
+    }
+  })
+
+  it('diz o que sai, onde fica (Criados) e se vai à turma, e como', () => {
+    for (const item of CATALOGO_DE_FERRAMENTAS) {
+      const texto = COMO_VAI_SAIR[item.ferramenta].join(' ')
+      expect(texto, `${item.nome}: onde fica`).toContain('Criados')
+      expect(texto, `${item.nome}: se vai à turma`).toMatch(/turma/)
+    }
+    // Só a atividade se aplica à turma pela professora; o plano é só dela; a versão adaptada espera a aprovação.
+    expect(COMO_VAI_SAIR.atividade_objetiva.join(' ')).toContain('“Aplicar à turma”')
+    expect(COMO_VAI_SAIR.plano_de_aula.join(' ')).toContain('Não vai à turma')
+    expect(COMO_VAI_SAIR.adaptacao.join(' ')).toContain('esperando a sua aprovação')
+    expect(COMO_VAI_SAIR.adaptacao.join(' ')).toContain('Só o tipo da adaptação é registrado')
+    // Aprovada, a versão ainda precisa de "Aplicar à turma": a frase diz como ela vai, e não só que vai.
+    expect(COMO_VAI_SAIR.adaptacao.join(' ')).toContain('Depois de aprovada, vai à turma quando você escolher “Aplicar à turma”')
+  })
+
+  it('as aspas são as tipográficas, como nas outras telas: nenhuma linha leva aspas retas', () => {
+    for (const item of CATALOGO_DE_FERRAMENTAS) for (const linha of COMO_VAI_SAIR[item.ferramenta]) expect(linha).not.toContain('"')
+  })
+
+  it('D46, RF21: nenhum texto fala em nota, conceito, pontuação, média, ranking nem em diagnóstico do aluno', () => {
+    for (const item of CATALOGO_DE_FERRAMENTAS) for (const linha of COMO_VAI_SAIR[item.ferramenta]) expect(linha).not.toMatch(VOCABULARIO_PROIBIDO)
+  })
+
+  it('D35: o texto da Adaptação não cita aluno nem condição de aluno', () => {
+    for (const linha of COMO_VAI_SAIR.adaptacao) expect(linha).not.toMatch(FALA_DE_ALUNO_OU_CONDICAO)
+  })
+
+  it('as listas de palavras proibidas pegam o que dizem pegar', () => {
+    for (const palavra of ['nota', 'notas', 'conceito', 'conceitos', 'pontuação', 'média', 'médias', 'ranking', 'diagnóstico do aluno']) expect(palavra).toMatch(VOCABULARIO_PROIBIDO)
+    for (const palavra of ['aluno', 'laudo', 'diagnóstico', 'TDAH', 'dislexia', 'condição']) expect(palavra).toMatch(FALA_DE_ALUNO_OU_CONDICAO)
+    // O vocabulário permitido não é pego por engano: "anotar" não é "nota", e "gabarito" e "acerto" são o que a tela diz.
+    for (const palavra of ['anotar', 'gabarito', 'acerto', 'Criados']) expect(palavra).not.toMatch(VOCABULARIO_PROIBIDO)
   })
 })
