@@ -32,10 +32,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 3.3 `icones-de-ferramenta.tsx`, que exporta o mapa de ferramenta para ícone (a 4.0 e a 7.0 só o consomem)
   - [x] 3.4 Testes: os quatro estados; a saudação com o relógio fixo; o atalho abre o cartão, e a Adaptação nunca leva o texto da caixa
 
-- [ ] **4.0 — Conversa e cartão da ferramenta na pele nova**
-  - [ ] 4.1 `Conversa.tsx`: a coluna, a caixa presa e o aviso de IA
-  - [ ] 4.2 O cartão da ferramenta com ícone e nome; o resultado com as ações de hoje
-  - [ ] 4.3 Testes: os estados; a pergunta da D18 com duas opções iguais; nenhum cartão sem o "sim"
+- [x] **4.0 — Conversa e cartão da ferramenta na pele nova**
+  - [x] 4.1 `Conversa.tsx`: a coluna, a caixa presa e o aviso de IA
+  - [x] 4.2 O cartão da ferramenta com ícone e nome; o resultado com as ações de hoje
+  - [x] 4.3 Testes: os estados; a pergunta da D18 com duas opções iguais; nenhum cartão sem o "sim"
 
 - [ ] **5.0 — Criados: o que a professora já gerou, por turma, com filtros**
   - [ ] 5.1 `/professor/criados`: a rota, o lugar na lateral e o ícone

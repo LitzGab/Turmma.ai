@@ -15,6 +15,7 @@ import { MotorFormulario } from '../../componentes/ia/MotorFormulario'
 import type { NivelDoTitulo } from '../../componentes/Tela'
 import { AvisoDeSuspensao, FalhaDoPedido } from './avisos'
 import { descricaoDaFerramenta, ferramentaDoCatalogo, montarPedido, type IniciaisDaFerramenta } from './ferramentas'
+import { IconeDeFerramenta } from './icones-de-ferramenta'
 import { CICLO_DA_FERRAMENTA, enviarPedidoDeFerramenta } from './memoria-do-professor'
 import { ResultadoDaFerramenta } from './ResultadoDaFerramenta'
 import { nomesDasTurmas, turmasDaProfessora } from './turmas-da-professora'
@@ -27,6 +28,8 @@ interface PropsDoCartao {
   readonly aoCancelar?: () => void
   /** O nível do título do formulário, para a ordem dos títulos da tela não pular. Sem ele, 3. */
   readonly nivel?: NivelDoTitulo
+  /** O ícone ilustrado da ferramenta, de 32 px, antes do nome: o cabeçalho do cartão da conversa. O formulário de Ferramentas já tem o nome no `h1`, e fica sem. */
+  readonly comIcone?: boolean
 }
 
 /**
@@ -38,7 +41,7 @@ interface PropsDoCartao {
  * que falta e leva até lá; a função suspensa pela escola, que explica; e o motor, com o formulário, a geração e o
  * resultado.
  */
-export function CartaoDeFerramenta({ ferramenta, iniciais, aoCancelar, nivel = 3 }: PropsDoCartao) {
+export function CartaoDeFerramenta({ ferramenta, iniciais, aoCancelar, nivel = 3, comIcone = false }: PropsDoCartao) {
   const item = ferramentaDoCatalogo(ferramenta)
   const adaptacao = ferramenta === 'adaptacao'
   const [, navegar] = useLocation()
@@ -105,7 +108,7 @@ export function CartaoDeFerramenta({ ferramenta, iniciais, aoCancelar, nivel = 3
 
   return (
     <div data-cartao-de-ferramenta={ferramenta} className="flex min-w-0 flex-col gap-3">
-      <MotorFormulario descricao={descricao} estado={estado} nivel={nivel} aoGerar={aoGerar} aoEditar={limpar} {...(aoCancelar === undefined ? {} : { aoCancelar })} {...(problema === undefined ? {} : { falha: problema })}>
+      <MotorFormulario descricao={descricao} estado={estado} nivel={nivel} aoGerar={aoGerar} aoEditar={limpar} {...(comIcone ? { icone: <IconeDeFerramenta ferramenta={ferramenta} tamanho={32} /> } : {})} {...(aoCancelar === undefined ? {} : { aoCancelar })} {...(problema === undefined ? {} : { falha: problema })}>
         {artefatoGerado !== undefined && <ResultadoDaFerramenta artefatoId={artefatoGerado.artefatoId} entregaId={artefatoGerado.entregaId} funcao={item.funcao} />}
       </MotorFormulario>
       {/* Para quem não vê a tela: a troca de "Gerando…" pelo resultado é dita uma vez, com calma. */}

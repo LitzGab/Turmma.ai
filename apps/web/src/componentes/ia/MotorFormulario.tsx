@@ -37,6 +37,8 @@ interface PropsDoMotor {
   readonly children?: ReactNode
   /** O nível do título do formulário, que é o nome da ferramenta. Sem ele, 3: o formulário dentro de uma seção ou cartão. */
   readonly nivel?: NivelDoTitulo
+  /** O desenho que abre o título, antes do nome (o ícone da ferramenta no cartão da conversa). Só para os olhos: o nome já está escrito ao lado. */
+  readonly icone?: ReactNode
 }
 
 function CampoDeVarias({ campo, marcados, erro, aoMudar }: { campo: CampoDeMultipla; marcados: readonly string[]; erro: string | undefined; aoMudar: (marcados: readonly string[]) => void }) {
@@ -103,7 +105,7 @@ function CampoDeVarias({ campo, marcados, erro, aoMudar }: { campo: CampoDeMulti
  *
  * O estado é de quem usa, porque é ele que sabe quando a geração terminou (`GET /v1/execucoes/:id`).
  */
-export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEditar, falha, children, nivel = 3 }: PropsDoMotor) {
+export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEditar, falha, children, nivel = 3, icone }: PropsDoMotor) {
   const Titulo = `h${nivel}` as const
   const campos: readonly CampoDoMotor[] = descricao.campos
   const [valores, definirValores] = useState<ValoresDoFormulario>(() => valoresPadrao(campos))
@@ -160,12 +162,15 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
     return (
       <section aria-labelledby={idDoTitulo} data-motor={estado} className="flex min-w-0 flex-col gap-4">
         <div ref={recolhido} tabIndex={-1} className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-cartao border-2 border-borda bg-superficie px-4 py-3">
-          <p className="min-w-0 break-words text-apoio">
-            <span id={idDoTitulo} className="font-bold text-tinta">
-              {descricao.nome}
-            </span>
-            {pedido !== undefined && resumoDoPedido(campos, pedido) !== '' && <> · {resumoDoPedido(campos, pedido)}</>}
-          </p>
+          <div className="flex min-w-0 items-center gap-3">
+            {icone}
+            <p className="min-w-0 break-words text-apoio">
+              <span id={idDoTitulo} className="font-bold text-tinta">
+                {descricao.nome}
+              </span>
+              {pedido !== undefined && resumoDoPedido(campos, pedido) !== '' && <> · {resumoDoPedido(campos, pedido)}</>}
+            </p>
+          </div>
           {estado === 'pronto' && aoEditar !== undefined && (
             <Botao variante="discreto" tamanho="compacto" onClick={aoEditar}>
               Editar os campos
@@ -184,7 +189,8 @@ export function MotorFormulario({ descricao, estado, aoGerar, aoCancelar, aoEdit
 
   return (
     <form ref={formulario} noValidate onSubmit={aoSubmeter} aria-labelledby={idDoTitulo} data-motor="formulario" className="flex min-w-0 flex-col gap-4">
-      <Titulo ref={titulo} tabIndex={-1} id={idDoTitulo} className="t-cartao text-tinta">
+      <Titulo ref={titulo} tabIndex={-1} id={idDoTitulo} className="t-cartao flex min-w-0 items-center gap-3 text-tinta">
+        {icone}
         {descricao.nome}
       </Titulo>
       {campos.map((campo) => {

@@ -12,7 +12,7 @@ import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/est
 import { AssinaturaIA } from '../../componentes/ia/AssinaturaIA'
 import { Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
-import { AvisoDeSuspensao } from './avisos'
+import { AvisoDeIA, AvisoDeSuspensao } from './avisos'
 import { CaixaDoAssistente } from './CaixaDoAssistente'
 import { CICLO_DA_CONVERSA, CONTEXTO_ESCOLHIDO, enviarPedidoDaConversa } from './memoria-do-professor'
 import { saudacao } from './saudacao'
@@ -91,10 +91,7 @@ export default function Home() {
                 semMenu
                 funcaoSuspensa={(funcao) => funcaoSuspensa(time.data, funcao)}
               />
-              {/* "Nada chega à turma sem você aprovar" é a regra 70, item 3: só vale enquanto nenhuma ferramenta entregar direto à turma. */}
-              <p className="px-2 text-center text-[13px] leading-[18px] text-sutil">
-                O Assistente é uma IA e pode errar · <strong className="font-bold">Nada chega à turma sem você aprovar</strong>
-              </p>
+              <AvisoDeIA />
               <p className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-2 text-sm text-sutil">
                 <span className="min-w-0 break-words" role="status">
                   {respondendo ? 'O Assistente ainda está respondendo ao seu último pedido.' : ''}
