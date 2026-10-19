@@ -13,6 +13,7 @@ import { TurmaIndisponivel } from '../../componentes/TurmaIndisponivel'
 import { useTituloDaTela } from '../../titulo'
 import { TEXTO_DA_TURMA_INDISPONIVEL, turmaIndisponivel } from './acesso-da-turma'
 import { ABAS_DA_TURMA, abaDoEndereco, abaDoId, enderecoDaAba } from './endereco-da-turma'
+import { O_MIOLO_DO_DOCUMENTO, useTopoDoPainel } from './miolo-do-documento'
 
 /**
  * Cada aba só é baixada com ela aberta, cada uma no seu pedaço (`tela-professor-<Aba>-*.js`): a fachada da área fica com a
@@ -40,6 +41,10 @@ const BAIXAR_A_ABA = { hoje: baixarHoje, atividades: baixarAtividades, alunos: b
  * decisão inclusive. A releitura que cai por rede ou servidor com o dado já na tela não desmonta nada: a professora pode
  * estar com o código projetado.
  *
+ * **A página não rola, rola o painel da aba** (RF22; `mockup.md` 10.2): do `md` para cima o título, a série e as abas ficam parados e
+ * só o painel da aba ativa rola por dentro, com o mesmo miolo do documento aberto (`miolo-do-documento.ts`), que mede onde o painel
+ * começa. Abaixo de 768 px a página rola inteira.
+ *
  * A turma que sai do alcance com a tela aberta tira a página inteira, com um aviso só: pela releitura da turma, ou pela
  * leitura dos pedidos (aba Alunos), que se repete sozinha e é a primeira a saber (`perdida`). Hoje também se relê aos 15 s, mas a
  * releitura que cai com o dado na tela não tira a página.
@@ -65,6 +70,8 @@ export default function Turma({ turmaId }: { turmaId: string }) {
   const nomeDaTurma = turma.data === undefined || indisponivel ? 'Turma' : `Turma ${turma.data.nome}`
   const serieDaTurma = turma.data === undefined || indisponivel ? undefined : nomeDaSerie(turma.data.serie)
   useTituloDaTela(nomeDaTurma)
+  // O topo do painel só é medido com a turma à vista: antes disso a tela é o aviso de carregando, de erro ou de indisponível.
+  const topoDoPainel = useTopoDoPainel(turma.data !== undefined && eu.data !== undefined && !indisponivel)
 
   const voltar = (
     // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
@@ -97,14 +104,16 @@ export default function Turma({ turmaId }: { turmaId: string }) {
   return (
     <Tela titulo={nomeDaTurma} descricao={serieDaTurma} antes={voltar} idDoTitulo={idDoTitulo}>
       <section className="flex min-w-0 flex-col gap-6" aria-labelledby={idDoTitulo}>
-        <Abas rotulo="Seções da turma" abas={ABAS_DA_TURMA} ativa={aba} aoMudar={(id) => navegar(enderecoDaAba(caminho, abaDoId(id)), { replace: true })}>
-          {/* Só a aba à vista existe: a que sai da tela leva com ela as leituras dela, e Hoje, a que se repete a cada 15 s. */}
-          <Suspense fallback={<EstadoCarregando rotulo="Carregando a aba…" />}>
-            {aba === 'hoje' && <TurmaHoje turmaId={turmaId} />}
-            {aba === 'atividades' && <AtividadesDaTurma turmaId={turmaId} />}
-            {aba === 'alunos' && <AlunosDaTurma turmaId={turmaId} turmaNome={turma.data.nome} escola={eu.data.escola} aoPerderATurma={perderATurma} />}
-          </Suspense>
-        </Abas>
+        <div ref={topoDoPainel} className="min-w-0">
+          <Abas rotulo="Seções da turma" abas={ABAS_DA_TURMA} ativa={aba} aoMudar={(id) => navegar(enderecoDaAba(caminho, abaDoId(id)), { replace: true })} classeDoPainel={O_MIOLO_DO_DOCUMENTO}>
+            {/* Só a aba à vista existe: a que sai da tela leva com ela as leituras dela, e Hoje, a que se repete a cada 15 s. */}
+            <Suspense fallback={<EstadoCarregando rotulo="Carregando a aba…" />}>
+              {aba === 'hoje' && <TurmaHoje turmaId={turmaId} />}
+              {aba === 'atividades' && <AtividadesDaTurma turmaId={turmaId} />}
+              {aba === 'alunos' && <AlunosDaTurma turmaId={turmaId} turmaNome={turma.data.nome} escola={eu.data.escola} aoPerderATurma={perderATurma} />}
+            </Suspense>
+          </Abas>
+        </div>
       </section>
     </Tela>
   )

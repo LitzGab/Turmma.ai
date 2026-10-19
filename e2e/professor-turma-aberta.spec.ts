@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import type { Page } from '@playwright/test'
-import { desempenhoSintetico } from './__fixtures__/assistente.ts'
+import { desempenhoSintetico, simularAssistente } from './__fixtures__/assistente.ts'
 import { PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { principal } from './__fixtures__/fluxo-do-professor.ts'
-import { acionar, comLote, entrar, irPara, PRAZO_DA_TELA_MS, VOCABULARIO_DE_NOTA } from './__fixtures__/professor/cena.ts'
+import { acionar, comLote, entrar, irPara, PRAZO_DA_TELA_MS, soOPainelDaAbaRola, VOCABULARIO_DE_NOTA } from './__fixtures__/professor/cena.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarEquipeComSenha, encerrarVinculosNoBanco } from './__fixtures__/sessao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 
@@ -70,6 +70,21 @@ test.describe('a turma aberta em três abas (D69)', () => {
     await expect(principal(page)).not.toContainText(VOCABULARIO_DE_NOTA)
     await expect(principal(page)).not.toContainText(/ranking|pódio|posição|º lugar/i)
     await expect(principal(page).getByRole('region', { name: 'Por aluno' })).toHaveCount(0)
+  })
+
+  test('Hoje mantém a página parada a 1366 × 768: quem rola é o painel da aba, e as abas não saem do lugar', async ({ page }) => {
+    // A professora entra pela API e abre a turma numa carga só: o caso paga uma entrada a menos (o portão reprova caso acima de 15 s).
+    const api = await simularAssistente(page)
+    const professora = await criarEquipeComSenha()
+    const turma = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId, ['Química'])
+    await confirmarVinculosNoBanco(professora.escolaId, turma.vinculoIds)
+    api.desempenho = desempenhoSintetico(turma.turmaId)
+    comLote(api, turma.turmaId)
+    const entrada = await page.request.post('/v1/sessao/email', { data: { email: professora.email, senha: professora.senha } })
+    expect(entrada.ok(), 'a entrada pela API').toBe(true)
+    await page.goto(`/professor/turmas/${turma.turmaId}`)
+    await expect(page.getByRole('region', { name: 'Acerto por habilidade' })).toContainText('QUI.EM.04', { timeout: PRAZO_DA_ENTRADA_MS })
+    await soOPainelDaAbaRola(page)
   })
 
   test('com lote aprovado, Atividades mostra a atividade encerrada e o caminho para a correção', async ({ page, hasTouch }) => {

@@ -6,6 +6,7 @@ import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
+import { formatarDataHora } from '../../formatar'
 import { prepararTela, redeFalsa, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
 import Criados from './Criados'
 
@@ -176,6 +177,24 @@ describe('Criados: os quatro estados', () => {
     expect(within(grupo('8ºB · Química')).getByRole('link').textContent).toContain('Plano de aula')
     // O id nunca aparece como nome de turma.
     expect(document.body.textContent).not.toContain('0197a1c0')
+  })
+
+  it('cada linha mostra a data e a hora de quando o documento foi criado, a do próprio documento e não a de outro', async () => {
+    const rede = redeFalsa()
+    // Um mês de distância: a data é outra em qualquer fuso do computador que roda o teste.
+    const DO_NOVO = '2026-10-07T15:00:00.000Z'
+    const DO_ANTIGO = '2026-09-03T15:00:00.000Z'
+    const ANTIGO = artefato(5, 'Plano de ondas antigo', TURMA_B, QUIMICA, { tipo: 'plano_de_aula', criadoEm: DO_ANTIGO })
+    const NOVO = artefato(6, 'Lista de óptica', TURMA_B, QUIMICA, { criadoEm: DO_NOVO })
+    instalar(rede, { artefatos: [NOVO, ANTIGO] })
+    montar()
+    await screen.findByText('Lista de óptica')
+    const linhaDoNovo = screen.getByRole('link', { name: /Lista de óptica/ })
+    const linhaDoAntigo = screen.getByRole('link', { name: /Plano de ondas antigo/ })
+    expect(linhaDoNovo.textContent).toContain(formatarDataHora(DO_NOVO))
+    expect(linhaDoNovo.textContent).not.toContain(formatarDataHora(DO_ANTIGO))
+    expect(linhaDoAntigo.textContent).toContain(formatarDataHora(DO_ANTIGO))
+    expect(linhaDoAntigo.textContent).not.toContain(formatarDataHora(DO_NOVO))
   })
 })
 

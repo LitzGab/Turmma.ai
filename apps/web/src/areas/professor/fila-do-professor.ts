@@ -60,6 +60,8 @@ export interface FilaDoProfessor {
   readonly erro?: unknown
   /** O que o sino não leu, em palavras ("os pedidos de nome de 2 turmas"): é o que o aviso da lista parcial diz. */
   readonly naoLeu: readonly string[]
+  /** A página de entregas veio cheia e há outra: o número do sino é um piso, e ele diz "100 ou mais" (PRD, seção 7). Falso quando as entregas não foram lidas. */
+  readonly haMais: boolean
   /** A escola não tem ano letivo em curso: a professora não lê os anos (só a coordenação), e a API responde como inexistente. */
   readonly semAnoLetivo: boolean
   /** O quanto o sino já leu de cada turma confirmada, pelo id (9.0): é o que impede o cartão de dizer "Em dia" sem ter lido. */
@@ -176,10 +178,12 @@ export function filaDoProfessor({ entregas, vinculos, contagens }: EntradaDaFila
   itens.sort((a, b) => porNome(grupoDoItem(a), grupoDoItem(b)) || TIPOS_DA_FILA_DO_PROFESSOR.indexOf(a.tipo) - TIPOS_DA_FILA_DO_PROFESSOR.indexOf(b.tipo))
 
   const leituraPorTurma = leituraDeCadaTurma(entregas, turmas, contagens)
+  // A página de entregas cheia, com outra depois: o que se leu é um piso. Entrega que falhou ou ainda lê não tem número a dizer.
+  const haMais = entregas.estado === 'lida' && !entregas.completa
   const lendo = entregas.estado === 'carregando' || vinculos.estado === 'carregando' || leituras.some(({ leitura }) => leitura.estado === 'carregando')
-  if (lendo) return { itens, situacao: 'carregando', naoLeu: [], semAnoLetivo: false, leituraPorTurma }
-  if (semAnoLetivo) return { itens, situacao: 'parcial', naoLeu: [], semAnoLetivo: true, leituraPorTurma }
-  if (entregas.estado === 'erro' && vinculos.estado === 'erro') return { itens, situacao: 'erro', erro: entregas.erro, naoLeu: [], semAnoLetivo: false, leituraPorTurma }
+  if (lendo) return { itens, situacao: 'carregando', naoLeu: [], haMais, semAnoLetivo: false, leituraPorTurma }
+  if (semAnoLetivo) return { itens, situacao: 'parcial', naoLeu: [], haMais, semAnoLetivo: true, leituraPorTurma }
+  if (entregas.estado === 'erro' && vinculos.estado === 'erro') return { itens, situacao: 'erro', erro: entregas.erro, naoLeu: [], haMais, semAnoLetivo: false, leituraPorTurma }
 
   const naoLeu: string[] = []
   if (entregas.estado === 'erro') naoLeu.push('as correções e as versões adaptadas')
@@ -188,7 +192,7 @@ export function filaDoProfessor({ entregas, vinculos, contagens }: EntradaDaFila
   else if (vinculos.estado === 'lida' && !vinculos.completa) naoLeu.push('parte das suas turmas')
   const semLeitura = leituras.filter(({ leitura }) => leitura.estado !== 'lida').length + alemDoTeto.length
   if (semLeitura > 0) naoLeu.push(semLeitura === 1 ? 'os pedidos de nome de 1 turma' : `os pedidos de nome de ${String(semLeitura)} turmas`)
-  return { itens, situacao: naoLeu.length > 0 ? 'parcial' : 'pronta', naoLeu, semAnoLetivo: false, leituraPorTurma }
+  return { itens, situacao: naoLeu.length > 0 ? 'parcial' : 'pronta', naoLeu, haMais, semAnoLetivo: false, leituraPorTurma }
 }
 
 /**
