@@ -50,6 +50,7 @@ export default function SinoDoProfessor() {
       textoDoVazio="Nada espera a sua decisão agora."
       avisoDaLeituraParcial={avisoDaLeituraParcial(fila.semAnoLetivo, fila.naoLeu)}
       pe={PE_DO_SINO}
+      ouMais={fila.haMais}
     />,
     ancora,
   )

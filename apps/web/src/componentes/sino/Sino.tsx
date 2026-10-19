@@ -62,6 +62,8 @@ interface Props {
   readonly avisoDaLeituraParcial?: string
   /** Os links do pé da lista (o professor leva dois: o que o Assistente fez e o que o Tutor viu). Sem ele, a lista não tem pé. */
   readonly pe?: PeDoSino
+  /** O número de itens é um piso, porque uma leitura veio cheia e há mais (o professor, com 100 entregas esperando). Sem ele, o número é exato. */
+  readonly ouMais?: boolean
 }
 
 /** O grupo dos itens que não dizem de que grupo são, e o aviso e o vazio de quem não troca o texto: os da coordenação (X2). */
@@ -84,12 +86,13 @@ function agruparPorGrupo(itens: readonly ItemDoSino[]): readonly { readonly titu
 const HORA = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit' })
 
 /**
- * O nome do botão. Só duas formas existem para a lista lida: "Esperando você, N" e "Esperando você, nada". Lista que não foi
+ * O nome do botão. Só duas formas existem para a lista lida: "Esperando você, N" e "Esperando você, nada". Com `ouMais`, o
+ * número é um piso ("Esperando você, 100 ou mais"); sem item não há número a completar. Lista que não foi
  * lida inteira nunca diz "nada": lendo, parcial sem item e erro têm o nome do que falta, e a contagem de uma lista parcial
  * é a do que se leu.
  */
-function nomeDoBotao(itens: number, situacao: SituacaoDoSino): string {
-  if (itens > 0) return `Esperando você, ${String(itens)}`
+function nomeDoBotao(itens: number, situacao: SituacaoDoSino, ouMais: boolean): string {
+  if (itens > 0) return `Esperando você, ${String(itens)}${ouMais ? ' ou mais' : ''}`
   if (situacao === 'carregando') return 'Esperando você, carregando'
   if (situacao === 'erro') return 'Esperando você, não carregou'
   if (situacao === 'parcial') return 'Esperando você, parte não carregou'
@@ -149,7 +152,7 @@ function PeDaLista({ titulo, links }: PeDoSino) {
  *   `avisoDaLeituraParcial`, `pe`) e o `grupo` do item existem para o professor, e sem elas a peça é a da X2. O pé é fixo: dois
  *   links de acompanhamento que não contam no número do sino e não mudam com a leitura (carregando, erro, parcial ou em dia).
  */
-export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = false, aoAtualizar, atualizando = false, atualizadoEm, faltaPara, textoDoVazio = VAZIO_PADRAO, avisoDaLeituraParcial = AVISO_PARCIAL_PADRAO, pe }: Props) {
+export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = false, aoAtualizar, atualizando = false, atualizadoEm, faltaPara, textoDoVazio = VAZIO_PADRAO, avisoDaLeituraParcial = AVISO_PARCIAL_PADRAO, pe, ouMais = false }: Props) {
   // O endereço em que a lista foi aberta. Ir a um item muda o endereço (o caminho ou só a consulta), e o painel modal sai da
   // frente da tela de destino; voltar a ele depois não o reabre.
   const [caminho] = useLocation()
@@ -162,7 +165,7 @@ export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = f
 
   const urgentes = itens.filter((item) => item.urgente)
   const gruposDosDemais = agruparPorGrupo(itens.filter((item) => !item.urgente))
-  const nome = nomeDoBotao(itens.length, situacao)
+  const nome = nomeDoBotao(itens.length, situacao, ouMais)
 
   return (
     <>
@@ -170,7 +173,7 @@ export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = f
         <Bell aria-hidden="true" size={20} strokeWidth={2.5} />
         {/* O nome vem do `aria-label`, com o número; o texto à vista é o rótulo do botão a partir de 768 px, e abaixo disso só o ícone cabe. */}
         <span className="sr-only md:not-sr-only">Esperando você</span>
-        <Contador n={itens.length} oQueConta="esperando você" />
+        <Contador n={itens.length} oQueConta="esperando você" ouMais={ouMais} />
       </Botao>
       {aberto && (
         <PainelLado

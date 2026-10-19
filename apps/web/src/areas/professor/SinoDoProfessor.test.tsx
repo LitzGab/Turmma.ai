@@ -260,6 +260,27 @@ describe('os estados do sino', () => {
     expect(within(painel()).queryByText('Tudo em dia')).toBeNull()
   })
 
+  const CEM_ENTREGAS = Array.from({ length: 100 }, (_, i) => lote(i + 1, TURMA_A.id))
+
+  it('com a página de entregas cheia e outra depois, o sino diz "100 ou mais", com o aviso de que parte não carregou', async () => {
+    const rede = redeFalsa()
+    instalar(rede, { entregas: ok(CEM_ENTREGAS, { proxima: id(999) }), vinculos: ok([vinculo(1, TURMA_A)]), pedidos: { [TURMA_A.id]: ok([]) } })
+    montar()
+    const sino = await botao('Esperando você, 100 ou mais')
+    expect(sino.textContent).toContain('100+')
+    fireEvent.click(sino)
+    expect(within(painel()).getByText('Parte da lista não carregou. Não foi possível ler parte das correções e das versões adaptadas.')).toBeTruthy()
+    expect(within(painel()).queryByText('Tudo em dia')).toBeNull()
+  })
+
+  it('o controle: as mesmas 100 entregas, sem outra página depois, são exatamente 100', async () => {
+    const rede = redeFalsa()
+    instalar(rede, { entregas: ok(CEM_ENTREGAS), vinculos: ok([vinculo(1, TURMA_A)]), pedidos: { [TURMA_A.id]: ok([]) } })
+    montar()
+    const sino = await botao('Esperando você, 100')
+    expect(sino.textContent).not.toContain('+')
+  })
+
   it('Esc fecha a lista e devolve o foco ao sino', async () => {
     const usuario = userEvent.setup()
     const rede = redeFalsa()
