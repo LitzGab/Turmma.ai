@@ -107,7 +107,6 @@ export default function AlunosDaTurma({ turmaId, turmaNome, escola, aoPerderATur
         vazio={{
           titulo: 'Nenhum pedido esperando',
           descricao: 'Os pedidos aparecem aqui quando os alunos entram pelo link da sala ou pelo código da turma e pedem o nome. Confira se o acesso dos alunos está ativo.',
-          acao: { rotulo: 'Ver o acesso dos alunos', aoAcionar: () => tituloDoAcesso.current?.focus() },
         }}
         aoPerderATurma={aoPerderATurma}
       />

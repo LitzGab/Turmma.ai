@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
 import { AUTORIZACAO_DE_TESTE, prepararTela, redeFalsa, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
+import { classesDoBotao } from '../../componentes/botao-secundario'
 import AlunosDaTurma from './AlunosDaTurma'
 
 /**
@@ -389,7 +390,7 @@ describe('Alunos: os estados da leitura', () => {
 
     await usuario.click(screen.getByRole('button', { name: 'Ver mais' }))
     await waitFor(() => expect(chamadasA(rede, 'alunos')).toHaveLength(2))
-    const outro = screen.getByRole('button', { name: 'Ver o acesso dos alunos' })
+    const outro = await screen.findByRole('button', { name: 'Convidar alunos' })
     outro.focus()
     segunda.liberar(ok({ itens: [CAIO] }))
     await waitFor(() => expect(nomesNaTela()).toHaveLength(2))
@@ -456,7 +457,7 @@ describe('Alunos: a turma, o cache e os pedidos de nome', () => {
     expect(aoPerder).not.toHaveBeenCalled()
   })
 
-  it('os pedidos de nome ficam no alto da aba, antes dos alunos, com as regras de hoje: a seção e o vazio com o caminho para o acesso', async () => {
+  it('os pedidos de nome ficam no alto da aba, antes dos alunos, com as regras de hoje: a seção e o vazio, sem ação', async () => {
     const rede = redeFalsa()
     instalar(rede)
     montar()
@@ -467,8 +468,23 @@ describe('Alunos: a turma, o cache e os pedidos de nome', () => {
     // Ordem no documento: o acesso, os pedidos, os alunos.
     expect(pedidos.compareDocumentPosition(porAluno) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(pedidos).getByText('Nenhum pedido esperando')).toBeTruthy()
-    expect(within(pedidos).getByRole('button', { name: 'Ver o acesso dos alunos' })).toBeTruthy()
+    // O acesso dos alunos já está à vista logo acima, e a ação do vazio não repete o caminho até ele.
+    expect(within(pedidos).queryByRole('button')).toBeNull()
     expect(screen.getByRole('heading', { name: 'Acesso dos alunos' })).toBeTruthy()
+  })
+
+  it('a aba tem um só botão cheio, o "Convidar alunos" (docs/interface.md, R4): o vazio dos pedidos não leva outro', async () => {
+    const rede = redeFalsa()
+    instalar(rede)
+    montar()
+    await screen.findByRole('region', { name: 'Por aluno' })
+    await screen.findByRole('button', { name: 'Convidar alunos' })
+    await within(screen.getByRole('region', { name: 'Pedidos de nome' })).findByText('Nenhum pedido esperando')
+
+    // O cheio é o botão de face laranja (R4), de qualquer tamanho (`principal`, `compacto` ou `icone`): a classe da face, e não a combinação inteira.
+    expect(classesDoBotao().split(' ')).toContain('bg-laranja')
+    const cheios = screen.getAllByRole('button').filter((botao) => botao.classList.contains('bg-laranja'))
+    expect(cheios.map((botao) => botao.textContent)).toEqual(['Convidar alunos'])
   })
 })
 

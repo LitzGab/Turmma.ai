@@ -222,17 +222,14 @@ test.describe('W4 (Pedidos) e W15, pelo professor', () => {
     await expect(vazio(page)).toHaveCount(0)
     segurada.abrir()
 
-    // Vazio: o convite para agir leva ao acesso dos alunos, que é de onde os pedidos vêm. Sem "Atualizar": a lista do
-    // professor se atualiza sozinha, e a tela diz isso.
+    // Vazio: o texto manda conferir o acesso dos alunos, que está logo acima, e não leva botão: o "Convidar alunos" é o único
+    // botão cheio da aba (docs/interface.md, R4). Sem "Atualizar": a lista do professor se atualiza sozinha, e a tela diz isso.
     await expect(vazio(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(secao(page)).toContainText(TEXTO_DA_ATUALIZACAO_SOZINHA)
-    await expect(secao(page).getByRole('button')).toHaveText(['Ver o acesso dos alunos'])
-    await alvoDeToque(secao(page).getByRole('button', { name: 'Ver o acesso dos alunos' }), 'Ver o acesso dos alunos')
+    await expect(secao(page).getByRole('button')).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
-    await tocar(secao(page), 'Ver o acesso dos alunos', hasTouch)
     const tituloDoAcesso = principal(page).getByRole('heading', { name: 'Acesso dos alunos' })
-    await expect(tituloDoAcesso).toBeFocused()
     await expect(regiaoViva(page)).toHaveText('')
 
     // Erro: a releitura cai com a lista ainda vazia, e a tela não afirma "Nenhum pedido esperando".

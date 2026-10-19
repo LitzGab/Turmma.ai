@@ -50,8 +50,7 @@ export function AcessoDaTurma({ turmaId, escola, titulo, convidarPeloEndereco = 
 
   const recarregar = useCallback(() => cliente.invalidateQueries({ queryKey: consultaAcessoDaTurma(turmaId).queryKey }), [cliente, turmaId])
   // O foco quando ninguém abriu o diálogo (o endereço o pediu) ou o botão que o abriu saiu da seção (a leitura em erro tira o
-  // "Convidar alunos"): vai para o botão, se ele está na tela, e senão para o título. O título é de quem desenha a página: o
-  // vazio dos pedidos também leva o foco a ele (16.0).
+  // "Convidar alunos"): vai para o botão, se ele está na tela, e senão para o título. O título é de quem desenha a página.
   const focarNaSecao = useCallback(() => (botaoConvidar.current ?? titulo.current)?.focus(), [titulo])
 
   /** Abrir o diálogo apaga o anúncio da ação anterior: o que ele dizia já não é o que a pessoa está fazendo. */
