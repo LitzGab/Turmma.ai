@@ -1,4 +1,4 @@
-import type { Locator } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { abrirGaleria, acionar, caixa, conferirQueOFocoNaoCaiu, desenho, secao } from './__fixtures__/galeria.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, corDoToken, focoVisivel, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -21,6 +21,14 @@ const RGB = {
 } as const
 
 const TEMAS = ['claro', 'escuro'] as const
+
+/** As quatro peças sobrepostas da galeria: onde ficam, o botão que abre, o que abre e, nas confirmações, qual é o botão que confirma. */
+const ABERTOS = [
+  { nome: 'o diálogo', borda: 'borda de 2 px com degrau', bloco: 'dialogo', gatilho: 'Nova disciplina', alvo: (page: Page) => page.getByRole('dialog', { name: 'Nova disciplina' }), confirmar: undefined },
+  { nome: 'a confirmação oficial', borda: 'borda de 2 px com degrau', bloco: 'confirmacao', gatilho: 'Aprovar 32 correções', alvo: (page: Page) => page.getByRole('alertdialog', { name: 'Aprovar 32 correções' }), confirmar: 'oficial' },
+  { nome: 'a confirmação de perigo', borda: 'borda de 2 px com degrau', bloco: 'confirmacao', gatilho: 'Suspender a função', alvo: (page: Page) => page.getByRole('alertdialog', { name: 'Suspender a correção de objetiva' }), confirmar: 'perigo' },
+  { nome: 'o painel', borda: 'borda de 2 px de um lado só, sem degrau', bloco: 'painel-lado', gatilho: 'Abrir o painel da turma 2ºB', alvo: (page: Page) => page.getByRole('dialog', { name: 'Turma 2ºB · Química' }), confirmar: undefined },
+] as const
 
 /** O foco do teclado está dentro do elemento (o diálogo ou o painel): é o que a prisão do foco promete. */
 function estaDentro(alvo: Locator): Promise<boolean> {
@@ -552,23 +560,20 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
+  // Um caso por tema e por peça aberta: os quatro em sequência num caso só levavam 12 s aqui e 31,7 s no runner da esteira
+  // (execução 39234137170), contra o prazo de 30 s. A galeria abre em ~1 s, então abrir uma peça por caso custa pouco.
   for (const tema of TEMAS) {
-    test(`o diálogo, a confirmação e o painel, no tema ${tema}: borda de 2 px com degrau, véu do tema, sem violação do axe`, async ({ page, hasTouch }) => {
-      await abrirGaleria(page)
-      await page.evaluate((valor) => document.documentElement.setAttribute('data-tema', valor), tema)
-      const veuEsperado = tema === 'claro' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.6)'
-      const borda = await corDoToken(page, 'borda')
+    for (const aberto of ABERTOS) {
+      test(`${aberto.nome}, no tema ${tema}: ${aberto.borda}, véu do tema, sem violação do axe`, async ({ page, hasTouch }) => {
+        await abrirGaleria(page)
+        await page.evaluate((valor) => document.documentElement.setAttribute('data-tema', valor), tema)
+        const veuEsperado = tema === 'claro' ? 'rgba(0, 0, 0, 0.35)' : 'rgba(0, 0, 0, 0.6)'
+        const borda = await corDoToken(page, 'borda')
+        const alvo = aberto.alvo(page)
 
-      const abertos = [
-        { bloco: 'dialogo', gatilho: 'Nova disciplina', alvo: page.getByRole('dialog', { name: 'Nova disciplina' }), confirmar: undefined },
-        { bloco: 'confirmacao', gatilho: 'Aprovar 32 correções', alvo: page.getByRole('alertdialog', { name: 'Aprovar 32 correções' }), confirmar: 'oficial' },
-        { bloco: 'confirmacao', gatilho: 'Suspender a função', alvo: page.getByRole('alertdialog', { name: 'Suspender a correção de objetiva' }), confirmar: 'perigo' },
-        { bloco: 'painel-lado', gatilho: 'Abrir o painel da turma 2ºB', alvo: page.getByRole('dialog', { name: 'Turma 2ºB · Química' }), confirmar: undefined },
-      ] as const
-      for (const aberto of abertos) {
         await acionar(secao(page, aberto.bloco).getByRole('button', { name: aberto.gatilho }), hasTouch)
-        await expect(aberto.alvo).toBeVisible()
-        const estilo = await aberto.alvo.evaluate((dialogo) => {
+        await expect(alvo).toBeVisible()
+        const estilo = await alvo.evaluate((dialogo) => {
           const caixaDoDialogo = getComputedStyle(dialogo)
           return {
             veu: getComputedStyle(dialogo, '::backdrop').backgroundColor,
@@ -596,17 +601,17 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
         }
         // O botão que confirma, nos dois temas: o `perigo` cheio é o `vermelho` do tema, e o oficial não o é.
         if (aberto.confirmar === 'perigo') {
-          const cheio = await desenho(aberto.alvo.getByRole('button', { name: aberto.gatilho }))
+          const cheio = await desenho(alvo.getByRole('button', { name: aberto.gatilho }))
           expect(cheio.fundo, `${aberto.gatilho}: perigo cheio`).toBe(await corDoToken(page, 'vermelho'))
         }
         if (aberto.confirmar === 'oficial') {
-          const oficial = await desenho(aberto.alvo.getByRole('button', { name: aberto.gatilho }))
+          const oficial = await desenho(alvo.getByRole('button', { name: aberto.gatilho }))
           expect(oficial.fundo, `${aberto.gatilho}: oficial`).not.toBe(await corDoToken(page, 'vermelho'))
         }
         expect(await violacoesGraves(page), `${aberto.bloco}: axe`).toEqual([])
         await page.keyboard.press('Escape')
-        await expect(aberto.alvo).toHaveCount(0)
-      }
-    })
+        await expect(alvo).toHaveCount(0)
+      })
+    }
   }
 })

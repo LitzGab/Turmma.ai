@@ -11,7 +11,7 @@ import { AvisoFila } from '../../componentes/ia/AvisoFila'
  * (`FUNCAO_SUSPENSA`).
  */
 export const TEXTO_DA_SUSPENSAO: Readonly<Partial<Record<ChaveDeFuncao, string>>> = {
-  conversa_e_ferramentas: 'A coordenação suspendeu a conversa e as ferramentas do Assistente nesta escola. Enquanto isso ele não responde a pedidos novos; o que você já gerou continua em Ferramentas. Fale com a coordenação para saber quando volta.',
+  conversa_e_ferramentas: 'A coordenação suspendeu a conversa e as ferramentas do Assistente nesta escola. Enquanto isso ele não responde a pedidos novos; o que você já gerou continua em Criados. Fale com a coordenação para saber quando volta.',
   adaptacao: 'A coordenação suspendeu a Adaptação nesta escola. Enquanto isso o Assistente não prepara versão adaptada nova; as que você já aprovou continuam valendo. Fale com a coordenação para saber quando volta.',
 }
 

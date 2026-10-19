@@ -946,6 +946,37 @@ export async function porAprovadosNaListaDaTurma(escolaId: string, turmaId: stri
   })
 }
 
+/** Um aluno que o teste pôs na turma: o id que a lista de nomes devolve é o `usuarioId`, e o mesmo que o desempenho chama de `alunoId`. */
+export interface AlunoNaTurmaDeTeste {
+  readonly usuarioId: string
+  readonly nome: string
+}
+
+/**
+ * Alunos **na turma agora**, direto no banco: um usuário aluno por nome e o vínculo `confirmado` na turma, como a aprovação do
+ * pedido de nome o deixa (telas do professor, 12.0). É o que `GET /v1/turmas/:id/alunos` lista. Atalho só do e2e: sem a decisão
+ * humana nem a auditoria dela. A coordenadora sintética da mesma escola assina os vínculos, como em `colocarAlunoNaTurma`.
+ */
+export async function matricularAlunosNaTurmaNoBanco(escolaId: string, turmaId: string, nomes: readonly string[]): Promise<AlunoNaTurmaDeTeste[]> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ ano_letivo_id: string }>('select ano_letivo_id from turma where escola_id = $1 and id = $2', [escolaId, turmaId])
+    const anoLetivoId = rows[0]?.ano_letivo_id
+    if (anoLetivoId === undefined) throw new Error('turma do e2e não encontrada')
+    const contaDaCoordenacao = await id(banco, 'insert into conta (email) values ($1) returning id', [`coordenacao-${randomUUID()}@educa.invalid`])
+    const coordenacaoId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'coordenador', 'Coordenação sintética') returning id", [escolaId, contaDaCoordenacao])
+    const alunos: AlunoNaTurmaDeTeste[] = []
+    for (const nome of nomes) {
+      const usuarioId = await id(banco, "insert into usuario (escola_id, papel, nome) values ($1, 'aluno', $2) returning id", [escolaId, nome])
+      await banco.query(
+        "insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, decidido_em, criado_por) values ($1, $2, $3, $4, 'aluno', 'confirmado', now(), $5)",
+        [escolaId, anoLetivoId, usuarioId, turmaId, coordenacaoId],
+      )
+      alunos.push({ usuarioId, nome })
+    }
+    return alunos
+  })
+}
+
 /** O link e o código de uma sala, como o professor os recebe no "Gerar acesso" (4.0): só existem aqui. */
 export interface AcessoDaSalaDeTeste {
   readonly token: string

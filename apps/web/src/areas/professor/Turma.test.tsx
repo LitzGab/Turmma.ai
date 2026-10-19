@@ -33,6 +33,7 @@ function instalar(rede: RedeFalsa): void {
   rede.responderPor('/v1/materiais', ok({ itens: [] }))
   rede.responderPor(`/v1/turmas/${TURMA}/acesso`, ok({ expiraEm: null }))
   rede.responderPor(`/v1/turmas/${TURMA}/reivindicacoes`, ok({ itens: [] }))
+  rede.responderPor(`/v1/turmas/${TURMA}/alunos`, ok({ itens: [] }))
 }
 
 function montar(busca = '') {

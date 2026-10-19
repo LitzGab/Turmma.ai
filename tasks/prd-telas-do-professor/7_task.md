@@ -21,11 +21,11 @@ ferramenta. Só existem as três que o produto tem. A lista do que foi gerado j�
 
 ## Subtarefas
 
-- [ ] 7.1 — `Ferramentas.tsx`: o `h1` "Ferramentas"; uma seção por categoria com ferramenta (Planejar, Preparar a aula,
+- [x] 7.1 — `Ferramentas.tsx`: o `h1` "Ferramentas"; uma seção por categoria com ferramenta (Planejar, Preparar a aula,
   Avaliar; "Corrigir" não aparece, porque nenhuma ferramenta dela existe); o cartão é uma `Linha` de 108 px com o
   ícone de 48 px, o nome, a descrição em até 3 linhas e, se for o caso, o selo "Suspensa pela coordenação". Grade de
   3 colunas a partir de 1280 px, 2 a partir de 768, 1 abaixo. O `data-ferramenta` e o endereço do formulário ficam
-- [ ] 7.2 — Testes
+- [x] 7.2 — Testes
 
 ## Arquivos previstos
 
@@ -72,10 +72,171 @@ Preenchida por quem implementa (`/executar-task`, passo 2). Sem nenhuma, escreva
 
 | Divergência | Motivo | Onde está na spec (`techspec.md` §, id do `cenarios.md`, documento da seção 11) |
 |---|---|---|
+| O `data-ferramenta` mora no `<li>` do cartão, e não no link; o selo "Suspensa pela coordenação" fica embaixo da descrição, e não no `fim` da `Linha` | a `Linha` da X1 não aceita atributo, e a 768 px o cartão tem uns 340 px: o selo ao lado deixaria o nome sem lugar | techspec §9, "Ferramentas (divergências da 7.0)", item 1; `docs/interface.md` 1.2 |
+| O título da categoria é `h2`, e o `h2` "Catálogo" só para leitor de tela saiu | o `CabecalhoDeSecao` é `h2`; com o `h1` da tela, a ordem dos títulos não pula | techspec §9, item 2 |
+| A página lê também `GET /v1/meus-vinculos`, para o aviso "Falta uma turma confirmada" | a tabela de testes da tarefa pede o aviso que leva a Turmas; a rota já existe (a do Início) | techspec §9, item 3 |
+| A leitura do time que falhou é `time.data === undefined && time.errorUpdateCount > 0`, e não `time.isError` | "Tentar de novo" põe a consulta de volta em `pending`; com `isError`, o aviso e o botão apertado somem e voltam, e o foco se perde | techspec §9, item 4 |
+| `TEXTO_DA_SUSPENSAO.conversa_e_ferramentas` diz "continua em Criados" (dizia "em Ferramentas") | a lista saiu de Ferramentas na 5.0, e a frase agora aparece na própria página de Ferramentas | techspec §9, item 5 (`avisos.tsx`) |
 
 ## Mutações
 
-Preenchida por quem implementa (`/executar-task`, passo 2). Sem cláusula nova, escreva "nenhuma".
+Cada cláusula que a tarefa acrescenta ao código, com o teste que fica vermelho sem ela. O que é só classe de CSS (as colunas da grade, os 108 px de altura mínima, o alvo de 44 px) o `jsdom` não mede: o e2e mede as colunas a 1366 (3), a 800 (2) e a 360 (1), a altura e o alvo nos dois projetos (`professor-ferramentas.spec.ts › o catálogo tem só as três ferramentas…`), e o clique de cada cartão até o formulário (`› cada cartão abre o formulário`).
+
+**`time.data === undefined`, primeiro termo de `leituraDoTimeFalhou`: com a resposta, o aviso sai**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › a leitura do time falha
+  // aviso, com o botão que acabou de ser apertado, sumiria e voltaria (o foco se perderia no meio). Com a resposta, o aviso sai.
+-  const leituraDoTimeFalhou = time.data === undefined && time.errorUpdateCount > 0
++  const leituraDoTimeFalhou = time.errorUpdateCount > 0
+```
+
+**`time.errorUpdateCount > 0`, segundo termo: antes de falhar não há aviso**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › o time ainda não respondeu
+-  const leituraDoTimeFalhou = time.data === undefined && time.errorUpdateCount > 0
++  const leituraDoTimeFalhou = time.data === undefined
+```
+
+**o `new Set` das funções: a frase de uma função sai uma vez só**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › a conversa e as ferramentas suspensas
+-const FUNCOES_DO_CATALOGO = [...new Set(CATALOGO_DE_FERRAMENTAS.map((item) => item.funcao))]
++const FUNCOES_DO_CATALOGO = CATALOGO_DE_FERRAMENTAS.map((item) => item.funcao)
+```
+
+**o filtro das funções suspensas: só a suspensa tem frase**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › só a Adaptação suspensa
+-  const suspensas = FUNCOES_DO_CATALOGO.filter((funcao) => funcaoSuspensa(time.data, funcao))
++  const suspensas = FUNCOES_DO_CATALOGO
+```
+
+**o selo no cartão só com a função suspensa**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › sem nenhuma suspensa
+                        {/* Embaixo do texto, e não no `fim` da linha: a 768 px o cartão tem uns 340 px, e o selo ao lado deixaria o nome sem lugar. */}
+-                        {funcaoSuspensa(time.data, item.funcao) && (
++                        {true && (
+```
+
+**o selo lê a função do próprio cartão, e não uma fixa**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › a conversa e as ferramentas suspensas
+-                        {funcaoSuspensa(time.data, item.funcao) && (
++                        {funcaoSuspensa(time.data, 'adaptacao') && (
+```
+
+**`onClick` de "Tentar de novo": lê o time outra vez**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › a leitura do time falha
+-                <Botao variante="secundario" tamanho="compacto" onClick={() => void time.refetch()} disabled={time.isFetching}>
++                <Botao variante="secundario" tamanho="compacto" onClick={() => undefined} disabled={time.isFetching}>
+```
+
+**`disabled` de "Tentar de novo" enquanto a leitura corre**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › a leitura do time falha
+-                <Botao variante="secundario" tamanho="compacto" onClick={() => void time.refetch()} disabled={time.isFetching}>
++                <Botao variante="secundario" tamanho="compacto" onClick={() => void time.refetch()}>
+```
+
+**o texto "Tentando de novo…" enquanto a leitura corre**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › a leitura do time falha
+-                  {time.isFetching ? 'Tentando de novo…' : ''}
++                  {''}
+```
+
+**`vinculos.data !== undefined`, primeiro termo: o aviso não pisca enquanto os vínculos não chegam**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › enquanto os vínculos não chegam
+-        {vinculos.data !== undefined && turmas.length === 0 && (
++        {turmas.length === 0 && (
+```
+
+**`vinculos.data !== undefined`: a leitura dos vínculos que falha não vira aviso de turma**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › a leitura dos vínculos que falha
+-        {vinculos.data !== undefined && turmas.length === 0 && (
++        {!vinculos.isPending && turmas.length === 0 && (
+```
+
+**`turmas.length === 0`, segundo termo: com turma confirmada não há aviso**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › com uma turma confirmada não há aviso
+-        {vinculos.data !== undefined && turmas.length === 0 && (
++        {vinculos.data !== undefined && (
+```
+
+**o destino de "Ir para Turmas"**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › sem vínculo nenhum
+-              <Botao variante="secundario" tamanho="compacto" onClick={() => navegar(ROTAS_DO_PROFESSOR.turmas)}>
++              <Botao variante="secundario" tamanho="compacto" onClick={() => navegar(ROTAS_DO_PROFESSOR.ferramentas)}>
+```
+
+**o endereço do formulário no cartão**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › cada cartão leva ao formulário
+-                    para={caminhoDaFerramentaDoProfessor(item.ferramenta)}
++                    para={ROTAS_DO_PROFESSOR.ferramentas}
+```
+
+**o ícone de 48 px**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › cada cartão leva ao formulário
+-                    inicio={<IconeDeFerramenta ferramenta={item.ferramenta} tamanho={48} />}
++                    inicio={<IconeDeFerramenta ferramenta={item.ferramenta} tamanho={32} />}
+```
+
+**o corte da descrição em três linhas**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/Ferramentas.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › cada cartão leva ao formulário
+-                        <span title={item.descricao} className="line-clamp-3">
++                        <span title={item.descricao}>
+```
+
+**a frase da suspensão aponta para Criados, onde a lista mora**
+
+```mutacao
+arquivo: apps/web/src/areas/professor/avisos.tsx
+teste: apps/web/src/areas/professor/Ferramentas.test.tsx › a conversa e as ferramentas suspensas
+-o que você já gerou continua em Criados. Fale
++o que você já gerou continua em Ferramentas. Fale
+```
+
 
 ## Recomendações sem aplicar
 
@@ -83,3 +244,26 @@ Recomendação de revisor que não foi aplicada, com destino. Sem nenhuma, escre
 
 | Revisor e rodada | Recomendação | Destino ou motivo |
 |---|---|---|
+| frontend-reviewer (1ª) | Encurtar as descrições em `ferramentas.ts` até caberem em três linhas a 360 px (na Adaptação some "o conteúdo…") | A 8.0, que é a tarefa que altera `ferramentas.ts` (a 7.0 declara que ele não muda aqui) |
+| frontend-reviewer (1ª) | Aviso curto com "Tentar de novo" quando a leitura dos vínculos falha | Não aplicada: muda comportamento e texto de tela. O revisor-geral e o frontend-reviewer aceitam o silêncio (a leitura só serve para avisar e não tira cartão); o item 3 deixa o silêncio fixado e dito |
+| frontend-reviewer (1ª) | Rótulo "FERRAMENTAS" cortado em "FERRAMEN…" a 360 px na barra inferior e o nome da escola cortado no cabeçalho (`CascaDaEscola.tsx`) | Fora desta tarefa (arquivo da X1); vai ao Validador, que fotografa a casca nas telas da professora |
+| frontend-reviewer (1ª) | Contraste do selo da suspensão (cor de família "info") no modo escuro | `/validar`, se a diferença para o cartão normal parecer fraca |
+| test-engineer (1ª) | O aviso "Falta uma turma confirmada" olha só a primeira página de `/v1/meus-vinculos` | `/retro`, como dívida do padrão (mesmo padrão de `Home.tsx` e `CartaoDeFerramenta.tsx`; o próprio revisor diz que não é regressão) |
+| revisor-geral (1ª) | Frase de apoio ao lado do título de cada seção (`CabecalhoDeSecao` aceita `apoio`; `mockup.md` 8 fala dela) | Não aplicada: é texto de tela fora da subtarefa 7.1, e nenhum documento da spec define as três frases. Vai ao Validador, que confere o RF10 contra o mockup |
+| revisor-geral (1ª) | A 1366 px os cartões ocupam um terço da largura (uma ferramenta por seção em grade de 3 colunas) | Recusada: é o que o PRD manda (3 colunas a partir de 1280) e se corrige sozinha quando entrarem as outras ferramentas (F7) |
+| revisor-geral (2ª) | O helper `naoApareceDepoisDaLeitura` só vale com o `retry` do QueryClient do teste desligado; uma linha no comentário do helper evita regressão silenciosa se o `retry` for ligado | `/retro`, como cuidado do padrão de teste "não aparece" com janela de tempo; não reabre a tarefa (o caso novo do silêncio dos vínculos já falha por 404, que o `deveTentarDeNovo` não repete) |
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-10-19 08:27:06 | 2026-10-19 08:27:55 | `frontend-reviewer` | 1 | APROVADO | a473a08b678b6ef34 |
+| 2026-10-19 08:27:09 | 2026-10-19 08:28:28 | `test-engineer` | 1 | APROVADO | a88babe4ecde081c3 |
+| 2026-10-19 08:27:12 | 2026-10-19 08:28:45 | `revisor-geral` | 1 | APROVADO | a1a75fe106c0aa867 |
+| 2026-10-19 08:45:06 | 2026-10-19 08:45:32 | `frontend-reviewer` | 2 | APROVADO | aa606c3d302ea2dbc |
+| 2026-10-19 08:45:20 | 2026-10-19 08:45:52 | `revisor-geral` | 2 | APROVADO | ac6285abda9c2df8c |
+| 2026-10-19 08:45:13 | 2026-10-19 08:46:03 | `test-engineer` | 2 | APROVADO | abb5876bcc4102575 |

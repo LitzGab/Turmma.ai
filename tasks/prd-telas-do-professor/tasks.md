@@ -48,7 +48,7 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 6.2 `EncerramentoDaAtividade`, extraído de `AplicacaoDoArtefato`, sem mudar comportamento
   - [x] 6.3 Testes: os quatro estados; aplicar e encerrar com a confirmação; a versão rejeitada não exporta; a aba pelo endereço
 
-- [ ] **7.0 — Ferramentas: o catálogo por categoria**
+- [x] **7.0 — Ferramentas: o catálogo por categoria**
   - [ ] 7.1 `Ferramentas.tsx`: uma seção por categoria com ferramenta, em cartões com ícone ilustrado
   - [ ] 7.2 Testes: só as três ferramentas; categoria vazia não aparece; a função suspensa no cartão
 
@@ -72,10 +72,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [ ] 11.2 Encerrar pelo painel; "Aplicar uma atividade" leva a Criados com a turma
   - [ ] 11.3 Testes: o estado de cada linha; encerrar com a confirmação; os quatro estados
 
-- [ ] **12.0 — Turma › Alunos**
-  - [ ] 12.1 `api/alunos-da-turma.ts` e `AlunosDaTurma.tsx`: os alunos em ordem de nome, com os acertos
-  - [ ] 12.2 Os pedidos de nome no alto, com as regras de hoje
-  - [ ] 12.3 Testes: a ordem de nome; aluno sem correção aprovada; os estados; a lista não fica no cache
+- [x] **12.0 — Turma › Alunos**
+  - [x] 12.1 `api/alunos-da-turma.ts` e `AlunosDaTurma.tsx`: os alunos em ordem de nome, com os acertos
+  - [x] 12.2 Os pedidos de nome no alto, com as regras de hoje
+  - [x] 12.3 Testes: a ordem de nome; aluno sem correção aprovada; os estados; a lista não fica no cache
 
 - [ ] **13.0 — "Convidar alunos" num diálogo**
   - [ ] 13.1 `ConvidarAlunos.tsx`: o acesso da turma em passos de um diálogo só
