@@ -58,12 +58,14 @@ export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao
   ],
   // A2 (D73): Início, Turmas e Ferramentas. Calendário nasce com a grade (F8) e Histórico, com o F5: nenhum aparece antes da
   // tela dele. X1 (12.0): "Nova conversa" virou "Início", no mesmo endereço, com os ícones ilustrados da D80. X3 (2.0): a ordem
-  // é a da D80, e "Seu time" saiu da lateral: o Assistente e o Tutor abrem pelo pé do sino (`areas/professor/SinoDoProfessor.tsx`).
+  // é a da D80, e "Seu time" saiu da lateral: o Assistente e o Tutor abrem pelo pé do sino (`areas/professor/SinoDoProfessor.tsx`). X3 (5.0): Criados é o quarto lugar,
+  // o último dos quatro que cabem na barra de baixo. O artefato aberto ainda fica acendendo Ferramentas; o documento em folha (6.0) o passa a Criados.
   // As telas deles (`/professor/time/assistente` e `/professor/time/tutor`) não são lugar de nenhum item.
   professor: [
     { rotulo: 'Início', caminho: ROTAS.novaConversa, icone: { lugar: 'inicio' }, tambemEm: [ROTAS.conversa] },
     { rotulo: 'Turmas', caminho: ROTAS.turmas, icone: { lugar: 'turmas' } },
     { rotulo: 'Ferramentas', caminho: ROTAS.ferramentas, icone: { lugar: 'ferramentas' }, tambemEm: [ROTAS.artefatos] },
+    { rotulo: 'Criados', caminho: ROTAS.criados, icone: { lugar: 'criados' } },
   ],
   // A3 e A4: Tutor, Atividades e Minha turma. "Meu desempenho" e "Avisar um adulto" nascem com a tela de cada um: nesta
   // fatia não existem, e por isso não aparecem. "Privacidade" é do rodapé fixo (`RODAPE_DA_LATERAL`), e não desta lista. A

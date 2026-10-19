@@ -43,7 +43,7 @@ export function CartaoDeFerramenta({ ferramenta, iniciais, aoCancelar, nivel = 3
   const adaptacao = ferramenta === 'adaptacao'
   const [, navegar] = useLocation()
   const vinculos = useInfiniteQuery(consultaMeusVinculos)
-  const artefatos = useInfiniteQuery({ ...consultaArtefatos, enabled: adaptacao })
+  const artefatos = useInfiniteQuery({ ...consultaArtefatos(), enabled: adaptacao })
   // A atividade de onde se veio ("Pedir versão adaptada") pode não estar na primeira página do que já foi gerado.
   const origem = useQuery({ ...consultaArtefato(iniciais?.origem ?? ''), enabled: adaptacao && iniciais?.origem !== undefined })
   const time = useQuery(consultaTime)

@@ -2,8 +2,8 @@ import type { ReactElement } from 'react'
 
 /**
  * Os ícones ilustrados dos lugares da navegação (`docs/interface.md` 9.4; D80, item 4): os quatro que a X1 desenha
- * (`inicio`, `turmas`, `tarefas`, `ferramentas`) e os quatro que a coordenação ganha na X2 (`painel`, `ia`, `escola`,
- * `registros`). Os outros nascem com o lugar de cada um (X3 e X4).
+ * (`inicio`, `turmas`, `tarefas`, `ferramentas`), os quatro que a coordenação ganha na X2 (`painel`, `ia`, `escola`,
+ * `registros`) e o `criados` da professora (X3, 5.0). Os outros nascem com o lugar de cada um (X3 e X4).
  *
  * Cada desenho é **a grade de 48 por 48 e só as formas dela**: o `<svg>` é do `Icone`, que dá o tamanho, o `viewBox` e o
  * nome. Chapados, de duas a três cores, sem contorno, sem degradê e sem sombra.
@@ -17,7 +17,7 @@ import type { ReactElement } from 'react'
  * - O visto é feito de dois retângulos de ponta redonda, e não de um traço, para a cor ser sempre `fill-*`.
  */
 
-export const NOMES_DOS_LUGARES = ['inicio', 'turmas', 'tarefas', 'ferramentas', 'painel', 'ia', 'escola', 'registros'] as const
+export const NOMES_DOS_LUGARES = ['inicio', 'turmas', 'tarefas', 'ferramentas', 'painel', 'ia', 'escola', 'registros', 'criados'] as const
 export type NomeDoLugar = (typeof NOMES_DOS_LUGARES)[number]
 
 /** Início, em laranja: a casa, com a porta e a chaminé na família e as janelas na linha. */
@@ -125,6 +125,19 @@ function Registros() {
   )
 }
 
+/** Criados, em amarelo: a pasta com duas folhas saindo dela, a da frente com a linha escrita. A de trás é da linha neutra. */
+function Criados() {
+  return (
+    <>
+      <path d="M4 14a5 5 0 0 1 5-5h9a4 4 0 0 1 3.2 1.6l2 2.4H39a5 5 0 0 1 5 5V38a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z" className="fill-amarelo" />
+      <rect x="10" y="5" width="20" height="24" rx="4" transform="rotate(-10 20 18)" className="fill-icone-linha" />
+      <rect x="19" y="7" width="20" height="24" rx="4" transform="rotate(8 29 20)" className="fill-icone-papel" />
+      <rect x="23" y="12" width="12" height="3.5" rx="1.75" transform="rotate(8 29 20)" className="fill-icone-linha" />
+      <rect x="4" y="21" width="40" height="22" rx="5" className="fill-amarelo" />
+    </>
+  )
+}
+
 /** O desenho de cada lugar. A chave é o `nome` do `Icone`. */
 export const DESENHO_DO_LUGAR: Readonly<Record<NomeDoLugar, () => ReactElement>> = {
   inicio: Inicio,
@@ -135,4 +148,5 @@ export const DESENHO_DO_LUGAR: Readonly<Record<NomeDoLugar, () => ReactElement>>
   ia: Ia,
   escola: Escola,
   registros: Registros,
+  criados: Criados,
 }

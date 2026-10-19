@@ -225,8 +225,8 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     ])
     expect(await violacoesGraves(page)).toEqual([])
 
-    // Em Ferramentas, o que foi gerado vem do mais novo para o mais antigo, e a versão adaptada diz a situação dela.
-    await irPelaNavegacao(page, 'Ferramentas', hasTouch)
+    // Em Criados, o que foi gerado vem do mais novo para o mais antigo, e a versão adaptada diz a situação dela.
+    await irPelaNavegacao(page, 'Criados', hasTouch)
     const gerados = page.locator('[data-artefato]')
     await expect(gerados).toHaveCount(3, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(gerados.nth(0)).toContainText(`Versão adaptada · Linguagem direta · ${turmaNome}`)

@@ -37,11 +37,11 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [ ] 4.2 O cartão da ferramenta com ícone e nome; o resultado com as ações de hoje
   - [ ] 4.3 Testes: os estados; a pergunta da D18 com duas opções iguais; nenhum cartão sem o "sim"
 
-- [ ] **5.0 — Criados: o que a professora já gerou, por turma, com filtros**
-  - [ ] 5.1 `/professor/criados`: a rota, o lugar na lateral e o ícone
-  - [ ] 5.2 `Criados.tsx` e `criados.ts`: grupos por turma, filtros no endereço, "Ver mais"
-  - [ ] 5.3 "O que você já gerou" sai de Ferramentas; a fixture `professor/criados.ts` aponta para Criados
-  - [ ] 5.4 Testes: os quatro estados; filtro sem resultado; o filtro de turma vai ao servidor; o voltar devolve os filtros
+- [x] **5.0 — Criados: o que a professora já gerou, por turma, com filtros**
+  - [x] 5.1 `/professor/criados`: a rota, o lugar na lateral e o ícone
+  - [x] 5.2 `Criados.tsx` e `criados.ts`: grupos por turma, filtros no endereço, "Ver mais"
+  - [x] 5.3 "O que você já gerou" sai de Ferramentas; a fixture `professor/criados.ts` aponta para Criados
+  - [x] 5.4 Testes: os quatro estados; filtro sem resultado; o filtro de turma vai ao servidor; o voltar devolve os filtros
 
 - [ ] **6.0 — O documento aberto em folha**
   - [ ] 6.1 `Artefato.tsx`: cabeçalho, abas no endereço e a folha sobre a mesa

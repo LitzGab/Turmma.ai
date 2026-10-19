@@ -78,7 +78,7 @@ describe('BarraDeBaixo', () => {
     // acender não deslocar nada, e o texto é `sutil`.
     for (const classe of ['border-2', 'border-azul-borda', 'bg-azul-claro']) expect(classesDo(pilula('Turmas')).has(classe), `aceso: ${classe}`).toBe(true)
     expect(classesDo(texto('Turmas')).has('text-azul-texto')).toBe(true)
-    for (const apagado of ['Início', 'Ferramentas']) {
+    for (const apagado of ['Início', 'Ferramentas', 'Criados']) {
       expect(classesDo(pilula(apagado)).has('border-2'), `${apagado}: a borda de 2 px existe`).toBe(true)
       expect(classesDo(pilula(apagado)).has('border-transparent'), apagado).toBe(true)
       expect(classesDo(pilula(apagado)).has('bg-azul-claro'), apagado).toBe(false)

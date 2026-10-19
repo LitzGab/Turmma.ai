@@ -41,9 +41,9 @@ export interface RedeFalsa {
   /**
    * A resposta de **toda** chamada cujo caminho (com a consulta) casa, na hora que ela chega: a ordem não importa. É o que
    * serve à tela que lê em paralelo (a fila do sino faz seis leituras de uma vez), em que a fila de respostas viraria
-   * sorteio. Sem consumir: vale até o fim do caso. A resposta pode ser uma função, para mudar entre uma chamada e outra, e a função pode devolver uma promessa para segurar a chamada.
+   * sorteio. Sem consumir: vale até o fim do caso. A resposta pode ser uma função, que recebe o caminho da própria chamada (com a consulta), para mudar entre uma chamada e outra, e a função pode devolver uma promessa para segurar a chamada.
    */
-  responderPor(casa: string | RegExp, resposta: RespostaFalsa | (() => RespostaFalsa | Promise<RespostaFalsa>)): void
+  responderPor(casa: string | RegExp, resposta: RespostaFalsa | ((caminho: string) => RespostaFalsa | Promise<RespostaFalsa>)): void
   /**
    * A próxima chamada fica no ar, sem resposta, até `liberar`: é o jeito de ver a tela carregando, e a resposta que chega
    * depois do que a pessoa já fez.
@@ -58,14 +58,14 @@ export interface RedeFalsa {
 export function redeFalsa(): RedeFalsa {
   const chamadas: ChamadaFeita[] = []
   const fila: (RespostaFalsa | Promise<RespostaFalsa>)[] = []
-  const porCaminho: { readonly casa: string | RegExp; readonly resposta: RespostaFalsa | (() => RespostaFalsa | Promise<RespostaFalsa>) }[] = []
+  const porCaminho: { readonly casa: string | RegExp; readonly resposta: RespostaFalsa | ((caminho: string) => RespostaFalsa | Promise<RespostaFalsa>) }[] = []
   const casaCom = (casa: string | RegExp, caminho: string) => (typeof casa === 'string' ? caminho === casa || caminho.startsWith(`${casa}?`) : casa.test(caminho))
   vi.stubGlobal(
     'fetch',
     vi.fn(async (caminho: string, opcoes?: RequestInit) => {
       chamadas.push({ caminho, metodo: opcoes?.method ?? 'GET', autorizacao: new Headers(opcoes?.headers).get('Authorization') ?? undefined })
       const doCaminho = porCaminho.find(({ casa }) => casaCom(casa, caminho))
-      const preparada = doCaminho === undefined ? fila.shift() : typeof doCaminho.resposta === 'function' ? doCaminho.resposta() : doCaminho.resposta
+      const preparada = doCaminho === undefined ? fila.shift() : typeof doCaminho.resposta === 'function' ? doCaminho.resposta(caminho) : doCaminho.resposta
       if (preparada === undefined) throw new Error(`chamada à API sem resposta preparada: ${caminho}`)
       const resposta = await preparada
       return new Response(resposta.corpo === undefined ? null : JSON.stringify(resposta.corpo), { status: resposta.status })

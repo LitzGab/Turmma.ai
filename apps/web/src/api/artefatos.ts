@@ -17,14 +17,26 @@ const CAMINHO_DOS_ARTEFATOS = '/v1/artefatos'
 /**
  * O que a professora já gerou (`GET /v1/artefatos`), nas turmas em que ela tem vínculo confirmado: a escola, o ano e o
  * vínculo vêm do token. Paginada, como a API entrega (regra 80, item 8).
+ *
+ * Com `turmaId` a leitura é só daquela turma (telas do professor, 5.0): o filtro **vai ao servidor**, que o aplica sobre o
+ * que o token alcança, e a turma de outra escola ou de outra professora responde uma página vazia, como o id que não existe
+ * (regra 10, itens 4 e 6). A chave de cada turma começa pela de todas, e as duas começam por `artefatos`: quem invalida
+ * `CHAVE_DOS_ARTEFATOS` (gerar, adaptar, decidir) alcança as duas.
  */
-export const consultaArtefatos = infiniteQueryOptions({
-  queryKey: [...CHAVE_DOS_ARTEFATOS, 'lista'],
-  queryFn: ({ pageParam, signal }) =>
-    buscarComSessao(pageParam === undefined ? CAMINHO_DOS_ARTEFATOS : `${CAMINHO_DOS_ARTEFATOS}?pagina=${encodeURIComponent(pageParam)}`, esquemaRespostaListaDeArtefatos, signal),
-  initialPageParam: undefined as string | undefined,
-  getNextPageParam: (ultima) => ultima.proxima,
-})
+export function consultaArtefatos(turmaId?: string) {
+  return infiniteQueryOptions({
+    queryKey: turmaId === undefined ? [...CHAVE_DOS_ARTEFATOS, 'lista'] : [...CHAVE_DOS_ARTEFATOS, 'lista', turmaId],
+    queryFn: ({ pageParam, signal }) => {
+      const consulta = new URLSearchParams()
+      if (turmaId !== undefined) consulta.set('turmaId', turmaId)
+      if (pageParam !== undefined) consulta.set('pagina', pageParam)
+      const texto = consulta.toString()
+      return buscarComSessao(texto === '' ? CAMINHO_DOS_ARTEFATOS : `${CAMINHO_DOS_ARTEFATOS}?${texto}`, esquemaRespostaListaDeArtefatos, signal)
+    },
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (ultima) => ultima.proxima,
+  })
+}
 
 /** Um artefato inteiro (`GET /v1/artefatos/:id`): o conteúdo, as versões adaptadas que saíram dele e as aplicações. */
 export function consultaArtefato(id: string) {

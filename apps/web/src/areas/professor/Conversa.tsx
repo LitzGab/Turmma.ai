@@ -30,7 +30,7 @@ import { turmaEscolhida, turmasDaProfessora, valorDoContexto } from './turmas-da
 /** As duas respostas à pergunta da D18, **do mesmo peso**: nenhuma é a "certa" (D59), e a peça `Escolha` as desenha iguais. */
 function opcoesDaProposta(mensagem: Extract<MensagemDoAgente, { tipo: 'proposta_de_ferramenta' }>): readonly [OpcaoDeEscolha, OpcaoDeEscolha] {
   return [
-    { id: 'ferramenta' satisfies EscolhaDaProposta, titulo: `Usar a ferramenta ${NOME_DA_FERRAMENTA[mensagem.proposta.ferramenta]}`, descricao: 'Salva em Ferramentas, liga à turma e cita a página.', icone: LayoutGrid },
+    { id: 'ferramenta' satisfies EscolhaDaProposta, titulo: `Usar a ferramenta ${NOME_DA_FERRAMENTA[mensagem.proposta.ferramenta]}`, descricao: 'Salva em Criados, liga à turma e cita a página.', icone: LayoutGrid },
     { id: 'conversa' satisfies EscolhaDaProposta, titulo: 'Só conversar', descricao: 'Sigo respondendo aqui, sem salvar nada.', icone: MessageCircle },
   ]
 }

@@ -75,7 +75,7 @@ test.describe('a casca da escola no celular', () => {
     // `Seções` é uma só (A14, negativa), à vista com a gaveta fechada, e a gaveta nem abriu.
     await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(1)
     await expect(gaveta(page)).toBeHidden()
-    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas'])
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas', 'Criados'])
     await expect(secoes(page).getByRole('link', { name: 'Início' })).toHaveAttribute('aria-current', 'page')
 
     // A barra: fixa no pé da janela, com 68 px, e cada item é um alvo de 44 px ou mais (A13, A93, A95).
@@ -83,9 +83,9 @@ test.describe('a casca da escola no celular', () => {
     expect(Math.round(barra.height)).toBe(ALTURA_DA_BARRA_PX)
     expect(Math.round(barra.y + barra.height)).toBe(ALTURA_DA_JANELA)
     expect(Math.round(barra.width)).toBe(LARGURA)
-    for (const rotulo of ['Início', 'Turmas', 'Ferramentas']) await esperarAlvoDe44(secoes(page).getByRole('link', { name: rotulo }), rotulo)
+    for (const rotulo of ['Início', 'Turmas', 'Ferramentas', 'Criados']) await esperarAlvoDe44(secoes(page).getByRole('link', { name: rotulo }), rotulo)
     // A pílula que segura o ícone é de 48 × 36 (13.1), e a borda de 2 px entra nessa conta.
-    for (const rotulo of ['Início', 'Turmas', 'Ferramentas']) {
+    for (const rotulo of ['Início', 'Turmas', 'Ferramentas', 'Criados']) {
       const pilula = await caixaDe(secoes(page).getByRole('link', { name: rotulo }).locator('[data-pilula]'), `a pílula de ${rotulo}`)
       expect([Math.round(pilula.width), Math.round(pilula.height)], `a pílula de ${rotulo}`).toEqual([48, 36])
     }
@@ -223,17 +223,17 @@ test.describe('a casca da escola no celular', () => {
   })
 
   /**
-   * "Ferramentas" com doze coisas já geradas: uma tela comprida, **sem `BarraPresa`**. É isso que prova a reserva da barra de
+   * "Criados" com dezesseis coisas já geradas: uma tela comprida, **sem `BarraPresa`**. É isso que prova a reserva da barra de
    * baixo, e não a da barra presa: a `BarraPresa` sobe sozinha e grava a reserva dela em linha, e com ela na tela o `<main>`
    * e o `scroll-padding` do `<html>` nunca seriam o que falha. A lista termina num controle (o último artefato).
    */
   async function entrarNaTelaComprida(page: Page, hasTouch: boolean): Promise<void> {
     await entrarComoProfessoraDeTurma(page, hasTouch, (simulada, turmaId) => {
-      simulada.artefatos = Array.from({ length: 12 }, (_, indice) => atividadeSintetica(turmaId, randomUUID(), { titulo: `Atividade de estequiometria ${String(indice + 1)}` }))
+      simulada.artefatos = Array.from({ length: 16 }, (_, indice) => atividadeSintetica(turmaId, randomUUID(), { titulo: `Atividade de estequiometria ${String(indice + 1)}` }))
     })
-    await acionar(secoes(page).getByRole('link', { name: 'Ferramentas' }), hasTouch)
-    await expect(page).toHaveURL(/\/professor\/ferramentas$/, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(page.locator('[data-artefato]')).toHaveCount(12, { timeout: PRAZO_DA_TELA_MS })
+    await acionar(secoes(page).getByRole('link', { name: 'Criados' }), hasTouch)
+    await expect(page).toHaveURL(/\/professor\/criados$/, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.locator('[data-artefato]')).toHaveCount(16, { timeout: PRAZO_DA_TELA_MS })
     await expect(page.locator('[data-barra-presa]')).toHaveCount(0)
     const rola = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)
     expect(rola, 'a tela de teste precisa rolar bem mais que a barra de baixo').toBeGreaterThan(ALTURA_DA_BARRA_PX * 2)

@@ -90,7 +90,9 @@ existe e onde nasce o que falta: a **X1** troca a pele e a casca com os itens de
   formato de formulário para quem não quer conversar. Existe desde a A2; a X3 recompõe o catálogo
   e o formulário
 - **Criados** é o que a professora já gerou, por turma, com o estado de cada coisa, e o documento
-  aberto em folha (P13). Hoje o artefato abre dentro de Ferramentas; o lugar nasce na X3
+  aberto em folha (P13). O lugar existe desde a tarefa 5.0 da X3, com a lista e os filtros de tipo,
+  turma e estado no endereço; o documento aberto em folha chega na 6.0 (hoje ele abre na própria
+  tela do artefato)
 - **Conversas**, embaixo dos lugares, lista as conversas do professor, agrupadas por data (hoje,
   ontem, 7 dias, mais antigas), cada uma no próprio endereço. A coordenação nunca vê (regra 70,
   item 8; P06). O MVP tem uma conversa só por professora (decisão 19 de `docs/mvp-rapido.md`); a
@@ -1461,7 +1463,7 @@ perto de 127 kB, e o teto **não sobe** com a pele (RF22 da X1).
 
 ### 11.1 A casca da escola
 
-Uma só para coordenação, professor e aluno. A lateral do professor, como fica na X3 (tarefa 2.0; o lugar Criados entra com a tela dele, na 5.0):
+Uma só para coordenação, professor e aluno. A lateral do professor, como fica na X3 (tarefa 2.0; o lugar Criados entrou com a tela dele, na 5.0):
 
 ```
 ┌──────────────────────────┬────────────────────────────────────────────────────┐
@@ -1471,6 +1473,7 @@ Uma só para coordenação, professor e aluno. A lateral do professor, como fica
 │ ▣ INÍCIO                 │   conteúdo, na coluna do tipo de página (9.3),     │
 │ ▣ TURMAS                 │   dentro da moldura de 1200 px                     │
 │ ▣ FERRAMENTAS            │                                                    │
+│ ▣ CRIADOS                │                                                    │
 │ ──────────────────────── │                                                    │
 │ (CS) Camila Souza        │                                                    │
 │ ⇥ Sair                   │                                                    │
@@ -1516,7 +1519,7 @@ Lugar sem tela não aparece (D73).
 
 | Papel | Na X1 | Os lugares da D80 | Chegam na |
 |---|---|---|---|
-| Professor | Início (era "Nova conversa") · Ferramentas · Turmas, e o grupo "Seu time" | Início · Turmas · Ferramentas · Criados, as Conversas embaixo e o sino. Na tarefa 2.0 a lateral ficou com Início · Turmas · Ferramentas, e "Seu time" saiu; Criados chega com a tela dele (5.0) | X3 |
+| Professor | Início (era "Nova conversa") · Ferramentas · Turmas, e o grupo "Seu time" | Início · Turmas · Ferramentas · Criados, as Conversas embaixo e o sino. Na tarefa 2.0 a lateral ficou com Início · Turmas · Ferramentas, e "Seu time" saiu; Criados chegou com a tela dele (5.0), e a lateral e a barra de baixo ficaram com os quatro | X3 |
 | Aluno | Tutor · Atividades · Minha turma, e Privacidade no rodapé | Início · Tarefas · Eu · Avisar um adulto (este, com o F9) | X4 |
 | Coordenação | Governança · Agentes · Analista · Estrutura · Professores · Material · Privacidade. Eram sete, na gaveta do celular, e só valeram até a X2 | Painel · Analista · Escola · Registros, e o sino. São quatro: cabem na barra de baixo do celular | X2 (entregue) |
 | Rede | — | Painel · Analista · Escolas | F14 |

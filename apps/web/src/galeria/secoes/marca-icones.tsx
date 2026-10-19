@@ -19,6 +19,7 @@ const ROTULOS: Readonly<Record<NomeDoLugar, string>> = {
   ia: 'Analista',
   escola: 'Escola',
   registros: 'Registros',
+  criados: 'Criados',
 }
 
 /**

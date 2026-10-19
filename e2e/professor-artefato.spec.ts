@@ -35,7 +35,7 @@ test.describe('o artefato', () => {
     await acionar(page.getByRole('button', { name: 'Tentar de novo' }), hasTouch)
     await expect(page.getByText('Este artefato não está disponível')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     api.trocar('artefato')
-    await irPara(page, '/professor/ferramentas')
+    await irPara(page, '/professor/criados')
     await acionar(page.locator('[data-artefato]').filter({ hasText: 'Atividade objetiva' }), hasTouch)
 
     // Com dado: o nome da coisa, a assinatura da IA, as questões com gabarito em texto, a explicação e a página.

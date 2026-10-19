@@ -41,12 +41,13 @@ const TITULO_DA_FALHA = 'Não foi possível carregar esta parte do Turmma'
 /**
  * Os itens do professor, como a tabela `apps/web/src/areas/navegacao.ts` os declara. O e2e não importa o fonte da web
  * (outra resolução de módulos); a tarefa que acrescenta a linha lá acrescenta aqui, e o W2 percorre todos. "Nova
- * conversa" e "Ferramentas" chegaram com a A2 (D73); a ordem é a da D80 (telas do professor, 2.0), e "Seu time" saiu da lista.
+ * conversa" e "Ferramentas" chegaram com a A2 (D73); a ordem é a da D80 (telas do professor, 2.0), e "Seu time" saiu da lista; "Criados" chegou como o quarto (telas do professor, 5.0).
  */
 const ITENS_DO_PROFESSOR = [
   { rotulo: 'Início', caminho: '/professor/nova-conversa' },
   { rotulo: 'Turmas', caminho: '/professor/turmas' },
   { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
+  { rotulo: 'Criados', caminho: '/professor/criados' },
 ] as const
 /**
  * Os quatro lugares da coordenação, como a mesma tabela os declara (X2, 3.0): o Painel, onde ela abre, o Analista e as molduras

@@ -90,7 +90,7 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
         {artefato.isPending ? (
           <EstadoCarregando rotulo="Carregando o artefato…" />
         ) : naoEncontrado ? (
-          <EstadoVazio titulo="Este artefato não está disponível" descricao="Ele pode ter sido gerado para uma turma que não é mais sua, ou o endereço está errado. O que você gerou está em Ferramentas." />
+          <EstadoVazio titulo="Este artefato não está disponível" descricao="Ele pode ter sido gerado para uma turma que não é mais sua, ou o endereço está errado. O que você gerou está em Criados." />
         ) : (
           <EstadoErro erro={artefato.error} tentando={artefato.isFetching} aoTentarDeNovo={() => void artefato.refetch({ cancelRefetch: false })} />
         )}

@@ -192,8 +192,12 @@ export class ApiDoAssistente {
       const execucao = this.execucoes.get(id)
       return execucao === undefined ? erroDaApi(404, 'NAO_ENCONTRADO') : { status: 200, corpo: execucao }
     }
-    if (rota === 'artefatos')
-      return { status: 200, corpo: this.pagina(this.artefatos.map(({ conteudo: _conteudo, versoesAdaptadas: _versoes, aplicacoes: _aplicacoes, ...resumido }) => resumido), url) }
+    if (rota === 'artefatos') {
+      // Como a API: `?turmaId=` só restringe a lista (telas do professor, 5.0). Turma que não é da professora devolve a página vazia.
+      const turma = url.searchParams.get('turmaId')
+      const daTurma = turma === null ? this.artefatos : this.artefatos.filter((item) => item.turmaId === turma)
+      return { status: 200, corpo: this.pagina(daTurma.map(({ conteudo: _conteudo, versoesAdaptadas: _versoes, aplicacoes: _aplicacoes, ...resumido }) => resumido), url) }
+    }
     if (rota === 'artefato' || rota === 'renomear' || rota === 'pdf') {
       const artefato = this.artefatos.find((item) => item.id === id)
       if (artefato === undefined) return erroDaApi(404, 'NAO_ENCONTRADO')

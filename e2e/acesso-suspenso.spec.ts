@@ -1,7 +1,7 @@
 import type { BrowserContext, Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
-import { entrarComoAluno, entrarPorEmail, esperarAtividades, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
-import { expect, test } from './__fixtures__/perfis.ts'
+import { entrarComoAluno, entrarPelaApi, entrarPorEmail, esperarAtividades, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
 import {
   agendarEliminacaoNoBanco,
   cancelarEliminacaoNoBanco,
@@ -24,10 +24,11 @@ const ROTA_EU = '**/v1/eu'
 const TEXTO_DA_SUSPENSAO = MENSAGENS_DE_ERRO.ACESSO_SUSPENSO
 const INTERVALO_DA_ATIVIDADE_MIN = 5
 /** A esteira responde mais devagar que a máquina; aqui a lentidão é forçada, e não esperada. */
-const ATRASO_DA_REDE_LENTA_MS = 1_500
+const ATRASO_DA_REDE_LENTA_MS = 500
 
 const dialogo = (page: Page) => page.getByRole('dialog')
 const tituloDaTela = (page: Page) => page.getByRole('heading', { level: 1, name: 'Acesso suspenso' })
+const tituloDeFerramentas = (page: Page) => page.getByRole('heading', { level: 1, name: 'Ferramentas' })
 const linkDaEntrada = (page: Page) => page.getByRole('link', { name: 'Ir para a entrada' })
 
 async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
@@ -49,13 +50,13 @@ async function esperarSemSaidaFalsa(page: Page): Promise<void> {
 
 /**
  * A segunda aba da mesma professora, aberta com **toda leitura da API atrasada** e devolvida só quando **nenhuma
- * requisição dela está a caminho**. A saudação espera apenas o `/v1/eu`; ao montar, a Nova conversa dispara outras três
- * (vínculos, time e entregas pendentes), e a casca ainda pode ganhar mais. Na esteira elas chegaram depois da marca
+ * requisição dela está a caminho**. O título espera apenas o `/v1/eu`; ao montar, a tela dispara a leitura dela (e a
+ * Nova conversa, outras três: vínculos, time e entregas pendentes), e a casca ainda pode ganhar mais. Na esteira elas chegaram depois da marca
  * posta no banco: a segunda aba levou o 403 primeiro e apagou o cookie, e a primeira renovou sem ele (401) e mostrou o
  * login por cima, e não a tela. O teste afirma que a primeira aba pede primeiro, e isso só vale sem nada da segunda a
  * caminho, qualquer que seja a leitura: por isso conta o que saiu e ainda não voltou, em vez de listar as consultas.
  */
-async function abrirSegundaAbaQuieta(context: BrowserContext, nome: string): Promise<Page> {
+async function abrirSegundaAbaQuieta(context: BrowserContext, endereco: string): Promise<Page> {
   const aba = await context.newPage()
   const eUmaLeitura = (url: URL): boolean => url.pathname.startsWith('/v1/')
   await aba.route(eUmaLeitura, async (rota: Route) => {
@@ -66,8 +67,8 @@ async function abrirSegundaAbaQuieta(context: BrowserContext, nome: string): Pro
   aba.on('request', (pedido: Request) => aCaminho.add(pedido))
   aba.on('requestfinished', (pedido: Request) => aCaminho.delete(pedido))
   aba.on('requestfailed', (pedido: Request) => aCaminho.delete(pedido))
-  await aba.goto('/')
-  await esperarNovaConversa(aba, nome)
+  await aba.goto(endereco)
+  await expect(tituloDeFerramentas(aba)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   await expect.poll(() => aCaminho.size, { timeout: PRAZO_DA_ENTRADA_MS }).toBe(0)
   await aba.unroute(eUmaLeitura)
   return aba
@@ -196,21 +197,24 @@ test.describe('acesso suspenso pela eliminação agendada', () => {
 
   test('duas abas: a primeira mostra a tela, e a segunda recebe o login por cima, em que a senha certa mostra o texto e não abre sessão', async ({ page, context, hasTouch }) => {
     const professora = await criarEquipeComSenha()
-    await page.goto('/entrar')
-    await entrarPorEmail(page, professora, hasTouch)
-    await esperarNovaConversa(page, professora.nome)
-    const segundaAba = await abrirSegundaAbaQuieta(context, professora.nome)
+    // As duas abas abrem em Ferramentas, que não lê nada além do que a casca já lê: o caso gasta o tempo no que prova, não na saudação.
+    // A primeira carga não afirma nada sobre o tempo de baixar (`carregarSemRedeLenta`); a lentidão que o caso quer vem da segunda aba.
+    await carregarSemRedeLenta(page, async () => {
+      await entrarPelaApi(page, professora, '/professor/ferramentas')
+      await expect(tituloDeFerramentas(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    })
+    const segundaAba = await abrirSegundaAbaQuieta(context, '/professor/ferramentas')
 
     await agendarEliminacaoNoBanco(professora.usuarioId)
-    // A primeira aba é a que pede primeiro: é o 403 dela que apaga o cookie. "Ferramentas" ainda não foi aberta, então a
+    // A primeira aba é a que pede primeiro: é o 403 dela que apaga o cookie. "Criados" ainda não foi aberta, então a
     // consulta sai; "Turmas" estaria no cache (30 s de `staleTime`), e a aba só mostraria o que já tinha.
-    await irPelaNavegacao(page, 'Ferramentas', hasTouch)
+    await irPelaNavegacao(page, 'Criados', hasTouch)
     await expect(tituloDaTela(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     // A aba sabia que era a professora: o caminho de volta é a entrada da equipe, e não o endereço da escola.
     await expect(linkDaEntrada(page)).toHaveAttribute('href', '/entrar')
 
     // A segunda renova com o cookie que já não existe: 401, e a sessão vence com o login por cima da tela dela.
-    await irPelaNavegacao(segundaAba, 'Ferramentas', hasTouch)
+    await irPelaNavegacao(segundaAba, 'Criados', hasTouch)
     await expect(dialogo(segundaAba)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(dialogo(segundaAba)).toContainText('Sua sessão expirou')
     await expect(tituloDaTela(segundaAba)).toHaveCount(0)

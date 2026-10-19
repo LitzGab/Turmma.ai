@@ -65,6 +65,7 @@ describe('ItemDaLateral', () => {
       ['Início', 'inicio'],
       ['Turmas', 'turmas'],
       ['Ferramentas', 'ferramentas'],
+      ['Criados', 'criados'],
       ['Atividades', 'tarefas'],
       ['Painel', 'painel'],
       ['Analista', 'ia'],

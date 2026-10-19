@@ -29,7 +29,7 @@ test.describe('a navegação do professor na A2 (D73)', () => {
     await expect(page.getByText(/Seu time/)).toHaveCount(0)
 
     // `Seções` está à vista sem abrir a gaveta (a barra de baixo, no celular): os três lugares, na ordem da D80.
-    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas'])
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas', 'Criados'])
     await abrirNavegacao(page, hasTouch)
     // "Seu time" saiu da lateral: nenhum grupo de agentes, e nem o Assistente nem o Tutor são item dela.
     await expect(lateral(page).getByRole('navigation', { name: 'Seu time' })).toHaveCount(0)

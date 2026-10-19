@@ -350,7 +350,7 @@ test.describe('casca da escola', () => {
     const menu = page.getByRole('button', { name: 'Abrir o menu' })
     await expect(menu).toHaveAttribute('aria-expanded', 'false')
     await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(1)
-    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas'])
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas', 'Criados'])
     await expect(page.locator('html')).toHaveAttribute('data-barra-de-baixo', '')
     await esperarAlvoDeToqueEm(secoes(page).getByRole('link', { name: 'Turmas' }))
     for (const alvo of [menu, page.getByRole('button', { name: 'Sair' }), page.getByRole('link', { name: 'Turmma, página inicial' })]) await esperarAlvoDeToqueEm(alvo)
@@ -400,9 +400,9 @@ test.describe('casca da escola', () => {
     await expect(gaveta(page)).toBeHidden()
 
     // A barra de baixo fica inerte com a gaveta aberta: o toque em cima dela só fecha a gaveta, não navega. O item é o último
-    // da barra ("Ferramentas", desde a ordem da D80), que cai depois da borda da gaveta; um do meio cairia dentro dela.
-    const ultimo = await secoes(page).getByRole('link', { name: 'Ferramentas' }).boundingBox()
-    if (ultimo === null) throw new Error('o item Ferramentas da barra de baixo sem caixa')
+    // da barra ("Criados", o quarto lugar, telas do professor 5.0), que cai depois da borda da gaveta; um do meio cairia dentro dela.
+    const ultimo = await secoes(page).getByRole('link', { name: 'Criados' }).boundingBox()
+    if (ultimo === null) throw new Error('o item Criados da barra de baixo sem caixa')
     const antes = page.url()
     if (hasTouch) await menu.tap()
     else await menu.click()
@@ -420,11 +420,12 @@ test.describe('casca da escola', () => {
     const paradas = [
       page.getByRole('link', { name: 'Turmma, página inicial' }),
       page.getByRole('button', { name: 'Recolher a lateral' }),
-      // Os três itens do professor, na ordem da D80: Início, Turmas e Ferramentas. "Seu time" saiu da lateral (telas do professor,
+      // Os quatro itens do professor, na ordem da D80: Início, Turmas, Ferramentas e Criados. "Seu time" saiu da lateral (telas do professor,
       // 2.0): o Assistente e o Tutor abrem pelo pé do sino.
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Início' }),
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }),
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Ferramentas' }),
+      page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Criados' }),
       // F3 (18.0): o menu da pessoa tem "Meus dados" antes do "Sair", no pé da lateral.
       page.getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link', { name: 'Meus dados' }),
       // X1 (2.0): a Aparência é uma parada só, a opção marcada, entre os links da conta e o "Sair", que continua o último.
@@ -527,7 +528,7 @@ test.describe('casca da escola', () => {
     await expect(gaveta(page)).toBeVisible()
     await expect(abrir).toHaveAttribute('aria-expanded', 'true')
     // A20: de 768 a 1023 px a gaveta do trilho leva os itens, e não há barra de baixo (ela é do celular).
-    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas'])
+    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas', 'Criados'])
     await expect(page.locator('html')).not.toHaveAttribute('data-barra-de-baixo', '')
     // E a página não reserva o lugar de uma barra que não existe: a variável vale zero, e o `<main>` guarda só os 32 px.
     expect(await reservaDaBarraDeBaixo(page)).toEqual({ variavel: '0px', paddingDoMain: '32px' })
@@ -584,10 +585,10 @@ test.describe('casca da escola', () => {
     })
     expect(lateral).toEqual({ largura: 256, borda: '2px', cor: 'rgb(229, 229, 229)', fundo: 'rgb(255, 255, 255)' })
     // Cada lugar tem 52 px de altura (o ícone numa caixa de 36, e o rótulo em caixa-alta), e a moldura começa onde a lateral termina.
-    for (const rotulo of ['Início', 'Turmas', 'Ferramentas']) expect((await secoes.getByRole('link', { name: rotulo }).boundingBox())?.height, rotulo).toBe(52)
+    for (const rotulo of ['Início', 'Turmas', 'Ferramentas', 'Criados']) expect((await secoes.getByRole('link', { name: rotulo }).boundingBox())?.height, rotulo).toBe(52)
     expect((await page.getByRole('main').boundingBox())?.x).toBe(256)
-    // O ícone do lugar é decoração: o ilustrado a 32 px em Início, Ferramentas e Turmas, e o nome do link é só o rótulo.
-    for (const rotulo of ['Início', 'Turmas', 'Ferramentas']) {
+    // O ícone do lugar é decoração: o ilustrado a 32 px em Início, Turmas, Ferramentas e Criados, e o nome do link é só o rótulo.
+    for (const rotulo of ['Início', 'Turmas', 'Ferramentas', 'Criados']) {
       const icone = secoes.getByRole('link', { name: rotulo, exact: true }).locator('svg[data-icone]')
       await expect(icone).toHaveCount(1)
       await expect(icone).toHaveAttribute('aria-hidden', 'true')

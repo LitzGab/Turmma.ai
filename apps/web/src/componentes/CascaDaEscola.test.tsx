@@ -150,7 +150,7 @@ describe('onde ficam os itens de navegação em cada largura (RF14)', () => {
     // A barra é irmã da gaveta, e não filha dela: com o `dialog` modal aberto o navegador a deixa inerte.
     const barra = screen.getByRole('navigation', { name: 'Seções' })
     expect(barra.closest('dialog')).toBeNull()
-    expect(within(barra).getAllByRole('link').map((link) => link.textContent)).toEqual(['Início', 'Turmas', 'Ferramentas'])
+    expect(within(barra).getAllByRole('link').map((link) => link.textContent)).toEqual(['Início', 'Turmas', 'Ferramentas', 'Criados'])
     expect(document.documentElement.hasAttribute('data-barra-de-baixo')).toBe(true)
 
     const gaveta = gavetaDaPagina()
@@ -203,7 +203,7 @@ describe('onde ficam os itens de navegação em cada largura (RF14)', () => {
     expect(document.documentElement.hasAttribute('data-barra-de-baixo')).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: 'Abrir a lateral' }))
     const gaveta = screen.getByRole('dialog', { name: 'Menu' })
-    expect(within(gaveta).getAllByRole('link', { name: /^(Início|Ferramentas|Turmas)$/ }).map((link) => link.textContent)).toEqual(['Início', 'Turmas', 'Ferramentas'])
+    expect(within(gaveta).getAllByRole('link', { name: /^(Início|Ferramentas|Turmas|Criados)$/ }).map((link) => link.textContent)).toEqual(['Início', 'Turmas', 'Ferramentas', 'Criados'])
     expect(gaveta.querySelectorAll('nav[aria-label="Seções"]')).toHaveLength(1)
   })
 
@@ -215,7 +215,7 @@ describe('onde ficam os itens de navegação em cada largura (RF14)', () => {
     expect(document.documentElement.hasAttribute('data-barra-de-baixo')).toBe(false)
     const secoes = screen.getAllByRole('navigation', { name: 'Seções' })
     expect(secoes).toHaveLength(1)
-    expect(within(secoes[0] as HTMLElement).getAllByRole('link').map((link) => link.textContent)).toEqual(['Início', 'Turmas', 'Ferramentas'])
+    expect(within(secoes[0] as HTMLElement).getAllByRole('link').map((link) => link.textContent)).toEqual(['Início', 'Turmas', 'Ferramentas', 'Criados'])
   })
 })
 

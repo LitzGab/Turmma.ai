@@ -1,8 +1,7 @@
 import { ROTULOS_DA_ADAPTACAO, TIPOS_DE_ADAPTACAO } from '../packages/shared/src/assistente/conteudo.ts'
-import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
-import { atividadeSintetica, erroDaApi, portao, versaoAdaptada } from './__fixtures__/assistente.ts'
-import { irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { atividadeSintetica, erroDaApi, versaoAdaptada } from './__fixtures__/assistente.ts'
 import { caixa } from './__fixtures__/fluxo-do-professor.ts'
+import { entrarEmCriados } from './__fixtures__/professor/criados.ts'
 import { acionar, entrar, irPara, PRAZO_DA_TELA_MS, recarregar, selosDeIA } from './__fixtures__/professor/cena.ts'
 import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
@@ -12,43 +11,21 @@ import { expect, test } from './__fixtures__/perfis.ts'
  */
 
 test.describe('Ferramentas (D74) e o formulário', () => {
-  test('o catálogo tem só as três ferramentas que existem, nas categorias da D74, e a lista do que foi gerado tem os quatro estados', async ({ page, hasTouch }) => {
-    // Entrada, troca de tela e recarga com a CPU ×4 e a rede lenta do perfil: o teste percorre vários estados da mesma tela.
-    test.slow()
-    const { api, turmaId, turmaNome, disciplinaId } = await entrar(page, hasTouch)
-    const segura = portao()
-    api.trocar('artefatos', async () => {
-      await segura.aberta
-      return erroDaApi(503, 'INDISPONIVEL_TENTE_DE_NOVO')
+  test('o catálogo tem só as três ferramentas que existem, nas categorias da D74, sem a lista do que foi gerado, que mora em Criados', async ({ page }) => {
+    // Abre Ferramentas direto, pela API, com um documento já gerado: o login pela tela leva a maior parte dos 15 s do portão.
+    await entrarEmCriados(page, {
+      endereco: '/professor/ferramentas',
+      antes: ({ api, turmaId, disciplinaId }) => {
+        api.artefatos = [atividadeSintetica(turmaId, disciplinaId)]
+      },
     })
-    await irPelaNavegacao(page, 'Ferramentas', hasTouch)
     await expect(page).toHaveTitle('Ferramentas · Turmma', { timeout: PRAZO_DA_TELA_MS })
     await expect(page.getByRole('heading', { level: 3 })).toHaveText(['Planejar', 'Preparar a aula', 'Avaliar'])
     await expect(page.locator('[data-ferramenta]')).toHaveCount(3)
     for (const fora of ['Prova', 'Apresentação', 'Simulado', 'Redação', 'Mapa mental']) await expect(page.getByRole('main').getByText(fora, { exact: true })).toHaveCount(0)
-    await expect(page.getByText('Carregando o que você já gerou…')).toBeVisible()
-    segura.abrir()
-    await expect(page.getByRole('main').getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_TELA_MS })
-    api.trocar('artefatos')
-    await acionar(page.getByRole('button', { name: 'Tentar de novo' }), hasTouch)
-    await expect(page.getByText('Nada gerado ainda')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
-    expect(await larguraExcedente(page)).toBe(0)
-    expect(await violacoesGraves(page)).toEqual([])
-
-    const origem = atividadeSintetica(turmaId, disciplinaId)
-    const adaptada = versaoAdaptada(origem)
-    api.artefatos = [adaptada.artefato, origem]
-    // A lista vem em páginas: a primeira, e "Ver mais" traz a seguinte.
-    api.porPagina = 1
-    await recarregar(page)
-    const gerados = page.locator('[data-artefato]')
-    await expect(gerados).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
-    await acionar(page.getByRole('button', { name: 'Ver mais' }), hasTouch)
-    await expect(gerados).toHaveCount(2, { timeout: PRAZO_DA_TELA_MS })
-    await expect(page.getByRole('button', { name: 'Ver mais' })).toHaveCount(0)
-    await expect(gerados.nth(0)).toContainText('Versão adaptada · Fonte ampliada + Tempo adicional (50% a mais)')
-    await expect(gerados.nth(0)).toContainText('Esperando você')
-    await expect(gerados.nth(1)).toContainText(`Atividade objetiva · ${turmaNome}`)
+    // O que a professora já gerou saiu daqui (telas do professor, 5.0): nem o título da seção, nem o item.
+    await expect(page.getByText('O que você já gerou')).toHaveCount(0)
+    await expect(page.locator('[data-artefato]')).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 

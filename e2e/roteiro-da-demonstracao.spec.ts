@@ -425,7 +425,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
     const acertosDaAna = respostasDaAna.filter((resposta, indice) => resposta === primeira.questoes[indice]?.gabarito).length
 
     const primeiraAplicadaId = await test.step('a professora aplica a primeira atividade como avaliação, e a aluna responde uma por vez e envia', async () => {
-      await irPelaNavegacao(professora, 'Ferramentas', hasTouch)
+      await irPelaNavegacao(professora, 'Criados', hasTouch)
       await professora.locator('[data-artefato]').filter({ hasText: 'Atividade objetiva · ' }).first().click({ timeout: PRAZO_DA_ENTRADA_MS })
       await expect(professora.getByRole('heading', { level: 1, name: PRIMEIRA })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       const naTurma = professora.locator('[data-aplicacao-do-artefato]')

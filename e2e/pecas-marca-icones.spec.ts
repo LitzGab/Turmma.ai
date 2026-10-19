@@ -54,13 +54,15 @@ for (const tema of TEMAS) {
     test('a cor dominante de cada lugar é a face da família dele, lida do token, e as ferramentas são laranja, azul, verde e roxo', async ({ page }) => {
       await irParaOTema(page, tema)
       const faces = Object.fromEntries(
-        await Promise.all(['laranja', 'azul', 'verde', 'roxo', 'turquesa'].map(async (token) => [token, await corDoToken(page, token)] as const)),
+        await Promise.all(['laranja', 'azul', 'verde', 'roxo', 'turquesa', 'amarelo'].map(async (token) => [token, await corDoToken(page, token)] as const)),
       )
       const doLugar = (nome: string) => secao(page, 'marca-icones').locator(`[data-icones-do-tamanho="48"] [data-icone="${nome}"]`)
       expect(await enchimentoDasFormas(doLugar('inicio'))).toContain(faces['laranja'])
       expect(await enchimentoDasFormas(doLugar('turmas'))).toContain(faces['turquesa'])
       expect(await enchimentoDasFormas(doLugar('tarefas'))).toContain(faces['azul'])
       expect(await enchimentoDasFormas(doLugar('ferramentas'))).toEqual([faces['laranja'], faces['azul'], faces['verde'], faces['roxo']])
+      // Criados (telas do professor, 5.0): a pasta é amarela, com a folha e a linha nos tokens de papel e de linha.
+      expect(await enchimentoDasFormas(doLugar('criados'))).toContain(faces['amarelo'])
     })
 
     test('cada ícone é quadrado na medida pedida, e o ladrilho, também, com o ícone a 72% do lado, centrado', async ({ page }) => {

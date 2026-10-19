@@ -3,11 +3,12 @@ import * as navegacao from './navegacao'
 import { estaNoItem, MENU_DA_PESSOA, NAVEGACAO, RODAPE_DA_LATERAL } from './navegacao'
 
 describe('navegação por papel', () => {
-  it('W2: os quatro lugares da coordenação, "Minha turma" do aluno e, na ordem da D80, "Início" (era "Nova conversa"), "Turmas" e "Ferramentas" do professor têm tela', () => {
+  it('W2: os quatro lugares da coordenação, "Minha turma" do aluno e, na ordem da D80, "Início" (era "Nova conversa"), "Turmas", "Ferramentas" e "Criados" do professor têm tela', () => {
     expect(NAVEGACAO.professor.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
       { rotulo: 'Início', caminho: '/professor/nova-conversa' },
       { rotulo: 'Turmas', caminho: '/professor/turmas' },
       { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
+      { rotulo: 'Criados', caminho: '/professor/criados' },
     ])
     // A3 e A4: o aluno tem Tutor, Atividades e Minha turma, nesta ordem, e mais nada.
     expect(NAVEGACAO.aluno.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([

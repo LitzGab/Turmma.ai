@@ -36,8 +36,8 @@ const tokenDa = (classe: string) => classe.replace(/^fill-/, '')
 const NEUTROS = ['icone-papel', 'icone-linha']
 
 describe('os ícones dos lugares', () => {
-  it('são os quatro da X1 e os quatro da coordenação (X2), e cada nome tem um desenho', () => {
-    expect([...NOMES_DOS_LUGARES]).toEqual(['inicio', 'turmas', 'tarefas', 'ferramentas', 'painel', 'ia', 'escola', 'registros'])
+  it('são os quatro da X1, os quatro da coordenação (X2) e o de Criados (X3), e cada nome tem um desenho', () => {
+    expect([...NOMES_DOS_LUGARES]).toEqual(['inicio', 'turmas', 'tarefas', 'ferramentas', 'painel', 'ia', 'escola', 'registros', 'criados'])
     expect(Object.keys(DESENHO_DO_LUGAR).sort()).toEqual([...NOMES_DOS_LUGARES].sort())
     for (const nome of NOMES_DOS_LUGARES) expect(formasDe(nome).length, nome).toBeGreaterThan(0)
   })
@@ -92,6 +92,8 @@ describe('os ícones dos lugares', () => {
     expect(classesDe('ia')).toEqual(['fill-anil', 'fill-icone-papel', 'fill-icone-papel', 'fill-icone-papel'])
     expect(classesDe('escola')).toEqual(['fill-icone-linha', 'fill-azul', 'fill-azul', 'fill-icone-papel', 'fill-icone-papel', 'fill-icone-papel'])
     expect(classesDe('registros')).toEqual(['fill-amarelo', 'fill-icone-papel', 'fill-icone-linha', 'fill-icone-linha', 'fill-icone-linha'])
+    // X3 (5.0): Criados em amarelo, a pasta de trás, a folha de trás na linha, a da frente no papel com a linha escrita, e a frente da pasta.
+    expect(classesDe('criados')).toEqual(['fill-amarelo', 'fill-icone-linha', 'fill-icone-papel', 'fill-icone-linha', 'fill-amarelo'])
   })
 
   it('as ferramentas são os quatro quadradinhos, laranja, azul, verde e roxo, nessa ordem de leitura', () => {

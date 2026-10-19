@@ -17,6 +17,8 @@ export const ROTAS_DO_PROFESSOR = {
   ferramentas: '/ferramentas',
   /** O formulário de uma ferramenta: o mesmo motor do cartão da conversa (D18). */
   ferramenta: '/ferramentas/:ferramenta',
+  /** Criados (telas do professor, 5.0): o que a professora já gerou, por turma, com os filtros de tipo, turma e estado no endereço. */
+  criados: '/criados',
   /** Um artefato aberto: a atividade ou o plano, com a página de origem e as versões adaptadas. */
   artefato: '/artefatos/:artefatoId',
   /** O que o Assistente de ensino fez (pelo pé do sino): o que as funções dele fizeram e o que espera a professora (11.4). */
@@ -186,6 +188,8 @@ export const ROTAS = {
   conversa: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.conversa}`,
   /** "Ferramentas" do professor, pela raiz. */
   ferramentas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.ferramentas}`,
+  /** "Criados" do professor, pela raiz (telas do professor, 5.0): é o endereço que a navegação usa. */
+  criados: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.criados}`,
   /** Os artefatos abertos, pela raiz: dentro deles, "Ferramentas" continua selecionado na lateral. */
   artefatos: `${BASE_DA_AREA.professor}/artefatos`,
   /** "Turmas" do professor, pela raiz: é o endereço que a navegação usa. */

@@ -29,6 +29,8 @@ const ITENS_DO_PROFESSOR = [
   { rotulo: 'Ferramentas', escondido: false },
   { rotulo: 'Turmas', escondido: false },
 ] as const
+/** Criados chegou depois (telas do professor, 5.0), num caso próprio: o login do professor já leva a maior parte do prazo do caso. */
+const ITEM_CRIADOS = [{ rotulo: 'Criados', escondido: false }] as const
 /** Os quatro lugares da coordenação (X2): Escola e Registros abrem na primeira aba, e a aba do navegador diz de onde a tela é. */
 const ITENS_DA_COORDENACAO = [
   { rotulo: 'Painel', escondido: false },
@@ -124,6 +126,11 @@ test.describe('o título de cada item da lateral', () => {
   test('professor: Ferramentas e Turmas mostram o título, e o Início o esconde, com o texto de "Início"', async ({ page, hasTouch }) => {
     await entrarComoProfessora(page, hasTouch)
     await percorrer(page, ITENS_DO_PROFESSOR, hasTouch)
+  })
+
+  test('professor: Criados mostra o título', async ({ page, hasTouch }) => {
+    await entrarComoProfessora(page, hasTouch)
+    await percorrer(page, ITEM_CRIADOS, hasTouch)
   })
 
   test('coordenação: os quatro lugares mostram o título, e a aba diz a tela ("Painel · Turmma" e os demais)', async ({ page, hasTouch }) => {

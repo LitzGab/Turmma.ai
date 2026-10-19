@@ -249,3 +249,22 @@ export async function entrarComoAluno(page: Page, aluno: { readonly slug: string
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
   await esperarAtividades(page, aluno.nome)
 }
+
+/**
+ * Entra pela API (`POST /v1/sessao/email`) no contexto da página e abre o endereço: o cookie de renovação fica no contexto, e a
+ * aplicação restaura a sessão a partir dele, como num retorno à aba. É o atalho do caso que prova outra coisa que não a entrada
+ * (a entrada pela tela tem os casos dela) e que, com o argon2 e a CPU ×4 do perfil, não cabe nos 15 s do portão com um login a mais.
+ * Com a conta em mais de uma escola, `usuarioId` escolhe a escola (`POST /v1/sessao/escola`, com o desafio).
+ */
+export async function entrarPelaApi(page: Page, pessoa: Pick<EquipeDeTeste, 'email' | 'senha'>, endereco: string, usuarioId?: string): Promise<void> {
+  const pedidos = page.context().request
+  const entrada = await pedidos.post('/v1/sessao/email', { data: { email: pessoa.email, senha: pessoa.senha } })
+  let corpo = (await entrada.json()) as { etapa?: string; desafio?: string }
+  if (entrada.ok() && corpo.etapa === 'escolher' && usuarioId !== undefined && corpo.desafio !== undefined) {
+    const escolha = await pedidos.post('/v1/sessao/escola', { headers: { Authorization: `Bearer ${corpo.desafio}` }, data: { usuarioId } })
+    corpo = (await escolha.json()) as { etapa?: string }
+    if (!escolha.ok()) throw new Error(`a escolha da escola pela API falhou: ${String(escolha.status())}`)
+  }
+  if (corpo.etapa !== 'pronta') throw new Error(`a entrada pela API não abriu sessão: ${String(entrada.status())} ${String(corpo.etapa)}`)
+  await page.goto(endereco)
+}

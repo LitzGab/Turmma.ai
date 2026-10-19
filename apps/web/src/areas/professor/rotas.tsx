@@ -13,6 +13,8 @@ const Home = lazy(() => import('./Home'))
 const Conversa = lazy(() => import('./Conversa'))
 const Ferramentas = lazy(() => import('./Ferramentas'))
 const Ferramenta = lazy(() => import('./Ferramenta'))
+/** Criados (telas do professor, 5.0): o que a professora já gerou, por turma, com filtros; sai em `tela-professor-Criados-*.js`. */
+const Criados = lazy(() => import('./Criados'))
 const Artefato = lazy(() => import('./Artefato'))
 const Time = lazy(() => import('./Time'))
 const Tutor = lazy(() => import('./Tutor'))
@@ -31,7 +33,7 @@ const SinoDoProfessor = lazy(() => import('./SinoDoProfessor'))
  * A área do professor, relativa a `/professor` (o `Route` aninhado de `apps/web/src/rotas.tsx`), num chunk próprio,
  * `professor-*.js` (`apps/web/nome-dos-chunks.ts`), que só se baixa depois de a guarda conferir o papel. Na A2 (D73) ela
  * tem "Início" (a Home, onde o professor abre, e a conversa com o Assistente), "Ferramentas" (o catálogo, o
- * formulário de cada uma e o artefato aberto), "Turmas", com a turma aberta dentro dela (A1), "Meus dados" (F3, 18.0, no
+ * formulário de cada uma e o artefato aberto), "Criados" (o que ela já gerou, por turma), "Turmas", com a turma aberta dentro dela (A1), "Meus dados" (F3, 18.0, no
  * menu da pessoa) e, pelo pé do sino, "O que o Assistente fez" e "O que o Tutor viu". O item da lateral continua selecionado nas telas
  * de dentro (`estaNoItem`).
  *
@@ -50,6 +52,7 @@ export default function RotasDoProfessor() {
         <Route path={ROTAS_DO_PROFESSOR.novaConversa} component={Home} />
         <Route path={ROTAS_DO_PROFESSOR.conversa} component={Conversa} />
         <Route path={ROTAS_DO_PROFESSOR.ferramentas} component={Ferramentas} />
+        <Route path={ROTAS_DO_PROFESSOR.criados} component={Criados} />
         {/* A `key` pela ferramenta: outra ferramenta é outro formulário, e não o anterior com os valores dele. */}
         <Route path={ROTAS_DO_PROFESSOR.ferramenta}>{(parametros) => <Ferramenta key={parametros.ferramenta} ferramenta={parametros.ferramenta} />}</Route>
         {/* A `key` pelo artefato: ir de uma versão adaptada à atividade de origem é abrir outra tela, sem o renomear da anterior. */}

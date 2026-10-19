@@ -15,7 +15,7 @@ const FORMA_DE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
 function Formulario({ ferramenta }: { ferramenta: Parameters<typeof ferramentaDoCatalogo>[0] }) {
   const item = ferramentaDoCatalogo(ferramenta)
   useTituloDaTela(item.nome)
-  // O formulário aberto de novo começa em branco: a geração que já terminou fica em "O que você já gerou", e a que ainda
+  // O formulário aberto de novo começa em branco: a geração que já terminou fica em Criados, e a que ainda
   // está no ar continua aqui. Antes da primeira pintura, para o resultado antigo não piscar na tela.
   useLayoutEffect(() => esquecerGeracaoTerminada(ferramenta), [ferramenta])
   // "Pedir versão adaptada", no artefato, traz a atividade de origem no endereço: só o id dela, e nada sobre aluno.
