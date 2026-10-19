@@ -1605,11 +1605,17 @@ As seções 11.2 a 11.8 da versão de setembro desenhavam estas telas na pele an
 que segue é o que continua verdade, até a spec da área recompor a tela. Código e teste que citam o
 número antigo acham aqui o assunto.
 
-**Início do professor** (era 11.2; X3). A saudação vem pela hora, com o primeiro nome, e embaixo
-fica a caixa de pedido. Nela, **Ferramenta** (D18) e **Web** (D68, desligada por padrão e dizendo
-isso no próprio botão) mudam o pedido, a **turma** é o contexto, e o enviar é o `primario` da tela.
-O menu Ferramenta, e o mesmo menu aberto digitando `/`, leem o catálogo da página (P17). O anexo
-continua fora (P07). A linha do dia só existe quando houver grade (F2, F8).
+**Início do professor** (era 11.2; X3). O grupo fica a um terço da altura livre (uma coluna
+`1fr · auto · 2fr`). Em cima o Assistente se apresenta: o avatar da onça (40 px), o nome da função
+e o selo "IA", e embaixo dele a saudação pela hora, com o primeiro nome, e "O que vamos preparar
+hoje?". Depois vêm a caixa de pedido, com a **turma** como contexto e o enviar `primario`; os
+**atalhos de ferramenta**, um botão secundário de 44 px com o ícone ilustrado para cada ferramenta
+que existe (o catálogo da página, P17) e o link "Ferramentas"; e a frase "O Assistente é uma IA e
+pode errar · Nada chega à turma sem você aprovar", sem link. O atalho é a escolha explícita da
+ferramenta (D18): abre o cartão na conversa com a turma e, como tema, o que está na caixa, e a
+Adaptação abre sem ler a caixa (D35). O pedido escrito e enviado vai ao Assistente, que pergunta
+antes. **Web** (D68), o anexo (P07) e a linha do dia (F2, F8) continuam fora. **O que espera a
+professora não está no Início: está no sino.** O menu **Ferramenta** fica na caixa da conversa.
 
 **A conversa, o selo de IA e os cartões** (era 11.3; X3).
 

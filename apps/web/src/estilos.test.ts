@@ -272,7 +272,7 @@ interface UsoDaFaceDoOficial {
  * a entrada dele não cita reprova, e a entrada cuja classe já não está no arquivo reprova também, para a tarefa que
  * tira o uso tirar a linha. O teto de `TETO_DA_LISTA_DO_OFICIAL` não sobe.
  *
- * A primeira entrada é o oficial. As outras três são usos de antes da D80, que a `noite` pintava de preto no claro; no
+ * A primeira entrada é o oficial. As outras duas são usos de antes da D80, que a `noite` pintava de preto no claro; no
  * escuro a face deles é a mesma do oficial. Isso já acontece na tela da atividade, onde a questão aberta do mapa e o
  * botão "Enviar a atividade" têm a mesma face (achado da 1ª rodada da 3.0, `conformidade-reviewer`).
  */
@@ -287,11 +287,6 @@ const FACE_DO_OFICIAL: Readonly<Record<string, UsoDaFaceDoOficial>> = {
     justificativa: 'a questão aberta do mapa da atividade; no escuro tem a mesma face do botão oficial da mesma tela',
     sai: 'X4 (telas-do-aluno-e-primeiro-acesso), que reveste o mapa de questões',
   },
-  'areas/professor/Home.tsx': {
-    classes: ['bg-noite'],
-    justificativa: 'o ícone do atalho da lista de entregas esperando na Início da professora',
-    sai: 'X3 (telas-do-professor), que recompõe a Início',
-  },
   'operacao/componentes/NavegacaoDaLista.tsx': {
     classes: ['bg-noite'],
     justificativa: 'a opção de ordenação marcada, na lista das escolas da operação',
@@ -300,7 +295,7 @@ const FACE_DO_OFICIAL: Readonly<Record<string, UsoDaFaceDoOficial>> = {
 }
 
 /** Sobe só com decisão: a lista do oficial é a de hoje, e cada tarefa que tira um uso a faz encolher. */
-const TETO_DA_LISTA_DO_OFICIAL = 4
+const TETO_DA_LISTA_DO_OFICIAL = 3
 
 function listaDoOficialCresceu(lista: Readonly<Record<string, UsoDaFaceDoOficial>>): boolean {
   return Object.keys(lista).length > TETO_DA_LISTA_DO_OFICIAL

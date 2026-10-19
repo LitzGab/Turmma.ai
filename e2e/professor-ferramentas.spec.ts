@@ -128,11 +128,10 @@ test.describe('Ferramentas (D74) e o formulário', () => {
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // A Adaptação escolhida na caixa de pedido abre o cartão dela, e o que estava escrito na caixa não vai junto.
+    // O atalho da Adaptação, no Início, abre o cartão dela, e o que estava escrito na caixa não vai junto.
     await irPara(page, '/professor/nova-conversa')
     await caixa(page).fill('prova adaptada para um aluno com laudo')
-    await acionar(page.getByRole('button', { name: 'Ferramenta' }), hasTouch)
-    await acionar(page.getByRole('menuitemradio', { name: /^Adaptação/ }), hasTouch)
+    await acionar(page.getByRole('group', { name: 'Atalhos de ferramenta' }).getByRole('button', { name: /^Adaptação/ }), hasTouch)
     await expect(page).toHaveURL(/\/professor\/conversa$/)
     const cartao = page.locator('[data-cartao-de-ferramenta="adaptacao"]')
     await expect(cartao.locator('[data-motor="formulario"]')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })

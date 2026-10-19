@@ -26,11 +26,11 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 2.6 `docs/interface.md`, Parte A: os lugares, o sino e o que saiu de "Seu time"
   - [x] 2.7 Testes: os lugares nas três larguras; os sete blocos de "Seu time" alcançados pelo sino; a contagem de casos do e2e igual
 
-- [ ] **3.0 — Início: a saudação com a onça, a caixa de pedido e os atalhos**
-  - [ ] 3.1 `Home.tsx`: a composição nova, sem "Esperando você"
-  - [ ] 3.2 `AtalhosDeFerramenta`; a caixa do Início sem o menu "Ferramenta"
-  - [ ] 3.3 `icones-de-ferramenta.tsx`, que exporta o mapa de ferramenta para ícone (a 4.0 e a 7.0 só o consomem)
-  - [ ] 3.4 Testes: os quatro estados; a saudação com o relógio fixo; o atalho abre o cartão, e a Adaptação nunca leva o texto da caixa
+- [x] **3.0 — Início: a saudação com a onça, a caixa de pedido e os atalhos**
+  - [x] 3.1 `Home.tsx`: a composição nova, sem "Esperando você"
+  - [x] 3.2 `AtalhosDeFerramenta`; a caixa do Início sem o menu "Ferramenta"
+  - [x] 3.3 `icones-de-ferramenta.tsx`, que exporta o mapa de ferramenta para ícone (a 4.0 e a 7.0 só o consomem)
+  - [x] 3.4 Testes: os quatro estados; a saudação com o relógio fixo; o atalho abre o cartão, e a Adaptação nunca leva o texto da caixa
 
 - [ ] **4.0 — Conversa e cartão da ferramenta na pele nova**
   - [ ] 4.1 `Conversa.tsx`: a coluna, a caixa presa e o aviso de IA
