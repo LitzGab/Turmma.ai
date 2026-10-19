@@ -2,21 +2,22 @@
 
 ## Agora
 - **Espero:** o `RELATÓRIO` de cada linha:
-  - linha 1 (`Implementador`/`Mesa`): ociosa desde 19/10 ~12h55 (correção `acesso-suspenso` encontrada em `d0b0a7d`); as duas tarefas que faltam correm nas linhas 2 e 3;
-  - linha 2 (`Implementador 2`/`Mesa 2`): **11.0**, pequena (partida 19/10 ~12h50; até 2 h sem a 1ª rodada, isto é, ~14h50), 1ª tentativa;
+  - linha 1 (`Implementador`/`Mesa`): **correção `2026-10-19-a2-assistente-conta-um-gabarito-a-mais`** (partida 19/10 ~14h35), 1ª tentativa: esteira vermelha em `0559707` e `d0b0a7d`, `e2e/a2-assistente.spec.ts:86` (chromebook e celular) conta 6 `Gabarito` onde espera 5; entrou com a 6.0 (`6b86cb2` não tinha). Guardiões ditados: `frontend-reviewer`. Encontro como tarefa;
+  - linha 2 (`Implementador 2`/`Mesa 2`): ociosa desde 19/10 ~14h30 (11.0 encontrada em `284d15e`);
   - linha 3 (`Implementador 3`/`Mesa 3`): **13.0**, grande (partida 19/10 ~12h50; até 4 h sem a 1ª rodada, isto é, ~16h50), 1ª tentativa.
   A cada `RELATÓRIO`: `linhas.ts encontro <n>` e `esteira.ts`. Esteiras: `745a550` verde; `91acc6d` vermelha, corrigida por
-  `c5bcb52` (correção `pecas-sobrepor`); `cb0af68` (5.0) verde; `c400e04` e `742dee0` vermelhas (correção na linha 1); `38242ef` (12.0) verde; `6b86cb2` (8.0), `0559707` (6.0) e `d0b0a7d` (correção `acesso-suspenso`) na fila do GitHub às 12h55: vermelha em `6b86cb2`/`0559707` em `acesso-suspenso:165` ou `escola-e-vinculos:423` já está corrigida em `d0b0a7d`; o que vale é a de `d0b0a7d`.
+  `c5bcb52` (correção `pecas-sobrepor`); `cb0af68` (5.0) verde; `c400e04` e `742dee0` vermelhas (correção na linha 1); `38242ef` (12.0) verde; `6b86cb2` (8.0) vermelha só em `escola-e-vinculos:423` e `0559707` (6.0) vermelha em `acesso-suspenso:165`, os dois corrigidos em `d0b0a7d`; `0559707` e `d0b0a7d` vermelhas em `a2-assistente:86` (correção na linha 1); `284d15e` (11.0) na fila.
 - **Devo ainda:** (0) feito, 19/10 ~00h20: o `Implementador 3` sabe que a Turma vira lazy (30 kB) e a fachada fica em 8 kB; (1) ficar de olho em `e2e/areas.spec.ts:231` (19–21 s na máquina, 23,8 s na esteira); se cair,
   correção como a `:204`; (2) a X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em `1477850`): não
   retomar sem a palavra do Joaquim; (3) as esteiras de `0650af0` e `23e8794` foram verdes: nada pendente da 1.0. (4) no fechamento, linha no `TODO.md`: com sete fatias, sobram ~180 casos do e2e (~1379, 197 por fatia) até precisar da oitava (ver `tools/ci/prazo-do-e2e.ts`). (5) também de olho, acima de 15 s na máquina e fora da correção `acesso-suspenso`: `acesso-suspenso:78` (18,4 s), `escola-e-vinculos:212` (22,4 s) e `:272` (18,9 s); se a esteira estourar, correção como a do `:165`.
-- **Base:** `spec/telas-do-professor` em `d0b0a7d` (correção `acesso-suspenso` em `363cdf0`; 6.0 em `5762f90`, merge da correção `encontro-6` em `b90c204`; 8.0 em `9d6bcb5`; 12.0 em `03806c1`; 7.0 em `ebff7f6`; correção `pecas-sobrepor` em `c5bcb52`; 5.0 em `9fde9be`; 14.0 em `b0ba717`, merge da correção `encontro-14`; 10.0 em `8cf865e`, merge da correção `encontro-10`; 4.0 em `a7d86a8`; correção do mfa em `907d546`; 9.0 em `d13cb69`) (2.0 em `7ad636e`, com a correção `75f94a3`).
+- **Base:** `spec/telas-do-professor` em `284d15e` (11.0 em `e8915a2`; correção `acesso-suspenso` em `363cdf0`; 6.0 em `5762f90`, merge da correção `encontro-6` em `b90c204`; 8.0 em `9d6bcb5`; 12.0 em `03806c1`; 7.0 em `ebff7f6`; correção `pecas-sobrepor` em `c5bcb52`; 5.0 em `9fde9be`; 14.0 em `b0ba717`, merge da correção `encontro-14`; 10.0 em `8cf865e`, merge da correção `encontro-10`; 4.0 em `a7d86a8`; correção do mfa em `907d546`; 9.0 em `d13cb69`) (2.0 em `7ad636e`, com a correção `75f94a3`).
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri` com
   `MAESTRI_SOCKET=/tmp/maestri-309bb7f3/maestri.sock`.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
+| 11.0 | `e8915a2` → `284d15e` | Sonnet | 2 | `test-engineer` reprovou na 1ª, os quatro aprovaram na 2ª; 19 mutações; divergências: recarregar com o painel aberto fica em componente (e2e com recarga passaria de 15 s), Corrigir de novo também no lote rejeitado, selo Encerrada não existe sozinho, gancho `corrigir-de-novo.ts` extraído |
 | correção `2026-10-19-acesso-suspenso-passa-do-prazo` | `363cdf0` → `d0b0a7d` | Sonnet | 1 | esteira vermelha em `c400e04`/`742dee0`; `:165` e `:423` lentos por construção, cada caso virou dois (3,3–8,7 s), 96 execuções verdes; `infra-guardian` e `test-engineer` na 1ª; turno parado pela queda da API às 11h55 |
 | 6.0 | `5762f90` → `b90c204` | Sonnet | 3 | `ESCALADA` (test-engineer r1 e r2), diagnóstico do Arquiteto (`diagnostico-6.md`), aprovado na 3ª; turno parado pela queda da API às 11h54 e retomado; encontro em CONFLITO com a 12.0 em `techspec.md`, resolvido pela correção `encontro-6` (1 rodada); a navegação acende Criados no documento aberto (techspec §9) |
 | 8.0 | `9d6bcb5` | Sonnet | 2 | os quatro aprovaram na 1ª com recomendações, aplicadas na 2ª; 22 mutações; 14 fotos |
@@ -68,6 +69,7 @@ Recomendo: destravar; o código foi aprovado, e o que falta são duas mutações
 **Respondida (18/10 ~20h):** "pode destravar, segue com a 1", no meu terminal. A contagem do `test-engineer` recomeça.
 
 ## O que falhou
+- 19/10 ~14h30: esteira vermelha em `0559707` e `d0b0a7d` em `a2-assistente.spec.ts:86` [chromebook, celular]: 6 `Gabarito` onde o teste espera 5, determinístico desde a 6.0; nenhuma linha viu porque o e2e não estava entre os alterados. Correção na linha 1.
 - 19/10 ~12h25: encontro da linha 2 (6.0, `5762f90`) em CONFLITO com a spec em `techspec.md` (§9, a navegação que acende Criados); correção `encontro-6` na linha.
 - 19/10 ~11h55: a API caiu (ECONNREFUSED) e parou o turno do `Implementador` (correção `acesso-suspenso`, medindo com traço) e do `Implementador 2` (6.0, antes do portão). Rede de volta às 11h56; `PEDIDO de retomada` aos dois, na mesma sessão, e os dois retomaram. O `Implementador 3` passou sozinho (o `npm audit` falhou pela rede e ele rodou o portão de novo).
 - 19/10 ~10h55: esteiras de `c400e04` e `742dee0` vermelhas: `acesso-suspenso.spec.ts:165` [celular] passa de 30 s nas duas; `escola-e-vinculos.spec.ts:423` [chromebook] na primeira. Correção na linha 1.
