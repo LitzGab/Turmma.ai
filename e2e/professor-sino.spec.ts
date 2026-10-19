@@ -1,8 +1,11 @@
+import { randomUUID } from 'node:crypto'
 import type { BrowserContextOptions, Browser, Locator, Page } from '@playwright/test'
 import { abrirAbaAlunos, abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, escolherNoSeletor, esperarNovaConversa, esperarPainel, lateral, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { mensagemDela } from './__fixtures__/assistente.ts'
 import { cacheDeConsultas, semAcessosDaConta } from './__fixtures__/consultas.ts'
 import { caixa as caixaDoPedido } from './__fixtures__/fluxo-do-professor.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
+import { irPara } from './__fixtures__/professor/cena.ts'
 import { entrarNaCena, esperarSino, listaDoSino, peDoSino, portao, prepararCena, semAnimacao, sinoDe, TITULO_DA_CORRECAO, TITULO_DA_VERSAO } from './__fixtures__/professor/sino.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarCoordenadoraNaEscola, criarProfessoraNaEscola, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -250,6 +253,15 @@ test.describe('do sino à tela', () => {
     const cena = await prepararCena(page)
     await entrarNaCena(page, cena, hasTouch)
     await esperarSino(page, 'Esperando você, 4')
+    // A primeira deixa também uma conversa lida e um cartão aberto na conversa (telas do professor, 4.0): a segunda, na mesma
+    // aba, não encontra nenhum dos dois. Volta ao Início sem recarregar, porque recarregar esvaziaria a memória da aba.
+    cena.api.conversa = [mensagemDela('pedido da primeira professora', cena.turmaA.turmaId, randomUUID())]
+    await irPara(page, '/professor/conversa')
+    await expect(page.getByRole('log').getByText('pedido da primeira professora')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await acionar(page.getByRole('button', { name: 'Ferramenta', exact: true }), hasTouch)
+    await acionar(page.getByRole('menuitemradio', { name: /Adaptação/ }), hasTouch)
+    await expect(page.getByRole('region', { name: 'Ferramenta Adaptação' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await irPara(page, '/professor/nova-conversa')
     // A primeira deixa um pedido escrito na caixa do Início; a segunda, com uma turma dela (sem turma não haveria caixa), a
     // encontra vazia: a memória da aba não passa de uma pessoa a outra (telas do professor, 3.4). O texto da caixa vive no
     // estado do componente, que se perde quando a Home sai da tela com a saída da primeira: este caso é guarda de regressão,
@@ -265,6 +277,7 @@ test.describe('do sino à tela', () => {
     await acionar(lateral(page).getByRole('button', { name: 'Sair' }), hasTouch)
     await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
     cena.api.entregas = []
+    cena.api.conversa = []
     await entrarPorEmail(page, segunda, hasTouch)
     await esperarNovaConversa(page, segunda.nome)
     await expect(caixaDoPedido(page)).toHaveValue('', { timeout: PRAZO_DA_TELA_MS })
@@ -281,7 +294,13 @@ test.describe('do sino à tela', () => {
     await expect(page.locator('body')).not.toContainText(cena.professora.nome)
     await expect(page.locator('body')).not.toContainText('rascunho da primeira professora')
     const cache = semAcessosDaConta(await cacheDeConsultas(page))
-    for (const daPrimeira of [cena.professora.usuarioId, cena.turmaA.turmaId, cena.turmaA.turmaNome, cena.turmaB.turmaNome, ...cena.turmaA.vinculoIds, ...cena.turmaB.vinculoIds]) expect(cache).not.toContain(daPrimeira)
+    for (const daPrimeira of [cena.professora.usuarioId, cena.turmaA.turmaId, cena.turmaA.turmaNome, cena.turmaB.turmaNome, 'pedido da primeira professora', ...cena.turmaA.vinculoIds, ...cena.turmaB.vinculoIds]) expect(cache).not.toContain(daPrimeira)
+    // A conversa que a primeira leu e o cartão que deixou aberto não estão na conversa da segunda.
+    await irPara(page, '/professor/conversa')
+    await expect(page.getByText('Nenhuma conversa ainda')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(page.locator('[data-cartao-de-ferramenta]')).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Ferramenta Adaptação' })).toHaveCount(0)
+    await expect(page.locator('body')).not.toContainText('pedido da primeira professora')
   })
 
   test('360 px: o sino e a lista não rolam de lado e não têm violação grave', async ({ page, hasTouch }) => {

@@ -35,6 +35,12 @@ test.describe('a conversa (11.3)', () => {
     await expect(caixa(page)).toHaveValue('')
     // O enviar da Home saiu da tela com ela: o foco chega na caixa da conversa, e não no `body`.
     await expect(caixa(page)).toBeFocused()
+    // A caixa presa embaixo, com a frase de IA depois dela, e 24 px entre a frase e o pé da barra (telas do professor, 4.1).
+    const barra = page.getByRole('group', { name: 'Novo pedido' })
+    const [caixaDaBarra, caixaDoCampo, caixaDaFrase] = await Promise.all([barra.boundingBox(), caixa(page).boundingBox(), barra.getByText('O Assistente é uma IA e pode errar').boundingBox()])
+    expect(caixaDaFrase?.y ?? 0).toBeGreaterThanOrEqual((caixaDoCampo?.y ?? Infinity) + (caixaDoCampo?.height ?? 0))
+    expect(Math.round((caixaDaBarra?.y ?? 0) + (caixaDaBarra?.height ?? 0) - ((caixaDaFrase?.y ?? 0) + (caixaDaFrase?.height ?? 0)))).toBe(24)
+    await expect(barra.getByText('Nada chega à turma sem você aprovar')).toBeVisible()
     // O pedido saiu uma vez, com a chave do envio, o texto e a turma; nada de escola nem de pessoa.
     await expect.poll(() => api.pedidosEm(/mensagens$/).length).toBe(1)
     const enviado = api.pedidosEm(/mensagens$/)[0]?.corpo as Record<string, unknown>
@@ -82,7 +88,18 @@ test.describe('a conversa (11.3)', () => {
     const cartao = page.locator('[data-cartao-de-ferramenta="atividade_objetiva"]')
     await expect(cartao.getByLabel('Tema')).toHaveValue('Estequiometria')
     // A opção escolhida saiu da tela: o foco vai para o cartão que abriu.
-    await expect(page.getByRole('region', { name: 'Ferramenta Atividade objetiva' })).toBeFocused()
+    const regiao = page.getByRole('region', { name: 'Ferramenta Atividade objetiva' })
+    await expect(regiao).toBeFocused()
+    // O cabeçalho do cartão: o ícone ilustrado de 32 px e o nome, na borda de 2 px (telas do professor, 4.2).
+    const icone = regiao.locator('[data-icone-de-ferramenta="atividade_objetiva"]')
+    await expect(icone).toBeVisible()
+    const caixaDoIcone = await icone.boundingBox()
+    expect([Math.round(caixaDoIcone?.width ?? 0), Math.round(caixaDoIcone?.height ?? 0)]).toEqual([32, 32])
+    await expect(regiao.getByRole('heading', { level: 2, name: 'Atividade objetiva' })).toBeVisible()
+    expect(await regiao.evaluate((elemento) => getComputedStyle(elemento).borderTopWidth)).toBe('2px')
+    // E na cor do token `borda`, a mesma da linha "Você escolheu:" que a pergunta deixou (`border-2 border-borda`).
+    const corDaBorda = (alvo: Locator) => alvo.evaluate((elemento) => getComputedStyle(elemento).borderTopColor)
+    expect(await corDaBorda(regiao)).toBe(await corDaBorda(conversa.locator('[data-escolha="feita"]')))
     await expect(cartao.getByLabel('Questões')).toHaveValue('10')
     await expect(cartao.getByLabel('Turma e disciplina')).toHaveValue(`${turmaId}:${disciplinaId}`)
     // Com o cartão aberto, a ação da tela é a dele: a caixa de pedido espera.

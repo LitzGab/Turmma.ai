@@ -19,7 +19,7 @@ import { Conversa as ListaDeMensagens, MensagemIA, MensagemPessoa, Pensando } fr
 import { TextoDaIA } from '../../componentes/ia/TextoDaIA'
 import { Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
-import { AvisoDeSuspensao, FalhaDoPedido } from './avisos'
+import { AvisoDeIA, AvisoDeSuspensao, FalhaDoPedido } from './avisos'
 import { CaixaDoAssistente } from './CaixaDoAssistente'
 import { CartaoDeFerramenta } from './CartaoDeFerramenta'
 import { itensDaConversa, marcaDoFim, mensagensNaTela, pedidoDeSoConversar, pendenteNaConversa, propostaQuePergunta } from './conversa'
@@ -168,9 +168,9 @@ export default function Conversa() {
           {pendente?.erro !== undefined && <FalhaDoPedido erro={pendente.erro} funcao="conversa_e_ferramentas" aoTentarDeNovo={repetir} />}
 
           {cartao !== undefined && (
-            <section ref={secaoDoCartao} tabIndex={-1} aria-label={`Ferramenta ${ferramentaDoCatalogo(cartao.ferramenta).nome}`} className="min-w-0 rounded-cartao border border-linha bg-superficie p-4 lg:p-5">
+            <section ref={secaoDoCartao} tabIndex={-1} aria-label={`Ferramenta ${ferramentaDoCatalogo(cartao.ferramenta).nome}`} className="min-w-0 rounded-cartao border-2 border-borda bg-superficie p-4 lg:p-5">
               {/* A `key` pela ferramenta e pelo que ela já sabe: outro cartão é outro formulário, e não o anterior com os valores dele. */}
-              <CartaoDeFerramenta key={`${cartao.ferramenta}-${JSON.stringify(cartao.iniciais)}`} ferramenta={cartao.ferramenta} iniciais={cartao.iniciais} nivel={2} aoCancelar={() => CARTAO_DA_CONVERSA.guardar(undefined)} />
+              <CartaoDeFerramenta key={`${cartao.ferramenta}-${JSON.stringify(cartao.iniciais)}`} ferramenta={cartao.ferramenta} iniciais={cartao.iniciais} nivel={2} comIcone aoCancelar={() => CARTAO_DA_CONVERSA.guardar(undefined)} />
             </section>
           )}
         </ListaDeMensagens>
@@ -189,8 +189,10 @@ export default function Conversa() {
       {suspensa && <AvisoDeSuspensao funcao="conversa_e_ferramentas" />}
       {turma !== undefined && (
         <BarraPresa rotulo="Novo pedido" semLinha>
-          <div ref={barra} className="w-full min-w-0">
+          {/* A barra já tem 12 px de folga; o `pb-3` leva a frase a 24 px do pé da janela. */}
+          <div ref={barra} className="flex w-full min-w-0 flex-col gap-2 pb-3">
             <CaixaDoAssistente turmas={turmas} turma={turma} iniciar={iniciar} respondendo={emCurso(ciclo)} desligada={suspensa || cartaoOcupaATela} />
+            <AvisoDeIA />
           </div>
         </BarraPresa>
       )}

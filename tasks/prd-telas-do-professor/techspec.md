@@ -168,6 +168,15 @@ os 44 px (36 abaixo de 768) do mockup. O `AvatarAgente` e a `CabecaOnca` só ace
 **Adaptação** (`TEXTO_DA_SUSPENSAO`) quando só ela está suspensa, porque o atalho dela fica desligado e um botão desligado
 sem dizer por quê não explica nada.
 
+**O cartão da conversa** (divergência da 4.0): o ícone ilustrado de 32 px não é um cabeçalho à parte, porque o motor já escreve o
+nome da ferramenta (como título do formulário e como primeira palavra do pedido recolhido) e um segundo cabeçalho repetiria o
+nome. O `MotorFormulario` ganha a prop opcional `icone`, desenhada antes do nome nos dois lugares, sem mudar nenhuma prop que
+existia; o `CartaoDeFerramenta` a liga com `comIcone`, que só a Conversa passa (o formulário de Ferramentas tem o nome no
+`h1`). A frase "O Assistente é uma IA e pode errar · Nada chega à turma sem você aprovar" é o componente `AvisoDeIA`
+(`areas/professor/avisos.tsx`), usado no Início e sob a caixa da Conversa, dentro da `BarraPresa`. **"Nada chega à turma sem você aprovar" é a regra 70, item 3, e só vale enquanto nenhuma ferramenta entregar direto à turma:** quem criar uma ferramenta que entregue à turma sem aprovação tira a frase do `AvisoDeIA`, nas duas telas de uma vez, antes de a ferramenta existir. Sobre a posição: "a caixa presa a 24 px do
+fim" é a frase a 24 px do pé da barra (12 px da `BarraPresa` mais `pb-3` do filho; a barra de Aprovar não muda). O "vão de 24"
+entre mensagens é o `gap-6` do `log`. O cartão ganha a borda de 2 px (`border-2 border-borda`) da pele nova.
+
 **`data-esperando-voce`** (divergência da 3.0): o item do sino da 1.0 não leva o atributo, e a 3.0 não o acrescenta. O
 Início não tem o atributo nem o que ele marcava, e o e2e prova que o sino tem a entrega pelo nome do botão ("Esperando você,
 1") e pelo link do item ("Versão adaptada para decidir…", "Correção para revisar…").
@@ -206,6 +215,7 @@ painel ao lado vira folha de baixo, e a barra presa de Aprovar fica acima da bar
 | Componente (jsdom, `__fixtures__/tela.tsx`) | por tela: carregando, vazio, erro, com dado e o foco depois de cada ação; o oficial desligado até `podeAprovar`. O sino, contando as chamadas: leitura parcial; recusa na 3ª leitura; 14 turmas em `parcial`; dois tempos com o `focusManager` e o `onlineManager` (zero chamadas, e o controle relê); retry e "Atualizar" por chave exata; `JSON.stringify` do `QueryCache` sem nome. Hoje: aos 15 s sai nova leitura; recém-aberta, sem nome no DOM; sem `?ver=tutor`, nenhuma rota nominal além dos sinais |
 | E2E | um spec por tela, nos dois projetos, com axe e largura; entrega decidida em outra aba; a coordenação na mesma aba sem leituras da professora; Hoje sem nome; "Acesso gerado" sem nome nem acerto legível; os fluxos `a2-assistente`, `a3-a4-professor` e `roteiro-da-demonstracao`, por fixtures de tela |
 | Isolamento | os de hoje, mais o sino na troca de escola e na segunda pessoa; Criados com artefato na turma de B (o título dele não aparece com `?turma=` de B) |
+|  | **Onde mora o recomeço da conversa** (divergência da 4.0): o recomeço do Início (3.0, o texto na caixa) e o da conversa (4.0, a conversa lida e o cartão aberto) estão no caso de recomeço da segunda professora de `e2e/professor-sino.spec.ts`, e não em casos novos de `professor-inicio.spec.ts` e `professor-conversa.spec.ts`: um caso com duas entradas na mesma aba passa de 15 s (o piso de `entrar` é de 11 a 12 s) |
 
 **A separação dos specs** (tarefa 2.0) move casos sem mudar título nem asserção: a contagem de `test(` em `e2e/` é
 conferida antes e depois.
