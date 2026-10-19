@@ -73,6 +73,38 @@ export const CATALOGO_DE_FERRAMENTAS: readonly FerramentaDoCatalogo[] = [
   },
 ]
 
+/**
+ * **"Como vai sair"** (telas do professor, 8.0; RF11): o que cada ferramenta entrega e o que acontece depois, em texto
+ * **fixo**, ao lado do formulário. Fixo porque o motor não tem o que mostrar antes de gerar: nenhuma prévia é inventada, e
+ * o texto é o mesmo antes, durante e depois da geração. Três linhas no máximo, nesta ordem: o que sai, onde fica
+ * (Criados) e se vai à turma, e como. O `Record` faz a ferramenta nova sem texto não compilar.
+ *
+ * Vocabulário: acerto e página do material, nunca nota, conceito ou pontuação (D46). **A Adaptação não fala de aluno nem de
+ * condição**: só do tipo da adaptação, que é o que o sistema registra (D35, D67). As aspas são as tipográficas, como nas outras
+ * telas, e a versão adaptada aprovada continua precisando de "Aplicar à turma" (`AplicacaoDoArtefato.tsx`).
+ *
+ * **O e2e copia o texto à mão** (`e2e/professor-ferramentas.spec.ts`, constante `COMO_VAI_SAIR`): ele não importa este módulo, que
+ * puxa o React e os ícones. Quem muda o texto aqui muda lá, e o e2e só roda no portão da tarefa que o altera: esquecer a cópia
+ * só aparece na esteira, uma tarefa depois (regra 40, "O preço").
+ */
+export const COMO_VAI_SAIR: Readonly<Record<Ferramenta, readonly string[]>> = {
+  atividade_objetiva: [
+    'Questões de múltipla escolha com gabarito, explicação e a página do material de onde cada uma saiu.',
+    'Fica em Criados, para você revisar.',
+    'Só vai à turma quando você escolher “Aplicar à turma”.',
+  ],
+  plano_de_aula: [
+    'Objetivos, etapas com o tempo de cada uma e como avaliar, com a página do material.',
+    'Fica em Criados.',
+    'Não vai à turma: é só seu.',
+  ],
+  adaptacao: [
+    'A mesma atividade em outra forma, cobrando o mesmo conteúdo.',
+    'Nasce esperando a sua aprovação e fica em Criados. Só o tipo da adaptação é registrado.',
+    'Depois de aprovada, vai à turma quando você escolher “Aplicar à turma”.',
+  ],
+}
+
 export function ehFerramenta(valor: string): valor is Ferramenta {
   return (FERRAMENTAS as readonly string[]).includes(valor)
 }
