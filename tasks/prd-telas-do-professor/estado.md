@@ -1,18 +1,27 @@
 # Estado da execução — telas-do-professor
 
 ## Agora
-- **Espero:** o `RELATÓRIO` do `Implementador` (linha 1) da correção `2026-10-18-professor-em-area-alheia-estoura-o-prazo`
-  (`e2e/areas.spec.ts:204` [celular], estourou 30 s na esteira 39129521729), 1ª tentativa, pedida em 18/10 ~14h.
-  Depois: `linhas.ts encontro 1` e `esteira.ts` (a 39147219460, em `b12056f`, ainda corria).
-- **Devo ainda:** (1) a partida da 2.0 (grande) depois do encontro desta correção; (2) a X4 continua parada (andar
-  "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em `1477850`): não retomar sem a palavra do Joaquim.
-- **Base:** `spec/telas-do-professor` em `b12056f`.
+- **Espero:** o `RELATÓRIO` do `Implementador` (linha 1, par reiniciado 18/10 ~19h43) da **2.0**, retomada na 1ª tentativa:
+  restaurar da `.processo/backup-2.0/` da linha só os 43 arquivos da 2.0 (não os de `tools/ci/`, `tools/processo/` e
+  `.claude/`, que a correção substitui), encurtar ou dividir `casca:468` e `areas:151`, portão e Mesa. Depois:
+  `linhas.ts encontro 1` e `esteira.ts`.
+  A correção `2026-10-18-duracao-do-e2e-le-o-prazo-declarado` está em `75f94a3` na linha 1 (4 rodadas, destravada pelo
+  Joaquim), sem encontro próprio: segue com o da 2.0.
+- **Devo ainda:** (1) ler a esteira de `0650af0` (as duas correções da esteira vermelha da 1.0 juntas): a de
+  `b12056f` (39147219460) e a de `2e814f1` (39143125529, vermelha só no `areas.spec.ts:204`) já estão cobertas pela
+  `43067f8`. Vermelha em outra coisa: correção antes da próxima partida; (2) ficar de olho em `e2e/areas.spec.ts:231`
+  (não tocado): 19–21 s na máquina, 23,8 s na esteira, folga curta para os 30 s. Se cair, correção como a `:204`;
+  (3) a X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em `1477850`): não retomar sem a palavra
+  do Joaquim.
+- **Base:** `spec/telas-do-professor` em `23e8794`; linha 1 em `75f94a3`.
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri`.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
+| correção `2026-10-18-professor-em-area-alheia-estoura-o-prazo` | `43067f8` | Sonnet | 1 | esteira vermelha da 1.0; o caso `areas.spec.ts:204` (seis cargas, 30 s na esteira) virou cinco casos de 4 s, entrando pela API |
 | correção `2026-10-18-textos-da-turma-indisponivel-diferem` | `61dba8c` | Sonnet | 2 | esteira vermelha da 1.0; o caso W4 de `acesso-da-turma.spec.ts` dividido em 8 pelo portão (15 s) |
+| correção `2026-10-18-duracao-do-e2e-le-o-prazo-declarado` | `75f94a3` | Sonnet | 4 | divergência da 2.0 (alt. 1); `test-engineer` escalou (r2), diagnóstico do `Arquiteto`, 3ª reprovação destravada pelo Joaquim; sem encontro próprio |
 | 1.0 | `cb209b5` | Sonnet | 3 | escalada do `test-engineer` (r1, r2); diagnóstico do `Arquiteto` (`diagnostico-1.md`), aprovado na r3 |
 
 ## Esperando o Joaquim
@@ -31,9 +40,26 @@ Opções: terminar a 1.0, depois M1 a M5 antes da 2.0 | parar a 1.0 agora e faze
 Recomendo: terminar a 1.0; falta um teste, e M1 a M5 não muda a revisão dela. A 2.0 não parte antes de M1 a M5 pousar.
 **Respondida (18/10):** "faça o melhor para o projeto e aprovo", no meu terminal: termina a 1.0; M1 a M5 antes da 2.0.
 
+## 18/10 15:10 — X3 2.0 (2.4 e 2.5), `BLOQUEIO` do Arquiteto
+Decisão: como resolver o choque entre a §10 da Tech Spec (mover os specs sem mudar título) e a régua nova de 15 s por caso de e2e alterado (`4723044`, retro M1)?
+Contexto: os casos movidos levam de 11,5 a 37,8 s, e os editados pela 2.4 vão até 71,7 s, mas quase todos declaram prazo próprio (`test.slow()` = 90 s; a2, a3-a4 e roteiro de 300 s a 8 min), que a régua não lê. Triagem em `.processo/ordens/divergencia-2-duracao-do-e2e.md`, no checkout da linha 1.
+Opções: (1) correção de processo antes: limite = metade do prazo declarado do caso; a §10 fica, e a 2.0 só encurta `casca:468` e `areas:151` | (2) dividir ou encurtar ~35 casos na 2.0 | (3) isentar só o mover puro; os editados ainda teriam de ser divididos
+Recomendo: a 1, como o Arquiteto; a régua mede contra um prazo que esses casos não têm, e o estouro na esteira continua coberto.
+**Respondida (18/10 ~15h15):** "pode seguir com a 1", no meu terminal.
+
+## 18/10 19:50 — X3 correção `2026-10-18-duracao-do-e2e-le-o-prazo-declarado` (no meio da 2.0), `BLOQUEIO` da Mesa
+Decisão: destravar o limite das três reprovações do `test-engineer` nesta correção, para uma 4ª rodada?
+Contexto: com o diagnóstico do Arquiteto aplicado (83 blocos de mutação), a 3ª rodada achou só 2 blocos (linhas ~210 e ~231 do documento) que mutam para código que não compila e ficam vermelhos pelo motivo errado. A correção é só no documento, mais o carimbo; o `revisor-geral` aprovou as três. Achados: `tasks/correcoes/achados/2026-10-18-duracao-do-e2e-le-o-prazo-declarado.md`, na linha 1.
+Opções: destravar e seguir para a 4ª rodada | não destravar e repensar a correção com o Arquiteto
+Recomendo: destravar; o código foi aprovado, e o que falta são duas mutações escritas de outro jeito.
+**Respondida (18/10 ~20h):** "pode destravar, segue com a 1", no meu terminal. A contagem do `test-engineer` recomeça.
+
 ## O que falhou
 
 ## O que decidi sem perguntar
+- 18/10: a correção da régua do e2e (alternativa 1 da parada da 2.0) corre na linha 1, como correção de portão no meio
+  da tarefa (passo 6), e não em andar avulso: a ferramenta pousa com a spec. Contra o risco do `test.slow()` posto para
+  escapar, vale só o prazo declarado que já estava no HEAD. Guardiões: só `test-engineer` e `revisor-geral`.
 - 18/10: `DIVERGÊNCIA` de portão na correção `2026-10-18-textos-da-turma-indisponivel-diferem`: o limite de 15 s
   do e2e alterado (correção de processo (a)) reprovou o caso `acesso-da-turma.spec.ts:257`, que tem `test.slow()`
   (90 s) e leva 61–66 s na máquina e 72 s no runner. Não há liberação no portão; mandei dividir o caso na própria
