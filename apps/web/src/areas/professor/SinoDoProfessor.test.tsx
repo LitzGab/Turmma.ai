@@ -2,6 +2,7 @@
 import { focusManager, onlineManager, QueryClientProvider, QueryObserver, type QueryClient } from '@tanstack/react-query'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
@@ -10,7 +11,9 @@ import { aplicarDecisao, consultaContagemDePedidos, consultaPedidosDaTurma } fro
 import { prepararTela, redeFalsa, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
 import { ContextoDaAncoraDoSino } from '../../componentes/ancora-do-sino'
 import { ListaDePedidos } from '../../componentes/pedidos/ListaDePedidos'
+import Aprovar from './Aprovar'
 import SinoDoProfessor from './SinoDoProfessor'
+import Turmas from './Turmas'
 
 /**
  * O sino da professora com a fila de verdade (telas do professor, 1.0; RF3 a RF5): o que ele lê, o que nunca guarda, quando
@@ -79,7 +82,7 @@ afterEach(() => {
   onlineManager.setOnline(true)
 })
 
-function montar(opcoes: { cliente?: QueryClient; comLista?: { turmaId: string; nome: string } } = {}) {
+function montar(opcoes: { cliente?: QueryClient; comLista?: { turmaId: string; nome: string }; aoLado?: ReactNode } = {}) {
   const cliente = opcoes.cliente ?? criarClienteDeConsultas()
   const ancora = document.createElement('div')
   document.body.append(ancora)
@@ -91,6 +94,7 @@ function montar(opcoes: { cliente?: QueryClient; comLista?: { turmaId: string; n
           {opcoes.comLista !== undefined && (
             <ListaDePedidos turma={{ id: opcoes.comLista.turmaId, nome: opcoes.comLista.nome }} quem="professor" vazio={{ titulo: 'Nenhum pedido', descricao: 'x' }} aoPerderATurma={() => undefined} />
           )}
+          {opcoes.aoLado}
           <SinoDoProfessor />
         </ContextoDaAncoraDoSino>
       </Router>
@@ -622,5 +626,109 @@ describe('a hora da leitura anterior não fica na tela quando a fila recomeça (
     expect(within(painel()).queryByText(/Atualizado às/)).toBeNull()
     liberar(ok([]))
     expect(await within(painel()).findByText('Atualizado às 11:45')).toBeTruthy()
+  })
+})
+
+describe('o que a professora decide em outra tela tira o item do sino, na mesma aba (RF3)', () => {
+  const HABILIDADE = { codigo: 'QUI.EM.04', descricao: 'Usar a proporção da equação balanceada.' }
+  const ALUNO_EM_BRANCO = id(11)
+  const ALUNO_FORA_DO_HISTORICO = id(12)
+  const ABERTO_EM = '2026-10-05T13:38:00.000Z'
+  const RESUMO = {
+    alunosDaTurma: 30,
+    corrigidos: 28,
+    questoes: 2,
+    mediaDeAcertos: 1.25,
+    distribuicao: [{ de: 0, ate: 2, alunos: 28 }],
+    porHabilidade: [{ habilidade: HABILIDADE, acertos: 20, total: 28 }],
+    porQuestao: [{ numero: 1, habilidade: HABILIDADE, gabarito: 1, acertos: 20, porAlternativa: [3, 20, 2, 2], emBranco: 1 }],
+  }
+
+  /** A correção do lote de `lote(1, …)`, com os dois destaques já abertos: a API liga o botão de aprovar. */
+  function correcaoDoLote(estado: 'pendente' | 'aprovada') {
+    return {
+      atividadeAplicadaId: id(701),
+      titulo: 'Atividade de estequiometria',
+      entrega: { id: id(601), estado },
+      resumo: RESUMO,
+      destaques: [
+        { alunoId: ALUNO_EM_BRANCO, nome: 'Ana Sintética', acertos: 0, total: 2, emBranco: 2, motivos: ['em_branco'], abertoEm: ABERTO_EM },
+        { alunoId: ALUNO_FORA_DO_HISTORICO, nome: 'Bruno Sintético', acertos: 0, total: 2, emBranco: 0, motivos: ['fora_do_historico'], abertoEm: ABERTO_EM },
+      ],
+      outras: [{ alunoId: id(21), nome: 'Clara Sintética', acertos: 1, total: 2, emBranco: 0 }],
+      destaquesAbertos: 2,
+      podeAprovar: estado === 'pendente',
+      validacao: null,
+    }
+  }
+
+  beforeEach(() => {
+    // A tabela do lote é tabela a partir de 768 px, e a barra presa mede a si mesma: o `jsdom` não tem nenhum dos dois.
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: () => undefined, removeEventListener: () => undefined }))
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    )
+  })
+
+  it('aprovar o lote tira a correção do sino, sem outra ação: as entregas são relidas e o item some da lista', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    let aprovado = false
+    instalar(rede, { entregas: () => ok(aprovado ? [] : [lote(1, TURMA_A.id)]), vinculos: ok([vinculo(1, TURMA_A)]), pedidos: { [TURMA_A.id]: ok([]) } })
+    rede.responderPor(`/v1/atividades-aplicadas/${id(701)}/correcao`, () => ({ status: 200, corpo: correcaoDoLote(aprovado ? 'aprovada' : 'pendente') }))
+    rede.responderPor(`/v1/entregas/${id(601)}/aprovar-lote`, () => {
+      aprovado = true
+      return {
+        status: 200,
+        corpo: {
+          entrega: { ...lote(1, TURMA_A.id), estado: 'aprovada', decididaEm: ABERTO_EM, decididaPor: { id: id(2), nome: 'Camila Sintética' } },
+          validacao: {
+            id: id(3),
+            apresentado: { resumo: RESUMO, destaques: [{ alunoId: ALUNO_EM_BRANCO, motivos: ['em_branco'] }, { alunoId: ALUNO_FORA_DO_HISTORICO, motivos: ['fora_do_historico'] }] },
+            aberto: [
+              { alunoId: ALUNO_EM_BRANCO, abertoEm: ABERTO_EM },
+              { alunoId: ALUNO_FORA_DO_HISTORICO, abertoEm: ABERTO_EM },
+            ],
+            confirmadaPor: { id: id(2), nome: 'Camila Sintética' },
+            confirmadaEm: ABERTO_EM,
+          },
+        },
+      }
+    })
+    montar({ aoLado: <Aprovar atividadeAplicadaId={id(701)} /> })
+    // O sino conta a correção para revisar, e a tela de revisar está ao lado, no mesmo cliente de consultas.
+    await botao('Esperando você, 1')
+    await usuario.click(await screen.findByRole('button', { name: 'Aprovar 28 correções' }))
+    await usuario.click(within(await screen.findByRole('alertdialog', { name: 'Aprovar 28 correções' })).getByRole('button', { name: 'Aprovar 28 correções' }))
+    await botao('Esperando você, nada')
+    await usuario.click(await botao('Esperando você, nada'))
+    expect(within(painel()).queryByRole('link', { name: /Correção para revisar/ })).toBeNull()
+    expect(within(painel()).getByText('Tudo em dia')).toBeTruthy()
+  })
+
+  it('confirmar a turma tira "Confirme sua turma" do sino, sem outra ação, e a turma passa a ter os pedidos lidos', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    let confirmado = false
+    const pendente = vinculo(1, TURMA_A, { estado: 'pendente' })
+    instalar(rede, { vinculos: () => ok([confirmado ? { ...pendente, estado: 'confirmado' } : pendente]), pedidos: { [TURMA_A.id]: ok([]) } })
+    rede.responderPor(`/v1/vinculos/${pendente.id}/confirmar`, () => {
+      confirmado = true
+      return { status: 200, corpo: { ...pendente, estado: 'confirmado' } }
+    })
+    montar({ aoLado: <Turmas /> })
+    await botao('Esperando você, 1')
+    await usuario.click(await screen.findByRole('button', { name: 'Confirmar' }))
+    await botao('Esperando você, nada')
+    await usuario.click(await botao('Esperando você, nada'))
+    expect(within(painel()).queryByRole('link', { name: /Confirme sua turma/ })).toBeNull()
+    expect(within(painel()).getByText('Tudo em dia')).toBeTruthy()
+    // A turma confirmada entra na leitura dos pedidos de nome: sem isso o "nada" seria só o item que saiu.
+    expect(vezesQue(rede, reivindicacoes(TURMA_A.id))).toBe(1)
   })
 })
