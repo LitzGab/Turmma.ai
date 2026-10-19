@@ -50,6 +50,20 @@ describe('o botão do sino', () => {
     expect(screen.getByRole('button', { name: 'Esperando você, nada' })).toBeTruthy()
   })
 
+  it('o nome do botão diz "ou mais" quando a lista lida é um piso; sem item, não há número a completar', () => {
+    const cem = Array.from({ length: 100 }, (_, i): ItemDoSino => ({ ...CONVITE, id: `c${String(i)}` }))
+    desenhar({ itens: cem, situacao: 'parcial', ouMais: true })
+    expect(screen.getByRole('button', { name: 'Esperando você, 100 ou mais' })).toBeTruthy()
+    expect(document.querySelector('[data-contador]')?.textContent).toBe('100+ ou mais esperando você')
+    cleanup()
+    // O controle: os mesmos 100, sem a marca, são 100.
+    desenhar({ itens: cem, situacao: 'pronta' })
+    expect(screen.getByRole('button', { name: 'Esperando você, 100' })).toBeTruthy()
+    cleanup()
+    desenhar({ itens: [], situacao: 'parcial', ouMais: true })
+    expect(screen.getByRole('button', { name: 'Esperando você, parte não carregou' })).toBeTruthy()
+  })
+
   it('"nada" só vale para a lista lida inteira: carregando, parcial e erro têm o nome do que falta', () => {
     for (const [situacao, nome] of [
       ['carregando', 'Esperando você, carregando'],

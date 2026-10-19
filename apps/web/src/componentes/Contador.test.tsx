@@ -22,6 +22,18 @@ describe('Contador', () => {
     expect(pilula.firstChild?.textContent).toBe('2')
   })
 
+  it('"ou mais" mostra o sinal de mais e diz "ou mais" ao leitor de tela; sem ele, o número é exato', () => {
+    const { container } = render(<Contador n={100} oQueConta="esperando você" ouMais />)
+    const pilula = container.querySelector('[data-contador]') as HTMLElement
+    expect(pilula.textContent).toBe('100+ ou mais esperando você')
+    // O sinal é só da vista: quem lê a tela ouve "100 ou mais", e não "100 mais".
+    expect(pilula.querySelector('[aria-hidden="true"]')?.textContent).toBe('+')
+    expect((pilula.querySelector('.sr-only') as HTMLElement).textContent?.trim()).toBe('ou mais esperando você')
+    cleanup()
+    const { container: exato } = render(<Contador n={100} oQueConta="esperando você" />)
+    expect((exato.querySelector('[data-contador]') as HTMLElement).textContent).toBe('100 esperando você')
+  })
+
   it('zero, negativo e o que não é número não desenham nada', () => {
     for (const n of [0, -1, Number.NaN]) {
       const { container, unmount } = render(<Contador n={n} oQueConta="pedidos de nome" />)

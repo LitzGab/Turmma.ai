@@ -53,7 +53,10 @@ e abrir a lista não faz leitura: os observadores de `entregas`, `meus-vinculos`
 min, `refetchInterval: false`, `refetchOnWindowFocus: false` e `refetchOnReconnect: false`, como na X2 (§5 e §7c).
 "Atualizar" e "Tentar de novo" releem só pela chave exata, nunca por prefixo. Leitura que falha, recusa por limite ou
 turma além do teto marcam a fila como `parcial`: o sino mostra o que leu e diz o que não leu, e nunca "Tudo em
-dia". "Não relê por tempo" vale só para o sino: a aba Hoje tem a regra da §7b.
+dia". **Página de entregas cheia, com outra depois** (`proxima`, 100 pendentes ou mais) também: o que se leu é um piso, e o
+botão diz "Esperando você, 100 ou mais" (a pílula, "100+"), como a contagem de pedidos já dizia. Sem item lido o nome fica o da
+situação, porque "0 ou mais" não diz nada. A fila entrega isso em `haMais`, e o `Sino` e o `Contador` recebem `ouMais`.
+"Não relê por tempo" vale só para o sino: a aba Hoje tem a regra da §7b.
 
 **A série vale em toda leitura que não vem de um clique.** Quantas turmas já foram liberadas é estado do conjunto de turmas
 que ela lê: quando o conjunto muda (sessão nova, troca de escola, vínculo novo), a série recomeça na primeira. A contagem que

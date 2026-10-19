@@ -153,6 +153,18 @@ describe('a situação da fila: nunca "Tudo em dia" sem ter lido tudo', () => {
     expect(filaDoProfessor(completa({ entregas: lida([], false) }))).toMatchObject({ situacao: 'parcial', naoLeu: ['parte das correções e das versões adaptadas'] })
   })
 
+  it('a página de entregas cheia, com outra depois, faz a fila dizer que há mais; inteira, não', () => {
+    const cem = Array.from({ length: 100 }, (_, i) => lote(String(i).padStart(2, '0')))
+    const cheia = filaDoProfessor(completa({ entregas: lida(cem, false) }))
+    expect(cheia).toMatchObject({ situacao: 'parcial', haMais: true })
+    expect(cheia.itens).toHaveLength(100)
+    // O controle: as mesmas 100, lidas até o fim, são exatamente 100.
+    expect(filaDoProfessor(completa({ entregas: lida(cem, true) }))).toMatchObject({ situacao: 'pronta', haMais: false })
+    // O que falhou ou ainda lê não tem número a dizer.
+    expect(filaDoProfessor(completa({ entregas: { estado: 'erro', erro: new Error('falhou') } })).haMais).toBe(false)
+    expect(filaDoProfessor(completa({ entregas: { estado: 'carregando' } })).haMais).toBe(false)
+  })
+
   it('os vínculos que não vieram, ou vieram em parte, deixam a fila parcial', () => {
     expect(filaDoProfessor(completa({ vinculos: { estado: 'erro', erro: new Error('falhou') } }))).toMatchObject({ situacao: 'parcial', naoLeu: ['as suas turmas'] })
     expect(filaDoProfessor(completa({ vinculos: lida([vinculo('01', B)], false) }))).toMatchObject({ situacao: 'parcial', naoLeu: ['parte das suas turmas'] })
