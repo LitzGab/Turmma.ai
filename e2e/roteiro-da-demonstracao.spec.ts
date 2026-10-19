@@ -13,7 +13,7 @@ import { CAMINHO_DO_PDF_DE_DEMONSTRACAO, materiaisNoBanco, recusasNaAuditoria } 
 import { criarOperadorComSegundoFator, removerOperador } from './__fixtures__/operacao.ts'
 import { idDaEscolaComOEndereco, nomeQueVemPrimeiro } from './__fixtures__/painel.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { abrirSinaisDoTutor } from './__fixtures__/professor/tutor.ts'
+import { abrirOPainelDoTutor, abrirSinaisDoTutor, painelDoTutor } from './__fixtures__/professor/tutor.ts'
 import {
   alunoDaMatricula,
   alunoReivindicaPelaApi,
@@ -517,8 +517,11 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await principal(professora).getByRole('link', { name: `Abrir a turma ${turmaA}` }).click()
       const habilidades = professora.getByRole('region', { name: 'Acerto por habilidade' })
       await expect(habilidades).toContainText(/\d+ de \d+/, { timeout: PRAZO_DA_ENTRADA_MS })
+      // Hoje não lista aluno: os alunos estão na aba Alunos.
+      await expect(professora.getByRole('region', { name: 'Por aluno' })).toHaveCount(0)
+      await professora.getByRole('tab', { name: 'Alunos' }).click()
       const porAluno = professora.getByRole('region', { name: 'Por aluno' })
-      for (const aluno of [ana, bruno, carla]) await expect(porAluno).toContainText(aluno.nome)
+      for (const aluno of [ana, bruno, carla]) await expect(porAluno).toContainText(aluno.nome, { timeout: PRAZO_DA_ENTRADA_MS })
       await expect(principal(professora)).not.toContainText(VOCABULARIO_DE_NOTA)
 
       await aluna.reload()
@@ -575,13 +578,16 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(doTutor).not.toContainText(alternativaCerta)
       await expect(principal(aluna).locator('[data-uso-do-dia]')).toContainText('Hoje: 1 de 60 perguntas', { timeout: PRAZO_DA_ENTRADA_MS })
 
-      // A professora vê o sinal, com a questão e o nome, e nada do que a aluna escreveu.
+      // A professora vê o sinal em Hoje, sem nome; o nome e a questão, só no painel que ela pede. Nada do que a aluna escreveu.
       await abrirSinaisDoTutor(professora, hasTouch)
-      const sinais = professora.getByRole('region', { name: 'Sinais da turma' })
+      await expect(professora.getByText('Carregando os sinais…')).toHaveCount(0, { timeout: PRAZO_DA_ENTRADA_MS })
+      await expect(professora.locator('body')).not.toContainText(ana.nome)
+      await abrirOPainelDoTutor(professora, hasTouch)
+      const sinais = painelDoTutor(professora).getByRole('region', { name: 'Sinais por aluno' })
       await expect(sinais).toContainText(`Pediu a resposta pronta na questão 1 de "${SEGUNDA}"`, { timeout: PRAZO_DA_ENTRADA_MS })
       await expect(sinais).toContainText(ana.nome)
       await expect(principal(professora)).not.toContainText(pergunta)
-      await expect(sinais.getByRole('link')).toHaveCount(0)
+      await expect(painelDoTutor(professora).getByRole('link')).toHaveCount(0)
     })
 
     // ── 9. Passo 6: a governança, a suspensão por função, o Analista e o nominal com auditoria (A5; D9, D45, D64). ─

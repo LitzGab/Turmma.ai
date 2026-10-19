@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react'
 import { Route, Switch } from 'wouter'
 import { ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { ConteudoNaoEncontrado } from '../../componentes/NaoEncontrada'
-import { Turma } from './Turma'
 import { Turmas } from './Turmas'
 
 /**
@@ -18,6 +17,8 @@ const Artefato = lazy(() => import('./Artefato'))
 const Time = lazy(() => import('./Time'))
 const Tutor = lazy(() => import('./Tutor'))
 const Aprovar = lazy(() => import('./Aprovar'))
+/** A turma aberta (telas do professor, 10.0): a tela e as três abas dela, cada uma num pedaço próprio, e a fachada fica como estava. */
+const Turma = lazy(() => import('./Turma'))
 /**
  * "Meus dados" é a mesma tela do professor e do aluno, e por isso mora em `componentes/` (a tela de uma área não importa
  * módulo de outra, `areas/navegacao.ts`, linha 5): sai num pedaço `parte-*` só por `import()`, que nenhuma entrada baixa.
@@ -35,7 +36,7 @@ const SinoDoProfessor = lazy(() => import('./SinoDoProfessor'))
  * de dentro (`estaNoItem`).
  *
  * **Tela nova entra por `lazy(() => import('./Tela'))`**, e não por `import` direto: as cinco linhas da convenção estão
- * no topo de `areas/navegacao.ts`. Turmas e a turma aberta são da A1, e ficam na fachada como estavam.
+ * no topo de `areas/navegacao.ts`. Turmas é da A1 e fica na fachada como estava; a turma aberta é lazy desde a 10.0.
  */
 export default function RotasDoProfessor() {
   return (

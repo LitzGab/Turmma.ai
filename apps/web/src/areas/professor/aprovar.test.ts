@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as textos from './aprovar'
+import { QUANDO_O_TUTOR_AVISA, falaDoGrupo, horaDoUltimoAviso, textoDaAtencaoHumana, textoDaHoraDoAviso, textoDoSinal, tituloDaAtencaoHumana } from './sinais'
 import { acertosDoAluno, caminhoDeVoltaDaCorrecao, contadorDosDestaques, estadoDoDestaque, explicacoesDoDestaque, semCorrecao, letraDaAlternativa, motivosDoDestaque, resumoDoLote, rotuloDaFaixa, rotuloDeAprovar, situacaoDaAplicacao, textoDaMedia, textoDosCorrigidos } from './aprovar'
 
 const id = (final: string) => `0190f5a0-0000-7000-8000-0000000000${final}`
@@ -101,5 +102,24 @@ describe('aprovar a correção: "Voltar para a turma" (X3, 2.0)', () => {
     expect(caminhoDeVoltaDaCorrecao(undefined)).toBe('/turmas')
     // Outra turma, outro caminho: o endereço não é fixo.
     expect(caminhoDeVoltaDaCorrecao(id('a2'))).not.toBe(caminhoDeVoltaDaCorrecao(id('a1')))
+  })
+})
+
+describe('Hoje (X3, 10.0): é diagnóstico, não nota — nenhum texto da aba fala em nota, conceito, média, pontuação nem ranking (D46, D69)', () => {
+  it('os textos fixos e os que os sinais geram', () => {
+    const referencias = { atividades: { [id('a1')]: 'Atividade — Estequiometria' }, materiais: { [id('b1')]: 'Química 2' } }
+    const aluno = { id: id('01'), nome: 'Aluno sintético 01' }
+    const base = { id: id('s1'), aluno, criadoEm: '2026-10-05T13:00:00.000Z' }
+    const textosDeHoje = [
+      ...QUANDO_O_TUTOR_AVISA,
+      ...[1, 3].flatMap((alunos) => [tituloDaAtencaoHumana(alunos), textoDaAtencaoHumana(alunos)]),
+      textoDaHoraDoAviso(horaDoUltimoAviso([{ criadoEm: '2026-10-05T13:40:00.000Z' }]) ?? ''),
+      ...(['travou', 'resposta_pronta', 'duvida_repetida'] as const).flatMap((tipo) => [
+        falaDoGrupo({ tipo, atividadeAplicadaId: id('a1'), questao: 3, alunos: 8 }, referencias),
+        textoDoSinal({ ...base, tipo, atividadeAplicadaId: id('a1'), questao: 3, materialId: null, pagina: null }, referencias),
+      ]),
+    ]
+    expect(textosDeHoje.length).toBeGreaterThan(10)
+    for (const texto of textosDeHoje) expect(texto).not.toMatch(/\bnotas?\b|\bconceitos?\b|pontua|\bmédia\b|ranking|pódio/i)
   })
 })

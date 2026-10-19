@@ -318,10 +318,14 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     await expect(page).toHaveTitle(`Turma ${turma.turmaNome} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('heading', { level: 1, name: `Turma ${turma.turmaNome}` })).toBeVisible()
     await expect(principal(page)).toContainText(SERIE_DA_TURMA)
-    // A turma abre na Visão Geral (A3); o acesso dos alunos está na aba "Alunos".
-    await expect(page.getByRole('tab')).toHaveText(['Visão Geral', 'Alunos'])
+    // A turma abre em Hoje (X3, 10.0); o acesso dos alunos está na aba "Alunos".
+    await expect(page.getByRole('tab')).toHaveText(['Hoje', 'Atividades', 'Alunos'])
     await abrirAbaAlunos(page, hasTouch)
     await expect(secoes(page).getByRole('link', { name: 'Turmas' })).toHaveAttribute('aria-current', 'page')
+    // A aba fica no endereço, e recarregar a página a mantém (X3, 10.0; RF15).
+    await expect(page).toHaveURL(new RegExp(`/professor/turmas/${turma.turmaId}\\?aba=alunos$`))
+    await page.reload()
+    await expect(page.getByRole('tab', { selected: true })).toHaveText('Alunos', { timeout: PRAZO_DA_ENTRADA_MS })
   })
 
   test('carregando; "Sem acesso ativo" com o Gerar, sem link nem código; e o diálogo do primeiro acesso diz o que ele faz, com 7 dias já escolhidos', async ({ page, hasTouch }) => {
@@ -448,7 +452,7 @@ test.describe('W4 (Acesso): os quatro estados', () => {
       rota.request().method() === 'GET' && falhar ? rota.fulfill({ status: 503, contentType: 'application/json', body: INDISPONIVEL }) : rota.fallback(),
     )
     await abrirJaEntrando(page, professora, `/professor/turmas/${turma.turmaId}`)
-    // A turma abre na Visão Geral: o acesso está na aba "Alunos".
+    // A turma abre em Hoje: o acesso está na aba "Alunos".
     await abrirAbaAlunos(page, hasTouch)
     await expect(secao(page).getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(acessoAtivo(page)).toHaveCount(0)
@@ -1111,7 +1115,7 @@ test.describe('recomeço da tela do acesso', () => {
     await page.evaluate((caminho) => history.pushState(null, '', caminho), `/professor/turmas/${segunda.turmaId}`)
     await expect(principal(page).getByRole('heading', { level: 1, name: `Turma ${segunda.turmaNome}` })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(dialogosDaTela(page)).toHaveCount(0)
-    // Outra turma é outra tela, e abre na Visão Geral dela: o acesso está na aba "Alunos".
+    // Outra turma é outra tela, e abre em Hoje: o acesso está na aba "Alunos".
     await abrirAbaAlunos(page, hasTouch)
     await expect(semAcesso(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(acessoAtivo(page)).toHaveCount(0)
@@ -1260,7 +1264,7 @@ test.describe('recomeço da tela do acesso', () => {
     await expect(principal(page).getByRole('heading', { name: 'Acesso dos alunos' })).toHaveCount(0)
     derrubarOEu = false
     await tocar(principal(page), 'Tentar de novo', hasTouch)
-    await expect(page).toHaveURL(new RegExp(`/professor/turmas/${turma.turmaId}$`))
+    await expect(page).toHaveURL(new RegExp(`/professor/turmas/${turma.turmaId}(\\?aba=alunos)?$`))
     await expect(acessoAtivo(page)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(secao(page)).toContainText(`Vale até ${await dataNaTela(page, gerado.expiraEm)}.`)
     await expect(dialogosAbertos(page)).toHaveCount(0)

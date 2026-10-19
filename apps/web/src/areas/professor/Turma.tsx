@@ -1,31 +1,35 @@
 import { nomeDaSerie } from '@educa/shared'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { lazy, Suspense, useCallback, useId, useRef, useState } from 'react'
-import { Link } from 'wouter'
+import { lazy, Suspense, useCallback, useEffect, useId, useState } from 'react'
+import { Link, useLocation, useSearch } from 'wouter'
 import { consultaTurmaAberta } from '../../api/estrutura'
 import { consultaEu } from '../../api/eu'
 import { ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { Abas } from '../../componentes/Abas'
 import { EstadoCarregando, EstadoErro } from '../../componentes/estado'
-import { ListaDePedidos } from '../../componentes/pedidos/ListaDePedidos'
 import { Tela } from '../../componentes/Tela'
 import { TurmaIndisponivel } from '../../componentes/TurmaIndisponivel'
 import { useTituloDaTela } from '../../titulo'
 import { TEXTO_DA_TURMA_INDISPONIVEL, turmaIndisponivel } from './acesso-da-turma'
-import { AcessoDaTurma } from './AcessoDaTurma'
-
-/** A Visão Geral só é baixada com a aba dela aberta: fica fora da fachada da área, que é das telas da A1. */
-const VisaoGeralDaTurma = lazy(() => import('./VisaoGeralDaTurma'))
-
-const ABAS_DA_TURMA = [
-  { id: 'visao-geral', rotulo: 'Visão Geral' },
-  { id: 'alunos', rotulo: 'Alunos' },
-] as const
+import { ABAS_DA_TURMA, abaDoEndereco, abaDoId, enderecoDaAba } from './endereco-da-turma'
 
 /**
- * A turma aberta pelo professor, dentro de Turmas (A1, 15.0 e 16.0; `docs/interface.md` 1 e 11.1): o nome e a série, o
- * acesso dos alunos e os pedidos de nome, que ele aprova ou recusa. As abas chegam com a A3 (P28).
+ * Cada aba só é baixada com ela aberta, cada uma no seu pedaço (`tela-professor-<Aba>-*.js`): a fachada da área fica com a
+ * moldura da turma, e as abas crescem sem tocar nela (a 11.0 e a 12.0 só alteram o arquivo da aba delas).
+ */
+const baixarHoje = () => import('./TurmaHoje')
+const baixarAtividades = () => import('./AtividadesDaTurma')
+const baixarAlunos = () => import('./AlunosDaTurma')
+const TurmaHoje = lazy(baixarHoje)
+const AtividadesDaTurma = lazy(baixarAtividades)
+const AlunosDaTurma = lazy(baixarAlunos)
+const BAIXAR_A_ABA = { hoje: baixarHoje, atividades: baixarAtividades, alunos: baixarAlunos } as const
+
+/**
+ * A turma aberta pelo professor, dentro de Turmas (A1, 15.0 e 16.0; telas do professor, 10.0; `docs/interface.md` 1 e 11.1): o
+ * nome e a série e três abas, **Hoje, Atividades e Alunos**, guardadas no endereço (`?aba=`). Sem aba, ou com aba que não existe
+ * (o `visao-geral` de antes), abre em Hoje; trocar de aba troca o endereço (`replace`), sem passo no histórico.
  *
  * Só abre a turma em que o vínculo dele está confirmado, no ano em curso: quem decide é a API (`GET /v1/turmas/:id`), e
  * a turma de outro professor, a de outra escola, a pendente e a que não existe respondem igual (regra 10, item 6). A tela
@@ -37,16 +41,23 @@ const ABAS_DA_TURMA = [
  * estar com o código projetado.
  *
  * A turma que sai do alcance com a tela aberta tira a página inteira, com um aviso só: pela releitura da turma, ou pela
- * leitura dos pedidos, que é a que se repete sozinha e a primeira a saber (`perdida`).
+ * leitura dos pedidos (aba Alunos), que se repete sozinha e é a primeira a saber (`perdida`). Hoje também se relê aos 15 s, mas a
+ * releitura que cai com o dado na tela não tira a página.
  */
-export function Turma({ turmaId }: { turmaId: string }) {
+export default function Turma({ turmaId }: { turmaId: string }) {
   const turma = useQuery(consultaTurmaAberta(turmaId))
   const eu = useQuery(consultaEu)
   const idDoTitulo = useId()
-  const tituloDoAcesso = useRef<HTMLHeadingElement>(null)
+  const [caminho, navegar] = useLocation()
+  // A aba é do endereço, e não de `useState`: recarregar e voltar pelo histórico devolvem a mesma.
+  const aba = abaDoEndereco(useSearch())
+  // O pedaço da aba sai junto com as leituras da turma, e não depois delas: o navegador guarda o módulo, e a aba que aparece em
+  // seguida o encontra pronto (a rede lenta do Chromebook paga uma ida só, e não duas em fila). Se falhar, quem avisa é a aba.
+  useEffect(() => {
+    BAIXAR_A_ABA[aba]().catch(() => undefined)
+  }, [aba])
   // A leitura dos pedidos deixou de achar a turma: vale como a releitura da turma que deixa de achá-la.
   const [perdida, definirPerdida] = useState(false)
-  const [aba, definirAba] = useState<'visao-geral' | 'alunos'>('visao-geral')
   const perderATurma = useCallback(() => definirPerdida(true), [])
   // A turma que a API deixou de achar sai também do título da aba.
   const indisponivel = perdida || turmaIndisponivel(turma.error)
@@ -86,30 +97,13 @@ export function Turma({ turmaId }: { turmaId: string }) {
   return (
     <Tela titulo={nomeDaTurma} descricao={serieDaTurma} antes={voltar} idDoTitulo={idDoTitulo}>
       <section className="flex min-w-0 flex-col gap-6" aria-labelledby={idDoTitulo}>
-        {/*
-          As duas abas que existem (A3; D69): a Visão Geral, com o acerto por habilidade, e Alunos, com o que a A1 já
-          mostrava (o acesso da sala e os pedidos de nome). As outras do desenho nascem com a fase delas.
-        */}
-        <Abas rotulo="Seções da turma" abas={ABAS_DA_TURMA} ativa={aba} aoMudar={(id) => definirAba(id === 'alunos' ? 'alunos' : 'visao-geral')}>
-          {aba === 'visao-geral' ? (
-            <Suspense fallback={<EstadoCarregando rotulo="Carregando a visão geral…" />}>
-              <VisaoGeralDaTurma turmaId={turmaId} />
-            </Suspense>
-          ) : (
-            <div className="flex min-w-0 flex-col gap-6">
-              <AcessoDaTurma turmaId={turmaId} escola={eu.data.escola} titulo={tituloDoAcesso} />
-              <ListaDePedidos
-                turma={{ id: turmaId, nome: turma.data.nome }}
-                quem="professor"
-                vazio={{
-                  titulo: 'Nenhum pedido esperando',
-                  descricao: 'Os pedidos aparecem aqui quando os alunos entram pelo link da sala ou pelo código da turma e pedem o nome. Confira se o acesso dos alunos está ativo.',
-                  acao: { rotulo: 'Ver o acesso dos alunos', aoAcionar: () => tituloDoAcesso.current?.focus() },
-                }}
-                aoPerderATurma={perderATurma}
-              />
-            </div>
-          )}
+        <Abas rotulo="Seções da turma" abas={ABAS_DA_TURMA} ativa={aba} aoMudar={(id) => navegar(enderecoDaAba(caminho, abaDoId(id)), { replace: true })}>
+          {/* Só a aba à vista existe: a que sai da tela leva com ela as leituras dela, e Hoje, a que se repete a cada 15 s. */}
+          <Suspense fallback={<EstadoCarregando rotulo="Carregando a aba…" />}>
+            {aba === 'hoje' && <TurmaHoje turmaId={turmaId} />}
+            {aba === 'atividades' && <AtividadesDaTurma turmaId={turmaId} />}
+            {aba === 'alunos' && <AlunosDaTurma turmaId={turmaId} turmaNome={turma.data.nome} escola={eu.data.escola} aoPerderATurma={perderATurma} />}
+          </Suspense>
         </Abas>
       </section>
     </Tela>

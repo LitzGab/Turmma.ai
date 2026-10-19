@@ -13,7 +13,7 @@ import TutorDoAluno from './aluno/Tutor'
 import Conversa from './professor/Conversa'
 import Home from './professor/Home'
 import Time from './professor/Time'
-import { Turma } from './professor/Turma'
+import Turma from './professor/Turma'
 import TutorDoProfessor from './professor/Tutor'
 import { Turmas } from './professor/Turmas'
 
