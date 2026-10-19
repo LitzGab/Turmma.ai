@@ -20,8 +20,9 @@ test.describe('aplicar à turma e encerrar, no artefato (A3)', () => {
     api.entregas = [pendente.entrega]
     api.loteAoEncerrar = loteSintetico
 
-    // A versão adaptada que ainda espera a aprovação não vai à turma: a tela diz por quê, e não oferece o botão.
-    await irPara(page, `/professor/artefatos/${pendente.artefato.id}`)
+    // A versão adaptada que ainda espera a aprovação não vai à turma: a tela diz por quê, e não oferece o botão. A seção é a aba
+    // "Na turma" do documento, que também abre pelo endereço (`?aba=turma`).
+    await irPara(page, `/professor/artefatos/${pendente.artefato.id}?aba=turma`)
     const naTurma = page.locator('[data-aplicacao-do-artefato]')
     await expect(naTurma).toContainText('Esta versão adaptada só pode ser aplicada à turma depois que você aprovar.', { timeout: PRAZO_DA_TELA_MS })
     await expect(page.getByRole('button', { name: 'Aplicar à turma' })).toHaveCount(0)
@@ -36,6 +37,11 @@ test.describe('aplicar à turma e encerrar, no artefato (A3)', () => {
     await page.reload()
     await expect(page.getByRole('main').getByRole('heading', { level: 1 })).toBeAttached({ timeout: PRAZO_DA_TELA_MS })
     await irPara(page, `/professor/artefatos/${atividade.id}`)
+    // O documento abre em Conteúdo, que não oferece aplicar: a professora vai à aba "Na turma" pelo clique.
+    await expect(page.getByRole('tab', { name: 'Conteúdo', selected: true })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(page.getByRole('button', { name: 'Aplicar à turma' })).toHaveCount(0)
+    await acionar(page.getByRole('tab', { name: 'Na turma' }), hasTouch)
+    await expect(page).toHaveURL(new RegExp(`/professor/artefatos/${atividade.id}\\?aba=turma$`))
     await expect(naTurma.getByText('Carregando as aplicações desta atividade…')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     await expect(naTurma).not.toContainText('ainda não foi aplicada')
     await expect(page.getByRole('button', { name: 'Aplicar à turma' })).toHaveCount(0)
@@ -68,7 +74,8 @@ test.describe('aplicar à turma e encerrar, no artefato (A3)', () => {
     expect(await violacoesGraves(page)).toEqual([])
 
     await dialogo.getByRole('radio', { name: /^É avaliativa/ }).check()
-    await acionar(dialogo.getByRole('button', { name: 'Aplicar à turma' }), hasTouch)
+    // Dois cliques em confirmar mandam um pedido só (regra 80, item 7).
+    await dialogo.getByRole('button', { name: 'Aplicar à turma' }).dblclick()
     await expect(dialogo).toBeHidden({ timeout: PRAZO_DA_TELA_MS })
     expect(api.pedidosEm(/atividades-aplicadas$/).map((pedido) => pedido.corpo)).toEqual([{ artefatoId: atividade.id, turmaId, avaliativa: true }])
     const aplicada = naTurma.locator('[data-atividade-aplicada="aberta"]')
@@ -85,8 +92,10 @@ test.describe('aplicar à turma e encerrar, no artefato (A3)', () => {
     await expect(encerrar).toContainText('a correção fica esperando você revisar e aprovar')
     await expect(encerrar).toContainText('0 de 30 alunos')
     expect(api.pedidosEm(/encerrar$/)).toHaveLength(0)
-    await acionar(encerrar.getByRole('button', { name: 'Encerrar a atividade' }), hasTouch)
+    // Dois cliques em confirmar mandam um pedido só (regra 80, item 7).
+    await encerrar.getByRole('button', { name: 'Encerrar a atividade' }).dblclick()
     await expect(encerrar).toBeHidden({ timeout: PRAZO_DA_TELA_MS })
+    expect(api.pedidosEm(/encerrar$/)).toHaveLength(1)
     const encerrada = naTurma.locator('[data-atividade-aplicada="encerrada"]')
     await expect(encerrada).toContainText('Encerrada · avaliativa', { timeout: PRAZO_DA_TELA_MS })
     await expect(encerrada.getByRole('button', { name: 'Encerrar a atividade' })).toHaveCount(0)
@@ -104,7 +113,7 @@ test.describe('aplicar à turma e encerrar, no artefato (A3)', () => {
     api.aplicadas = [
       { id: randomUUID(), artefatoId: atividade.id, turmaId, titulo: atividade.titulo, avaliativa: false, estado: 'aberta', questoes: 2, aplicadaEm: '2026-10-05T13:00:00.000Z', encerradaEm: null, participacao: { alunos: 30, iniciaram: 12, enviaram: 10 }, entrega: null },
     ]
-    await irPara(page, `/professor/artefatos/${atividade.id}`)
+    await irPara(page, `/professor/artefatos/${atividade.id}?aba=turma`)
     const naTurma = page.locator('[data-aplicacao-do-artefato]')
     await expect(naTurma).toContainText('Aberta para a turma · prática · 10 de 30 alunos enviaram', { timeout: PRAZO_DA_TELA_MS })
     await acionar(naTurma.getByRole('button', { name: 'Encerrar a atividade' }), hasTouch)
@@ -113,12 +122,18 @@ test.describe('aplicar à turma e encerrar, no artefato (A3)', () => {
     await expect(semCorrecao).toContainText('a coordenação suspendeu a correção de objetiva nesta escola', { timeout: PRAZO_DA_TELA_MS })
     await expect(naTurma.getByRole('link', { name: 'Revisar a correção' })).toHaveCount(0)
     await expect(principal(page).getByRole('alert')).toHaveCount(0)
+    // O pedido de "Corrigir de novo" falha: a mensagem do catálogo fica na seção, sem o código, e a atividade continua como estava.
+    api.trocar('encerrar', () => erroDaApi(503, 'INDISPONIVEL_TENTE_DE_NOVO'))
+    await acionar(naTurma.getByRole('button', { name: 'Corrigir de novo' }), hasTouch)
+    await expect(naTurma.getByRole('alert')).toHaveText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO, { timeout: PRAZO_DA_TELA_MS })
+    await expect(naTurma.getByRole('button', { name: 'Corrigir de novo' })).toBeEnabled()
+    api.trocar('encerrar')
     // A função volta: "Corrigir de novo" encerra de novo, e agora a correção nasce.
     api.loteAoEncerrar = loteSintetico
     await acionar(naTurma.getByRole('button', { name: 'Corrigir de novo' }), hasTouch)
     await expect(naTurma.getByRole('link', { name: 'Revisar a correção' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     await expect(naTurma.getByRole('status')).toHaveText('Correção feita. Ela está esperando você revisar.')
-    expect(api.pedidosEm(/encerrar$/)).toHaveLength(2)
+    expect(api.pedidosEm(/encerrar$/)).toHaveLength(3)
     expect(await violacoesGraves(page)).toEqual([])
   })
 })

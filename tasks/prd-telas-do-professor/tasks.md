@@ -43,10 +43,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 5.3 "O que você já gerou" sai de Ferramentas; a fixture `professor/criados.ts` aponta para Criados
   - [x] 5.4 Testes: os quatro estados; filtro sem resultado; o filtro de turma vai ao servidor; o voltar devolve os filtros
 
-- [ ] **6.0 — O documento aberto em folha**
-  - [ ] 6.1 `Artefato.tsx`: cabeçalho, abas no endereço e a folha sobre a mesa
-  - [ ] 6.2 `EncerramentoDaAtividade`, extraído de `AplicacaoDoArtefato`, sem mudar comportamento
-  - [ ] 6.3 Testes: os quatro estados; aplicar e encerrar com a confirmação; a versão rejeitada não exporta; a aba pelo endereço
+- [x] **6.0 — O documento aberto em folha**
+  - [x] 6.1 `Artefato.tsx`: cabeçalho, abas no endereço e a folha sobre a mesa
+  - [x] 6.2 `EncerramentoDaAtividade`, extraído de `AplicacaoDoArtefato`, sem mudar comportamento
+  - [x] 6.3 Testes: os quatro estados; aplicar e encerrar com a confirmação; a versão rejeitada não exporta; a aba pelo endereço
 
 - [ ] **7.0 — Ferramentas: o catálogo por categoria**
   - [ ] 7.1 `Ferramentas.tsx`: uma seção por categoria com ferramenta, em cartões com ícone ilustrado

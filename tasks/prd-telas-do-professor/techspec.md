@@ -187,6 +187,23 @@ promete ordem), com o id como desempate, e nunca por acerto. (4) As abas não le
 faixa e na barra presa. (5) A tela passa de `formulario` para `leitura` (880 px), que é o tipo da tabela acima. (6) O lote já decidido
 não abre o destaque que ficou fechado (não há mais o que registrar), e só mostra o que já estava aberto.
 
+**O documento aberto** (divergências da 6.0): (1) `ConteudoDoArtefato` ganha a prop **opcional** `comGabarito` (padrão `true`), porque o
+interruptor "Gabarito" precisa tirar a marca da alternativa certa e a explicação sem trocar o conteúdo; a 4.0 não a passa e não muda. (2) A aba
+**Versões adaptadas** só existe com versão, e a **Na turma** só na atividade objetiva (o plano de aula não tem o que aplicar); aba que não existe
+para o documento cai em Conteúdo, pelo mesmo caminho do valor desconhecido. (3) A assinatura da IA e a situação da versão adaptada (o selo, quem
+decidiu, o texto do PDF) ficam **acima das abas**, à vista em todas: a decisão sobre a saída de IA não depende da aba aberta (regra 70, itens 3 e
+6). (4) A `Folha` é a coluna de 760 px sobre a `mesa`; **abaixo de 768 px não há mesa nem borda**, como o celular do mockup. O sumário lateral e
+o "Lado a lado" são do F7. (5) `EncerramentoDaAtividade` leva o botão, o diálogo e a trava do envio único; "Corrigir de novo" (a atividade
+já encerrada, sem confirmação) ganha mutation própria em `AplicacaoDoArtefato`. (6) A seção "Na turma" só é lida com a aba aberta, e por isso
+os e2e que aplicam a atividade (`a3-a4-professor`, `roteiro-da-demonstracao`) clicam na aba antes. (7) O documento aberto acende **Criados** na navegação do professor (`areas/navegacao.ts`: `tambemEm` passa de Ferramentas para
+Criados), e a recarga do recomeço "recarregar mantém a aba" é feita dentro do caso lento que já existia (`os quatro estados; …`), e não num caso novo:
+a recarga custa perto de 9 s sob a CPU ×4, e um caso novo com ela passava de 15 s. (8) **A página não rola, rola a mesa** (`mockup.md` 10.2; RF22): do
+`md` para cima o cabeçalho, a assinatura com as ações e as abas ficam parados, e só o painel da aba rola por dentro (`O_MIOLO_DO_DOCUMENTO`, em
+`areas/professor/miolo-do-documento.ts`, a equivalente da `O_MIOLO_QUE_ROLA` da coordenação, **com a altura medida** por `useTopoDoPainel`: o cabeçalho muda com o que a versão adaptada diz, e uma soma em `rem` não serve a todas). Para a mesa ter altura útil a 1366 × 768, **as ações
+(Renomear, Exportar em PDF, Pedir versão adaptada) saem da linha do título e vão para a linha da assinatura da IA**: o cabeçalho passa de 370 px para
+cerca de 335 px. A versão adaptada leva mais linhas acima das abas (a adaptação, a situação, o "Ver e decidir" e a origem): o cabeçalho é mais alto e a mesa, mais baixa,
+mas a página continua parada. Abaixo de 768 px a página rola inteira.
+
 **`data-esperando-voce`** (divergência da 3.0): o item do sino da 1.0 não leva o atributo, e a 3.0 não o acrescenta. O
 Início não tem o atributo nem o que ele marcava, e o e2e prova que o sino tem a entrega pelo nome do botão ("Esperando você,
 1") e pelo link do item ("Versão adaptada para decidir…", "Correção para revisar…").
@@ -227,6 +244,7 @@ painel ao lado vira folha de baixo, e a barra presa de Aprovar fica acima da bar
 | Componente (jsdom, `__fixtures__/tela.tsx`) | por tela: carregando, vazio, erro, com dado e o foco depois de cada ação; o oficial desligado até `podeAprovar`. O sino, contando as chamadas: leitura parcial; recusa na 3ª leitura; 14 turmas em `parcial`; dois tempos com o `focusManager` e o `onlineManager` (zero chamadas, e o controle relê); retry e "Atualizar" por chave exata; `JSON.stringify` do `QueryCache` sem nome. Hoje: aos 15 s sai nova leitura; recém-aberta, sem nome no DOM; sem `?ver=tutor`, nenhuma rota nominal além dos sinais |
 | E2E | um spec por tela, nos dois projetos, com axe e largura; entrega decidida em outra aba; a coordenação na mesma aba sem leituras da professora; Hoje sem nome; "Acesso gerado" sem nome nem acerto legível; os fluxos `a2-assistente`, `a3-a4-professor` e `roteiro-da-demonstracao`, por fixtures de tela |
 | Isolamento | os de hoje, mais o sino na troca de escola e na segunda pessoa; Criados com artefato na turma de B (o título dele não aparece com `?turma=` de B) |
+|  | **Os casos novos de recomeço da 6.0** (divergência da 6.0): a segunda professora e o isolamento do documento de outra escola entram pela API (`entrarEmCriados`, `entrarPelaApi`) e não pela tela, e "recarregar mantém a aba" mora no caso lento que já existia: o login pela tela passa de 15 s com duas entradas na mesma aba, e a recarga sob a CPU ×4 custa perto de 9 s |
 |  | **Onde mora o recomeço da conversa** (divergência da 4.0): o recomeço do Início (3.0, o texto na caixa) e o da conversa (4.0, a conversa lida e o cartão aberto) estão no caso de recomeço da segunda professora de `e2e/professor-sino.spec.ts`, e não em casos novos de `professor-inicio.spec.ts` e `professor-conversa.spec.ts`: um caso com duas entradas na mesma aba passa de 15 s (o piso de `entrar` é de 11 a 12 s) |
 
 **A separação dos specs** (tarefa 2.0) move casos sem mudar título nem asserção: a contagem de `test(` em `e2e/` é

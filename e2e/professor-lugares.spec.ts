@@ -66,7 +66,7 @@ test.describe('a navegação do professor na A2 (D73)', () => {
       await expect(secoes(page).getByRole('link', { name: rotulo })).toHaveAttribute('aria-current', 'page')
       await expect(page.getByText(/Seu time/)).toHaveCount(0)
     }
-    // Dentro da conversa, "Início" continua selecionado; dentro de um artefato, "Ferramentas".
+    // Dentro da conversa, "Início" continua selecionado (o documento aberto acende "Criados": `areas/navegacao.test.ts`).
     await irPara(page, '/professor/conversa')
     await expect(secoes(page).getByRole('link', { name: 'Início' })).toHaveAttribute('aria-current', 'page')
     await expect(page.getByText(/Seu time/)).toHaveCount(0)

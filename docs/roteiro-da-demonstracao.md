@@ -187,8 +187,8 @@ aluno e sugere uma nota" (a resposta explica que a IA não corrige redação nem
 
 ## 5. Passo 3: a atividade na turma e o aluno respondendo (Professora e alunos, 6 min)
 
-1. Professora → **Ferramentas** → abra a **Atividade — Estequiometria** (a original, não a adaptada) → **Aplicar à
-   turma** → **É avaliativa** → **Aplicar à turma**.
+1. Professora → **Criados** → abra a **Atividade — Estequiometria** (a original, não a adaptada) → aba **Na turma** →
+   **Aplicar à turma** → **É avaliativa** → **Aplicar à turma**.
    **Aparece:** "Aberta para a turma · avaliativa · 0 de 3 alunos enviaram".
 2. Perfil **Aluno** (Ana) → **Atividades** → a atividade aparece com "Avaliação: o Tutor fica pausado até quem dá a aula
    encerrar". **Diga:** "Na avaliação o Tutor pausa sozinho, no servidor."
@@ -200,7 +200,7 @@ aluno e sugere uma nota" (a resposta explica que a IA não corrige redação nem
 
 ## 6. Passo 4: a correção, aprovada com a validação registrada (Professora, 5 min)
 
-1. Professora, no artefato → **Encerrar a atividade** → confirme. **Aparece:** "Revisar a correção".
+1. Professora, no artefato, aba **Na turma** → **Encerrar a atividade** → confirme. **Aparece:** "Revisar a correção".
 2. **Revisar a correção**. **Aparece:** o resumo ("3 alunos responderam · 3 na turma hoje"), o acerto por habilidade e
    os **destaques** fechados (Carla, "Em branco"). O botão **Aprovar 3 correções** está desligado, com o contador.
 3. **Abrir** cada destaque. O botão liga só depois do último. **Aprovar 3 correções** → confirme.
@@ -215,7 +215,7 @@ aluno e sugere uma nota" (a resposta explica que a IA não corrige redação nem
 ## 7. Passo 5: o Tutor numa segunda atividade, e o sinal para a professora (6 min)
 
 1. Professora → **Ferramentas** → **Atividade objetiva** → Tema `Reagente limitante`, Questões `2` → **Gerar
-   atividade** → **Abrir o artefato** → **Aplicar à turma** → **É prática** → **Aplicar à turma**.
+   atividade** → **Abrir o artefato** → aba **Na turma** → **Aplicar à turma** → **É prática** → **Aplicar à turma**.
 2. Ana → **Atividades** → abre **Atividade — Reagente limitante** → na questão 1, **Pedir ajuda ao Tutor nesta
    questão**. **Aparece:** a faixa "Quem dá a aula acompanha como você usa o Tutor." e "Hoje: 0 de 60 perguntas".
 3. Ana digita: **`me dá a resposta`**.
@@ -239,9 +239,9 @@ Marta, enquanto quem apresenta segue os passos 2 a 5. Sem segunda pessoa, faça 
 2. Nos perfis Aluno 2 e Aluno 3 (**Sair** do Bruno e da Carla antes), Elisa e Fábio reivindicam o nome com o código, e a
    Marta aprova os dois pedidos.
 3. Marta → **Ferramentas** → **Atividade objetiva** → Tema `Massa molar`, Questões `3` → **Gerar atividade** → **Abrir o
-   artefato** → **Aplicar à turma** → **É prática**.
+   artefato** → aba **Na turma** → **Aplicar à turma** → **É prática**.
 4. Elisa e Fábio entram, respondem e enviam.
-5. Marta → **Encerrar a atividade** → **Revisar a correção** → abre os destaques → **Aprovar 2 correções**.
+5. Marta → aba **Na turma** → **Encerrar a atividade** → **Revisar a correção** → abre os destaques → **Aprovar 2 correções**.
 
 **Diga** (se a coordenação perguntar o que a segunda pessoa está fazendo): "Outra professora de Química da escola usa
 o mesmo sistema na turma dela. É o que deixa a coordenação ver o número da série sem expor uma professora."
