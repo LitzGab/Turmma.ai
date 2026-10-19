@@ -18,7 +18,7 @@
     "brotli": true
   },
   {
-    "name": "JS da área do professor (o chunk professor-*.js, só por import(), depois da guarda de papel; na 16.0, Turmas e a turma aberta com o acesso dos alunos e os pedidos, perto de 5,5 kB; os diálogos, a cópia única e os pedidos ficam em parte-* que ela divide com a coordenação e a operação)",
+    "name": "JS da área do professor (o chunk professor-*.js, só por import(), depois da guarda de papel; as rotas e o sino; Turmas sai por import() em tela-professor-Turmas-* desde a 9.0 e a turma aberta sai na 10.0, e o teto de 8 kB não sobe; os diálogos, a cópia única e os pedidos ficam em parte-* que ela divide com a coordenação e a operação)",
     "path": "apps/web/dist/assets/professor-*.js",
     "limit": "8 kB",
     "brotli": true

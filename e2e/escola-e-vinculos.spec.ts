@@ -96,6 +96,16 @@ async function acionarNoSeletor(page: Page, nome: string, hasTouch: boolean): Pr
   else await linha.click()
 }
 
+/**
+ * A professora entra pela API (o cookie fica na aba) e abre o endereço: uma carga só. Cada carga custa uns 7 s no Chromebook de
+ * teste, e o portão da tarefa reprova caso de e2e alterado que passa de 15 s; a entrada pela tela é provada em outros casos.
+ */
+async function abrirJaEntrando(page: Page, professora: EquipeDeTeste, endereco: string): Promise<void> {
+  const resposta = await page.request.post('/v1/sessao/email', { data: { email: professora.email, senha: professora.senha } })
+  expect(resposta.ok(), 'a entrada pela API').toBe(true)
+  await page.goto(endereco)
+}
+
 test.describe('escolher e trocar de escola', () => {
   test('a professora com duas escolas escolhe por onde entra, só com teclado, e vê escola e papel de cada acesso', async ({ page }) => {
     const emA = await criarEquipeComSenha()
@@ -286,61 +296,62 @@ test.describe('vínculos do professor', () => {
     const professora = await criarEquipeComSenha()
     const alocacao = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId, ['Matemática', 'História'])
 
-    await page.goto('/entrar')
-    await entrarPorEmail(page, professora, hasTouch)
-    await esperarEscola(page, professora.nome, professora.escolaNome)
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    await abrirJaEntrando(page, professora, '/professor/turmas')
 
     const matematica = page.getByRole('listitem').filter({ hasText: 'Matemática' })
     const historia = page.getByRole('listitem').filter({ hasText: 'História' })
-    await expect(matematica).toContainText(`${alocacao.turmaNome} · Matemática`, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(matematica).toContainText(NOME_DO_ESTADO_DE_VINCULO.pendente)
-    await expect(historia).toContainText(NOME_DO_ESTADO_DE_VINCULO.pendente)
+    // Cada vínculo que espera a professora é uma faixa "Confirme sua turma", com a turma e a disciplina, e ainda não é cartão de turma.
+    await expect(matematica).toContainText(`Confirme sua turma · ${alocacao.turmaNome} · Matemática`, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(historia).toContainText(`Confirme sua turma · ${alocacao.turmaNome} · História`)
+    await expect(page.getByRole('region', { name: 'Suas turmas', exact: true })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Sair' })).toBeVisible()
     await esperarAlvoDeToque(matematica.getByRole('button', { name: 'Confirmar' }), 'o botão de confirmar o vínculo')
     expect(await larguraExcedente(page)).toBe(0)
-    expect(await violacoesGraves(page)).toEqual([])
 
-    // Confirma só a de matemática: a outra continua esperando.
+    // Confirma só a de matemática: ela vira cartão, e a outra continua na faixa.
     if (hasTouch) await matematica.getByRole('button', { name: 'Confirmar' }).tap()
     else await matematica.getByRole('button', { name: 'Confirmar' }).click()
     await expect(matematica).toContainText(NOME_DO_ESTADO_DE_VINCULO.confirmado, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(historia).toContainText(NOME_DO_ESTADO_DE_VINCULO.pendente)
+    await expect(historia).toContainText('Confirme sua turma')
 
-    // Contesta a de história, com o motivo e o complemento.
+    // Contesta a de história, no painel ao lado, com o motivo e o complemento.
     if (hasTouch) await historia.getByRole('button', { name: 'Contestar' }).tap()
     else await historia.getByRole('button', { name: 'Contestar' }).click()
+    const painel = page.getByRole('dialog', { name: 'Contestar a turma' })
+    await expect(painel).toBeVisible()
     // O texto livre é lido pela coordenação: a tela avisa, ali mesmo, para não escrever nome de aluno (regra 20).
-    await expect(historia).toContainText(AVISO_DO_COMPLEMENTO)
+    await expect(painel).toContainText(AVISO_DO_COMPLEMENTO)
     // Ação oficial: o que vai acontecer aparece antes de enviar (regra 50, item 8).
-    await expect(historia).toContainText(EFEITO_DA_CONTESTACAO)
+    await expect(painel).toContainText(EFEITO_DA_CONTESTACAO)
 
-    await historia.getByRole('radio', { name: NOME_DA_CONTESTACAO.nao_leciono }).check()
-    await historia.getByRole('textbox').fill('Quem dá história nesta turma é o outro professor.')
+    await painel.getByRole('radio', { name: NOME_DA_CONTESTACAO.nao_leciono }).check()
+    await painel.getByRole('textbox').fill('Quem dá história nesta turma é o outro professor.')
     expect(await violacoesGraves(page)).toEqual([])
     expect(await larguraExcedente(page)).toBe(0)
-    if (hasTouch) await historia.getByRole('button', { name: 'Enviar a contestação' }).tap()
-    else await historia.getByRole('button', { name: 'Enviar a contestação' }).click()
+    if (hasTouch) await painel.getByRole('button', { name: 'Enviar a contestação' }).tap()
+    else await painel.getByRole('button', { name: 'Enviar a contestação' }).click()
 
+    await expect(painel).toHaveCount(0, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(historia).toContainText(NOME_DO_ESTADO_DE_VINCULO.contestado, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(historia).toContainText(NOME_DA_CONTESTACAO.nao_leciono)
+    // O contestado espera a coordenação: sai da faixa e não abre a turma.
+    await expect(page.getByRole('region', { name: 'Confirme suas turmas', exact: true })).toHaveCount(0)
+    await expect(historia.getByRole('link', { name: /Abrir a turma/ })).toHaveCount(0)
     // O estado de cada um é o seu: confirmar um não decide o outro (caso de borda do PRD).
     await expect(matematica).toContainText(NOME_DO_ESTADO_DE_VINCULO.confirmado)
   })
 
-  test('o cartão se resolve inteiro pelo teclado: Tab até o botão, motivo com a barra de espaço e Enter para enviar', async ({ page, hasTouch }) => {
+  test('o cartão se resolve inteiro pelo teclado: Tab até o botão, motivo com a barra de espaço e Enter para enviar', async ({ page }) => {
     const professora = await criarEquipeComSenha()
     const alocacao = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId, ['Matemática'])
 
-    await page.goto('/entrar')
-    await entrarPorEmail(page, professora, hasTouch)
-    await esperarEscola(page, professora.nome, professora.escolaNome)
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    await abrirJaEntrando(page, professora, '/professor/turmas')
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 
-    // Abre a contestação sem tocar no mouse.
+    // Abre a contestação sem tocar no mouse: ela abre no painel ao lado, e o foco entra nele.
     await tabAte(page, page.getByRole('button', { name: 'Contestar' }), 'o botão de contestar')
     await page.keyboard.press('Enter')
+    await expect(page.getByRole('dialog', { name: 'Contestar a turma' })).toBeVisible()
     await expect(page.getByRole('group', { name: 'O que está errado neste vínculo?' })).toBeVisible()
 
     // Escolhe o motivo pelo teclado: o grupo de rádio começa sem nada marcado, e a barra de espaço marca o focado.
@@ -356,6 +367,9 @@ test.describe('vínculos do professor', () => {
 
     await expect(page.getByRole('main')).toContainText(NOME_DO_ESTADO_DE_VINCULO.contestado, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('main')).toContainText(NOME_DA_CONTESTACAO.nao_leciono)
+    // O painel fechou, e o foco foi para onde o cartão entrou: quem usa o teclado não volta ao topo da página.
+    await expect(page.getByRole('dialog', { name: 'Contestar a turma' })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Suas turmas' })).toBeFocused()
   })
 
   test('contestar sem escolher o motivo não manda nada, e o clique repetido em confirmar não decide duas vezes', async ({ page, hasTouch }) => {
@@ -376,21 +390,23 @@ test.describe('vínculos do professor', () => {
       await rota.continue()
     })
 
-    await page.goto('/entrar')
-    await entrarPorEmail(page, professora, hasTouch)
-    await esperarEscola(page, professora.nome, professora.escolaNome)
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    await abrirJaEntrando(page, professora, '/professor/turmas')
 
     const historia = page.getByRole('listitem').filter({ hasText: 'História' })
     await expect(historia).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     if (hasTouch) await historia.getByRole('button', { name: 'Contestar' }).tap()
     else await historia.getByRole('button', { name: 'Contestar' }).click()
-    await historia.getByRole('textbox').fill('sem motivo escolhido')
-    if (hasTouch) await historia.getByRole('button', { name: 'Enviar a contestação' }).tap()
-    else await historia.getByRole('button', { name: 'Enviar a contestação' }).click()
+    const painel = page.getByRole('dialog', { name: 'Contestar a turma' })
+    await painel.getByRole('textbox').fill('sem motivo escolhido')
+    if (hasTouch) await painel.getByRole('button', { name: 'Enviar a contestação' }).tap()
+    else await painel.getByRole('button', { name: 'Enviar a contestação' }).click()
     // Contestação sem código não é contestação: a coordenação receberia um vínculo travado e sem motivo.
-    await expect(historia).toContainText(NOME_DO_ESTADO_DE_VINCULO.pendente)
+    await expect(painel).toBeVisible()
     expect(contestacoes).toBe(0)
+    if (hasTouch) await painel.getByRole('button', { name: 'Cancelar' }).tap()
+    else await painel.getByRole('button', { name: 'Cancelar' }).click()
+    await expect(painel).toHaveCount(0)
+    await expect(historia).toContainText('Confirme sua turma')
 
     const matematica = page.getByRole('listitem').filter({ hasText: 'Matemática' })
     const confirmar = matematica.getByRole('button', { name: /Confirmar|Confirmando/ })

@@ -1,18 +1,17 @@
 # Estado da execução — telas-do-professor
 
 ## Agora
-- **Espero:** o `RELATÓRIO` de cada linha, retomadas em 19/10 ~03h depois da correção do detector (`8afb24d`, na spec por
-  fast-forward), cada uma com `git merge --no-edit spec/telas-do-professor` e **um portão por vez**:
-  - linha 1 (`Implementador`/`Mesa`, reiniciados na L1): **3.0**, pequena; código e testes prontos na árvore;
-  - linha 2 (`Implementador 2`/`Mesa 2`): **9.0**, pequena; e2e isolado da tarefa feito ou rodando;
-  - linha 3 (`Implementador 3`/`Mesa 3`): **10.0**, grande; os 2 specs de "Visão Geral" entram com razão.
-  A cada `RELATÓRIO`: `linhas.ts encontro <n>` e `esteira.ts`. A correção `2026-10-19-detector-de-literal-compara-com-a-web`
-  ficou fora do `linhas.ts conferir` (ele só conhece correção na branch `spec/` ou contra a `develop`): conferi com
-  `conferirEntrega(…, 'spec/telas-do-professor')`, OK.
+- **Espero:** o `RELATÓRIO` de cada linha:
+  - linha 1 (`Implementador`/`Mesa`, reiniciados 19/10 ~03h20): correção `2026-10-19-mfa-codigo-de-recuperacao-estoura-o-prazo`
+    (esteira de `143f000` vermelha só no `e2e/mfa.spec.ts:85`, celular, 30,3 s; nas verdes, 25 a 28 s). Encontro próprio
+    (`linhas.ts encontro 1`); depois parte a **4.0** (o quadro a mostrou), e a 5.0 só quando a 9.0 terminar;
+  - linha 2 (`Implementador 2`/`Mesa 2`): **9.0**, pequena, no portão depois da correção do detector;
+  - linha 3 (`Implementador 3`/`Mesa 3`): **10.0**, grande, no portão.
+  A cada `RELATÓRIO`: `linhas.ts encontro <n>` e `esteira.ts`. Esteiras: `5a1b068` verde; `126e50a` e `4cbe1b0` rodando.
 - **Devo ainda:** (0) feito, 19/10 ~00h20: o `Implementador 3` sabe que a Turma vira lazy (30 kB) e a fachada fica em 8 kB; (1) ficar de olho em `e2e/areas.spec.ts:231` (19–21 s na máquina, 23,8 s na esteira); se cair,
   correção como a `:204`; (2) a X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em `1477850`): não
   retomar sem a palavra do Joaquim; (3) as esteiras de `0650af0` e `23e8794` foram verdes: nada pendente da 1.0.
-- **Base:** `spec/telas-do-professor` em `8afb24d` (2.0 em `7ad636e`, com a correção `75f94a3`).
+- **Base:** `spec/telas-do-professor` em `4cbe1b0` (3.0 em `7a78946`) (2.0 em `7ad636e`, com a correção `75f94a3`).
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri` com
   `MAESTRI_SOCKET=/tmp/maestri-309bb7f3/maestri.sock`.
 
@@ -21,6 +20,7 @@
 |---|---|---|---|---|
 | correção `2026-10-18-professor-em-area-alheia-estoura-o-prazo` | `43067f8` | Sonnet | 1 | esteira vermelha da 1.0; o caso `areas.spec.ts:204` (seis cargas, 30 s na esteira) virou cinco casos de 4 s, entrando pela API |
 | correção `2026-10-18-textos-da-turma-indisponivel-diferem` | `61dba8c` | Sonnet | 2 | esteira vermelha da 1.0; o caso W4 de `acesso-da-turma.spec.ts` dividido em 8 pelo portão (15 s) |
+| 9.0 | `d13cb69` | Sonnet | 2 | duas divergências decididas pelo `Arquiteto` sem mudar desenho (série fora do cartão; Turmas lazy, fachada em 8 kB); portão lento pelo detector |
 | 3.0 | `7a78946` | Sonnet | 2 | portão lento por defeito do detector (diagnóstico 3), não da tarefa; 1ª rodada só depois da correção `8afb24d` |
 | correção `2026-10-19-detector-de-literal-compara-com-a-web` | `8afb24d` | Sonnet | 2 | diagnóstico 3 do `Arquiteto`: o detector puxava quase toda a suíte nas três linhas; andar próprio saído da spec, fast-forward |
 | 2.0 | `7ad636e` | Sonnet | 2 | divergência de desenho (régua do e2e × §10), parada, alt. 1 do Joaquim; `test-engineer` reprovou na 1ª; trabalho guardado fora da árvore durante a correção e restaurado |

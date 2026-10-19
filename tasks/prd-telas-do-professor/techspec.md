@@ -135,7 +135,11 @@ pontuação) é estendido aos textos novos.
 | Métrica, alerta e cenário de carga | o teto do `size-limit` e o teste do build; cenário inalterado |
 
 **Orçamento.** O sino não entra na entrada: só o mapa e o `lazy()`. As abas e os painéis ficam em pedaços
-`tela-professor-*` (30 kB cada); `Turmas` e `Turma` continuam na fachada, cujo teto a 10.0 mede. Os ícones das
+`tela-professor-*` (30 kB cada). `Turmas` e `Turma` também saem da fachada, por `lazy()`, cada uma no seu pedaço
+`tela-professor-*`: com os cartões, a faixa e o painel de contestação da 9.0, a fachada passava de 11 kB contra os 8 kB
+do `size-limit` (divergência da 9.0). A 9.0 tira `Turmas`, e a 10.0, que reescreve a turma aberta, tira `Turma`. A
+fachada fica com as rotas e o sino, e o teto de 8 kB **não sobe**; a descrição dela no `.size-limit.json` e o
+comentário de `areas/professor/rotas.tsx` passam a dizer isso. Os ícones das
 ferramentas moram em `areas/professor/icones-de-ferramenta.tsx`; o de Criados, no arquivo de lugares da X1.
 
 ## 9. Frontend
@@ -178,6 +182,12 @@ atividade", "Exportar em PDF", "Pedir versão adaptada"; e todos os `data-*` do 
 **Nomes que mudam:** as abas da turma; "Voltar para Ferramentas", no documento, vira "Voltar para Criados"; "Voltar
 para o Seu time" vira "Voltar para a turma"; "Ver e decidir em Seu time" vira "Ver e decidir"; o `h1` das telas
 do time perde "Seu time: ".
+
+**Cartão da turma.** Tudo vem do `Vinculo` de `meus-vinculos` e da fila do sino: o ladrilho da disciplina, "7ºA ·
+Matemática" (turma e disciplina), o estado em texto (`NOME_DO_ESTADO_DE_VINCULO`) e o selo do que espera. **A série
+não entra no cartão**: o `Vinculo` não a traz, e lê-la seria um `GET /v1/turmas/:id` por cartão, que a §4 não admite e
+que a API recusa no vínculo pendente. O nome da turma já diz o ano. A série volta quando o contrato de `meus-vinculos`
+a trouxer, em spec que mexa na API (divergência da 9.0).
 
 **Texto da pessoa.** O que a professora escreve (pedido, contestação, justificativa) mora no estado da página:
 releitura e sessão vencida não o apagam; sai junto quando entra outra pessoa.

@@ -296,16 +296,16 @@ test.describe('W4 (Acesso): os quatro estados', () => {
     await encerrarVinculosNoBanco(professora.escolaId, encerrada.turmaId, professora.usuarioId)
     await abrirJaEntrando(page, professora, '/professor/turmas')
 
-    // Só o cartão do vínculo confirmado leva à turma: os que esperam a decisão e o encerrado não oferecem o que a API
-    // recusaria.
+    // Só o cartão do vínculo confirmado leva à turma: o que espera a decisão dela é faixa, e o contestado e o encerrado não
+    // oferecem o que a API recusaria.
     const paraConfirmar = principal(page).getByRole('region', { name: 'Confirme suas turmas', exact: true })
     const decididas = principal(page).getByRole('region', { name: 'Suas turmas', exact: true })
-    await expect(paraConfirmar.getByRole('listitem')).toHaveCount(2, { timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(paraConfirmar.getByRole('listitem').filter({ hasText: `${turma.turmaNome} · História` })).toContainText('Contestado por você')
-    await expect(paraConfirmar.getByRole('listitem').filter({ hasText: pendente.turmaNome })).toContainText('Aguardando a sua confirmação')
+    await expect(paraConfirmar.getByRole('listitem')).toHaveCount(1, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(paraConfirmar.getByRole('listitem').filter({ hasText: pendente.turmaNome })).toContainText(`Confirme sua turma · ${pendente.turmaNome} · Ciências`)
     await expect(paraConfirmar.getByRole('link')).toHaveCount(0)
     const abrir = decididas.getByRole('link', { name: `Abrir a turma ${turma.turmaNome}` })
-    await expect(decididas.getByRole('listitem')).toHaveCount(2)
+    await expect(decididas.getByRole('listitem')).toHaveCount(3)
+    await expect(decididas.getByRole('listitem').filter({ hasText: `${turma.turmaNome} · História` })).toContainText('Contestado por você')
     await expect(decididas.getByRole('listitem').filter({ hasText: encerrada.turmaNome })).toContainText('Encerrado pela escola')
     await expect(decididas.getByRole('link')).toHaveCount(1)
     await alvoDeToque(abrir, 'Abrir a turma')

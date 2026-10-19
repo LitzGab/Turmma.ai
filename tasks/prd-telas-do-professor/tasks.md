@@ -56,10 +56,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [ ] 8.1 `Ferramenta.tsx` em duas colunas; o texto fixo por ferramenta, em `ferramentas.ts`
   - [ ] 8.2 Testes: o texto por ferramenta e o vocabulário; os estados do formulário; a Adaptação sem campo de texto
 
-- [ ] **9.0 — Turmas: os cartões e "Confirme sua turma"**
-  - [ ] 9.1 `Turmas.tsx`: a faixa de confirmar, os cartões e o que espera em cada turma
-  - [ ] 9.2 A contestação no `PainelLado`, com o texto guardado na página
-  - [ ] 9.3 Testes: os quatro estados; confirmar em oficial; contestar; o texto sobrevive à releitura
+- [x] **9.0 — Turmas: os cartões e "Confirme sua turma"**
+  - [x] 9.1 `Turmas.tsx`: a faixa de confirmar, os cartões e o que espera em cada turma
+  - [x] 9.2 A contestação no `PainelLado`, com o texto guardado na página
+  - [x] 9.3 Testes: os quatro estados; confirmar em oficial; contestar; o texto sobrevive à releitura
 
 - [ ] **10.0 — A turma aberta em três abas, com Hoje**
   - [ ] 10.1 `Turma.tsx`: Hoje, Atividades e Alunos no endereço; os blocos de hoje mudam de aba sem mudar de conteúdo ("Por aluno" e o acesso vão para Alunos; "Atividades da turma", para Atividades); a tarefa liga as três abas e cria `AtividadesDaTurma.tsx` e `AlunosDaTurma.tsx` como cascas, que a 11.0 e a 12.0 preenchem sem tocar em `Turma.tsx`
