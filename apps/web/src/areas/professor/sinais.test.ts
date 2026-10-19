@@ -1,7 +1,8 @@
 import type { Sinal } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import * as textos from './sinais'
-import { emQueEstava, falaDoGrupo, ondeFoi, separarSinais, textoDaAtencaoHumana, textoDoSinal, tituloDaAtencaoHumana, trocasDeHoje } from './sinais'
+import { formatarDiaEHora } from '../../formatar'
+import { emQueEstava, falaDoGrupo, horaDoUltimoAviso, ondeFoi, porNome, separarSinais, textoDaAtencaoHumana, textoDaHoraDoAviso, textoDoSinal, tituloDaAtencaoHumana, trocasDeHoje } from './sinais'
 
 const id = (final: string) => `0190f5a0-0000-7000-8000-0000000000${final}`
 const REFERENCIAS = { atividades: { [id('a1')]: 'Atividade — Estequiometria' }, materiais: { [id('b1')]: 'Química 2' } }
@@ -61,5 +62,36 @@ describe('o aviso de atenção humana (D36)', () => {
     expect(textoDaAtencaoHumana(1)).toContain('procure o aluno pessoalmente')
     expect(textoDaAtencaoHumana(2)).toContain('procure cada aluno pessoalmente')
     for (const quantos of [1, 2]) expect(textoDaAtencaoHumana(quantos)).toContain('O que foi dito não aparece aqui')
+  })
+})
+
+describe('o aviso de Hoje diz a hora, e a ordem do painel é a de nome (telas do professor, 10.0)', () => {
+  it('a hora é a do aviso mais recente, como hora, na ordem em que a API os deu ou fora dela; sem aviso, nenhuma', () => {
+    const velho = { criadoEm: '2026-10-05T13:40:00.000Z' }
+    const novo = { criadoEm: '2026-10-05T13:50:00.000Z' }
+    expect(horaDoUltimoAviso([velho, novo])).toBe(formatarDiaEHora(novo.criadoEm))
+    expect(horaDoUltimoAviso([novo, velho])).toBe(formatarDiaEHora(novo.criadoEm))
+    expect(horaDoUltimoAviso([velho])).toBe(formatarDiaEHora(velho.criadoEm))
+    expect(horaDoUltimoAviso([])).toBeUndefined()
+    // Dois avisos do mesmo instante dão a mesma hora; um aviso de outro dia ganha de um mais tarde do dia anterior.
+    expect(horaDoUltimoAviso([{ criadoEm: '2026-10-05T23:00:00.000Z' }, { criadoEm: '2026-10-06T01:00:00.000Z' }])).toBe(formatarDiaEHora('2026-10-06T01:00:00.000Z'))
+  })
+
+  it('a hora é dita como hora, nunca como "há X minutos" (D69)', () => {
+    expect(textoDaHoraDoAviso('05/10, 10h40')).toBe('Aviso mais recente: 05/10, 10h40')
+    expect(textoDaHoraDoAviso('05/10, 10h40')).not.toMatch(/há \d|ocios|parado/i)
+  })
+
+  it('em ordem de nome, com acento e número por valor; o mesmo nome fica na ordem em que veio', () => {
+    const itens = [
+      { id: 'a', nome: 'Zélia' },
+      { id: 'b', nome: 'Ana 10' },
+      { id: 'c', nome: 'Ana 2' },
+      { id: 'd', nome: 'Álvaro' },
+      { id: 'e', nome: 'Ana 2' },
+    ]
+    expect(porNome(itens, (item) => item.nome).map((item) => item.id)).toEqual(['d', 'c', 'e', 'b', 'a'])
+    // Não muda a lista de quem chamou.
+    expect(itens.map((item) => item.id)).toEqual(['a', 'b', 'c', 'd', 'e'])
   })
 })

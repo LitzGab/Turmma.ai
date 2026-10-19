@@ -24,11 +24,12 @@ import {
   tituloDasOutras,
   tituloDosDestaques,
 } from './aprovar'
+import { QUANDO_O_TUTOR_AVISA, falaDoGrupo, horaDoUltimoAviso, textoDaAtencaoHumana, textoDaHoraDoAviso, textoDoSinal, tituloDaAtencaoHumana } from './sinais'
 
 const id = (final: string) => `0190f5a0-0000-7000-8000-0000000000${final}`
 const destaque = (final: string, abertoEm: string | null = null) => ({ alunoId: id(final), nome: `Aluno sintético ${final}`, acertos: 1, total: 5, emBranco: 0, motivos: ['fora_do_historico' as const], abertoEm })
-/** O que nenhuma tela do professor diz de uma correção (D46, D57, D64): nota, conceito, pontuação, média e ranking. */
-const VOCABULARIO_PROIBIDO = /\bnotas?\b|\bconceitos?\b|pontua|\bmédia\b|ranking/i
+/** O que nenhuma tela do professor diz de uma correção (D46, D57, D59, D64): nota, conceito, pontuação, média, ranking e pódio. */
+const VOCABULARIO_PROIBIDO = /\bnotas?\b|\bconceitos?\b|pontua|\bmédia\b|ranking|pódio/i
 const RESUMO = { alunosDaTurma: 32, corrigidos: 28, questoes: 5, mediaDeAcertos: 3.42, distribuicao: [], porHabilidade: [], porQuestao: [] }
 
 describe('aprovar a correção: o contador que diz por que o botão está desligado (D33)', () => {
@@ -215,5 +216,28 @@ describe('aprovar a correção: "Voltar para a turma" (X3, 2.0)', () => {
     expect(caminhoDeVoltaDaCorrecao(undefined)).toBe('/turmas')
     // Outra turma, outro caminho: o endereço não é fixo.
     expect(caminhoDeVoltaDaCorrecao(id('a2'))).not.toBe(caminhoDeVoltaDaCorrecao(id('a1')))
+  })
+})
+
+describe('Hoje (X3, 10.0): é diagnóstico, não nota — nenhum texto da aba fala em nota, conceito, média, pontuação nem ranking (D46, D69)', () => {
+  it('os textos fixos e os que os sinais geram', () => {
+    const referencias = { atividades: { [id('a1')]: 'Atividade — Estequiometria' }, materiais: { [id('b1')]: 'Química 2' } }
+    const aluno = { id: id('01'), nome: 'Aluno sintético 01' }
+    const base = { id: id('s1'), aluno, criadoEm: '2026-10-05T13:00:00.000Z' }
+    const textosDeHoje = [
+      ...QUANDO_O_TUTOR_AVISA,
+      ...[1, 3].flatMap((alunos) => [tituloDaAtencaoHumana(alunos), textoDaAtencaoHumana(alunos)]),
+      textoDaHoraDoAviso(horaDoUltimoAviso([{ criadoEm: '2026-10-05T13:40:00.000Z' }]) ?? ''),
+      ...(['travou', 'resposta_pronta', 'duvida_repetida'] as const).flatMap((tipo) => [
+        falaDoGrupo({ tipo, atividadeAplicadaId: id('a1'), questao: 3, alunos: 8 }, referencias),
+        textoDoSinal({ ...base, tipo, atividadeAplicadaId: id('a1'), questao: 3, materialId: null, pagina: null }, referencias),
+      ]),
+    ]
+    expect(textosDeHoje.length).toBeGreaterThan(10)
+    for (const texto of textosDeHoje) expect(texto).not.toMatch(VOCABULARIO_PROIBIDO)
+  })
+
+  it('a lista de palavras proibidas pega cada uma delas, o pódio inclusive', () => {
+    for (const palavra of ['nota', 'conceito', 'pontuação', 'média', 'ranking', 'pódio']) expect(palavra).toMatch(VOCABULARIO_PROIBIDO)
   })
 })

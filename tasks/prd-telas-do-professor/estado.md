@@ -5,23 +5,24 @@
   - linha 1 (`Implementador`/`Mesa`, reiniciados 19/10 ~04h05): **5.0**, grande (até 4 h sem a 1ª rodada), 1ª tentativa.
     A correção do `mfa:85` se encontrou em `907d546` (spec em `550389a`); confirmar o `mfa.spec.ts` no celular na
     esteira de `550389a` (39214321944);
-  - linha 2 (`Implementador 2`/`Mesa 2`, reiniciados 19/10 ~03h30): **4.0**, pequena (até 2 h sem a 1ª rodada);
+  - linha 2 (`Implementador 2`/`Mesa 2`, reiniciados 19/10 ~04h55): **14.0**, grande (até 4 h sem a 1ª rodada), 1ª tentativa;
   - linha 3 (`Implementador 3`/`Mesa 3`, reiniciados 19/10 ~05h): **retomada da correção `encontro-10`** (frontend-reviewer):
     refazer o merge de `spec/telas-do-professor`, com o `rotas.tsx` resolvido (9.0 × 10.0, os dois lazy) guardado no
     scratchpad, passar o portão e a Mesa e fechar o merge. A sétima fatia do e2e já está em `52f43fe` (correção
     `2026-10-19-setima-fatia-do-e2e`, 2 rodadas, aprovada por todos). A 10.0 está em `2b8e78e` (2 rodadas, tudo aprovado).
     **Com o RELATÓRIO:** `linhas.ts encontro 3`, e a 10.0 e as duas correções vão para "Concluídas".
-  A cada `RELATÓRIO`: `linhas.ts encontro <n>` e `esteira.ts`. Esteiras: `4cbe1b0` verde; `f37a95f` e `550389a` rodando.
+  A cada `RELATÓRIO`: `linhas.ts encontro <n>` e `esteira.ts`. Esteiras: `4cbe1b0` verde; `f37a95f`, `550389a` e `2945862` (39219575056) rodando.
 - **Devo ainda:** (0) feito, 19/10 ~00h20: o `Implementador 3` sabe que a Turma vira lazy (30 kB) e a fachada fica em 8 kB; (1) ficar de olho em `e2e/areas.spec.ts:231` (19–21 s na máquina, 23,8 s na esteira); se cair,
   correção como a `:204`; (2) a X4 continua parada (andar "X4 telas-do-aluno-e-primeiro-acesso", 1.0 em `1477850`): não
   retomar sem a palavra do Joaquim; (3) as esteiras de `0650af0` e `23e8794` foram verdes: nada pendente da 1.0. (4) no fechamento, linha no `TODO.md`: com sete fatias, sobram ~180 casos do e2e (~1379, 197 por fatia) até precisar da oitava (ver `tools/ci/prazo-do-e2e.ts`).
-- **Base:** `spec/telas-do-professor` em `550389a` (correção do mfa em `907d546`; 9.0 em `d13cb69`) (2.0 em `7ad636e`, com a correção `75f94a3`).
+- **Base:** `spec/telas-do-professor` em `2945862` (4.0 em `a7d86a8`; correção do mfa em `907d546`; 9.0 em `d13cb69`) (2.0 em `7ad636e`, com a correção `75f94a3`).
 - **Maestri:** o `maestri` não está no PATH: usar `/tmp/.mount_MaestrKFhlcN/resources/cli/maestri` com
   `MAESTRI_SOCKET=/tmp/maestri-309bb7f3/maestri.sock`.
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
+| 4.0 | `a7d86a8` | Sonnet | 2 | divergências no documento e na Tech Spec §9/§10 (prop `icone` no MotorFormulario, AvisoDeIA também no Início, recomeço no `professor-sino.spec`); cartão aberto da D18 sem foto (a vitrine não tem proposta) |
 | correção `2026-10-19-mfa-codigo-de-recuperacao-estoura-o-prazo` | `907d546` | Sonnet | 2 | esteira de `143f000` vermelha no `mfa.spec.ts:85` (celular, 30,3 s); o caso virou dois de 10 a 12 s; o `PRAZO_DA_ENTRADA_MS` em quatro arquivos foi para o `TODO.md` |
 | correção `2026-10-18-professor-em-area-alheia-estoura-o-prazo` | `43067f8` | Sonnet | 1 | esteira vermelha da 1.0; o caso `areas.spec.ts:204` (seis cargas, 30 s na esteira) virou cinco casos de 4 s, entrando pela API |
 | correção `2026-10-18-textos-da-turma-indisponivel-diferem` | `61dba8c` | Sonnet | 2 | esteira vermelha da 1.0; o caso W4 de `acesso-da-turma.spec.ts` dividido em 8 pelo portão (15 s) |

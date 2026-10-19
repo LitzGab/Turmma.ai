@@ -1,4 +1,5 @@
 import { NOME_DO_SINAL, type GrupoDeSinais, type Sinal, type UsoDoAluno } from '@educa/shared'
+import { formatarDiaEHora } from '../../formatar'
 
 /**
  * O que a conversa do Tutor diz à professora da turma (`docs/interface.md` 11.4; D8, D36, D47; regra 50, item 10; regra
@@ -65,6 +66,26 @@ export function textoDaAtencaoHumana(alunos: number): string {
   return alunos > 1
     ? 'O Tutor parou a conversa e mostrou a cada um como falar com um adulto. O que foi dito não aparece aqui: procure cada aluno pessoalmente, ou a coordenação.'
     : 'O Tutor parou a conversa e mostrou ao aluno como falar com um adulto. O que foi dito não aparece aqui: procure o aluno pessoalmente, ou a coordenação.'
+}
+
+/**
+ * A hora do aviso de atenção humana mais recente, como hora ("05/10, 10h40"), e nunca "há X minutos": seria relógio de tempo
+ * parado (D69). É o que o aviso de Hoje diz no lugar do nome, que só vem por "Ver quem" (D34, D36).
+ */
+export function horaDoUltimoAviso(atencao: readonly { readonly criadoEm: string }[]): string | undefined {
+  let maisRecente: string | undefined
+  for (const sinal of atencao) if (maisRecente === undefined || Date.parse(sinal.criadoEm) > Date.parse(maisRecente)) maisRecente = sinal.criadoEm
+  return maisRecente === undefined ? undefined : formatarDiaEHora(maisRecente)
+}
+
+/** "Aviso mais recente: 05/10, 10h40". */
+export function textoDaHoraDoAviso(hora: string): string {
+  return `Aviso mais recente: ${hora}`
+}
+
+/** Em ordem de nome (`pt-BR`, com os números por valor), a ordem estável: quem tem o mesmo nome fica na ordem em que a API o deu. */
+export function porNome<Item>(itens: readonly Item[], nomeDe: (item: Item) => string): Item[] {
+  return [...itens].sort((a, b) => nomeDe(a).localeCompare(nomeDe(b), 'pt-BR', { numeric: true }))
 }
 
 /** Os sinais separados em dois: os de atenção humana, que vêm primeiro e à parte, e os de trabalho. */

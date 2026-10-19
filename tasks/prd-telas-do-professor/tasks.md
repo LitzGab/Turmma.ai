@@ -61,11 +61,11 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 9.2 A contestação no `PainelLado`, com o texto guardado na página
   - [x] 9.3 Testes: os quatro estados; confirmar em oficial; contestar; o texto sobrevive à releitura
 
-- [ ] **10.0 — A turma aberta em três abas, com Hoje**
-  - [ ] 10.1 `Turma.tsx`: Hoje, Atividades e Alunos no endereço; os blocos de hoje mudam de aba sem mudar de conteúdo ("Por aluno" e o acesso vão para Alunos; "Atividades da turma", para Atividades); a tarefa liga as três abas e cria `AtividadesDaTurma.tsx` e `AlunosDaTurma.tsx` como cascas, que a 11.0 e a 12.0 preenchem sem tocar em `Turma.tsx`
-  - [ ] 10.2 `TurmaHoje.tsx`: a atenção humana, os sinais, o acerto por habilidade e o painel por aluno
-  - [ ] 10.3 `Tutor.tsx` vira redirecionamento; a fixture `professor/tutor.ts` aponta para Hoje
-  - [ ] 10.4 Testes: a aba pelo endereço; os estados de Hoje; Hoje relê aos 15 s e não mostra nome; sem painel, sem rota nominal; nada abre conversa de aluno; o endereço antigo do Tutor
+- [x] **10.0 — A turma aberta em três abas, com Hoje**
+  - [x] 10.1 `Turma.tsx`: Hoje, Atividades e Alunos no endereço; os blocos de hoje mudam de aba sem mudar de conteúdo ("Por aluno" e o acesso vão para Alunos; "Atividades da turma", para Atividades); a tarefa liga as três abas e cria `AtividadesDaTurma.tsx` e `AlunosDaTurma.tsx` como cascas, que a 11.0 e a 12.0 preenchem sem tocar em `Turma.tsx`
+  - [x] 10.2 `TurmaHoje.tsx`: a atenção humana, os sinais, o acerto por habilidade e o painel por aluno
+  - [x] 10.3 `Tutor.tsx` vira redirecionamento; a fixture `professor/tutor.ts` aponta para Hoje
+  - [x] 10.4 Testes: a aba pelo endereço; os estados de Hoje; Hoje relê aos 15 s e não mostra nome; sem painel, sem rota nominal; nada abre conversa de aluno; o endereço antigo do Tutor
 
 - [ ] **11.0 — Turma › Atividades**
   - [ ] 11.1 `AtividadesDaTurma.tsx`: as linhas com estado, o filtro e o painel da atividade

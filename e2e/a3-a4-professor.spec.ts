@@ -5,7 +5,7 @@ import { acionar, gerarAtividade, montarEscolaEEntrar, PRAZO_DA_IA_MS, principal
 import { expect, test } from './__fixtures__/perfis.ts'
 import { abrirODestaque, fecharOPainel } from './__fixtures__/professor/aprovar.ts'
 import { abrirEntregasDoAssistente } from './__fixtures__/professor/entregas.ts'
-import { abrirSinaisDoTutor } from './__fixtures__/professor/tutor.ts'
+import { abrirOPainelDoTutor, abrirSinaisDoTutor, painelDoTutor } from './__fixtures__/professor/tutor.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula } from './__fixtures__/sessao.ts'
 import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -140,28 +140,33 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     const habilidades = page.getByRole('region', { name: 'Acerto por habilidade' })
     await expect(habilidades.locator('svg').first()).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(habilidades).toContainText(/\d de \d/)
+    // Hoje não lista aluno: as atividades estão em Atividades, e os alunos em ordem de nome, em Alunos.
+    await expect(page.getByRole('region', { name: 'Por aluno' })).toHaveCount(0)
+    await acionar(page.getByRole('tab', { name: 'Atividades' }), hasTouch)
+    await expect(page.getByRole('region', { name: 'Atividades da turma' })).toContainText('Encerrada · prática · 2 de 3 alunos enviaram', { timeout: PRAZO_DA_ENTRADA_MS })
+    await acionar(page.getByRole('tab', { name: 'Alunos' }), hasTouch)
     const porAluno = page.getByRole('region', { name: 'Por aluno' })
-    for (const aluno of alunos) await expect(porAluno).toContainText(aluno.nome)
-    await expect(page.getByRole('region', { name: 'Atividades da turma' })).toContainText('Encerrada · prática · 2 de 3 alunos enviaram')
+    for (const aluno of alunos) await expect(porAluno).toContainText(aluno.nome, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText(VOCABULARIO_DE_NOTA)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // O Tutor, pelo pé do sino: o sinal do pedido de resposta pronta, com a questão, e o uso do aluno. Nenhuma conversa.
+    // O Tutor, pelo pé do sino, abre Hoje: o sinal sem nome de aluno; o nome e o uso só no painel, pedido. Nenhuma conversa.
     await abrirSinaisDoTutor(page, hasTouch)
-    const sinais = page.getByRole('region', { name: 'Sinais da turma' })
+    await expect(page.getByText('Carregando os sinais…')).toHaveCount(0, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.locator('body')).not.toContainText(primeiro.nome)
+    await abrirOPainelDoTutor(page, hasTouch)
+    const sinais = painelDoTutor(page).getByRole('region', { name: 'Sinais por aluno' })
     await expect(sinais).toContainText(`Pediu a resposta pronta na questão 1 de "${TITULO}"`, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(sinais).toContainText(primeiro.nome)
-    const uso = page.getByRole('region', { name: 'Uso do Tutor pela turma' })
+    const uso = painelDoTutor(page).getByRole('region', { name: 'Uso do Tutor pela turma' })
     await expect(uso).toContainText(primeiro.nome)
     await expect(uso).toContainText(/1 de \d+/)
     await expect(uso).toContainText(`Na questão 1 de "${TITULO}"`)
     // Quem não usou não aparece, e nada do que o aluno escreveu ao Tutor chega à tela da professora.
     await expect(uso).not.toContainText(segundo.nome)
     await expect(principal(page)).not.toContainText('me dá a resposta')
-    await expect(sinais.getByRole('link')).toHaveCount(0)
-    await expect(uso.getByRole('link')).toHaveCount(0)
-    await expect(uso.getByRole('button')).toHaveCount(0)
+    await expect(painelDoTutor(page).getByRole('link')).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
   })
