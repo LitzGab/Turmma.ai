@@ -2,7 +2,7 @@ import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { FUNCOES } from '../packages/shared/src/time/funcoes.ts'
 import { atividadeSintetica, erroDaApi, portao, QUEM_DECIDE, versaoAdaptada } from './__fixtures__/assistente.ts'
 import { acionar, comLote, entrar, irPara, PRAZO_DA_TELA_MS, selosDeIA } from './__fixtures__/professor/cena.ts'
-import { sinoDe } from './__fixtures__/professor/sino.ts'
+import { listaDoSino, sinoDe } from './__fixtures__/professor/sino.ts'
 import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 
@@ -195,11 +195,13 @@ test.describe('Seu time com a correção e o Tutor (11.4)', () => {
     test.slow()
     const { api, turmaNome } = await entrar(page, hasTouch, { antes: (simulada, turma) => void comLote(simulada, turma) })
     const atividadeId = [...api.correcoes.keys()][0] ?? ''
-    // A Home: "Esperando você" com o lote, e "Revisar".
-    const esperando = page.locator('[data-esperando-voce]')
-    await expect(esperando).toContainText('Correção de objetiva', { timeout: PRAZO_DA_TELA_MS })
-    await expect(esperando).toContainText(`Atividade de estequiometria · ${turmaNome}`)
-    await expect(esperando).toContainText('Revisar')
+    // O título do caso fica como era (o prazo do `test.slow()` do HEAD se acha por ele): a Home deixou de mostrar o lote, e quem
+    // aponta para a mesma tela é o sino, com "Correção para revisar", a atividade e a turma.
+    await expect(sinoDe(page)).toHaveAccessibleName('Esperando você, 1', { timeout: PRAZO_DA_TELA_MS })
+    await expect(page.getByRole('main').getByRole('heading', { name: 'Esperando você' })).toHaveCount(0)
+    await acionar(sinoDe(page), hasTouch)
+    await expect(listaDoSino(page).getByRole('region', { name: turmaNome }).getByRole('link', { name: /Correção para revisar.*Atividade de estequiometria/ })).toBeVisible()
+    await page.keyboard.press('Escape')
 
     await irPara(page, '/professor/time/assistente')
     const lote = page.locator('[data-entrega="pendente"]')

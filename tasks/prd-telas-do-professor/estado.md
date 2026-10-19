@@ -21,6 +21,7 @@
 |---|---|---|---|---|
 | correção `2026-10-18-professor-em-area-alheia-estoura-o-prazo` | `43067f8` | Sonnet | 1 | esteira vermelha da 1.0; o caso `areas.spec.ts:204` (seis cargas, 30 s na esteira) virou cinco casos de 4 s, entrando pela API |
 | correção `2026-10-18-textos-da-turma-indisponivel-diferem` | `61dba8c` | Sonnet | 2 | esteira vermelha da 1.0; o caso W4 de `acesso-da-turma.spec.ts` dividido em 8 pelo portão (15 s) |
+| 3.0 | `7a78946` | Sonnet | 2 | portão lento por defeito do detector (diagnóstico 3), não da tarefa; 1ª rodada só depois da correção `8afb24d` |
 | correção `2026-10-19-detector-de-literal-compara-com-a-web` | `8afb24d` | Sonnet | 2 | diagnóstico 3 do `Arquiteto`: o detector puxava quase toda a suíte nas três linhas; andar próprio saído da spec, fast-forward |
 | 2.0 | `7ad636e` | Sonnet | 2 | divergência de desenho (régua do e2e × §10), parada, alt. 1 do Joaquim; `test-engineer` reprovou na 1ª; trabalho guardado fora da árvore durante a correção e restaurado |
 | correção `2026-10-18-duracao-do-e2e-le-o-prazo-declarado` | `75f94a3` | Sonnet | 4 | divergência da 2.0 (alt. 1); `test-engineer` escalou (r2), diagnóstico do `Arquiteto`, 3ª reprovação destravada pelo Joaquim; sem encontro próprio |

@@ -1,9 +1,10 @@
-import type { Ferramenta } from '@educa/shared'
+import type { ChaveDeFuncao, Ferramenta } from '@educa/shared'
 import { LayoutGrid, MessagesSquare } from 'lucide-react'
 import { useState } from 'react'
 import { CaixaPedido } from '../../componentes/ia/CaixaPedido'
 import { Menu, type ItemDoMenu } from '../../componentes/Menu'
 import { Selecao } from '../../componentes/Selecao'
+import { AtalhosDeFerramenta } from './AtalhosDeFerramenta'
 import { CATALOGO_DE_FERRAMENTAS, ehFerramenta, ferramentaDoCatalogo, iniciaisDoPedido } from './ferramentas'
 import { abrirCartaoNaConversa, CARTAO_DA_CONVERSA, CONTEXTO_ESCOLHIDO, type PedidoDaConversa } from './memoria-do-professor'
 import type { TurmaDaProfessora } from './turmas-da-professora'
@@ -32,6 +33,13 @@ interface PropsDaCaixa {
   readonly desligada: boolean
   /** O pedido saiu, ou o cartão de uma ferramenta abriu: a Home leva à conversa. */
   readonly depois?: () => void
+  /**
+   * O Início: a caixa sem o menu **Ferramenta**, e no lugar dele os atalhos embaixo (`AtalhosDeFerramenta`). Sem o menu, o
+   * pedido escrito nunca leva ferramenta escolhida: vai ao Assistente, que pergunta antes (D18).
+   */
+  readonly semMenu?: boolean
+  /** Só com `semMenu`: a função suspensa pela escola desliga o atalho da ferramenta que ela executa (D60). */
+  readonly funcaoSuspensa?: (funcao: ChaveDeFuncao) => boolean
 }
 
 /**
@@ -42,9 +50,13 @@ interface PropsDaCaixa {
  *   pedido perguntando o que ela já disse;
  * - a **Adaptação** abre o cartão dela ao ser escolhida, e **nunca recebe o que foi escrito na caixa** (D35, D67).
  *
+ * No Início (`semMenu`) a caixa não tem o menu: os atalhos vêm embaixo, e cada um faz a mesma coisa que escolher a
+ * ferramenta e enviar — abre o cartão com a turma e, como tema, o que já está escrito —, menos a Adaptação, que não lê a
+ * caixa. O pedido enviado sem atalho vai sempre ao Assistente.
+ *
  * O texto é limpo e o estado muda na hora do envio, sem esperar resposta nenhuma: o segundo Enter não manda de novo.
  */
-export function CaixaDoAssistente({ turmas, turma, iniciar, respondendo, desligada, depois }: PropsDaCaixa) {
+export function CaixaDoAssistente({ turmas, turma, iniciar, respondendo, desligada, depois, semMenu = false, funcaoSuspensa = () => false }: PropsDaCaixa) {
   const [texto, definirTexto] = useState('')
   const [ferramenta, definirFerramenta] = useState<Ferramenta | typeof SEM_FERRAMENTA>(SEM_FERRAMENTA)
   const escolhida = ferramenta === SEM_FERRAMENTA ? undefined : ferramentaDoCatalogo(ferramenta)
@@ -78,7 +90,21 @@ export function CaixaDoAssistente({ turmas, turma, iniciar, respondendo, desliga
     depois?.()
   }
 
-  return (
+  const menu = (
+    <Menu
+      rotulo={escolhida?.nome ?? 'Ferramenta'}
+      {...(escolhida === undefined ? {} : { prefixo: 'Ferramenta' })}
+      icone={LayoutGrid}
+      titulo="Ferramentas"
+      itens={ITENS_DO_MENU}
+      escolhido={ferramenta}
+      aoEscolher={aoEscolherFerramenta}
+      variante="discreto"
+      desligado={desligada}
+    />
+  )
+
+  const caixa = (
     <CaixaPedido
       rotulo="Pedido ao Assistente de ensino"
       exemplo={escolhida === undefined ? 'Peça uma atividade, um plano de aula…' : `O tema para ${escolhida.nome.toLocaleLowerCase('pt-BR')}…`}
@@ -86,20 +112,18 @@ export function CaixaDoAssistente({ turmas, turma, iniciar, respondendo, desliga
       aoMudar={definirTexto}
       aoEnviar={aoEnviar}
       estado={desligada ? 'desligada' : respondendo ? 'gerando' : 'pronta'}
-      esquerda={
-        <Menu
-          rotulo={escolhida?.nome ?? 'Ferramenta'}
-          {...(escolhida === undefined ? {} : { prefixo: 'Ferramenta' })}
-          icone={LayoutGrid}
-          titulo="Ferramentas"
-          itens={ITENS_DO_MENU}
-          escolhido={ferramenta}
-          aoEscolher={aoEscolherFerramenta}
-          variante="discreto"
-          desligado={desligada}
-        />
-      }
+      {...(semMenu ? {} : { esquerda: menu })}
       direita={<Selecao variante="pilula" rotulo="Turma e disciplina" opcoes={turmas.map((item) => ({ valor: item.valor, rotulo: item.rotulo }))} valor={turma.valor} aoMudar={CONTEXTO_ESCOLHIDO.guardar} desligada={desligada} />}
     />
+  )
+  if (!semMenu) return caixa
+
+  // O atalho é a escolha da ferramenta com o que já está escrito: o texto da caixa vira o tema. A Adaptação nunca o recebe
+  // (`iniciaisDoPedido`, D35, D67).
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      {caixa}
+      <AtalhosDeFerramenta aoAbrir={(daFerramenta) => abrirCartao(daFerramenta, texto)} desligado={(funcao) => desligada || funcaoSuspensa(funcao)} />
+    </div>
   )
 }

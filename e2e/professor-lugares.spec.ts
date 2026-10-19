@@ -35,8 +35,9 @@ test.describe('a navegação do professor na A2 (D73)', () => {
     await expect(lateral(page).getByRole('navigation', { name: 'Seu time' })).toHaveCount(0)
     await expect(lateral(page).getByRole('link', { name: /Assistente de ensino|^Tutor$/ })).toHaveCount(0)
     for (const fora of ['Calendário', 'Histórico']) await expect(lateral(page).getByText(fora, { exact: true })).toHaveCount(0)
-    // X1 (12.0): nenhum avatar da onça na casca (A80).
-    await expect(lateral(page).locator('[data-agente]')).toHaveCount(0)
+    // X1 (12.0): nenhum avatar da onça na casca (A80). O Início tem o do Assistente, no `main` (telas do professor, 3.1): a
+    // casca é tudo o que está fora dele.
+    await expect(lateral(page).locator('[data-agente]:not(main *)')).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
     if (naGaveta(page)) {
       await page.keyboard.press('Escape')
