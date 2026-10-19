@@ -132,6 +132,20 @@ describe('o sino da professora lê a fila', () => {
     expect(rede.chamadas).toHaveLength(antes)
   })
 
+  it('o pé leva às duas telas do time, em qualquer estado da fila, e o número do sino é só o dos itens (2.0)', async () => {
+    const usuario = userEvent.setup()
+    const rede = redeFalsa()
+    instalar(rede, { entregas: ok([]), vinculos: ok([]) })
+    montar()
+    await usuario.click(await botao('Esperando você, nada'))
+    const pe = within(painel()).getByRole('region', { name: 'Acompanhar a IA' })
+    const links = within(pe).getAllByRole('link')
+    expect(links.map((link) => link.textContent)).toEqual([expect.stringContaining('O que o Assistente fez'), expect.stringContaining('O que o Tutor viu')])
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/time/assistente', '/time/tutor'])
+    // Ver o pé não lê nada além da fila.
+    expect([...new Set(caminhosDe(rede))].sort()).toEqual(['/v1/entregas', '/v1/meus-vinculos'].sort())
+  })
+
   it('decidir um pedido relê a contagem da turma, uma vez, e o item sai do sino sem outra ação', async () => {
     const rede = redeFalsa()
     let leituras = 0

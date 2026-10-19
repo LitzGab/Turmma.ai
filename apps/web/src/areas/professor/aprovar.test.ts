@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import * as textos from './aprovar'
-import { acertosDoAluno, contadorDosDestaques, estadoDoDestaque, explicacoesDoDestaque, semCorrecao, letraDaAlternativa, motivosDoDestaque, resumoDoLote, rotuloDaFaixa, rotuloDeAprovar, situacaoDaAplicacao, textoDaMedia, textoDosCorrigidos } from './aprovar'
+import { acertosDoAluno, caminhoDeVoltaDaCorrecao, contadorDosDestaques, estadoDoDestaque, explicacoesDoDestaque, semCorrecao, letraDaAlternativa, motivosDoDestaque, resumoDoLote, rotuloDaFaixa, rotuloDeAprovar, situacaoDaAplicacao, textoDaMedia, textoDosCorrigidos } from './aprovar'
 
 const id = (final: string) => `0190f5a0-0000-7000-8000-0000000000${final}`
 const destaque = (final: string, abertoEm: string | null = null) => ({ alunoId: id(final), nome: `Aluno sintético ${final}`, acertos: 1, total: 5, emBranco: 0, motivos: ['fora_do_historico' as const], abertoEm })
@@ -92,5 +92,14 @@ describe('aprovar a correção: os textos', () => {
     expect(fixos.length).toBeGreaterThan(4)
     const gerados = [textoDaMedia(RESUMO), textoDosCorrigidos(RESUMO), rotuloDeAprovar(3), rotuloDaFaixa({ de: 0, ate: 2 }), acertosDoAluno({ acertos: 1, total: 5, emBranco: 1 }), contadorDosDestaques({ destaques: [destaque('01')], destaquesAbertos: 0, podeAprovar: false }).porQue ?? '']
     for (const texto of [...fixos, ...gerados]) expect(texto).not.toMatch(/\bnotas?\b|\bconceitos?\b|pontua/i)
+  })
+})
+
+describe('aprovar a correção: "Voltar para a turma" (X3, 2.0)', () => {
+  it('leva à turma da correção quando a entrega inteira a trouxe, e à lista de turmas enquanto não', () => {
+    expect(caminhoDeVoltaDaCorrecao(id('a1'))).toBe(`/turmas/${id('a1')}`)
+    expect(caminhoDeVoltaDaCorrecao(undefined)).toBe('/turmas')
+    // Outra turma, outro caminho: o endereço não é fixo.
+    expect(caminhoDeVoltaDaCorrecao(id('a2'))).not.toBe(caminhoDeVoltaDaCorrecao(id('a1')))
   })
 })

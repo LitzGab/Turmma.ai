@@ -59,6 +59,8 @@ export async function entrarNaCena(page: Page, cena: Pick<CenaDoSino, 'professor
 
 export const sinoDe = (page: Page): Locator => page.getByRole('button', { name: /^Esperando você/ })
 export const listaDoSino = (page: Page): Locator => page.getByRole('dialog', { name: 'Esperando você' })
+/** O pé da lista: as duas telas do que a IA fez, que já não são item da lateral (telas do professor, 2.0). */
+export const peDoSino = (page: Page): Locator => listaDoSino(page).getByRole('region', { name: 'Acompanhar a IA' })
 
 /** Espera o sino ter lido tudo (nome com o número) e devolve o botão. */
 export async function esperarSino(page: Page, nome: string): Promise<Locator> {

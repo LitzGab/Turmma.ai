@@ -31,7 +31,7 @@ const SinoDoProfessor = lazy(() => import('./SinoDoProfessor'))
  * `professor-*.js` (`apps/web/nome-dos-chunks.ts`), que só se baixa depois de a guarda conferir o papel. Na A2 (D73) ela
  * tem "Início" (a Home, onde o professor abre, e a conversa com o Assistente), "Ferramentas" (o catálogo, o
  * formulário de cada uma e o artefato aberto), "Turmas", com a turma aberta dentro dela (A1), "Meus dados" (F3, 18.0, no
- * menu da pessoa) e, no "Seu time", a conversa do Assistente de ensino. O item da lateral continua selecionado nas telas
+ * menu da pessoa) e, pelo pé do sino, "O que o Assistente fez" e "O que o Tutor viu". O item da lateral continua selecionado nas telas
  * de dentro (`estaNoItem`).
  *
  * **Tela nova entra por `lazy(() => import('./Tela'))`**, e não por `import` direto: as cinco linhas da convenção estão

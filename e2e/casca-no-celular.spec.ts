@@ -75,7 +75,7 @@ test.describe('a casca da escola no celular', () => {
     // `Seções` é uma só (A14, negativa), à vista com a gaveta fechada, e a gaveta nem abriu.
     await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(1)
     await expect(gaveta(page)).toBeHidden()
-    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas'])
     await expect(secoes(page).getByRole('link', { name: 'Início' })).toHaveAttribute('aria-current', 'page')
 
     // A barra: fixa no pé da janela, com 68 px, e cada item é um alvo de 44 px ou mais (A13, A93, A95).
@@ -83,9 +83,9 @@ test.describe('a casca da escola no celular', () => {
     expect(Math.round(barra.height)).toBe(ALTURA_DA_BARRA_PX)
     expect(Math.round(barra.y + barra.height)).toBe(ALTURA_DA_JANELA)
     expect(Math.round(barra.width)).toBe(LARGURA)
-    for (const rotulo of ['Início', 'Ferramentas', 'Turmas']) await esperarAlvoDe44(secoes(page).getByRole('link', { name: rotulo }), rotulo)
+    for (const rotulo of ['Início', 'Turmas', 'Ferramentas']) await esperarAlvoDe44(secoes(page).getByRole('link', { name: rotulo }), rotulo)
     // A pílula que segura o ícone é de 48 × 36 (13.1), e a borda de 2 px entra nessa conta.
-    for (const rotulo of ['Início', 'Ferramentas', 'Turmas']) {
+    for (const rotulo of ['Início', 'Turmas', 'Ferramentas']) {
       const pilula = await caixaDe(secoes(page).getByRole('link', { name: rotulo }).locator('[data-pilula]'), `a pílula de ${rotulo}`)
       expect([Math.round(pilula.width), Math.round(pilula.height)], `a pílula de ${rotulo}`).toEqual([48, 36])
     }
@@ -100,11 +100,11 @@ test.describe('a casca da escola no celular', () => {
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // A gaveta leva escola, "Seu time" e "Sua conta", e já não leva `Seções`: ela é da barra.
+    // A gaveta leva escola e "Sua conta", e já não leva `Seções`, que é da barra, nem "Seu time", que saiu da lateral (telas do professor, 2.0).
     await acionar(page.getByRole('button', { name: 'Abrir o menu' }), hasTouch)
     await expect(gaveta(page)).toBeVisible()
     await expect(gaveta(page).getByRole('navigation', { name: 'Seções' })).toHaveCount(0)
-    await expect(gaveta(page).getByRole('navigation', { name: 'Seu time' })).toHaveCount(1)
+    await expect(gaveta(page).getByRole('navigation', { name: 'Seu time' })).toHaveCount(0)
     await expect(gaveta(page).getByRole('navigation', { name: 'Sua conta', exact: true })).toHaveCount(1)
     // A gaveta fica por cima da barra de topo e deixa fora uma faixa da janela para o toque que a fecha (A16).
     const painel = await caixaDe(gaveta(page), 'a gaveta')

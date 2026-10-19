@@ -2,7 +2,8 @@ import type { Locator, Page } from '@playwright/test'
 import { entregasNoBanco } from './__fixtures__/a2.ts'
 import { conferirAssinaturas } from './__fixtures__/avatar.ts'
 import { acionar, caixa, conversa, DISCIPLINA, gerarAtividade, montarEscolaEEntrar, PRAZO_DA_IA_MS, principal, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
-import { abrirNavegacao, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { sinoDe } from './__fixtures__/professor/sino.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -43,7 +44,7 @@ async function pedirVersaoAdaptada(page: Page, cartao: Locator, tipos: readonly 
   const pronto = page.locator('[data-motor="pronto"]')
   await expect(pronto.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando você', { timeout: PRAZO_DA_IA_MS })
   await expect(pronto.getByText('Assistente · adaptação')).toBeVisible()
-  await acionar(pronto.getByRole('link', { name: 'Ver e decidir em Seu time' }), hasTouch)
+  await acionar(pronto.getByRole('link', { name: 'Ver e decidir' }), hasTouch)
   await expect(page).toHaveURL(/\/professor\/time\/assistente$/)
 }
 
@@ -92,7 +93,7 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     expect(arquivo.suggestedFilename()).toBe('atividade-estequiometria.pdf')
     expect(await arquivo.failure()).toBeNull()
 
-    // A versão adaptada, pelo tipo de adaptação: nasce esperando a professora, e é no Seu time que ela decide.
+    // A versão adaptada, pelo tipo de adaptação: nasce esperando a professora, e é na tela do Assistente que ela decide.
     await acionar(page.getByRole('button', { name: 'Pedir versão adaptada' }), hasTouch)
     const formulario = page.locator('[data-motor="formulario"]')
     await expect(formulario.getByLabel('Atividade de origem').locator('option:checked')).toContainText('Atividade — Estequiometria', { timeout: PRAZO_DA_ENTRADA_MS })
@@ -104,16 +105,14 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     await expect(pronto.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando você', { timeout: PRAZO_DA_IA_MS })
     await expect(pronto).toContainText('Adaptação: Fonte ampliada + Tempo adicional')
     expect(await entregasNoBanco(professora.escolaId)).toEqual([{ tipo: 'versao_adaptada', funcao: 'adaptacao', estado: 'pendente', decididaPor: null, decidida: false, justificativa: null }])
-    await acionar(pronto.getByRole('link', { name: 'Ver e decidir em Seu time' }), hasTouch)
+    await acionar(pronto.getByRole('link', { name: 'Ver e decidir' }), hasTouch)
 
-    // Seu time: a entrega esperando, na faixa e na conversa do Assistente, e o contador na lateral.
+    // A tela do Assistente: a entrega esperando, na faixa e na conversa dele, e o número no sino.
     await expect(page).toHaveURL(/\/professor\/time\/assistente$/)
     const pendente = page.locator('[data-entrega="pendente"]')
     await expect(pendente).toContainText(`Preparei "Atividade — Estequiometria (versão adaptada)" da turma ${turmaNome}. Esta versão adaptada só pode ir aos alunos depois que você aprovar.`, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('[data-faixa-esperando]')).toContainText(`Atividade — Estequiometria (versão adaptada) · ${turmaNome}`)
-    await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /^Assistente de ensino/ })).toHaveAccessibleName(/^Assistente de ensino\s*1\s*esperando você$/)
-    if (await page.getByRole('dialog', { name: 'Menu' }).isVisible()) await page.keyboard.press('Escape')
+    await expect(sinoDe(page)).toHaveAccessibleName('Esperando você, 1')
 
     // Aprovar: a confirmação diz o que é, de qual turma, e que só depois disso a versão pode ir aos alunos.
     await acionar(pendente.getByRole('button', { name: /^Aprovar/ }), hasTouch)
@@ -133,8 +132,7 @@ test.describe('A2 de ponta a ponta, contra a API real', () => {
     await expect(page.locator('[data-entrega="pendente"]')).toHaveCount(0)
     await expect(page.locator('[data-faixa-esperando]')).toHaveCount(0)
     expect(await entregasNoBanco(professora.escolaId)).toEqual([{ tipo: 'versao_adaptada', funcao: 'adaptacao', estado: 'aprovada', decididaPor: professora.usuarioId, decidida: true, justificativa: null }])
-    await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /^Assistente de ensino/ })).toHaveAccessibleName('Assistente de ensino')
+    await expect(sinoDe(page)).toHaveAccessibleName('Esperando você, nada')
   })
 
   test('"Só conversar" recebe a resposta em texto, sem a ferramenta abrir de novo; e o pedido de corrigir redação recebe a recusa que explica, como mensagem do Assistente', async ({ page, hasTouch }) => {

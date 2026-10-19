@@ -3,12 +3,12 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
-import { MENU_DA_PESSOA, NAVEGACAO, RODAPE_DA_LATERAL, SEU_TIME } from '../areas/navegacao'
+import { MENU_DA_PESSOA, NAVEGACAO, RODAPE_DA_LATERAL } from '../areas/navegacao'
 import { classesDo, contraste, corDoToken, TEMAS } from '../__fixtures__/cor-das-classes'
-import { ItemDaLateral, ListaDeItens, SecaoDoTime } from './itens-da-lateral'
+import { ItemDaLateral, ListaDeItens } from './itens-da-lateral'
 
 /**
- * O lugar da lateral (`docs/interface.md` 11.1; D80, 12.0): o ícone de cada item, o aceso e o apagado, o trilho e "Seu time".
+ * O lugar da lateral (`docs/interface.md` 11.1; D80, 12.0): o ícone de cada item, o aceso e o apagado e o trilho.
  * A cor que o navegador calcula, a medida de 52 px e a dica que aparece são do e2e (`e2e/casca.spec.ts`, `e2e/areas.spec.ts`);
  * aqui está o que o `jsdom` sabe: o nome acessível, o ícone decorativo, a família e as classes que carregam a regra.
  */
@@ -63,8 +63,8 @@ describe('ItemDaLateral', () => {
     }
     expect([...ilustrados]).toEqual([
       ['Início', 'inicio'],
-      ['Ferramentas', 'ferramentas'],
       ['Turmas', 'turmas'],
+      ['Ferramentas', 'ferramentas'],
       ['Atividades', 'tarefas'],
       ['Painel', 'painel'],
       ['Analista', 'ia'],
@@ -95,7 +95,8 @@ describe('ItemDaLateral', () => {
   })
 
   it('aceso: `aria-current`, fundo `azul-claro`, borda `azul-borda` e texto `azul-texto`; apagado: nenhuma das três, e a borda transparente', () => {
-    const [inicio, ferramentas] = NAVEGACAO.professor
+    const inicio = NAVEGACAO.professor.find((item) => item.rotulo === 'Início')
+    const ferramentas = NAVEGACAO.professor.find((item) => item.rotulo === 'Ferramentas')
     if (inicio === undefined || ferramentas === undefined) throw new Error('faltou item')
     render(
       noEndereco(
@@ -132,7 +133,7 @@ describe('ItemDaLateral', () => {
   })
 
   it('de 768 a 1023 px o item é um quadrado de 52 px com o rótulo só para o leitor de tela, e aberto tem 52 px de altura', () => {
-    const [turmas] = NAVEGACAO.professor.slice(2)
+    const turmas = NAVEGACAO.professor.find((item) => item.rotulo === 'Turmas')
     if (turmas === undefined) throw new Error('faltou Turmas')
     const { unmount } = render(noEndereco('/', <ul><ItemDaLateral item={turmas} trilho /></ul>))
     const noTrilho = screen.getByRole('link', { name: 'Turmas' })
@@ -151,54 +152,6 @@ describe('ItemDaLateral', () => {
 describe('ListaDeItens', () => {
   it('sem item não desenha nem a região', () => {
     const { container } = render(noEndereco('/', <ListaDeItens itens={[]} rotulo="Rodapé" trilho={false} />))
-    expect(container.innerHTML).toBe('')
-  })
-})
-
-describe('SecaoDoTime', () => {
-  const ESPERANDO = { quantidade: 3, haMais: false } as const
-
-  it('cada agente tem o ícone da função num ladrilho na família dele, e nenhum avatar da onça', () => {
-    const { container } = render(noEndereco('/', <SecaoDoTime agentes={SEU_TIME.professor} esperando={ESPERANDO} trilho={false} />))
-    // A casca é da entrada, e a onça mora fora dela: nenhum nó do avatar do agente (A80).
-    expect(container.querySelector('[data-agente]')).toBeNull()
-    expect(container.querySelector('[data-assinatura]')).toBeNull()
-    const nav = screen.getByRole('navigation', { name: 'Seu time' })
-    const familias = [...nav.querySelectorAll('[data-ladrilho]')].map((ladrilho) => ladrilho.getAttribute('data-ladrilho'))
-    expect(familias).toEqual(['azul', 'laranja'])
-    // O ladrilho é decoração: o nome do link é o da função.
-    expect(screen.getByRole('link', { name: /^Assistente de ensino/ })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Tutor' })).toBeTruthy()
-    expect(within(nav).queryByRole('img')).toBeNull()
-  })
-
-  it('o contador é só do agente que deixa entrega, diz o que conta em texto e não leva nada que se mexa', () => {
-    const { container } = render(noEndereco('/', <SecaoDoTime agentes={SEU_TIME.professor} esperando={ESPERANDO} trilho={false} />))
-    const contadores = container.querySelectorAll('[data-contador-do-time]')
-    expect(contadores).toHaveLength(1)
-    expect(contadores[0]?.textContent).toBe('3 esperando você')
-    expect(screen.getByRole('link', { name: 'Tutor' }).querySelector('[data-contador-do-time]')).toBeNull()
-    // D59: o contador não anima, nem o ponto do trilho.
-    expect(contadores[0]?.className).not.toMatch(/animate|transition/)
-  })
-
-  it('no trilho o ponto de espera é só do agente que espera, e o nome do link o diz', () => {
-    const { container } = render(noEndereco('/', <SecaoDoTime agentes={SEU_TIME.professor} esperando={ESPERANDO} trilho />))
-    expect(container.querySelectorAll('[data-ponto-de-espera]')).toHaveLength(1)
-    expect(screen.getByRole('link', { name: 'Assistente de ensino, 3 esperando você' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Tutor' })).toBeTruthy()
-    // O rótulo do grupo só existe aberto.
-    expect(screen.queryByText('Seu time')).toBeNull()
-  })
-
-  it('sem pendência, nada de contador nem de ponto', () => {
-    const { container } = render(noEndereco('/', <SecaoDoTime agentes={SEU_TIME.professor} esperando={{ quantidade: 0, haMais: false }} trilho />))
-    expect(container.querySelector('[data-ponto-de-espera]')).toBeNull()
-    expect(container.querySelector('[data-contador-do-time]')).toBeNull()
-  })
-
-  it('sem agente, não desenha o grupo', () => {
-    const { container } = render(noEndereco('/', <SecaoDoTime agentes={[]} esperando={ESPERANDO} trilho={false} />))
     expect(container.innerHTML).toBe('')
   })
 })

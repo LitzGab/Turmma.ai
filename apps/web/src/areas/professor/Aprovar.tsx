@@ -7,7 +7,6 @@ import { abrirDestaque, aprovarLote, consultaCorrecaoDoLote, recarregarDepoisDoL
 import { ErroDaApi, mensagemDoErro } from '../../api/cliente'
 import { consultaEntregas, decidirEntrega } from '../../api/entregas'
 import { consultaMeusVinculos } from '../../api/vinculos'
-import { ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { BarraPresa } from '../../componentes/BarraPresa'
 import { BarraRotulada } from '../../componentes/BarraRotulada'
 import { Botao } from '../../componentes/Botao'
@@ -25,6 +24,7 @@ import { useTituloDaTela } from '../../titulo'
 import {
   acertosDoAluno,
   AVISO_DA_REJEICAO_DO_LOTE,
+  caminhoDeVoltaDaCorrecao,
   contadorDosDestaques,
   EFEITO_DE_APROVAR_O_LOTE,
   EFEITO_DE_REJEITAR_O_LOTE,
@@ -161,11 +161,13 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
     },
   })
 
+  // A entrega inteira traz a turma; enquanto ela não chegou (ou se a leitura falhou), o caminho de volta é a lista de turmas.
+  const entregaInteira = dados === undefined ? undefined : entregas.data?.pages.flatMap((pagina) => pagina.itens).find((entrega) => entrega.id === dados.entrega.id)
   const voltar = (
     // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
-    <Link to={ROTAS_DO_PROFESSOR.timeDoAssistente} className="inline-flex min-h-11 items-center gap-2 self-start text-caramelo-texto underline">
+    <Link to={caminhoDeVoltaDaCorrecao(entregaInteira?.turmaId)} className="inline-flex min-h-11 items-center gap-2 self-start text-caramelo-texto underline">
       <ArrowLeft aria-hidden="true" size={18} />
-      Voltar para o Seu time
+      Voltar para a turma
     </Link>
   )
 
@@ -176,7 +178,7 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
         {correcao.isPending ? (
           <EstadoCarregando rotulo="Carregando a correção…" />
         ) : naoEncontrada ? (
-          <EstadoVazio titulo="Esta correção não está disponível" descricao="A atividade pode ainda estar aberta, ser de uma turma que não é mais sua, ou o endereço está errado. A correção nasce quando você encerra a atividade, e aparece em Seu time." />
+          <EstadoVazio titulo="Esta correção não está disponível" descricao="A atividade pode ainda estar aberta, ser de uma turma que não é mais sua, ou o endereço está errado. A correção nasce quando você encerra a atividade, e aparece em “Esperando você”, no sino." />
         ) : (
           <EstadoErro erro={correcao.error} tentando={correcao.isFetching} aoTentarDeNovo={() => void correcao.refetch({ cancelRefetch: false })} />
         )}
@@ -187,7 +189,6 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
   const { resumo, destaques, outras } = dados
   const pendente = dados.entrega.estado === 'pendente'
   const contador = contadorDosDestaques(dados)
-  const entregaInteira = entregas.data?.pages.flatMap((pagina) => pagina.itens).find((entrega) => entrega.id === dados.entrega.id)
   const turma = entregaInteira === undefined ? undefined : nomesDasTurmas(vinculos.data?.pages.flatMap((pagina) => pagina.itens) ?? [])[entregaInteira.turmaId]
   const problemaDaJustificativa = problemaDoTexto(justificativa, LIMITES_DA_JUSTIFICATIVA)
   const falha = decidir.isError && !(decidir.error instanceof ErroDaApi && AVISO_DA_DECISAO[decidir.error.codigo] !== undefined) ? mensagemDoErro(decidir.error) : undefined
@@ -261,7 +262,7 @@ export default function Aprovar({ atividadeAplicadaId }: { atividadeAplicadaId: 
           <LinhaAprovacao aprovacao={aprovacaoDaEntrega(entregaInteira)} verbo={VERBO_DA_ENTREGA} />
         ) : (
           // A decisão só é afirmada com quem decidiu (regra 70, item 6): sem a leitura da entrega, a tela diz onde ver.
-          <p className="text-sm text-sutil">{dados.entrega.estado === 'rejeitada' ? 'Esta correção foi rejeitada. Quem rejeitou e por quê está em Seu time.' : 'Esta correção já foi decidida. A decisão está em Seu time.'}</p>
+          <p className="text-sm text-sutil">{dados.entrega.estado === 'rejeitada' ? 'Esta correção foi rejeitada. Quem rejeitou e por quê está em “O que o Assistente fez”, pelo sino.' : 'Esta correção já foi decidida. A decisão está em “O que o Assistente fez”, pelo sino.'}</p>
         )}
         {dados.validacao !== null && <p className="text-sm break-words text-sutil">Os alunos já podem ver o diagnóstico deles. O registro guarda o que esta tela mostrou e os destaques que foram abertos.</p>}
       </div>

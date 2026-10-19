@@ -1,9 +1,22 @@
 import { createPortal } from 'react-dom'
+import { ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { useAncoraDoSino } from '../../componentes/ancora-do-sino'
-import { Sino } from '../../componentes/sino/Sino'
+import { Sino, type PeDoSino } from '../../componentes/sino/Sino'
 import { useFilaDoProfessor } from './fila-do-professor'
 
 const AVISO_SEM_ANO_LETIVO = 'Não há ano letivo em curso nesta escola. O que espera você aparece aqui quando a coordenação abrir o ano.'
+
+/**
+ * O pé da lista (telas do professor, 2.0): as duas telas que "Seu time" tinha na lateral. Não são pendência e não entram no
+ * número do sino. O Tutor continua visível à professora (regra 70, item 4): a tela dele abre pelo sino, de qualquer tela.
+ */
+const PE_DO_SINO: PeDoSino = {
+  titulo: 'Acompanhar a IA',
+  links: [
+    { rotulo: 'O que o Assistente fez', para: ROTAS_DO_PROFESSOR.timeDoAssistente },
+    { rotulo: 'O que o Tutor viu', para: ROTAS_DO_PROFESSOR.timeDoTutor },
+  ],
+}
 
 /** O que o aviso da lista lida em parte diz: o que o sino não leu, em palavras. Quem monta a fila escreve cada parte. */
 function avisoDaLeituraParcial(semAnoLetivo: boolean, naoLeu: readonly string[]): string {
@@ -36,6 +49,7 @@ export default function SinoDoProfessor() {
       atualizadoEm={fila.atualizadoEm}
       textoDoVazio="Nada espera a sua decisão agora."
       avisoDaLeituraParcial={avisoDaLeituraParcial(fila.semAnoLetivo, fila.naoLeu)}
+      pe={PE_DO_SINO}
     />,
     ancora,
   )

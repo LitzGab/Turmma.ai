@@ -38,7 +38,7 @@ export function ResultadoDaFerramenta({ artefatoId, entregaId, funcao }: PropsDo
   return (
     <MensagemIA
       funcao={funcao}
-      // A entrega recém-nascida é sempre pendente: a aprovação só existe depois da decisão, no Seu time.
+      // A entrega recém-nascida é sempre pendente: a aprovação só existe depois da decisão, em “O que o Assistente fez”.
       {...(entregaId === null ? {} : { aprovacao: { aprovacao: { estado: 'pendente' as const } } })}
       acoes={
         <>
@@ -50,7 +50,7 @@ export function ResultadoDaFerramenta({ artefatoId, entregaId, funcao }: PropsDo
           {saidaEmPdf(data.entrega) !== 'nao_exporta' && <ExportarPdf artefatoId={data.id} titulo={data.titulo} rascunho={saidaEmPdf(data.entrega) === 'rascunho'} />}
           {entregaId !== null && (
             <Link to={ROTAS_DO_PROFESSOR.timeDoAssistente} className={CLASSES_DA_ACAO}>
-              Ver e decidir em Seu time
+              Ver e decidir
             </Link>
           )}
         </>

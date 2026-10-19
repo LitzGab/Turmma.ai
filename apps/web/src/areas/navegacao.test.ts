@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { estaNoItem, MENU_DA_PESSOA, NAVEGACAO, RODAPE_DA_LATERAL, SEU_TIME } from './navegacao'
+import * as navegacao from './navegacao'
+import { estaNoItem, MENU_DA_PESSOA, NAVEGACAO, RODAPE_DA_LATERAL } from './navegacao'
 
 describe('navegação por papel', () => {
-  it('W2: os quatro lugares da coordenação, "Minha turma" do aluno e, na A2, "Início" (era "Nova conversa"), "Ferramentas" e "Turmas" do professor têm tela', () => {
+  it('W2: os quatro lugares da coordenação, "Minha turma" do aluno e, na ordem da D80, "Início" (era "Nova conversa"), "Turmas" e "Ferramentas" do professor têm tela', () => {
     expect(NAVEGACAO.professor.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
       { rotulo: 'Início', caminho: '/professor/nova-conversa' },
-      { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
       { rotulo: 'Turmas', caminho: '/professor/turmas' },
+      { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
     ])
     // A3 e A4: o aluno tem Tutor, Atividades e Minha turma, nesta ordem, e mais nada.
     expect(NAVEGACAO.aluno.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
@@ -84,19 +85,17 @@ describe('navegação por papel', () => {
     expect(acesos('/coordenacao/governanca-velha')).toEqual([])
   })
 
-  it('D73: cada item só aparece com a fase dele — o professor não tem Calendário nem Histórico, e "Seu time" tem o Assistente de ensino e, desde a A4, o Tutor', () => {
+  it('D73: cada item só aparece com a fase dele — o professor não tem Calendário nem Histórico, e os agentes não são lugar da lateral (X3, 2.0)', () => {
     const rotulos = NAVEGACAO.professor.map((item) => item.rotulo)
     expect(rotulos).not.toContain('Calendário')
     expect(rotulos).not.toContain('Histórico')
-    // Só o Assistente deixa entrega esperando decisão: a linha do Tutor não leva contador (D59).
-    expect(SEU_TIME.professor.map(({ agente, rotulo, caminho, comEspera }) => ({ agente, rotulo, caminho, comEspera }))).toEqual([
-      { agente: 'assistente_de_ensino', rotulo: 'Assistente de ensino', caminho: '/professor/time/assistente', comEspera: true },
-      { agente: 'tutor', rotulo: 'Tutor', caminho: '/professor/time/tutor', comEspera: false },
-    ])
-    // O Analista é da coordenação, e não aparece para o professor.
-    expect(SEU_TIME.professor.map((item) => item.agente)).not.toContain('analista_de_desempenho_escolar')
-    expect(SEU_TIME.coordenador).toEqual([])
-    expect(SEU_TIME.aluno).toEqual([])
+    // "Seu time" saiu: o Assistente e o Tutor abrem pelo pé do sino, e nenhum papel tem item de agente na lateral.
+    for (const papel of ['professor', 'aluno', 'coordenador'] as const) {
+      const nomes = [...NAVEGACAO[papel], ...RODAPE_DA_LATERAL[papel], ...MENU_DA_PESSOA[papel]].map((item) => item.rotulo)
+      expect(nomes, papel).not.toContain('Assistente de ensino')
+      expect(nomes, papel).not.toContain('Seu time')
+    }
+    expect(navegacao).not.toHaveProperty('SEU_TIME')
   })
 
   it('o aluno não tem item que leva a tela inexistente nesta fatia, e a atividade e a conversa abertas ficam dentro do item delas', () => {
@@ -112,15 +111,18 @@ describe('navegação por papel', () => {
   })
 
   it('a conversa aberta fica dentro de "Início", e o artefato aberto, dentro de "Ferramentas"', () => {
-    const [inicio, ferramentas, turmas] = NAVEGACAO.professor
-    if (inicio === undefined || ferramentas === undefined || turmas === undefined) throw new Error('faltou item na navegação do professor')
+    const [inicio, , ferramentas] = NAVEGACAO.professor
+    if (inicio === undefined || ferramentas === undefined) throw new Error('faltou item na navegação do professor')
     expect(estaNoItem('/professor/conversa', inicio)).toBe(true)
     expect(estaNoItem('/professor/conversa', ferramentas)).toBe(false)
     expect(estaNoItem('/professor/artefatos/0190f5a0-0000-7000-8000-000000000001', ferramentas)).toBe(true)
     expect(estaNoItem('/professor/ferramentas/adaptacao', ferramentas)).toBe(true)
     expect(estaNoItem('/professor/artefatos/0190f5a0-0000-7000-8000-000000000001', inicio)).toBe(false)
-    // O Seu time não é de nenhum item: quem diz onde a pessoa está é a linha do agente.
-    for (const item of NAVEGACAO.professor) expect(estaNoItem('/professor/time/assistente', item)).toBe(false)
+    // As telas do pé do sino não são de nenhum item: a lateral não acende nada nelas.
+    for (const item of NAVEGACAO.professor) {
+      expect(estaNoItem('/professor/time/assistente', item), item.rotulo).toBe(false)
+      expect(estaNoItem('/professor/time/tutor', item), item.rotulo).toBe(false)
+    }
     expect(estaNoItem('/professor/conversas', inicio)).toBe(false)
   })
 

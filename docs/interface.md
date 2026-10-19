@@ -95,9 +95,12 @@ existe e onde nasce o que falta: a **X1** troca a pele e a casca com os itens de
   ontem, 7 dias, mais antigas), cada uma no próprio endereço. A coordenação nunca vê (regra 70,
   item 8; P06). O MVP tem uma conversa só por professora (decisão 19 de `docs/mvp-rapido.md`); a
   lista nasce com o histórico de conversas, no F7
-- **O sino "Esperando você"** fica no canto de cima da área de conteúdo e toma o lugar de "Seu
+- **O sino "Esperando você"** fica no canto de cima da área de conteúdo e tomou o lugar de "Seu
   time": o que um agente deixa esperando o professor vira item de uma fila só, e o agente continua
-  assinando o que fez (seção 1.3). "Seu time" continua na lateral até a X3, que traz o sino
+  assinando o que fez (seção 1.3). **"Seu time" saiu da lateral na X3** (tarefa 2.0): o pé da
+  lista do sino leva às duas telas que ele tinha, **"O que o Assistente fez"** e **"O que o Tutor
+  viu"**, nos mesmos endereços de antes. Elas não são lugar da lateral, e o Tutor continua
+  à vista do professor, pelo sino, de qualquer tela (regra 70, item 4)
 - **O Calendário deixa de ser lugar** (D73 revista). Quando o F8 existir, ele é a visão **Semana**
   de Turmas: aulas, avaliações, entregas e o que o Assistente concluiu, por escola e turma. Deriva
   da estrutura da escola: o professor não monta nem move aula (regra 60, item 8; P12)
@@ -187,9 +190,10 @@ a descrição de campos de cada ferramenta sai de `descricaoDaFerramenta`
   Corretor, Planejador e Adaptador deixaram de ser agentes: são **funções do Assistente** —
   correção de objetiva, adaptação, e "seu dia e sua semana", que abre o dia com o que já existe e
   só gera plano quando o professor pede
-- **Até a X3, "Seu time" é um grupo da lateral**, e cada agente abre a própria conversa em tela
-  cheia. A do Assistente junta o que as funções fizeram, com filtro: tudo · esperando você ·
-  correção · adaptação · seu dia (P14). A do Tutor mostra o que ele viu no uso da turma
+- **Cada agente abre a própria conversa em tela cheia, pelo pé do sino** ("Seu time" deixou de
+  ser grupo da lateral na X3, tarefa 2.0). "O que o Assistente fez" junta o que as funções
+  fizeram, com filtro: tudo · esperando você · correção · adaptação · seu dia (P14). "O que o
+  Tutor viu" mostra o que ele viu no uso da turma; a aba Hoje da turma o traz de volta nesta spec
 - **Da X3 em diante, o que espera o professor mora no sino** (D80): uma fila só, em que cada item
   diz o que foi feito e **o que está esperando**: "Corrigi as 32 provas do 2ºB, média 6,4.
   Esperando você aprovar". O número do sino é o tamanho da fila; sem item, sem número. **Nada do que
@@ -988,9 +992,8 @@ Agentes a usa com o nome da função em `h2`), e um teste reprova outro arquivo 
 ou qualquer coisa da pasta da onça. O bloco é o `data-assinatura`, e o teste confere que cada
 `data-agente` tem, nele, o nome da função em texto visível e um `data-selo-ia`. O cartão de cada
 agente na tela Agentes leva `data-cartao-do-agente`, e não `data-agente`, que é só do avatar.
-Na lateral e no trilho, "Seu time" mostra o ícone da função
-num ladrilho, sem a onça: a casca mora na entrada, e no trilho não há lugar para o nome. As funções
-do Assistente não têm avatar próprio, e aparecem pelo nome ("Assistente · correção de objetiva").
+A casca não desenha a onça nem o avatar do agente: ela mora na entrada, e a lateral não leva mais
+agentes (o grupo "Seu time" saiu na X3). As funções do Assistente não têm avatar próprio, e aparecem pelo nome ("Assistente · correção de objetiva").
 Tamanhos: 24 px na linha da mensagem, 32 na assinatura, 40 e 48 no cabeçalho.
 
 O avatar é **um desenho só por agente, com uma expressão neutra, parado**. As props são o agente e
@@ -1458,7 +1461,7 @@ perto de 127 kB, e o teto **não sobe** com a pele (RF22 da X1).
 
 ### 11.1 A casca da escola
 
-Uma só para coordenação, professor e aluno. A lateral do professor, como fica na X1:
+Uma só para coordenação, professor e aluno. A lateral do professor, como fica na X3 (tarefa 2.0; o lugar Criados entra com a tela dele, na 5.0):
 
 ```
 ┌──────────────────────────┬────────────────────────────────────────────────────┐
@@ -1466,12 +1469,8 @@ Uma só para coordenação, professor e aluno. A lateral do professor, como fica
 │ [ CA  Colégio Aurora ⇅ ] │                                                    │
 │                          │                                                    │
 │ ▣ INÍCIO                 │   conteúdo, na coluna do tipo de página (9.3),     │
-│ ▣ FERRAMENTAS            │   dentro da moldura de 1200 px                     │
-│ ▣ TURMAS                 │                                                    │
-│ ──────────────────────── │                                                    │
-│ Seu time                 │                                                    │
-│  [ícone] Assistente  (3) │                                                    │
-│  [ícone] Tutor           │                                                    │
+│ ▣ TURMAS                 │   dentro da moldura de 1200 px                     │
+│ ▣ FERRAMENTAS            │                                                    │
 │ ──────────────────────── │                                                    │
 │ (CS) Camila Souza        │                                                    │
 │ ⇥ Sair                   │                                                    │
@@ -1501,7 +1500,7 @@ Uma só para coordenação, professor e aluno. A lateral do professor, como fica
 |---|---|
 | ≥ 1024 px (o Chromebook de 1366 × 768 cai aqui) | Lateral aberta de 256 px; recolhe para o trilho por escolha |
 | 768 a 1023 px | O trilho de 88 px |
-| < 768 px, a partir de 360 px | Barra de topo de 56 px, com a pinta, a escola, o botão do menu e o **Sair**. Papel com até quatro itens tem a **barra de baixo**, fixa, de 68 px mais a área segura; o resto (escola, "Seu time", conta) abre na gaveta. Com mais de quatro, os itens continuam na gaveta. Nada rola de lado |
+| < 768 px, a partir de 360 px | Barra de topo de 56 px, com a pinta, a escola, o botão do menu e o **Sair**. Papel com até quatro itens tem a **barra de baixo**, fixa, de 68 px mais a área segura; o resto (escola, conta) abre na gaveta. Com mais de quatro, os itens continuam na gaveta. Nada rola de lado |
 
 Na barra de baixo cada lugar é uma coluna: o ícone de 28 px numa pílula de 48 × 36, e o rótulo de
 12 px em 700, caixa-alta. O ícone do `lucide` não tem versão ilustrada: ele entra no ladrilho da
@@ -1517,7 +1516,7 @@ Lugar sem tela não aparece (D73).
 
 | Papel | Na X1 | Os lugares da D80 | Chegam na |
 |---|---|---|---|
-| Professor | Início (era "Nova conversa") · Ferramentas · Turmas, e o grupo "Seu time" | Início · Turmas · Ferramentas · Criados, as Conversas embaixo e o sino | X3 |
+| Professor | Início (era "Nova conversa") · Ferramentas · Turmas, e o grupo "Seu time" | Início · Turmas · Ferramentas · Criados, as Conversas embaixo e o sino. Na tarefa 2.0 a lateral ficou com Início · Turmas · Ferramentas, e "Seu time" saiu; Criados chega com a tela dele (5.0) | X3 |
 | Aluno | Tutor · Atividades · Minha turma, e Privacidade no rodapé | Início · Tarefas · Eu · Avisar um adulto (este, com o F9) | X4 |
 | Coordenação | Governança · Agentes · Analista · Estrutura · Professores · Material · Privacidade. Eram sete, na gaveta do celular, e só valeram até a X2 | Painel · Analista · Escola · Registros, e o sino. São quatro: cabem na barra de baixo do celular | X2 (entregue) |
 | Rede | — | Painel · Analista · Escolas | F14 |
@@ -1527,7 +1526,10 @@ quando ele está ligado para a turma, e em Atividades quando não está.
 
 **O sino** (X2 e X3) fica no canto de cima à direita da área de conteúdo, e na barra de topo no
 celular. O contador é laranja, e é o único número da casca do professor e da coordenação. A lista
-abre num painel de 400 px ancorado no sino, e como `PainelLado` no celular.
+abre num painel de 400 px ancorado no sino, e como `PainelLado` no celular. **No pé da lista do
+professor** ficam duas linhas que não são pendência e não entram no número: "O que o Assistente
+fez" e "O que o Tutor viu" (grupo "Acompanhar a IA"). Elas aparecem com a lista em dia, carregando,
+lida em parte ou com erro, e ir a uma delas fecha a lista, como a qualquer item.
 
 **O pé da lateral, em duas peças (F3, tarefa 18.0).** A lista de seções não leva "Meus dados", e o lugar dele é diferente por
 papel: no **aluno**, o item **Privacidade** é o do rodapé fixo (acima do menu da pessoa, num bloco `nav` de nome "Rodapé", com o
@@ -1540,7 +1542,7 @@ fica selecionada ali.
 Na X4 o aluno passa a achar a Privacidade dentro de Eu, com as mesmas regras.
 
 **Os nomes acessíveis não mudam**: o e2e navega por eles (Tech Spec da X1, seção 9). São as
-navegações "Seções", "Seu time", "Rodapé" e "Sua conta"; o diálogo "Menu"; os botões "Abrir o
+navegações "Seções", "Rodapé" e "Sua conta" ("Seu time" saiu na X3, tarefa 2.0); o diálogo "Menu"; os botões "Abrir o
 menu", "Fechar o menu", "Recolher a lateral", "Abrir a lateral" e "Sair"; o seletor que começa por
 "Escola: "; e o link "Turmma, página inicial". Um rótulo muda: "Nova conversa" vira "Início", no
 mesmo endereço.
@@ -1625,7 +1627,8 @@ continua fora (P07). A linha do dia só existe quando houver grade (F2, F8).
 - **As ações da resposta ficam sempre visíveis.** Enquanto o texto chega, enviar vira **Parar**.
   Fila cheia ou provedor lento vira aviso dentro da conversa, nunca erro cru (regra 80, item 4)
 
-**Seu time** (era 11.4; até a X3). Cada agente abre a própria conversa em tela cheia, e a entrega
+**O que o Assistente fez e o que o Tutor viu** (era "Seu time", 11.4; pelo pé do sino desde a X3, tarefa 2.0; os
+títulos das telas, no `h1`, são "Assistente de ensino" e "Tutor"). Cada agente abre a própria conversa em tela cheia, e a entrega
 é um cartão com o que foi feito, o que está esperando e o estado em selo. A conversa do Tutor
 mostra **sinal, não conversa de aluno** (regra 50, item 10): o nome do aluno aparece só para o
 professor da turma (D34), e abrir a conversa de um aluno é ação à parte, com aviso de que fica em
@@ -1713,7 +1716,7 @@ sintéticos, está em `docs/roteiro-da-demonstracao.md`; o que ficou de fora de 
 | 2. Professora pede uma atividade; o chat pergunta; abre o cartão; gera com página citada; exporta | Home e conversa | 11.2, 11.3 | A2 |
 | 2. Pede a versão adaptada escolhendo o tipo, e aprova | Cartão de Adaptação e cartão de entrega | 11.3, 11.4 | A2 |
 | 3. Aluno responde a atividade e abre o Tutor, que recusa, conduz e cita | Área do aluno | 11.6 | A3, A4 |
-| 4. Professora recebe do Tutor que oito travaram; o Assistente avisa que corrigiu e espera | Seu time | 11.4 | A3, A4 |
+| 4. Professora recebe do Tutor que oito travaram; o Assistente avisa que corrigiu e espera | O que o Assistente fez e o que o Tutor viu, pelo pé do sino (era "Seu time") | 11.4 | A3, A4 |
 | 4. Abre os destaques e aprova, com o registro da validação | Aprovar | 11.5 | A3 |
 | 4. Vê o acerto por habilidade | Turmas › a turma aberta, com Visão Geral e Alunos (as outras abas fecham antes do PRD do F6, P28) | 1, 10.2 | A3 |
 | 5. Coordenação abre a governança, os agentes com as funções, e o resumo do Analista | Governança e Agentes | 11.7 | A5 |

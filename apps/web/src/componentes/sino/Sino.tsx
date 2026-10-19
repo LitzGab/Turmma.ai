@@ -28,6 +28,18 @@ export interface ItemDoSino {
   readonly contador?: { readonly n: number; readonly oQueConta: string }
 }
 
+/** Um link do pé do sino: o texto e o endereço da tela, relativo à área onde o sino está. */
+export interface LinkDoPeDoSino {
+  readonly rotulo: string
+  readonly para: string
+}
+
+/** O pé do sino (X3): links que não são pendência, e por isso ficam fora dos itens e do contador. O título dá o nome do grupo. */
+export interface PeDoSino {
+  readonly titulo: string
+  readonly links: readonly LinkDoPeDoSino[]
+}
+
 /** O que a leitura da lista diz: lendo, lida inteira, lida em parte (uma consulta falhou ou veio truncada), ou nada lido. */
 export type SituacaoDoSino = 'carregando' | 'pronta' | 'parcial' | 'erro'
 
@@ -48,6 +60,8 @@ interface Props {
   readonly textoDoVazio?: string
   /** O que o aviso da lista lida em parte diz. Sem ele, "Parte da lista não carregou"; o do professor diz o que não leu (X3). */
   readonly avisoDaLeituraParcial?: string
+  /** Os links do pé da lista (o professor leva dois: o que o Assistente fez e o que o Tutor viu). Sem ele, a lista não tem pé. */
+  readonly pe?: PeDoSino
 }
 
 /** O grupo dos itens que não dizem de que grupo são, e o aviso e o vazio de quem não troca o texto: os da coordenação (X2). */
@@ -103,6 +117,23 @@ function GrupoDeItens({ titulo, itens }: { readonly titulo: string; readonly ite
   )
 }
 
+/** O pé: as linhas que levam a telas de acompanhamento, e não a uma decisão. Aparecem em qualquer situação da leitura. */
+function PeDaLista({ titulo, links }: PeDoSino) {
+  if (links.length === 0) return null
+  return (
+    <section aria-label={titulo} data-pe-do-sino="" className="flex min-w-0 flex-col gap-2">
+      <h3 className="t-rotulo text-sutil">{titulo}</h3>
+      <ul className="divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda">
+        {links.map((link) => (
+          <li key={link.para}>
+            <Linha para={link.para} titulo={link.rotulo} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 /**
  * O sino da coordenação (D80; Tech Spec das telas da coordenação, seções 5 e 9): um botão "Esperando você, N" que abre a
  * lista num `PainelLado`. Recebe a lista por prop e não lê nada: quem a calcula é a área (`useFilaDaCoordenacao`), e
@@ -114,10 +145,11 @@ function GrupoDeItens({ titulo, itens }: { readonly titulo: string; readonly ite
  *   não carregou"; o sino do professor diz o que não leu) e "Tentar de novo". O vazio é ícone ilustrado, sem mascote (a onça de corpo inteiro é decisão do Joaquim, seção 12).
  * - **A lista fecha ao se ir a um item**: o painel é modal, e a tela de destino nasce sem nada por cima dela.
  * - "Atualizado às HH:MM" é o que quem usa a peça entrega; a peça não tem temporizador.
- * - **Os dois sinos usam esta peça** (coordenação, X2; professor, X3). As três props opcionais do fim (`faltaPara`, `textoDoVazio`,
- *   `avisoDaLeituraParcial`) e o `grupo` do item existem para o professor, e sem elas a peça é a da X2.
+ * - **Os dois sinos usam esta peça** (coordenação, X2; professor, X3). As quatro props opcionais do fim (`faltaPara`, `textoDoVazio`,
+ *   `avisoDaLeituraParcial`, `pe`) e o `grupo` do item existem para o professor, e sem elas a peça é a da X2. O pé é fixo: dois
+ *   links de acompanhamento que não contam no número do sino e não mudam com a leitura (carregando, erro, parcial ou em dia).
  */
-export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = false, aoAtualizar, atualizando = false, atualizadoEm, faltaPara, textoDoVazio = VAZIO_PADRAO, avisoDaLeituraParcial = AVISO_PARCIAL_PADRAO }: Props) {
+export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = false, aoAtualizar, atualizando = false, atualizadoEm, faltaPara, textoDoVazio = VAZIO_PADRAO, avisoDaLeituraParcial = AVISO_PARCIAL_PADRAO, pe }: Props) {
   // O endereço em que a lista foi aberta. Ir a um item muda o endereço (o caminho ou só a consulta), e o painel modal sai da
   // frente da tela de destino; voltar a ele depois não o reabre.
   const [caminho] = useLocation()
@@ -190,6 +222,7 @@ export function Sino({ itens, situacao, erro, aoTentarDeNovo, tentandoDeNovo = f
                 )}
               </div>
             )}
+            {pe !== undefined && <PeDaLista {...pe} />}
           </div>
         </PainelLado>
       )}

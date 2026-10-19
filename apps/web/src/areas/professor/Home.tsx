@@ -139,7 +139,7 @@ export default function Home() {
                 )
               })}
             </ul>
-            {pendentes.data?.proxima !== undefined && <p className="text-sm text-sutil">Há mais entregas esperando você em Seu time.</p>}
+            {pendentes.data?.proxima !== undefined && <p className="text-sm text-sutil">Há mais entregas esperando você. Veja no sino “Esperando você”.</p>}
           </section>
         )}
       </div>

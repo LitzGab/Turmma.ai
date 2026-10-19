@@ -228,3 +228,58 @@ describe('o sino do professor, pelas props opcionais (telas do professor, 1.0)',
     expect(within(painel).queryByText('Tudo em dia')).toBeNull()
   })
 })
+
+describe('o pé do sino (telas do professor, 2.0)', () => {
+  const PE = {
+    titulo: 'Acompanhar a IA',
+    links: [
+      { rotulo: 'O que o Assistente fez', para: '/time/assistente' },
+      { rotulo: 'O que o Tutor viu', para: '/time/tutor' },
+    ],
+  } as const
+
+  async function abrir(sobre: Partial<PropsDoSino>, nome: string) {
+    const usuario = userEvent.setup()
+    const resultado = desenhar({ semFaltaPara: true, ...sobre })
+    await usuario.click(screen.getByRole('button', { name: nome }))
+    return { ...resultado, painel: screen.getByRole('dialog', { name: 'Esperando você' }), usuario }
+  }
+
+  it('os dois links ficam no fim da lista, com o endereço de cada um, e não contam no número do sino', async () => {
+    const { painel } = await abrir({ itens: [CONVITE], pe: PE }, 'Esperando você, 1')
+    const pe = within(painel).getByRole('region', { name: 'Acompanhar a IA' })
+    const links = within(pe).getAllByRole('link')
+    expect(links.map((link) => link.textContent)).toEqual([expect.stringContaining('O que o Assistente fez'), expect.stringContaining('O que o Tutor viu')])
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/time/assistente', '/time/tutor'])
+    // O pé vem depois dos itens da lista, e o contador do botão continua sendo o dos itens.
+    expect(painel.querySelector('[data-pe-do-sino]')?.compareDocumentPosition(within(painel).getByRole('link', { name: /Refazer o convite/ }))).toBe(Node.DOCUMENT_POSITION_PRECEDING)
+    expect(document.querySelector('[data-contador]')?.textContent).toContain('1')
+  })
+
+  it('aparece em toda situação da leitura: em dia, carregando, parcial e com erro', async () => {
+    for (const [sobre, nome] of [
+      [{ itens: [], situacao: 'pronta' }, 'Esperando você, nada'],
+      [{ itens: [], situacao: 'carregando' }, 'Esperando você, carregando'],
+      [{ itens: [], situacao: 'parcial' }, 'Esperando você, parte não carregou'],
+      [{ itens: [], situacao: 'erro' }, 'Esperando você, não carregou'],
+    ] as const) {
+      const { painel } = await abrir({ ...sobre, pe: PE }, nome)
+      expect(within(painel).getAllByRole('link').map((link) => link.getAttribute('href')), sobre.situacao).toEqual(['/time/assistente', '/time/tutor'])
+      cleanup()
+    }
+  })
+
+  it('ir a um dos links fecha a lista, como qualquer item', async () => {
+    const { painel, usuario } = await abrir({ itens: [], pe: PE }, 'Esperando você, nada')
+    await usuario.click(within(painel).getByRole('link', { name: 'O que o Tutor viu' }))
+    expect(screen.queryByRole('dialog', { name: 'Esperando você' })).toBeNull()
+  })
+
+  it('sem o pé, ou com o pé sem link, a lista não tem região de pé (o sino da coordenação é o de sempre)', async () => {
+    const { painel } = await abrir({ itens: [INCIDENTE] }, 'Esperando você, 1')
+    expect(painel.querySelector('[data-pe-do-sino]')).toBeNull()
+    cleanup()
+    const vazio = await abrir({ itens: [INCIDENTE], pe: { titulo: 'Acompanhar a IA', links: [] } }, 'Esperando você, 1')
+    expect(vazio.painel.querySelector('[data-pe-do-sino]')).toBeNull()
+  })
+})

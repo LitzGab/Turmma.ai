@@ -1,5 +1,5 @@
-import { NOMES_DOS_AGENTES, type Agente, type PapelDeUsuario } from '@educa/shared'
-import { FolderLock, Lock, MessageCircleQuestion, MessagesSquare, School, type LucideIcon } from 'lucide-react'
+import type { PapelDeUsuario } from '@educa/shared'
+import { FolderLock, Lock, MessageCircleQuestion, School, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 // Só tipos, que o compilador apaga: o `Contador` e os ícones ilustrados são peças da entrada ou fora dela, e este arquivo
 // não importa nenhuma (o item 4 do guia acima). O que ele diz é qual ícone e qual família, e a casca é quem desenha.
@@ -56,12 +56,14 @@ export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao
     { rotulo: 'Escola', caminho: ROTAS.estrutura, icone: { lugar: 'escola' }, tambemEm: [ROTAS.professores, ROTAS.material] },
     { rotulo: 'Registros', caminho: ROTAS.governanca, icone: { lugar: 'registros' }, tambemEm: [ROTAS.agentes, ROTAS.privacidade] },
   ],
-  // A2 (D73): Início, Ferramentas e Turmas. Calendário nasce com a grade (F8) e Histórico, com o F5: nenhum aparece antes da
-  // tela dele. X1 (12.0): "Nova conversa" virou "Início", no mesmo endereço, com os ícones ilustrados da D80.
+  // A2 (D73): Início, Turmas e Ferramentas. Calendário nasce com a grade (F8) e Histórico, com o F5: nenhum aparece antes da
+  // tela dele. X1 (12.0): "Nova conversa" virou "Início", no mesmo endereço, com os ícones ilustrados da D80. X3 (2.0): a ordem
+  // é a da D80, e "Seu time" saiu da lateral: o Assistente e o Tutor abrem pelo pé do sino (`areas/professor/SinoDoProfessor.tsx`).
+  // As telas deles (`/professor/time/assistente` e `/professor/time/tutor`) não são lugar de nenhum item.
   professor: [
     { rotulo: 'Início', caminho: ROTAS.novaConversa, icone: { lugar: 'inicio' }, tambemEm: [ROTAS.conversa] },
-    { rotulo: 'Ferramentas', caminho: ROTAS.ferramentas, icone: { lugar: 'ferramentas' }, tambemEm: [ROTAS.artefatos] },
     { rotulo: 'Turmas', caminho: ROTAS.turmas, icone: { lugar: 'turmas' } },
+    { rotulo: 'Ferramentas', caminho: ROTAS.ferramentas, icone: { lugar: 'ferramentas' }, tambemEm: [ROTAS.artefatos] },
   ],
   // A3 e A4: Tutor, Atividades e Minha turma. "Meu desempenho" e "Avisar um adulto" nascem com a tela de cada um: nesta
   // fatia não existem, e por isso não aparecem. "Privacidade" é do rodapé fixo (`RODAPE_DA_LATERAL`), e não desta lista. A
@@ -95,41 +97,9 @@ export const MENU_DA_PESSOA: Readonly<Record<PapelDeUsuario, readonly ItemDaNave
   aluno: [],
 }
 
-/** O nome de cada um desses grupos para o leitor de tela: o que a navegação "Seções" e "Seu time" já fazem. */
+/** O nome de cada um desses grupos para o leitor de tela: o que a navegação "Seções" já faz. */
 export const NOME_DO_RODAPE = 'Rodapé'
 export const NOME_DO_MENU_DA_PESSOA = 'Sua conta'
-
-/**
- * Uma linha de "Seu time": o agente, o endereço da conversa dele e o ícone da função, num `Ladrilho` na família do agente.
- * **Sem a onça**: a casca é da entrada, e a cabeça da onça mora fora dela (Tech Spec da X1, seção 7b); o avatar do agente
- * em tela é o da `AssinaturaIA`, junto do nome e do selo "IA".
- */
-export interface AgenteDaLateral {
-  readonly agente: Agente
-  readonly rotulo: string
-  readonly caminho: string
-  readonly icone: LucideIcon
-  /** A família do agente no resto do produto (`docs/interface.md` 9.7): o Assistente em azul, o Tutor em laranja. */
-  readonly familia: FamiliaDeCor
-  /** A linha leva o contador do que espera a pessoa: só o agente que deixa entrega para decidir. */
-  readonly comEspera: boolean
-}
-
-/**
- * "Seu time", o grupo da lateral com os agentes que a pessoa acompanha (D73; `docs/interface.md` 11.1 e 11.4). Como os
- * itens, **cada linha nasce com a tela dela**: na A2 o professor tem a do Assistente de ensino; a do Tutor chega com os
- * sinais (A4). Coordenação e aluno não têm o grupo.
- */
-export const SEU_TIME: Readonly<Record<PapelDeUsuario, readonly AgenteDaLateral[]>> = {
-  coordenador: [],
-  professor: [
-    { agente: 'assistente_de_ensino', rotulo: NOMES_DOS_AGENTES.assistente_de_ensino, caminho: ROTAS.timeDoAssistente, icone: MessagesSquare, familia: 'azul', comEspera: true },
-    // A4: o Tutor, que a professora supervisiona. A conversa dele mostra sinais e uso da turma, e não conversa de aluno.
-    // Não tem contador: sinal não é pendência que espera decisão, e ponto na lateral não vira pressão de uso (D59).
-    { agente: 'tutor', rotulo: NOMES_DOS_AGENTES.tutor, caminho: ROTAS.timeDoTutor, icone: MessageCircleQuestion, familia: 'laranja', comEspera: false },
-  ],
-  aluno: [],
-}
 
 /**
  * O item está selecionado no endereço dele e em qualquer um abaixo dele (a turma aberta dentro de Turmas, na 15.0), e

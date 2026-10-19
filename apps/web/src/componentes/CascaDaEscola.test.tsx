@@ -34,9 +34,6 @@ function respostaEu(papel: PapelDeUsuario, usuarioId: string, nome: string) {
   return { status: 200, corpo: { usuarioId, papel, nome, escola: ESCOLA, inatividadeMin: 30, acessos: [] } }
 }
 
-/** A página vazia de "Esperando você", que só o papel com "Seu time" pede depois do `/v1/eu`. */
-const SEM_ENTREGAS = { status: 200, corpo: { itens: [] } }
-
 function instalarLargura(largura: Largura): void {
   const casa = (consulta: string): boolean => (consulta === '(min-width: 768px)' ? largura !== 'estreita' : consulta === '(min-width: 1024px)' ? largura === 'larga' : false)
   vi.stubGlobal('matchMedia', (consulta: string) => ({ matches: casa(consulta), media: consulta, addEventListener: () => undefined, removeEventListener: () => undefined }))
@@ -73,7 +70,6 @@ function desenhar(caminho: string) {
 async function abrirCasca(rede: RedeFalsa, papel: PapelDeUsuario, largura: Largura, caminho: string) {
   instalarLargura(largura)
   rede.responder(respostaEu(papel, PESSOA_A, 'Camila Souza'))
-  if (papel === 'professor') rede.responder(SEM_ENTREGAS)
   const casca = desenhar(caminho)
   await screen.findByText('Camila Souza')
   return casca
@@ -154,16 +150,26 @@ describe('onde ficam os itens de navegação em cada largura (RF14)', () => {
     // A barra é irmã da gaveta, e não filha dela: com o `dialog` modal aberto o navegador a deixa inerte.
     const barra = screen.getByRole('navigation', { name: 'Seções' })
     expect(barra.closest('dialog')).toBeNull()
-    expect(within(barra).getAllByRole('link').map((link) => link.textContent)).toEqual(['Início', 'Ferramentas', 'Turmas'])
+    expect(within(barra).getAllByRole('link').map((link) => link.textContent)).toEqual(['Início', 'Turmas', 'Ferramentas'])
     expect(document.documentElement.hasAttribute('data-barra-de-baixo')).toBe(true)
 
     const gaveta = gavetaDaPagina()
     expect(gaveta.querySelector('nav[aria-label="Seções"]')).toBeNull()
-    for (const nome of ['Seu time', 'Sua conta']) expect(gaveta.querySelector(`nav[aria-label="${nome}"]`), nome).not.toBeNull()
+    expect(gaveta.querySelector('nav[aria-label="Sua conta"]')).not.toBeNull()
+    // "Seu time" saiu da lateral (X3, 2.0): nenhum grupo de agentes na gaveta nem na página.
+    expect(document.querySelector('nav[aria-label="Seu time"]')).toBeNull()
     expect(gaveta.textContent).toContain('Colégio Vista Alegre')
 
     // O `<main>` guarda embaixo a altura da barra (o lugar dela é a variável do `<html>`).
     expect(classesDo(screen.getByRole('main')).has('pb-[calc(var(--barra-baixo,0px)+2rem)]')).toBe(true)
+  })
+
+  it('a casca do professor só lê a sessão: as entregas que esperam ele são do sino da área, e não há leitura para o contador de um grupo da lateral (X3, 2.0)', async () => {
+    const rede = redeFalsa()
+    await abrirCasca(rede, 'professor', 'larga', ROTAS.turmas)
+    // Deixa passar o que a casca pediria depois do `/v1/eu`, se ainda pedisse algo.
+    await new Promise((resolver) => setTimeout(resolver, 20))
+    expect(rede.chamadas.map((chamada) => chamada.caminho.split('?')[0])).toEqual(['/v1/eu'])
   })
 
   it('abaixo de 768 px, o aluno tem os três itens na barra, e o Privacidade continua no rodapé da gaveta', async () => {
@@ -197,7 +203,7 @@ describe('onde ficam os itens de navegação em cada largura (RF14)', () => {
     expect(document.documentElement.hasAttribute('data-barra-de-baixo')).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: 'Abrir a lateral' }))
     const gaveta = screen.getByRole('dialog', { name: 'Menu' })
-    expect(within(gaveta).getAllByRole('link', { name: /^(Início|Ferramentas|Turmas)$/ }).map((link) => link.textContent)).toEqual(['Início', 'Ferramentas', 'Turmas'])
+    expect(within(gaveta).getAllByRole('link', { name: /^(Início|Ferramentas|Turmas)$/ }).map((link) => link.textContent)).toEqual(['Início', 'Turmas', 'Ferramentas'])
     expect(gaveta.querySelectorAll('nav[aria-label="Seções"]')).toHaveLength(1)
   })
 
@@ -209,7 +215,7 @@ describe('onde ficam os itens de navegação em cada largura (RF14)', () => {
     expect(document.documentElement.hasAttribute('data-barra-de-baixo')).toBe(false)
     const secoes = screen.getAllByRole('navigation', { name: 'Seções' })
     expect(secoes).toHaveLength(1)
-    expect(within(secoes[0] as HTMLElement).getAllByRole('link').map((link) => link.textContent)).toEqual(['Início', 'Ferramentas', 'Turmas'])
+    expect(within(secoes[0] as HTMLElement).getAllByRole('link').map((link) => link.textContent)).toEqual(['Início', 'Turmas', 'Ferramentas'])
   })
 })
 

@@ -350,7 +350,7 @@ test.describe('casca da escola', () => {
     const menu = page.getByRole('button', { name: 'Abrir o menu' })
     await expect(menu).toHaveAttribute('aria-expanded', 'false')
     await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(1)
-    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas'])
     await expect(page.locator('html')).toHaveAttribute('data-barra-de-baixo', '')
     await esperarAlvoDeToqueEm(secoes(page).getByRole('link', { name: 'Turmas' }))
     for (const alvo of [menu, page.getByRole('button', { name: 'Sair' }), page.getByRole('link', { name: 'Turmma, página inicial' })]) await esperarAlvoDeToqueEm(alvo)
@@ -399,14 +399,15 @@ test.describe('casca da escola', () => {
     await page.mouse.click(350, 400)
     await expect(gaveta(page)).toBeHidden()
 
-    // A barra de baixo fica inerte com a gaveta aberta: o toque em cima dela só fecha a gaveta, não navega.
-    const turmas = await secoes(page).getByRole('link', { name: 'Turmas' }).boundingBox()
-    if (turmas === null) throw new Error('o item Turmas da barra de baixo sem caixa')
+    // A barra de baixo fica inerte com a gaveta aberta: o toque em cima dela só fecha a gaveta, não navega. O item é o último
+    // da barra ("Ferramentas", desde a ordem da D80), que cai depois da borda da gaveta; um do meio cairia dentro dela.
+    const ultimo = await secoes(page).getByRole('link', { name: 'Ferramentas' }).boundingBox()
+    if (ultimo === null) throw new Error('o item Ferramentas da barra de baixo sem caixa')
     const antes = page.url()
     if (hasTouch) await menu.tap()
     else await menu.click()
     await expect(gaveta(page)).toBeVisible()
-    await page.mouse.click(turmas.x + turmas.width / 2, turmas.y + turmas.height / 2)
+    await page.mouse.click(ultimo.x + ultimo.width / 2, ultimo.y + ultimo.height / 2)
     await expect(gaveta(page)).toBeHidden()
     expect(page.url()).toBe(antes)
   })
@@ -419,13 +420,11 @@ test.describe('casca da escola', () => {
     const paradas = [
       page.getByRole('link', { name: 'Turmma, página inicial' }),
       page.getByRole('button', { name: 'Recolher a lateral' }),
-      // A2 (D73): os três itens do professor e, em "Seu time", as linhas do Assistente de ensino e do Tutor (fase 3). X1
-      // (12.0): "Nova conversa" virou "Início", no mesmo lugar da ordem (A17).
+      // Os três itens do professor, na ordem da D80: Início, Turmas e Ferramentas. "Seu time" saiu da lateral (telas do professor,
+      // 2.0): o Assistente e o Tutor abrem pelo pé do sino.
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Início' }),
-      page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Ferramentas' }),
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' }),
-      page.getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: 'Assistente de ensino' }),
-      page.getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: 'Tutor' }),
+      page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Ferramentas' }),
       // F3 (18.0): o menu da pessoa tem "Meus dados" antes do "Sair", no pé da lateral.
       page.getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link', { name: 'Meus dados' }),
       // X1 (2.0): a Aparência é uma parada só, a opção marcada, entre os links da conta e o "Sair", que continua o último.
@@ -451,8 +450,9 @@ test.describe('casca da escola', () => {
     // contêiner, e a folga dele precisa ser maior que o contorno mais o afastamento do anel.
     await page.setViewportSize({ width: 1366, height: ALTURA_BAIXA_PX })
     // O foco ainda está no "Sair", a última parada da volta de cima, e o navegador continua dali: o percurso recomeça na
-    // marca por `focus()` (a última entrada foi o teclado, e o anel aparece), e as outras seis são Tab.
-    for (const [indice, parada] of paradas.slice(0, 7).entries()) {
+    // marca por `focus()` (a última entrada foi o teclado, e o anel aparece), e as outras quatro são Tab. São as cinco do alto
+    // que rola: a marca, o recolher e os três itens; "Meus dados", a Aparência e o "Sair" ficam no pé, fora dele.
+    for (const [indice, parada] of paradas.slice(0, 5).entries()) {
       if (indice === 0) await parada.focus()
       else await page.keyboard.press('Tab')
       await expect(parada).toBeFocused()
@@ -465,7 +465,7 @@ test.describe('casca da escola', () => {
     }
   })
 
-  test('W12: recolher a lateral para o trilho fica guardado, o trilho dá a dica pelo teclado, e abrir desfaz', async ({ page, hasTouch }) => {
+  test('W12: recolher a lateral dá o trilho, que dá a dica pelo teclado e tem alvos do tamanho do toque', async ({ page, hasTouch }) => {
     await page.setViewportSize({ width: 1366, height: 768 })
     await entrarComoProfessora(page, hasTouch)
 
@@ -480,8 +480,8 @@ test.describe('casca da escola', () => {
 
     // No trilho, o item é só o ícone, com o nome para o leitor de tela e a dica que aparece ao chegar pelo teclado.
     const turmas = page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Turmas' })
-    // "Turmas" é o terceiro item do professor desde a A2: antes dele vêm "Início" e "Ferramentas".
-    for (const anterior of ['Início', 'Ferramentas']) {
+    // "Turmas" é o segundo item do professor desde a ordem da D80 (telas do professor, 2.0): antes dele vem "Início".
+    for (const anterior of ['Início']) {
       await page.keyboard.press('Tab')
       await expect(page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: anterior })).toBeFocused()
     }
@@ -492,16 +492,26 @@ test.describe('casca da escola', () => {
     await esperarAlvoDeToqueEm(page.getByRole('button', { name: 'Sair' }))
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('W12: a lateral recolhida fica guardada neste navegador, e abrir desfaz', async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width: 1366, height: 768 })
+    await entrarComoProfessora(page, hasTouch)
+
+    const recolher = page.getByRole('button', { name: 'Recolher a lateral' })
+    if (hasTouch) await recolher.tap()
+    else await recolher.click()
+    await expect(page.getByRole('button', { name: 'Abrir a lateral' })).toBeFocused()
 
     // A escolha fica guardada neste navegador.
-    await page.reload()
+    await carregarSemRedeLenta(page, () => page.reload())
     await expect(page.getByRole('button', { name: 'Abrir a lateral' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('button', { name: 'Recolher a lateral' })).toHaveCount(0)
 
     if (hasTouch) await page.getByRole('button', { name: 'Abrir a lateral' }).tap()
     else await page.getByRole('button', { name: 'Abrir a lateral' }).click()
     await expect(page.getByRole('button', { name: 'Recolher a lateral' })).toBeFocused()
-    await page.reload()
+    await carregarSemRedeLenta(page, () => page.reload())
     await expect(page.getByRole('button', { name: 'Recolher a lateral' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   })
 
@@ -517,7 +527,7 @@ test.describe('casca da escola', () => {
     await expect(gaveta(page)).toBeVisible()
     await expect(abrir).toHaveAttribute('aria-expanded', 'true')
     // A20: de 768 a 1023 px a gaveta do trilho leva os itens, e não há barra de baixo (ela é do celular).
-    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
+    await expect(gaveta(page).getByRole('navigation', { name: 'Seções' }).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas'])
     await expect(page.locator('html')).not.toHaveAttribute('data-barra-de-baixo', '')
     // E a página não reserva o lugar de uma barra que não existe: a variável vale zero, e o `<main>` guarda só os 32 px.
     expect(await reservaDaBarraDeBaixo(page)).toEqual({ variavel: '0px', paddingDoMain: '32px' })
@@ -574,10 +584,10 @@ test.describe('casca da escola', () => {
     })
     expect(lateral).toEqual({ largura: 256, borda: '2px', cor: 'rgb(229, 229, 229)', fundo: 'rgb(255, 255, 255)' })
     // Cada lugar tem 52 px de altura (o ícone numa caixa de 36, e o rótulo em caixa-alta), e a moldura começa onde a lateral termina.
-    for (const rotulo of ['Início', 'Ferramentas', 'Turmas']) expect((await secoes.getByRole('link', { name: rotulo }).boundingBox())?.height, rotulo).toBe(52)
+    for (const rotulo of ['Início', 'Turmas', 'Ferramentas']) expect((await secoes.getByRole('link', { name: rotulo }).boundingBox())?.height, rotulo).toBe(52)
     expect((await page.getByRole('main').boundingBox())?.x).toBe(256)
     // O ícone do lugar é decoração: o ilustrado a 32 px em Início, Ferramentas e Turmas, e o nome do link é só o rótulo.
-    for (const rotulo of ['Início', 'Ferramentas', 'Turmas']) {
+    for (const rotulo of ['Início', 'Turmas', 'Ferramentas']) {
       const icone = secoes.getByRole('link', { name: rotulo, exact: true }).locator('svg[data-icone]')
       await expect(icone).toHaveCount(1)
       await expect(icone).toHaveAttribute('aria-hidden', 'true')
@@ -623,7 +633,7 @@ type PapelDaCasca = 'professor' | 'aluno' | 'coordenacao'
 const ALTURA_BAIXA_PX = 600
 
 const PAPEIS_DA_CASCA: readonly { readonly papel: PapelDaCasca; readonly navegacoes: readonly string[]; readonly ausentes: readonly string[]; readonly primeiro: string }[] = [
-  { papel: 'professor', navegacoes: ['Seções', 'Seu time', 'Sua conta'], ausentes: ['Rodapé'], primeiro: 'Início' },
+  { papel: 'professor', navegacoes: ['Seções', 'Sua conta'], ausentes: ['Seu time', 'Rodapé'], primeiro: 'Início' },
   { papel: 'aluno', navegacoes: ['Seções', 'Rodapé'], ausentes: ['Seu time', 'Sua conta'], primeiro: 'Tutor' },
   { papel: 'coordenacao', navegacoes: ['Seções'], ausentes: ['Seu time', 'Rodapé', 'Sua conta'], primeiro: 'Painel' },
 ]

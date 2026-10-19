@@ -34,7 +34,7 @@ function LinhaDaVersao({ versao, entregas, carregando }: { versao: Pick<Artefato
   // A pendente não tem autor: a linha já pode dizer que espera a professora, sem a leitura das entregas.
   if (versao.entrega.estado === 'pendente') return <LinhaAprovacao aprovacao={{ estado: 'pendente' }} />
   // A decidida só é afirmada com quem decidiu (regra 70, item 6): sem a leitura, a tela diz onde ver, e não inventa.
-  return <p className="text-sm text-sutil">{carregando ? 'Carregando quem decidiu…' : 'A decisão desta versão está em Seu time.'}</p>
+  return <p className="text-sm text-sutil">{carregando ? 'Carregando quem decidiu…' : 'A decisão desta versão está em “O que o Assistente fez”, pelo sino.'}</p>
 }
 
 /**
@@ -193,7 +193,7 @@ export default function Artefato({ artefatoId }: { artefatoId: string }) {
               <p className="min-w-0 text-sm break-words text-sutil">
                 Esta versão só pode ir aos alunos depois que você aprovar.{' '}
                 <Link to={ROTAS_DO_PROFESSOR.timeDoAssistente} className="text-caramelo-texto underline">
-                  Ver e decidir em Seu time
+                  Ver e decidir
                 </Link>
               </p>
             )}

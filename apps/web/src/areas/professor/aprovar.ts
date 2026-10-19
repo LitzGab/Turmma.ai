@@ -1,4 +1,5 @@
 import { NOME_DO_MOTIVO_DE_DESTAQUE, type AtividadeAplicada, type Destaque, type MotivoDeDestaque, type RespostaCorrecaoDoLote, type ResumoDoLote } from '@educa/shared'
+import { caminhoDaTurmaDoProfessor, ROTAS_DO_PROFESSOR } from '../../caminhos'
 import type { LinhaDoResumo } from '../../componentes/DialogoDeConfirmacao'
 import { formatarDiaEHora } from '../../formatar'
 
@@ -9,6 +10,14 @@ import { formatarDiaEHora } from '../../formatar'
  */
 
 const numero = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 })
+
+/**
+ * Para onde "Voltar para a turma" leva, **relativo à área**: a turma da correção, quando a entrega inteira já a trouxe, e a
+ * lista de turmas enquanto ela não chegou ou a leitura falhou. A correção em si não diz a turma.
+ */
+export function caminhoDeVoltaDaCorrecao(turmaId: string | undefined): string {
+  return turmaId === undefined ? ROTAS_DO_PROFESSOR.turmas : caminhoDaTurmaDoProfessor(turmaId)
+}
 
 /** "3,4 de 5 questões": a média de acertos da turma, em questões. */
 export function textoDaMedia(resumo: Pick<ResumoDoLote, 'mediaDeAcertos' | 'questoes'>): string {

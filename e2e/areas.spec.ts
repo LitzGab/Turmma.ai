@@ -41,12 +41,12 @@ const TITULO_DA_FALHA = 'Não foi possível carregar esta parte do Turmma'
 /**
  * Os itens do professor, como a tabela `apps/web/src/areas/navegacao.ts` os declara. O e2e não importa o fonte da web
  * (outra resolução de módulos); a tarefa que acrescenta a linha lá acrescenta aqui, e o W2 percorre todos. "Nova
- * conversa" e "Ferramentas" chegaram com a A2 (D73); "Turmas" continua por último, que é onde o W2 termina.
+ * conversa" e "Ferramentas" chegaram com a A2 (D73); a ordem é a da D80 (telas do professor, 2.0), e "Seu time" saiu da lista.
  */
 const ITENS_DO_PROFESSOR = [
   { rotulo: 'Início', caminho: '/professor/nova-conversa' },
-  { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
   { rotulo: 'Turmas', caminho: '/professor/turmas' },
+  { rotulo: 'Ferramentas', caminho: '/professor/ferramentas' },
 ] as const
 /**
  * Os quatro lugares da coordenação, como a mesma tabela os declara (X2, 3.0): o Painel, onde ela abre, o Analista e as molduras
@@ -148,21 +148,10 @@ async function voltarAoInicio(page: Page, hasTouch: boolean): Promise<void> {
 }
 
 test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
-  test('o professor vê os itens da fase dele, cada um leva à tela com as pistas do selecionado, e a aba diz a tela', async ({ page, hasTouch }) => {
+  test('o professor vê os itens da fase dele, cada um leva à sua tela, e a aba diz a tela', async ({ page, hasTouch }) => {
     const professora = await entrarComoProfessora(page, hasTouch)
     // O professor abre em "Início" (A2; D73; D80), e não numa página de passagem.
     await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
-    // A tela em que ele abre não diz que as turmas ficam para depois: sem turma confirmada, aponta para elas, a um toque
-    // também no celular.
-    await expect(page.getByRole('main')).not.toContainText('próximas versões')
-    const paraTurmas = page.getByRole('main').getByRole('button', { name: 'Ir para Turmas' })
-    if (hasTouch) await paraTurmas.tap({ timeout: PRAZO_DA_ENTRADA_MS })
-    else await paraTurmas.click({ timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(page).toHaveURL(/\/professor\/turmas$/)
-    await voltarAoInicio(page, hasTouch)
-    await expect(page).toHaveURL(/\/professor\/nova-conversa$/)
-    await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
-
     // Os itens são os da tabela do papel, e só eles; cada tarefa de tela acrescenta a linha dela. Estão à vista sem abrir a
     // gaveta: no celular são a barra de baixo (RF14), e no computador, a lateral.
     await expect(secoes(page)).toHaveCount(1)
@@ -177,8 +166,8 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true })).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // Nenhum item da tabela leva a tela que não existe.
-    for (const item of ITENS_DO_PROFESSOR) {
+    // Nenhum item da tabela leva a tela que não existe. O W2 termina em "Turmas", que a ordem da D80 deixou no meio: ela vai por último.
+    for (const item of [...ITENS_DO_PROFESSOR].sort((a, b) => Number(a.rotulo === 'Turmas') - Number(b.rotulo === 'Turmas'))) {
       await irPelaNavegacao(page, item.rotulo, hasTouch)
       await expect(page).toHaveURL(new RegExp(`${item.caminho}$`))
       await expect(page).toHaveTitle(`${item.rotulo} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
@@ -190,6 +179,19 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Turmas' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByText('A coordenação ainda não alocou você')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(naoEncontrada(page)).toHaveCount(0)
+  })
+
+  test('o professor: o item da tela aberta ganha as pistas do selecionado, e o apagado, nenhuma', async ({ page, hasTouch }) => {
+    await entrarComoProfessora(page, hasTouch)
+    await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
+    // A tela em que ele abre não diz que as turmas ficam para depois: sem turma confirmada, aponta para elas, a um toque
+    // também no celular.
+    await expect(page.getByRole('main')).not.toContainText('próximas versões')
+    const paraTurmas = page.getByRole('main').getByRole('button', { name: 'Ir para Turmas' })
+    if (hasTouch) await paraTurmas.tap({ timeout: PRAZO_DA_ENTRADA_MS })
+    else await paraTurmas.click({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page).toHaveURL(/\/professor\/turmas$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Turmas' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
 
     // O selecionado (A23; D80): o `aria-current`, que o leitor de tela anuncia, o fundo `azul-claro`, a borda de 2 px
     // `azul-borda` e o texto `azul-texto`. O peso deixa de ser pista (os dois em 700), e o filete saiu.
@@ -203,6 +205,7 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     // Fora de "Turmas", o item volta a ser um item comum. A marca não é item, e a gaveta fecha também pela troca de
     // endereço, e não só pelo toque num item.
     await voltarAoInicio(page, hasTouch)
+    await expect(page).toHaveURL(/\/professor\/nova-conversa$/)
     await expect(gaveta(page)).toBeHidden()
     await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
     const apagado = secoes(page).getByRole('link', { name: 'Turmas' })

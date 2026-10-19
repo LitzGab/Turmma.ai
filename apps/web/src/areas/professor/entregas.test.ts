@@ -54,7 +54,7 @@ describe('o texto de cada estado da entrega (regra 70, itens 3 e 6)', () => {
   })
 })
 
-describe('a conversa do Assistente no Seu time (11.4)', () => {
+describe('a conversa de "O que o Assistente fez" (11.4)', () => {
   const lista = [
     entrega('01'),
     entrega('02', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA }),

@@ -1,8 +1,10 @@
 import { atividadesAplicadasNoBanco, entregasNoBanco, validacoesNoBanco } from './__fixtures__/a2.ts'
 import { entrarComoAlunoPelaApi, perguntarAoTutorPelaApi, responderPelaApi } from './__fixtures__/aluno-pela-api.ts'
-import { abrirNavegacao, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { acionar, gerarAtividade, montarEscolaEEntrar, PRAZO_DA_IA_MS, principal } from './__fixtures__/fluxo-do-professor.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
+import { abrirEntregasDoAssistente } from './__fixtures__/professor/entregas.ts'
+import { abrirSinaisDoTutor } from './__fixtures__/professor/tutor.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula } from './__fixtures__/sessao.ts'
 import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -70,9 +72,8 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     await expect(naTurma.locator('[data-atividade-aplicada="encerrada"]').getByRole('link', { name: 'Revisar a correção' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     expect(await entregasNoBanco(professora.escolaId)).toEqual([{ tipo: 'lote_de_correcao', funcao: 'correcao_de_objetiva', estado: 'pendente', decididaPor: null, decidida: false, justificativa: null }])
 
-    // No Seu time, a correção espera a professora, com "Revisar": do balão não se aprova.
-    await abrirNavegacao(page, hasTouch)
-    await acionar(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /Assistente de ensino/ }), hasTouch)
+    // Na tela do Assistente, aberta pelo pé do sino, a correção espera a professora, com "Revisar": do balão não se aprova.
+    await abrirEntregasDoAssistente(page, hasTouch)
     const lote = page.locator('[data-entrega="pendente"]')
     await expect(lote).toContainText(`Corrigi "${TITULO}" da turma ${turmaNome}.`, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(lote.getByText('Assistente · correção de objetiva')).toBeVisible()
@@ -143,9 +144,8 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // O Tutor, no Seu time: o sinal do pedido de resposta pronta, com a questão, e o uso do aluno. Nenhuma conversa.
-    await abrirNavegacao(page, hasTouch)
-    await acionar(lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: 'Tutor' }), hasTouch)
+    // O Tutor, pelo pé do sino: o sinal do pedido de resposta pronta, com a questão, e o uso do aluno. Nenhuma conversa.
+    await abrirSinaisDoTutor(page, hasTouch)
     const sinais = page.getByRole('region', { name: 'Sinais da turma' })
     await expect(sinais).toContainText(`Pediu a resposta pronta na questão 1 de "${TITULO}"`, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(sinais).toContainText(primeiro.nome)

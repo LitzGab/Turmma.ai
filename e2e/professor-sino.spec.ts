@@ -2,7 +2,7 @@ import type { BrowserContextOptions, Browser, Locator, Page } from '@playwright/
 import { abrirAbaAlunos, abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, escolherNoSeletor, esperarNovaConversa, esperarPainel, lateral, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { cacheDeConsultas, semAcessosDaConta } from './__fixtures__/consultas.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { entrarNaCena, esperarSino, listaDoSino, portao, prepararCena, semAnimacao, sinoDe, TITULO_DA_CORRECAO, TITULO_DA_VERSAO } from './__fixtures__/professor/sino.ts'
+import { entrarNaCena, esperarSino, listaDoSino, peDoSino, portao, prepararCena, semAnimacao, sinoDe, TITULO_DA_CORRECAO, TITULO_DA_VERSAO } from './__fixtures__/professor/sino.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarCoordenadoraNaEscola, criarProfessoraNaEscola, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -67,6 +67,8 @@ test.describe('do sino à tela', () => {
     await expect(lista.getByRole('link', { name: new RegExp(`Versão adaptada para decidir.*${literal(TITULO_DA_VERSAO)}`) })).toBeVisible()
     await expect(lista.getByRole('link', { name: /Pedidos de nome para decidir.*2 pedidos esperando a decisão/ })).toBeVisible()
     await expect(lista.getByRole('link', { name: /Confirme sua turma.*Física/ })).toBeVisible()
+    // O pé: as duas telas do que a IA fez, depois da fila e fora da conta do número.
+    await expect(peDoSino(page).getByRole('link')).toHaveText([/O que o Assistente fez/, /O que o Tutor viu/])
     await expect(lista).not.toContainText('Sintética do sino')
     await expect(lista).not.toContainText('Sintético do sino')
     await semAnimacao(lista)
@@ -108,7 +110,9 @@ test.describe('do sino à tela', () => {
     await esperarSino(page, 'Esperando você, 3')
     await acionar(sino, hasTouch)
     await expect(listaDoSino(page).getByRole('link', { name: /Pedidos de nome para decidir/ })).toHaveCount(0)
-    await expect(listaDoSino(page).getByRole('link')).toHaveCount(3)
+    // Os três itens que restam e os dois links do pé, que a fila não gasta.
+    await expect(listaDoSino(page).getByRole('link')).toHaveCount(3 + 2)
+    await expect(peDoSino(page).getByRole('link')).toHaveCount(2)
   })
 
   test('entrega decidida em outra aba: o item segue no sino até a tentativa, a tela diz que já estava decidida, e o item sai sem recarregar', async ({ page, browser, hasTouch }) => {
@@ -120,7 +124,7 @@ test.describe('do sino à tela', () => {
       ;(window as unknown as { __semRecarga: boolean }).__semRecarga = true
     })
 
-    // A: a tela do Seu time com a versão adaptada esperando.
+    // A: a tela do Assistente com a versão adaptada esperando.
     await acionar(sino, hasTouch)
     await acionar(listaDoSino(page).getByRole('link', { name: /Versão adaptada para decidir/ }), hasTouch)
     await expect(page).toHaveURL(/\/professor\/time\/assistente$/, { timeout: PRAZO_DA_ENTRADA_MS })
@@ -232,7 +236,9 @@ test.describe('do sino à tela', () => {
     await expect(sinoDe(page)).toHaveAccessibleName('Esperando você, nada')
     await acionar(sinoDe(page), hasTouch)
     await expect(listaDoSino(page).getByText('Tudo em dia')).toBeVisible()
-    await expect(listaDoSino(page).getByRole('link')).toHaveCount(0)
+    // Sem nada esperando, só o pé tem link.
+    await expect(listaDoSino(page).getByRole('link')).toHaveCount(2)
+    await expect(peDoSino(page).getByRole('link')).toHaveCount(2)
     await expect(page.locator('body')).not.toContainText(cena.turmaA.turmaNome)
     const cache = semAcessosDaConta(await cacheDeConsultas(page))
     for (const deA of [cena.professora.escolaId, cena.professora.usuarioId, cena.turmaA.turmaId, cena.turmaA.turmaNome, cena.turmaB.turmaNome, ...cena.turmaA.vinculoIds, ...cena.turmaB.vinculoIds]) expect(cache).not.toContain(deA)
@@ -258,7 +264,9 @@ test.describe('do sino à tela', () => {
     await expect(sino).not.toHaveAccessibleName('Esperando você, 4')
     await acionar(sino, hasTouch)
     await expect(listaDoSino(page).getByText('Tudo em dia')).toBeVisible()
-    await expect(listaDoSino(page).getByRole('link')).toHaveCount(0)
+    // Sem nada esperando, só o pé tem link.
+    await expect(listaDoSino(page).getByRole('link')).toHaveCount(2)
+    await expect(peDoSino(page).getByRole('link')).toHaveCount(2)
     await expect(page.locator('body')).not.toContainText(cena.turmaA.turmaNome)
     await expect(page.locator('body')).not.toContainText(cena.professora.nome)
     const cache = semAcessosDaConta(await cacheDeConsultas(page))

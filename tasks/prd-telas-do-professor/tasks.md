@@ -17,14 +17,14 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 1.4 `SinoDoProfessor` e o mapa `sino-do-papel.ts`, montados na casca por `lazy()`; a seção da galeria
   - [x] 1.5 Testes: a conta, tipo a tipo; os estados e a leitura parcial; nenhuma releitura por tempo, foco ou reconexão; mais de 12 turmas; recusa por limite; permissão; entrega decidida em outra aba; contador sem animação; troca de escola e segunda pessoa
 
-- [ ] **2.0 — A lateral do professor fica com Início, Turmas e Ferramentas, e "Seu time" sai dela**
-  - [ ] 2.1 `navegacao.ts`: a ordem da D80 e `SEU_TIME` vazio; a casca e `itens-da-lateral` sem o grupo
-  - [ ] 2.2 O pé do sino: "O que o Assistente fez" e "O que o Tutor viu"
-  - [ ] 2.3 Nenhum texto de tela diz "Seu time": títulos, links e avisos
-  - [ ] 2.4 `e2e/__fixtures__/professor/`: como os specs chegam às entregas, aos sinais e ao que foi gerado
-  - [ ] 2.5 `professor-assistente.spec.ts` e `professor-turma.spec.ts` viram um spec por tela, sem mudar título nem asserção
-  - [ ] 2.6 `docs/interface.md`, Parte A: os lugares, o sino e o que saiu de "Seu time"
-  - [ ] 2.7 Testes: os lugares nas três larguras; os sete blocos de "Seu time" alcançados pelo sino; a contagem de casos do e2e igual
+- [x] **2.0 — A lateral do professor fica com Início, Turmas e Ferramentas, e "Seu time" sai dela**
+  - [x] 2.1 `navegacao.ts`: a ordem da D80 e `SEU_TIME` vazio; a casca e `itens-da-lateral` sem o grupo
+  - [x] 2.2 O pé do sino: "O que o Assistente fez" e "O que o Tutor viu"
+  - [x] 2.3 Nenhum texto de tela diz "Seu time": títulos, links e avisos
+  - [x] 2.4 `e2e/__fixtures__/professor/`: como os specs chegam às entregas, aos sinais e ao que foi gerado
+  - [x] 2.5 `professor-assistente.spec.ts` e `professor-turma.spec.ts` viram um spec por tela, sem mudar título nem asserção
+  - [x] 2.6 `docs/interface.md`, Parte A: os lugares, o sino e o que saiu de "Seu time"
+  - [x] 2.7 Testes: os lugares nas três larguras; os sete blocos de "Seu time" alcançados pelo sino; a contagem de casos do e2e igual
 
 - [ ] **3.0 — Início: a saudação com a onça, a caixa de pedido e os atalhos**
   - [ ] 3.1 `Home.tsx`: a composição nova, sem "Esperando você"

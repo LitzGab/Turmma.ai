@@ -17,8 +17,8 @@ type PropsDaMensagemIA = QuemAssina & {
    */
   readonly acoes?: ReactNode
   /**
-   * `coluna` é a mensagem da conversa: **sem bolha**, na largura da coluna, com a assinatura em cima. `balao` é a do
-   * Seu time, e só de lá (11.4): o agente fala em balão à esquerda, com a assinatura em cima e o balão logo abaixo dela.
+   * `coluna` é a mensagem da conversa: **sem bolha**, na largura da coluna, com a assinatura em cima. `balao` é a de
+   * "O que o Assistente fez", e só de lá (11.4): o agente fala em balão à esquerda, com a assinatura em cima e o balão logo abaixo dela.
    */
   readonly variante?: 'coluna' | 'balao'
 }
@@ -112,7 +112,7 @@ interface PropsDaConversa {
 }
 
 /**
- * A lista de mensagens de toda conversa do produto (a da Home, a de cada agente no Seu time, a do Tutor): um registro
+ * A lista de mensagens de toda conversa do produto (a da Home, a de "O que o Assistente fez", a do Tutor): um registro
  * (`role="log"`) que **anuncia a mensagem que chega**, com calma, sem tirar o foco de onde a pessoa está. Quem usa leitor
  * de tela e acabou de enviar um pedido ouve a resposta sem ter de procurá-la.
  *

@@ -96,7 +96,7 @@ export function estaDemorando(desde: number, agora: number): boolean {
 /**
  * O que a tela lê de novo quando a execução conclui, pelo que ela produziu: a resposta do Assistente entra na conversa;
  * o artefato novo entra na lista e no artefato de origem (a versão adaptada aparece nele); e a entrega que nasceu com
- * ele entra em "Esperando você", na Home, no Seu time e no contador da lateral.
+ * ele entra em "Esperando você", na Home e no sino.
  */
 export function chavesParaInvalidar(resultado: ResultadoDaExecucao): readonly (readonly string[])[] {
   if (resultado.tipo === 'mensagem') return [CHAVE_DA_CONVERSA]

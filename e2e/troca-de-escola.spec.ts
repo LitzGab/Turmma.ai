@@ -19,6 +19,7 @@ import {
 } from './__fixtures__/casca.ts'
 import { cacheDeConsultas, semAcessosDaConta } from './__fixtures__/consultas.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
+import { abrirEntregasDoAssistente } from './__fixtures__/professor/entregas.ts'
 import { criarAlocacaoDoProfessor, criarAlunoComMatricula, criarEquipeComSenha, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -324,7 +325,7 @@ test.describe('recomeço da tela do seletor', () => {
     await esperarNovaConversa(page, emA.nome)
 
     // As telas seguintes ainda falam com o mesmo token: nenhuma sessão nova foi gravada. Turmas pode não pedir nada (a
-    // Nova conversa já leu os vínculos, e o cache das consultas os serve); o Seu time do Assistente lê a lista inteira das
+    // Nova conversa já leu os vínculos, e o cache das consultas os serve); a tela do Assistente, aberta pelo pé do sino, lê a lista inteira das
     // entregas, que a Nova conversa não lê, e por isso sempre sai ao menos um pedido observado depois da escolha.
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByText('A coordenação ainda não alocou você')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -332,9 +333,7 @@ test.describe('recomeço da tela do seletor', () => {
       const url = new URL(pedido.url())
       return url.pathname === '/v1/entregas' && !url.searchParams.has('estado')
     })
-    await abrirNavegacao(page, hasTouch)
-    const assistente = lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: /^Assistente de ensino/ })
-    await (hasTouch ? assistente.tap() : assistente.click())
+    await abrirEntregasDoAssistente(page, hasTouch)
     await listaDasEntregas
     expect(trocas).toBe(0)
     expect(tokens.length).toBeGreaterThan(0)

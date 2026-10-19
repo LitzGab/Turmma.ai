@@ -35,7 +35,7 @@ function daTurma(nomeDaTurma: string | undefined): string {
 }
 
 /**
- * O que o Assistente diz da entrega, no balão do Seu time: o que fez, e o que falta para valer. Só o trabalho, sem
+ * O que o Assistente diz da entrega, no balão de "O que o Assistente fez": o que fez, e o que falta para valer. Só o trabalho, sem
  * número de aluno nem nome: o detalhe abre na tela da própria entrega.
  */
 export function falaDaEntrega(entrega: Pick<Entrega, 'tipo' | 'titulo'>, nomeDaTurma: string | undefined): string {
@@ -77,7 +77,7 @@ export function podeRenomear(entrega: { readonly estado: Entrega['estado'] } | n
 /** O aviso do título e do tema: os dois vão para o modelo, e não são lugar de escrever sobre aluno (regra 20, item 3). */
 export const AVISO_DE_TEXTO_SEM_ALUNO = 'Não escreva nome nem condição de aluno.'
 
-/** Os filtros da conversa do Assistente no Seu time (11.4; P14): tudo, o que espera a professora, e por função. */
+/** Os filtros da conversa do Assistente em "O que o Assistente fez" (11.4; P14): tudo, o que espera a professora, e por função. */
 export const FILTROS_DO_TIME = [
   { id: 'tudo', rotulo: 'Tudo' },
   { id: 'esperando', rotulo: 'Esperando você' },

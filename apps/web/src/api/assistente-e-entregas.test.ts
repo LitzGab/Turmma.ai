@@ -162,7 +162,7 @@ describe('as entregas e a decisão', () => {
     await expect(m.entregas.decidirEntrega(id('01'), { decisao: 'aprovar' })).rejects.toMatchObject({ codigo: 'ENTREGA_JA_DECIDIDA' })
   })
 
-  it('depois da decisão, a entrega sai de "Esperando você" na hora e aparece decidida na conversa do Seu time', async () => {
+  it('depois da decisão, a entrega sai de "Esperando você" na hora e aparece decidida na conversa de "O que o Assistente fez"', async () => {
     const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     cliente.setQueryData(m.entregas.consultaEntregasPendentes.queryKey, { itens: [entrega('01'), entrega('02')] })
     cliente.setQueryData(m.entregas.consultaEntregas.queryKey, { pages: [{ itens: [entrega('02'), entrega('01')] }], pageParams: [undefined] })
@@ -172,14 +172,7 @@ describe('as entregas e a decisão', () => {
       [id('02'), 'pendente', undefined],
       [id('01'), 'aprovada', 'Camila Souza'],
     ])
-    // E o contador da lateral acompanha: é a mesma leitura.
-    expect(m.entregas.quantasEsperam(cliente.getQueryData(m.entregas.consultaEntregasPendentes.queryKey))).toEqual({ quantidade: 1, haMais: false })
     expect(cliente.getQueryState(m.entregas.consultaEntregasPendentes.queryKey)?.isInvalidated).toBe(true)
-  })
-
-  it('o contador não inventa: sem leitura é zero, e a página cheia diz que há mais', () => {
-    expect(m.entregas.quantasEsperam(undefined)).toEqual({ quantidade: 0, haMais: false })
-    expect(m.entregas.quantasEsperam({ itens: [entrega('01'), entrega('02', 'aprovada')], proxima: id('02') })).toEqual({ quantidade: 1, haMais: true })
   })
 })
 

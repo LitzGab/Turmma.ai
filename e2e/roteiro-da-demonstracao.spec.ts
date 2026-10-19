@@ -5,7 +5,7 @@ import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts
 import { entregasNoBanco, validacoesNoBanco } from './__fixtures__/a2.ts'
 import { respostasNoBanco } from './__fixtures__/a3.ts'
 import { entrarComoAlunoPelaApi, responderPelaApi } from './__fixtures__/aluno-pela-api.ts'
-import { abrirAbaAlunos, abrirNavegacao, esperarAtividades, esperarPainel, esperarNovaConversa, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirAbaAlunos, esperarAtividades, esperarPainel, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { irPelaCoordenacao, linhasDaTabela, painelDoAno } from './__fixtures__/coordenacao.ts'
 import { caixa, conversa, DISCIPLINA, gerarAtividade, PRAZO_DA_IA_MS, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
 import { auditoriasNoBanco, suspensoesNoBanco } from './__fixtures__/governanca.ts'
@@ -13,6 +13,7 @@ import { CAMINHO_DO_PDF_DE_DEMONSTRACAO, materiaisNoBanco, recusasNaAuditoria } 
 import { criarOperadorComSegundoFator, removerOperador } from './__fixtures__/operacao.ts'
 import { idDaEscolaComOEndereco, nomeQueVemPrimeiro } from './__fixtures__/painel.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
+import { abrirSinaisDoTutor } from './__fixtures__/professor/tutor.ts'
 import {
   alunoDaMatricula,
   alunoReivindicaPelaApi,
@@ -99,12 +100,6 @@ async function entrarComEmail(page: Page, email: string, senha: string): Promise
   await page.getByLabel('E-mail').fill(email)
   await page.getByLabel('Senha').fill(senha)
   await page.getByRole('button', { name: /^Entrar$/ }).click()
-}
-
-/** No Seu time da lateral, o link de um agente. */
-async function abrirNoSeuTime(page: Page, agente: RegExp | string, hasTouch: boolean): Promise<void> {
-  await abrirNavegacao(page, hasTouch)
-  await lateral(page).getByRole('navigation', { name: 'Seu time' }).getByRole('link', { name: agente }).click()
 }
 
 /** O cartão do número de painel da Governança: o pai do rótulo. */
@@ -406,7 +401,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(pronto.locator('[data-aprovacao="pendente"]')).toHaveText('Esperando você', { timeout: PRAZO_DA_IA_MS })
       expect(await entregasNoBanco(escolaId)).toEqual([{ tipo: 'versao_adaptada', funcao: 'adaptacao', estado: 'pendente', decididaPor: null, decidida: false, justificativa: null }])
 
-      await pronto.getByRole('link', { name: 'Ver e decidir em Seu time' }).click()
+      await pronto.getByRole('link', { name: 'Ver e decidir' }).click()
       const pendente = professora.locator('[data-entrega="pendente"]')
       await pendente.getByRole('button', { name: /^Aprovar/ }).click({ timeout: PRAZO_DA_ENTRADA_MS })
       const aprovar = professora.getByRole('alertdialog', { name: 'Aprovar a versão adaptada' })
@@ -581,7 +576,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(principal(aluna).locator('[data-uso-do-dia]')).toContainText('Hoje: 1 de 60 perguntas', { timeout: PRAZO_DA_ENTRADA_MS })
 
       // A professora vê o sinal, com a questão e o nome, e nada do que a aluna escreveu.
-      await abrirNoSeuTime(professora, 'Tutor', hasTouch)
+      await abrirSinaisDoTutor(professora, hasTouch)
       const sinais = professora.getByRole('region', { name: 'Sinais da turma' })
       await expect(sinais).toContainText(`Pediu a resposta pronta na questão 1 de "${SEGUNDA}"`, { timeout: PRAZO_DA_ENTRADA_MS })
       await expect(sinais).toContainText(ana.nome)

@@ -290,7 +290,7 @@ test.describe('Meus dados: onde cada pessoa os acha', () => {
     expect((caixaDoLink?.height ?? 0) >= ALVO_DE_TOQUE_PRINCIPAL_PX).toBe(true)
     // A ausência de "Meus dados" em `Seções` precisa de controle positivo (A91): no celular `Seções` do professor é a barra de
     // baixo, e olhar dentro da gaveta passaria vazio. Com os três itens dele à vista, a negativa vale.
-    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Ferramentas', 'Turmas'])
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Turmas', 'Ferramentas'])
     await expect(secoes(page).getByRole('link', { name: 'Meus dados' })).toHaveCount(0)
 
     await acionar(link, hasTouch)

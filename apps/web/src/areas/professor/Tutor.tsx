@@ -26,7 +26,7 @@ import { emQueEstava, falaDoGrupo, QUANDO_O_TUTOR_AVISA, separarSinais, textoDaA
 const INTERVALO_DOS_SINAIS_MS = 15_000
 
 /**
- * Seu time › Tutor (`docs/interface.md` 11.4; D8, D34, D36, D47; regra 50, item 10; regra 70, itens 4 e 7): o que o Tutor
+ * O que o Tutor viu (`docs/interface.md` 11.4; pelo pé do sino; D8, D34, D36, D47; regra 50, item 10; regra 70, itens 4 e 7): o que o Tutor
  * viu no uso da turma. **Sinal, não conversa de aluno**: onde a turma travou, quem pediu a resposta pronta, a dúvida que
  * se repetiu, e o uso do Tutor por aluno. **Nada nesta tela abre a conversa de um aluno**, e não há aqui tempo parado,
  * ordem por recência, comparação entre alunos nem lista de quem não usou.
@@ -63,7 +63,7 @@ export default function Tutor() {
   const grupos = sinais.data?.grupos ?? []
 
   return (
-    <Tela titulo="Seu time: Tutor" largura="conversa" tituloSoParaLeitor>
+    <Tela titulo="Tutor" largura="conversa" tituloSoParaLeitor>
       <header className="flex min-w-0 flex-col gap-2">
         <AssinaturaIA agente="tutor" tamanho={32} />
         <details className="group min-w-0 rounded-cartao border border-linha bg-superficie">

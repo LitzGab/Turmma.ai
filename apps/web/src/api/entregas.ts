@@ -15,15 +15,14 @@ const CAMINHO_DAS_ENTREGAS = '/v1/entregas'
 
 /**
  * O que a IA produziu e espera a professora (`GET /v1/entregas?estado=pendente`), nas turmas em que ela tem vínculo
- * confirmado. Uma página, a maior que a API entrega: é o que "Esperando você" mostra na Home, no Seu time e no contador
- * da lateral. Havendo mais, a tela diz que há mais (`quantasEsperam`).
+ * confirmado. Uma página, a maior que a API entrega: é o que "Esperando você" mostra na Home e no sino da casca. Havendo mais (`proxima`), a Home diz que há mais e manda ao sino.
  */
 export const consultaEntregasPendentes = queryOptions({
   queryKey: [...CHAVE_DAS_ENTREGAS, 'pendentes'],
   queryFn: ({ signal }) => buscarComSessao(`${CAMINHO_DAS_ENTREGAS}?estado=pendente&limite=${String(TAMANHO_MAXIMO_DA_PAGINA)}`, esquemaRespostaListaDeEntregas, signal),
 })
 
-/** Todas as entregas da professora, de qualquer estado, paginadas: é o que o Assistente fez, na conversa do Seu time. */
+/** Todas as entregas da professora, de qualquer estado, paginadas: é o que o Assistente fez, na conversa de "O que o Assistente fez". */
 export const consultaEntregas = infiniteQueryOptions({
   queryKey: [...CHAVE_DAS_ENTREGAS, 'todas'],
   queryFn: ({ pageParam, signal }) =>
@@ -41,18 +40,6 @@ export function consultaEntregasDaTurma(turmaId: string) {
     queryKey: [...CHAVE_DAS_ENTREGAS, 'turma', turmaId],
     queryFn: ({ signal }) => buscarComSessao(`${CAMINHO_DAS_ENTREGAS}?turmaId=${encodeURIComponent(turmaId)}&limite=${String(TAMANHO_MAXIMO_DA_PAGINA)}`, esquemaRespostaListaDeEntregas, signal),
   })
-}
-
-export interface QuantasEsperam {
-  readonly quantidade: number
-  /** A página veio cheia e há outra: a tela diz "100 ou mais", e não um número que não sabe. */
-  readonly haMais: boolean
-}
-
-/** Quantas entregas esperam a professora, pelo que a leitura trouxe. Sem leitura, nenhuma: o contador não inventa. */
-export function quantasEsperam(pagina: RespostaListaDeEntregas | undefined): QuantasEsperam {
-  if (pagina === undefined) return { quantidade: 0, haMais: false }
-  return { quantidade: pagina.itens.filter((entrega) => entrega.estado === 'pendente').length, haMais: pagina.proxima !== undefined }
 }
 
 /**

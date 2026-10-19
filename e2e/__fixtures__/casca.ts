@@ -23,7 +23,7 @@ export const gaveta = (page: Page): Locator => page.getByRole('dialog', { name: 
 
 /**
  * Onde a lateral está agora: dentro da gaveta, quando é gaveta, ou a página. Com a gaveta aberta, o "Sair" da barra do
- * topo continua na página, atrás dela: procurar a partir daqui acha o da lateral. Vale para a escola, "Seu time", o
+ * topo continua na página, atrás dela: procurar a partir daqui acha o da lateral. Vale para a escola, o
  * rodapé, "Sua conta" e o nome da pessoa; **não vale para `Seções` do professor e do aluno no celular**, que estão na
  * barra de baixo, fora da gaveta: para eles, `secoes`.
  */
@@ -34,8 +34,8 @@ export function lateral(page: Page): Locator {
 /**
  * A `navigation "Seções"` que a pessoa vê: a barra de baixo (professor e aluno abaixo de 768 px, sempre à vista), a
  * lateral ou o trilho (a partir de 768 px) ou, com a gaveta aberta, a que está dentro dela (a coordenação no celular).
- * Fechada, a gaveta não expõe nada. É a única navegação com esse nome na página: o resto da casca tem os dela ("Seu
- * time", "Rodapé", "Sua conta").
+ * Fechada, a gaveta não expõe nada. É a única navegação com esse nome na página: o resto da casca tem os dela ("Rodapé",
+ * "Sua conta").
  */
 export const secoes = (page: Page): Locator => page.getByRole('navigation', { name: 'Seções', exact: true })
 

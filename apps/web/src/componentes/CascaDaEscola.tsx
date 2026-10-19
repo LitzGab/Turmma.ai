@@ -2,10 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
 import { Link, useLocation } from 'wouter'
-import { consultaEntregasPendentes, quantasEsperam } from '../api/entregas'
 import { consultaEu } from '../api/eu'
 import { assinarSessao, estadoDaSessao, lembrarQuemEsta, sair } from '../api/sessao'
-import { MENU_DA_PESSOA, NAVEGACAO, NOME_DO_RODAPE, RODAPE_DA_LATERAL, SEU_TIME, type AgenteDaLateral, type ItemDaNavegacao } from '../areas/navegacao'
+import { MENU_DA_PESSOA, NAVEGACAO, NOME_DO_RODAPE, RODAPE_DA_LATERAL, type ItemDaNavegacao } from '../areas/navegacao'
 import { ROTAS } from '../caminhos'
 import { NOME_DO_PAPEL } from '../papeis'
 import { useInatividade } from '../sessao/inatividade'
@@ -13,7 +12,7 @@ import { ContextoDaAncoraDoSino, type AncoraDoSino } from './ancora-do-sino'
 import { BarraDeBaixo, ondeFicamOsItens } from './BarraDeBaixo'
 import { CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
 import { ContextoDaGaveta, type Gaveta } from './gaveta'
-import { Dica, ItemDaLateral, ListaDeItens, SecaoDoTime, type EsperandoNoTime } from './itens-da-lateral'
+import { Dica, ItemDaLateral, ListaDeItens } from './itens-da-lateral'
 import { guardarRecolhida, lerRecolhida } from './lateral-recolhida'
 import { Marca } from './Marca'
 import { MenuDaPessoa } from './MenuDaPessoa'
@@ -56,9 +55,6 @@ interface DadosDaPessoa {
 interface PropsDaLateralAberta {
   readonly pessoa: DadosDaPessoa | undefined
   readonly itens: (typeof NAVEGACAO)[keyof typeof NAVEGACAO]
-  /** "Seu time": os agentes que o papel acompanha e o que espera a pessoa (A2). Vazio para quem não tem o grupo. */
-  readonly time: readonly AgenteDaLateral[]
-  readonly esperando: EsperandoNoTime
   /** O rodapé fixo (aluno: "Privacidade") e os links do menu da pessoa (professor: "Meus dados"); vazios, nada aparece. */
   readonly rodape: readonly ItemDaNavegacao[]
   readonly menuDaPessoa: readonly ItemDaNavegacao[]
@@ -71,11 +67,11 @@ interface PropsDaLateralAberta {
 
 /**
  * A lateral aberta, de 256 px no computador e dentro da gaveta: marca, escola, navegação e a pessoa no pé. Só o alto rola
- * (marca, escola, navegação e "Seu time"), e é o `flex-1 min-h-0` dele que segura o pé, com a pessoa, a Aparência e o
+ * (marca, escola e navegação), e é o `flex-1 min-h-0` dele que segura o pé, com a pessoa, a Aparência e o
  * "Sair", dentro da janela em qualquer altura (RF15, A18; D59): o alto encolhe e rola, o pé não. A folga de 6 px do alto
  * guarda o anel de foco (3 px de contorno e 2 de afastamento), que o `overflow` cortaria.
  */
-function LateralAberta({ pessoa, itens, time, esperando, rodape, menuDaPessoa, seletor, botaoDoTopo, aoSair, saindo }: PropsDaLateralAberta) {
+function LateralAberta({ pessoa, itens, rodape, menuDaPessoa, seletor, botaoDoTopo, aoSair, saindo }: PropsDaLateralAberta) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 p-3">
       <div className="-m-1.5 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-1.5">
@@ -95,7 +91,6 @@ function LateralAberta({ pessoa, itens, time, esperando, rodape, menuDaPessoa, s
             </ul>
           </nav>
         )}
-        <SecaoDoTime agentes={time} esperando={esperando} trilho={false} />
       </div>
       <div className="flex shrink-0 flex-col gap-2">
         <ListaDeItens itens={rodape} rotulo={NOME_DO_RODAPE} trilho={false} />
@@ -107,8 +102,6 @@ function LateralAberta({ pessoa, itens, time, esperando, rodape, menuDaPessoa, s
 
 interface PropsDoTrilho {
   readonly itens: (typeof NAVEGACAO)[keyof typeof NAVEGACAO]
-  readonly time: readonly AgenteDaLateral[]
-  readonly esperando: EsperandoNoTime
   readonly rodape: readonly ItemDaNavegacao[]
   readonly menuDaPessoa: readonly ItemDaNavegacao[]
   readonly botaoDeAbrir: RefObject<HTMLButtonElement | null>
@@ -124,7 +117,7 @@ interface PropsDoTrilho {
  * largura. Não rola (a dica `absolute` seria cortada): o "Sair" fica à vista porque a pilha inteira cabe em 600 px de
  * altura, o que o e2e de A18 mede; um lugar a mais na coordenação pede medir de novo.
  */
-function Trilho({ itens, time, esperando, rodape, menuDaPessoa, botaoDeAbrir, aoAbrir, lateralAberta, aoSair, saindo }: PropsDoTrilho) {
+function Trilho({ itens, rodape, menuDaPessoa, botaoDeAbrir, aoAbrir, lateralAberta, aoSair, saindo }: PropsDoTrilho) {
   return (
     <div className="sticky top-0 z-10 flex h-screen w-22 shrink-0 flex-col items-center gap-3 self-start border-r-2 border-borda bg-lateral py-3">
       <Link to={ROTAS.inicio} aria-label="Turmma, página inicial" className="flex size-11 items-center justify-center rounded-controle hover:bg-fundo-suave">
@@ -144,7 +137,6 @@ function Trilho({ itens, time, esperando, rodape, menuDaPessoa, botaoDeAbrir, ao
           </ul>
         </nav>
       )}
-      <SecaoDoTime agentes={time} esperando={esperando} trilho />
       <div className="mt-auto flex shrink-0 flex-col items-center gap-2">
         <ListaDeItens itens={rodape} rotulo={NOME_DO_RODAPE} trilho />
         <MenuDaPessoa aoSair={aoSair} saindo={saindo} itens={menuDaPessoa} trilho />
@@ -162,7 +154,7 @@ function Trilho({ itens, time, esperando, rodape, menuDaPessoa, botaoDeAbrir, ao
  * Abaixo de 768 px a lateral vira **gaveta**, num `dialog` modal: o navegador prende o foco nela, o Esc fecha, e o que
  * está atrás fica inerte. A barra do topo, de 56 px, mostra o botão do menu, a pinta, a escola (cortada com reticências
  * quando não cabe) e o **Sair**, que continua a um toque também no celular (D59). Os itens de navegação do professor e do
- * aluno (de um a quatro) ficam na **barra de baixo**, fixa, e saem da gaveta, que leva o resto: a escola, "Seu time", o
+ * aluno (de um a quatro) ficam na **barra de baixo**, fixa, e saem da gaveta, que leva o resto: a escola, o
  * rodapé e a conta. A coordenação, com sete, mantém os itens na gaveta (`ondeFicamOsItens`). A gaveta fecha ao escolher
  * um item, e fecha sozinha quando uma fronteira de erro assume a tela (`FronteiraDaArea`).
  *
@@ -254,11 +246,6 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
   const itens = dados === undefined ? [] : NAVEGACAO[dados.papel]
   // Só abaixo de 768 px os itens saem da gaveta: de 768 a 1023 px o trilho abre por cima com todos eles (A20).
   const naBarraDeBaixo = faixa === 'estreita' && ondeFicamOsItens(itens) === 'barra'
-  // "Seu time" (A2): só quem tem agente na lateral pergunta o que espera por ele. A leitura fica velha quando uma entrega
-  // nasce ou é decidida (`api/ciclo-de-execucao.ts`, `api/entregas.ts`) e ao voltar à aba; a casca não bate na API sozinha.
-  const time = dados === undefined ? [] : SEU_TIME[dados.papel]
-  const pendentes = useQuery({ ...consultaEntregasPendentes, enabled: time.length > 0 })
-  const esperando = quantasEsperam(pendentes.data)
   const rodape = dados === undefined ? [] : RODAPE_DA_LATERAL[dados.papel]
   const menuDaPessoa = dados === undefined ? [] : MENU_DA_PESSOA[dados.papel]
   const pessoa = dados === undefined ? undefined : { nome: dados.nome, papel: NOME_DO_PAPEL[dados.papel] }
@@ -287,8 +274,6 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
       <LateralAberta
         pessoa={pessoa}
         itens={naBarraDeBaixo ? [] : itens}
-        time={time}
-        esperando={esperando}
         rodape={rodape}
         menuDaPessoa={menuDaPessoa}
         seletor={seletor}
@@ -335,8 +320,6 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
               <LateralAberta
                 pessoa={pessoa}
                 itens={itens}
-                time={time}
-                esperando={esperando}
                 rodape={rodape}
                 menuDaPessoa={menuDaPessoa}
                 seletor={seletor}
@@ -354,8 +337,6 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
             faixa !== 'estreita' && (
               <Trilho
                 itens={itens}
-                time={time}
-                esperando={esperando}
                 rodape={rodape}
                 menuDaPessoa={menuDaPessoa}
                 botaoDeAbrir={botaoDeAbrir}

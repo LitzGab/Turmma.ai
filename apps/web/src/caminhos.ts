@@ -19,9 +19,9 @@ export const ROTAS_DO_PROFESSOR = {
   ferramenta: '/ferramentas/:ferramenta',
   /** Um artefato aberto: a atividade ou o plano, com a página de origem e as versões adaptadas. */
   artefato: '/artefatos/:artefatoId',
-  /** Seu time › Assistente de ensino: o que as funções dele fizeram e o que espera a professora (11.4). */
+  /** O que o Assistente de ensino fez (pelo pé do sino): o que as funções dele fizeram e o que espera a professora (11.4). */
   timeDoAssistente: '/time/assistente',
-  /** Seu time › Tutor: os sinais e o uso do Tutor pela turma, sem conversa de aluno (A4; 11.4). */
+  /** O que o Tutor viu (pelo pé do sino): os sinais e o uso do Tutor pela turma, sem conversa de aluno (A4; 11.4). */
   timeDoTutor: '/time/tutor',
   /** Aprovar a correção de objetiva de uma atividade aplicada: os destaques e o registro da validação (A3; 11.5). */
   aprovar: '/aprovar/:atividadeAplicadaId',
@@ -56,7 +56,7 @@ export function caminhoDoArtefatoDoProfessor(artefatoId: string): string {
   return ROTAS_DO_PROFESSOR.artefato.replace(':artefatoId', encodeURIComponent(artefatoId))
 }
 
-/** O endereço da correção de uma atividade aplicada, **relativo à área**: é o "Revisar" do Seu time. */
+/** O endereço da correção de uma atividade aplicada, **relativo à área**: é o "Revisar" de "O que o Assistente fez". */
 export function caminhoDaCorrecaoDoProfessor(atividadeAplicadaId: string): string {
   return ROTAS_DO_PROFESSOR.aprovar.replace(':atividadeAplicadaId', encodeURIComponent(atividadeAplicadaId))
 }
@@ -188,10 +188,6 @@ export const ROTAS = {
   ferramentas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.ferramentas}`,
   /** Os artefatos abertos, pela raiz: dentro deles, "Ferramentas" continua selecionado na lateral. */
   artefatos: `${BASE_DA_AREA.professor}/artefatos`,
-  /** Seu time › Assistente de ensino, pela raiz: é o endereço da linha do agente na lateral. */
-  timeDoAssistente: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.timeDoAssistente}`,
-  /** Seu time › Tutor, pela raiz: é o endereço da linha do agente na lateral. */
-  timeDoTutor: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.timeDoTutor}`,
   /** "Turmas" do professor, pela raiz: é o endereço que a navegação usa. */
   turmas: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.turmas}`,
   /** "Meus dados" do professor, pela raiz: é o endereço do link do menu da pessoa (F3, 18.0). */

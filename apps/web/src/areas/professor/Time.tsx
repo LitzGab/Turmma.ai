@@ -55,7 +55,7 @@ interface DecisaoAberta {
 const idDoCartao = (entregaId: string) => `entrega-${entregaId}`
 
 /**
- * Seu time › Assistente de ensino (`docs/interface.md` 11.4): a conversa em que o Assistente diz o que as funções dele
+ * O que o Assistente de ensino fez (`docs/interface.md` 11.4; pelo pé do sino): a conversa em que o Assistente diz o que as funções dele
  * fizeram, em balão, com a faixa **"Esperando você"** presa no alto, o filtro por função e, em cada entrega, o que foi
  * feito e a situação dela.
  *
@@ -175,7 +175,7 @@ export default function Time() {
   )
 
   return (
-    <Tela titulo="Seu time: Assistente de ensino" largura="conversa" tituloSoParaLeitor>
+    <Tela titulo="Assistente de ensino" largura="conversa" tituloSoParaLeitor>
       <header className="flex min-w-0 flex-col gap-2">
         <AssinaturaIA agente="assistente_de_ensino" tamanho={32} />
         <details className="group min-w-0 rounded-cartao border border-linha bg-superficie">

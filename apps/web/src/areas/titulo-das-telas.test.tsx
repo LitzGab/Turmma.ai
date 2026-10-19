@@ -281,8 +281,8 @@ describe('a conversa é a exceção: o `h1` existe, escondido, com o texto de ho
   const CONVERSAS: readonly (readonly [string, () => ReactElement, string])[] = [
     ['Início do professor', () => <Home />, 'Início'],
     ['conversa com o Assistente de ensino', () => <Conversa />, 'Conversa com o Assistente de ensino'],
-    ['time: Assistente de ensino', () => <Time />, 'Seu time: Assistente de ensino'],
-    ['time: Tutor, do professor', () => <TutorDoProfessor />, 'Seu time: Tutor'],
+    ['o que o Assistente de ensino fez', () => <Time />, 'Assistente de ensino'],
+    ['o que o Tutor viu, do professor', () => <TutorDoProfessor />, 'Tutor'],
     ['Tutor do aluno', () => <TutorDoAluno />, 'Tutor'],
   ]
 
