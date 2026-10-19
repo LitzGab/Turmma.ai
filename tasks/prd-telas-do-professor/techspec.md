@@ -1,7 +1,7 @@
 # Tech Spec — Telas do professor
 
 **PRD:** `tasks/prd-telas-do-professor/prd.md`
-**Status:** revisada pelos guardiões em 13/10/2026 (rodada 4, `revisao-spec.md`) e aprovada por delegação do Joaquim; ele revê ao ler
+**Status:** implementada em 19/10/2026 (revisada pelos guardiões em 13/10/2026, rodada 4, `revisao-spec.md`, e aprovada por delegação do Joaquim; ele revê ao ler)
 **Tamanho:** acima do teto de 2.000 palavras, com aceite por delegação do Joaquim (13/10/2026). Motivo: a revisão dos guardiões exigiu por escrito a releitura do sino, o teto de 12 turmas, a supervisão de Hoje e a tela inteira de "Acesso gerado". O detalhe de cada teste fica nas tarefas.
 
 ## 1. Resumo da abordagem

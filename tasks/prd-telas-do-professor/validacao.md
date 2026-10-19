@@ -1,5 +1,159 @@
 # Validação — telas-do-professor (X3)
 
+## Rodada 2 — 19/10/2026
+
+**Escopo:** funcionalidade completa (revalidação depois das correções da rodada 1)
+**Commit validado:** `773cc92` (último commit com código: `bfd3715`, docs; último com código de tela: `d3a8a63`)
+**Veredito: APROVADA**
+
+O que mudou desde a rodada 1 (`9a2a4f9..773cc92`): dez correções, cada uma com o próprio documento em `tasks/correcoes/`,
+e os commits de estado e de encontro das linhas.
+
+| Achado da rodada 1 | Correção | Commit |
+|---|---|---|
+| C1 (RF3, a correção aprovada e a turma confirmada saem do sino) | `2026-10-19-sino-sem-a-correcao-aprovada` | `f3c06b1` |
+| C2 (RF12, a data da linha em Criados) | `2026-10-19-criados-data-sem-teste` | `27e95d9` |
+| C3 (RF18, dois botões cheios na aba Alunos) | `2026-10-19-alunos-dois-botoes-cheios` | `fe92bd6` |
+| C4 (RF22, Hoje e Alunos rolavam a página) | `2026-10-19-turma-aberta-rola-a-pagina` | `9dc5613` |
+| C4 (RF22, formulário e "O que o Assistente fez" rolavam a página) | `2026-10-19-formulario-e-assistente-rolam-a-pagina` | `6a44d8e` |
+| A1 ("100 ou mais") | `2026-10-19-sino-cem-ou-mais` | `ea8b9f7` |
+| A2 (vínculo encerrado com Hoje aberta) | `2026-10-19-hoje-vinculo-encerrado` | `d3a8a63` |
+| A3 (`docs/interface.md`, Parte A) | `2026-10-19-interface-parte-a` | `48316e2` |
+| A4 (docs que mandavam a "Seu time") | `2026-10-19-docs-sem-seu-time` | `bfd3715` |
+| (esteira) caso do endereço da Privacidade passava do prazo | `2026-10-19-privacidade-endereco-estoura-o-prazo` | `fc6eaba` |
+
+Fotos lidas nesta rodada: `.processo/vitrine/`, web do ambiente de teste 0 **reconstruída a partir desta árvore** pelo e2e
+de evidência abaixo (a que estava de pé era de 15h59, anterior às correções). Escola cheia e vazia, computador (1366 px) e
+celular (360 px), e as telas principais no tema escuro (`escuro--professora--*`). As três abas da turma aberta gravam o
+mesmo arquivo na vitrine; Hoje, Atividades e Alunos foram copiadas, uma por vez, para
+`/tmp/claude-1000/-home-joaquimdp-Documentos-git--maestri-floors-educaia--spectelas-do-professor/b9a68cbc-d57f-45eb-844c-3ca3cc892110/scratchpad/fotos/`
+(`hoje-*.png`, `atividades-*.png`, `alunos-*.png`).
+
+Relatório de rolagem da vitrine (a 1366 × 768):
+
+```
+escola cheia: Início, Conversa, Ferramentas, as três ferramentas, Criados, Turmas, a turma aberta (Hoje, Atividades,
+              Alunos), "O que o Assistente fez", Aprovar           → "Nenhuma tela rola a 1366 × 768."
+escola vazia: Turmas, a turma aberta (Hoje), "O que o Assistente fez", Adaptação, Criados, Início
+                                                                    → "Nenhuma tela rola a 1366 × 768. (escola vazia)"
+tema escuro:  Início, Ferramentas, Criados, Turmas, Alunos, "O que o Assistente fez", Aprovar
+                                                                    → "Nenhuma tela rola a 1366 × 768."
+```
+
+Aprovar continua sem abrir na vitrine ("Carregando a correção…"; é o M1 da rodada 1, a semente de validação anterior à
+spec): a medida dela não conta, e Aprovar não foi tocada pelas correções.
+
+### 1. RF a RF
+
+Só os RF que mudaram de situação ou de evidência. Os demais (RF1, RF2, RF4 a RF11, RF13 a RF17, RF19 a RF21) seguem
+ATENDIDOS com a evidência da rodada 1, e nenhuma correção tocou o código deles além do que está abaixo.
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF3 | ATENDIDO (era PARCIAL) | `api/atividades.ts:88` (`recarregarDepoisDoLote`); `Turmas.tsx` (`recarregar` dos vínculos); `fila-do-professor.ts:93-192` | `SinoDoProfessor.test.tsx:699` ("aprovar o lote tira a correção do sino…", `Aprovar` e o sino no mesmo cliente de consultas); `:735` ("confirmar a turma tira 'Confirme sua turma'…", com a leitura dos pedidos da turma confirmada como controle); os da rodada 1 (`fila-do-professor.test.ts:51-99`, `e2e/professor-sino.spec.ts:53`, `:122`) | Os quatro tipos agora têm prova de que saem: pedidos e versão adaptada por e2e, correção e turma por componente com a tela que decide ao lado. Mutação 1 abaixo, vermelha. O "e2e por tipo" do PRD continua em 2 de 4; os outros dois são componente com a tela real, e a mutação prova que pegam |
+| RF4 | ATENDIDO | `fila-do-professor.ts:182` (`haMais`); `componentes/sino/Sino.tsx:94`; `componentes/Contador.tsx` (`ouMais`) | `SinoDoProfessor.test.tsx:265`, `:276` (controle: 100 sem outra página são 100); `fila-do-professor.test.ts` ("a página de entregas cheia, com outra depois…"); `Sino.test.tsx` ("o nome do botão diz 'ou mais'…"); `Contador.test.tsx` | O caso de borda "mais de 100" agora diz "Esperando você, 100 ou mais" (pílula "100+", leitor de tela "100 ou mais"), com a troca registrada na Tech Spec (§ do sino, `ea8b9f7`) |
+| RF12 | ATENDIDO (era PARCIAL) | `Criados.tsx:214` | `Criados.test.tsx:182` (duas linhas, datas um mês distantes, cada uma com a sua e sem a da outra) | Mutação declarada no documento da correção e provada pelo portão. Foto `escuro--professora--professor-criados--computador.png` ("Versão adaptada · Fonte ampliada · 19/10/2026, 16:00") |
+| RF16 | ATENDIDO | `TurmaHoje.tsx:86-89` (o 404 dos sinais chama `aoPerderATurma`); `Turma.tsx:111` (`aoPerderATurma` passado a Hoje) | `TurmaHoje.test.tsx:388` e os três vizinhos (primeira leitura em 404; controles de limite e servidor); `Turma.test.tsx:203` (painel aberto e fechado); `e2e/professor-tutor.spec.ts:177` (rodado, verde nos dois projetos) | Fecha o A2 da rodada 1: a página sai pela releitura dos 15 s, sem esperar a releitura da turma (o e2e conta zero `GET /v1/turmas/:id`), e os nomes do "Ver quem" saem com ela. Mutação 2 abaixo, vermelha |
+| RF18 | ATENDIDO (era PARCIAL) | `AlunosDaTurma.tsx:106-110` (o vazio dos pedidos sem ação); `AcessoDaTurma.tsx:97` | `AlunosDaTurma.test.tsx:476` (conta os botões de face `bg-laranja`: só "Convidar alunos"), `:460` (o vazio sem botão); `e2e/pedidos.spec.ts:229` (`toHaveCount(0)` na seção) | Fotos `…/scratchpad/fotos/alunos-computador.png` e `escuro--professora--professor-turmas-01a15588-feac-7001-ae37-2dd93d0c0535--computador.png`: um botão cheio, "Convidar alunos". As asserções de `pedidos.spec.ts` que saíram eram do botão que saiu; o foco no título do acesso continua provado no mesmo caso (`:247`, `:262`) |
+| RF22 | ATENDIDO (era NÃO ATENDIDO) | `Turma.tsx:74`, `:107-108` (o painel da aba é o miolo, `O_MIOLO_DO_DOCUMENTO`, com o topo medido); `Ferramenta.tsx:25`, `:46` (`useTopoDoMiolo`); `Time.tsx:127`, `:304` (a conversa é o miolo, "Ver mais entregas" dentro dele); `miolo-do-documento.ts` | `e2e/professor-turma-aberta.spec.ts:75` (Hoje), `e2e/professor-turma-alunos.spec.ts:207` (Alunos), `e2e/professor-ferramentas.spec.ts:358` (as três ferramentas), `e2e/professor-entregas.spec.ts:51` (seis entregas, faixa aberta e fechada); os quatro rodados e verdes nos dois projetos; `soOPainelDaAbaRola` (`e2e/__fixtures__/professor/cena.ts`) confere que a página não passa da janela **e** que o painel tem o que rolar, com as abas paradas | Vitrine: nenhuma tela rola, na escola cheia, na vazia e no escuro. Fotos `…/scratchpad/fotos/hoje-computador.png`, `alunos-computador.png`, `professora--professor-ferramentas-adaptacao--computador.png`, `professora--professor-time-assistente--computador.png`, `vazia--professora--professor-turmas--Abrir-a-turma--computador.png` (todas param em 768 px, o miolo cortado no pé). A 360 px a página rola inteira, sem rolagem lateral (`hoje-celular.png`). Mutação 3 abaixo, vermelha |
+| RF23 | ATENDIDO | — | Casos de e2e 589 → 594 e da web 1904 → 1921 de `9a2a4f9` a `773cc92`, sem queda em nenhum commit de nenhuma linha; nenhum `.skip`, `.only` nem `fixme` | `fc6eaba` troca a entrada pela tela por entrada pela API num caso que prova só o endereço da Privacidade, com as mesmas asserções de endereço e de aba |
+
+Contagem: 23 RF, **23 ATENDIDOS**.
+
+Provas de mutação (cada uma restaurada com `git checkout -- <arquivo>`; `git status` limpo no fim, e a web do ambiente
+reconstruída sem a mutação, com o mesmo caso verde):
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF3 | `api/atividades.ts:88`, `void cliente.invalidateQueries({ queryKey: CHAVE_DAS_ENTREGAS })` em `recarregarDepoisDoLote` (a mesma que sobreviveu na rodada 1) | `SinoDoProfessor.test.tsx` › "aprovar o lote tira a correção do sino…" (estoura os 5 s esperando "Esperando você, nada") |
+| RF16 (A2) | `TurmaHoje.tsx:88`, `if (semATurma) aoPerderATurma()` → `if (semATurma && false) …` | 4 casos: `TurmaHoje.test.tsx` › "o 404 da releitura dos 15 s avisa a página…" e "a primeira leitura dos sinais já com 404…"; `Turma.test.tsx` › "o 404 da releitura dos sinais tira a página inteira" (painel aberto e fechado) |
+| RF22 | `Turma.tsx:108`, ` classeDoPainel={O_MIOLO_DO_DOCUMENTO}` | `e2e/professor-turma-aberta.spec.ts:75` [chromebook] › "Hoje mantém a página parada a 1366 × 768…" (`a página inteira rola a partir de 768 px: só o miolo deveria`, `Received: 156`) |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+As regras de negócio seguem cumpridas como na rodada 1; nenhuma correção mexeu em aprovação, lote, adaptação, convite ou
+vocabulário. Mudou o seguinte:
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regra nome do aluno só ao professor da turma, sem guardar ao sair | cumprida, e reforçada | A turma perdida em Hoje sai com o painel "Ver quem" (`e2e/professor-tutor.spec.ts:177`, nenhum dos nomes no `body`); sinais, uso, desempenho e alunos têm `gcTime: 0` (`api/tutor-da-turma.ts:17`, `:30`; `api/atividades.ts:99`) |
+| Borda: vínculo encerrado com a turma aberta | coberta (era em parte) | Hoje: `TurmaHoje.test.tsx:388`, `Turma.test.tsx:203`, `e2e/professor-tutor.spec.ts:177`; Alunos e abrir já encerrada, como na rodada 1 |
+| Borda: mais de 100 entregas esperando | coberta (era sem teste e divergente) | RF4 acima |
+| Pronto: tudo o que faz hoje pelos quatro lugares e pelo sino | cumprido | RF1 a RF6, com o RF3 completo |
+| Pronto: cada tela cabe em 1366 × 768 e funciona a 360 px | cumprido (era faltando) | RF22 acima; vitrine nas duas escolas e no escuro |
+| Pronto: foto de cada tela no claro e no escuro, no computador e no celular | cumprido nesta rodada | `.processo/vitrine/` (claro, escuro, vazia, computador e celular). O lado a lado com a seção do `mockup.md` é a métrica do PRD §9, que o Gabriel aprova ou aponta |
+| Pronto: `docs/interface.md`, Parte A, descreve o construído | cumprido (era faltando) | `docs/interface.md:83-100` (lugares, Criados, documento), `:195-225` (seção 1.3, o sino e o pé), `:261-379` (seção 1.7: Turmas, a turma aberta com Hoje, Atividades e Alunos, o miolo que rola e o diálogo "Convidar alunos"); "média 6,4" e "Visão Geral e Alunos" como estado atual saíram |
+| Docs sem "Seu time" como lugar atual (A4) | cumprido | `bfd3715`: roteiro, glossário, agentes, fluxos e as três AIAs. O que sobra em `docs/` é histórico (`mvp-rapido.md`, `pendencias-dos-mockups.md`) ou da área do aluno (`regulacao.md:184`) |
+| Pronto: teto dos pedaços `tela-professor-*` e da fachada no teste do build | esteira: conferida no fechamento | a etapa "teto do bundle da web" (`size-limit`, 150 kB) passou nas duas execuções do e2e desta rodada; o teto por pedaço é do `apps/web/nome-dos-chunks.test.ts`, na esteira |
+| Os demais itens da rodada 1 | sem mudança | — |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck` | não rodado (escopo de funcionalidade completa: esteira conferida no fechamento) |
+| `npm run lint` | não rodado (idem) |
+| Unidade e componente de evidência | ✅ 10 arquivos, 198 casos: `SinoDoProfessor`, `Criados`, `AlunosDaTurma`, `fila-do-professor`, `Contador`, `Sino`, `TurmaHoje`, `Turma`, `Ferramenta`, `Time` |
+| e2e de evidência | ✅ 10 de 10, nos dois projetos: `professor-turma-aberta.spec.ts:75`, `professor-turma-alunos.spec.ts:207`, `professor-ferramentas.spec.ts:358`, `professor-entregas.spec.ts:51`, `professor-tutor.spec.ts:177`; e `professor-turma-aberta.spec.ts:75` [chromebook] de novo, verde, depois da mutação 3 restaurada |
+| `npm run test:infra` | não se aplica |
+| Esteira do GitHub | esteira: conferida no fechamento |
+| Dependências | `node_modules` em dia com o `package-lock.json`: não precisou de `npm ci` |
+| Revisões das correções | ✅ as dez têm rodada de todo revisor da linha "Subagentes obrigatórios" e do `test-engineer`, com a última de cada um APROVADO; `revisor-geral` presente nas que passaram de 5 arquivos fora de `tasks/` (`formulario-e-assistente-rolam-a-pagina`, `sino-cem-ou-mais`, `docs-sem-seu-time`); `privacy-guardian` na do vínculo encerrado |
+| Commits sem `(tarefa N.0)` nem `(correção …)` | ✅ os nove sem marca só tocam `tasks/prd-telas-do-professor/estado.md`; os sete merges de encontro só resolvem `tasks/correcoes/achados/indice.md` e `TODO.md` |
+
+### 4. Achados
+
+**Críticos**
+
+- Nenhum.
+
+**Maiores**
+
+- Nenhum.
+
+**Menores**
+
+- N1 · `tasks/prd-telas-do-professor/techspec.md:211-213` ("(8) A página não rola, rola a mesa") só fala do documento; o
+  mesmo miolo agora é o da turma aberta, do formulário de ferramenta e de "O que o Assistente fez". Não é desvio silencioso:
+  está no `TODO.md` e no documento da correção, para o Arquiteto no fechamento. Correção: estender o parágrafo às três telas.
+- N2 · `apps/web/src/areas/professor/Time.tsx:275` (faixa "Esperando você"): com muitas entregas esperando, a lista da faixa
+  aberta e "O que cada função faz sozinha" aberto, o painel da conversa pode encolher quase a zero a 1366 × 768. Está no
+  `TODO.md` como decisão de desenho (teto com rolagem própria na faixa), com os dois e2e que faltam ("Ver" da faixa com a
+  rolagem dentro do painel; o formulário depois de gerar). O e2e de hoje cobre três itens abertos.
+- N3 · `TODO.md` ("A turma que sai do alcance deixa os nomes no cache de consultas", `privacy-guardian`): as leituras com nome
+  da turma (`consultaSinais`, `consultaUsoDoTutor`, `consultaDesempenhoDaTurma`, alunos e pedidos) já têm `gcTime: 0` e saem
+  do cache quando a aba desmonta. Quem pegar o item escreve primeiro o teste que lê o cache depois da turma perdida
+  (`tudoDoCache`, como o do sino); se ele passar, o item fecha sem código.
+- N4 · Títulos de e2e que ainda dizem "Seu time" como lugar (era o M5): `e2e/professor-lugares.spec.ts:19` (mantido de
+  propósito, com o comentário em `:16`), `e2e/a3-a4-professor.spec.ts:22`, `e2e/professor-entregas.spec.ts:15` e `:231` (os
+  `describe`, agora também do caso novo do RF22) e `e2e/pecas-marca-onca.spec.ts:92`. As asserções provam que nenhum texto de
+  tela diz "Seu time"; só o nome do caso ficou.
+- N5 · Os da rodada 1 que seguem: M1 (semente de validação da vitrine, Aprovar não abre), M2 (recomendações com destino
+  `TODO.md` sem a linha, para o fechamento), M3, M4, M6 (`tasks.md:52-53`, 7.1 e 7.2 `[ ]`), M7 e M8.
+
+**Positivos**
+
+- `soOPainelDaAbaRola` mede as duas metades do requisito (a página não passa da janela **e** o painel tem o que rolar), e por
+  isso não passa com a tela curta; a mutação o deixou vermelho com 156 px.
+- O C1 foi provado montando a tela que decide e o sino no mesmo cliente de consultas, que é onde a invalidação faz diferença,
+  e a mutação que sobrevivera na rodada 1 agora fica vermelha.
+- O caso do vínculo encerrado conta zero releituras da turma, o que prova que quem tira a página é a releitura dos 15 s.
+
+### 5. Conclusão
+
+APROVADA. Os quatro críticos e os quatro maiores da rodada 1 foram corrigidos, cada um com teste que pega a regra: as três
+mutações desta rodada ficaram vermelhas, e a do RF3 é a mesma que sobrevivia antes. Os 23 RF estão atendidos, nenhuma tela do
+professor rola a página a 1366 × 768 (escola cheia, vazia e escuro), e a Parte A do `docs/interface.md` descreve o que foi
+construído. O que sobra é menor e tem destino. A esteira do `773cc92` é conferida pelo Orquestrador no fechamento.
+
+### 6. Pendências herdadas
+
+- N1: Arquiteto, no fechamento (já no `TODO.md`).
+- N2 e N3: `TODO.md`, já escritos; o N3 com o teste antes de qualquer código.
+- N4 e o resto de N5: `TODO.md`, no fechamento (dono: Orquestrador), junto com as recomendações do M2.
+
+---
+
 ## Rodada 1 — 19/10/2026
 
 **Escopo:** funcionalidade completa
