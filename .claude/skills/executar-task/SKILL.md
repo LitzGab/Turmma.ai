@@ -182,8 +182,9 @@ portão e **atualize o texto no e2e**: o spec entra para rodar, e o caso lento q
 para o caso que o diff tocou). Limites: o portão não acha (i) o spec que cita só um **pedaço** do texto removido (tirar "Governança da
 escola" não puxa o spec que procura `/governança/i`), (ii) o texto de JSX que continua na linha de baixo começando em minúscula, nem o
 template que atravessa linhas, e (iii) o texto citado só num ajudante de `e2e/__fixtures__/`, que não puxa os specs que o importam. Ao
-contrário, o texto curto e comum ("Professor", "Estrutura") puxa todo spec que o cita: num diff de 40 commits (`3be23c9`) foram 24 dos 59
-specs. Troca de texto da tela: procure você mesmo, com `grep -rn` em `e2e/`, o pedaço que o e2e usa.
+contrário, o texto só conta como tirado quando **nenhum** `apps/web/src/**/*.{ts,tsx}` (menos os `.test`) ainda o tem: o que sai de um arquivo e
+continua em outro não puxa spec (antes de 19/10/2026 puxava, e "Tentar de novo" levou 53 dos 68 specs ao portão da 3.0 da telas-do-professor); o
+spec que o procurava justamente na tela trocada cai na esteira. Troca de texto da tela: procure você mesmo, com `grep -rn` em `e2e/`, o pedaço que o e2e usa.
 
 Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano

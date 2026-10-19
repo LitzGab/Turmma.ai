@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { e2eDosLiteraisRemovidos, e2eQueCitam, literaisDaLinha, literaisRemovidos } from './e2e-que-cita-literal.ts'
+import { e2eDosLiteraisRemovidos, e2eQueCitam, literaisDaLinha, literaisDaWeb, literaisRemovidos } from './e2e-que-cita-literal.ts'
 import { raizRepositorio } from './executar.ts'
 
 describe('literaisDaLinha: o que uma linha de código da web mostra ou nomeia', () => {
@@ -62,38 +62,74 @@ describe('literaisRemovidos: o que o diff de apps/web/src tirou de vez', () => {
       ...acrescentadas.map((linha) => `+${linha}`),
       '',
     ].join('\n')
-  const semArquivo = () => null
+  const apagado = (arquivo: string, removidas: string[]) =>
+    [`diff --git a/${arquivo} b/${arquivo}`, 'deleted file mode 100644', `--- a/${arquivo}`, '+++ /dev/null', '@@ -1,2 +0,0 @@', ...removidas.map((linha) => `-${linha}`), ''].join('\n')
+  const naWebNaoHaNada = new Set<string>()
 
   it('o texto trocado por outro saiu', () => {
     const diff = diffDe('apps/web/src/casca/menu.tsx', ['  <span>Governança</span>'], ['  <span>Gestão</span>'])
-    expect(literaisRemovidos(diff, semArquivo)).toEqual(['Governança'])
+    expect(literaisRemovidos(diff, naWebNaoHaNada)).toEqual(['Governança'])
   })
 
-  it('o texto que o diff recoloca em outra linha não saiu; o que o arquivo ainda tem também não', () => {
+  it('o texto que o diff recoloca em outra linha não saiu; o que a web ainda tem também não', () => {
     const movido = diffDe('apps/web/src/casca/menu.tsx', ['  <span>Governança</span>'], ['  <b>Governança</b>'])
-    expect(literaisRemovidos(movido, semArquivo)).toEqual([])
+    expect(literaisRemovidos(movido, naWebNaoHaNada)).toEqual([])
     const emOutroArquivo = [
       diffDe('apps/web/src/casca/menu.tsx', ['  <span>Governança</span>']),
       diffDe('apps/web/src/casca/rotulos.ts', [], ["  governanca: 'Governança',"]),
     ].join('')
-    expect(literaisRemovidos(emOutroArquivo, semArquivo)).toEqual([])
-    const aindaNoArquivo = diffDe('apps/web/src/casca/menu.tsx', ['  <span>Governança</span>'])
-    expect(literaisRemovidos(aindaNoArquivo, () => "const a = 'Governança'\n")).toEqual([])
+    expect(literaisRemovidos(emOutroArquivo, naWebNaoHaNada)).toEqual([])
+    const aindaNaWeb = diffDe('apps/web/src/casca/menu.tsx', ['  <span>Governança</span>'])
+    expect(literaisRemovidos(aindaNaWeb, new Set(['Governança']))).toEqual([])
   })
 
-  it('arquivo apagado tira tudo o que tinha', () => {
-    const diff = ['diff --git a/apps/web/src/velho.tsx b/apps/web/src/velho.tsx', 'deleted file mode 100644', '--- a/apps/web/src/velho.tsx', '+++ /dev/null', '@@ -1,2 +0,0 @@', "-  <h1>Painel antigo</h1>", ''].join('\n')
-    expect(literaisRemovidos(diff, semArquivo)).toEqual(['Painel antigo'])
+  it('o texto que sai de um arquivo e outro, que o diff nem toca, ainda tem não saiu da web', () => {
+    const diff = diffDe('apps/web/src/a.tsx', ['  <b>Tentar de novo</b>', '  <b>Convite vencido</b>'])
+    expect(literaisRemovidos(diff, new Set(['Tentar de novo']))).toEqual(['Convite vencido'])
+  })
+
+  it('arquivo apagado tira só o que nenhum outro arquivo da web tem', () => {
+    const diff = apagado('apps/web/src/velho.tsx', ['  <h1>Painel antigo</h1>', '  <p>Tentar de novo</p>'])
+    expect(literaisRemovidos(diff, naWebNaoHaNada)).toEqual(['Painel antigo', 'Tentar de novo'])
+    expect(literaisRemovidos(diff, new Set(['Tentar de novo']))).toEqual(['Painel antigo'])
   })
 
   it('teste da web não conta: o e2e não o lê', () => {
     const diff = diffDe('apps/web/src/casca/menu.test.tsx', ["  expect(tela.getByText('Governança')).toBeVisible()"])
-    expect(literaisRemovidos(diff, semArquivo)).toEqual([])
+    expect(literaisRemovidos(diff, naWebNaoHaNada)).toEqual([])
   })
 
   it('cada literal vem uma vez, de todos os arquivos', () => {
     const diff = [diffDe('apps/web/src/a.tsx', ['  <b>Governança</b>']), diffDe('apps/web/src/b.tsx', ['  <i>Governança</i>', '  <i>Convite vencido</i>'])].join('')
-    expect(literaisRemovidos(diff, semArquivo)).toEqual(['Governança', 'Convite vencido'])
+    expect(literaisRemovidos(diff, naWebNaoHaNada)).toEqual(['Governança', 'Convite vencido'])
+  })
+})
+
+describe('literaisDaWeb: o que a web inteira ainda mostra', () => {
+  it('junta os literais de todo .ts e .tsx de apps/web/src, em qualquer pasta, e deixa de fora o teste da web', () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'literais-da-web-'))
+    try {
+      mkdirSync(join(raiz, 'apps/web/src/areas/professor'), { recursive: true })
+      writeFileSync(join(raiz, 'apps/web/src/menu.tsx'), '<nav>\n  <a>Governança</a>\n</nav>\n')
+      writeFileSync(join(raiz, 'apps/web/src/areas/professor/rotulos.ts'), "export const R = 'Tentar de novo'\n")
+      writeFileSync(join(raiz, 'apps/web/src/areas/professor/rotulos.test.ts'), "expect(tela.getByText('Só no teste')).toBeVisible()\n")
+      writeFileSync(join(raiz, 'apps/web/src/estilo.css'), '.a::after { content: "Só no estilo" }\n')
+      // Uma pasta com nome de arquivo não é arquivo: lê-la como arquivo derrubaria o portão.
+      mkdirSync(join(raiz, 'apps/web/src/algo.ts'))
+      writeFileSync(join(raiz, 'apps/web/src/algo.ts/dentro.tsx'), '<b>Dentro da pasta</b>\n')
+      expect([...literaisDaWeb(raiz)].sort()).toEqual(['Dentro da pasta', 'Governança', 'Tentar de novo'])
+    } finally {
+      rmSync(raiz, { recursive: true, force: true })
+    }
+  })
+
+  it('sem apps/web/src, nenhum literal', () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'literais-da-web-'))
+    try {
+      expect([...literaisDaWeb(raiz)]).toEqual([])
+    } finally {
+      rmSync(raiz, { recursive: true, force: true })
+    }
   })
 })
 
@@ -157,6 +193,41 @@ describe('no repositório: o e2e que cita o literal que saiu', () => {
     const raiz = repositorio()
     rmSync(join(raiz, 'apps/web/src/menu.tsx'))
     expect(e2eDosLiteraisRemovidos(raiz).map((citado) => citado.arquivo).sort()).toEqual(['e2e/casca.spec.ts', 'e2e/turmas.spec.ts'])
+  })
+
+  it('o texto que sai de um arquivo da web mas fica em outro, que a árvore não tocou, não puxa o spec', () => {
+    const raiz = repositorio()
+    writeFileSync(join(raiz, 'apps/web/src/rodape.tsx'), '<footer>\n  <a>Governança</a>\n</footer>\n')
+    git(raiz, 'add', '.')
+    git(raiz, 'commit', '-q', '-m', 'o rodapé também tem')
+    writeFileSync(join(raiz, 'apps/web/src/menu.tsx'), '<nav>\n  <a>Gestão</a>\n  <a>Turmas</a>\n</nav>\n')
+    expect(e2eDosLiteraisRemovidos(raiz)).toEqual([])
+  })
+
+  it('o arquivo apagado puxa só os specs do texto que nenhum outro arquivo da web tem', () => {
+    const raiz = repositorio()
+    writeFileSync(join(raiz, 'apps/web/src/lateral.tsx'), '<aside>\n  <a>Turmas</a>\n</aside>\n')
+    git(raiz, 'add', '.')
+    git(raiz, 'commit', '-q', '-m', 'a lateral também tem Turmas')
+    rmSync(join(raiz, 'apps/web/src/menu.tsx'))
+    expect(e2eDosLiteraisRemovidos(raiz)).toEqual([{ arquivo: 'e2e/casca.spec.ts', literais: ['Governança'] }])
+  })
+
+  it('o texto que sai de um arquivo para um arquivo novo, ainda fora do índice, não saiu da web', () => {
+    const raiz = repositorio()
+    writeFileSync(join(raiz, 'apps/web/src/menu.tsx'), '<nav>\n  <a>Gestão</a>\n  <a>Turmas</a>\n</nav>\n')
+    writeFileSync(join(raiz, 'apps/web/src/novo.tsx'), '<footer>\n  <a>Governança</a>\n</footer>\n')
+    expect(git(raiz, 'status', '--short')).toContain('?? apps/web/src/novo.tsx')
+    expect(e2eDosLiteraisRemovidos(raiz)).toEqual([])
+  })
+
+  it('o texto que só um teste da web ainda tem conta como removido: o teste não aparece na tela', () => {
+    const raiz = repositorio()
+    writeFileSync(join(raiz, 'apps/web/src/menu.test.tsx'), "expect(tela.getByText('Governança')).toBeVisible()\n")
+    git(raiz, 'add', '.')
+    git(raiz, 'commit', '-q', '-m', 'o teste da web cita')
+    writeFileSync(join(raiz, 'apps/web/src/menu.tsx'), '<nav>\n  <a>Gestão</a>\n  <a>Turmas</a>\n</nav>\n')
+    expect(e2eDosLiteraisRemovidos(raiz)).toEqual([{ arquivo: 'e2e/casca.spec.ts', literais: ['Governança'] }])
   })
 
   it('e2eQueCitam lista cada spec uma vez, com os literais que ele cita', () => {

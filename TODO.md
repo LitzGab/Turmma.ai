@@ -959,12 +959,14 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       `git diff -U0 HEAD -- apps/web/src` saem os literais removidos que o diff não recolocou, e o `e2e/*.spec.ts` que cita algum,
       sem diferenciar maiúscula, entra nos alvos do portão da tarefa; **limites conhecidos**: o spec que cita só um pedaço do texto removido não entra (tirar "Governança da escola" não puxa
       `/governança/i`); o texto de JSX que continua em linha de baixo começando em minúscula, e o template que atravessa linhas, não
-      viram literal; o literal citado só num ajudante de `e2e/__fixtures__/` não puxa os specs que o importam; e o literal curto e comum
-      ("Professor", "Estrutura") puxa todo spec que o cita, o que **não é pouco**: num diff de 40 commits (`3be23c9`) foram 24 dos 59
-      specs. **Correção seguinte desta letra** (recomendações sem aplicar da `2026-10-18-e2e-que-cita-literal-removido`): (1) descartar o
+      viram literal; e o literal citado só num ajudante de `e2e/__fixtures__/` não puxa os specs que o importam. O limite "o literal curto e comum
+      ("Professor", "Estrutura") puxa todo spec que o cita" (24 dos 59 specs num diff de 40 commits, `3be23c9`) **foi corrigido** em
+      19/10/2026 na correção `2026-10-19-detector-de-literal-compara-com-a-web`: o literal só conta como tirado quando nenhum
+      `apps/web/src/**/*.{ts,tsx}` (menos o `.test`) ainda o tem, e não mais quando sai de um arquivo; o preço é que o spec que o procura
+      justamente na tela trocada, com outro arquivo da web ainda o tendo, só cai na esteira. **Correção seguinte desta letra** (recomendações sem aplicar da `2026-10-18-e2e-que-cita-literal-removido`): (1) descartar o
       literal que vem de `className=`/`class=` (classe do Tailwind, "sr-only", conta como texto de tela e no `290b7cb` puxou quatro specs
       sem relação); (2) teste da linha de log `▶ <spec> entra nos alvos: cita "<texto>"` do portão, que roda o portão; (3) excluir
-      `apps/web/src/__fixtures__/` como o `.test.tsx`; (4) o comentário de cabeçalho de `tools/ci/e2e-que-cita-literal.ts` ainda diz "o que só custa minutos" e cita só os limites antigos (copiar os quatro de `executar-task`); e talvez um aviso do portão quando o número de specs puxados passar de um teto);
+      `apps/web/src/__fixtures__/` como o `.test.tsx`, e também `apps/web/src/galeria/` (repete rótulos reais das telas: "Tentar de novo", "Esperando você", "Turmas") e os dois `__fixtures__/` (`literaisDaWeb` hoje os lê; muda o que o detector aceita e pede teste e mutação próprios); (4) o comentário de cabeçalho de `tools/ci/e2e-que-cita-literal.ts` ainda diz "o que só custa minutos" e cita só os limites antigos (copiar os quatro de `executar-task`); e talvez um aviso do portão quando o número de specs puxados passar de um teto);
       (e) **a vitrine lista as telas cuja página rola a 1366 × 768** (a altura medida em `tools/vitrine/foto.ts` passa da
       janela), no relatório que a Mesa e o Validador leem: na X2 o "só o miolo rola" (RF23) só foi visto pela altura das
       fotos, contada à mão, e escapou em duas telas até a validação (C1, C2)
