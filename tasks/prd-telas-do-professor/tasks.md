@@ -26,11 +26,11 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 2.6 `docs/interface.md`, Parte A: os lugares, o sino e o que saiu de "Seu time"
   - [x] 2.7 Testes: os lugares nas três larguras; os sete blocos de "Seu time" alcançados pelo sino; a contagem de casos do e2e igual
 
-- [ ] **3.0 — Início: a saudação com a onça, a caixa de pedido e os atalhos**
-  - [ ] 3.1 `Home.tsx`: a composição nova, sem "Esperando você"
-  - [ ] 3.2 `AtalhosDeFerramenta`; a caixa do Início sem o menu "Ferramenta"
-  - [ ] 3.3 `icones-de-ferramenta.tsx`, que exporta o mapa de ferramenta para ícone (a 4.0 e a 7.0 só o consomem)
-  - [ ] 3.4 Testes: os quatro estados; a saudação com o relógio fixo; o atalho abre o cartão, e a Adaptação nunca leva o texto da caixa
+- [x] **3.0 — Início: a saudação com a onça, a caixa de pedido e os atalhos**
+  - [x] 3.1 `Home.tsx`: a composição nova, sem "Esperando você"
+  - [x] 3.2 `AtalhosDeFerramenta`; a caixa do Início sem o menu "Ferramenta"
+  - [x] 3.3 `icones-de-ferramenta.tsx`, que exporta o mapa de ferramenta para ícone (a 4.0 e a 7.0 só o consomem)
+  - [x] 3.4 Testes: os quatro estados; a saudação com o relógio fixo; o atalho abre o cartão, e a Adaptação nunca leva o texto da caixa
 
 - [ ] **4.0 — Conversa e cartão da ferramenta na pele nova**
   - [ ] 4.1 `Conversa.tsx`: a coluna, a caixa presa e o aviso de IA
@@ -56,10 +56,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [ ] 8.1 `Ferramenta.tsx` em duas colunas; o texto fixo por ferramenta, em `ferramentas.ts`
   - [ ] 8.2 Testes: o texto por ferramenta e o vocabulário; os estados do formulário; a Adaptação sem campo de texto
 
-- [ ] **9.0 — Turmas: os cartões e "Confirme sua turma"**
-  - [ ] 9.1 `Turmas.tsx`: a faixa de confirmar, os cartões e o que espera em cada turma
-  - [ ] 9.2 A contestação no `PainelLado`, com o texto guardado na página
-  - [ ] 9.3 Testes: os quatro estados; confirmar em oficial; contestar; o texto sobrevive à releitura
+- [x] **9.0 — Turmas: os cartões e "Confirme sua turma"**
+  - [x] 9.1 `Turmas.tsx`: a faixa de confirmar, os cartões e o que espera em cada turma
+  - [x] 9.2 A contestação no `PainelLado`, com o texto guardado na página
+  - [x] 9.3 Testes: os quatro estados; confirmar em oficial; contestar; o texto sobrevive à releitura
 
 - [x] **10.0 — A turma aberta em três abas, com Hoje**
   - [x] 10.1 `Turma.tsx`: Hoje, Atividades e Alunos no endereço; os blocos de hoje mudam de aba sem mudar de conteúdo ("Por aluno" e o acesso vão para Alunos; "Atividades da turma", para Atividades); a tarefa liga as três abas e cria `AtividadesDaTurma.tsx` e `AlunosDaTurma.tsx` como cascas, que a 11.0 e a 12.0 preenchem sem tocar em `Turma.tsx`

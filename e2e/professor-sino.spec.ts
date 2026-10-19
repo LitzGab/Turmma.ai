@@ -1,6 +1,7 @@
 import type { BrowserContextOptions, Browser, Locator, Page } from '@playwright/test'
 import { abrirAbaAlunos, abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, entrarPorEmail, escolherNoSeletor, esperarNovaConversa, esperarPainel, lateral, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { cacheDeConsultas, semAcessosDaConta } from './__fixtures__/consultas.ts'
+import { caixa as caixaDoPedido } from './__fixtures__/fluxo-do-professor.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { entrarNaCena, esperarSino, listaDoSino, peDoSino, portao, prepararCena, semAnimacao, sinoDe, TITULO_DA_CORRECAO, TITULO_DA_VERSAO } from './__fixtures__/professor/sino.ts'
 import { confirmarVinculosNoBanco, criarAlocacaoDoProfessor, criarCoordenadoraNaEscola, criarProfessoraNaEscola, criarUsuarioEmOutraEscola } from './__fixtures__/sessao.ts'
@@ -249,7 +250,14 @@ test.describe('do sino à tela', () => {
     const cena = await prepararCena(page)
     await entrarNaCena(page, cena, hasTouch)
     await esperarSino(page, 'Esperando você, 4')
+    // A primeira deixa um pedido escrito na caixa do Início; a segunda, com uma turma dela (sem turma não haveria caixa), a
+    // encontra vazia: a memória da aba não passa de uma pessoa a outra (telas do professor, 3.4). O texto da caixa vive no
+    // estado do componente, que se perde quando a Home sai da tela com a saída da primeira: este caso é guarda de regressão,
+    // para o dia em que o rascunho for parar na memória da aba, e não a prova de uma limpeza.
+    await caixaDoPedido(page).fill('rascunho da primeira professora')
     const segunda = await criarProfessoraNaEscola(cena.professora)
+    const dela = await criarAlocacaoDoProfessor(segunda.escolaId, segunda.usuarioId, ['Biologia'])
+    await confirmarVinculosNoBanco(segunda.escolaId, dela.vinculoIds)
 
     // A primeira sai, e a segunda entra na mesma aba, sem recarregar: o cache de consultas é o mesmo. Na API simulada não sobra
     // entrega: o que apareceria no sino dela só podia vir do que ficou da primeira.
@@ -259,6 +267,8 @@ test.describe('do sino à tela', () => {
     cena.api.entregas = []
     await entrarPorEmail(page, segunda, hasTouch)
     await esperarNovaConversa(page, segunda.nome)
+    await expect(caixaDoPedido(page)).toHaveValue('', { timeout: PRAZO_DA_TELA_MS })
+    await expect(page.getByLabel('Turma e disciplina').locator('option:checked')).toHaveText(`${dela.turmaNome} · Biologia`)
 
     const sino = await esperarSino(page, 'Esperando você, nada')
     await expect(sino).not.toHaveAccessibleName('Esperando você, 4')
@@ -269,6 +279,7 @@ test.describe('do sino à tela', () => {
     await expect(peDoSino(page).getByRole('link')).toHaveCount(2)
     await expect(page.locator('body')).not.toContainText(cena.turmaA.turmaNome)
     await expect(page.locator('body')).not.toContainText(cena.professora.nome)
+    await expect(page.locator('body')).not.toContainText('rascunho da primeira professora')
     const cache = semAcessosDaConta(await cacheDeConsultas(page))
     for (const daPrimeira of [cena.professora.usuarioId, cena.turmaA.turmaId, cena.turmaA.turmaNome, cena.turmaB.turmaNome, ...cena.turmaA.vinculoIds, ...cena.turmaB.vinculoIds]) expect(cache).not.toContain(daPrimeira)
   })

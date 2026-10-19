@@ -135,7 +135,11 @@ pontuação) é estendido aos textos novos.
 | Métrica, alerta e cenário de carga | o teto do `size-limit` e o teste do build; cenário inalterado |
 
 **Orçamento.** O sino não entra na entrada: só o mapa e o `lazy()`. As abas e os painéis ficam em pedaços
-`tela-professor-*` (30 kB cada); `Turmas` e `Turma` continuam na fachada, cujo teto a 10.0 mede. Os ícones das
+`tela-professor-*` (30 kB cada). `Turmas` e `Turma` também saem da fachada, por `lazy()`, cada uma no seu pedaço
+`tela-professor-*`: com os cartões, a faixa e o painel de contestação da 9.0, a fachada passava de 11 kB contra os 8 kB
+do `size-limit` (divergência da 9.0). A 9.0 tira `Turmas`, e a 10.0, que reescreve a turma aberta, tira `Turma`. A
+fachada fica com as rotas e o sino, e o teto de 8 kB **não sobe**; a descrição dela no `.size-limit.json` e o
+comentário de `areas/professor/rotas.tsx` passam a dizer isso. Os ícones das
 ferramentas moram em `areas/professor/icones-de-ferramenta.tsx`; o de Criados, no arquivo de lugares da X1.
 
 ## 9. Frontend
@@ -156,16 +160,34 @@ entregar: nenhuma pose da onça é desenhada aqui.
 | Turma aberta | grade | Hoje · Atividades · Alunos; Hoje com o aviso de atenção humana sem nome (§7b); Criados e Alunos paginam com "Ver mais", que basta no Chromebook fraco |
 | Aprovar | leitura | números do lote; Destaques · Outras · Resumo; barra presa com o oficial |
 
+**O Assistente no Início** (divergência da 3.0): a `AssinaturaIA` do Início usa o avatar de **40 px** em toda largura, e não
+os 44 px (36 abaixo de 768) do mockup. O `AvatarAgente` e a `CabecaOnca` só aceitam 24, 32, 40 e 48 px (`docs/interface.md`
+9.7), e um tamanho a mais é peça da X1 redefinida, fora do recorte; o 40 é o do cabeçalho de uma conversa.
+
+**A função suspensa no Início** (divergência da 3.0): além do aviso da conversa e das ferramentas, o Início mostra o da
+**Adaptação** (`TEXTO_DA_SUSPENSAO`) quando só ela está suspensa, porque o atalho dela fica desligado e um botão desligado
+sem dizer por quê não explica nada.
+
+**`data-esperando-voce`** (divergência da 3.0): o item do sino da 1.0 não leva o atributo, e a 3.0 não o acrescenta. O
+Início não tem o atributo nem o que ele marcava, e o e2e prova que o sino tem a entrega pelo nome do botão ("Esperando você,
+1") e pelo link do item ("Versão adaptada para decidir…", "Correção para revisar…").
+
 **Nomes que não mudam** (contrato com o e2e): um `<main>`; `h1` "Turmas", "Ferramentas", "Turma <nome>", "Revisar a
 correção"; `log` "Conversa com o Assistente de ensino"; regiões "Sinais da turma", "Acerto por habilidade",
 "Confirme suas turmas", "Suas turmas", "Pedidos de nome"; `group` "Aprovação do lote" e "Código da turma";
 títulos "Acesso dos alunos", "Acesso gerado", "Gerar acesso", "Gerar novo acesso", "Revogar o acesso"; links
 "Abrir o artefato", "Revisar a correção", "Voltar para Turmas"; botões "Contestar", "Aplicar à turma", "Encerrar a
 atividade", "Exportar em PDF", "Pedir versão adaptada"; e todos os `data-*` do inventário, menos
-`data-contador-do-time`, que vira `data-contador-do-sino`, e `data-esperando-voce`, que passa ao item do sino.
+`data-contador-do-time`, que vira `data-contador-do-sino`, e `data-esperando-voce`, que sai do Início e não passa ao item do sino (divergência da 3.0).
 **Nomes que mudam:** as abas da turma; "Voltar para Ferramentas", no documento, vira "Voltar para Criados"; "Voltar
 para o Seu time" vira "Voltar para a turma"; "Ver e decidir em Seu time" vira "Ver e decidir"; o `h1` das telas
 do time perde "Seu time: ".
+
+**Cartão da turma.** Tudo vem do `Vinculo` de `meus-vinculos` e da fila do sino: o ladrilho da disciplina, "7ºA ·
+Matemática" (turma e disciplina), o estado em texto (`NOME_DO_ESTADO_DE_VINCULO`) e o selo do que espera. **A série
+não entra no cartão**: o `Vinculo` não a traz, e lê-la seria um `GET /v1/turmas/:id` por cartão, que a §4 não admite e
+que a API recusa no vínculo pendente. O nome da turma já diz o ano. A série volta quando o contrato de `meus-vinculos`
+a trouxer, em spec que mexa na API (divergência da 9.0).
 
 **Texto da pessoa.** O que a professora escreve (pedido, contestação, justificativa) mora no estado da página:
 releitura e sessão vencida não o apagam; sai junto quando entra outra pessoa.

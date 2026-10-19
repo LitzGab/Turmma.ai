@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { ErroDaApi } from '../../api/cliente'
 import { caminhoDaCorrecaoDoProfessor, ROTAS_DO_PROFESSOR } from '../../caminhos'
 import type { LeituraDaFila } from '../../componentes/sino/leitura-do-sino'
-import { esperandoVoce, filaDoProfessor, GRUPO_DA_TURMA_SEM_NOME, TETO_DE_TURMAS_LIDAS, turmasConfirmadas, type EntradaDaFilaDoProfessor, type LeituraDaContagem } from './fila-do-professor'
+import { esperandoVoce, esperaNaTurma, filaDoProfessor, GRUPO_DA_TURMA_SEM_NOME, TETO_DE_TURMAS_LIDAS, turmasConfirmadas, type EntradaDaFilaDoProfessor, type LeituraDaContagem } from './fila-do-professor'
 
 const TURMA_B = '0190f5a0-0000-7000-8000-00000000002b'
 const TURMA_A = '0190f5a0-0000-7000-8000-00000000002a'
@@ -211,5 +211,61 @@ describe('"Esperando você" do Início (11.2), que veio de entregas.ts', () => {
   it('sem pendência a lista é vazia, e a turma que a tela não conhece não vira "undefined"', () => {
     expect(esperandoVoce([entrega('03', { estado: 'aprovada', decididaEm: '2026-10-05T13:42:00.000Z', decididaPor: CAMILA })], {})).toEqual([])
     expect(esperandoVoce([entrega('01')], {})[0]?.detalhe).toBe('Atividade de estequiometria (versão adaptada)')
+  })
+})
+
+describe('o que espera em cada turma, para o cartão de Turmas (9.0)', () => {
+  const dasDuas = (campos: Partial<EntradaDaFilaDoProfessor> = {}) =>
+    filaDoProfessor(
+      entrada({
+        vinculos: lida([vinculo('01', B), vinculo('02', A)]),
+        contagens: new Map([
+          [TURMA_B, contagem(3)],
+          [TURMA_A, contagem(0)],
+        ]),
+        ...campos,
+      }),
+    )
+
+  it('soma a correção, a versão adaptada e os pedidos da turma, e só os dela', () => {
+    const fila = dasDuas({ entregas: lida([lote('01'), entrega('02'), lote('03', { turmaId: TURMA_A })]) })
+    expect(esperaNaTurma(fila, TURMA_B)).toEqual({ n: 5, ouMais: false, leitura: 'lida' })
+    expect(esperaNaTurma(fila, TURMA_A)).toEqual({ n: 1, ouMais: false, leitura: 'lida' })
+  })
+
+  it('o vínculo a confirmar não entra na soma, e a turma sem nada esperando e lida inteira é zero', () => {
+    const fila = filaDoProfessor(entrada({ vinculos: lida([vinculo('01', B, { estado: 'pendente' }), vinculo('02', A)]), contagens: new Map([[TURMA_A, contagem(0)]]) }))
+    expect(fila.itens.map((item) => item.tipo)).toEqual(['confirme-sua-turma'])
+    expect(esperaNaTurma(fila, TURMA_B).n).toBe(0)
+    expect(esperaNaTurma(fila, TURMA_A)).toEqual({ n: 0, ouMais: false, leitura: 'lida' })
+  })
+
+  it('a página de pedidos que veio cheia faz do número um piso', () => {
+    const fila = dasDuas({ contagens: new Map([[TURMA_B, contagem(100, true)], [TURMA_A, contagem(0)]]) })
+    expect(esperaNaTurma(fila, TURMA_B)).toEqual({ n: 100, ouMais: true, leitura: 'lida' })
+    expect(esperaNaTurma(fila, TURMA_A).ouMais).toBe(false)
+  })
+
+  it('a turma não lida (pedidos com erro, não lidos ou sem leitura) nunca é "lida"; as entregas lidas pela metade tiram a leitura de todas', () => {
+    const fila = dasDuas({ contagens: new Map<string, LeituraDaContagem>([[TURMA_B, { estado: 'erro', erro: new Error('x') }], [TURMA_A, { estado: 'nao-lida' }]]) })
+    expect(esperaNaTurma(fila, TURMA_B).leitura).toBe('nao-lida')
+    expect(esperaNaTurma(fila, TURMA_A).leitura).toBe('nao-lida')
+    expect(esperaNaTurma(dasDuas({ contagens: new Map([[TURMA_B, contagem(0)]]) }), TURMA_A).leitura).toBe('nao-lida')
+    expect(esperaNaTurma(dasDuas({ entregas: lida([], false) }), TURMA_B).leitura).toBe('nao-lida')
+    expect(esperaNaTurma(dasDuas({ entregas: { estado: 'erro', erro: new Error('x') } }), TURMA_B).leitura).toBe('nao-lida')
+    // O que está por responder é "lendo", e o número já lido continua sendo um piso.
+    const lendo = dasDuas({ entregas: { estado: 'carregando' }, contagens: new Map<string, LeituraDaContagem>([[TURMA_B, contagem(3)], [TURMA_A, { estado: 'carregando' }]]) })
+    expect(esperaNaTurma(lendo, TURMA_B)).toEqual({ n: 3, ouMais: true, leitura: 'lendo' })
+    expect(esperaNaTurma(lendo, TURMA_A).leitura).toBe('lendo')
+    // Turma que a fila não conhece (não confirmada) não é lida.
+    expect(esperaNaTurma(dasDuas(), '0190f5a0-0000-7000-8000-000000009999').leitura).toBe('nao-lida')
+  })
+
+  it('a turma além do teto de 12 é não lida', () => {
+    const turmas = Array.from({ length: TETO_DE_TURMAS_LIDAS + 1 }, (_, i) => ({ id: `0190f5a0-0000-7000-8000-0000000003${String(i).padStart(2, '0')}`, nome: `Turma ${String(i + 1).padStart(2, '0')}` }))
+    const contagens = new Map<string, LeituraDaContagem>(turmas.slice(0, TETO_DE_TURMAS_LIDAS).map((turma) => [turma.id, contagem(0)]))
+    const fila = filaDoProfessor(entrada({ vinculos: lida(turmas.map((turma, i) => vinculo(String(i).padStart(2, '0'), turma))), contagens }))
+    expect(esperaNaTurma(fila, turmas[0]?.id ?? '').leitura).toBe('lida')
+    expect(esperaNaTurma(fila, turmas[TETO_DE_TURMAS_LIDAS]?.id ?? '').leitura).toBe('nao-lida')
   })
 })

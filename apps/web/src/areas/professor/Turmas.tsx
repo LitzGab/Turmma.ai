@@ -1,17 +1,6 @@
-import {
-  AVISO_DO_COMPLEMENTO,
-  CONTESTACOES_DE_VINCULO,
-  EFEITO_DA_CONTESTACAO,
-  ESTADOS_EM_DECISAO,
-  NOME_DA_CONTESTACAO,
-  NOME_DO_ESTADO_DE_VINCULO,
-  TAMANHO_MAXIMO_DO_COMPLEMENTO,
-  type ContestacaoDeVinculo,
-  type EstadoDeVinculo,
-  type Vinculo,
-} from '@educa/shared'
+import { NOME_DA_CONTESTACAO, NOME_DO_ESTADO_DE_VINCULO, type ContestacaoDeVinculo, type Vinculo } from '@educa/shared'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useId, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'wouter'
 import { mensagemDoErro } from '../../api/cliente'
 import { confirmarVinculo, consultaMeusVinculos, contestarVinculo } from '../../api/vinculos'
@@ -19,74 +8,95 @@ import { caminhoDaTurmaDoProfessor } from '../../caminhos'
 import { Botao } from '../../componentes/Botao'
 import { CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/botao-secundario'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
+import { Estado } from '../../componentes/SeloDeEstado'
 import { Tela } from '../../componentes/Tela'
 import { useTituloDaTela } from '../../titulo'
+import { esperaNaTurma, useFilaDoProfessor, type EsperaNaTurma } from './fila-do-professor'
+import PainelDaContestacao, { type ContestacaoEmAndamento } from './PainelDaContestacao'
+import { LadrilhoDoVinculo, nomeDoVinculo } from './vinculo-na-tela'
 
-/** A contestação que está sendo escrita, no estado da página: a lista pode recarregar por baixo sem levá-la junto. */
-interface ContestacaoEmAndamento {
-  readonly vinculoId: string
-  /** Vazio enquanto nenhum motivo foi escolhido: sem ele, a contestação não é enviada. */
-  readonly codigo: ContestacaoDeVinculo | ''
-  readonly complemento: string
-}
-
-const emDecisao = (estado: EstadoDeVinculo): boolean => (ESTADOS_EM_DECISAO as readonly EstadoDeVinculo[]).includes(estado)
-
-/** "7ºA · Matemática", ou só a turma quando o vínculo não tem disciplina. */
-function nomeDoVinculo(vinculo: Vinculo): string {
-  return vinculo.disciplina === undefined ? vinculo.turma.nome : `${vinculo.turma.nome} · ${vinculo.disciplina.nome}`
+/**
+ * O selo do que espera a professora numa turma: o número, ou "Em dia" só quando a turma foi lida inteira. Turma que o sino não leu
+ * (a leitura falhou, foi recusada por limite, veio truncada ou passou das 12) diz "Não lida", nunca "Em dia" (Tech Spec, seção 5);
+ * o número de uma turma lida pela metade é um piso ("3 ou mais").
+ */
+function SeloDoQueEspera({ espera }: { readonly espera: EsperaNaTurma }) {
+  if (espera.n > 0) return <Estado familia="pendente">{`${String(espera.n)}${espera.ouMais ? ' ou mais' : ''} esperando você`}</Estado>
+  if (espera.leitura === 'lendo') return <Estado familia="info">Lendo o que espera…</Estado>
+  if (espera.leitura === 'nao-lida') return <Estado familia="info">Não lida</Estado>
+  return <Estado familia="ok">Em dia</Estado>
 }
 
 /**
  * "Turmas" do professor (D73; `docs/interface.md` 1): as turmas e disciplinas que a coordenação alocou na escola ativa,
- * no ano em curso (RF4, RF20 do F1). Um cartão por turma e disciplina: o professor que dá duas disciplinas na mesma turma
- * tem dois, e confirma ou contesta cada um separadamente.
+ * no ano em curso (RF4, RF20 do F1; telas do professor, RF14). Um cartão por turma e disciplina: o professor que dá duas
+ * disciplinas na mesma turma tem dois, e confirma ou contesta cada um separadamente.
  *
  * Os quatro estados (W4): carregando; erro com "Tentar de novo"; vazio, que diz que é a coordenação quem aloca; e com
- * dado, em dois grupos — **"Confirme suas turmas"**, as que ainda esperam a decisão dele (pendente ou contestada), com
- * os botões, e **"Suas turmas"**, as já decididas. Sem confirmar, a turma não abre para ele (E12, P2), e é por isso que
- * as que esperam vêm primeiro. Só o cartão do vínculo confirmado leva à turma aberta (15.0), onde ele gera o acesso dos
- * alunos: o encerrado e o contestado não a alcançam, e a tela não oferece o que a API recusaria.
+ * dado, em dois grupos — **"Confirme suas turmas"**, uma faixa para cada vínculo que espera a decisão dela (só o pendente: o
+ * contestado espera a coordenação e não é mais dela), com "Confirmar" e "Contestar", e **"Suas turmas"**, os cartões dos já
+ * decididos. Sem confirmar, a turma não abre (E12, P2), e é por isso que as faixas vêm primeiro. Só o cartão do vínculo
+ * confirmado leva à turma aberta (15.0): o contestado e o encerrado não a alcançam, e a tela não oferece o que a API recusaria.
  *
  * É aba de navegação: o `<h1>`, visível, é o título da tela, na `Tela` (RF12; `docs/interface.md` 11.2).
  *
- * - **O estado aparece em texto**, e não só em cor (regra 50, item 11).
- * - **Contestar mostra o que vai acontecer antes de enviar** (regra 50, item 8): a coordenação vê, e o vínculo não dá
- *   acesso à turma até ser corrigido. O complemento é texto livre que a coordenação lê, e por isso a tela avisa para
- *   não escrever nome de aluno ali (regra 20).
- * - **O que está sendo escrito mora aqui, na página**, e não no cartão: a lista some e volta a cada recarga — e a
- *   sessão pode até vencer no meio —, e nada disso pode apagar o que a professora digitou (regra 80, item 6).
+ * - **O estado aparece em texto**, e não só em cor (regra 50, item 11). **A série não entra no cartão**: o `Vinculo` não a traz
+ *   (divergência da 9.0, Tech Spec, seção 9).
+ * - **O que espera vem da fila do sino** (`useFilaDoProfessor`): as mesmas consultas, pelas mesmas chaves, e nenhuma leitura a mais.
+ * - **Contestar abre num painel ao lado** (folha de baixo a 360 px) e mostra o que vai acontecer antes de enviar (regra 50, item
+ *   8): a coordenação vê, e o vínculo não dá acesso à turma até ser corrigido. O complemento é texto livre que a coordenação lê, e
+ *   por isso a tela avisa para não escrever nome de aluno ali (regra 20); ele nunca vai a log nem a endereço.
+ * - **O que está sendo escrito mora aqui, na página**, e não no painel: a lista some e volta a cada recarga — e a sessão pode até
+ *   vencer no meio —, e nada disso pode apagar o que a professora digitou (regra 80, item 6). Sai junto quando entra outra pessoa,
+ *   porque a página sai.
  */
-export function Turmas() {
+export default function Turmas() {
   useTituloDaTela('Turmas')
   const cliente = useQueryClient()
   const vinculos = useInfiniteQuery(consultaMeusVinculos)
+  const fila = useFilaDoProfessor()
   const [contestacao, definirContestacao] = useState<ContestacaoEmAndamento | undefined>(undefined)
+  const tituloDasTurmas = useRef<HTMLHeadingElement>(null)
+  const tituloDaTela = useRef<HTMLHeadingElement>(null)
+  const [pedidoDeFoco, definirPedidoDeFoco] = useState(0)
+
+  // A faixa decidida sai da lista, e com ela o botão que tinha o foco. O foco vai para o título de "Suas turmas", onde o cartão
+  // entrou, assim que a lista relida está na tela (regra 50, item 11).
+  useEffect(() => {
+    if (pedidoDeFoco > 0) (tituloDasTurmas.current ?? tituloDaTela.current)?.focus()
+  }, [pedidoDeFoco])
 
   const recarregar = () => cliente.invalidateQueries({ queryKey: consultaMeusVinculos.queryKey })
 
-  const confirmar = useMutation({ mutationFn: (id: string) => confirmarVinculo(id), onSuccess: recarregar })
+  const confirmar = useMutation({
+    mutationFn: (id: string) => confirmarVinculo(id),
+    onSuccess: async () => {
+      await recarregar()
+      definirPedidoDeFoco((n) => n + 1)
+    },
+  })
   const contestar = useMutation({
     mutationFn: (pedido: ContestacaoEmAndamento & { codigo: ContestacaoDeVinculo }) => {
       const complemento = pedido.complemento.trim()
-      return contestarVinculo(pedido.vinculoId, { contestacao: pedido.codigo, ...(complemento === '' ? {} : { complemento }) })
+      return contestarVinculo(pedido.vinculoId, {
+        contestacao: pedido.codigo,
+        ...(complemento === '' ? {} : { complemento }),
+      })
     },
+    // O painel só fecha com a lista já relida: a faixa sai e o cartão entra de uma vez, e o foco tem para onde ir.
     onSuccess: async () => {
-      definirContestacao(undefined)
       await recarregar()
+      definirContestacao(undefined)
     },
   })
 
   const itens = vinculos.data?.pages.flatMap((pagina) => pagina.itens) ?? []
-  const paraConfirmar = itens.filter((vinculo) => emDecisao(vinculo.estado))
-  const decididas = itens.filter((vinculo) => !emDecisao(vinculo.estado))
-  // Uma decisão por vez: dois cliques seguidos no mesmo cartão, ou em dois cartões, são ação oficial repetida.
+  const paraConfirmar = itens.filter((vinculo) => vinculo.estado === 'pendente')
+  const decididas = itens.filter((vinculo) => vinculo.estado !== 'pendente')
+  // Uma decisão por vez: dois cliques seguidos no mesmo botão, ou em dois vínculos, são ação oficial repetida. O `disabled` dos botões
+  // enquanto uma decisão corre é o que impede o clique repetido: a decisão é oficial e sai uma vez só.
   const decidindo = confirmar.isPending || contestar.isPending
-
-  function aoConfirmar(id: string): void {
-    if (decidindo) return
-    confirmar.mutate(id)
-  }
+  const doPainel = contestacao === undefined ? undefined : paraConfirmar.find((vinculo) => vinculo.id === contestacao.vinculoId)
 
   function aoContestar(evento: FormEvent<HTMLFormElement>): void {
     evento.preventDefault()
@@ -94,48 +104,57 @@ export function Turmas() {
     contestar.mutate({ ...contestacao, codigo: contestacao.codigo })
   }
 
-  function cartao(vinculo: Vinculo) {
+  function abrirContestacao(id: string): void {
+    // Uma contestação por vez. Se o painel está aberto, o resto da página está inerte e este clique não chega; o `contestar.reset`
+    // tira o erro da tentativa anterior, que era de outro vínculo.
+    contestar.reset()
+    definirContestacao({ vinculoId: id, codigo: '', complemento: '' })
+  }
+
+  function faixa(vinculo: Vinculo) {
     return (
-      <li key={vinculo.id} className="rounded-cartao border border-linha bg-superficie p-4">
-        <p className="font-medium break-words text-tinta">{nomeDoVinculo(vinculo)}</p>
-        {/* O estado em texto: a cor sozinha não chega a quem não a distingue nem ao leitor de tela. */}
-        <p className="mt-1 text-apoio">
-          {NOME_DO_ESTADO_DE_VINCULO[vinculo.estado]}
-          {vinculo.contestacao !== undefined && ` · ${NOME_DA_CONTESTACAO[vinculo.contestacao]}`}
-        </p>
+      <li key={vinculo.id} data-faixa-de-vinculo="" className="flex min-w-0 flex-col gap-3 rounded-controle border-2 border-amarelo-borda bg-amarelo-claro p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <LadrilhoDoVinculo vinculo={vinculo} tamanho={40} />
+          <p className="min-w-0 font-medium break-words text-tinta">Confirme sua turma · {nomeDoVinculo(vinculo)}</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Botao variante="oficial" onClick={() => confirmar.mutate(vinculo.id)} disabled={decidindo}>
+            {confirmar.isPending && confirmar.variables === vinculo.id ? 'Confirmando…' : 'Confirmar'}
+          </Botao>
+          <Botao variante="secundario" onClick={() => abrirContestacao(vinculo.id)} disabled={decidindo}>
+            Contestar
+          </Botao>
+        </div>
         {confirmar.isError && confirmar.variables === vinculo.id && (
-          <p role="alert" className="mt-3 rounded-controle border border-erro bg-erro-cx p-3 text-erro">
+          <p role="alert" className="w-full rounded-controle border border-erro bg-erro-cx p-3 text-erro">
             {mensagemDoErro(confirmar.error)}
           </p>
         )}
-        {emDecisao(vinculo.estado) &&
-          (contestacao?.vinculoId === vinculo.id ? (
-            <FormularioDeContestacao
-              contestacao={contestacao}
-              enviando={contestar.isPending}
-              falha={contestar.isError ? contestar.error : undefined}
-              aoMudar={definirContestacao}
-              aoEnviar={aoContestar}
-              aoCancelar={() => definirContestacao(undefined)}
-            />
-          ) : (
-            <div className="mt-3 flex flex-wrap gap-3">
-              <Botao onClick={() => aoConfirmar(vinculo.id)} disabled={decidindo}>
-                {confirmar.isPending && confirmar.variables === vinculo.id ? 'Confirmando…' : 'Confirmar'}
-              </Botao>
-              <button
-                type="button"
-                onClick={() => definirContestacao({ vinculoId: vinculo.id, codigo: '', complemento: '' })}
-                disabled={decidindo}
-                className="inline-flex min-h-11 items-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-tinta enabled:hover:bg-realce-suave enabled:active:bg-realce disabled:text-inativo"
-              >
-                Contestar
-              </button>
-            </div>
-          ))}
+      </li>
+    )
+  }
+
+  function cartao(vinculo: Vinculo) {
+    return (
+      <li key={vinculo.id} className="flex min-w-0 flex-col gap-3 rounded-cartao border-2 border-borda bg-superficie p-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <LadrilhoDoVinculo vinculo={vinculo} tamanho={44} />
+          <p className="t-cartao min-w-0 break-words text-tinta">{nomeDoVinculo(vinculo)}</p>
+        </div>
+        {/* O estado em texto: a cor sozinha não chega a quem não a distingue nem ao leitor de tela. */}
+        <p className="text-apoio">
+          {NOME_DO_ESTADO_DE_VINCULO[vinculo.estado]}
+          {vinculo.contestacao !== undefined && ` · ${NOME_DA_CONTESTACAO[vinculo.contestacao]}`}
+        </p>
+        {vinculo.estado === 'confirmado' && (
+          <div>
+            <SeloDoQueEspera espera={esperaNaTurma(fila, vinculo.turma.id)} />
+          </div>
+        )}
         {vinculo.estado === 'confirmado' && (
           // Relativo à área: o `Route` aninhado em `/professor` resolve o `to` a partir da base dela.
-          <Link to={caminhoDaTurmaDoProfessor(vinculo.turma.id)} className={`mt-3 ${CLASSES_DO_LINK_SECUNDARIO}`}>
+          <Link to={caminhoDaTurmaDoProfessor(vinculo.turma.id)} className={`self-start ${CLASSES_DO_LINK_SECUNDARIO}`}>
             Abrir a turma<span className="sr-only"> {vinculo.turma.nome}</span>
           </Link>
         )}
@@ -144,33 +163,30 @@ export function Turmas() {
   }
 
   return (
-    <Tela titulo="Turmas" idDoTitulo="titulo-turmas">
+    <Tela titulo="Turmas" idDoTitulo="titulo-turmas" refDoTitulo={tituloDaTela}>
       <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-turmas">
         {vinculos.isPending && <EstadoCarregando rotulo="Carregando as suas turmas…" />}
         {vinculos.isError && <EstadoErro erro={vinculos.error} tentando={vinculos.isFetching} aoTentarDeNovo={() => void vinculos.refetch({ cancelRefetch: false })} />}
         {!vinculos.isPending && !vinculos.isError && itens.length === 0 && (
-          <EstadoVazio
-            titulo="A coordenação ainda não alocou você"
-            descricao="Quem aloca o professor nas turmas é a coordenação. Quando ela alocar você, a turma aparece aqui para você confirmar; se você já deveria ter turmas neste ano, fale com ela."
-          />
+          <EstadoVazio titulo="A coordenação ainda não alocou você" descricao="Quem aloca o professor nas turmas é a coordenação. Quando ela alocar você, a turma aparece aqui para você confirmar; se você já deveria ter turmas neste ano, fale com ela." />
         )}
 
         {paraConfirmar.length > 0 && (
           <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-para-confirmar">
-            <h2 id="titulo-para-confirmar" className="text-lg font-semibold text-tinta">
+            <h2 id="titulo-para-confirmar" className="t-secao text-tinta">
               Confirme suas turmas
             </h2>
             <p className="text-apoio">A coordenação alocou você nestas turmas. Até você confirmar, a turma não abre para você; se algo estiver errado, conteste.</p>
-            <ul className="flex flex-col gap-3">{paraConfirmar.map(cartao)}</ul>
+            <ul className="flex flex-col gap-3">{paraConfirmar.map(faixa)}</ul>
           </section>
         )}
 
         {decididas.length > 0 && (
           <section className="flex min-w-0 flex-col gap-3" aria-labelledby="titulo-decididas">
-            <h2 id="titulo-decididas" className="text-lg font-semibold text-tinta">
+            <h2 id="titulo-decididas" ref={tituloDasTurmas} tabIndex={-1} className="t-secao text-tinta">
               Suas turmas
             </h2>
-            <ul className="flex flex-col gap-3">{decididas.map(cartao)}</ul>
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{decididas.map(cartao)}</ul>
           </section>
         )}
 
@@ -180,83 +196,20 @@ export function Turmas() {
           </Botao>
         )}
       </section>
-    </Tela>
-  )
-}
 
-interface PropsDaContestacao {
-  contestacao: ContestacaoEmAndamento
-  enviando: boolean
-  falha: unknown
-  aoMudar: (contestacao: ContestacaoEmAndamento) => void
-  aoEnviar: (evento: FormEvent<HTMLFormElement>) => void
-  aoCancelar: () => void
-}
-
-/**
- * O formulário da contestação: o motivo em código fechado, o complemento curto e, antes de enviar, o que vai
- * acontecer. Sem motivo escolhido nada é enviado — o `required` do grupo segura no navegador, e a página confere de
- * novo antes de chamar a API.
- */
-function FormularioDeContestacao({ contestacao, enviando, falha, aoMudar, aoEnviar, aoCancelar }: PropsDaContestacao) {
-  const campoComplemento = useId()
-  const aviso = useId()
-  return (
-    <form className="mt-3 flex flex-col gap-3" onSubmit={aoEnviar}>
-      <fieldset className="flex flex-col gap-2">
-        <legend className="font-medium">O que está errado neste vínculo?</legend>
-        {CONTESTACOES_DE_VINCULO.map((codigo) => (
-          <label key={codigo} className="flex min-h-11 items-center gap-3">
-            <input
-              type="radio"
-              name={`contestacao-${contestacao.vinculoId}`}
-              value={codigo}
-              checked={contestacao.codigo === codigo}
-              onChange={() => aoMudar({ ...contestacao, codigo })}
-              required
-              className="h-6 w-6 accent-noite"
-            />
-            <span>{NOME_DA_CONTESTACAO[codigo]}</span>
-          </label>
-        ))}
-      </fieldset>
-      <div className="flex flex-col gap-1">
-        <label htmlFor={campoComplemento} className="font-medium">
-          Quer explicar? (opcional)
-        </label>
-        <p id={aviso} className="text-sm text-apoio">
-          {AVISO_DO_COMPLEMENTO} Até {TAMANHO_MAXIMO_DO_COMPLEMENTO} caracteres.
-        </p>
-        <textarea
-          id={campoComplemento}
-          aria-describedby={aviso}
-          maxLength={TAMANHO_MAXIMO_DO_COMPLEMENTO}
-          rows={3}
-          value={contestacao.complemento}
-          onChange={(evento) => aoMudar({ ...contestacao, complemento: evento.target.value })}
-          className="rounded-controle border border-borda-campo bg-superficie px-3 py-2 text-base text-tinta"
+      {contestacao !== undefined && doPainel !== undefined && (
+        <PainelDaContestacao
+          key={doPainel.id}
+          vinculo={doPainel}
+          contestacao={contestacao}
+          enviando={contestar.isPending}
+          falha={contestar.isError ? contestar.error : undefined}
+          aoMudar={definirContestacao}
+          aoEnviar={aoContestar}
+          aoFechar={() => definirContestacao(undefined)}
+          focoDeReserva={() => (tituloDasTurmas.current ?? tituloDaTela.current)?.focus()}
         />
-      </div>
-      {/* Ação oficial: a professora vê o efeito antes de confirmar (regra 50, item 8). */}
-      <p className="rounded-controle border border-pendente bg-pendente-cx p-3 text-pendente">{EFEITO_DA_CONTESTACAO}</p>
-      {falha !== undefined && (
-        <p role="alert" className="rounded-controle border border-erro bg-erro-cx p-3 text-erro">
-          {mensagemDoErro(falha)}
-        </p>
       )}
-      <div className="flex flex-wrap gap-3">
-        <Botao type="submit" disabled={enviando}>
-          {enviando ? 'Enviando…' : 'Enviar a contestação'}
-        </Botao>
-        <button
-          type="button"
-          onClick={aoCancelar}
-          disabled={enviando}
-          className="inline-flex min-h-11 items-center rounded-full border border-borda-campo bg-superficie px-4 py-2 text-base font-medium text-tinta enabled:hover:bg-realce-suave enabled:active:bg-realce disabled:text-inativo"
-        >
-          Cancelar
-        </button>
-      </div>
-    </form>
+    </Tela>
   )
 }

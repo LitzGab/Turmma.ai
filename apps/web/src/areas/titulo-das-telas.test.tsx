@@ -15,7 +15,7 @@ import Home from './professor/Home'
 import Time from './professor/Time'
 import Turma from './professor/Turma'
 import TutorDoProfessor from './professor/Tutor'
-import { Turmas } from './professor/Turmas'
+import Turmas from './professor/Turmas'
 
 /**
  * O título das seis telas que escreviam o cabeçalho à mão e passaram à `Tela` (RF12; Tech Spec da X1, seção 9, "Página"):
