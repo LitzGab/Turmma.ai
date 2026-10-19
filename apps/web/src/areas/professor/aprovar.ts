@@ -131,7 +131,7 @@ export function letraDaAlternativa(alternativa: number | null): string {
  * aluno e sem lista de quem não entregou: só a contagem.
  */
 export function situacaoDaAplicacao(aplicada: Pick<AtividadeAplicada, 'estado' | 'avaliativa' | 'participacao'>): string {
-  const partes = [aplicada.estado === 'aberta' ? 'Aberta para a turma' : 'Encerrada', aplicada.avaliativa ? 'avaliativa' : 'prática', `${String(aplicada.participacao.enviaram)} de ${textoDeAlunos(aplicada.participacao.alunos)} enviaram`]
+  const partes = [aplicada.estado === 'aberta' ? 'Aberta para a turma' : 'Encerrada', aplicada.avaliativa ? 'avaliativa' : 'prática', `${String(aplicada.participacao.enviaram)} de ${textoDeAlunos(aplicada.participacao.alunos)} ${aplicada.participacao.enviaram === 1 ? 'enviou' : 'enviaram'}`]
   return partes.join(' · ')
 }
 
@@ -140,6 +140,9 @@ export const ESCOLHA_DE_AVALIATIVA = [
   { valor: 'pratica', avaliativa: false, rotulo: 'É prática', descricao: 'O Tutor continua disponível para a turma, conduzindo por perguntas.' },
   { valor: 'avaliativa', avaliativa: true, rotulo: 'É avaliativa', descricao: 'O Tutor fica pausado para a turma até você encerrar a atividade.' },
 ] as const
+
+/** A atividade avaliativa que está aberta: o Tutor da turma fica pausado até a professora encerrar (regra 70, item 4c). */
+export const AVISO_DA_AVALIATIVA_ABERTA = 'É avaliativa: o Tutor está pausado para a turma até você encerrar.'
 
 /**
  * A atividade encerrada que não tem correção para revisar, e por quê. A API encerra sem corrigir em dois casos: ninguém

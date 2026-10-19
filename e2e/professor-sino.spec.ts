@@ -260,6 +260,27 @@ test.describe('do sino à tela', () => {
     await irPara(page, `/professor/turmas/${cena.turmaA.turmaId}?aba=alunos`)
     await expect(page.getByRole('region', { name: 'Por aluno' })).toContainText(alunoDaPrimeira, { timeout: PRAZO_DA_TELA_MS })
     await expect(page.getByRole('region', { name: 'Pedidos de nome' })).toContainText('Ana Sintética do sino', { timeout: PRAZO_DA_TELA_MS })
+    // A primeira abre também a aba Atividades da turma A (telas do professor, 11.0), com o painel de uma atividade: a segunda não encontra a
+    // lista nem o painel, na tela ou no cache.
+    const atividadeDela = `Atividade da primeira ${randomUUID().slice(0, 8)}`
+    const idDaAtividade = randomUUID()
+    cena.api.aplicadas = [
+      {
+        id: idDaAtividade,
+        artefatoId: randomUUID(),
+        turmaId: cena.turmaA.turmaId,
+        titulo: atividadeDela,
+        avaliativa: false,
+        estado: 'aberta',
+        questoes: 2,
+        aplicadaEm: '2026-10-05T13:00:00.000Z',
+        encerradaEm: null,
+        participacao: { alunos: 30, iniciaram: 12, enviaram: 10 },
+        entrega: null,
+      },
+    ]
+    await irPara(page, `/professor/turmas/${cena.turmaA.turmaId}?aba=atividades&atividade=${idDaAtividade}`)
+    await expect(page.getByRole('dialog', { name: atividadeDela })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     // A primeira deixa também uma conversa lida e um cartão aberto na conversa (telas do professor, 4.0): a segunda, na mesma
     // aba, não encontra nenhum dos dois. Volta ao Início sem recarregar, porque recarregar esvaziaria a memória da aba.
     cena.api.conversa = [mensagemDela('pedido da primeira professora', cena.turmaA.turmaId, randomUUID())]
@@ -285,6 +306,7 @@ test.describe('do sino à tela', () => {
     await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
     cena.api.entregas = []
     cena.api.conversa = []
+    cena.api.aplicadas = []
     await entrarPorEmail(page, segunda, hasTouch)
     await esperarNovaConversa(page, segunda.nome)
     await expect(caixaDoPedido(page)).toHaveValue('', { timeout: PRAZO_DA_TELA_MS })
@@ -301,15 +323,16 @@ test.describe('do sino à tela', () => {
     await expect(page.locator('body')).not.toContainText(cena.professora.nome)
     await expect(page.locator('body')).not.toContainText('rascunho da primeira professora')
     await expect(page.locator('body')).not.toContainText(alunoDaPrimeira)
+    await expect(page.locator('body')).not.toContainText(atividadeDela)
     const consultas = await cacheDeConsultas(page)
     const cache = semAcessosDaConta(consultas)
-    // A turma que a primeira abriu deixa, na troca de sessão, a chave de duas consultas da navegação (`estrutura/turma/<id>` e
-    // `acesso-da-turma/<id>`), esvaziadas e sem dado: o id opaco da turma, e mais nada. Só essas duas chaves, e só sem dado, ficam fora da
+    // A turma que a primeira abriu deixa, na troca de sessão, a chave de três consultas da navegação (`estrutura/turma/<id>`,
+    // `acesso-da-turma/<id>` e `atividades-aplicadas/<id>`, a da aba Atividades), esvaziadas e sem dado: o id opaco da turma, e mais nada. Só essas três chaves, e só sem dado, ficam fora da
     // conta; em qualquer outra consulta, ou com dado, o id da turma da primeira é herança.
-    const daNavegacao = (chave: unknown): boolean => Array.isArray(chave) && ((chave[0] === 'estrutura' && chave[1] === 'turma') || chave[0] === 'acesso-da-turma')
+    const daNavegacao = (chave: unknown): boolean => Array.isArray(chave) && ((chave[0] === 'estrutura' && chave[1] === 'turma') || chave[0] === 'acesso-da-turma' || chave[0] === 'atividades-aplicadas')
     const comOIdDaTurma = semAcessosDaConta(consultas.filter((consulta) => !(daNavegacao(consulta.chave) && consulta.dado === undefined)))
     expect(comOIdDaTurma).not.toContain(cena.turmaA.turmaId)
-    for (const daPrimeira of [cena.professora.usuarioId, cena.turmaA.turmaNome, cena.turmaB.turmaNome, 'pedido da primeira professora', alunoDaPrimeira, 'Ana Sintética do sino', ...cena.turmaA.vinculoIds, ...cena.turmaB.vinculoIds])
+    for (const daPrimeira of [cena.professora.usuarioId, cena.turmaA.turmaNome, cena.turmaB.turmaNome, 'pedido da primeira professora', alunoDaPrimeira, atividadeDela, idDaAtividade, 'Ana Sintética do sino', ...cena.turmaA.vinculoIds, ...cena.turmaB.vinculoIds])
       expect(cache).not.toContain(daPrimeira)
     // A conversa que a primeira leu e o cartão que deixou aberto não estão na conversa da segunda.
     await irPara(page, '/professor/conversa')
