@@ -3,8 +3,9 @@ import { entrarComoAlunoPelaApi, perguntarAoTutorPelaApi, responderPelaApi } fro
 import { irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { acionar, gerarAtividade, montarEscolaEEntrar, PRAZO_DA_IA_MS, principal } from './__fixtures__/fluxo-do-professor.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
+import { abrirODestaque, fecharOPainel } from './__fixtures__/professor/aprovar.ts'
 import { abrirEntregasDoAssistente } from './__fixtures__/professor/entregas.ts'
-import { abrirSinaisDoTutor } from './__fixtures__/professor/tutor.ts'
+import { abrirOPainelDoTutor, abrirSinaisDoTutor, painelDoTutor } from './__fixtures__/professor/tutor.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula } from './__fixtures__/sessao.ts'
 import { larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -84,7 +85,7 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     // Aprovar: o resumo, os destaques fechados, e o botão desligado com o contador dizendo por quê.
     await expect(page.getByRole('heading', { level: 1, name: 'Revisar a correção' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).toContainText(`${TITULO} · ${turmaNome}`)
-    await expect(principal(page)).toContainText('3 alunos responderam · 3 na turma hoje')
+    await expect(page.getByRole('group', { name: 'Números da correção' })).toContainText('Na turma hoje: 3')
     await expect(principal(page).getByText('Assistente · correção de objetiva')).toBeVisible()
     await expect(principal(page).locator('[data-selo-ia]').first()).toBeVisible()
     const fechados = page.locator('[data-destaque="fechado"]')
@@ -94,7 +95,6 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     expect(quantos).toBe(1)
     const doEmBranco = page.locator('[data-destaque]').filter({ hasText: emBranco.nome })
     await expect(doEmBranco).toContainText('Em branco')
-    await expect(doEmBranco).toContainText('Nenhuma questão foi respondida.')
     const barra = page.getByRole('group', { name: 'Aprovação do lote' })
     const aprovar = barra.getByRole('button', { name: 'Aprovar 3 correções' })
     await expect(aprovar).toBeDisabled()
@@ -104,13 +104,16 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // Ela abre cada destaque: a abertura fica registrada, e só depois da última o botão liga.
+    // Ela abre cada destaque: a abertura fica registrada, o painel ao lado mostra as respostas, e só depois da última o botão liga.
     for (let aberto = 0; aberto < quantos; aberto += 1) {
       await expect(aprovar).toBeDisabled()
-      await acionar(fechados.first().getByRole('button', { name: /^Abrir/ }), hasTouch)
+      const painel = await abrirODestaque(page, fechados.first(), hasTouch, PRAZO_DA_ENTRADA_MS)
+      // O único destaque é o do aluno em branco: o painel diz o motivo, como fato do trabalho.
+      await expect(painel.locator('[data-destaque-aberto]')).toContainText('Em branco')
+      await expect(painel.locator('[data-destaque-aberto]')).toContainText('Nenhuma questão foi respondida.')
+      await fecharOPainel(page, hasTouch, PRAZO_DA_ENTRADA_MS)
       await expect(page.locator('[data-destaque="aberto"]')).toHaveCount(aberto + 1, { timeout: PRAZO_DA_ENTRADA_MS })
     }
-    await expect(doEmBranco.locator('[data-destaque-aberto]')).toContainText('Em branco')
     await expect(barra.locator('[data-contador-dos-destaques]')).toContainText('Tudo aberto: a aprovação está liberada.')
     await expect(aprovar).toBeEnabled()
 
@@ -137,28 +140,33 @@ test.describe('A3 e A4 de ponta a ponta, do lado da professora, contra a API rea
     const habilidades = page.getByRole('region', { name: 'Acerto por habilidade' })
     await expect(habilidades.locator('svg').first()).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(habilidades).toContainText(/\d de \d/)
+    // Hoje não lista aluno: as atividades estão em Atividades, e os alunos em ordem de nome, em Alunos.
+    await expect(page.getByRole('region', { name: 'Por aluno' })).toHaveCount(0)
+    await acionar(page.getByRole('tab', { name: 'Atividades' }), hasTouch)
+    await expect(page.getByRole('region', { name: 'Atividades da turma' })).toContainText('Encerrada · prática · 2 de 3 alunos enviaram', { timeout: PRAZO_DA_ENTRADA_MS })
+    await acionar(page.getByRole('tab', { name: 'Alunos' }), hasTouch)
     const porAluno = page.getByRole('region', { name: 'Por aluno' })
-    for (const aluno of alunos) await expect(porAluno).toContainText(aluno.nome)
-    await expect(page.getByRole('region', { name: 'Atividades da turma' })).toContainText('Encerrada · prática · 2 de 3 alunos enviaram')
+    for (const aluno of alunos) await expect(porAluno).toContainText(aluno.nome, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText(VOCABULARIO_DE_NOTA)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // O Tutor, pelo pé do sino: o sinal do pedido de resposta pronta, com a questão, e o uso do aluno. Nenhuma conversa.
+    // O Tutor, pelo pé do sino, abre Hoje: o sinal sem nome de aluno; o nome e o uso só no painel, pedido. Nenhuma conversa.
     await abrirSinaisDoTutor(page, hasTouch)
-    const sinais = page.getByRole('region', { name: 'Sinais da turma' })
+    await expect(page.getByText('Carregando os sinais…')).toHaveCount(0, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.locator('body')).not.toContainText(primeiro.nome)
+    await abrirOPainelDoTutor(page, hasTouch)
+    const sinais = painelDoTutor(page).getByRole('region', { name: 'Sinais por aluno' })
     await expect(sinais).toContainText(`Pediu a resposta pronta na questão 1 de "${TITULO}"`, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(sinais).toContainText(primeiro.nome)
-    const uso = page.getByRole('region', { name: 'Uso do Tutor pela turma' })
+    const uso = painelDoTutor(page).getByRole('region', { name: 'Uso do Tutor pela turma' })
     await expect(uso).toContainText(primeiro.nome)
     await expect(uso).toContainText(/1 de \d+/)
     await expect(uso).toContainText(`Na questão 1 de "${TITULO}"`)
     // Quem não usou não aparece, e nada do que o aluno escreveu ao Tutor chega à tela da professora.
     await expect(uso).not.toContainText(segundo.nome)
     await expect(principal(page)).not.toContainText('me dá a resposta')
-    await expect(sinais.getByRole('link')).toHaveCount(0)
-    await expect(uso.getByRole('link')).toHaveCount(0)
-    await expect(uso.getByRole('button')).toHaveCount(0)
+    await expect(painelDoTutor(page).getByRole('link')).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
   })

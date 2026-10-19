@@ -44,12 +44,13 @@ export async function irPara(page: Page, caminho: string): Promise<void> {
 
 /**
  * A professora entra, com a API do Assistente simulada. `comTurma` dá a ela uma turma de Química com o vínculo confirmado (de
- * verdade, no banco). `antes` monta o que a escola já tinha antes de ela entrar: a Home lê o time logo na entrada.
+ * verdade, no banco); `outrasDisciplinas` dá a ela mais uma turma confirmada para cada disciplina da lista (o professor com mais de
+ * uma turma, desde a entrada: o que a lista lê ao entrar já as traz). `antes` monta o que a escola já tinha antes de ela entrar: a Home lê o time logo na entrada.
  */
 export async function entrar(
   page: Page,
   hasTouch: boolean,
-  { comTurma = true, antes }: { comTurma?: boolean; antes?: (api: ApiDoAssistente, turmaId: string) => void } = {},
+  { comTurma = true, outrasDisciplinas = [], antes }: { comTurma?: boolean; outrasDisciplinas?: readonly string[]; antes?: (api: ApiDoAssistente, turmaId: string) => void } = {},
 ): Promise<Cena> {
   const api = await simularAssistente(page)
   const professora = await criarEquipeComSenha()
@@ -60,6 +61,10 @@ export async function entrar(
     await confirmarVinculosNoBanco(professora.escolaId, alocacao.vinculoIds)
     turmaId = alocacao.turmaId
     turmaNome = alocacao.turmaNome
+    for (const disciplina of outrasDisciplinas) {
+      const outra = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId, [disciplina])
+      await confirmarVinculosNoBanco(professora.escolaId, outra.vinculoIds)
+    }
   }
   antes?.(api, turmaId)
   await page.goto('/entrar')

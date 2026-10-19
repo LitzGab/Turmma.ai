@@ -2,7 +2,6 @@ import { lazy, Suspense } from 'react'
 import { Route, Switch } from 'wouter'
 import { ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { ConteudoNaoEncontrado } from '../../componentes/NaoEncontrada'
-import { Turma } from './Turma'
 
 /**
  * As telas do Assistente de ensino (A2), cada uma no pedaço dela (`tela-professor-<Tela>-*.js`), que só se baixa ao
@@ -21,6 +20,8 @@ const Tutor = lazy(() => import('./Tutor'))
 const Aprovar = lazy(() => import('./Aprovar'))
 /** Turmas (telas do professor, 9.0): os cartões, a faixa e o painel de contestação tiraram a fachada do teto de 8 kB; sai em `tela-professor-Turmas-*.js`. */
 const Turmas = lazy(() => import('./Turmas'))
+/** A turma aberta (telas do professor, 10.0): a tela e as três abas dela, cada uma num pedaço próprio. */
+const Turma = lazy(() => import('./Turma'))
 /**
  * "Meus dados" é a mesma tela do professor e do aluno, e por isso mora em `componentes/` (a tela de uma área não importa
  * módulo de outra, `areas/navegacao.ts`, linha 5): sai num pedaço `parte-*` só por `import()`, que nenhuma entrada baixa.
@@ -38,8 +39,8 @@ const SinoDoProfessor = lazy(() => import('./SinoDoProfessor'))
  * de dentro (`estaNoItem`).
  *
  * **Tela nova entra por `lazy(() => import('./Tela'))`**, e não por `import` direto: as cinco linhas da convenção estão
- * no topo de `areas/navegacao.ts`. Turmas saiu da fachada na 9.0 e a turma aberta sai na 10.0 (Tech Spec, seção 8): a fachada
- * fica com as rotas e o sino, e o teto dela, 8 kB, não sobe. Até a 10.0 a turma aberta ainda está nela.
+ * no topo de `areas/navegacao.ts`. Turmas saiu da fachada na 9.0 e a turma aberta, na 10.0 (Tech Spec, seção 8): a fachada
+ * fica com as rotas e o sino, e o teto dela, 8 kB, não sobe.
  */
 export default function RotasDoProfessor() {
   return (

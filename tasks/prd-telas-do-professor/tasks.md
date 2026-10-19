@@ -32,10 +32,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 3.3 `icones-de-ferramenta.tsx`, que exporta o mapa de ferramenta para ícone (a 4.0 e a 7.0 só o consomem)
   - [x] 3.4 Testes: os quatro estados; a saudação com o relógio fixo; o atalho abre o cartão, e a Adaptação nunca leva o texto da caixa
 
-- [ ] **4.0 — Conversa e cartão da ferramenta na pele nova**
-  - [ ] 4.1 `Conversa.tsx`: a coluna, a caixa presa e o aviso de IA
-  - [ ] 4.2 O cartão da ferramenta com ícone e nome; o resultado com as ações de hoje
-  - [ ] 4.3 Testes: os estados; a pergunta da D18 com duas opções iguais; nenhum cartão sem o "sim"
+- [x] **4.0 — Conversa e cartão da ferramenta na pele nova**
+  - [x] 4.1 `Conversa.tsx`: a coluna, a caixa presa e o aviso de IA
+  - [x] 4.2 O cartão da ferramenta com ícone e nome; o resultado com as ações de hoje
+  - [x] 4.3 Testes: os estados; a pergunta da D18 com duas opções iguais; nenhum cartão sem o "sim"
 
 - [x] **5.0 — Criados: o que a professora já gerou, por turma, com filtros**
   - [x] 5.1 `/professor/criados`: a rota, o lugar na lateral e o ícone
@@ -61,11 +61,11 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [x] 9.2 A contestação no `PainelLado`, com o texto guardado na página
   - [x] 9.3 Testes: os quatro estados; confirmar em oficial; contestar; o texto sobrevive à releitura
 
-- [ ] **10.0 — A turma aberta em três abas, com Hoje**
-  - [ ] 10.1 `Turma.tsx`: Hoje, Atividades e Alunos no endereço; os blocos de hoje mudam de aba sem mudar de conteúdo ("Por aluno" e o acesso vão para Alunos; "Atividades da turma", para Atividades); a tarefa liga as três abas e cria `AtividadesDaTurma.tsx` e `AlunosDaTurma.tsx` como cascas, que a 11.0 e a 12.0 preenchem sem tocar em `Turma.tsx`
-  - [ ] 10.2 `TurmaHoje.tsx`: a atenção humana, os sinais, o acerto por habilidade e o painel por aluno
-  - [ ] 10.3 `Tutor.tsx` vira redirecionamento; a fixture `professor/tutor.ts` aponta para Hoje
-  - [ ] 10.4 Testes: a aba pelo endereço; os estados de Hoje; Hoje relê aos 15 s e não mostra nome; sem painel, sem rota nominal; nada abre conversa de aluno; o endereço antigo do Tutor
+- [x] **10.0 — A turma aberta em três abas, com Hoje**
+  - [x] 10.1 `Turma.tsx`: Hoje, Atividades e Alunos no endereço; os blocos de hoje mudam de aba sem mudar de conteúdo ("Por aluno" e o acesso vão para Alunos; "Atividades da turma", para Atividades); a tarefa liga as três abas e cria `AtividadesDaTurma.tsx` e `AlunosDaTurma.tsx` como cascas, que a 11.0 e a 12.0 preenchem sem tocar em `Turma.tsx`
+  - [x] 10.2 `TurmaHoje.tsx`: a atenção humana, os sinais, o acerto por habilidade e o painel por aluno
+  - [x] 10.3 `Tutor.tsx` vira redirecionamento; a fixture `professor/tutor.ts` aponta para Hoje
+  - [x] 10.4 Testes: a aba pelo endereço; os estados de Hoje; Hoje relê aos 15 s e não mostra nome; sem painel, sem rota nominal; nada abre conversa de aluno; o endereço antigo do Tutor
 
 - [ ] **11.0 — Turma › Atividades**
   - [ ] 11.1 `AtividadesDaTurma.tsx`: as linhas com estado, o filtro e o painel da atividade
@@ -82,10 +82,10 @@ tronco; da 3.0 em diante as telas correm em linhas. O corte possível, se a spec
   - [ ] 13.2 `?convidar=1` e o convite depois de confirmar a turma
   - [ ] 13.3 Testes: os nove casos do acesso, pelo diálogo; o link e o código uma vez; nada legível atrás de "Acesso gerado"
 
-- [ ] **14.0 — Aprovar na pele nova**
-  - [ ] 14.1 `Aprovar.tsx`: os números, as abas e o destaque no painel ao lado
-  - [ ] 14.2 A barra presa com o oficial, visível nas três abas
-  - [ ] 14.3 Testes: o oficial desligado até `podeAprovar`; abrir registra uma vez; a confirmação; nenhum botão laranja
+- [x] **14.0 — Aprovar na pele nova**
+  - [x] 14.1 `Aprovar.tsx`: os números, as abas e o destaque no painel ao lado
+  - [x] 14.2 A barra presa com o oficial, visível nas três abas
+  - [x] 14.3 Testes: o oficial desligado até `podeAprovar`; abrir registra uma vez; a confirmação; nenhum botão laranja
 
 ## Dependências e paralelismo
 

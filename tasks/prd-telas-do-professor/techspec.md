@@ -168,6 +168,25 @@ os 44 px (36 abaixo de 768) do mockup. O `AvatarAgente` e a `CabecaOnca` só ace
 **Adaptação** (`TEXTO_DA_SUSPENSAO`) quando só ela está suspensa, porque o atalho dela fica desligado e um botão desligado
 sem dizer por quê não explica nada.
 
+**O cartão da conversa** (divergência da 4.0): o ícone ilustrado de 32 px não é um cabeçalho à parte, porque o motor já escreve o
+nome da ferramenta (como título do formulário e como primeira palavra do pedido recolhido) e um segundo cabeçalho repetiria o
+nome. O `MotorFormulario` ganha a prop opcional `icone`, desenhada antes do nome nos dois lugares, sem mudar nenhuma prop que
+existia; o `CartaoDeFerramenta` a liga com `comIcone`, que só a Conversa passa (o formulário de Ferramentas tem o nome no
+`h1`). A frase "O Assistente é uma IA e pode errar · Nada chega à turma sem você aprovar" é o componente `AvisoDeIA`
+(`areas/professor/avisos.tsx`), usado no Início e sob a caixa da Conversa, dentro da `BarraPresa`. **"Nada chega à turma sem você aprovar" é a regra 70, item 3, e só vale enquanto nenhuma ferramenta entregar direto à turma:** quem criar uma ferramenta que entregue à turma sem aprovação tira a frase do `AvisoDeIA`, nas duas telas de uma vez, antes de a ferramenta existir. Sobre a posição: "a caixa presa a 24 px do
+fim" é a frase a 24 px do pé da barra (12 px da `BarraPresa` mais `pb-3` do filho; a barra de Aprovar não muda). O "vão de 24"
+entre mensagens é o `gap-6` do `log`. O cartão ganha a borda de 2 px (`border-2 border-borda`) da pele nova.
+
+**Aprovar na pele nova** (divergências da 14.0): (1) o painel de um destaque que o endereço traz (`?ver=<alunoId>`) lê as respostas
+pela **mesma rota que abre** (`POST …/correcao/destaques/:alunoId/abrir`), que a API já define como idempotente (devolve o mesmo, com a
+primeira hora, e não registra outra abertura): não existe rota só de leitura, e a §4 não admite uma nova. Isso só vale para o destaque
+que o lote **já traz aberto**: `?ver=` de um destaque fechado, ou de um id que o lote não tem (outra turma, outra escola), não abre
+painel e não chama a rota, igual em todo caso (regra 10, item 6). (2) A frase que explica o motivo ("Nenhuma questão foi respondida.")
+sai da linha e fica no painel; a linha diz o motivo e os acertos. (3) A lista de Outras é ordenada por nome **na tela** (a API não
+promete ordem), com o id como desempate, e nunca por acerto. (4) As abas não levam contador: o número de destaques que faltam está na
+faixa e na barra presa. (5) A tela passa de `formulario` para `leitura` (880 px), que é o tipo da tabela acima. (6) O lote já decidido
+não abre o destaque que ficou fechado (não há mais o que registrar), e só mostra o que já estava aberto.
+
 **`data-esperando-voce`** (divergência da 3.0): o item do sino da 1.0 não leva o atributo, e a 3.0 não o acrescenta. O
 Início não tem o atributo nem o que ele marcava, e o e2e prova que o sino tem a entrega pelo nome do botão ("Esperando você,
 1") e pelo link do item ("Versão adaptada para decidir…", "Correção para revisar…").
@@ -181,7 +200,9 @@ atividade", "Exportar em PDF", "Pedir versão adaptada"; e todos os `data-*` do 
 `data-contador-do-time`, que vira `data-contador-do-sino`, e `data-esperando-voce`, que sai do Início e não passa ao item do sino (divergência da 3.0).
 **Nomes que mudam:** as abas da turma; "Voltar para Ferramentas", no documento, vira "Voltar para Criados"; "Voltar
 para o Seu time" vira "Voltar para a turma"; "Ver e decidir em Seu time" vira "Ver e decidir"; o `h1` das telas
-do time perde "Seu time: ".
+do time perde "Seu time: ". Em Aprovar (14.0): o botão "Rejeitar…" da barra vira "Rejeitar a correção"; o "Abrir" e o "Ver de novo" de cada
+destaque somem, porque a linha inteira é o botão (o nome acessível dele é o do aluno, o motivo e o estado); o número "Média de
+acertos" vira "Acerto médio", porque a palavra "média" fica fora das telas do professor (RF21).
 
 **Cartão da turma.** Tudo vem do `Vinculo` de `meus-vinculos` e da fila do sino: o ladrilho da disciplina, "7ºA ·
 Matemática" (turma e disciplina), o estado em texto (`NOME_DO_ESTADO_DE_VINCULO`) e o selo do que espera. **A série
@@ -206,6 +227,7 @@ painel ao lado vira folha de baixo, e a barra presa de Aprovar fica acima da bar
 | Componente (jsdom, `__fixtures__/tela.tsx`) | por tela: carregando, vazio, erro, com dado e o foco depois de cada ação; o oficial desligado até `podeAprovar`. O sino, contando as chamadas: leitura parcial; recusa na 3ª leitura; 14 turmas em `parcial`; dois tempos com o `focusManager` e o `onlineManager` (zero chamadas, e o controle relê); retry e "Atualizar" por chave exata; `JSON.stringify` do `QueryCache` sem nome. Hoje: aos 15 s sai nova leitura; recém-aberta, sem nome no DOM; sem `?ver=tutor`, nenhuma rota nominal além dos sinais |
 | E2E | um spec por tela, nos dois projetos, com axe e largura; entrega decidida em outra aba; a coordenação na mesma aba sem leituras da professora; Hoje sem nome; "Acesso gerado" sem nome nem acerto legível; os fluxos `a2-assistente`, `a3-a4-professor` e `roteiro-da-demonstracao`, por fixtures de tela |
 | Isolamento | os de hoje, mais o sino na troca de escola e na segunda pessoa; Criados com artefato na turma de B (o título dele não aparece com `?turma=` de B) |
+|  | **Onde mora o recomeço da conversa** (divergência da 4.0): o recomeço do Início (3.0, o texto na caixa) e o da conversa (4.0, a conversa lida e o cartão aberto) estão no caso de recomeço da segunda professora de `e2e/professor-sino.spec.ts`, e não em casos novos de `professor-inicio.spec.ts` e `professor-conversa.spec.ts`: um caso com duas entradas na mesma aba passa de 15 s (o piso de `entrar` é de 11 a 12 s) |
 
 **A separação dos specs** (tarefa 2.0) move casos sem mudar título nem asserção: a contagem de `test(` em `e2e/` é
 conferida antes e depois.

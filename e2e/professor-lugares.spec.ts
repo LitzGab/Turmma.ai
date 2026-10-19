@@ -54,9 +54,10 @@ test.describe('a navegação do professor na A2 (D73)', () => {
     await expect(page.getByText(/Seu time/)).toHaveCount(0)
     // O Tutor, também pelo pé do sino.
     await abrirSinaisDoTutor(page, hasTouch)
-    await expect(page).toHaveURL(/\/professor\/time\/tutor$/)
-    await expect(page).toHaveTitle('Tutor · Turmma', { timeout: PRAZO_DA_TELA_MS })
-    await expect(secoes(page).locator('[aria-current="page"]')).toHaveCount(0)
+    await expect(page).toHaveURL(/\/professor\/turmas\/[0-9a-f-]{36}\?aba=hoje$/)
+    await expect(page).toHaveTitle(/^Turma .+ · Turmma$/, { timeout: PRAZO_DA_TELA_MS })
+    // O Tutor mora na turma (aba Hoje): é "Turmas" que a lateral acende, e nenhum outro item.
+    await expect(secoes(page).locator('[aria-current="page"]')).toHaveText('Turmas')
     await expect(page.getByText(/Seu time/)).toHaveCount(0)
     // Turmas e Ferramentas, os outros dois lugares, também não dizem "Seu time".
     for (const rotulo of ['Turmas', 'Ferramentas']) {

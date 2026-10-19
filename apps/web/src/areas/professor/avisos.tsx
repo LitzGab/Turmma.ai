@@ -24,6 +24,20 @@ export function AvisoDeSuspensao({ funcao }: { funcao: ChaveDeFuncao }) {
   )
 }
 
+/**
+ * A frase sob a caixa de pedido do Assistente, no Início e na conversa: que ele é uma IA e pode errar, e a regra 70, item 3.
+ * "Nada chega à turma sem você aprovar" só vale enquanto nenhuma ferramenta entregar direto à turma: se uma passar a
+ * entregar, a frase deixa de ser verdade e sai daqui, nas duas telas de uma vez. Texto, sem link (o mockup o liga a
+ * Configurações, que não é destas telas).
+ */
+export function AvisoDeIA() {
+  return (
+    <p className="px-2 text-center text-[13px] leading-[18px] text-sutil">
+      O Assistente é uma IA e pode errar · <strong className="font-bold">Nada chega à turma sem você aprovar</strong>
+    </p>
+  )
+}
+
 /** O aviso de que a função de uma entrega pendente está suspensa, com o mesmo desenho do aviso de suspensão. */
 export function AvisoNaEntregaDeFuncaoSuspensa({ texto }: { texto: string }) {
   return (

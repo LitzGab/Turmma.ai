@@ -156,8 +156,8 @@ export async function esperarNovaConversa(page: Page, nome: string, opcoes: { re
 
 /**
  * Na turma aberta do professor, o acesso da sala e os pedidos de nome ficam na aba **"Alunos"** (A3; D69): a turma abre
- * na "Visão Geral", com o acerto por habilidade. Cada vez que a turma é aberta de novo (outro endereço, voltar pelo
- * histórico), ela abre na Visão Geral outra vez.
+ * em Hoje, com o acerto por habilidade. Cada vez que a turma é aberta de novo (outro endereço, voltar pelo
+ * histórico), ela abre em Hoje outra vez (a menos que o endereço guarde a aba).
  */
 export async function abrirAbaAlunos(page: Page, hasTouch: boolean): Promise<void> {
   const aba = page.getByRole('tab', { name: 'Alunos' })

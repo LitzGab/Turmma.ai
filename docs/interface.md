@@ -1645,8 +1645,13 @@ auditoria. O resto está na seção 1.3.
 
 **Aprovar** (era 11.5; X3, com a ação oficial em grafite).
 
-- **O botão de aprovar é o único `oficial` da tela**, mora numa barra presa embaixo, e fica
-  desligado até o último destaque ser aberto — com o **contador ao lado dizendo por quê** (D33)
+- **A tela abre com uma faixa de três números** (correções, destaques abertos e acerto médio em
+  questões) e **três abas no endereço**: Destaques, Outras (em ordem de nome, nunca de acerto) e
+  Resumo (distribuição, acerto por habilidade e por questão). O destaque aberto aparece num painel
+  ao lado, que no celular é a folha de baixo (X3, tarefa 14.0)
+- **O botão de aprovar é o único `oficial` da tela**, mora numa barra presa embaixo, **fora das
+  abas** (está nas três), e fica desligado até o último destaque ser aberto — com o **contador ao
+  lado dizendo por quê** (D33)
 - Destaque fechado é `pendente`; aberto vira `ok`, com a hora. É a interface mostrando o que o
   **registro da validação** vai guardar (D56)
 - Confirmar abre diálogo com **o que vai acontecer**: avaliação, turma, quantas correções, e que

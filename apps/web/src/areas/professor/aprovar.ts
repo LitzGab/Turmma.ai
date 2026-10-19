@@ -97,6 +97,9 @@ export function contadorDosDestaques(correcao: Pick<RespostaCorrecaoDoLote, 'des
   return { texto, porQue: 'A aprovação ainda não foi liberada. Atualize a tela.' }
 }
 
+/** O nome do botão que recusa o lote. Está na barra presa, com o mesmo tamanho do que aprova (D59), e o diálogo se chama igual. */
+export const ROTULO_DE_REJEITAR_O_LOTE = 'Rejeitar a correção'
+
 /** "Aprovar 28 correções": o botão diz o que acontece, com a quantidade. */
 export function rotuloDeAprovar(corrigidos: number): string {
   return corrigidos === 1 ? 'Aprovar 1 correção' : `Aprovar ${String(corrigidos)} correções`
@@ -159,3 +162,98 @@ export const TEXTO_SEM_CORRECAO: Readonly<Record<SemCorrecao, string>> = {
 export const EFEITO_DE_APLICAR = 'Os alunos da turma passam a ver a atividade e podem responder. Fica registrado que você aplicou, com a data e a hora.'
 export const EFEITO_DE_ENCERRAR =
   'As respostas param agora: quem não enviou fica com o que respondeu até aqui. O Assistente corrige as objetivas, e a correção fica esperando você revisar e aprovar. Os alunos só veem o resultado depois disso.'
+
+/** O nome do grupo de abas, para o leitor de tela. */
+export const ROTULO_DAS_ABAS_DA_CORRECAO = 'Seções da correção'
+
+/** As três abas, na ordem em que aparecem. A primeira é a que o endereço sem `?aba=` abre. */
+export const ABAS_DA_CORRECAO = [
+  { id: 'destaques', rotulo: 'Destaques' },
+  { id: 'outras', rotulo: 'Outras' },
+  { id: 'resumo', rotulo: 'Resumo' },
+] as const
+export type AbaDaCorrecao = (typeof ABAS_DA_CORRECAO)[number]['id']
+
+/** Os dois parâmetros do endereço: a aba aberta e o destaque aberto ao lado. Só id e valor de lista fechada, nunca nome (regra 20, item 9). */
+export const PARAMETRO_DA_ABA = 'aba'
+export const PARAMETRO_DO_DESTAQUE = 'ver'
+
+/** A aba do endereço (`?aba=`). Valor que não é de nenhuma aba cai em Destaques, sem erro. */
+export function abaDoEndereco(busca: string): AbaDaCorrecao {
+  const valor = new URLSearchParams(busca).get(PARAMETRO_DA_ABA)
+  return ABAS_DA_CORRECAO.find((aba) => aba.id === valor)?.id ?? 'destaques'
+}
+
+/**
+ * O destaque que o endereço pede para ver ao lado (`?ver=<alunoId>`): só um destaque **deste lote** e **já aberto**. O id que o
+ * lote não tem não abre nada (regra 10, item 6), e o destaque ainda fechado também não: abrir é o clique, e é ele que fica
+ * registrado (D56). Recarregar a página com `?ver=` de um destaque fechado, ou colar o endereço de outra pessoa, não registra
+ * abertura nenhuma. `abertosAgora` são os que a tela acabou de abrir e que a leitura do lote ainda não trouxe.
+ */
+export function destaqueDoEndereco<D extends Pick<Destaque, 'alunoId' | 'abertoEm'>>(busca: string, destaques: readonly D[], abertosAgora: ReadonlySet<string>): D | undefined {
+  const alunoId = new URLSearchParams(busca).get(PARAMETRO_DO_DESTAQUE)
+  const destaque = destaques.find((candidato) => candidato.alunoId === alunoId)
+  if (destaque === undefined) return undefined
+  return destaque.abertoEm !== null || abertosAgora.has(destaque.alunoId) ? destaque : undefined
+}
+
+/**
+ * O endereço da tela com a aba posta e o destaque posto ou tirado, sem mexer no resto. `ver: null` tira o parâmetro; sem a
+ * chave, ele fica como estava (trocar de aba não fecha nada que esteja aberto, e fechar o painel não troca a aba).
+ */
+export function enderecoDaCorrecao(caminho: string, busca: string, mudanca: { readonly aba?: AbaDaCorrecao; readonly ver?: string | null }): string {
+  const parametros = new URLSearchParams(busca)
+  if (mudanca.aba !== undefined) parametros.set(PARAMETRO_DA_ABA, mudanca.aba)
+  if (mudanca.ver === null) parametros.delete(PARAMETRO_DO_DESTAQUE)
+  else if (mudanca.ver !== undefined) parametros.set(PARAMETRO_DO_DESTAQUE, mudanca.ver)
+  const resto = parametros.toString()
+  return resto === '' ? caminho : `${caminho}?${resto}`
+}
+
+export interface NumeroDoLote {
+  readonly rotulo: string
+  readonly valor: string
+  readonly apoio: string
+}
+
+/**
+ * A faixa de números do alto da tela: quantas correções há, quantos destaques já foram abertos e o acerto médio **em
+ * questões**. São contagens do trabalho da turma, nunca nota (D46): nenhum número aqui é um valor que o aluno "tirou".
+ * Quem respondeu e a turma de hoje ficam em números separados (docblock de `textoDosCorrigidos`).
+ */
+export function numerosDoLote(correcao: Pick<RespostaCorrecaoDoLote, 'resumo' | 'destaques' | 'destaquesAbertos'>): readonly [NumeroDoLote, NumeroDoLote, NumeroDoLote] {
+  const total = correcao.destaques.length
+  return [
+    { rotulo: 'Corrigidas', valor: String(correcao.resumo.corrigidos), apoio: `Na turma hoje: ${String(correcao.resumo.alunosDaTurma)}. Quem não abriu a atividade não tem correção.` },
+    {
+      rotulo: 'Destaques abertos',
+      valor: total === 0 ? '0' : `${String(correcao.destaquesAbertos)} de ${String(total)}`,
+      apoio: total === 0 ? 'Nenhum para abrir antes de aprovar.' : correcao.destaquesAbertos >= total ? 'Todos abertos.' : 'Abra todos antes de aprovar.',
+    },
+    { rotulo: 'Acerto médio', valor: textoDaMedia(correcao.resumo), apoio: 'Por aluno que respondeu.' },
+  ]
+}
+
+/** "Abra estes 2 antes de aprovar": o título da aba Destaques, com a quantidade. */
+export function tituloDosDestaques(quantos: number): string {
+  if (quantos === 0) return 'Nenhuma correção para abrir antes de aprovar'
+  return quantos === 1 ? 'Abra este antes de aprovar' : `Abra estes ${String(quantos)} antes de aprovar`
+}
+
+/** "As outras 2 correções": o título da aba Outras. */
+export function tituloDasOutras(quantas: number): string {
+  return quantas === 1 ? 'A outra correção' : `As outras ${String(quantas)} correções`
+}
+
+export const APOIO_DAS_OUTRAS = 'Dentro do esperado: não precisam ser abertas uma a uma. Estão em ordem de nome.'
+
+/**
+ * As outras correções **em ordem de nome**, e nunca de acerto: a ordem por acerto é um placar, e a lista é para a professora
+ * conferir, não para comparar alunos (regra 50, item 9; D57). Nome igual desempata pelo id, para a ordem não depender de quem
+ * a API devolveu primeiro.
+ */
+export function outrasEmOrdemDeNome<C extends { readonly alunoId: string; readonly nome: string }>(outras: readonly C[]): readonly C[] {
+  return [...outras].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR') || a.alunoId.localeCompare(b.alunoId))
+}
+
+export const AVISO_DO_GABARITO = 'Uma questão em que quase todos erram a mesma alternativa pode ter o gabarito errado. Se for o caso, rejeite a correção e diga qual questão.'
