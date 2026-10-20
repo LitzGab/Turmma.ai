@@ -278,6 +278,36 @@ deixar auditoria, nem adoção nominal em lugar nenhum.
 | F15 | roteiro, um comando que sobe o ambiente vazio | demonstração completa, com um bimestre e notas |
 | F8, F13, F14, F17, F16 | nada | tudo |
 
+## X5 — `reengenharia` [ ]
+**Depende de:** X3 · **vem antes da X4**, que fica congelada até ela pousar
+
+A reengenharia completa do sistema construído com IA, pedida pelo Joaquim em 20/10/2026: o código,
+a arquitetura, a estrutura de pastas, os contratos, os testes, a resiliência, as skills, os agentes,
+as regras, a orquestração e a documentação, para que o sistema seja legível por humanos sem depender
+da IA que o criou, cresça com pouco código, escale em usuários, escolas e equipe sem reescrita, exija
+pouca manutenção, com regra verificada por máquina e não por memória, e seja resiliente, com a falha
+contida, visível e recuperável. A liberdade é **reorganizar dentro da stack**: refatorar, apagar
+código morto comprovado, mover pastas (o plano de 26/09 entra aqui), tornar contratos explícitos e
+transformar regra em trava por ferramenta. A stack (D16) e as decisões D1 a D80 não mudam, e trocar
+peça de stack vira proposta para depois. As etapas 1 a 6 da missão rodam em `.reengenharia/`, na
+branch da spec; cada onda vira tarefas da X5, com o Implementador, a Mesa, os revisores com veto, a
+esteira e um pouso. Para nos quatro ⛔ (a entrevista, a linha de base, a arquitetura-alvo e a etapa
+de skills, agentes e regras), no pouso e em tudo que é irreversível; no resto segue com a
+recomendação e a registra em `DECISOES.md`. Nada em `.claude/` nem em `tools/processo/` muda antes
+das ondas da Etapa 9, salvo o que destrave a própria missão. A missão e as respostas da Etapa 0
+estão em `.processo/reengenharia/` (`MISSAO.md` e `RESPOSTAS.md`; onde divergem, vale a segunda).
+
+**Pronto quando:** comparado com a linha de base, a tipagem, o lint, as guardas, a unidade, a
+integração, o e2e e o infra rodam verdes, com os resultados reais registrados; o código morto
+removido tem evidência de que era morto; toda fronteira relevante tem contrato explícito e testado;
+cada mecanismo de resiliência novo tem um teste que simula a falha que ele cobre; os gargalos de
+escala estão tratados ou registrados com plano; a estrutura de pastas é coerente e travada por
+ferramenta onde fizer sentido; skills, agentes, regras e orquestração são descobertos e executados
+pela plataforma, sem contradição entre eles; os fluxos que não podem quebrar (os e2e obrigatórios da
+regra 40) e as invariantes das regras 10 e 70 continuam provados; a documentação oficial está
+atualizada e `.reengenharia/` foi apagado sem perder nada necessário; e o relatório final diz o que
+foi feito, o que foi medido e o que ficou pendente, sem número que não foi coletado.
+
 ## A pele nova — X1 a X4 (D80)
 
 > **Decidido em 12/10/2026** (D80). O Gabriel redesenhou o produto inteiro em mockup, de 04 a
@@ -352,6 +382,7 @@ do professor não ganha ranking, tempo ocioso nem texto livre sobre aluno; cada 
 768 e funciona a 360 px; e o e2e da A1 à A4 continua provando as mesmas regras.
 
 ## X4 — `telas-do-aluno-e-primeiro-acesso` [ ]
+Congelada em 20/10/2026 pela X5; a 1.0 está em `1477850`, na branch local `spec/telas-do-aluno-e-primeiro-acesso`, e é refeita depois.
 **Depende de:** X1 · **pode correr em paralelo com X2 e X3**
 
 As telas do aluno, e a primeira vez de cada papel. **Início**: o Tutor com a onça, a faixa de que o
