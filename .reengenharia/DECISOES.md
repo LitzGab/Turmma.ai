@@ -28,6 +28,17 @@ Marcas: **[código]** conferido no repositório · **[doc]** dito na documentaç
 | R15 | As saídas brutas da linha de base (logs, JSON do knip, jscpd, depcruise, ESLint, cobertura) ficam em `.processo/reengenharia/linha-de-base/`, fora do git; só o resumo entra em `LINHA-DE-BASE.md` §5 | `.processo/` já é ignorado (`.gitignore:26`). JSON bruto é grande e vira ruído no diff; o resumo é o que se compara na Etapa 12 | sim |
 | R16 | Vermelho na linha de base é registrado e **não é corrigido** nem repetido para ver se passa | A missão manda classificar toda falha como preexistente ou introduzida a partir da Etapa 4. Corrigir antes de medir apaga a evidência | — |
 
+## Etapa 4 ⛔ (aprovada pelo Joaquim em 20/10/2026)
+
+Resposta: "faça o melhor que eu aprovo sua escolha", no terminal do Orquestrador, sobre as três recomendações de
+`LINHA-DE-BASE.md` §6 (registro em `tasks/prd-reengenharia/estado.md`, "Esperando o Joaquim").
+
+| # | Decisão | Motivo | Reversível? |
+|---|---|---|---|
+| R17 | A priorização e as seis ondas de `LINHA-DE-BASE.md` §6 valem como plano de partida da Etapa 6, com a web em 3.º e os testes em 4.º | Os números da §5: 64 % das funções complexas e 93 % das longas estão na web, que tem a menor cobertura; 87 % da duplicação é de teste | sim, na Etapa 6 |
+| R18 | **P4: a pilha de sessão do operador não é unificada** com a da escola. Só as ~60 linhas literais entre `apps/web/src/operacao/paginas/{Mfa,Entrar}.tsx` e `apps/web/src/paginas/` são extraídas | O jscpd mostra que o resto é desenho paralelo, não cópia: unificar ganha conceito e põe em risco o isolamento do operador (RF6 da A0) | sim, mas fora da X5 |
+| R19 | A onda 4 (web) só fecha com **ramos ≥ 85 %** em `apps/web` e **nenhuma função de tela acima de 80 linhas**, medidos como em `LINHA-DE-BASE.md` §2 e §3. Entra como critério de aceite no PRD da X5 | É a faixa dos outros apps (api 89,0 %, worker 87,0 %, nucleo 91,1 %); 80 linhas é o limiar de medição da R10 | não sem nova parada |
+
 ## Achados que viram pergunta para a Etapa 6 (não decididos aqui)
 
 Ficam registrados para o PRD e a Tech Spec da X5. Cada um muda o desenho, um contrato ou uma decisão D, então é
@@ -38,7 +49,7 @@ Ficam registrados para o PRD e a Tech Spec da X5. Cada um muda o desenho, um con
 | P1 | Levar a IA e a extração de PDF do processo da API para a fila (o worker), pagando a dívida D77 | Muda o desenho de execução (regra 00.4, 80.2, D49) e a experiência (latência do Tutor) |
 | P2 | Validar a entrada HTTP por um mecanismo único (pipe ou decorator) em vez dos 137 handlers que fazem isso à mão | Muda o padrão de todos os controllers (contrato da borda) |
 | P3 | Gerar OpenAPI a partir dos schemas zod de `packages/shared` e travar o contrato das rotas por teste | Contrato novo, versionado |
-| P4 | Unificar a pilha de sessão do operador com a da escola (API e web, cerca de 2,5 mil linhas paralelas) | O isolamento do operador (RF6 da A0) é decisão de segurança |
+| P4 | ~~Unificar a pilha de sessão do operador com a da escola (API e web, cerca de 2,5 mil linhas paralelas)~~ **Decidida pelo Joaquim em 20/10/2026 (Etapa 4 ⛔): não unificar** nesta reengenharia; só extrair as ~60 linhas literais (R18) | O isolamento do operador (RF6 da A0) é decisão de segurança |
 | P5 | RLS como segunda camada de tenant | Toca o modelo de multi-tenancy: é irreversível pela RESPOSTAS. O que se propõe é camada extra, sem trocar o modelo |
 | P6 | Resposta da API `.strict()` contra a web aberta (deploy escalonado) | Muda a política de compatibilidade do contrato (regra 80.9) |
 | P7 | O que fazer com o realtime sem eventos e o `pgvector` sem uso | Depende do roadmap (F10, ingestão vetorial) |

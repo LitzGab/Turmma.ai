@@ -220,3 +220,17 @@ antes, e a web (3) precisa da rede antes de mexer.
 - **P4:** a recomendação muda para não unificar a pilha do operador nesta reengenharia.
 - As metas de saída da onda 4 (cobertura de ramos ≥ 85 % na web, nenhuma função de tela acima de 80 linhas): viram
   critério de aceite da onda, então são decisão dele.
+
+### A resposta do Joaquim (20/10/2026)
+
+**Aprovada, como recomendado** ("faça o melhor que eu aprovo sua escolha", terminal do Orquestrador; registrada em
+`tasks/prd-reengenharia/estado.md`, "Esperando o Joaquim"):
+
+- **A ordem** da tabela acima e as seis ondas, com a web em 3.º e os testes em 4.º. As ondas que dependem de P1, P2, P3,
+  P5, P6, P7, P8 e P10 continuam esperando a resposta da Etapa 6 ⛔.
+- **P4: não unificar** a pilha de sessão do operador nesta reengenharia. Entra só a extração das ~60 linhas literais
+  entre `operacao/paginas/{Mfa,Entrar}.tsx` e `paginas/`, sem tocar a separação do operador (RF6 da A0). A prioridade 10
+  fica reduzida a isso.
+- **A meta de saída da onda 4 é critério de aceite:** cobertura de ramos de `apps/web` ≥ 85 % (unidade e integração,
+  medida como na §2) e nenhuma função de tela acima de 80 linhas (sem branco e sem comentário, a regra da §3). Os
+  números de partida são os da §5: 72,6 % de ramos e 51 funções acima de 80 linhas na web.
