@@ -278,7 +278,7 @@ deixar auditoria, nem adoção nominal em lugar nenhum.
 | F15 | roteiro, um comando que sobe o ambiente vazio | demonstração completa, com um bimestre e notas |
 | F8, F13, F14, F17, F16 | nada | tudo |
 
-## X5 — `reengenharia` [ ]
+## X5 — `reengenharia` [~]
 **Depende de:** X3 · **vem antes da X4**, que fica congelada até ela pousar
 
 A reengenharia completa do sistema construído com IA, pedida pelo Joaquim em 20/10/2026: o código,
