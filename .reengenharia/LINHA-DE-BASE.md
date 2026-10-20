@@ -127,6 +127,8 @@ Os tamanhos de imagem só valem se a §1 construiu as imagens nesta execução. 
 **Vermelhos preexistentes:**
 
 - `tools/guardas/guardas.test.ts` > "nada fora de mockups/ aponta para o protótipo: o que não passa pelo lint não entra no produto". Primeira linha do erro: `AssertionError: expected [ …(2) ] to deeply equal []`, com `.reengenharia/medicao/depcruise.cjs` e `.reengenharia/medicao/knip.json`. **Não é preexistente no código; vem desta spec.** O commit `2d9ad5e` trouxe os dois arquivos de medição, que citam a palavra `mockups` (a exclusão do protótipo), e o teste só aceita a palavra em `.md` e em três arquivos fixos. Reproduziu nas duas execuções (suíte e cobertura). A `develop` está verde (`f1cb6ee`), e esta branch vai ficar vermelha na esteira por causa disso. Eu não corrigi, como manda o plano; a decisão é do Arquiteto (mover os arquivos para fora do alcance do teste, escrever o caminho de outro jeito, ou incluí-los na lista do teste).
+  **Resolvido pelo Arquiteto em 20/10:** as duas exclusões de `mockups/` eram redundantes (o depcruise só lê `apps` e
+  `packages`, e o knip só olha os `project` declarados) e saíram; o guarda não mudou, e o knip deu os mesmos números.
 - Efeito sobre a medição: o `portao-local.ts --e2e --infra` **para no primeiro vermelho**. Ele terminou em `test` com "Nenhum carimbo gravado", e e2e e infra não chegaram a rodar nele. A cobertura também não gerou relatório com o vermelho, e precisou de `--coverage.reportOnFailure=true`.
 - Fora esse caso, nenhum vermelho, nenhum instável na máquina. Os avisos de "Connection terminated" e "statement timeout" no log da unidade são de testes que provocam a falha de propósito.
 
@@ -142,34 +144,79 @@ Os tamanhos de imagem só valem se a §1 construiu as imagens nesta execução. 
 4.921 linhas); 3 ciclos, 0 violação de camada; 138 funções de produção acima de 10, 55 acima de 80 linhas, 2 com
 aninhamento acima de 4. **A medição bateu com a prévia em todos os números.**
 
-## 6. Priorização e ondas (proposta do Arquiteto, para a parada)
+## 6. Priorização e ondas (proposta do Arquiteto, ajustada aos números da §5, para a parada ⛔)
 
-A ordem final sai com os números da §5. O que já se vê, por **impacto × risco × esforço**, aparece abaixo. As decisões
-P1 a P10 estão em `DECISOES.md`, e nenhuma onda que dependa de uma delas começa sem a resposta do Joaquim.
+As decisões P1 a P10 estão em `DECISOES.md`, e nenhuma onda que dependa de uma delas começa sem a resposta do Joaquim.
+
+### O que os números mudaram
+
+1. **A web é onde o código é mais difícil e menos protegido.** Das funções de produção acima de 10 de complexidade,
+   89 de 138 (64 %) estão na web; das acima de 80 linhas, 51 de 55 (93 %). As onze mais complexas são todas telas
+   (`coordenacao/Estrutura.tsx` 51, `aluno/Tutor.tsx` 47, `professor/CartaoDeFerramenta.tsx` 46, `professor/Aprovar.tsx`
+   43…). E é o pacote de menor cobertura: 76,4 % de linhas, 72,6 % de ramos, 73,4 % de funções. A web sobe de 7.º para
+   3.º, e a onda dela começa pela rede: teste de unidade de cada tela antes de partir a tela. O e2e cobre o fluxo, mas
+   custa 49 min e não entra na cobertura.
+2. **A API tem rede forte.** 97,9 % de linhas e 89,0 % de ramos; nucleo 96,0 / 91,1; shared 99,7 / 93,2. Mexer em
+   fronteira e contrato da API é menos arriscado do que a §6 da prévia supunha. A onda de IA e PDF na fila continua
+   de risco alto, porque o que ela muda é comportamento sob carga, provado pelo infra, não pela unidade.
+3. **A duplicação de produção é pequena; a de teste não.** Dos 4.921 clones, 599 linhas são de produção (49 clones) e
+   4.285 (87 %) são de teste, e2e e infra. Os testes sobem de 8.º para 4.º: cada onda paga esse custo.
+4. **A pilha de sessão do operador é paralela, não copiada.** O jscpd acha só ~60 linhas literais entre
+   `web/src/operacao/paginas/{Mfa,Entrar}.tsx` e `web/src/paginas/` (37 + 24). As ~2,5 mil linhas da P4 são desenho
+   paralelo; unificar ganha conceito, não volume, e o risco (RF6 da A0) não muda. Desce para o último lugar do código, e
+   a recomendação na P4 passa a ser **não unificar nesta reengenharia**; só extrair o que é literal.
+5. **A trava de camadas sai barata.** 0 violação de camada em 1.304 módulos, e 3 ciclos. A trava entra com a regra de
+   hoje e os 3 ciclos quebrados, sem uma migração de código antes. Esforço cai de médio para pequeno. A trava genérica de
+   tenant (RISCOS S3) é outra peça e continua média.
+6. **Dependência é higiene rápida.** 10 pacotes usados sem declarar no workspace (44 ocorrências), `pino` sem uso no
+   despachante e no worker, e 2 altas e 4 moderadas só em ferramenta de desenvolvimento, todas com correção. O
+   `tailwindcss` apontado pelo knip é falso positivo (`apps/web/src/estilos.css` faz `@import 'tailwindcss'`).
+7. **O portão é o custo fixo de toda onda.** ~99 min em série na máquina e 39,5 min de esteira, e o caminho longo da
+   esteira é o job de infra (39,5 min para 57 casos; 35,5 min na máquina). O tempo por arquivo do infra não foi medido;
+   medir é o primeiro passo do item 9, sem tirar caso nenhum.
+8. **O que sai da lista.** Tamanho de bundle: tudo dentro do teto, a entrada usa 90 KB de 150 KB; S15 (sino em N+1) e
+   S16 (`chamarApi` sem timeout) ficam por correção e carga, não por tamanho. Vulnerabilidade de produção: zero.
+
+### A ordem
 
 | Prioridade | Problema | Impacto | Risco de mexer | Esforço | Depende de |
 |---|---|---|---|---|---|
-| 1 | IA e PDF em memória na API, sem fila, prioridade nem degradação (RISCOS S1, S2) | alto | alto | grande | P1 |
-| 2 | Contratos implícitos: entrada HTTP por convenção, rotas sem contrato, job sem registro tipado (CONTRATOS §2, §4) | alto | médio | médio | P2, P3 |
-| 3 | Trava genérica de tenant e de camadas; a de hoje é módulo a módulo (RISCOS S3) | crítico | baixo (só soma trava) | médio | Etapa 6 (dependência nova para a trava) |
-| 4 | `docs/arquitetura.md` e a ausência de "onde implemento" (U12) | alto para manutenção | baixo | médio | Etapa 11 |
-| 5 | Duplicação estrutural: a pilha de sessão do operador ×2 na API e na web (~2,5 mil linhas) | médio | alto (segurança) | grande | P4 |
-| 6 | Fronteiras da API: `sessao/` como biblioteca, `estrutura/entrada.ts` global, `ops` ↔ `operacao`, os 3 ciclos | médio | médio | médio | P10 |
-| 7 | Web: `api/sessao.ts` com seis assuntos, ~65 `EstadoErro` repetidos, sino em N+1 (S15), `chamarApi` sem timeout (S16), kit com variantes paralelas | médio | médio | médio | endpoint agregado (contrato novo) |
-| 8 | Teste: helpers e2e copiados (`acionar` ×39, `portao` ×20, `comBanco` ×7), e2e semeando por SQL cru, 8 fábricas de escola, limpeza manual | médio (custo de cada onda) | médio | médio | — |
-| 9 | Infra mecânica: 17 scripts com a mesma cadeia de build, 4 Dockerfiles iguais, ambiente copiado no compose, `vite preview` como imagem da web | baixo | baixo | pequeno | — |
-| 10 | Harness: base fixa de ~74 KB por sessão, contradições de texto, contrato por regex | alto em custo | alto | médio | Etapa 9 ⛔ |
+| 1 | Contratos implícitos: entrada HTTP por convenção, rotas sem contrato, job sem registro tipado (CONTRATOS §2, §4); dependências não declaradas (44) | alto | baixo (API com 97,9 % de linhas) | médio | P2, P3 |
+| 2 | Trava de camadas e ciclos (3 ciclos, 0 violação) e trava genérica de tenant (RISCOS S3) | crítico | baixo (só soma trava) | pequeno (camadas) / médio (tenant) | Etapa 6 (dependência nova para a trava) |
+| 3 | Web: 89 funções complexas e 51 longas em telas, cobertura de 76 % / 73 %; `api/sessao.ts` com seis assuntos, ~65 `EstadoErro` repetidos, sino em N+1 (S15), `chamarApi` sem timeout (S16), kit com variantes paralelas | alto para manutenção | alto (rede fraca) | grande | endpoint agregado (contrato novo) |
+| 4 | Teste: 87 % da duplicação (4.285 linhas); helpers e2e copiados (`acionar` ×39, `portao` ×20, `comBanco` ×7), e2e semeando por SQL cru, 8 fábricas de escola, limpeza manual | médio (custo de cada onda) | médio | médio | — |
+| 5 | IA e PDF em memória na API, sem fila, prioridade nem degradação (RISCOS S1, S2) | alto | alto (carga, provado só no infra) | grande | P1 |
+| 6 | Fronteiras da API: `sessao/` como biblioteca, `estrutura/entrada.ts` global, `ops` ↔ `operacao`, os 3 ciclos | médio | baixo | médio | P10 |
+| 7 | `docs/arquitetura.md` e a ausência de "onde implemento" (U12) | alto para manutenção | baixo | médio | Etapa 11 |
+| 8 | Infra mecânica: 17 scripts com a mesma cadeia de build, 4 Dockerfiles iguais, ambiente copiado no compose, `vite preview` como imagem da web (~989 MB, a medir), os clones literais entre os runners de `api/src/ops` (~120 linhas nos maiores); dependências de dev com vulnerabilidade | baixo | baixo | pequeno | — |
+| 9 | Tempo do infra (35,5 min para 57 casos, o caminho longo da esteira): medir por arquivo e tirar o custo de montagem, não caso | médio (custo de cada onda) | médio | pequeno a médio | — |
+| 10 | Duplicação de desenho: a pilha de sessão do operador na API e na web (~60 linhas literais; o resto é paralelo) | baixo | alto (segurança) | grande | P4 (recomendação: não) |
+| 11 | Harness: base fixa de ~74 KB por sessão, contradições de texto, contrato por regex | alto em custo | alto | médio | Etapa 9 ⛔ |
 
-**Ondas propostas** (na ordem de dependência da DESCOBERTA §4; cada onda deixa o portão verde e o comportamento igual):
+A prioridade é o valor; a onda é a ordem possível, porque a IA na fila (5) precisa de contrato (1) e fronteira (6)
+antes, e a web (3) precisa da rede antes de mexer.
 
-1. **Contratos primeiro:** em `shared`, o registro tipado de jobs; a borda única de validação (P2); OpenAPI (P3), se
-   aprovado; `throw` tipado. Rede de proteção antes de mover qualquer coisa.
-2. **Fronteiras da API e do nucleo:** os 3 ciclos; `estrutura/entrada.ts` para um lugar comum; `sessao/` em subpastas;
-   `ops` e `operacao` (P10); pilha do operador (P4), se aprovado. A trava de camada entra junto.
-3. **Execução e resiliência:** IA e PDF para a fila, com prioridade e degradação (P1), se aprovado. É a onda de maior
-   risco, e vem depois dos contratos e das fronteiras.
-4. **Web:** sessão parametrizada (P4), peças de estado que recebem a consulta, endpoint agregado do sino, timeout no
-   cliente, kit sem variantes paralelas.
-5. **Testes e infra:** helpers únicos, uma fábrica de escola, limpeza por FK automática, Dockerfile único, runner de
-   `ops`. Pode correr em linha paralela às ondas 2 e 4, desde que não toque os mesmos arquivos.
+### As ondas (cada uma deixa o portão verde e o comportamento igual)
+
+1. **Contratos e travas:** registro tipado de jobs em `shared`; borda única de validação (P2); OpenAPI (P3), se
+   aprovado; `throw` tipado; dependências declaradas no workspace que as usa e `pino` sem uso fora. Os 3 ciclos
+   quebrados e a trava de camadas ligada no fim da onda, com a regra medida (Etapa 6 para a dependência).
+2. **Fronteiras da API e do nucleo:** `estrutura/entrada.ts` para um lugar comum, `sessao/` em subpastas, `ops` e
+   `operacao` (P10), e a trava genérica de tenant. Sem a unificação do operador (P4), salvo resposta contrária.
+3. **Execução e resiliência:** IA e PDF para a fila, com prioridade e degradação (P1), se aprovado. Maior risco; vem
+   depois dos contratos e das fronteiras.
+4. **Web, rede primeiro:** teste de unidade das telas da tabela acima antes de partir cada uma; depois sessão
+   parametrizada, peças de estado que recebem a consulta, endpoint agregado do sino, timeout no cliente, kit sem
+   variantes paralelas. Meta de saída: a web com cobertura de ramos na faixa dos outros apps (≥ 85 %), e nenhuma tela
+   acima de 80 linhas por função.
+5. **Testes e infra, em linha paralela às ondas 2 e 4**, sem tocar os mesmos arquivos: helpers únicos, uma fábrica de
+   escola, limpeza por FK automática; o infra medido por arquivo e com a montagem compartilhada; Dockerfile único, runner
+   de `ops`, imagem da web sem `vite preview`, dependências de dev atualizadas. As imagens medidas antes e depois.
 6. **Etapa 9 (harness) ⛔** e **Etapa 11 (documentação oficial)**, como a missão manda.
+
+### O que pede a resposta do Joaquim nesta parada
+
+- A ordem acima, com a web subindo para 3.º e os testes para 4.º.
+- **P4:** a recomendação muda para não unificar a pilha do operador nesta reengenharia.
+- As metas de saída da onda 4 (cobertura de ramos ≥ 85 % na web, nenhuma função de tela acima de 80 linhas): viram
+  critério de aceite da onda, então são decisão dele.

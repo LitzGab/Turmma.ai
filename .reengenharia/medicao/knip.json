@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignore": ["mockups/**", "tools/guardas/__fixtures__/**", "tools/ci/fixtures/**"],
+  "ignore": ["tools/guardas/__fixtures__/**", "tools/ci/fixtures/**"],
   "ignoreWorkspaces": [],
   "workspaces": {
     ".": {
