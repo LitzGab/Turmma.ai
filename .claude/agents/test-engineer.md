@@ -38,7 +38,8 @@ mutar e restaurar**. As mutações do documento já foram provadas pelo portão 
    "Mutações" contra o `git diff`: **cláusula nova sem bloco é bloqueante por si**, sem você prová-la.
    Bloco vermelho pelo motivo errado também é: o cenário não chega à cláusula.
 2. Há asserção sobre o resultado, ou só sobre o código ter rodado?
-3. Os casos de borda listados estão cobertos?
+3. Cada linha da tabela de testes do documento tem o seu teste, citado pelo nome? Um item juntado a
+   outro por ponto e vírgula conta sozinho: na X3, três ficaram sem teste e só a validação viu.
 4. Há `.skip`, teste comentado, ou mock que esconde a regra sendo testada?
 5. Teste de IA usa adaptador falso ou amostra fixa, nunca provedor pago?
 6. Operação que pode acontecer duas vezes ao mesmo tempo tem teste de concorrência de

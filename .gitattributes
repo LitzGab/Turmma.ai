@@ -1,2 +1,3 @@
 tasks/**/achados/indice.md merge=union
 TODO.md merge=union
+tasks/prd-*/techspec.md merge=union

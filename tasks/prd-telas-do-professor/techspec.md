@@ -216,7 +216,10 @@ a recarga custa perto de 9 s sob a CPU ×4, e um caso novo com ela passava de 15
 `areas/professor/miolo-do-documento.ts`, a equivalente da `O_MIOLO_QUE_ROLA` da coordenação, **com a altura medida** por `useTopoDoPainel`: o cabeçalho muda com o que a versão adaptada diz, e uma soma em `rem` não serve a todas). Para a mesa ter altura útil a 1366 × 768, **as ações
 (Renomear, Exportar em PDF, Pedir versão adaptada) saem da linha do título e vão para a linha da assinatura da IA**: o cabeçalho passa de 370 px para
 cerca de 335 px. A versão adaptada leva mais linhas acima das abas (a adaptação, a situação, o "Ver e decidir" e a origem): o cabeçalho é mais alto e a mesa, mais baixa,
-mas a página continua parada. Abaixo de 768 px a página rola inteira.
+mas a página continua parada. Abaixo de 768 px a página rola inteira. **O mesmo miolo vale para mais três telas** (correções
+da validação, C4): a turma aberta (`Turma.tsx`, as abas com a `ref` de `useTopoDoPainel` e o painel com `O_MIOLO_DO_DOCUMENTO`, nas três
+abas), "O que o Assistente fez" (`Time.tsx`, também com `useTopoDoPainel`) e o formulário de ferramenta (`Ferramenta.tsx`, com
+`useTopoDoMiolo`, que mede o próprio elemento que rola, porque ali não há abas). Os e2e medem com `soOPainelDaAbaRola` e `paginaNaoRola`.
 
 **Alunos na pele nova** (divergências da 12.0): (1) a aba lê **três** rotas, `GET /v1/turmas/:id/alunos` (nova para a web), o desempenho
 aprovado e os pedidos; a lista de nomes é a base das linhas, e os acertos entram **pelo id** (`usuarioId` da lista é o `alunoId` do

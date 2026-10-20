@@ -59,8 +59,10 @@ fazer, e as dos guardiões marcados:
 
 - **Declare a mutação de cada cláusula; quem a prova é o portão.** Liste cada cláusula que o diff
   acrescenta — condição de `where`, `if` de guarda, `catch` que traduz erro, restrição ou índice de
-  migration, trava de clique, cada termo de uma condição composta (`a && b && c` são três) —,
-  inclusive as que a tabela de testes não cita, as cópias da mesma regra em outro arquivo e as que
+  migration, trava de clique, cada termo de uma condição composta (`a && b && c` são três); e, na
+  tela, a condição que mostra ou esconde um pedaço do JSX (`{confirmado && <Selo />}`, o vazio do
+  filtro), cada efeito (o foco devolvido, a medida gravada com `style.setProperty`, a guarda dele) e
+  o id dentro de uma `queryKey` —, inclusive as que a tabela de testes não cita, as cópias da mesma regra em outro arquivo e as que
   entram depois, para atender um revisor. Cada uma ganha um bloco na seção "Mutações" do `N_task.md`:
 
   ````
@@ -80,7 +82,13 @@ fazer, e as dos guardiões marcados:
   o teste citado, exige vermelho e restaura (`tools/processo/mutacoes.ts`). Bloco cujo teste continua
   verde reprova o portão: falta o teste, e não o bloco. Trava se prova pelo efeito (dois registros), não pela espera. No F3,
   17 reprovações foram cláusula sem teste que falhe sem ela, e em cinco a seção afirmava um vermelho
-  que não acontecia.
+  que não acontecia. Na X3, as oito reprovações deste tipo foram cláusula de tela, das três formas
+  acima.
+- **O texto que você põe na tela já aparece nela?** O sino em `main` (X3, 1.0) e o rótulo "Gabarito"
+  do interruptor (X3, 6.0) quebraram e2e que contavam o texto na página inteira, fora do diff, e a
+  esteira ficou vermelha em seis execuções; o portão só puxa os specs que citam texto **removido**.
+  Procure o texto novo em `e2e/` (`grep -rln '<texto>' e2e/`) e rode isolados os specs que o contam
+  (`toHaveCount`, `nth`).
 - **O cenário tem o segundo dado que torna a cláusula observável?** Foi a maior causa técnica de
   reprovação no F1, catorze vezes: a regra está no código, mas o teste tem uma turma só, uma escola
   só, um estado só, ou o valor padrão só — e apagar a cláusula não deixa nada vermelho. Se o

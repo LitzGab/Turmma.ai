@@ -110,6 +110,20 @@ infere o porte pela contagem de guardiões e avisa que inferiu.
 - Cada desvio da seção 11 da Tech Spec vira subtarefa de documento na tarefa que o cria: a exceção ao
   `escolaId` no `docs/modelo-de-dados.md`, o módulo global no `docs/arquitetura.md`. Na A0 os dois
   ficaram de fora, e um deles foi o único achado maior do `/validar`
+- **Tarefa que tira, move ou renomeia um lugar leva a busca pelo nome antigo** em `apps/web/src`,
+  `e2e/` e `docs/` (`grep -rn '<nome antigo>'`), com cada ocorrência trocada ou justificada no
+  documento. E **toda tarefa que muda uma tela que o `docs/interface.md` descreve leva a subtarefa da
+  Parte A daquela tela**: o critério de pronto da spec não tem dono. Na X3 a busca por "Seu time" foi só
+  nos textos de tela (2.3), e só a 2.0 tinha a subtarefa do `interface.md`; a validação achou os dois
+- **Uma linha da tabela de testes, um comportamento.** O que a célula junta com ponto e vírgula se
+  perde: na X3, "100 ou mais", "decidir tira o item" e "vínculo encerrado tira a página" estavam numa
+  célula com outros, ninguém escreveu o teste, e três dos oito achados da validação foram eles
+- **O RF que vale para toda tela vira linha na tabela de testes de cada tarefa que cria ou altera
+  tela**: cabe a 1366 × 768 sem a página rolar, uma ação cheia por tela, o vocabulário proibido. Com a
+  peça que mede: `paginaNaoRola` (`e2e/__fixtures__/coordenacao.ts`), `soOPainelDaAbaRola` e
+  `VOCABULARIO_DE_NOTA` (`e2e/__fixtures__/professor/cena.ts`). Na X3 o RF22 estava no "Contexto" de
+  oito tarefas e na tabela de nenhuma, que só diziam "sem rolar de lado" a 360 px; quatro telas rolavam
+  a página, e só a validação mediu
 - O leitor é um desenvolvedor júnior que não participou das conversas. Seja explícito sobre
   o contexto que ele precisa ler
 - **Toda tarefa diz como testar**, na seção "Como testar" do modelo: o teste existente a copiar e a
