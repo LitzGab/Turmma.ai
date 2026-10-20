@@ -100,37 +100,47 @@ docker image ls --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep -i educa | 
 
 Os tamanhos de imagem só valem se a §1 construiu as imagens nesta execução. Se não construiu, registre que não mediu.
 
-## 5. Resultados (preencher)
+## 5. Resultados (medidos em 20/10/2026 pelo Implementador)
 
-**Commit medido:** `____` · **Data:** ____ · **Máquina:** ____ (CPU, RAM)
+**Commit medido:** `08dc125` (HEAD da `spec/reengenharia`; só difere da base `a9d34cd` por documentos de `.reengenharia/`, sem mudança em `apps`, `packages`, `tools`, `e2e` nem `infra`) · **Data:** 20/10/2026, das 08:03 às 10:10 (-03) · **Máquina:** AMD Ryzen 5 7600 (6 núcleos, 12 threads), 30 GiB de RAM, Linux 7.2, Node 22.23.2, Docker Compose 5.6.0
 
 | Medida | Valor | Fonte |
 |---|---|---|
-| Tipos (`typecheck`) | | §1 |
-| Lint + guardas | | §1 |
-| gitleaks / `npm audit` (alta, produção) | | §1 |
-| Unidade: casos, vermelhos, tempo | | §1 |
-| Integração: casos, vermelhos, tempo | | §1 |
-| Infra: casos, vermelhos, tempo | | §1 |
-| E2E: casos (×2 projetos), vermelhos, tempo | | §1 |
-| Tempo total do portão completo | | §1 |
-| Cobertura de linhas / ramos por pacote | | §2 |
-| Código morto: arquivos, exports, tipos, dependências | | §3 knip |
-| Duplicação: % e linhas (total e só produção) | | §3 jscpd |
-| Ciclos e violações de camada | | §3 depcruise |
-| Funções em produção acima de 10 / 80 linhas / aninhamento 4 | | §3 eslint |
-| Vulnerabilidades (crítica, alta, moderada) | | §3 audit |
-| JS de entrada da web (brotli) e por área | | §4 |
-| Imagens Docker | | §4 |
+| Tipos (`typecheck`) | verde (raiz, e2e, infra e 7 workspaces) | §1 |
+| Lint + guardas | verde (`eslint --max-warnings=0` e `tools/guardas/lint.ts`: nenhuma violação) | §1 |
+| gitleaks / `npm audit` (alta, produção) | gitleaks: 600 commits, 45,8 MB, 0 vazamentos · audit de produção: 0 vulnerabilidades | §1 |
+| Unidade: casos, vermelhos, tempo | 4.621 casos, **1 vermelho** (preexistente na árvore, ver abaixo) · 444 arquivos de unidade e integração juntos | §1, §2 |
+| Integração: casos, vermelhos, tempo | 1.909 casos, 0 vermelhos · o vitest corre unidade e integração numa execução só: **754 s** (12,6 min) as duas, 770 s com cobertura | §1, §2 |
+| Infra: casos, vermelhos, tempo | 57 casos em 10 arquivos, 0 vermelhos · **35,5 min** (2.130 s) | rodado à parte, ver "não medido" |
+| E2E: casos (×2 projetos), vermelhos, tempo | 1.304 casos, já somados os dois projetos (652 em `chromebook` e 652 em `celular`), 0 vermelhos · **48,7 min** de teste, 49,1 min de relógio | rodado à parte, ver "não medido" |
+| Tempo total do portão completo | **~99 min** em série, nesta máquina: 1,5 (tipos, lint, guardas, `npm ci` conferido) + 12,6 (unidade e integração) + 49,1 (e2e) + 35,5 (infra). A esteira paraleliza em jobs: 39,5 min de relógio | §1 |
+| Cobertura de linhas / ramos por pacote | `apps/api` 97,9 % / 89,0 % · `apps/web` **76,4 % / 72,6 %** · `apps/worker` 92,5 % / 87,0 % · `apps/despachante` 89,2 % / 91,1 % · `apps/realtime` 91,1 % / 76,9 % (26 ramos) · `packages/nucleo` 96,0 % / 91,1 % · `packages/shared` 99,7 % / 93,2 %. Total: 88,5 % linhas, 80,9 % ramos, 84,7 % funções. Funções: api 97,6, web 73,4, worker 90,6, despachante 88,8, realtime 94,9, nucleo 90,7, shared 98,6 | §2 |
+| Código morto: arquivos, exports, tipos, dependências | 0 arquivos, **162 exports**, **26 tipos**; dependências: `pino` sem uso em `apps/despachante` e em `apps/worker`, `tailwindcss` em devDependencies da web sem uso; 10 pacotes usados sem declarar no workspace que os usa (`pg`, `ioredis`, `bullmq`, `drizzle-orm`, `jose`, `otpauth`, `@node-rs/argon2`, `socket.io-client`, `@opentelemetry/sdk-metrics`, `k6`; 44 ocorrências) | §3 knip |
+| Duplicação: % e linhas (total e só produção) | total **1,96 %**, 398 clones, 4.921 linhas (de 251.158, 1.427 arquivos). Só produção (fora teste, `e2e/` e `infra/`, nos dois lados do clone): 49 clones, 599 linhas | §3 jscpd |
+| Ciclos e violações de camada | **3 ciclos**, 0 violação de camada, em 1.304 módulos e 6.104 dependências: `operacao/operador.repository` ↔ `prazos-da-sessao`, `sessao/login.service` ↔ `conclusao-de-login`, `sessao/login.service` ↔ `convite.service` | §3 depcruise |
+| Funções em produção acima de 10 / 80 linhas / aninhamento 4 | **138** / **55** / **2** (com teste e fixture: 171 / 328 / 6) | §3 eslint |
+| Vulnerabilidades (crítica, alta, moderada) | produção: 0 / 0 / 0. Tudo: 0 / **2** / **4**, todas de ferramenta de desenvolvimento: alta em `brace-expansion` e `source-map-js` (transitivas, com correção disponível); moderada em `drizzle-kit`, `esbuild` e dois `@esbuild-kit/*` | §3 audit |
+| JS de entrada da web (brotli) e por área | entrada **90.095 B** (teto 150.000) · operador 14.129 (60.000) · coordenação 2.394 (16.000) · professor 2.557 (8.000) · aluno 2.169 (5.000) · peças 21.498 (40.000). Todos dentro do teto. `apps/web/dist/assets` inteiro: 1.147.986 B | §4 |
+| Imagens Docker | **não medido nesta execução** (a corrida usou imagens em cache). Só como indicação, as que existem na máquina: api 501 MB, worker 375, despachante 375, realtime 360, web 989 (`vite preview`) | §4 |
 | Esteira (referência) | **39,5 min** de relógio, **260 min** de runner (verificar 4,9; integração 17,4; infra 39,5; e2e 18,6 a 34,4 por fatia) | run 39344097590, `f1cb6ee` |
 
-**Vermelhos preexistentes:** (caso, primeira linha do erro, se passa na esteira)
+**Vermelhos preexistentes:**
+
+- `tools/guardas/guardas.test.ts` > "nada fora de mockups/ aponta para o protótipo: o que não passa pelo lint não entra no produto". Primeira linha do erro: `AssertionError: expected [ …(2) ] to deeply equal []`, com `.reengenharia/medicao/depcruise.cjs` e `.reengenharia/medicao/knip.json`. **Não é preexistente no código; vem desta spec.** O commit `2d9ad5e` trouxe os dois arquivos de medição, que citam a palavra `mockups` (a exclusão do protótipo), e o teste só aceita a palavra em `.md` e em três arquivos fixos. Reproduziu nas duas execuções (suíte e cobertura). A `develop` está verde (`f1cb6ee`), e esta branch vai ficar vermelha na esteira por causa disso. Eu não corrigi, como manda o plano; a decisão é do Arquiteto (mover os arquivos para fora do alcance do teste, escrever o caminho de outro jeito, ou incluí-los na lista do teste).
+- Efeito sobre a medição: o `portao-local.ts --e2e --infra` **para no primeiro vermelho**. Ele terminou em `test` com "Nenhum carimbo gravado", e e2e e infra não chegaram a rodar nele. A cobertura também não gerou relatório com o vermelho, e precisou de `--coverage.reportOnFailure=true`.
+- Fora esse caso, nenhum vermelho, nenhum instável na máquina. Os avisos de "Connection terminated" e "statement timeout" no log da unidade são de testes que provocam a falha de propósito.
 
 **O que não foi possível medir, e por quê:**
 
+- **E2E e infra fora do portão.** Por causa da parada acima, rodei `npm run test:e2e` e `npm run test:infra` à parte, sem `EDUCA_BANCO_NOVO`, no ambiente que a integração do portão tinha deixado. É o mesmo comando e o mesmo ambiente que o portão usaria, mas o tempo do e2e e do infra não passou pelo `flock` do portão.
+- **Tempo por etapa do portão** (tipos, lint, guardas): o portão não imprime hora; a soma de 1,5 min vem da hora de início da suíte (08:03:56) e do `Start at 08:05:26` do vitest. Unidade e integração não têm tempo separado porque correm numa execução só.
+- **Imagens Docker:** as imagens do compose de teste eram do cache (as da web, de 16 h antes, e as demais, de 7 dias), então o tamanho não vale como medida desta execução.
+- **Cobertura do e2e:** fora, como o plano diz. A cobertura da web (76,4 %) é só a da unidade e da integração.
+- A cobertura rodou duas vezes (a primeira sem relatório, por causa do vermelho). O `package.json` e o `package-lock.json` não mudaram em nenhum momento; `npm ci` restaurou `node_modules` no fim e o `git status` ficou limpo.
+
 **Prévia do Arquiteto (20/10), para comparar:** knip 0 arquivos, 162 exports, 26 tipos; jscpd 1,96% (398 clones,
 4.921 linhas); 3 ciclos, 0 violação de camada; 138 funções de produção acima de 10, 55 acima de 80 linhas, 2 com
-aninhamento acima de 4.
+aninhamento acima de 4. **A medição bateu com a prévia em todos os números.**
 
 ## 6. Priorização e ondas (proposta do Arquiteto, para a parada)
 
