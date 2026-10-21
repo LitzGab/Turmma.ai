@@ -80,3 +80,16 @@ Ficam registrados para o PRD e a Tech Spec da X5. Cada um muda o desenho, um con
 | P8 | Onde ficam as regras de conformidade hoje escritas em regex (D55, D36, recusa do Tutor) | Toca a regra 70 e precisa do `conformidade-reviewer` |
 | P9 | CLAUDE.md abaixo de 200 linhas, regras com `paths:` e guardrail em hook (Etapa 9) | A Etapa 9 é ⛔ por definição |
 | P10 | O nome de `ops/` × `operacao/`, a quebra de `sessao/` em subpastas e a convenção de pastas dos testes (o plano de 26/09) | É reorganização dentro da liberdade dada (RESPOSTAS 2), mas a convenção de pastas é desenho e precisa da aprovação da Etapa 6 |
+
+## Etapa 6 ⛔ — as perguntas, respondidas pelo Joaquim em 21/10/2026
+
+No terminal do Arquiteto, antes do PRD da X5. As quatro respostas foram "aprovo como recomendado".
+
+| # | Decisão | Motivo | Reversível? |
+|---|---|---|---|
+| R32 | **P1, P2, P3, P5, P6, P7, P8 e P10 aprovadas como recomendado** em `DIAGNOSTICO.md` §5: a IA e o PDF na fila, com o worker de IA como segunda entrada da imagem da API (P1); a validação da entrada no parâmetro, com conferência no boot (P2); o registro de rotas em `shared`, com o OpenAPI derivado (P3); a RLS fora da X5 (P5); o leitor tolerante na web, com a API estrita (P6); o realtime congelado atrás de um profile, e o pgvector como está (P7); o módulo de políticas, com corpus `ouro` de outro papel (P8); e os nomes da P10: `credencial/` e `sessao/` na API, `ops/` como adaptador fino de `operacao/`, subcaminhos de `exports` em `shared` e `nucleo`, `tools/testes/` e `componentes/` partido em kit e peças de domínio | Resposta do Joaquim | sim, até a onda executar |
+| R33 | **N1 a N11 aprovadas como recomendado** (`DIAGNOSTICO.md` §5) | Resposta do Joaquim | sim, até a onda executar |
+| R34 | A Tech Spec é **um `techspec.md` comum de até 2.000 palavras e um `onda-<n>.md` por onda, com até 1.500 cada**. A tarefa lê o comum e só a sua onda | O teto existe porque cada tarefa lê o documento inteiro, e o desenho de 18 mecanismos não cabe em 2.000 palavras. Partido por onda, o que cada tarefa lê continua dentro do teto | sim |
+| R35 | Os itens do §4 do diagnóstico (D36, D55, S12 e a saída com 2 do hook, N7) são as **primeiras tarefas da X5**, antes da onda 1, com os revisores e o Validador | Ficam no plano, com a Mesa e com a validação RF a RF, em vez de correções avulsas | sim |
+| R36 | As tarefas do harness (Etapa 9) só são geradas **depois da parada da Etapa 9 ⛔**, com as propostas arquivo por arquivo. A onda 6 já nasce com a documentação derivada (T18) e a documentação oficial (Etapa 11) | A Etapa 9 é ⛔ por definição (RESPOSTAS), e o processo não muda antes dela (salvo a N7) | — |
+| R37 | Os limiares da trava de tamanho e complexidade (T8) são os da medição: **complexidade 10, 80 linhas por função, aninhamento 4**, com catraca | São os da R10 e os da meta R19. Vão ao Joaquim dentro do PRD, e a aprovação do PRD os fixa | sim, na aprovação do PRD |
