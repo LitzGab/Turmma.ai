@@ -2,12 +2,12 @@
 
 **Comum:** `techspec.md` · **PRD:** RF27–RF29 · **Tarefas:** 81.0 a 91.0
 
-Corre ao lado das ondas 2 a 4 (`LINHA-DE-BASE.md` §6, item 5), sem migration, schema nem `packages/shared`.
+Corre ao lado das ondas 2 a 4, sem migration, schema nem `packages/shared`.
 
 ## 1. O que muda
 
-Semente tipada (depois de um spike), helper uma vez, prazo em toda espera, três medidas, um Dockerfile e profiles. Nada
-muda no produto.
+Semente tipada após um spike, helper uma vez, prazo em toda espera, três medidas, um Dockerfile e profiles. O produto
+fica igual.
 
 ## 2. Desenho
 
@@ -27,8 +27,7 @@ Resultado em `tasks/prd-reengenharia/spike-da-semente.md`; se os três falharem,
 ### RF27 — a semente e a fábrica de escola (84.0 e 85.0)
 
 **Onde mora.** `tools/testes/semente/`, um módulo por assunto (`escola`, `convite`, `estrutura`, `turma`, `titular`,
-`incidente`): é a divisão do `e2e/__fixtures__/sessao.ts` (1.300 linhas), feita junto com a semente para não mover SQL que
-será reescrito.
+`incidente`): é a divisão do `e2e/__fixtures__/sessao.ts` (1.300 linhas), junto com a semente.
 
 **Interface:** `escola(opcoes?: { papel?; semAnoLetivo?; rede? }): Promise<EscolaSemeada>`, dois adaptadores:
 - `pelasPortas(banco)` usa `criarRede` e `criarEscola` de `operacao/casos-de-uso/` (35.0), com a auditoria da produção.
@@ -36,10 +35,12 @@ será reescrito.
   `fila-de-teste.ts` e os `insert into escola` soltos;
 - `direto(banco)` insere pelo caminho do spike, e serve o e2e.
 
-Rejeitado: adaptador por HTTP, porque a API só cria escola pelo painel da operação, com segundo fator.
+Rejeitado: adaptador por HTTP (a API só cria escola pelo painel da operação).
 
 **A trava.** `semente.int.test.ts` roda cada função contra o banco migrado, e `no-restricted-syntax` barra `insert into`
-em literal em `e2e/**` fora da semente. Hoje são 110 inserts em 6 fixtures, numa lista que só encolhe.
+literal em `e2e/**` fora da semente (hoje 110 inserts em 6 fixtures; a lista só encolhe). A semente nunca desliga
+gatilho nem grava `nota`: um caso do `semente.int.test.ts` reprova `session_replication_role`, `disable trigger` e
+`insert into nota` em `tools/testes/semente/`.
 
 ### RF27 — o helper uma vez (82.0, 83.0 e 86.0)
 

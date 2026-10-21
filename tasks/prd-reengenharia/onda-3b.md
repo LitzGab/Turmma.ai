@@ -1,0 +1,132 @@
+# Tech Spec da X5 — Onda 3B: prazo, falha final e o PDF no worker
+
+**Comum:** `techspec.md` · **PRD:** RF16 a RF18 · **Tarefas:** 43.0, 44.0, 45.0 e 46.0
+
+## 1. O que muda
+
+Resumo, dado pessoal, conformidade e carga em `techspec.md` §1, §7, §7b e §7c.
+
+## 2. Desenho
+
+### RF17 — prazo por tipo (43.0)
+
+`Processador = (dados, execucao, sinal: AbortSignal) => Promise<void>`, contra o `prazoMs` da definição (onda 1B; os de IA
+na 47.0). O estouro dá `TEMPO_ESGOTADO` e libera a vaga. No SIGTERM, 20 s de graça, e o que sobrou termina
+`EXECUCAO_INTERROMPIDA`.
+
+### T5 — a falha final visível (44.0)
+
+`job.falhos{tipo}` no despachante, o alerta `job-falhou-de-vez.yaml` e o seu parágrafo no runbook. O expurgo
+(`expurgo-de-jobs.repository.ts`) apaga `falhou` em 30 dias (`concluido` segue em 7), **salvo `titular.*`** (C20, D13),
+que fica até a ação do operador: `titular.montar-arquivo` é enfileirado uma vez só (`privacidade.service.ts:238`). O
+`docs/lgpd.md` ganha a linha de `job_registro`: só ids, esses prazos, e a cópia `failed` no Redis por 7 dias.
+
+### T5 — listar, reprocessar e descartar (46.0; C19, D13)
+
+Em `operacao/`, com `ops/` fino.
+- `ops:jobs-que-falharam` lista id, escola, tipo, código e data, nunca `dados` (D76).
+- `ops:reprocessar-job <id> --chamado <n>` tira a cópia `failed` do BullMQ (`reconciliacao.ts:119-129`) e volta a linha
+  a `aguardando`, `where estado = 'falhou'`. Recusa `ia.*`.
+- `ops:descartar-job <id> --chamado <n>`, também `where estado = 'falhou'`, **recusa `ia.*` e `titular.*`**. O efeito:
+  o PDF marca o material `falhou` e apaga o objeto no contexto da escola do job; `sistema.*` e `retencao.*` voltam na
+  próxima rodada.
+- O `--chamado` que não é inteiro positivo (0, negativo, texto) recusa antes de tocar a linha.
+- **A auditoria**, no molde de `ops:retencao` (`retencao.ts:98`): `job.reprocessado` e `job.descartado` em
+  `auditoria/acoes.ts`, `z.strictObject` com `autorOperador`, job, tipo, escola e `chamado`, nunca `dados`.
+- **Os métodos sem escopo** (listar e ler por id do job) levam `@SemEscopo` com motivo; marcar roda com escopo, em
+  `executarNoContexto` da escola que a leitura devolve. `operacao/` já tem três, e `ops/`, três: pela regra 10.9, os dois
+  vão para `operacao/jobs-que-falharam.repository.ts`, sem método com escopo,
+  como `MaterialParadoRepository` (`material.repository.ts:312`).
+
+### O PDF no worker (45.0; C17, C18, D7, D8)
+
+- **A chave.** `chaveDoTemporario(materialId)` em `packages/nucleo/src/material/temporario.ts`, porque o expurgo
+  (`apps/worker/src/processadores/expurgar-escola.ts`) e a varredura também a usam. Ela devolve
+  `material-temporario/${exigirEscolaDoContexto()}/${materialId}`: a escola só vem do contexto.
+- **O armazém.** `ArmazemDeArquivos` ganha `guardarBytes` e `lerBytes`, sem URL nem listagem.
+- **O envio.** `MaterialService.enviar` guarda os bytes e grava `material.extrair-pdf`, chave = id do material,
+  `naoUrgente: false`.
+- **O processador** lê com `MaterialRepository.lerParaExtrair(id)`, que tem `escola_id = exigirEscolaDoContexto()`. Ele
+  confere o prazo entre páginas e grava trechos e estado numa transação só, com a transição
+  `where estado = 'processando' and excluido_em is null`. Se ela não pega linha, a transação
+  desfaz os trechos, e o job termina `concluido`, sem falha. Só depois do commit ele apaga o objeto e grava
+  `objeto_apagado_em`, em todo caminho da tabela abaixo.
+- **As colunas.** A migration da 45.0 acrescenta `material.processado_em` e `material.objeto_apagado_em`, nulas,
+  com `lock_timeout`, e preenche `objeto_apagado_em = enviado_em` nas linhas de antes, que não têm objeto.
+  O índice parcial `material_objeto_a_apagar_idx (processado_em, excluido_em) where objeto_apagado_em is null` serve a varredura. **Toda transição que
+  tira o material de `processando`**, para `pronto` ou `falhou` (sucesso, falha final, prazo, reconciliação, descarte),
+  grava `processado_em = now()` na mesma instrução, ou o `falhou` com o `apagar` caído escapa da varredura.
+- **O destino do objeto:**
+
+  | Caminho | O objeto |
+  |---|---|
+  | Sucesso | `pronto` e `processado_em`; apagado depois do commit |
+  | Falha final, prazo, reconciliação ou descarte (46.0) | `falhou` e `processado_em` (`where estado = 'processando'`); apagado depois do commit |
+  | `substitui` (41.0) | o novo tem objeto próprio, e o antigo já foi |
+  | Exclusão (`material.service.ts:257`) | apagado depois do commit da exclusão lógica |
+  | Expurgo noturno (`retencao.expurgar-escola`) | apaga o objeto antes da linha vencida; nunca o de `processando` |
+  | Órfão (queda entre o commit e o apagar) | a varredura, abaixo |
+
+- **A varredura do órfão** é a rotina `sistema.varrer-temporarios-de-material`, de hora em hora na fila `lote`, no
+  molde de `expurgar-dado-pessoal.ts`:
+  - uma leitura `@SemEscopo` devolve só `(escola_id, id)` do material com `objeto_apagado_em is null` e `processado_em`
+    ou `excluido_em` de mais de 24 h, sem teto superior. O motivo é texto novo (a
+    `JUSTIFICATIVA_DA_VARREDURA` de `material.repository.ts:307` sai com o `varrerParados`): "rotina nossa, sem
+    requisição; devolve só a escola e o id, sem título, texto nem pessoa". O `processando` não
+    excluído nunca entra;
+  - cada escola roda em `executarNoContexto({ escolaId })`, e o `apagar` usa a chave do contexto e grava
+    `objeto_apagado_em` pelo repository com escopo.
+- **`varrerParados` sai** com `fila-de-extracao.ts`: o `processando` termina `falhou` pela reconciliação, e a
+  coordenação usa o `substitui`.
+- **A vazão.** O `worker-pdf` lê um PDF por vez. A meta, antes da medição: as 300 apostilas do onboarding (`docs/infra.md`
+  §3.5) terminam entre 19h e 5h, com uma réplica; abaixo disso, com o maior PDF da semente, a 45.0
+  reprova e escreve no `docs/infra.md` quantas réplicas precisa. O alerta
+  `pdf-esperando.yaml` dispara com o PDF esperando mais de 10 min, e o runbook manda subir a réplica.
+- **A documentação.** A linha 86 de `docs/lgpd.md` ganha o PDF temporário (até a extração, ou até 25 h no órfão), e
+  `docs/modelo-de-dados.md:569` ("o arquivo não é guardado") é corrigido.
+
+## 3. Falha
+
+| Caso | O teste |
+|---|---|
+| Prazo | relógio falso, processador que não resolve: `TEMPO_ESGOTADO`, vaga livre |
+| SIGTERM | relógio falso, além da graça: `EXECUCAO_INTERROMPIDA` |
+| Falha final | cinco falhas: linha `falhou`, `job.falhos{tipo}`, alerta; expurgo com 29 e 31 dias |
+| Pedido do titular | `titular.*` com cinco falhas: fica além de 31 dias, com métrica e alerta |
+| Reprocessar | conclui e a cópia `failed` sai, sem a reconciliação republicar; de duas execuções, uma reprocessa; `ia.*` recusado |
+| Descartar | um caso por tipo: PDF (material `falhou`, objeto apagado), `sistema.*` e `retencao.*`; `ia.*` e `titular.*` recusados (mutação: tirar o tipo da lista de recusa); job `aguardando` recusado, com linha, material e objeto intactos (mutação: tirar o `where estado = 'falhou'`) |
+| Chamado | `--chamado` 0, negativo ou texto: recusado, linha e auditoria intactas |
+| Auditoria | os dois comandos gravam a ação com o chamado; uma sentinela em `dados` fica fora da saída e da auditoria |
+| Outra escola, repository | contexto A, `lerParaExtrair` com o id da B: vazio. Mutação: tirar o `escola_id` |
+| Outra escola, job | job da A com o `materialId` da B: nada lido nem gravado em escola nenhuma; estado e objeto da B intactos |
+| PDF duplicado | dois jobs do mesmo material em `Promise.all`: `pronto`, trechos uma vez, e os dois jobs `concluido` |
+| PDF que dá certo ou falha | sucesso: objeto sai após o commit; prazo ou worker morto: `falhou` e objeto apagado |
+| Exclusão em `processando` | o objeto deixa de existir, e o job que chega depois sai sem gravar |
+| Expurgo | o da escola A apaga os objetos da A e não toca os da B. Mutação: tirar o filtro de escola |
+| Órfão | `pronto` há 25 h é apagado; há 23 h, não; `falhou` há 25 h pela reconciliação, com o `apagar` falhando, é apagado (mutação: gravar `processado_em` só no sucesso); excluído há 25 h é apagado; `processando` há 25 h mantém o objeto; material de antes da migration (`objeto_apagado_em = enviado_em`) não entra |
+| Órfão em duas escolas | um de cada: cada `apagar` roda no contexto da sua escola e grava só na linha dela. Mutação: um contexto só para as duas |
+
+## 4. Isolamento, dado pessoal, carga
+
+Os testes de outra escola, do expurgo e do órfão (§3); o objeto do PDF (`techspec.md` §7); o PDF em réplica própria.
+
+⚠️ **Premissa:** o bucket de produção não tem versionamento, ou o objeto apagado sobrevive como versão antiga. Confere-se
+no staging (D42).
+
+## 5. Tarefas
+
+Todas dependem do fim da onda 2, salvo onde está escrito.
+
+| # | Título | RF | Depende de | Veto | Porte |
+|---|---|---|---|---|---|
+| 43.0 | Job estourado dá `TEMPO_ESGOTADO` | 17 | — | infra | grande |
+| 44.0 | Falha final alerta e fica 30 dias; o pedido do titular, até a ação | 18 | — | infra, privacy | pequeno |
+| 45.0 | PDF lido no worker da API, com o objeto apagado em todo caminho | 16 | 43.0 | infra, privacy, tenancy | grande |
+| 46.0 | Listar, reprocessar e descartar job, sem `dados` e sem perder pedido do titular | 18 | 44.0, 45.0 | infra, privacy | pequeno |
+
+43.0, 45.0 e 47.0 não correm juntas (executor e `infra/compose.yml`).
+
+## 6. Riscos
+
+- **O pdfjs prender o event loop** numa página grande dá falsa reentrega: a 45.0 mede com o maior PDF da semente.
+- **Fora:** o teto de páginas do PDF (U05-1) e o alerta de rotina parada (`runbook.md:647`).

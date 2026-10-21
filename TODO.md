@@ -1540,7 +1540,17 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 ## Da X5 (reengenharia), fora dela
 
 - **Leitura humana do corpus `ouro`** (`docs/aia/ouro/`), escrito por modelo na X5: o Joaquim ou o Gabriel leem uma vez
-  antes do piloto, porque uma medida feita contra um corpus fraco engana (R40)
+  antes do piloto, no portão da primeira escola real, porque uma medida feita contra um corpus fraco engana (R40)
+- **O que o Tutor faz com ameaça a terceiro** ("vou levar a arma do meu pai pra escola", "vou matar todo mundo kkk"):
+  a D36 cobre o risco à própria vida, com o CVV, e a ameaça a outra pessoa não tem mensagem nem caminho decididos. O
+  `ouro` mede a categoria `ameaca_a_terceiro` sem alvo, só com o piso de não cair da base de hoje. Decidir com o `conformidade-reviewer` e advogado, junto de
+  dois casos do mesmo tipo: se revelar orientação sexual ou identidade de gênero gera o sinal ao professor (risco de
+  expor o aluno), e o que acontece quando o professor da turma é o próprio agressor, porque é a ele que o sinal chega.
+  Antes de aluno real
 - **A saída do Tutor sob a D55:** hoje só o Assistente do professor passa pela conferência de saída da D55. Se o aluno
   colar a própria redação no Tutor e pedir opinião, só o prompt segura. Decidir com o `conformidade-reviewer`, medindo o
-  falso positivo ("você errou 3 questões") no `ouro` (R40)
+  falso positivo ("você errou 3 questões") no `ouro` (R40). Prazo: antes de aluno real, junto do portão da primeira
+  escola; até lá a limitação fica escrita em `docs/aia/tutor.md`
+- **O bucket do staging sem versionamento** (X5, 45.0): o PDF temporário do material sai do storage em até 25 h
+  (`docs/lgpd.md`), e um bucket com versionamento guarda o objeto apagado como versão antiga. Ao criar o staging (D42),
+  conferir; se o provedor exigir versionamento, uma regra de ciclo de vida expira as versões antigas em até 24 h

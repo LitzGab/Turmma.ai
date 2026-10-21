@@ -96,18 +96,18 @@ criarPolitica({ id, regra, erraPara: 'mais' | 'menos', grupos: Record<string, re
   até 3 alternativas internas.
 - `metamorficos.test.ts`: caixa alta, espaços extras, pontuação, "vc"/"você" e o prefixo "oi, " não mudam `casa`.
 
-**O `ouro` protegido (29.0)**, sem tocar `tools/processo/`:
-1. `selo.test.ts` compara o sha256 de `docs/aia/ouro/*` com o `SELO.json`.
+**O `ouro` protegido (29.0)**, fora de `tools/processo`:
+1. O `selo-do-ouro.test.ts` da 1.0 passa para o módulo de políticas.
 2. `tools/guardas/ouro-separado.ts`, com teste, lê o `git log --name-only` (esteira com `fetch-depth: 0`): o commit que
    toca `docs/aia/ouro/**` só toca `docs/` e leva `(ouro: …)`; commit com `(tarefa` ou `(correção` nunca o toca; em clone
-   raso, falha em vez de pular.
-3. O `conformidade-reviewer` confere `git log <base>..HEAD -- docs/aia/ouro` vazio em toda tarefa de política.
+   raso, falha.
+3. O `conformidade-reviewer` confere `git log <base>..HEAD -- docs/aia/ouro` vazio (`<base>`: o commit do início da tarefa) em toda tarefa de política.
 
 O marcador forjado num commit só de docs, só a 3 pega; o guardião por caminho fica para a Etapa 9.
 
 ### RF13 — Dependências e `throw`
 
-**As dependências (24.0)**, as do knip na linha de base, nas versões do lock:
+**As dependências (24.0)**, as do knip, nas versões do lock:
 
 - `devDependencies` da raiz: `pg`, `ioredis`, `@node-rs/argon2`, `otpauth`, `bullmq`, `socket.io-client`,
   `@opentelemetry/sdk-metrics`; de `apps/realtime`: `jose`; de `apps/worker`: `drizzle-orm`.
@@ -115,7 +115,7 @@ O marcador forjado num commit só de docs, só a 3 pega; o guardião por caminho
 
 **A trava.** O `knip.json` da raiz, derivado de `.reengenharia/medicao/knip.json`, roda com
 `--include dependencies,unlisted,binaries,unresolved` em `tools/ci/etapas-de-guarda.ts`. O knip é `devDependency` (R40),
-6.42.1 com `--save-exact`.
+6.42.1 exato.
 
 **O `throw` (25.0).** São 94 `throw new Error('…')` em produção, quase todos invariantes.
 - `ErroDeInvariante extends Error` (`packages/nucleo/src/erro/`) leva motivo fixo, sem interpolar valor.

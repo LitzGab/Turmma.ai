@@ -136,8 +136,9 @@ verificados por máquina, e cada falha conhecida fica contida, visível e recupe
 
 | Dado | Titular | Finalidade | Retenção | Já está em `docs/lgpd.md`? |
 |---|---|---|---|---|
-| Job que falhou de vez (payload só com ids) | aluno, professor | o operador ver e reprocessar a falha, inclusive de pedido do titular | 30 dias ou até reprocessar ou descartar (hoje 7) | sim; retenção muda (RF18) |
-| Escolha pendente no `sessionStorage` (ids de atividade, questão, alternativa) | aluno | não perder resposta (regra 80.6) | até o envio, a troca de sessão ou o fechamento da aba | não; entra na tarefa (RF21) |
+| Job que falhou de vez (payload só com ids) | aluno, professor | o operador ver e reprocessar a falha, inclusive de pedido do titular | 30 dias ou até reprocessar ou descartar (hoje 7); o de `titular.eliminar` só sai com a ação do operador | não; entra na tarefa (RF18) |
+| Escolha pendente no `sessionStorage` (ids de atividade, questão, alternativa) | aluno | não perder resposta (regra 80.6) | até o envio, o "Sair", a troca de dono da sessão ou o fechamento da aba | não; entra na tarefa (RF21) |
+| PDF do material, guardado até a extração (hoje não é guardado) | coordenação, licenciante | a extração rodar no worker (RF16) | até a extração terminar, com teto para o órfão | não; entra na tarefa (RF16) |
 | Corpus `ouro` | nenhum (sintético) | medir as políticas da regra 70 | permanente, em `docs/aia/` | não se aplica |
 
 ## 8b. Risco regulatório

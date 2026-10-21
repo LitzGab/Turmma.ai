@@ -137,6 +137,11 @@ discursivo ou uma redação do aluno**, nem quando ele cola o texto e pergunta s
 Fundamento: D55; D66 ("o Tutor não avalia o texto"); regra 70, item 2a.
 Como se confere: conjunto fixo de amostras em que o aluno pede avaliação do próprio texto, com
 taxa mínima de recusa.
+Limitação conhecida (21/10/2026, X5): a recusa vem só do prompt. A saída do Tutor não passa pela conferência
+da D55 que o Assistente do professor tem; fechar isso é item do `TODO.md`, antes de aluno real (R40).
+Limitação conhecida (21/10/2026, X5): a ameaça a outra pessoa ("vou matar ele amanhã") cai hoje no mesmo caminho do
+risco à própria vida, com o CVV, que não é a resposta certa para ela. A resposta é decisão de produto em aberto
+(`TODO.md`); até lá o `ouro` a mede com piso, para a proteção de hoje não cair (R42).
 
 **N6. Não decide nada sobre o aluno** e não recomenda aprovação, reprovação, recuperação ou
 encaminhamento.
