@@ -4,16 +4,16 @@ A missão é `.reengenharia/MISSAO.md`, e o que vale sobre ela é `.reengenharia
 respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão: não existe outro.
 
 ## Agora
-- **Espero:** a hora da construção, **19:37 de 21/10/2026**. A lista de tarefas chegou às 19:06
-  (`6623cab`): 92 tarefas, 1.0 a 91.0 nas ondas 0 a 5 e a 92.0, que é a parada da Etapa 9. Só existem
-  os documentos de 1.0 a 29.0 (ondas 0, 1A e 1B); os das ondas seguintes o Arquiteto escreve quando a
-  anterior fecha (R41): aviso de `N_task.md` ausente é o sinal para pedir a ele. Na primeira vigia
-  depois das 19:37, sem palavra do Joaquim aqui nem no terminal do Arquiteto, começa a 1.0 (pequena),
-  na linha 1. Vigia ligada
-- **Devo ainda:** ler o veredito da esteira de `6623cab` (execução 39684094812) ao fechar a 1.0. As de
-  `2237da1`, `3eebeb7`, `7fac74f` e `a8ba046` ficaram verdes; a de `827697a` (só o PRD) ficou vermelha,
-  e as seguintes verdes
-- **Base:** `spec/reengenharia` em `6623cab`. Spec aprovada na 5ª rodada; ameaça a terceiro no `TODO.md`
+- **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
+  Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
+- **Espero:**
+  - linha 1 (`Implementador` e `Mesa`, `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specreengenharia--l1`): **1.0**, pequena, 1ª tentativa, desde 20:01
+  - linha 2 (`Implementador 2` e `Mesa 2`, `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specreengenharia--l2`): **4.0**, grande, 1ª tentativa, desde 20:01
+  - linha 3 (`Implementador 3` e `Mesa 3`, `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specreengenharia--l3`): **5.0**, pequena, 1ª tentativa, desde 20:01
+- **Devo ainda:** ler o veredito da esteira de `6623cab` (execução 39684094812) no primeiro encontro.
+  Documentos só de 1.0 a 29.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
+  Arquiteto (R41). A 92.0 é a parada da Etapa 9
+- **Base:** `spec/reengenharia` em `32072a5`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
