@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao"
+            "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao || { echo 'hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.' >&2; exit 2; }"
           }
         ]
       }

@@ -41,3 +41,6 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-21 16:16:11 | `tenancy-guardian` | 5ª | APROVADO | `revisao-spec` | `onda-3b.md:36`: a contagem diz "`operacao/` já tem cinco e `ops/`, oito". No código são três e três: `painel.repository.ts` em `operacao/`;… |
 | 2026-10-21 16:16:45 | `llm-integrator` | 5ª | APROVADO | `revisao-spec` | Pior caso do menor (3c): a espera de 8 s é por reserva, e a reserva é por chamada. Com as 2 tentativas do `chamarAteValer` o pior caso é 2×(8+prazo), ou seja… |
 | 2026-10-21 16:17:03 | `infra-guardian` | 5ª | APROVADO | `revisao-spec` | `onda-3a.md:98`: falta dizer de onde vem o número de "jobs ativos da réplica". Hoje não há nada que o dê: `job_registro` não grava o worker e não existe gauge… |
+| 2026-10-21 20:06:27 | `revisor-geral` | 1ª | APROVADO | `5_task` | `hook-portao.test.ts:24-25`: `comandoDe` chama `expect` fora de um `it`. Em `const portao = comandoDe(...)`, dentro do `describe`, esse `expect` roda na… |
+| 2026-10-21 20:06:36 | `test-engineer` | 1ª | APROVADO | `5_task` | `hook-portao.test.ts:41` copia só os `.ts` de `tools/processo/`. Se o hook passar a importar arquivo de outra pasta, ou que não seja `.ts`, os casos do hook… |
+| 2026-10-21 20:12:14 | `test-engineer` | 2ª | APROVADO | `5_task` | nenhuma nova. |
