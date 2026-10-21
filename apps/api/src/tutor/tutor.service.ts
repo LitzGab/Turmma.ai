@@ -117,7 +117,8 @@ function paraATela(mensagem: MensagemDaConversa): unknown {
  * O Tutor do aluno (MVP, A4; D8, D36, D38, D47, D58, D66; regra 70, itens 3, 4, 4a, 4b e 4d).
  *
  * A resposta do Tutor é a única saída de IA que chega ao aluno sem aprovação prévia: é **supervisionada** (D47). Por
- * isso tudo que limita o Tutor é conferido aqui, no servidor, antes de a pergunta ser aceita, **nesta ordem**:
+ * isso tudo que limita o Tutor é conferido aqui, no servidor, antes de a pergunta ser aceita, **nesta ordem** (a do item 3 se
+ * repete depois do `202`, ao rodar e ao concluir):
  *
  * 1. **O aluno alcança o que referencia.** A atividade aplicada é da turma dele; o material é da escola, `pronto`, não
  *    excluído e de disciplina que a turma tem. O que não alcança responde como o inexistente.
@@ -125,7 +126,11 @@ function paraATela(mensagem: MensagemDaConversa): unknown {
  *    avaliação aberta, o limite do dia, o pacote esgotado e a função suspensa não tiram do aluno o encaminhamento. A
  *    mensagem fixa não ajuda em prova nenhuma. Esse turno não chama modelo, não espera fila, e o professor recebe o
  *    sinal sem o conteúdo.
- * 3. **Atividade avaliativa aberta trava o Tutor** para a turma (`TUTOR_PAUSADO_EM_AVALIACAO`; regra 30, item 10).
+ * 3. **Atividade avaliativa aberta trava o Tutor** para a turma (`TUTOR_PAUSADO_EM_AVALIACAO`; regra 30, item 10). A
+ *    conferência se repete em duas janelas: ao rodar (`entrada`, antes de trechos, memória e modelo) e ao concluir
+ *    (`aoConcluir`, na transação que grava a resposta). A avaliação que abre depois do `202` faz a execução `falhar` com
+ *    esse código: sem resposta, sem sinal e sem troca contada, com a pergunta só em `mensagem_tutor`. A exceção é a saída
+ *    `assunto_delicado` do modelo, que grava a mensagem fixa e o sinal mesmo com a avaliação aberta (D36).
  * 4. **O freio do dia do aluno e o pacote do mês da turma** (D38), contados sob a trava do aluno, na mesma transação
  *    que grava a pergunta: dez envios ao mesmo tempo não passam do limite. A pergunta que o modelo não respondeu não
  *    conta.
@@ -201,6 +206,9 @@ export class TutorService {
         // O alcance é conferido de novo na hora de rodar: quem saiu da turma depois do `202` não recebe resposta sobre ela.
         const agora = await this.#alcance({ ...(pergunta.atividadeAplicadaId === null ? {} : { atividadeAplicadaId: pergunta.atividadeAplicadaId }), ...(pergunta.materialId === null ? {} : { materialId: pergunta.materialId }) })
         if (agora.turma.turmaId !== pergunta.turmaId) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+        // A avaliação que abriu entre o `202` e agora trava o turno antes de qualquer trabalho: sem trecho, sem memória e sem
+        // chamar o modelo. A execução falha com o código da pausa, `trocas()` a ignora e a pergunta fica só em `mensagem_tutor`.
+        if ((await tutor.avaliativaAberta(agora.turma.turmaId)) !== undefined) throw new ErroDeDominio(CodigoDeErro.TUTOR_PAUSADO_EM_AVALIACAO)
         const questao = agora.atividade === undefined || pergunta.questao === null ? undefined : questaoSemGabarito(agora.atividade.conteudo, pergunta.questao)
         const entregues = await this.#trechosDoTurno(pergunta, agora, questao)
         const turnosAnteriores = (await tutor.turnosParaATarefa(pergunta, TURNOS_ANTERIORES_NO_TURNO)).reverse().map((turno) => ({ autor: turno.autor, texto: turno.texto.slice(0, TAMANHO_MAXIMO_DO_TURNO) }))
@@ -216,6 +224,13 @@ export class TutorService {
       },
       aoConcluir: async (saida, tx) => {
         if (lido === undefined) throw new ErroDeIa('IA_ENTRADA_INVALIDA')
+        // A avaliação que abriu enquanto o modelo respondia descarta a resposta e desfaz a transação: nada é gravado e a troca
+        // não conta. A exceção é o encaminhamento da D36: a mensagem fixa e o sinal ficam mesmo com a avaliação aberta.
+        // Sem trava: a conferência lê e grava em READ COMMITTED, e a avaliação que comita logo depois da leitura ainda deixa a
+        // resposta passar. O resultado equivale à ordem serial "a resposta grava antes de a prova abrir": nenhuma transação lê o que a outra escreve.
+        if (saida.classificacao !== 'assunto_delicado' && (await new TutorDoAlunoRepository(tx, this.relogio).avaliativaAberta(lido.pergunta.turmaId)) !== undefined) {
+          throw new ErroDeDominio(CodigoDeErro.TUTOR_PAUSADO_EM_AVALIACAO)
+        }
         exigirCitacoesEntregues(saida.citacoes, lido.entregues)
         return { tipo: 'mensagem_do_tutor', mensagemId: await this.#gravarTurno(tx, lido.pergunta, saida) }
       },

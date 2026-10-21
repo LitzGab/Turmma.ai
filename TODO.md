@@ -1554,3 +1554,17 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - **O bucket do staging sem versionamento** (X5, 45.0): o PDF temporário do material sai do storage em até 25 h
   (`docs/lgpd.md`), e um bucket com versionamento guarda o objeto apagado como versão antiga. Ao criar o staging (D42),
   conferir; se o provedor exigir versionamento, uma regra de ciclo de vida expira as versões antigas em até 24 h
+- **A frase do `onda-0.md` §2.4 (linha 94) diz que a pergunta pausada fica "no registro que o professor vê"** (X5, 4.0): o
+  código a deixa fora da supervisão (`supervisao.repository.ts`), só em `mensagem_tutor`, fora da contagem e da última troca.
+  Corrigir o texto para "fica só em `mensagem_tutor`, fora da contagem e da última troca" quando a spec for tocada de novo.
+  O comentário "A pergunta continua no registro que o professor vê" no caso da primeira janela de `tutor.int.test.ts` repete a
+  mesma frase: corrigir os dois juntos, para "fica só em `mensagem_tutor`, sem resposta"
+- **O risco que sobra da avaliação aberta antes do `entrada()`** (X5, 4.0): a pergunta delicada que o filtro de frases não
+  reconhece, e que só o modelo classificaria, é pausada sem a mensagem fixa. A spec aceita o caso; registrar em
+  `docs/aia/tutor.md`, ao fechar a onda 0, junto com a medida que o Arquiteto escreve (`onda-0.md` §4)
+- **`TUTOR_PAUSADO_EM_AVALIACAO` fora da contagem de falha de execução** (X5, 4.0): a pausa por avaliação aberta termina
+  como `falhou`; quando a 47.0 e a 49.0 criarem `job.falhos{tipo}` e o alerta "Provedor de IA fora", essa falha não pode
+  contar como falha do provedor
+- **`execucaoLida`, `pausada` e `consumoDaExecucao` repetidos** em `tutor.int.test.ts` e `tutor-modelo.int.test.ts` (X5,
+  4.0): levar para `apps/api/test/escola-com-tutor.ts` na próxima tarefa que mexer nesse arquivo, porque mexer nele caduca
+  todos os testes de Tutor que o usam

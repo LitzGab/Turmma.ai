@@ -32,16 +32,16 @@ seguinte ao Arquiteto. A 92.0 é a parada da Etapa 9, e dela nascem as tarefas d
   - [ ] 3.4 `ouro.test.ts` liga `saidaQualitativa` e `julgamentoDeTextoDeAluno`
   - [ ] 3.5 Testes: as chaves, a reserva, o alvo
 
-- [ ] **4.0 — Avaliação aberta depois do 202: o Tutor não responde e a troca não conta**
+- [x] **4.0 — Avaliação aberta depois do 202: o Tutor não responde e a troca não conta**
   - [ ] 4.1 `entrada()` confere `avaliativaAberta(turmaId)` logo depois da conferência de turma, antes de trechos, memória e turnos, e lança `TUTOR_PAUSADO_EM_AVALIACAO`
   - [ ] 4.2 `aoConcluir` repete a conferência na transação que grava a resposta; a saída `assunto_delicado` grava a mensagem fixa e o `atencao_humana` mesmo com a avaliação aberta
   - [ ] 4.3 Testes: as duas janelas com `GatilhoDeParada`, a exceção da D36, a concorrência, a caracterização da web
 
-- [ ] **5.0 — O hook bloqueia quando não carrega**
-  - [ ] 5.1 O comando `portao` de `.claude/settings.json` ganha `|| { echo '…' >&2; exit 2; }`, com o texto de `onda-0.md` §2.5; o `registrar` fica como está
-  - [ ] 5.2 `tools/processo/hook-portao.test.ts` roda o comando lido do `settings.json` sobre uma cópia de `tools/processo/`
-  - [ ] 5.3 A sessão de teste que confirma o exit 2 no Claude Code, registrada neste documento
-  - [ ] 5.4 Testes: carga quebrada sai 2 com a mensagem; hook são sai 0 e o `deny` passa intacto
+- [x] **5.0 — O hook bloqueia quando não carrega**
+  - [x] 5.1 O comando `portao` de `.claude/settings.json` ganha `|| { echo '…' >&2; exit 2; }`, com o texto de `onda-0.md` §2.5; o `registrar` fica como está
+  - [x] 5.2 `tools/processo/hook-portao.test.ts` roda o comando lido do `settings.json` sobre uma cópia de `tools/processo/`
+  - [x] 5.3 A sessão de teste que confirma o exit 2 no Claude Code, registrada neste documento
+  - [x] 5.4 Testes: carga quebrada sai 2 com a mensagem; hook são sai 0 e o `deny` passa intacto
 
 ### Onda 1A — escopo, camadas e entrada
 
