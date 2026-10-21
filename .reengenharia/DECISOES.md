@@ -39,6 +39,30 @@ Resposta: "faça o melhor que eu aprovo sua escolha", no terminal do Orquestrado
 | R18 | **P4: a pilha de sessão do operador não é unificada** com a da escola. Só as ~60 linhas literais entre `apps/web/src/operacao/paginas/{Mfa,Entrar}.tsx` e `apps/web/src/paginas/` são extraídas | O jscpd mostra que o resto é desenho paralelo, não cópia: unificar ganha conceito e põe em risco o isolamento do operador (RF6 da A0) | sim, mas fora da X5 |
 | R19 | A onda 4 (web) só fecha com **ramos ≥ 85 %** em `apps/web` e **nenhuma função de tela acima de 80 linhas**, medidos como em `LINHA-DE-BASE.md` §2 e §3. Entra como critério de aceite no PRD da X5 | É a faixa dos outros apps (api 89,0 %, worker 87,0 %, nucleo 91,1 %); 80 linhas é o limiar de medição da R10 | não sem nova parada |
 
+## Etapa 5 (Arquiteto, 21/10/2026)
+
+O consolidado está em `DIAGNOSTICO.md`, e os 13 relatórios por unidade em `diagnostico/`.
+
+| # | Decisão | Motivo | Reversível? |
+|---|---|---|---|
+| R20 | O diagnóstico rodou em **13 subagentes** (Sonnet), com a U08 partida em `U08a` (coordenação e operação) e `U08b` (professor e aluno), um roteiro comum (`diagnostico/00-roteiro.md`) e o recorte da medição da linha de base por unidade. Os relatórios brutos ficam versionados em `.reengenharia/diagnostico/` e saem na Etapa 11 | Mesmo método da R1 e da R2. A U08 tem 20,8 mil linhas de tela e é a unidade da meta R19 | sim |
+| R21 | Os temas **T1 a T18** de `DIAGNOSTICO.md` §3 são o ponto de partida da arquitetura-alvo, cada um com o mecanismo escolhido e o que foi **rejeitado**. Os rejeitados ficam registrados ali como decisão de padrão (Etapa 6.3) | Junta 202 achados em mecanismos que cruzam unidades, como a missão pede | sim, na Etapa 6 |
+| R22 | A pergunta "um provedor brasileiro para tudo ou dois" (U03-5) **não** é da X5: fica na D37, que já está em aberto. A X5 aplica a D62 em código (roteamento por classe de dado e conferência na subida), e só a conferência bloqueante vai à Etapa 6 (N10) | A D62 está decidida; o provedor, não. Escolher provedor é trocar peça, fora da liberdade dada (RESPOSTAS 2) | — |
+| R23 | A tarefa `relatorio_da_correcao` **fica** até o PRD do F6 (U03-18) | Apagar mexe em `check` de duas tabelas e é o lado irreversível. Manter não custa nada em produção | sim |
+| R24 | A auditoria da decisão sobre entrega (U05-3) se trava na X5 por **teste de lista fechada** dos pontos que mudam `entrega.estado`. O gatilho no banco fica fora | Gatilho em tabela da regra 70 é migration própria (RISCOS M1). O teste fecha o esquecimento sem tocar o banco | sim |
+| R25 | "Abrir a atividade sem responder conta como aberta" (U05-15) **se preserva** como está | É regra de produto que o código já pratica; mudar é mudança funcional sem defeito | — |
+| R26 | A telemetria de falha do navegador (U07-8) **não entra** na X5. Entram só a fronteira de erro de render na raiz e a porta `reportarFalha`, sem envio | O envio é canal novo de dado a partir de tela de menor (regra 20). A porta deixa o envio para quando a decisão vier | sim |
+| R27 | O corte do teto de IA fora do Tutor (U03-6) e o Analista sem modelo (U03-12) ficam **fora da X5**. A X5 só preenche `custo_micros` | O primeiro é a decisão em aberto "teto de IA do pacote" (D14, D39). O segundo mexe na D32. Medir custo é requisito da D14 | — |
+| R28 | A imagem de produção da web (U10-9), a janela de deploy × expurgos (U06), backup e rollback (U10-17) e a rodada do despachante em lote (U06-8) ficam **registradas**, fora da X5 | Dependem do staging (D42), da produção (D31) ou de volume que não existe (D25) | — |
+| R29 | A separação do domínio de privacidade do `nucleo` (U02-8) e o subcaminho `@educa/shared/servidor` (U01-7) **não** viram pergunta à parte: entram na P10 como subcaminhos de `exports`, sem pacote novo | É convenção de pastas e de importação, que é a P10; pacote novo multiplica a trilha `source`/`dist` (U01-10) | sim |
+| R30 | As perguntas do harness (U11: git hook nativo, guardião por caminho, revisão das guardas, mutação obrigatória, caminho `(mvp:)`, histórico de `achados/`) e a da esteira em `pull_request` (U10-13) ficam para a **Etapa 9 ⛔**. Só a saída com código 2 do hook na falha de carga vai à Etapa 6 (N7) | RESPOSTAS: o processo não muda antes da Etapa 9. A falha aberta (U11-2) é a exceção que protege, e o conserto é uma linha | — |
+| R31 | As 27 perguntas novas das unidades foram reduzidas a **11** (N1 a N11, `DIAGNOSTICO.md` §5), juntando as do mesmo assunto. As que viraram decisão do Arquiteto ou registro são a R22 a R30 | A parada precisa caber numa leitura | — |
+
+**Recomendações para as P1–P10** (detalhe em `DIAGNOSTICO.md` §5): P1 aprovar, com a IA no worker como segunda entrada
+da imagem da API · P2 aprovar o pipe por parâmetro · P3 aprovar o registro de rotas, com o OpenAPI derivado · P4
+decidida (R18) · P5 adiar para fora da X5 · P6 aprovar o leitor tolerante na web · P7 congelar o realtime por profile ·
+P8 aprovar o módulo de políticas com corpus `ouro` · P9 na Etapa 9 · P10 aprovar a convenção, com os nomes dele.
+
 ## Achados que viram pergunta para a Etapa 6 (não decididos aqui)
 
 Ficam registrados para o PRD e a Tech Spec da X5. Cada um muda o desenho, um contrato ou uma decisão D, então é

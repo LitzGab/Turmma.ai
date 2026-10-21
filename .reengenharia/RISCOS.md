@@ -30,6 +30,24 @@ nota sem humano. Marcas: **[código]** · **[doc]** · **[hipótese]**. A priori
 | S18 | **Sem telemetria de erro no cliente** | alta | baixo | U07 §8, U08 §8 [código] | — | registrar |
 | S19 | **Link do runbook nos alertas aponta para `Educa.ia`** | média | baixo | `tools/guardas/alerta-tem-runbook.ts:21` [hipótese: depende do redirecionamento do GitHub] | — | Etapa 7 |
 
+### Atualização da Etapa 5 (21/10/2026)
+
+O que o diagnóstico confirmou ou acrescentou (`DIAGNOSTICO.md` §2 e §4):
+
+- **S8** cresce: além do upsert "o último vence", a escolha pendente se perde no F5 ou ao fechar a aba, e um envio
+  pendurado trava a fila inteira, porque `chamarApi` não tem timeout (U08b-1, U08b-2).
+- **S10** e **S12** passam de hipótese a **confirmados** (U03-5, U03-7).
+- **S3**: 25 de 71 repositories não chamam `exigirEscolaDoContexto`, quase todos com motivo, e 3 recebem `escolaId` por
+  argumento (U10-4, U02-2).
+
+| # | Risco | Prob. | Impacto | Evidência | Mitigação que já existe | Onde resolver |
+|---|---|---|---|---|---|---|
+| S20 | **O hook do processo falha aberto** quando a carga quebra, e não reconhece `git` em forma não canônica: commit sem revisão e push em branch protegida passariam | baixa | alto (D53, D23) | `hook-revisoes.ts:4-6` (import estático fora do `try`), `settings.json:26-32` [código, U11-2, U11-3] | os agentes usam a forma canônica | N7; o resto na Etapa 9 |
+| S21 | **Job preso sem prazo** segura lock, vaga e concorrência para sempre; o stalled só pega réplica morta | média quando a IA entrar na fila | alto | U06-3 [código] | renovação de lock e de vaga | T4 e T9 (`prazoMs` e `AbortSignal`) |
+| S22 | **Lacunas na rede determinística de D36 e D55**: a lista de risco à vida não pega "me jogar" nem "melhor sem mim", e a saída da D55 não barra devolutiva qualitativa | média | **crítico** (regra 70, CVV) | `turno-do-tutor.ts:92-98` [código, conferido], U03-4 | o modelo também classifica `assunto_delicado`; o prompt proíbe devolutiva | N11, correção antes da onda 1 |
+| S23 | **Falha final de job some em 7 dias sem alerta**, e as rotinas de expurgo (LGPD) podem parar sem ninguém saber | média | alto (regra 20.16) | U02-4, U06-1 [código]; o runbook admite | o estado `falhou` com `codigo_falha` | T5, N1 |
+| S24 | **A meta R19 global fecha com a pasta do aluno baixa**: 827 ramos faltam, e a base sozinha não chega | alta | médio | U07-2 [medida, conferida] | — | N4 (piso por pasta) |
+
 ## 2. Riscos da reengenharia
 
 | # | Risco | Prob. | Impacto | Por quê | Como reduzir |
