@@ -4,13 +4,16 @@ A missão é `.reengenharia/MISSAO.md`, e o que vale sobre ela é `.reengenharia
 respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão: não existe outro.
 
 ## Agora
-- **Espero:** o Arquiteto (sessão nova no andar, 21/10) escrevendo o **PRD da X5** (Etapa 6), a partir de
-  `DIAGNOSTICO.md` §3 e §5. Ele para no terminal dele com o Joaquim nas perguntas (P1–P10, N1–N11) e na
-  aprovação do PRD ⛔; depois segue para a Tech Spec (aviso) e as tarefas. 1ª tentativa. Vigia ligada
-- **Devo ainda:** ler o veredito da esteira de `148617a` (execução 39642502289; as anteriores, de
-  `0b1d65a` a `4b4711e`, verdes) no próximo relatório
-- **Base:** `spec/reengenharia` em `148617a` (Etapa 5: 202 achados em 18 temas, R20–R31, S20–S24; o
-  Arquiteto apagou `apps/web/src/api:`, sobra de subagente)
+- **Espero:** a hora da construção, **19:37 de 21/10/2026**. A lista de tarefas chegou às 19:06
+  (`6623cab`): 92 tarefas, 1.0 a 91.0 nas ondas 0 a 5 e a 92.0, que é a parada da Etapa 9. Só existem
+  os documentos de 1.0 a 29.0 (ondas 0, 1A e 1B); os das ondas seguintes o Arquiteto escreve quando a
+  anterior fecha (R41): aviso de `N_task.md` ausente é o sinal para pedir a ele. Na primeira vigia
+  depois das 19:37, sem palavra do Joaquim aqui nem no terminal do Arquiteto, começa a 1.0 (pequena),
+  na linha 1. Vigia ligada
+- **Devo ainda:** ler o veredito da esteira de `6623cab` (execução 39684094812) ao fechar a 1.0. As de
+  `2237da1`, `3eebeb7`, `7fac74f` e `a8ba046` ficaram verdes; a de `827697a` (só o PRD) ficou vermelha,
+  e as seguintes verdes
+- **Base:** `spec/reengenharia` em `6623cab`. Spec aprovada na 5ª rodada; ameaça a terceiro no `TODO.md`
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -21,7 +24,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 3 Material de trabalho | feita, `2d9ad5e` | `CONTRATOS`, `RISCOS`, `SUSPEITOS-MORTOS`, `DECISOES` |
 | 4 Linha de base ⛔ | medida, `5c2db6a`; §6 ajustada, `0b1d65a`; aprovada pelo Joaquim em 20/10 | `LINHA-DE-BASE.md` |
 | 5 Diagnóstico por lentes | feita, `148617a` (limite semanal derrubou os subagentes em 20/10; retomada em 21/10, sem perda) | `DIAGNOSTICO.md` |
-| 6 Arquitetura-alvo ⛔ | PRD pedido ao Arquiteto em 21/10 | PRD e Tech Spec da X5 |
+| 6 Arquitetura-alvo ⛔ | PRD aprovado pelo Joaquim, `827697a`; Tech Spec `3eebeb7`; spec aprovada na 5ª rodada, `7fac74f`; tarefas `6623cab`, em 21/10 | PRD e Tech Spec da X5 |
 | 7 e 8 Ondas e testes | | tarefas, nas linhas |
 | 9 Skills, agentes, regras ⛔ | | |
 | 10 Revisão independente | | Validador |
