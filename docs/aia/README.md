@@ -19,6 +19,7 @@ ensino, não são alto risco e não têm AIA.
 | `correcao-de-objetiva.md` | A função de correção de objetiva do Assistente de ensino, registro da validação (D56) e **saída da aba durante a prova** (D70), com o risco de falso positivo em quem usa leitor de tela ou teclado virtual | F6 | etapa 1 fechada para o MVP (05/10/2026); revisão do Gabriel e etapas 2 a 6 pendentes |
 | `diagnostico-por-habilidade.md` | Diagnóstico formativo por habilidade (D46), que alimenta a memória do Tutor e "Turmas" | F6 | etapa 1 fechada para o MVP (05/10/2026); revisão do Gabriel e etapas 2 a 6 pendentes |
 | `adaptacao.md` | A função de adaptação do Assistente de ensino e a ferramenta Adaptação: recebe o tipo de adaptação, nunca a condição nem texto livre sobre o aluno (D35, D67) | F7 | etapa 1 fechada para o MVP (05/10/2026); revisão do Gabriel e etapas 2 a 6 pendentes |
+| `ouro/` | O corpus `ouro`: frases fixas que medem as políticas de risco à vida, assunto delicado, pedido de resposta pronta e D55 do Tutor e do Assistente, separadas das amostras de desenvolvimento (R38 da X5). Não é AIA: mede as regras que o `tutor.md` descreve | X5, onda 0 (antes da tarefa 1.0) | escrito em 21/10/2026, sem leitura humana (`TODO.md`); só o Arquiteto altera, com `SELO.json` |
 
 Em 05/10/2026 o Joaquim decidiu os itens que fecham a etapa 1 das cinco AIAs para o MVP de
 apresentação (suspensão, chaves, fidelidade da adaptação e justificativa da rejeição), registrados

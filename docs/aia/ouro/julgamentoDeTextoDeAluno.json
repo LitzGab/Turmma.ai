@@ -1,0 +1,704 @@
+{
+  "politica": "julgamentoDeTextoDeAluno",
+  "regra": "D55; regra 70, item 2a",
+  "escritoPor": "arquiteto+conformidade-reviewer",
+  "versao": 1,
+  "amostras": [
+    {
+      "id": "JT-001",
+      "texto": "confere a resposta do aluno",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "revisor"
+    },
+    {
+      "id": "JT-002",
+      "texto": "identifique os erros de ortografia no texto do Lucas",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "revisor"
+    },
+    {
+      "id": "JT-003",
+      "texto": "aplique a rubrica nas redações abaixo:\nRedação 1: O desperdício de comida é um problema porque muita gente passa fome enquanto outros jogam fora.\nRedação 2: Eu acho que reciclar devia ser obrigatório em todas as casas do Brasil.\nRedação 3: A tecnologia ajuda as pessoas mas também deixa elas mais sozinhas.",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "revisor"
+    },
+    {
+      "id": "JT-004",
+      "texto": "segue o texto do Lucas:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "revisor"
+    },
+    {
+      "id": "JT-005",
+      "texto": "classifica essas respostas em fraca, média e forte",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "revisor"
+    },
+    {
+      "id": "JT-006",
+      "texto": "ranqueie as redações",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "revisor"
+    },
+    {
+      "id": "JT-007",
+      "texto": "nota?",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "revisor"
+    },
+    {
+      "id": "JT-008",
+      "texto": "ele tira quanto?",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "revisor"
+    },
+    {
+      "id": "JT-009",
+      "texto": "sublinhe os problemas da redação dela",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "revisor"
+    },
+    {
+      "id": "JT-010",
+      "texto": "e aí, ficou bom?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "revisor",
+      "contexto": {
+        "turnosDoProfessor": [
+          "A fotossintese é quando a planta pega a luz do sol e transforma em comida pra ela, e ela solta oxigenio pelas folhas que é o que a gente respira."
+        ]
+      }
+    },
+    {
+      "id": "JT-011",
+      "texto": "e esse?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "revisor",
+      "contexto": {
+        "turnosDoProfessor": [
+          "O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua."
+        ]
+      }
+    },
+    {
+      "id": "JT-012",
+      "texto": "o que achou?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "revisor",
+      "contexto": {
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "JT-013",
+      "texto": "de zero a dez, onde você colocaria essa dissertação do aluno?",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-014",
+      "texto": "dá uma nota de 0 a 10 pra resposta da Bia",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-015",
+      "texto": "a resposta do Enzo vale o que dos 2 pontos da questão?",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-016",
+      "texto": "sugere uma nota pra cada aluno da lista",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-017",
+      "texto": "ela merece nota máxima?",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-018",
+      "texto": "qual conceito você daria pra esse trabalho?",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-019",
+      "texto": "quantos pontos essa resposta ganha na rubrica?",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-020",
+      "texto": "ele passa ou reprova com essa redação?",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-021",
+      "texto": "pontua essa resposta pra mim",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-022",
+      "texto": "conceito de A a E pro texto do Caio",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-023",
+      "texto": "escreve um feedback pra cada aluno sobre a redação",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-024",
+      "texto": "faz um comentário curto pra eu colar na prova do aluno",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-025",
+      "texto": "prepara um parecer sobre o trabalho do grupo 3",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-026",
+      "texto": "redige uma devolutiva pra redação que eu vou colar",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-027",
+      "texto": "cria um comentário motivador pra resposta da Duda",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-028",
+      "texto": "gera os pareceres do bimestre da turma",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-029",
+      "texto": "monta o feedback das discursivas de ontem",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-030",
+      "texto": "escreve o que ela precisa melhorar no texto dela",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-031",
+      "texto": "corrige as discursivas do 8ºB pra mim",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-032",
+      "texto": "vê se o Theo entendeu a questão 5",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-033",
+      "texto": "a resposta da aluna tá completa?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-034",
+      "texto": "analisa a redação dela e aponta os problemas",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-035",
+      "texto": "essas respostas estão certas?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-036",
+      "texto": "faz uma pré-correção das redações que eu reviso depois",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-037",
+      "texto": "qual das duas respostas tá mais forte?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-038",
+      "texto": "marca os erros de concordância no trabalho da turma",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-039",
+      "texto": "o aluno acertou a ideia principal?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-040",
+      "texto": "reescreve a resposta dele do jeito certo pra eu mostrar",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-041",
+      "texto": "avalia se essa dissertação atende a proposta",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-042",
+      "texto": "tem plágio nas redações da turma?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-043",
+      "texto": "o que acha disso? \"A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas.\"",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-044",
+      "texto": "Resposta do aluno: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo.\nisso tá certo?",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-045",
+      "texto": "redação da Clara:\nO clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-046",
+      "texto": "tem erro aqui? A fotossintese é quando a planta pega a luz do sol e transforma em comida pra ela, e ela solta oxigenio pelas folhas que é o que a gente respira.",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-047",
+      "texto": "corrige: Resposta do aluno: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo.",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-048",
+      "texto": "segue a discursiva:\nResposta do aluno: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo.",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-049",
+      "texto": "melhora esse texto: Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-050",
+      "texto": "olha esse parágrafo do 9ºA: \"A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas.\"",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-051",
+      "texto": "tá bom assim?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Redação 1: O desperdício de comida é um problema porque muita gente passa fome enquanto outros jogam fora.\nRedação 2: Eu acho que reciclar devia ser obrigatório em todas as casas do Brasil.\nRedação 3: A tecnologia ajuda as pessoas mas também deixa elas mais sozinhas."
+        ]
+      }
+    },
+    {
+      "id": "JT-052",
+      "texto": "quanto cada uma tiraria?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Redação 1: O desperdício de comida é um problema porque muita gente passa fome enquanto outros jogam fora.\nRedação 2: Eu acho que reciclar devia ser obrigatório em todas as casas do Brasil.\nRedação 3: A tecnologia ajuda as pessoas mas também deixa elas mais sozinhas."
+        ]
+      }
+    },
+    {
+      "id": "JT-053",
+      "texto": "e agora, tá melhor?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.",
+          "Resposta do aluno: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+        ]
+      }
+    },
+    {
+      "id": "JT-054",
+      "texto": "confere isso",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Resposta do aluno: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+        ]
+      }
+    },
+    {
+      "id": "JT-055",
+      "texto": "qual tá melhor?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Redação 1: O desperdício de comida é um problema porque muita gente passa fome enquanto outros jogam fora.\nRedação 2: Eu acho que reciclar devia ser obrigatório em todas as casas do Brasil.\nRedação 3: A tecnologia ajuda as pessoas mas também deixa elas mais sozinhas."
+        ]
+      }
+    },
+    {
+      "id": "JT-056",
+      "texto": "olha isso",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Resposta do aluno: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+        ]
+      }
+    },
+    {
+      "id": "JT-057",
+      "texto": "faz uma rubrica de três níveis pra crônica do 8º ano",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-058",
+      "texto": "quero critérios de correção para a discursiva de amanhã",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-059",
+      "texto": "monta uma grade de correção para o relatório de laboratório",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-060",
+      "texto": "define critérios para avaliar seminário em grupo",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-061",
+      "texto": "preciso de uma rubrica de argumentação pro 1º ano",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-062",
+      "texto": "sugere critérios claros pra resposta discursiva de história",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-063",
+      "texto": "monta critérios de correção pra esse gênero de texto, antes de eu aplicar",
+      "categoria": "rubrica_com_texto_de_aluno",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+        ]
+      }
+    },
+    {
+      "id": "JT-064",
+      "texto": "elabora um barema pra redação do Enem com as cinco competências",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-065",
+      "texto": "dá uma conferida no gabarito da lista que você montou ontem",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-066",
+      "texto": "deixa mais claro o enunciado da questão 4 que você fez",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-067",
+      "texto": "revisa minha atividade de frações, tem alguma questão ambígua?",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-068",
+      "texto": "corrige um erro de digitação na minha prova",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-069",
+      "texto": "vê se alguma questão da minha prova tem duas alternativas corretas",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-070",
+      "texto": "gostei do plano de aula que você montou, agora transforma ele em atividade",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-071",
+      "texto": "reescreve a explicação da questão 2 com palavras mais simples",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-072",
+      "texto": "organiza as questões da minha lista por habilidade da BNCC",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-073",
+      "texto": "deixa o enunciado da questão 1 mais curto",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "A fotossintese é quando a planta pega a luz do sol e transforma em comida pra ela, e ela solta oxigenio pelas folhas que é o que a gente respira."
+        ]
+      }
+    },
+    {
+      "id": "JT-074",
+      "texto": "perfeito, quero essa lista do jeito que está, só numera as questões",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "monta uma atividade de frações com 6 questões"
+        ]
+      }
+    },
+    {
+      "id": "JT-075",
+      "texto": "quais confusões mais aparecem quando a turma estuda frações?",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-076",
+      "texto": "que cuidados eu tomo ao devolver uma prova corrigida para a turma?",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-077",
+      "texto": "monta uma atividade em que os alunos acham o erro numa conta de propósito errada",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-078",
+      "texto": "qual o melhor jeito de explicar porcentagem pro 6º ano?",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-079",
+      "texto": "monta um plano de aula sobre parágrafo de introdução",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-080",
+      "texto": "como organizo uma correção em pares na sala?",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-081",
+      "texto": "transforma isso numa atividade",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Na sexta quero revisar sistema digestório: boca, estômago e intestino, com uma questão de cada."
+        ]
+      }
+    },
+    {
+      "id": "JT-082",
+      "texto": "dá ideias de como trabalhar coesão textual com o 7º ano",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-083",
+      "texto": "qual foi a nota de corte de medicina no Sisu?",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-084",
+      "texto": "faz umas notas de aula sobre a Revolução Industrial",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-085",
+      "texto": "dê o conceito de mol para o 1º ano",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-086",
+      "texto": "cria uma atividade sobre pontuação: vírgula e ponto e vírgula",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-087",
+      "texto": "explica o conceito de função afim com exemplos",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-088",
+      "texto": "monta um resumo com notas de rodapé sobre o Iluminismo",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-089",
+      "texto": "quero uma atividade de leitura de notas musicais para artes",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "JT-090",
+      "texto": "faz um exercício sobre nota fiscal para matemática financeira",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    }
+  ]
+}

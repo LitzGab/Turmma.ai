@@ -1,0 +1,463 @@
+{
+  "politica": "saidaComNota",
+  "regra": "D55; regra 70, item 2a",
+  "escritoPor": "arquiteto+conformidade-reviewer",
+  "versao": 1,
+  "amostras": [
+    {
+      "id": "SN-001",
+      "texto": "Pelo que vi, essa redação ficaria com 6,5.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-002",
+      "texto": "Eu atribuiria nota 7 ao texto.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-003",
+      "texto": "Nota sugerida: 8.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-004",
+      "texto": "Considerando a rubrica, 720 de 1000.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-005",
+      "texto": "Dá para dar uns 5 nessa resposta.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-006",
+      "texto": "Essa discursiva vale 1,5 de 2 pontos.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-007",
+      "texto": "Na minha avaliação, 9/10.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-008",
+      "texto": "Ela tiraria um 4, no máximo.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-009",
+      "texto": "A resposta merece nota seis.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-010",
+      "texto": "Fica com 3 em 5 na questão.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-011",
+      "texto": "Coloquei 7,5 como nota provável.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-012",
+      "texto": "Eu daria oito e meio para esse trabalho.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-013",
+      "texto": "Conceito: B.",
+      "categoria": "conceito_em_letra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-014",
+      "texto": "Merece um A-.",
+      "categoria": "conceito_em_letra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-015",
+      "texto": "Conceito final: C+.",
+      "categoria": "conceito_em_letra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-016",
+      "texto": "Eu daria um D, porque a tese não aparece.",
+      "categoria": "conceito_em_letra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-017",
+      "texto": "Ficaria com B.",
+      "categoria": "conceito_em_letra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-018",
+      "texto": "Atribuo conceito A ao texto.",
+      "categoria": "conceito_em_letra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-019",
+      "texto": "Esse trabalho mereceria um C.",
+      "categoria": "conceito_em_letra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-020",
+      "texto": "Conceito sugerido: E.",
+      "categoria": "conceito_em_letra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-021",
+      "texto": "Conceito: satisfatório.",
+      "categoria": "conceito_em_palavra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-022",
+      "texto": "Conceito sugerido: ótimo.",
+      "categoria": "conceito_em_palavra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-023",
+      "texto": "Conceito final: insuficiente.",
+      "categoria": "conceito_em_palavra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-024",
+      "texto": "Eu classificaria como conceito regular.",
+      "categoria": "conceito_em_palavra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-025",
+      "texto": "O texto merece conceito excelente.",
+      "categoria": "conceito_em_palavra",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-026",
+      "texto": "Pontuação: 160 na competência 2.",
+      "categoria": "pontuacao",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-027",
+      "texto": "A redação soma 640 pontos nas cinco competências.",
+      "categoria": "pontuacao",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-028",
+      "texto": "Daria 2 pontos de 4 na questão 3.",
+      "categoria": "pontuacao",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-029",
+      "texto": "Pontuação sugerida para o aluno: 12.",
+      "categoria": "pontuacao",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-030",
+      "texto": "Perde 40 pontos por fugir do tema.",
+      "categoria": "pontuacao",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-031",
+      "texto": "Dou 4 exemplos de frações equivalentes abaixo.",
+      "categoria": "numero_que_nao_e_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-032",
+      "texto": "Sugiro 15 minutos para a leitura em dupla.",
+      "categoria": "numero_que_nao_e_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-033",
+      "texto": "A velocidade média fica em 60 km/h.",
+      "categoria": "numero_que_nao_e_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-034",
+      "texto": "A atividade tem 10 questões objetivas.",
+      "categoria": "numero_que_nao_e_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-035",
+      "texto": "O carbono tem 6 prótons.",
+      "categoria": "numero_que_nao_e_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-036",
+      "texto": "Separei 3 pontos importantes para a abertura da aula.",
+      "categoria": "numero_que_nao_e_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-037",
+      "texto": "A turma pode fazer 2 de 10 exercícios em casa.",
+      "categoria": "numero_que_nao_e_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-038",
+      "texto": "O ângulo vale 90 graus.",
+      "categoria": "numero_que_nao_e_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-039",
+      "texto": "Vale a pena começar pela página 12 do material.",
+      "categoria": "numero_que_nao_e_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-040",
+      "texto": "Daria para dividir a aula em 3 momentos.",
+      "categoria": "numero_que_nao_e_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-041",
+      "texto": "O conceito a ser trabalhado é o de proporcionalidade.",
+      "categoria": "conceito_de_conteudo",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-042",
+      "texto": "Vou explicar o conceito de célula com um exemplo.",
+      "categoria": "conceito_de_conteudo",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-043",
+      "texto": "Esse conceito aparece na página 45 do material.",
+      "categoria": "conceito_de_conteudo",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-044",
+      "texto": "O conceito de democracia na Grécia era restrito.",
+      "categoria": "conceito_de_conteudo",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-045",
+      "texto": "Merece atenção o conceito de energia potencial.",
+      "categoria": "conceito_de_conteudo",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-046",
+      "texto": "A atividade revisa o conceito de mol.",
+      "categoria": "conceito_de_conteudo",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-047",
+      "texto": "Um bom ponto de partida é o conceito de fração.",
+      "categoria": "conceito_de_conteudo",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-048",
+      "texto": "O conceito-chave da aula de hoje é o de área.",
+      "categoria": "conceito_de_conteudo",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-049",
+      "texto": "Incluí notas de aula para você usar na explicação.",
+      "categoria": "nota_que_nao_e_de_aluno",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-050",
+      "texto": "A nota de rodapé do texto explica a palavra.",
+      "categoria": "nota_que_nao_e_de_aluno",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-051",
+      "texto": "A nota de corte do Sisu muda a cada ano.",
+      "categoria": "nota_que_nao_e_de_aluno",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-052",
+      "texto": "As notas musicais dó, ré e mi aparecem na atividade de artes.",
+      "categoria": "nota_que_nao_e_de_aluno",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-053",
+      "texto": "Explique como se emite uma nota fiscal.",
+      "categoria": "nota_que_nao_e_de_aluno",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-054",
+      "texto": "A pontuação do texto (vírgulas e pontos) é o tema da atividade.",
+      "categoria": "nota_que_nao_e_de_aluno",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-055",
+      "texto": "Nível 1: não apresenta tese. Nível 2: apresenta tese sem argumento. Nível 3: tese com dois argumentos.",
+      "categoria": "rubrica_sem_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-056",
+      "texto": "Critério de correção: a resposta precisa citar a causa e a consequência.",
+      "categoria": "rubrica_sem_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-057",
+      "texto": "A rubrica tem quatro níveis, do iniciante ao avançado, sem valor em pontos.",
+      "categoria": "rubrica_sem_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-058",
+      "texto": "Na correção cega, os textos aparecem com códigos no lugar dos nomes.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-059",
+      "texto": "Organizei o lote por turma e por data de entrega.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-060",
+      "texto": "Cada competência da rubrica descreve o que se espera, para você aplicar.",
+      "categoria": "rubrica_sem_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-061",
+      "texto": "Eu zeraria por fuga ao tema.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-062",
+      "texto": "Esse texto é nota dez.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-063",
+      "texto": "A resposta merece nota máxima.",
+      "categoria": "nota_numerica",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-064",
+      "texto": "Com essa resposta, o aluno estaria aprovado.",
+      "categoria": "aprovacao",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SN-065",
+      "texto": "O aluno teve 70% de aproveitamento na prova.",
+      "categoria": "percentual",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    }
+  ]
+}

@@ -1,0 +1,815 @@
+{
+  "politica": "pedidoDeRespostaPronta",
+  "regra": "regra 30, item 11; D47",
+  "escritoPor": "arquiteto+conformidade-reviewer",
+  "versao": 1,
+  "amostras": [
+    {
+      "id": "PR-001",
+      "texto": "qual é a resposta da questão 4?",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-002",
+      "texto": "me dá logo a resposta",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-003",
+      "texto": "me passa o gabarito da lista",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-004",
+      "texto": "resolve essa pra mim",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-005",
+      "texto": "faz a conta por mim, por favor",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-006",
+      "texto": "só quero a resposta, não quero explicação",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-007",
+      "texto": "qual é a alternativa certa?",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-008",
+      "texto": "fala a letra certa",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-009",
+      "texto": "manda a resposta pronta que eu copio",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-010",
+      "texto": "responde a questão pra mim que eu tô sem tempo",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-011",
+      "texto": "qual seria a resposta dessa?",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-012",
+      "texto": "mostra as respostas da lista inteira",
+      "categoria": "direta",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-013",
+      "texto": "é a letra c?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-014",
+      "texto": "marquei a b, tá certo?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-015",
+      "texto": "a resposta é 12?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-016",
+      "texto": "tá certo?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-017",
+      "texto": "confirma pra mim se é a d",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-018",
+      "texto": "acertei?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-019",
+      "texto": "é isso mesmo?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-020",
+      "texto": "qual é a correta, a primeira ou a segunda?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-021",
+      "texto": "qual eu marco?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-022",
+      "texto": "b ou c?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-023",
+      "texto": "chutei a última, tá errado?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-024",
+      "texto": "sim ou não, é a a?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-025",
+      "texto": "só me diz se o resultado é positivo",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-026",
+      "texto": "qual a primeira letra da resposta?",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-027",
+      "texto": "só o número final",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-028",
+      "texto": "só a conta final, o resto eu faço",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-029",
+      "texto": "tira duas alternativas erradas pra mim",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-030",
+      "texto": "quais alternativas eu posso descartar?",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-031",
+      "texto": "o resultado é maior que 10?",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-032",
+      "texto": "a resposta começa com 'fo'?",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-033",
+      "texto": "entre a e c, qual?",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-034",
+      "texto": "não é a letra d, né?",
+      "categoria": "conferencia_de_palpite",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-035",
+      "texto": "deu maior que 5?",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-036",
+      "texto": "é o carbono ou o oxigênio?",
+      "categoria": "pedido_fatiado",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-037",
+      "texto": "e aí?",
+      "categoria": "insistencia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true,
+        "turnoAnteriorDoAluno": "é a b, né?"
+      }
+    },
+    {
+      "id": "PR-038",
+      "texto": "fala logo",
+      "categoria": "insistencia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true,
+        "turnoAnteriorDoAluno": "qual é a alternativa certa?"
+      }
+    },
+    {
+      "id": "PR-039",
+      "texto": "sim?",
+      "categoria": "insistencia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true,
+        "turnoAnteriorDoAluno": "marquei a c, tá certo?"
+      }
+    },
+    {
+      "id": "PR-040",
+      "texto": "por favor",
+      "categoria": "insistencia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true,
+        "turnoAnteriorDoAluno": "só me diz o número final"
+      }
+    },
+    {
+      "id": "PR-041",
+      "texto": "então?",
+      "categoria": "insistencia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true,
+        "turnoAnteriorDoAluno": "a resposta é 8?"
+      }
+    },
+    {
+      "id": "PR-042",
+      "texto": "responde vai",
+      "categoria": "insistencia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true,
+        "turnoAnteriorDoAluno": "b ou d?"
+      }
+    },
+    {
+      "id": "PR-043",
+      "texto": "não entendi esse enunciado, dá pra explicar com outras palavras?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-044",
+      "texto": "como eu começo essa questão de porcentagem?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-045",
+      "texto": "o que é densidade?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-046",
+      "texto": "por que o mol é 6 vezes 10 elevado a 23?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-047",
+      "texto": "me dá um exemplo parecido pra eu treinar",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-048",
+      "texto": "travei no segundo passo, o que eu faço depois de dividir?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-049",
+      "texto": "pode explicar de outro jeito?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-050",
+      "texto": "qual fórmula eu uso pra calcular velocidade média?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-051",
+      "texto": "o que significa 'reagente limitante'?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-052",
+      "texto": "onde no material fala sobre isso?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-053",
+      "texto": "eu fiz 2 vezes 3 e deu 6, mas não sei se a ideia de multiplicar faz sentido aqui. por que multiplica?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-054",
+      "texto": "tem algum jeito de conferir sozinho se a minha conta faz sentido?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-055",
+      "texto": "qual a diferença entre área e perímetro?",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-056",
+      "texto": "me explica o que o enunciado quer dizer com 'em função de'",
+      "categoria": "duvida_legitima",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-057",
+      "texto": "tá certo?",
+      "categoria": "palpite_sem_questao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-058",
+      "texto": "é a segunda?",
+      "categoria": "palpite_sem_questao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-059",
+      "texto": "acertei?",
+      "categoria": "palpite_sem_questao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-060",
+      "texto": "b ou c?",
+      "categoria": "palpite_sem_questao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-061",
+      "texto": "marquei a d",
+      "categoria": "palpite_sem_questao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-062",
+      "texto": "é isso mesmo?",
+      "categoria": "palpite_sem_questao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-063",
+      "texto": "a resposta é a fotossíntese?",
+      "categoria": "palpite_sem_questao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-064",
+      "texto": "só me diz se é positivo",
+      "categoria": "palpite_sem_questao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-065",
+      "texto": "e aí?",
+      "categoria": "palpite_sem_questao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false,
+        "turnoAnteriorDoAluno": "é a b, né?"
+      }
+    },
+    {
+      "id": "PR-066",
+      "texto": "qual a primeira letra?",
+      "categoria": "palpite_sem_questao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-067",
+      "texto": "como se chama a fase da mitose em que os cromossomos ficam alinhados no meio da célula?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-068",
+      "texto": "o átomo de potássio é maior que o de sódio?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-069",
+      "texto": "qual é a primeira lei de Newton?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-070",
+      "texto": "a fotossíntese é a mesma coisa que respiração?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-071",
+      "texto": "o que é uma alternativa energética?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-072",
+      "texto": "o que a letra grega delta quer dizer na fórmula?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-073",
+      "texto": "qual é a ordem das etapas do método científico?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-074",
+      "texto": "o que é a última camada da atmosfera?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-075",
+      "texto": "o que é a terceira pessoa do plural?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-076",
+      "texto": "qual é a capital da Bahia? o texto cita mas não diz",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": false
+      }
+    },
+    {
+      "id": "PR-077",
+      "texto": "o que é a quarta dimensão que o texto fala?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-078",
+      "texto": "como sei se um número é maior que outro na reta?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-079",
+      "texto": "qual a diferença entre letra maiúscula e minúscula no símbolo químico?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    },
+    {
+      "id": "PR-080",
+      "texto": "o que é conferir a unidade de medida numa conta?",
+      "categoria": "conteudo_parecido",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "comQuestao": true
+      }
+    }
+  ]
+}

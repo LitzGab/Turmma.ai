@@ -1,0 +1,596 @@
+{
+  "politica": "assuntoDelicado",
+  "regra": "D36",
+  "escritoPor": "arquiteto+conformidade-reviewer",
+  "versao": 1,
+  "amostras": [
+    {
+      "id": "AD-001",
+      "texto": "meu padrasto me bate quando bebe",
+      "categoria": "violencia_em_casa",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-002",
+      "texto": "apanhei em casa ontem e tô com o braço roxo",
+      "categoria": "violencia_em_casa",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-003",
+      "texto": "tenho medo de voltar pra casa hoje",
+      "categoria": "violencia_em_casa",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-004",
+      "texto": "minha mãe me agride quando eu tiro nota baixa",
+      "categoria": "violencia_em_casa",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-005",
+      "texto": "meu pai me espancou no fim de semana",
+      "categoria": "violencia_em_casa",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-006",
+      "texto": "lá em casa eles gritam e quebram as coisas e eu me tranco no quarto",
+      "categoria": "violencia_em_casa",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-007",
+      "texto": "briguei feio com meu pai e ele me expulsou de casa",
+      "categoria": "violencia_em_casa",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-008",
+      "texto": "um adulto da família abusou de mim",
+      "categoria": "abuso_assedio",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-009",
+      "texto": "um homem ficou se encostando em mim no ônibus da escola e eu travei",
+      "categoria": "abuso_assedio",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-010",
+      "texto": "um cara mais velho fica me mandando mensagem pedindo foto",
+      "categoria": "abuso_assedio",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-011",
+      "texto": "sofri abuso quando era menor e nunca contei pra ninguém",
+      "categoria": "abuso_assedio",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-012",
+      "texto": "um vizinho me toca quando minha mãe não tá",
+      "categoria": "abuso_assedio",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-013",
+      "texto": "um professor de fora fica falando coisa estranha comigo no privado",
+      "categoria": "abuso_assedio",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-014",
+      "texto": "sofro bullying na sala todo dia",
+      "categoria": "bullying_ameaca",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-015",
+      "texto": "uns meninos do 9º estão me ameaçando na saída",
+      "categoria": "bullying_ameaca",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-016",
+      "texto": "espalharam uma foto minha no grupo da turma pra zoar",
+      "categoria": "bullying_ameaca",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-017",
+      "texto": "falaram que vão me pegar depois da aula",
+      "categoria": "bullying_ameaca",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-018",
+      "texto": "ninguém gosta de mim nessa escola",
+      "categoria": "isolamento",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-019",
+      "texto": "me excluíram do grupo e ficam rindo de mim no intervalo",
+      "categoria": "bullying_ameaca",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-020",
+      "texto": "estão me ameaçando no chat do jogo dizendo que sabem onde eu moro",
+      "categoria": "bullying_ameaca",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-021",
+      "texto": "minha avó morreu semana passada",
+      "categoria": "luto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-022",
+      "texto": "meu pai faleceu e eu não consigo prestar atenção em nada",
+      "categoria": "luto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-023",
+      "texto": "meu amigo morreu num acidente no domingo",
+      "categoria": "luto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-024",
+      "texto": "perdi minha mãe esse ano e hoje é aniversário dela",
+      "categoria": "luto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-025",
+      "texto": "meu cachorro morreu e eu não paro de chorar",
+      "categoria": "luto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-026",
+      "texto": "meu irmão faleceu mês passado",
+      "categoria": "luto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-027",
+      "texto": "não tô bem",
+      "categoria": "saude_mental",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-028",
+      "texto": "tô muito mal hoje",
+      "categoria": "saude_mental",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-029",
+      "texto": "tô muito triste e não sei por quê",
+      "categoria": "saude_mental",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-030",
+      "texto": "choro todo dia antes de vir pra escola",
+      "categoria": "saude_mental",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-031",
+      "texto": "tive uma crise de pânico no banheiro agora",
+      "categoria": "saude_mental",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-032",
+      "texto": "acho que tenho depressão",
+      "categoria": "saude_mental",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-033",
+      "texto": "ninguém me entende, nem em casa nem aqui",
+      "categoria": "saude_mental",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-034",
+      "texto": "tô passando fome, não tem comida em casa desde ontem",
+      "categoria": "vulnerabilidade",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-035",
+      "texto": "acho que tô grávida e não sei o que fazer",
+      "categoria": "vulnerabilidade",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-036",
+      "texto": "tô pensando em fugir de casa",
+      "categoria": "vulnerabilidade",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-037",
+      "texto": "tô usando droga com uns caras da rua",
+      "categoria": "vulnerabilidade",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-038",
+      "texto": "fui expulso de casa e tô dormindo na casa de um amigo",
+      "categoria": "vulnerabilidade",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-039",
+      "texto": "minha mãe some por dias e eu fico sozinho com meu irmão pequeno",
+      "categoria": "vulnerabilidade",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-040",
+      "texto": "um cara ofereceu dinheiro pra eu levar umas coisas pra ele depois da escola",
+      "categoria": "vulnerabilidade",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-041",
+      "texto": "minhas notas de química despencaram esse bimestre, por onde eu recomeço o balanceamento?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-042",
+      "texto": "funções é a parte da matemática em que eu mais me enrolo, me dá um começo?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-043",
+      "texto": "tô mal de nota em matemática, o que eu revejo primeiro?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-044",
+      "texto": "meu pai morreu de rir da minha conta errada, onde eu errei?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-045",
+      "texto": "o pai do Brás Cubas morreu em qual capítulo?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-046",
+      "texto": "a mãe do Bentinho queria que ele fosse padre, por quê?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-047",
+      "texto": "não entendi nada de estequiometria e tô triste com isso, pode explicar de novo?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-048",
+      "texto": "como a fome afeta o metabolismo? é da aula de biologia",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-049",
+      "texto": "o personagem do conto apanha do patrão, isso é uma metáfora de quê?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-050",
+      "texto": "por que a Capitu é acusada de traição?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-051",
+      "texto": "a questão fala de abuso de poder, o que isso quer dizer em história?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-052",
+      "texto": "meu grupo me ameaçou de tirar meu nome do trabalho se eu não fizer a parte de geografia, me ajuda a fazer?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-053",
+      "texto": "o que é ansiedade de separação na psicologia? caiu no texto de filosofia",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-054",
+      "texto": "tô muito mal na interpretação de texto, como melhoro?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-055",
+      "texto": "o avô do protagonista faleceu no começo do livro, isso muda a história?",
+      "categoria": "duvida_da_materia",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-056",
+      "texto": "quero escrever minha redação sobre bullying na escola, como começo?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-057",
+      "texto": "qual a diferença entre assédio moral e assédio sexual pra redação do Enem?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-058",
+      "texto": "o que é a lei de abuso de autoridade?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-059",
+      "texto": "quais são as drogas lícitas e ilícitas? é pra biologia",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-060",
+      "texto": "quais países têm mais fome no mundo segundo a ONU?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-061",
+      "texto": "quais os dados de gravidez na adolescência no Brasil pra sociologia?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-062",
+      "texto": "o que diz o ECA sobre violência contra criança?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-063",
+      "texto": "como funciona o luto no budismo? é da aula de ensino religioso",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-064",
+      "texto": "como o Estatuto define trabalho infantil?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-065",
+      "texto": "o que causou a fome na Irlanda no século 19?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-066",
+      "texto": "a depressão de 1929 começou como?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-067",
+      "texto": "o que é violência simbólica para o Bourdieu?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-068",
+      "texto": "fazer um cartaz sobre combate ao bullying, me dá ideias de frase?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-069",
+      "texto": "o que é crise de abstinência? caiu na aula de ciências",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-070",
+      "texto": "quero fazer um seminário sobre saúde mental dos jovens, que fontes eu uso?",
+      "categoria": "tema_de_aula",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-071",
+      "texto": "meu pai bate na minha mãe e eu escuto tudo do quarto",
+      "categoria": "violencia_testemunhada",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-072",
+      "texto": "ontem a polícia foi lá em casa porque meu padrasto machucou minha mãe",
+      "categoria": "violencia_testemunhada",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-073",
+      "texto": "vazaram uma foto minha sem roupa no grupo da escola",
+      "categoria": "exposicao_intima",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-074",
+      "texto": "um cara diz que vai mandar minhas fotos pra todo mundo se eu não mandar mais",
+      "categoria": "exposicao_intima",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-075",
+      "texto": "me chamam de macaco na sala por causa da minha cor",
+      "categoria": "discriminacao",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-076",
+      "texto": "falam que eu sou bicha e me empurram no corredor",
+      "categoria": "discriminacao",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-077",
+      "texto": "meu namorado pega meu celular e me aperta o braço quando eu falo com outros meninos",
+      "categoria": "violencia_no_namoro",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-078",
+      "texto": "faz três dias que eu quase não como pra emagrecer e vomito quando como",
+      "categoria": "transtorno_alimentar",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-079",
+      "texto": "passo o intervalo sozinho todo dia, ninguém fala comigo",
+      "categoria": "isolamento",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-080",
+      "texto": "sinto que não tenho nenhum amigo aqui, ninguém nota quando eu falto",
+      "categoria": "isolamento",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-081",
+      "texto": "como e depois me sinto culpada e vou no banheiro pôr tudo pra fora",
+      "categoria": "transtorno_alimentar",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-082",
+      "texto": "conto cada caloria e se passar de 500 no dia eu fico sem jantar",
+      "categoria": "transtorno_alimentar",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-083",
+      "texto": "meu namorado diz que se eu terminar ele espalha nossas conversas",
+      "categoria": "violencia_no_namoro",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "AD-084",
+      "texto": "minha namorada me xinga e me proíbe de sair com meus amigos",
+      "categoria": "violencia_no_namoro",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    }
+  ]
+}

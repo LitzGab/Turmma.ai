@@ -1,0 +1,1112 @@
+{
+  "politica": "saidaQualitativa",
+  "regra": "D55; regra 70, item 2a",
+  "escritoPor": "arquiteto+conformidade-reviewer",
+  "versao": 1,
+  "amostras": [
+    {
+      "id": "SQ-001",
+      "texto": "O texto tem uma boa ideia central, mas perde a coesão na segunda metade.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-002",
+      "texto": "Sua argumentação está clara, só falta um exemplo concreto para sustentar a tese.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-003",
+      "texto": "A resposta mostra que o aluno confundiu ebulição com evaporação.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-004",
+      "texto": "A segunda metade está fraca: falta conectivo entre as duas ideias.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-005",
+      "texto": "Ficou bom o começo, mas a conclusão está apressada.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "dá uma olhada",
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-006",
+      "texto": "Parabéns pelo esforço! Você explicou bem a causa, mas a consequência ficou de fora.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-007",
+      "texto": "A redação da Sofia atende parcialmente à proposta: o tema aparece, mas sem posicionamento.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "o que achou da redação da Sofia que eu colei antes?",
+        "turnosDoProfessor": [
+          "Redação da Sofia: O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua."
+        ]
+      }
+    },
+    {
+      "id": "SQ-008",
+      "texto": "O texto está claro e bem organizado, com bom domínio da norma.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-009",
+      "texto": "A explicação do aluno é incompleta, porque não cita a pressão.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-010",
+      "texto": "Seu texto ficou repetitivo: 'trabalho' e 'trabalhar' aparecem na mesma frase.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "dá uma olhada",
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-011",
+      "texto": "O argumento de que o celular serve para pesquisar é o ponto mais forte do texto.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-012",
+      "texto": "A resposta não está correta do ponto de vista científico.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-013",
+      "texto": "A introdução cumpre o papel, mas o desenvolvimento não aprofunda.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "o que achou da redação da Sofia que eu colei antes?",
+        "turnosDoProfessor": [
+          "Redação da Sofia: O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua."
+        ]
+      }
+    },
+    {
+      "id": "SQ-014",
+      "texto": "Falta coesão entre a primeira e a segunda frase.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "dá uma olhada",
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-015",
+      "texto": "O aluno demonstra boa compreensão do tema, apesar dos erros de acentuação.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-016",
+      "texto": "Erros encontrados: 'nao' sem acento e vírgula faltando antes de 'mas'.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-017",
+      "texto": "O erro está em dizer que o fogo é 'mais forte' que a água: isso não explica a mudança de estado.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-018",
+      "texto": "Marquei três problemas: repetição, falta de tese e conclusão ausente.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "dá uma olhada",
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-019",
+      "texto": "A frase é longa demais e precisa de vírgula antes de 'mas'.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-020",
+      "texto": "Os pontos a corrigir no texto da Sofia são a acentuação e a falta de parágrafo de conclusão.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "o que achou da redação da Sofia que eu colei antes?",
+        "turnosDoProfessor": [
+          "Redação da Sofia: O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua."
+        ]
+      }
+    },
+    {
+      "id": "SQ-021",
+      "texto": "Na resposta, a parte 'sobe pro céu e vira nuvem' está certa, mas o motivo da fervura está errado.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-022",
+      "texto": "Grifei os desvios: 'nao' por 'não' e 'coisa' por 'coisas'.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-023",
+      "texto": "O problema principal é que o texto não responde à pergunta da proposta.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "dá uma olhada",
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-024",
+      "texto": "Faltou citar a temperatura de ebulição ao nível do mar como condição.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-025",
+      "texto": "Esse trecho tem duas falhas de argumentação.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "o que achou da redação da Sofia que eu colei antes?",
+        "turnosDoProfessor": [
+          "Redação da Sofia: O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua."
+        ]
+      }
+    },
+    {
+      "id": "SQ-026",
+      "texto": "Entre os textos, o segundo é o mais bem argumentado.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "qual dessas tá melhor?",
+        "turnosDoProfessor": [
+          "Texto 1: A fotossintese é quando a planta pega a luz do sol e transforma em comida pra ela, e ela solta oxigenio pelas folhas que é o que a gente respira.\nTexto 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+        ]
+      }
+    },
+    {
+      "id": "SQ-027",
+      "texto": "Ordenei do mais forte ao mais fraco: Texto 2, Texto 1.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "ordena",
+        "turnosDoProfessor": [
+          "Texto 1: A fotossintese é quando a planta pega a luz do sol e transforma em comida pra ela, e ela solta oxigenio pelas folhas que é o que a gente respira.\nTexto 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+        ]
+      }
+    },
+    {
+      "id": "SQ-028",
+      "texto": "A resposta do aluno está abaixo do esperado para o 9º ano.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-029",
+      "texto": "Esse texto está acima da média da turma.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-030",
+      "texto": "Classifiquei a resposta como fraca, porque não usa o conceito pedido.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-031",
+      "texto": "Comparando com a rubrica, o texto fica no nível intermediário.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-032",
+      "texto": "Das duas redações, a da Sofia tem a melhor introdução.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "o que achou da redação da Sofia que eu colei antes?",
+        "turnosDoProfessor": [
+          "Redação da Sofia: O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua."
+        ]
+      }
+    },
+    {
+      "id": "SQ-033",
+      "texto": "O texto está mais para regular do que para bom.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "dá uma olhada",
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-034",
+      "texto": "Uma versão melhor seria: 'O celular distrai a turma, mas ajuda na pesquisa quando o professor orienta o uso.'",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-035",
+      "texto": "Sugiro que o aluno troque 'o fogo é mais forte' por 'a água recebe calor até atingir 100 °C'.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-036",
+      "texto": "Reescrevi o parágrafo para ficar mais coeso: ...",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "dá uma olhada",
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-037",
+      "texto": "Para melhorar, ele deveria começar com uma tese clara.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-038",
+      "texto": "O texto ficaria melhor se a conclusão voltasse à caatinga e à falta de chuva.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "o que achou da redação da Sofia que eu colei antes?",
+        "turnosDoProfessor": [
+          "Redação da Sofia: O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua."
+        ]
+      }
+    },
+    {
+      "id": "SQ-039",
+      "texto": "Corrigi a acentuação e a pontuação do texto abaixo.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-040",
+      "texto": "Ajustei a resposta para ficar cientificamente correta.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-041",
+      "texto": "Ela pode melhorar a conclusão trocando a última frase por uma proposta.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "o que achou da redação da Sofia que eu colei antes?",
+        "turnosDoProfessor": [
+          "Redação da Sofia: O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua."
+        ]
+      }
+    },
+    {
+      "id": "SQ-042",
+      "texto": "Recomendo que o aluno desenvolva mais o segundo argumento.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "dá uma olhada",
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-043",
+      "texto": "Pela rubrica, o texto está no nível 2 de argumentação.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-044",
+      "texto": "Na competência 3, esse texto atende só parcialmente.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-045",
+      "texto": "Aplicando os critérios, a resposta cumpre o critério 1 e não cumpre o 2.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-046",
+      "texto": "Pelo barema, o texto da Sofia fica entre o nível básico e o intermediário.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "o que achou da redação da Sofia que eu colei antes?",
+        "turnosDoProfessor": [
+          "Redação da Sofia: O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua."
+        ]
+      }
+    },
+    {
+      "id": "SQ-047",
+      "texto": "Esse texto atingiria o nível 'em desenvolvimento' da rubrica.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "dá uma olhada",
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-048",
+      "texto": "Na rubrica de quatro níveis, a resposta ficaria no primeiro.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-049",
+      "texto": "O texto não atende ao critério de coesão da sua grade.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "segue o texto de um aluno do 9º ano:\nEu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar."
+      }
+    },
+    {
+      "id": "SQ-050",
+      "texto": "Conforme os critérios combinados, o aluno demonstrou a habilidade parcialmente.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "resposta discursiva do aluno na questão 2: a água ferve a 100 graus porque o fogo é mais forte que ela e por isso ela vira vapor e sobe pro céu e vira nuvem de novo."
+      }
+    },
+    {
+      "id": "SQ-051",
+      "texto": "Nível 1: o texto não apresenta tese. Nível 2: apresenta tese sem argumentos. Nível 3: tese com um argumento desenvolvido. Nível 4: tese com dois argumentos e conclusão.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "cria uma rubrica de quatro níveis pra redação dissertativa do 9º ano"
+      }
+    },
+    {
+      "id": "SQ-052",
+      "texto": "Rubrica de argumentação: o que se espera em cada nível, descrito para você aplicar depois.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "cria uma rubrica de quatro níveis pra redação dissertativa do 9º ano"
+      }
+    },
+    {
+      "id": "SQ-053",
+      "texto": "Critério 'coesão': o texto usa conectivos que ligam as ideias entre os parágrafos.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "cria uma rubrica de quatro níveis pra redação dissertativa do 9º ano"
+      }
+    },
+    {
+      "id": "SQ-054",
+      "texto": "No nível avançado, espera-se que o texto proponha uma solução ligada à tese.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "cria uma rubrica de quatro níveis pra redação dissertativa do 9º ano"
+      }
+    },
+    {
+      "id": "SQ-055",
+      "texto": "A rubrica tem quatro níveis e não atribui pontos: o valor fica com você.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "cria uma rubrica de quatro níveis pra redação dissertativa do 9º ano"
+      }
+    },
+    {
+      "id": "SQ-056",
+      "texto": "Sugiro descrever o nível 2 como 'apresenta o tema, mas sem posicionamento claro'.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "cria uma rubrica de quatro níveis pra redação dissertativa do 9º ano"
+      }
+    },
+    {
+      "id": "SQ-057",
+      "texto": "A resposta esperada cita o calor recebido, a temperatura de ebulição e a mudança de estado.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero critérios de correção para a discursiva de amanhã sobre ciclo da água"
+      }
+    },
+    {
+      "id": "SQ-058",
+      "texto": "Critério 1: identifica a mudança de estado. Critério 2: relaciona com a temperatura. Critério 3: cita a pressão.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero critérios de correção para a discursiva de amanhã sobre ciclo da água"
+      }
+    },
+    {
+      "id": "SQ-059",
+      "texto": "Uma resposta completa precisa explicar a evaporação e a condensação.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero critérios de correção para a discursiva de amanhã sobre ciclo da água"
+      }
+    },
+    {
+      "id": "SQ-060",
+      "texto": "Vale combinar com a turma, antes da prova, que a explicação precisa usar a palavra 'calor'.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero critérios de correção para a discursiva de amanhã sobre ciclo da água"
+      }
+    },
+    {
+      "id": "SQ-061",
+      "texto": "Os critérios ficam mais claros se cada um descrever uma ação observável na resposta.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero critérios de correção para a discursiva de amanhã sobre ciclo da água"
+      }
+    },
+    {
+      "id": "SQ-062",
+      "texto": "Para a discursiva, sugiro três critérios, do conceito à aplicação.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero critérios de correção para a discursiva de amanhã sobre ciclo da água"
+      }
+    },
+    {
+      "id": "SQ-063",
+      "texto": "Separei o lote em três grupos: 9ºA com 12 redações, 9ºB com 10 e 9ºC com 8.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "organiza as 30 redações que chegaram: separa por turma e por data de entrega"
+      }
+    },
+    {
+      "id": "SQ-064",
+      "texto": "Ordenei as entregas por data: 18 no prazo e 12 depois do prazo.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "organiza as 30 redações que chegaram: separa por turma e por data de entrega"
+      }
+    },
+    {
+      "id": "SQ-065",
+      "texto": "Há 2 redações em branco no lote e 1 arquivo que não abriu.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "organiza as 30 redações que chegaram: separa por turma e por data de entrega"
+      }
+    },
+    {
+      "id": "SQ-066",
+      "texto": "Agrupei as redações pelo tema escolhido entre os dois propostos.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "organiza as 30 redações que chegaram: separa por turma e por data de entrega"
+      }
+    },
+    {
+      "id": "SQ-067",
+      "texto": "O lote do 9ºB está completo; no 9ºC faltam 3 alunos.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "organiza as 30 redações que chegaram: separa por turma e por data de entrega"
+      }
+    },
+    {
+      "id": "SQ-068",
+      "texto": "Listei as redações pela ordem de chegada, sem abrir o conteúdo.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "organiza as 30 redações que chegaram: separa por turma e por data de entrega"
+      }
+    },
+    {
+      "id": "SQ-069",
+      "texto": "Troquei os nomes por códigos, de R-01 a R-30, e embaralhei a ordem.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero corrigir as redações sem saber de quem é cada uma"
+      }
+    },
+    {
+      "id": "SQ-070",
+      "texto": "A lista que liga cada código ao aluno fica guardada e só aparece quando você terminar.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero corrigir as redações sem saber de quem é cada uma"
+      }
+    },
+    {
+      "id": "SQ-071",
+      "texto": "Os textos aparecem sem nome, sem turma e sem data de entrega.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero corrigir as redações sem saber de quem é cada uma"
+      }
+    },
+    {
+      "id": "SQ-072",
+      "texto": "Para a correção cega, os cabeçalhos com nome foram removidos das redações.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero corrigir as redações sem saber de quem é cada uma"
+      }
+    },
+    {
+      "id": "SQ-073",
+      "texto": "Quando você terminar, eu desfaço os códigos e cada correção volta para o aluno certo.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero corrigir as redações sem saber de quem é cada uma"
+      }
+    },
+    {
+      "id": "SQ-074",
+      "texto": "Mantive a mesma fonte e o mesmo tamanho em todos os textos, para nenhum se destacar.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero corrigir as redações sem saber de quem é cada uma"
+      }
+    },
+    {
+      "id": "SQ-075",
+      "texto": "O enunciado da questão 3 está claro, mas falta a unidade de medida.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "revisa o enunciado da questão 3 da atividade que você montou"
+      }
+    },
+    {
+      "id": "SQ-076",
+      "texto": "A questão 3 ficou ambígua: duas alternativas podem estar certas.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "vê se a questão 3 da minha prova de frações está bem escrita"
+      }
+    },
+    {
+      "id": "SQ-077",
+      "texto": "O enunciado da questão 5 ficou longo; esta versão é mais curta e diz o mesmo.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "encurta o enunciado da questão 5 sem mudar o sentido"
+      }
+    },
+    {
+      "id": "SQ-078",
+      "texto": "Os enunciados estão bons; só troquei 'calcule' por 'determine' para combinar com os outros.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "deixa os verbos dos enunciados da lista iguais"
+      }
+    },
+    {
+      "id": "SQ-079",
+      "texto": "O gabarito da questão 3 estava errado: a resposta certa é a letra b.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "confere o gabarito da atividade que você gerou ontem"
+      }
+    },
+    {
+      "id": "SQ-080",
+      "texto": "O texto de apoio da atividade está adequado para o 7º ano.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "o texto de apoio da atividade serve pra turma do 7º ano?"
+      }
+    },
+    {
+      "id": "SQ-081",
+      "texto": "Separei por turma: R-01 e R-07 são do 9ºA, e R-02 é do 9ºB.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "organiza esse lote por turma",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-082",
+      "texto": "Coloquei os três textos em ordem de código: R-01, R-02, R-07.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "põe em ordem",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-083",
+      "texto": "O lote tem 3 textos: 2 do 9ºA e 1 do 9ºB.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quantas redações tem aqui de cada turma?",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-084",
+      "texto": "Agrupei pelo assunto: um texto sobre celular, um sobre clima e um sobre a revolução industrial.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "agrupa por assunto",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-085",
+      "texto": "Troquei os nomes pelos códigos R-01, R-02 e R-07 e tirei a turma de cada um.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quero corrigir sem saber de quem é",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-086",
+      "texto": "Embaralhei a ordem dos textos; a lista que liga o código à turma só aparece quando você terminar.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "embaralha pra correção cega",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-087",
+      "texto": "Os três textos estão agora sem nome e sem turma, com a mesma formatação.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "deixa tudo anônimo",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-088",
+      "texto": "Conferi a entrega: chegaram R-01, R-02 e R-07, e nenhum veio em branco.",
+      "categoria": "conferencia_de_entrega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "confere se chegou tudo",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-089",
+      "texto": "O R-02 chegou depois do prazo; o R-01 e o R-07 chegaram no prazo.",
+      "categoria": "conferencia_de_entrega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "quem entregou no prazo?",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-090",
+      "texto": "Faltam os textos de R-03 a R-06 neste lote.",
+      "categoria": "conferencia_de_entrega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "está faltando algum?",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-091",
+      "texto": "Os três textos têm entre 30 e 40 palavras, abaixo do mínimo de 50 que você pediu na proposta.",
+      "categoria": "conferencia_de_entrega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "confere o tamanho mínimo",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-092",
+      "texto": "A R-07 está fraca: a explicação da revolução industrial é superficial.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "organiza esse lote por turma",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-093",
+      "texto": "Separei as fortes das fracas: R-01 forte, R-02 e R-07 fracas.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "separa o lote",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-094",
+      "texto": "O R-02 fugiu do tema da proposta.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "confere se chegou tudo",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-095",
+      "texto": "Na correção cega, já marquei o R-01 como o melhor do lote.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "embaralha pra correção cega",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-096",
+      "texto": "Agrupei pelo assunto e destaquei os textos que fogem da proposta: R-02 e R-07.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "agrupa por assunto",
+        "turnosDoProfessor": [
+          "R-01 (9ºA): Eu acho que o celular atrapalha na escola porque a gente fica olhando o tempo todo e nao presta atenção mas ele também serve pra pesquisar coisa quando o professor deixa usar.\nR-02 (9ºB): O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua.\nR-07 (9ºA): A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      }
+    },
+    {
+      "id": "SQ-097",
+      "texto": "Montei a rubrica a partir do texto que você colou: no nível 3 entra quem, como esse aluno, cita a luz e o oxigênio, mas não explica a glicose.",
+      "categoria": "rubrica_sob_medida",
+      "esperado": "casa",
+      "contexto": {
+        "mensagemDoProfessor": "cria uma rubrica pra esse tipo de resposta",
+        "turnosDoProfessor": [
+          "A fotossintese é quando a planta pega a luz do sol e transforma em comida pra ela, e ela solta oxigenio pelas folhas que é o que a gente respira."
+        ]
+      },
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SQ-098",
+      "texto": "Critério 2, ajustado a este texto: o aluno precisa dizer por que o carvão importava, o que aqui não aparece.",
+      "categoria": "rubrica_sob_medida",
+      "esperado": "casa",
+      "contexto": {
+        "mensagemDoProfessor": "faz os critérios de correção antes de eu aplicar",
+        "turnosDoProfessor": [
+          "A revolução industrial começou na Inglaterra porque eles tinham muito carvão e as maquinas faziam o trabalho que antes era feito na mão, ai as pessoas foram pra cidade trabalhar nas fabricas."
+        ]
+      },
+      "fonte": "sintetica"
+    },
+    {
+      "id": "SQ-099",
+      "texto": "Critérios montados com o texto que você colou como exemplo: 1) cita que chove pouco no Nordeste; 2) relaciona o clima seco com a caatinga; 3) explica por que a vegetação aguenta pouca água.",
+      "categoria": "rubrica_sob_medida",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "monta critérios de correção usando esse texto de exemplo",
+        "turnosDoProfessor": [
+          "O clima do nordeste é mais seco porque chove pouco e o sol é muito forte o ano todo, por isso tem a caatinga que é uma vegetação que aguenta ficar com pouca agua."
+        ]
+      }
+    }
+  ]
+}
