@@ -22,11 +22,11 @@ segue, e o commit passa sem portão. Depois desta tarefa, o hook que não carreg
 
 ## Subtarefas
 
-- [ ] 5.1 — O comando `portao` de `.claude/settings.json` ganha `|| { echo '…' >&2; exit 2; }`, com o texto de
+- [x] 5.1 — O comando `portao` de `.claude/settings.json` ganha `|| { echo '…' >&2; exit 2; }`, com o texto de
   `onda-0.md` §2.5; o `registrar` fica como está
-- [ ] 5.2 — `tools/processo/hook-portao.test.ts` roda o comando lido do `settings.json` sobre uma cópia de `tools/processo/`
-- [ ] 5.3 — A sessão de teste que confirma o exit 2 no Claude Code, registrada neste documento
-- [ ] 5.4 — Testes: carga quebrada sai 2 com a mensagem; hook são sai 0 e o `deny` passa intacto
+- [x] 5.2 — `tools/processo/hook-portao.test.ts` roda o comando lido do `settings.json` sobre uma cópia de `tools/processo/`
+- [x] 5.3 — A sessão de teste que confirma o exit 2 no Claude Code, registrada neste documento
+- [x] 5.4 — Testes: carga quebrada sai 2 com a mensagem; hook são sai 0 e o `deny` passa intacto
 
 ## Arquivos previstos
 
@@ -80,6 +80,7 @@ reprovações na A1). Sem nenhuma, escreva "nenhuma".
 
 | Divergência | Motivo | Onde está na spec (`techspec.md` §, id do `cenarios.md`, documento da seção 11) |
 |---|---|---|
+| nenhuma | | |
 
 ## Mutações
 
@@ -90,11 +91,57 @@ O portão da tarefa aplica cada bloco, roda o teste citado e exige vermelho. Lin
 `teste:` (só em teste de e2e; sem ela o caso roda no `chromebook`). Sem cláusula nova, escreva "nenhuma".
 
 ```mutacao
-arquivo: [caminho do arquivo que tem a cláusula]
-teste: [caminho do teste] › [nome do caso]
-  [linha de contexto, que fica]
-- [a cláusula que sai]
+arquivo: .claude/settings.json
+teste: tools/processo/hook-portao.test.ts › import de módulo que não existe: sai 2 e diz o que fazer
+- "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao || { echo 'hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.' >&2; exit 2; }"
++ "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao"
 ```
+
+```mutacao
+arquivo: .claude/settings.json
+teste: tools/processo/hook-portao.test.ts › erro de sintaxe em revisoes.ts: sai 2
+- "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao || { echo 'hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.' >&2; exit 2; }"
++ "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao"
+```
+
+```mutacao
+arquivo: .claude/settings.json
+teste: tools/processo/hook-portao.test.ts › módulo que lança ao carregar: sai 2
+- "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao || { echo 'hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.' >&2; exit 2; }"
++ "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao"
+```
+
+```mutacao
+arquivo: .claude/settings.json
+teste: tools/processo/hook-portao.test.ts › import de módulo que não existe: sai 2 e diz o que fazer
+- "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao || { echo 'hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.' >&2; exit 2; }"
++ "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao || { exit 2; }"
+```
+
+```mutacao
+arquivo: .claude/settings.json
+teste: tools/processo/hook-portao.test.ts › hook são, Bash comum: sai 0 e não diz nada no stdout
+- "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao || { echo 'hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.' >&2; exit 2; }"
++ "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao ; { echo 'hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.' >&2; exit 2; }"
+```
+
+```mutacao
+arquivo: .claude/settings.json
+teste: tools/processo/hook-portao.test.ts › hook são, push do time para a develop: sai 0 e o deny da regra passa intacto no stdout
+- "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao || { echo 'hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.' >&2; exit 2; }"
++ "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" portao > /dev/null || { echo 'hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.' >&2; exit 2; }"
+```
+
+```mutacao
+arquivo: .claude/settings.json
+teste: tools/processo/hook-portao.test.ts › não ganha o exit 2: ele impediria o revisor de terminar
+- "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" registrar"
++ "command": "node \"$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts\" registrar || { exit 2; }"
+```
+
+## Sessão de teste do exit 2 (subtarefa 5.3)
+
+21/10/2026, nesta sessão do Implementador (Claude Code, `claude --agent implementador`, node 22.23.2, o `settings.json` já com o comando novo). Foi acrescentado a `tools/processo/hook-revisoes.ts` um `import` de módulo que não existe e, em seguida, rodado um Bash comum (`echo`). O Claude Code **bloqueou o Bash**: o `echo` não rodou, o erro do node veio como "PreToolUse:Bash hook error" e a última linha era a mensagem "hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.". O `{ …; }` do `sh` foi aceito pelo Claude Code. O `import` foi tirado pelo Edit (que não passa pelo Bash) e o Bash voltou; `git status` só mostra o `settings.json` e o teste novo.
 
 ## Recomendações sem aplicar
 
@@ -105,9 +152,23 @@ não promessa. "Anularia as aprovações" não é motivo (`/executar-task`, pass
 
 | Revisor e rodada | Recomendação | Destino ou motivo |
 |---|---|---|
+| test-engineer (1ª) | `hook-portao.test.ts:56`: o filho herda `process.env` inteiro do vitest; montar o ambiente mínimo (`PATH`, `CLAUDE_PROJECT_DIR`, `CLAUDE_CODE_AGENT`) | Recusada: o revisor diz "Hoje passa" e o risco é hipotético (um `NODE_OPTIONS` futuro). Um ambiente mínimo pode tirar do `sh` e do `node` variável de que eles precisam (`HOME`, `PATH` do node) e deixaria o teste mais frágil do que está. Se o runner passar a mexer em `NODE_OPTIONS` e um caso do hook ficar vermelho por isso, a correção é nesse momento |
 
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina, e o que os revisores exigem vai para
      achados/<este arquivo>, resumido em achados/indice.md. Não escreva nenhum dos três à mão
      e não acrescente seção depois de "Revisões". -->
 
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-10-21 20:05:56 | 2026-10-21 20:06:27 | `revisor-geral` | 1 | APROVADO | a0a4ca6f0735fa1bd |
+| 2026-10-21 20:05:55 | 2026-10-21 20:06:36 | `test-engineer` | 1 | APROVADO | abf029fa82dee4515 |
+| 2026-10-21 20:11:54 | 2026-10-21 20:12:09 | `revisor-geral` | 2 | APROVADO | ae11d1c9061e1221b |
+| 2026-10-21 20:11:49 | 2026-10-21 20:12:14 | `test-engineer` | 2 | APROVADO | ab8fe347fa6210c86 |

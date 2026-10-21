@@ -48,3 +48,6 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-21 20:24:12 | `test-engineer` | 1ª | APROVADO | `4_task` | Segunda janela sem duas asserções. O caso "abre entre a execução e a conclusão" em `tutor-modelo.int.test.ts` não afirma que a pergunta continua em… |
 | 2026-10-21 20:30:55 | `revisor-geral` | 2ª | APROVADO | `4_task` | `apps/api/src/tutor/tutor.int.test.ts:514`: o comentário "A pergunta continua no registro que o professor vê" repete a frase do `onda-0.md` §2.4. O próprio… |
 | 2026-10-21 20:30:59 | `test-engineer` | 2ª | APROVADO | `4_task` | A linha 60 da tabela diz que a marca é procurada também no Redis. As asserções novas da segunda janela não olham o Redis, só as tabelas e o log. Essa janela… |
+| 2026-10-21 20:06:27 | `revisor-geral` | 1ª | APROVADO | `5_task` | `hook-portao.test.ts:24-25`: `comandoDe` chama `expect` fora de um `it`. Em `const portao = comandoDe(...)`, dentro do `describe`, esse `expect` roda na… |
+| 2026-10-21 20:06:36 | `test-engineer` | 1ª | APROVADO | `5_task` | `hook-portao.test.ts:41` copia só os `.ts` de `tools/processo/`. Se o hook passar a importar arquivo de outra pasta, ou que não seja `.ts`, os casos do hook… |
+| 2026-10-21 20:12:14 | `test-engineer` | 2ª | APROVADO | `5_task` | nenhuma nova. |
