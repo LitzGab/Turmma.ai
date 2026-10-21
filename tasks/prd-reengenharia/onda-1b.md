@@ -98,10 +98,10 @@ criarPolitica({ id, regra, erraPara: 'mais' | 'menos', grupos: Record<string, re
 
 **O `ouro` protegido (29.0)**, fora de `tools/processo`:
 1. O `selo-do-ouro.test.ts` da 1.0 passa para o módulo de políticas.
-2. `tools/guardas/ouro-separado.ts`, com teste, lê o `git log --name-only` (esteira com `fetch-depth: 0`): o commit que
-   toca `docs/aia/ouro/**` só toca `docs/` e leva `(ouro: …)`; commit com `(tarefa` ou `(correção` nunca o toca; em clone
-   raso, falha.
-3. O `conformidade-reviewer` confere `git log <base>..HEAD -- docs/aia/ouro` vazio (`<base>`: o commit do início da tarefa) em toda tarefa de política.
+2. `tools/guardas/ouro-separado.ts`, com teste, lê `git log --no-renames --name-only -m --first-parent 400dc42..HEAD`
+   (`400dc42` é a origem do corpus; esteira com `fetch-depth: 0`): o commit que toca `docs/aia/ouro/**` só toca `docs/` e
+   leva `(ouro: …)`; `(tarefa` e `(correção` nunca o tocam; clone raso falha.
+3. Em toda tarefa de política, o `conformidade-reviewer` confere `git log <início da tarefa>..HEAD -- docs/aia/ouro` vazio.
 
 O marcador forjado num commit só de docs, só a 3 pega; o guardião por caminho fica para a Etapa 9.
 

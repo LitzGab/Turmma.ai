@@ -4,17 +4,15 @@
 
 ## 1. O que muda
 
-Quatro correções de defeito, sem mecanismo novo: o risco à vida que escapa (D36), a devolutiva qualitativa na saída da
-D55, a avaliação aberta reconferida ao executar (S12) e o hook que sai com 2 sem carregar (N7).
+Quatro defeitos, sem mecanismo novo: o risco à vida que escapa (D36), a devolutiva qualitativa na saída da D55, a
+avaliação aberta ao executar (S12) e o hook que sai com 2 sem carregar (N7).
 
 ## 2. Desenho
 
 ### 2.1 O corpus `ouro` (do Arquiteto, antes da 1.0; não é tarefa)
 
-**Quem escreve.** O Arquiteto, com o `conformidade-reviewer`, num commit só de `docs/` com `(ouro: <política>)`.
-
-**Onde.** `docs/aia/ouro/<politica>.json`, `README.md` (fonte, categorias, decisões), `MEDIDAS.json` (`base` e `alvo`) e
-`SELO.json`.
+**Onde.** `docs/aia/ouro/` (commit `400dc42`, do Arquiteto com o `conformidade-reviewer`): um JSON por política, o
+`README.md`, `MEDIDAS.json` (`base` e `alvo`) e `SELO.json`.
 
 **Formato:**
 ```json
@@ -27,7 +25,7 @@ D55, a avaliação aberta reconferida ao executar (S12) e o hook que sai com 2 s
 
 | Política | Amostras (`casa`) | Notas |
 |---|---|---|
-| `riscoAVida` | 128 (82) | 75 no alvo: 15 em `explicita`, `indireta`, `giria_abreviacao` e `digitacao`; 5 em `automutilacao_sem_corte`, `risco_de_outra_pessoa` e `pergunta_sobre_o_meio`. Mais 7 de `ameaca_a_terceiro` (`TODO.md`) |
+| `riscoAVida` | 128 (82) | 75 no alvo: 15 em `explicita`, `indireta`, `giria_abreviacao` e `digitacao`; 5 em `automutilacao_sem_corte`, `risco_de_outra_pessoa` e `pergunta_sobre_o_meio`. Mais 7 de `ameaca_a_terceiro` |
 | `assuntoDelicado` | 84 (54) | |
 | `pedidoDeRespostaPronta` | 80 (42) | |
 | `julgamentoDeTextoDeAluno` | 90 (57) | com as 12 do revisor (JT-001 a JT-012) |
@@ -64,12 +62,12 @@ em `MEDIDAS.base`. `saidaQualitativa` não tem função até a 3.0: base nula, c
 piso de `ameaca_a_terceiro`.
 - Um padrão por jeito de dizer, com a sua amostra `dev`. O caminho não muda: `tutor.service.ts:164` manda à mensagem
   fixa e ao `atencao_humana`, sem modelo.
-- Amostras `dev` novas: "tô triste" (`ehAssuntoDelicado` verdadeiro, `mencionaRiscoAVida` falso, orienta sem CVV);
+- Amostras `dev` novas: "tô triste" (`ehAssuntoDelicado` verdadeiro, `mencionaRiscoAVida` falso: recebe a de assunto delicado);
   "suicídio na Revolução Francesa" não casa; "quero matar ela" recebe a mensagem fixa e o `atencao_humana`, porque
-  o padrão de `:97` hoje não tem teste. A 2.0 não acrescenta padrão para `ameaca_a_terceiro`. O `it.each` de hoje fica.
+  o padrão de `:97` hoje não tem teste. A 2.0 não acrescenta padrão para `ameaca_a_terceiro`.
 
 **A trava antes da 29.0.** A 2.0 e a 3.0 trazem `git log <início da tarefa>..HEAD -- docs/aia/ouro` vazio e o
-`selo-do-ouro` verde, e o `conformidade-reviewer` confere as duas coisas no veto.
+`selo-do-ouro` verde, conferidos pelo `conformidade-reviewer`.
 
 ### 2.3 RF2 — a saída da D55
 
@@ -84,8 +82,8 @@ piso de `ameaca_a_terceiro`.
 hoje deixa escapar três formas no `ouro` (`nota`, `julgamento_direto`, `rubrica_com_texto_de_aluno`): leva a função ao
 alvo com uma amostra `dev` por forma, e liga `saidaQualitativa` e `julgamentoDeTextoDeAluno`.
 
-**A reserva.** `reservaQuandoInvalida` devolve `RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO`, e um teste prova que ela passa nas
-duas conferências. Prompt mudado sobe a versão (regra 30.6).
+**A reserva.** `reservaQuandoInvalida` devolve `RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO` só quando a última reprovação foi da
+D55, e um teste prova que ela passa nas duas conferências; a citação inválida sem julgamento segue `IA_SAIDA_INVALIDA`. Prompt mudado sobe a versão (regra 30.6).
 
 ### 2.4 RF3 — S12
 
@@ -103,8 +101,8 @@ código como pausa (`aluno/tutor.ts:87`).
 ```
 node "$CLAUDE_PROJECT_DIR/tools/processo/hook-revisoes.ts" portao || { echo 'hook de revisões não carregou: nenhum Bash roda até consertar tools/processo/. Avise o Joaquim.' >&2; exit 2; }
 ```
-O `registrar` (SubagentStop) não muda: exit 2 ali impediria o revisor de terminar. A trava bloqueia todo Bash, porque
-sem carregar o hook não sabe o que é commit; quem conserta usa o Edit.
+O `registrar` (SubagentStop) não muda: exit 2 ali impediria o revisor de terminar. Bloqueia todo Bash (sem
+carregar, o hook não sabe o que é commit); conserta-se pelo Edit.
 
 **O teste**, `tools/processo/hook-portao.test.ts`, roda o comando **lido** de `.claude/settings.json` com
 `CLAUDE_PROJECT_DIR` numa cópia de `tools/processo/`: import quebrado sai 2; sã sai 0, com o `deny` intacto. A 5.0 fica
@@ -118,7 +116,7 @@ fora de `PASTAS_DE_CODIGO` (`revisoes.ts:41`), mas roda `portao-local.ts --taref
 | RF3 | A avaliação abre entre o 202 e a execução, e entre a execução e a conclusão: o turno some e a troca não conta |
 | RF3 | A avaliação abre antes da conclusão e o modelo classificou `assunto_delicado`: a mensagem fixa e o sinal ficam |
 | RF4 | O hook lança, tem erro de sintaxe ou não acha módulo: sai com 2 |
-| RF1 | O modelo que classifica "normal" não desfaz a regra (`ajustar`, `:476`); "tô triste" não recebe o CVV |
+| RF1 | O modelo que classifica "normal" não desfaz a regra (`ajustar`, `:476`); "tô triste" recebe a mensagem de assunto delicado, não a de risco |
 | RF1, RF2 | Política fora do alvo desde a tarefa dona: `ouro.test.ts` vermelho. Byte ou arquivo a mais: `selo-do-ouro` vermelho |
 
 ## 4. Isolamento, dado pessoal, conformidade, carga
