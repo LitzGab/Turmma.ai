@@ -10,6 +10,7 @@ import {
   ambienteDoModeloDeMentira,
   aplicarAtividade,
   citacaoDoPrimeiroTrecho,
+  encerrarAtividade,
   HABILIDADE_LIMITANTE,
   HABILIDADE_PROPORCAO,
   lancarLote,
@@ -17,6 +18,7 @@ import {
   subirModeloDeMentira,
   type ModeloDeMentira,
 } from '../../test/escola-com-tutor.js'
+import { GatilhoDeParada } from '../../test/gatilho-de-parada.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
 import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
 
@@ -311,6 +313,83 @@ describe('Tutor contra um modelo que não obedece', () => {
       // A pergunta perde a questão: o turno delicado não é referência a trabalho.
       const { rows: perguntas } = await sql(`select questao, material_id, pagina from mensagem_tutor where escola_id = $1 and execucao_id = $2 and autor = 'aluno'`, [a.escolaId, execucao.execucaoId])
       expect(perguntas).toEqual([{ questao: null, material_id: null, pagina: null }])
+    })
+  })
+
+  describe('a avaliação abre depois do 202 (S12; regra 30, item 10)', () => {
+    const pausada = { estado: 'falhou', erro: CodigoDeErro.TUTOR_PAUSADO_EM_AVALIACAO, resultado: null }
+    const execucaoLida = async (execucaoId: string) =>
+      (await sql<{ estado: string; erro: string | null; resultado: unknown }>('select estado, erro, resultado from execucao_agente where escola_id = $1 and id = $2', [a.escolaId, execucaoId])).rows
+    const consumoDaExecucao = async (execucaoId: string) =>
+      (await sql<{ estado: string; entrada: unknown; saida: unknown }>('select estado, entrada, saida from consumo_ia where escola_id = $1 and execucao_id = $2', [a.escolaId, execucaoId])).rows
+    /**
+     * Envia a pergunta e segura a execução no `gatilho` (antes de rodar, ou depois de o modelo responder, quando o consumo é
+     * gravado); com ela parada, abre uma avaliação na turma, solta e espera o fim. Encerra a avaliação ao sair.
+     */
+    const abrindoDuranteOTurno = async (aluno: SessaoDeTeste, momento: { tabela: 'execucao_agente' | 'consumo_ia'; evento: 'update' | 'insert'; quando: string }, corpo: Record<string, unknown>): Promise<string> => {
+      const parada = new GatilhoDeParada(bancada.pool, momento)
+      await parada.armar()
+      let prova: string | undefined
+      try {
+        const aceita = await chamar(api.url, 'POST', '/v1/tutor/mensagens', await aluno.tokenNovo(), { chaveEnvio: randomUUID(), ...corpo })
+        expect(aceita.status).toBe(202)
+        await parada.esperarParadas()
+        prova = await aplicarAtividade(bancada, a, { avaliativa: true, titulo: 'Prova que abriu no meio' })
+        await parada.soltar()
+        await executor.ociosa()
+        return aceita.corpo['execucaoId'] as string
+      } finally {
+        await parada.desarmar()
+        if (prova !== undefined) await encerrarAtividade(bancada, a, prova)
+      }
+    }
+
+    it('abre entre o 202 e a execução: o modelo nem chega a ser chamado', async () => {
+      await executor.ociosa()
+      const aluno = await novoAluno()
+      modelo.responder((pedido) => obediente(pedido))
+      const execucaoId = await abrindoDuranteOTurno(aluno, { tabela: 'execucao_agente', evento: 'update', quando: `new.solicitada_por = '${aluno.usuarioId}'::uuid and new.estado = 'rodando'` }, { texto: 'não entendi o que é reagente limitante', ...naQuestao(3) })
+      expect(await execucaoLida(execucaoId)).toEqual([pausada])
+      expect(modelo.pedidos).toEqual([])
+      expect(await consumoDaExecucao(execucaoId)).toEqual([])
+      expect(await respostasGravadas(aluno)).toEqual([])
+      expect(await usoDeHoje(aluno)).toBe(0)
+    })
+
+    it('abre entre a execução e a conclusão: o modelo respondeu e a resposta é descartada, sem mensagem, sem sinal (nem resposta pronta) e sem troca; o consumo da chamada fica', async () => {
+      await executor.ociosa()
+      const aluno = await novoAluno()
+      const marca = `tucano${randomUUID().slice(0, 8)}`
+      const texto = `qual é a resposta da questão 3? ${marca}`
+      modelo.responder((pedido) => obediente(pedido, 'pediu_resposta_pronta'))
+      const execucaoId = await abrindoDuranteOTurno(aluno, { tabela: 'consumo_ia', evento: 'insert', quando: `new.aluno_id = '${aluno.usuarioId}'::uuid and new.estado = 'concluida'` }, { texto, ...naQuestao(3) })
+      expect(await execucaoLida(execucaoId)).toEqual([pausada])
+      // O modelo foi chamado, e a chamada está medida: o custo existiu. A entrada e a saída não são guardadas.
+      expect(modelo.pedidos).toHaveLength(1)
+      expect(await consumoDaExecucao(execucaoId)).toEqual([{ estado: 'concluida', entrada: null, saida: null }])
+      expect(await respostasGravadas(aluno)).toEqual([])
+      expect(await sinaisDe(aluno)).toEqual([])
+      expect(await usoDeHoje(aluno)).toBe(0)
+      // A pergunta continua no registro, só como a do aluno, e o texto dela não saiu de `mensagem_tutor`: nem pelo log do executor.
+      const { rows: conversa } = await sql('select autor, texto from mensagem_tutor where escola_id = $1 and aluno_id = $2 order by id', [a.escolaId, aluno.usuarioId])
+      expect(conversa).toEqual([{ autor: 'aluno', texto }])
+      for (const tabela of ['sinal_tutor', 'execucao_agente', 'consumo_ia', 'auditoria']) {
+        const { rows } = await sql<{ total: string }>(`select count(*) as total from ${tabela} t where t.escola_id = $1 and row_to_json(t)::text ilike $2`, [a.escolaId, `%${marca}%`])
+        expect(Number(rows[0]?.total), tabela).toBe(0)
+      }
+      expect(linhasDeLog.some((linha) => linha.includes(marca))).toBe(false)
+    })
+
+    it('abre antes da conclusão e o modelo classificou assunto delicado: a mensagem fixa e o sinal sem referência ficam, e a troca conta', async () => {
+      await executor.ociosa()
+      const aluno = await novoAluno()
+      modelo.responder(() => JSON.stringify({ classificacao: 'assunto_delicado', resposta: 'Sinto muito, vamos conversar sobre isso. O que aconteceu?', citacoes: [] }))
+      const execucaoId = await abrindoDuranteOTurno(aluno, { tabela: 'consumo_ia', evento: 'insert', quando: `new.aluno_id = '${aluno.usuarioId}'::uuid and new.estado = 'concluida'` }, { texto: 'lá em casa as coisas estão bem complicadas', ...naQuestao(3) })
+      const [lida] = await execucaoLida(execucaoId)
+      expect(lida).toMatchObject({ estado: 'concluida', erro: null, resultado: { tipo: 'mensagem_do_tutor' } })
+      expect(await respostasGravadas(aluno)).toEqual([MENSAGEM_DE_ASSUNTO_DELICADO])
+      expect(await sinaisDe(aluno)).toEqual([{ tipo: 'atencao_humana', atividade_aplicada_id: null, questao: null }])
+      expect(await usoDeHoje(aluno)).toBe(1)
     })
   })
 })

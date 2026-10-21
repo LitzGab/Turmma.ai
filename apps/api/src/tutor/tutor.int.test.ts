@@ -2,7 +2,7 @@ import { MENSAGEM_DE_ASSUNTO_DELICADO, MENSAGEM_DE_RISCO_A_VIDA, type ExecutorNo
 import { esquemaRespostaConversaDoTutor, esquemaRespostaMemoriaDoTutor, esquemaRespostaSinais, esquemaRespostaUsoDoTutor, TROCAS_POR_DIA_PADRAO_DO_TUTOR, type ChaveDeFuncao } from '@educa/shared'
 import type { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
 import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from '../../test/api-com-sessao.js'
 import {
@@ -36,6 +36,7 @@ import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste
 import { TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from '../assistente/limite-de-pedidos-de-ia.js'
 import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
 import { CLIENTE_REDIS_CACHE } from '../limite.module.js'
+import { BuscaDeTrechos } from '../material/busca-de-trechos.js'
 import { CLIENTE_REDIS_LOGIN } from '../sessao/sessao.module.js'
 import { TROCAS_SEGUIDAS_PARA_TRAVOU } from './sinais-do-turno.js'
 import { SupervisaoDoTutorRepository } from './supervisao.repository.js'
@@ -456,6 +457,123 @@ describe('Tutor e sinais', () => {
       // Encerrada, o Tutor volta, e ajuda na própria prova sem receber o gabarito (a questão vai sem ele em qualquer estado).
       const dita = resposta(await turno(doC, 'qual é a resposta da questão 3?', { atividadeAplicadaId: prova, questao: 3 }))
       expect(dita.texto).not.toContain(ALTERNATIVA_CERTA_DA_QUESTAO_3)
+    })
+  })
+
+  describe('a avaliação abre depois do 202 (S12; regra 30, item 10)', () => {
+    /** As provas que o caso abriu: a `afterEach` as encerra, passe ou falhe o caso. */
+    const abertas: string[] = []
+    afterEach(async () => {
+      for (const prova of abertas.splice(0)) await encerrarAtividade(bancada, a, prova)
+    })
+    const abrirProva = async (turmaId: string = a.turma, titulo = 'Prova que abriu no meio'): Promise<string> => {
+      const prova = await aplicarAtividade(bancada, a, { avaliativa: true, turmaId, titulo, ...(turmaId === a.turma ? {} : { aplicadaPor: a.colega.usuarioId }) })
+      abertas.push(prova)
+      return prova
+    }
+    /**
+     * Envia as perguntas, espera todas as execuções paradas antes de rodar (o `update` para `rodando`), roda `aoParar` e
+     * solta. Devolve as respostas do `POST`, com as execuções já terminadas.
+     */
+    const abrindoEntreO202EAExecucao = async (alunos: readonly SessaoDeTeste[], enviarTodos: () => Promise<RespostaHttp[]>, aoParar: () => Promise<void>): Promise<RespostaHttp[]> => {
+      const ids = alunos.map((aluno) => `'${aluno.usuarioId}'::uuid`).join(', ')
+      const parada = new GatilhoDeParada(bancada.pool, { tabela: 'execucao_agente', evento: 'update', quando: `new.solicitada_por in (${ids}) and new.estado = 'rodando'` })
+      await parada.armar()
+      let aceitas: RespostaHttp[]
+      try {
+        aceitas = await enviarTodos()
+        expect(aceitas.map((aceita) => aceita.status)).toEqual(alunos.map(() => 202))
+        await parada.esperarParadas(alunos.length)
+        await aoParar()
+      } finally {
+        await parada.desarmar()
+      }
+      await executor.ociosa()
+      return aceitas
+    }
+    const execucaoLida = async (execucaoId: string) =>
+      (await sql<{ estado: string; erro: string | null; resultado: unknown }>('select estado, erro, resultado from execucao_agente where escola_id = $1 and id = $2', [a.escolaId, execucaoId])).rows
+    const consumoDaExecucao = async (execucaoId: string) => Number((await sql<{ total: string }>('select count(*) as total from consumo_ia where escola_id = $1 and execucao_id = $2', [a.escolaId, execucaoId])).rows[0]?.total)
+    const pausada = { estado: 'falhou', erro: 'TUTOR_PAUSADO_EM_AVALIACAO', resultado: null }
+
+    it('abre entre o 202 e a execução: a execução falha com o código da pausa, sem trecho, sem modelo, sem resposta, sem sinal e sem troca; a pergunta fica só na conversa; o reenvio devolve a mesma execução', async () => {
+      await executor.ociosa()
+      const aluno = await novoAluno(a)
+      const marca = `sabia${randomUUID().slice(0, 8)}`
+      const texto = `não entendi o reagente limitante ${marca}`
+      const chaveEnvio = randomUUID()
+      const corpo = { texto, ...naQuestao(3), materialId: a.materialId, pagina: 4, chaveEnvio }
+      const buscar = vi.spyOn(api.app.get(BuscaDeTrechos), 'buscar')
+      try {
+        const [aceita] = await abrindoEntreO202EAExecucao([aluno], async () => [await enviar(aluno, corpo)], async () => void (await abrirProva()))
+        const execucaoId = aceita?.corpo['execucaoId'] as string
+        expect(await execucaoLida(execucaoId)).toEqual([pausada])
+        // Nada do turno rodou: a busca de trechos não foi chamada para esta pergunta, e o modelo não deixou consumo.
+        expect(buscar.mock.calls.filter(([pedido]) => pedido.texto.includes(marca))).toEqual([])
+        expect(await consumoDaExecucao(execucaoId)).toBe(0)
+        // A pergunta continua no registro que o professor vê, sem resposta, e nenhum sinal nasceu.
+        expect(await mensagensDe(aluno)).toEqual([{ autor: 'aluno', tipo: 'texto', texto, questao: 3, material_id: a.materialId, pagina: 4, atividade_aplicada_id: atividade }])
+        expect(await sinaisDe(aluno)).toEqual([])
+        // A troca não conta: nem a barra do aluno, nem a lista da professora.
+        expect((await conversaDe(aluno, `?atividadeAplicadaId=${atividade}`)).uso.hoje).toBe(0)
+        expect((await usoPara(a.professora, a.turma)).alunos.find((linha) => linha.aluno.id === aluno.usuarioId)?.trocasHoje ?? 0).toBe(0)
+        // O texto dele não saiu de `mensagem_tutor`: nem para sinal, execução, consumo, auditoria, log ou Redis.
+        expect(await ondeVazou(a.escolaId, marca)).toEqual([])
+
+        // O reenvio com a mesma chave, com a avaliação ainda aberta, devolve a mesma execução já `falhou`: sem nova pergunta e sem troca.
+        const reenvio = await enviar(aluno, corpo)
+        expect(reenvio).toMatchObject({ status: 202, corpo: { execucaoId } })
+        await executor.ociosa()
+        expect(await execucaoLida(execucaoId)).toEqual([pausada])
+        expect((await mensagensDe(aluno)).map((mensagem) => mensagem.autor)).toEqual(['aluno'])
+        expect((await conversaDe(aluno, `?atividadeAplicadaId=${atividade}`)).uso.hoje).toBe(0)
+      } finally {
+        buscar.mockRestore()
+      }
+    })
+
+    it('transferido para uma turma em prova entre o 202 e a execução: a execução falha como inexistente, e não como pausa', async () => {
+      const aluno = await novoAluno(a)
+      const [aceita] = await abrindoEntreO202EAExecucao(
+        [aluno],
+        async () => [await enviar(aluno, { texto: 'como eu organizo o estudo de estequiometria?' })],
+        async () => {
+          await abrirProva(a.outraTurma, 'Prova sintética da outra turma')
+          await transferir(a, aluno)
+        },
+      )
+      expect(await execucaoLida(aceita?.corpo['execucaoId'] as string)).toEqual([{ estado: 'falhou', erro: 'NAO_ENCONTRADO', resultado: null }])
+      expect(await sinaisDe(aluno)).toEqual([])
+      expect((await mensagensDe(aluno)).map((mensagem) => mensagem.autor)).toEqual(['aluno'])
+    })
+
+    it('a avaliação de outra turma da escola abre no meio: o turno conclui, com resposta e troca contada', async () => {
+      const aluno = await novoAluno(a)
+      const [aceita] = await abrindoEntreO202EAExecucao([aluno], async () => [await enviar(aluno, { texto: 'não entendi a questão 3', ...naQuestao(3) })], async () => void (await abrirProva(a.outraTurma, 'Prova sintética da outra turma')))
+      const execucaoId = aceita?.corpo['execucaoId'] as string
+      expect((await execucaoLida(execucaoId)).map((linha) => linha.estado)).toEqual(['concluida'])
+      expect((await mensagensDe(aluno)).map((mensagem) => mensagem.autor)).toEqual(['aluno', 'tutor'])
+      expect((await conversaDe(aluno, `?atividadeAplicadaId=${atividade}`)).uso.hoje).toBe(1)
+    })
+
+    it('dois alunos parados ao entrar em `rodando` quando a prova abre (dois bastam para segurar as duas vagas da escola ao mesmo tempo): todas as execuções falham, nenhuma chama o modelo e nenhuma troca é contada', async () => {
+      await executor.ociosa()
+      const alunos = [await novoAluno(a), await novoAluno(a)]
+      const noMesAntes = (await usoPara(a.professora, a.turma)).trocasDaTurmaNoMes
+      const aceitas = await abrindoEntreO202EAExecucao(
+        alunos,
+        () => Promise.all(alunos.map((aluno) => enviar(aluno, { texto: 'não entendi a questão 3', ...naQuestao(3) }))),
+        async () => void (await abrirProva()),
+      )
+      expect(new Set(aceitas.map((aceita) => aceita.corpo['execucaoId'])).size).toBe(alunos.length)
+      for (const [posicao, aceita] of aceitas.entries()) {
+        const execucaoId = aceita.corpo['execucaoId'] as string
+        expect(await execucaoLida(execucaoId), `aluno ${String(posicao)}`).toEqual([pausada])
+        expect(await consumoDaExecucao(execucaoId), `aluno ${String(posicao)}`).toBe(0)
+        expect((await mensagensDe(alunos[posicao] as SessaoDeTeste)).map((mensagem) => mensagem.autor)).toEqual(['aluno'])
+        expect(await sinaisDe(alunos[posicao] as SessaoDeTeste)).toEqual([])
+      }
+      expect((await usoPara(a.professora, a.turma)).trocasDaTurmaNoMes).toBe(noMesAntes)
     })
   })
 

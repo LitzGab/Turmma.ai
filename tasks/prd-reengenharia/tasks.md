@@ -32,7 +32,7 @@ seguinte ao Arquiteto. A 92.0 é a parada da Etapa 9, e dela nascem as tarefas d
   - [ ] 3.4 `ouro.test.ts` liga `saidaQualitativa` e `julgamentoDeTextoDeAluno`
   - [ ] 3.5 Testes: as chaves, a reserva, o alvo
 
-- [ ] **4.0 — Avaliação aberta depois do 202: o Tutor não responde e a troca não conta**
+- [x] **4.0 — Avaliação aberta depois do 202: o Tutor não responde e a troca não conta**
   - [ ] 4.1 `entrada()` confere `avaliativaAberta(turmaId)` logo depois da conferência de turma, antes de trechos, memória e turnos, e lança `TUTOR_PAUSADO_EM_AVALIACAO`
   - [ ] 4.2 `aoConcluir` repete a conferência na transação que grava a resposta; a saída `assunto_delicado` grava a mensagem fixa e o `atencao_humana` mesmo com a avaliação aberta
   - [ ] 4.3 Testes: as duas janelas com `GatilhoDeParada`, a exceção da D36, a concorrência, a caracterização da web
