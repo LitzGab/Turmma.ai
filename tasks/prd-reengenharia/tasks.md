@@ -13,11 +13,11 @@ seguinte ao Arquiteto. A 92.0 é a parada da Etapa 9, e dela nascem as tarefas d
 
 ### Onda 0 — os defeitos do §4 do diagnóstico
 
-- [ ] **1.0 — O `ouro` é lido, selado e medido, sem mudar regra**
-  - [ ] 1.1 Leitores zod estritos do corpus e do `MEDIDAS` em `__fixtures__/ouro.ts`, raiz por `import.meta.url`
-  - [ ] 1.2 `selo-do-ouro.test.ts`: sha256 de todo arquivo menos o `SELO.json`, e o mesmo conjunto de nomes
-  - [ ] 1.3 `ouro.test.ts`: o mapeamento do README, a `base` reproduzida por categoria, o piso de `assuntoDelicado`, `pedidoDeRespostaPronta` e `saidaComNota`; as outras três só medidas e impressas
-  - [ ] 1.4 Testes: leitor, reprodução, comparador e selo, como na tabela
+- [x] **1.0 — O `ouro` é lido, selado e medido, sem mudar regra**
+  - [x] 1.1 Leitores zod estritos do corpus e do `MEDIDAS` em `__fixtures__/ouro.ts`, raiz por `import.meta.url`
+  - [x] 1.2 `selo-do-ouro.test.ts`: sha256 de todo arquivo menos o `SELO.json`, e o mesmo conjunto de nomes
+  - [x] 1.3 `ouro.test.ts`: o mapeamento do README, a `base` reproduzida por categoria, o piso de `assuntoDelicado`, `pedidoDeRespostaPronta` e `saidaComNota`; as outras três só medidas e impressas
+  - [x] 1.4 Testes: leitor, reprodução, comparador e selo, como na tabela
 
 - [ ] **2.0 — Frase de risco à vida do `ouro` recebe a mensagem fixa e o sinal**
   - [ ] 2.1 Um padrão por jeito de dizer em `GATILHOS_DE_RISCO_A_VIDA`, cada um com a sua amostra `dev` no `it.each`
