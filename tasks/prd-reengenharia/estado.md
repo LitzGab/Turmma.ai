@@ -45,13 +45,14 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
   - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **14.0**, grande (entrada no padrão NestJS, D81), desde 11:38; prazo 15:38
-    12:00, DIVERGÊNCIA de portão (os 3 casos do `ouro.test.ts`): mandei trazer o `05aa2fe` da `spec/reengenharia--l1` (o
-    único commit dela além da spec) e rodar o portão de novo
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **51.0 pronta** (`50e04d0`, 2 rodadas), **encontro recusado** porque o
-    andar da spec tem os `docs/aia/ouro-retido/*-retido-1.json` do `Arquiteto` sem commit. Avisei-o. Com o relatório dele:
-    `encontro 3`, e então, **antes da 53.0, a correção do `apps/api/test/arquivo-do-titular.int.test.ts`** (3 a 4 casos de
-    data fixa vencidos desde 19/10, vermelhos com ou sem a 51.0, deixam a esteira vermelha) na linha 3
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **14.0 pronta** (`ca057e8`, 2 rodadas; tenancy, test-engineer,
+    revisor-geral). **Encontro recusado** por falso positivo: o merge `7f6ed10` (l1 → l2, que eu mandei) não traz
+    resolução (`--remerge-diff` vazio), mas `linhas.ts` julga merge de linha pelo diff contra o 1º pai. Pedi ao `Arquiteto`
+    a decisão e o conserto (merge julgado pelo `--remerge-diff`). Com o relatório dele: `encontro 2`, depois a partida da
+    linha 2 (o quadro diz qual; 15.0 espera a 14.0)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **correção `arquivo-do-titular-datas`** desde ~12:20 (casos de data
+    fixa vencidos em `apps/api/test/arquivo-do-titular.int.test.ts`, esteira vermelha; guardião privacy-guardian). É correção
+    de esteira: tem encontro próprio. Depois dela, a linha 3 pega a **53.0** (o quadro já a mostra)
 - **Devo ainda:**
   - **95.0 (guia), entregue pelo Claude Code #2** em `/home/joaquimdp/Documentos/git/Educa.ia/.processo/reengenharia/guia/`
     (`guia-do-desenvolvedor.md`, `arquitetura.md` corrigido, `LEIA.md` com o que conferir). Quando o `Arquiteto` tiver
@@ -61,13 +62,18 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     das pastas
   - todos os 36 documentos existem (`504a041`, `43a6ae2`, `bc9241f`); R55 e R56 em `DECISOES.md`. A 96.0 depende da
     97.0; a 90.0 espera a 24.0; a 43.0 e a 90.0 não correm juntas (`infra/compose.yml`)
-  - **lote retido 2 feito** (`0ff264c`, `1f770ea`, R59): regra 37/75, regra ou modelo local 51/75 (alvo ≥ 71); fecha
-    abaixo do alvo pelo recorte, com a lacuna em `onda-0.md` §2.2a, AIA do Tutor, `RETIDOS.json` e `TODO.md`; refinamento
-    e lote 3 na X6. **Pedi o lote retido dos alvos da 3.0** (saidaQualitativa, julgamentoDeTextoDeAluno), antes da validação
-  - ler o veredito da esteira de `975bad2` no próximo encontro (`b5b7d11` e `63aac92` verdes; `f794080` cancelada pelo push seguinte)
+  - **onda 0 fechada pelo recorte**: lote retido 2 do riscoAVida (R59) e lotes retidos 1 da 3.0 (`3b44efe`, medida abaixo
+    do alvo: saidaQualitativa 22/58 e 3/41 legítimas barradas; julgamento 33/57), lacuna em `2fe1d73` (R60, `onda-0.md`
+    §2.3, `TODO.md`). Ponto de produto para a X6: a entrada recusa pedido do professor sobre o próprio material com palavra
+    de nota ou correção (10/10, já antes da 3.0). **Dizer ao Joaquim no fim** que a AIA do Tutor e esta lacuna merecem o
+    olhar dele antes do piloto
+  - esteira: `f6913ee` na fila e `3f100df` rodando (ler no próximo encontro); `3b44efe` e `1f770ea` canceladas pelo push
+    seguinte. A vermelha conhecida é a do `arquivo-do-titular` (correção na linha 3)
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
-- **Base:** `spec/reengenharia` em `1f770ea`. Vigia ligada
+  - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
+    (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`)
+- **Base:** `spec/reengenharia` em `2fe1d73`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -95,6 +101,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 93.0 | `c361eb8` | Sonnet | 3 (test-engineer 4) | linha 3, grande, 09:40–11:00; escalada (dose letal) com diagnóstico: volta ao HEAD, a 3ª piora fica declarada; absorveu a correção das pioras da l2 |
 | 3.0 | `1566521` | Sonnet | 4 | linha 1, grande, 07:47–11:25; divergência (triagem: detalhe), escalada, bloqueio destravado pelo recorte; saidaQualitativa 54/58, 0 legítimas barradas; lacuna declarada no §2.3 |
 | 94.0 | `0975b97` | Sonnet | 2 | linha 2, grande, 11:07–11:36; dentro do prazo de 14:55, escopo inteiro; três recomendações no TODO.md |
+| 51.0 | `50e04d0` | Sonnet | 2 | encontro adiado até o commit dos lotes retidos da 3.0 (`3b44efe`); lacuna da 3.0 em `2fe1d73` (R60); o ponto de produto do material do professor com palavra de nota vai para a X6 |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
