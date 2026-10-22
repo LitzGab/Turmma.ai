@@ -92,8 +92,8 @@ da tarefa diz como rodá-lo.
 - [x] **51.0 — Resposta atrasada não sobrescreve, nem depois do F5 nem em outra aba**
   - [x] 51.1 O `51_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
 
-- [ ] **53.0 — Pendente sobrevive ao F5 e à sessão vencida**
-  - [ ] 53.1 O `53_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
+- [x] **53.0 — Pendente sobrevive ao F5 e à sessão vencida**
+  - [x] 53.1 O `53_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
 
 - [ ] **36.0 — O kit visual mora em `componentes/ui/` e não importa API, área nem sessão**
   - [ ] 36.1 O `36_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-2.md`, com o nome `componentes/ui/` da D81 no lugar de `kit/`

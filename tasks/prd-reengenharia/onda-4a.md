@@ -68,8 +68,10 @@ caracterização, e as travas têm catraca por arquivo, zerada na 80.0.
 - As 12 `let` e os três `Set` (76–139) vão para a closure; `sessaoDaAba = criarSessao()` mantém os 55 importadores.
 - `sessao/contexto.tsx` com `useSessao()`, que as páginas, `LoginPorCima`, `SeletorDeEscola` e `CascaDaEscola` usam
   a partir da 77.0. `renderizarTela(tela, { sessao })` dá sessão nova por caso. `operacao/api/sessao.ts` fica (P4).
-- Ficam, com teste, `anunciar()` antes de `limparDadosDaEscola()` (`sessao.ts:323-324`) e a limpeza do pendente da
-  prova no envio, no "Sair" e na troca de dono, não na sessão vencida (`:332`, 53.0).
+- Ficam, com teste, `anunciar()` antes de `limparDadosDaEscola()` (`sessao.ts:323-324`) e os ganchos `aoTrocarDeSessao`
+  e `estadoDaSessao()` que o espelho da prova usa para limpar o pendente no "Sair" e na suspensão, e não na sessão
+  vencida (53.0: a limpeza mora em `api/espelho-da-fila.ts`, carregado pela casca, e não em `sessao.ts`; a troca de
+  dono é a `CascaDaEscola` chamando `esquecerEspelhosDeOutroDono` a cada `/v1/eu`). A 57.0 não mexe nisso.
 - Trava `no-restricted-imports`: `paginas/` e `componentes/` só importam `useSessao`, e `operacao/` não importa
   `api/sessao`.
 
