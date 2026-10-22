@@ -8,6 +8,7 @@ import { relogioDoSistema, type Relogio } from '../relogio.js'
 import type { AdaptadorDeModelo, CorrecaoPedida } from './adaptador.js'
 import { AdaptadorFalso } from './adaptador-falso.js'
 import { AdaptadorOpenAICompat } from './adaptador-openai-compat.js'
+import { AdaptadorResiliente } from './adaptador-resiliente.js'
 import type { ConsumoDeIa, OrcamentoDeIa, RegistroDeConsumo } from './consumo.js'
 import { ErroDeIa, type CodigoDeErroDeIa } from './erros.js'
 import { semMarcacao } from './limpar-saida.js'
@@ -23,8 +24,6 @@ export interface DependenciasDoProvedor {
   readonly registro: RegistroDeConsumo
   readonly orcamento: OrcamentoDeIa
   readonly suspensao: SuspensaoDeFuncao
-  /** Prazo de cada chamada ao modelo (`LLM_TIMEOUT_MS`). */
-  readonly timeoutMs: number
   readonly logger?: RegistradorDeIa
   readonly relogio?: Relogio
 }
@@ -75,7 +74,7 @@ interface Gasto {
 
 /**
  * A implementação da porta, igual para todo adaptador. Em toda chamada, nesta ordem: valida a entrada, confere se a
- * escola suspendeu a função, consulta o orçamento (salvo na resposta de regra fixa), chama o modelo com prazo, valida a saída (repetindo uma vez),
+ * escola suspendeu a função, consulta o orçamento (salvo na resposta de regra fixa), chama o modelo (o prazo e a repetição do que não cobrou são do `AdaptadorResiliente`), valida a saída (repetindo uma vez),
  * registra o consumo e escreve o log.
  *
  * Nada que não foi registrado é devolvido: se o registro falhar, a chamada falha (regra 30, item 4).
@@ -192,9 +191,8 @@ export class ProvedorDeIa implements LLMProvider {
     let problemasDaUltima: readonly string[] = []
     while (gasto.tentativas < TENTATIVAS_MAXIMAS) {
       gasto.tentativas += 1
-      // Um prazo por chamada. O sinal de quem chamou (o executor) cancela junto.
-      const prazo = AbortSignal.timeout(this.dependencias.timeoutMs)
-      const sinal = pedido.sinal === undefined ? prazo : AbortSignal.any([prazo, pedido.sinal])
+      // O prazo da chamada é do `AdaptadorResiliente`, que sabe o do perfil. O sinal de quem chamou (o executor) o cancela.
+      const sinal = pedido.sinal ?? new AbortController().signal
       const resposta = await this.dependencias.adaptador.chamar({ tarefa, entrada, sinal, ...(correcao === undefined ? {} : { correcao }) })
       gasto.modelo = resposta.modelo
       gasto.tokensDeEntrada += resposta.tokensDeEntrada
@@ -268,11 +266,15 @@ export interface PortasDoProvedor {
   readonly relogio?: Relogio
 }
 
-/** Monta a porta a partir da configuração: é aqui, e só aqui, que `IA_ADAPTADOR` escolhe o adaptador. */
+/**
+ * Monta a porta a partir da configuração: é aqui, e só aqui, que `IA_ADAPTADOR` escolhe o adaptador, e que ele ganha o
+ * prazo por perfil, a repetição e o disjuntor.
+ */
 export function criarProvedorDeIa(config: ConfiguracaoDeIa, portas: PortasDoProvedor): LLMProvider {
   if (config.adaptador === 'openai_compat' && config.modelo === undefined) throw new ConfiguracaoInvalida(['LLM_BASE_URL', 'LLM_MODELO'])
   // A latência simulada é só do adaptador falso (teste de carga, regra 80, item 11): o do provedor tem a do provedor.
-  const adaptador =
+  const interno =
     config.modelo === undefined ? new AdaptadorFalso(config.latenciaFalsaMs === undefined ? {} : { latenciaMs: config.latenciaFalsaMs }) : new AdaptadorOpenAICompat(config.modelo)
-  return new ProvedorDeIa({ adaptador, timeoutMs: config.timeoutMs, ...portas })
+  const adaptador = new AdaptadorResiliente(interno, { prazosMs: config.prazosMs, recuoMs: config.recuoMs, aleatorio: Math.random })
+  return new ProvedorDeIa({ adaptador, ...portas })
 }

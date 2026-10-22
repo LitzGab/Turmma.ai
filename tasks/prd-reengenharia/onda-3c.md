@@ -13,16 +13,29 @@ Ver `techspec.md` §1, §7, §7b e §7c.
 **48.0 (C22).** `packages/nucleo/src/ia/adaptador-resiliente.ts` decora o adaptador em `criarProvedorDeIa`, com
 `cockatiel` (N9).
 - **A ordem:** `wrap(timeoutDaChamada, disjuntor, retry)`: o prazo cobre chamada e repetição, e o sinal aborta o `retry`.
-- **A repetição:** uma, com jitter, só em 429 e conexão recusada; timeout e 5xx podem ter cobrado e não se repetem (`pedirComRecuo` sai).
-- **O prazo por perfil:** `LLM_TIMEOUT_MS_RAPIDO` = 20 s, `LLM_TIMEOUT_MS_PADRAO` = 60 s; os outros, `LLM_TIMEOUT_MS`.
+- **A repetição:** uma, com jitter (entre meio recuo e o recuo inteiro, `LLM_RECUO_MS`), só em 429 e conexão recusada; timeout e 5xx
+  podem ter cobrado e não se repetem (`pedirComRecuo` sai). O `Retry-After` do 429 vale se for menor que o prazo do perfil; do contrário
+  nenhuma repetição, e a espera sugerida vai para quem chamou. O adaptador do provedor diz o que aconteceu (`ErroDoProvedor`, `FalhaDoProvedor`:
+  `limite`, `recusada`, `servidor`, `tempo`, `rejeitada`) e o decorador devolve sempre um `ErroDeIa` simples. O prazo que acaba na espera da repetição
+  dá `IA_TEMPO_ESGOTADO`.
+- **O prazo por perfil:** `LLM_TIMEOUT_MS_RAPIDO` = 20 s, `LLM_TIMEOUT_MS_PADRAO` = 60 s; os outros, `LLM_TIMEOUT_MS`. O prazo e o recuo vêm de
+  `ConfiguracaoDeIa` (`prazosMs`, `recuoMs`), e o `ProvedorDeIa` não recebe mais `timeoutMs`.
 - **O orçamento:** 2 tentativas de `chamarAteValer` × (o prazo + 8 s da reserva da 49.0): `rapido` 56 s e `padrao` 136 s, abaixo do
   corte do perfil (60 s e 140 s, `onda-3a.md`). O menor substitui a principal, não soma.
-- **A latência falsa** fica abaixo do prazo do seu perfil: o invariante de `config-ia.ts:102` passa a ser por perfil
-  (`IA_LATENCIA_FALSA_MS_PADRAO` < `LLM_TIMEOUT_MS_PADRAO`, e o mesmo no `rapido`).
-- **O disjuntor**, por provedor, modelo **e perfil** (o `LLM_MODELO` é um só: o Tutor não cai com as ferramentas), abre com 5 falhas e meio-abre em 30 s. Conta 5xx, timeout e conexão recusada; não conta 429 nem
+- **A latência falsa** fica abaixo do prazo do seu perfil: o invariante de `config-ia.ts:102` passa a ser por perfil. Na 48.0 a
+  variável é uma só, `IA_LATENCIA_FALSA_MS`, e fica abaixo do **menor** dos três prazos (o recuo também; `IA_EXECUCAO_TIMEOUT_MS` fica acima do
+  **maior**); a `IA_LATENCIA_FALSA_MS_PADRAO` nasce na 47.0, com o seu invariante contra `LLM_TIMEOUT_MS_PADRAO`.
+- **O disjuntor**, por provedor, modelo **e perfil** (o `LLM_MODELO` é um só: o Tutor não cai com as ferramentas; o provedor é o do decorador,
+  que é de um só, e a chave do mapa é modelo e perfil), abre com 5 falhas e meio-abre em 30 s. Conta 5xx, timeout e conexão recusada; não conta 429 nem
   `IA_SAIDA_INVALIDA`. **A chamada lenta** conta só no `rapido`, acima de 10 s (metade do prazo, ~1,7× um turno de 6 s);
   no `padrao` a ferramenta normal leva ~50 s dos 60, e só o timeout conta. O menor tem o seu. Em memória por réplica,
   como saúde local: exceção aceita à 80.5, no ADR da onda 6.
+
+**Como a 48.0 ficou (o que a implementação fixou):** a subtarefa 48.1 pedia a caracterização « num commit antes ». Ela não teve commit
+à parte: a caracterização é a que o HEAD `84ef3df` já tem, nos três casos de `adaptador-openai-compat.test.ts` (« erro 500 duas vezes:
+uma repetição depois do recuo », « erro %i e depois resposta boa » e « servidor que demora além do prazo »), que prendem o recuo de
+hoje em 429 e 5xx e o `IA_TEMPO_ESGOTADO` no prazo. Um commit só de teste não passaria no hook (`tools/processo/revisoes.ts` bloqueia
+código sem `(tarefa N.0)` e sem revisores da tarefa), e os mesmos casos foram reescritos na tarefa para o novo contrato.
 
 **49.0, os tokens (C24).**
 - **A porta** `LimiteDeTokens` em `packages/nucleo/src/ia/limite-de-tokens.ts`, implementada em `apps/api/src/ia/` sobre o

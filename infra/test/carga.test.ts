@@ -250,8 +250,9 @@ describe('infra/compose.carga.yml', () => {
     const doCarga = parseEnv(lerArquivo('infra/carga.env'))
     const latencia = Number(doCarga['IA_LATENCIA_FALSA_MS'])
     expect(latencia).toBeGreaterThan(0)
-    // O adaptador falso a respeita no `LLM_TIMEOUT_MS` do ambiente: a espera precisa caber no prazo da chamada.
-    expect(latencia).toBeLessThan(Number(parseEnv(lerArquivo('.env.example'))['LLM_TIMEOUT_MS']))
+    // O adaptador falso a respeita no prazo de todo perfil do ambiente: a espera precisa caber no menor deles.
+    const ambiente = parseEnv(lerArquivo('.env.example'))
+    expect(latencia).toBeLessThan(Math.min(...['LLM_TIMEOUT_MS', 'LLM_TIMEOUT_MS_RAPIDO', 'LLM_TIMEOUT_MS_PADRAO'].map((variavel) => Number(ambiente[variavel]))))
     expect(doCarga['IA_ADAPTADOR'] ?? parseEnv(lerArquivo('.env.example'))['IA_ADAPTADOR']).toBe('falso')
   })
 

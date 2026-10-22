@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { once } from 'node:events'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MOTIVO_SEM_PROVEDOR_ID, type ConfiguracaoDoModelo } from '../config/config-ia.js'
 import { comContextoDaEscolaDoPedido } from './__fixtures__/contexto-da-escola.js'
 import { ALUNO_1, atividadeDeEstequiometria, entradaDeAtividade, entradaDoTutor, ESCOLA_A } from './__fixtures__/entradas.js'
@@ -6,6 +9,7 @@ import { MATERIAL_DE_ESTEQUIOMETRIA } from './__fixtures__/estequiometria.js'
 import { respostaDoChat, subirServidorLlamaFalso, type PedidoRecebido, type RespostaRoteirizada, type ServidorLlamaFalso } from './__fixtures__/servidor-llama-falso.js'
 import { ConfiguracaoInvalida } from '../config/validar-config.js'
 import { AdaptadorOpenAICompat } from './adaptador-openai-compat.js'
+import { AdaptadorResiliente } from './adaptador-resiliente.js'
 import { ConsumoEmMemoria, OrcamentoEmMemoria } from './consumo.js'
 import { ErroDeIa } from './erros.js'
 import { ProvedorDeIa } from './provedor.js'
@@ -24,18 +28,26 @@ const RECUO_MS = 40
 let servidor: ServidorLlamaFalso | undefined
 
 afterEach(async () => {
+  vi.restoreAllMocks()
   await servidor?.fechar()
   servidor = undefined
 })
 
 async function montar(
   roteiro: (pedido: PedidoRecebido, numero: number) => RespostaRoteirizada,
-  opcoes: { timeoutMs?: number; config?: Partial<ConfiguracaoDoModelo> } = {},
+  opcoes: { timeoutMs?: number; recuoMs?: number; config?: Partial<ConfiguracaoDoModelo> } = {},
 ): Promise<{ ia: ProvedorDeIa; consumo: ConsumoEmMemoria; pedidos: PedidoRecebido[] }> {
   servidor = await subirServidorLlamaFalso(roteiro)
   const consumo = new ConsumoEmMemoria()
-  const adaptador = new AdaptadorOpenAICompat({ baseUrl: servidor.url, modelos: MODELOS, processamentoLocal: true, recuoMs: RECUO_MS, ...opcoes.config })
-  const ia = comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: opcoes.timeoutMs ?? 5_000 }))
+  const configuracao = { baseUrl: servidor.url, modelos: MODELOS, processamentoLocal: true, ...opcoes.config }
+  // O prazo e a repetição são do decorador, como `criarProvedorDeIa` o monta; o sorteio do jitter fixo faz a espera ser o recuo.
+  const prazo = opcoes.timeoutMs ?? 5_000
+  const adaptador = new AdaptadorResiliente(new AdaptadorOpenAICompat(configuracao), {
+    prazosMs: { rapido: prazo, padrao: prazo, complexo: prazo, visao: prazo },
+    recuoMs: opcoes.recuoMs ?? RECUO_MS,
+    aleatorio: () => 1,
+  })
+  const ia = comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria() }))
   return { ia, consumo, pedidos: servidor.pedidos }
 }
 
@@ -112,7 +124,7 @@ describe('AdaptadorOpenAICompat: resposta boa', () => {
   })
 
   it('fora da nossa rede o adaptador não nasce sem o id do provedor: quem monta a configuração à mão não escapa da exigência da subida', () => {
-    const base = { baseUrl: 'https://provedor.example/v1', modelos: MODELOS, recuoMs: RECUO_MS }
+    const base = { baseUrl: 'https://provedor.example/v1', modelos: MODELOS }
     expect(() => new AdaptadorOpenAICompat({ ...base, processamentoLocal: false })).toThrow(ConfiguracaoInvalida)
     expect(() => new AdaptadorOpenAICompat({ ...base, processamentoLocal: false })).toThrow(/IA_PROVEDOR_ID/)
     expect(() => new AdaptadorOpenAICompat({ ...base, processamentoLocal: false })).toThrow(expect.objectContaining({ motivos: [MOTIVO_SEM_PROVEDOR_ID] }))
@@ -197,13 +209,15 @@ describe('AdaptadorOpenAICompat: saída inválida repete uma vez, dizendo o que 
 
 describe('AdaptadorOpenAICompat: prazo e indisponibilidade', () => {
   it('servidor que demora além do prazo: erro tipado de tempo esgotado, sem esperar a resposta', async () => {
-    const { ia, pedidos } = await montar(() => ({ corpo: respostaDoChat(TEXTO_BOM), atrasoMs: 3_000 }), { timeoutMs: 80 })
+    const { ia, consumo, pedidos } = await montar(() => ({ corpo: respostaDoChat(TEXTO_BOM), atrasoMs: 3_000 }), { timeoutMs: 80 })
     const inicio = performance.now()
     const erro = await erroDe(gerarAtividade(ia))
     expect(erro).toMatchObject({ codigoDeIa: 'IA_TEMPO_ESGOTADO', codigo: 'IA_TEMPO_ESGOTADO', status: 503 })
     expect(performance.now() - inicio).toBeLessThan(1_500)
     // Prazo estourado não é saída inválida: não há repetição.
     expect(pedidos).toHaveLength(1)
+    // A troca conta: o prazo vencido fica registrado, com o código de tempo esgotado.
+    expect(consumo.registros).toMatchObject([{ estado: 'falhou', codigoDeErro: 'IA_TEMPO_ESGOTADO' }])
   })
 
   it('o sinal de quem chamou cancela a chamada em curso', async () => {
@@ -216,15 +230,26 @@ describe('AdaptadorOpenAICompat: prazo e indisponibilidade', () => {
     expect(performance.now() - inicio).toBeLessThan(1_500)
   })
 
-  it('erro 500 duas vezes: uma repetição depois do recuo e, então, erro tipado de indisponível; o corpo do provedor não sai da camada', async () => {
+  it('erro 500: uma chamada só, sem repetição (pode ter cobrado), e erro tipado de indisponível; o corpo do provedor não sai da camada', async () => {
+    const { ia, consumo, pedidos } = await montar(() => ({ status: 500, corpo: { error: { message: 'falha interna ao processar o prompt: "texto do aluno"' } } }))
+    const erro = await erroDe(gerarAtividade(ia))
+    expect(erro).toMatchObject({ codigoDeIa: 'IA_INDISPONIVEL', codigo: 'IA_INDISPONIVEL', status: 503 })
+    expect(`${erro.message} ${JSON.stringify(erro)} ${String(erro.cause)}`).not.toContain('texto do aluno')
+    // A saída inválida não entra aqui, e o 5xx não se repete: exatamente um pedido.
+    await new Promise((resolve) => setTimeout(resolve, RECUO_MS * 3))
+    expect(pedidos).toHaveLength(1)
+    expect(consumo.registros).toMatchObject([{ estado: 'falhou', codigoDeErro: 'IA_INDISPONIVEL', tentativas: 1 }])
+  })
+
+  it('erro 429 duas vezes: uma repetição depois do recuo e, então, erro tipado de indisponível; o corpo do provedor não sai da camada', async () => {
     const chegadas: number[] = []
     const { ia, consumo, pedidos } = await montar(() => {
       chegadas.push(performance.now())
-      return { status: 500, corpo: { error: { message: 'falha interna ao processar o prompt: "texto do aluno"' } } }
+      return { status: 429, corpo: { error: { message: 'limite do prompt: "texto do aluno"' } } }
     })
     const erro = await erroDe(gerarAtividade(ia))
     expect(erro).toMatchObject({ codigoDeIa: 'IA_INDISPONIVEL', codigo: 'IA_INDISPONIVEL', status: 503 })
-    expect(`${erro.message} ${JSON.stringify(erro)}`).not.toContain('texto do aluno')
+    expect(`${erro.message} ${JSON.stringify(erro)} ${String(erro.cause)}`).not.toContain('texto do aluno')
     // Exatamente duas: a chamada e uma repetição. A saída inválida não entra aqui, então o provedor não repete por cima.
     expect(pedidos).toHaveLength(2)
     expect((chegadas[1] ?? 0) - (chegadas[0] ?? 0)).toBeGreaterThanOrEqual(RECUO_MS - 5)
@@ -232,12 +257,19 @@ describe('AdaptadorOpenAICompat: prazo e indisponibilidade', () => {
     expect(consumo.registros).toMatchObject([{ estado: 'falhou', codigoDeErro: 'IA_INDISPONIVEL', tentativas: 1 }])
   })
 
-  it.each([500, 502, 503, 429])('erro %i e depois resposta boa: a repetição resolve, e o domínio nem fica sabendo', async (status) => {
-    const { ia, pedidos } = await montar((_pedido, numero) => (numero === 1 ? { status, corpo: { error: { message: 'tente de novo' } } } : { corpo: respostaDoChat(TEXTO_BOM, { uso: USO }) }))
+  it('erro 429 e depois resposta boa: a repetição resolve, e o domínio nem fica sabendo', async () => {
+    const { ia, pedidos } = await montar((_pedido, numero) => (numero === 1 ? { status: 429, corpo: { error: { message: 'tente de novo' } } } : { corpo: respostaDoChat(TEXTO_BOM, { uso: USO }) }))
     const { saida, medicao } = await gerarAtividade(ia)
     expect(saida).toEqual(BOA)
     expect(pedidos).toHaveLength(2)
     expect(medicao).toMatchObject({ tentativas: 1, tokensDeEntrada: 1200 })
+  })
+
+  it.each([500, 502, 503])('erro %i e depois resposta boa: não se repete, porque pode ter cobrado, e a segunda resposta nunca é pedida', async (status) => {
+    const { ia, pedidos } = await montar((_pedido, numero) => (numero === 1 ? { status, corpo: { error: { message: 'tente de novo' } } } : { corpo: respostaDoChat(TEXTO_BOM, { uso: USO }) }))
+    expect((await erroDe(gerarAtividade(ia))).codigoDeIa).toBe('IA_INDISPONIVEL')
+    await new Promise((resolve) => setTimeout(resolve, RECUO_MS * 3))
+    expect(pedidos).toHaveLength(1)
   })
 
   it.each([400, 401, 404, 422])('erro %i não é repetido: pedido ou configuração errada não melhora na segunda vez', async (status) => {
@@ -246,23 +278,24 @@ describe('AdaptadorOpenAICompat: prazo e indisponibilidade', () => {
     expect(pedidos).toHaveLength(1)
   })
 
-  it('erro 429 com espera sugerida maior que o recuo: não repete à toa, e a espera vai para quem chamou', async () => {
+  it('erro 429 com espera sugerida além do prazo: não repete à toa, e a espera vai para quem chamou', async () => {
+    // O prazo de 5 s do teste é menor que os 7 s que o provedor pediu.
     const { ia, pedidos } = await montar(() => ({ status: 429, cabecalhos: { 'retry-after': '7' }, corpo: { error: { message: 'rate limit' } } }))
     const erro = await erroDe(gerarAtividade(ia))
     expect(erro).toMatchObject({ codigoDeIa: 'IA_INDISPONIVEL', tenteDeNovoEmSegundos: 7 })
     expect(pedidos).toHaveLength(1)
   })
 
-  it('a repetição respeita o prazo da chamada: recuo que não cabe no prazo termina em indisponível, sem segunda chamada', async () => {
-    const { ia, pedidos } = await montar(() => ({ status: 503, corpo: {} }), { timeoutMs: 80, config: { recuoMs: 2_000 } })
+  it('a repetição respeita o prazo da chamada: recuo que não cabe no prazo termina em tempo esgotado, sem segunda chamada', async () => {
+    const { ia, pedidos } = await montar(() => ({ status: 429, corpo: {} }), { timeoutMs: 80, recuoMs: 2_000 })
     const inicio = performance.now()
-    expect((await erroDe(gerarAtividade(ia))).codigoDeIa).toBe('IA_INDISPONIVEL')
+    expect((await erroDe(gerarAtividade(ia))).codigoDeIa).toBe('IA_TEMPO_ESGOTADO')
     expect(performance.now() - inicio).toBeLessThan(1_000)
     expect(pedidos).toHaveLength(1)
   })
 
   it('a repetição que estoura o prazo é cortada: o total nunca passa do prazo da chamada', async () => {
-    const { ia, pedidos } = await montar((_pedido, numero) => (numero === 1 ? { status: 500, corpo: {} } : { corpo: respostaDoChat(TEXTO_BOM), atrasoMs: 3_000 }), { timeoutMs: 200 })
+    const { ia, pedidos } = await montar((_pedido, numero) => (numero === 1 ? { status: 429, corpo: {} } : { corpo: respostaDoChat(TEXTO_BOM), atrasoMs: 3_000 }), { timeoutMs: 200 })
     const inicio = performance.now()
     expect((await erroDe(gerarAtividade(ia))).codigoDeIa).toBe('IA_TEMPO_ESGOTADO')
     expect(performance.now() - inicio).toBeLessThan(1_500)
@@ -277,11 +310,89 @@ describe('AdaptadorOpenAICompat: prazo e indisponibilidade', () => {
     expect((await erroDe(gerarAtividade(naoJson.ia))).codigoDeIa).toBe('IA_INDISPONIVEL')
   })
 
-  it('servidor fora do ar: indisponível', async () => {
+  it('servidor fora do ar: a conexão recusada nem chegou ao provedor, e se repete uma vez; então, indisponível', async () => {
     const { ia } = await montar(() => ({ corpo: respostaDoChat(TEXTO_BOM) }))
     await servidor?.fechar()
     servidor = undefined
+    // O `fetch` de verdade contra a porta fechada: o adaptador lê `cause.code` da recusa para saber que pode repetir.
+    const pedidos = vi.spyOn(globalThis, 'fetch')
     expect((await erroDe(gerarAtividade(ia))).codigoDeIa).toBe('IA_INDISPONIVEL')
+    expect(pedidos).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('AdaptadorOpenAICompat: a falha ganha o nome do que aconteceu, e só ele sai', () => {
+  /** O adaptador sozinho, sem o decorador: o que ele diz à camada de resiliência. */
+  async function falhaDoAdaptador(roteiro: (pedido: PedidoRecebido, numero: number) => RespostaRoteirizada, sinal: AbortSignal = AbortSignal.timeout(2_000)): Promise<unknown> {
+    servidor = await subirServidorLlamaFalso(roteiro)
+    const adaptador = new AdaptadorOpenAICompat({ baseUrl: servidor.url, modelos: MODELOS, processamentoLocal: true })
+    return adaptador.chamar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), sinal }).then(
+      () => undefined,
+      (erro: unknown) => erro,
+    )
+  }
+
+  it('429 é limite, com a espera que o provedor pediu; 5xx é servidor; outro 4xx é rejeitada', async () => {
+    expect(await falhaDoAdaptador(() => ({ status: 429, cabecalhos: { 'retry-after': '7' }, corpo: {} }))).toMatchObject({ falha: 'limite', codigoDeIa: 'IA_INDISPONIVEL', tenteDeNovoEmSegundos: 7 })
+    await servidor?.fechar()
+    expect(await falhaDoAdaptador(() => ({ status: 429, corpo: {} }))).toMatchObject({ falha: 'limite', tenteDeNovoEmSegundos: undefined })
+    await servidor?.fechar()
+    expect(await falhaDoAdaptador(() => ({ status: 500, corpo: {} }))).toMatchObject({ falha: 'servidor', codigoDeIa: 'IA_INDISPONIVEL' })
+    await servidor?.fechar()
+    expect(await falhaDoAdaptador(() => ({ status: 422, corpo: {} }))).toMatchObject({ falha: 'rejeitada', codigoDeIa: 'IA_INDISPONIVEL' })
+  })
+
+  it('resposta 200 que não é do padrão, ou que nem é JSON, é servidor', async () => {
+    expect(await falhaDoAdaptador(() => ({ corpo: { resultado: 'ok' } }))).toMatchObject({ falha: 'servidor' })
+    await servidor?.fechar()
+    expect(await falhaDoAdaptador(() => ({ textoCru: '<html>502 Bad Gateway</html>' }))).toMatchObject({ falha: 'servidor' })
+  })
+
+  it('o sinal cancelado com a resposta em curso é tempo, e no meio do corpo também', async () => {
+    const controle = new AbortController()
+    setTimeout(() => controle.abort(), 60)
+    expect(await falhaDoAdaptador(() => ({ corpo: respostaDoChat(TEXTO_BOM), atrasoMs: 3_000 }), controle.signal)).toMatchObject({ falha: 'tempo', codigoDeIa: 'IA_TEMPO_ESGOTADO' })
+    await servidor?.fechar()
+    // O servidor manda o começo do corpo e para: o `fetch` já respondeu, e quem falha é a leitura do JSON.
+    const parcial = createServer((_requisicao, resposta) => {
+      resposta.writeHead(200, { 'content-type': 'application/json' })
+      resposta.write('{"choices":[')
+    })
+    parcial.listen(0, '127.0.0.1')
+    await once(parcial, 'listening')
+    try {
+      const { port } = parcial.address() as AddressInfo
+      const corte = new AbortController()
+      setTimeout(() => corte.abort(), 100)
+      const adaptador = new AdaptadorOpenAICompat({ baseUrl: `http://127.0.0.1:${String(port)}/v1`, modelos: MODELOS, processamentoLocal: true })
+      const erro = await adaptador.chamar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), sinal: corte.signal }).then(
+        () => undefined,
+        (motivo: unknown) => motivo,
+      )
+      expect(erro).toMatchObject({ falha: 'tempo' })
+    } finally {
+      parcial.closeAllConnections()
+      parcial.close()
+    }
+  })
+
+  it('a conexão recusada é recusada, e só ela: a causa vem em `cause.code`', async () => {
+    servidor = await subirServidorLlamaFalso(() => ({ corpo: respostaDoChat(TEXTO_BOM) }))
+    const porta = new URL(servidor.url).port
+    await servidor.fechar()
+    servidor = undefined
+    const adaptador = new AdaptadorOpenAICompat({ baseUrl: `http://127.0.0.1:${porta}/v1`, modelos: MODELOS, processamentoLocal: true })
+    const erro = await adaptador.chamar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), sinal: AbortSignal.timeout(2_000) }).then(
+      () => undefined,
+      (motivo: unknown) => motivo,
+    )
+    expect(erro).toMatchObject({ falha: 'recusada', codigoDeIa: 'IA_INDISPONIVEL' })
+  })
+
+  it('cinco respostas 400 seguidas não abrem o disjuntor: o pedido errado é nosso, não do provedor', async () => {
+    const { ia, pedidos } = await montar(() => ({ status: 400, corpo: { error: { message: 'pedido inválido' } } }))
+    for (let vez = 0; vez < 6; vez += 1) await erroDe(gerarAtividade(ia))
+    expect(pedidos).toHaveLength(6)
   })
 })
 

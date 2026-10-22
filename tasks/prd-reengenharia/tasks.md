@@ -175,7 +175,7 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 - [x] **44.0 — Falha final alerta e fica 30 dias; o pedido do titular, até a ação**
   - [ ] 44.1 O `44_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3b.md`
 
-- [ ] **48.0 — Provedor lento, 429 ou fora falha rápido, com orçamento**
+- [x] **48.0 — Provedor lento, 429 ou fora falha rápido, com orçamento**
   - [ ] 48.1 O `48_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
 
 ### Pastas, no projeto inteiro
