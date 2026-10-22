@@ -1,11 +1,12 @@
 import { contextoAtual, DURACAO_DA_SESSAO_HORAS, ErroDeDominio, executarNoContexto, type Ambiente, type Banco, type EmissorDeToken, type MetodoDeSessao } from '@educa/nucleo'
-import { CodigoDeErro, type RespostaLogin } from '@educa/shared'
+import { CodigoDeErro, type EtapaComDesafio, type RespostaLogin } from '@educa/shared'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { MAX_AGE_DO_COOKIE_DISPOSITIVO_SEGUNDOS, type CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, COOKIE_SESSAO, lerCookie, serializarCookie } from './cookies.js'
 import { CriacaoDeSessaoRepository } from './criacao-de-sessao.repository.js'
 import type { EmissorDeDesafio, SessaoDeOrigemDaTroca } from './desafio.js'
-import { BYTES_DO_REFRESH, etapaDoLogin, hashDoRefresh, ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './login.service.js'
+import { BYTES_DO_REFRESH, hashDoRefresh } from './identificadores-do-login.js'
+import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './origem-da-requisicao.js'
 import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
 import type { ResolucaoDeTenantRepository, UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
 import { SessaoDeOrigemRepository } from './sessao-de-origem.repository.js'
@@ -170,4 +171,15 @@ export class ConclusaoDeLogin {
     const { token, expiraEm } = await this.dependencias.emissorDeToken.emitir({ escolaId: usuario.escolaId, usuarioId: usuario.usuarioId, sessaoId })
     return { token, expiraEm, refresh }
   }
+}
+
+/**
+ * A etapa depois da credencial certa (Tech Spec, seção 5, "Etapas"): mais de um usuário ativo, `escolher`; um só
+ * coordenador, o segundo fator (`mfa`, ou `configurar_mfa` quando ainda não tem), a menos que ele já tenha sido
+ * cumprido nesta entrada; um só professor, `pronta`.
+ */
+export function etapaDoLogin(usuarios: readonly Pick<UsuarioAtivoDaConta, 'papel'>[], mfaAtivo: boolean, mfaCumprido = false): EtapaComDesafio | 'pronta' {
+  if (usuarios.length > 1) return 'escolher'
+  if (usuarios[0]?.papel === 'coordenador' && !mfaCumprido) return mfaAtivo ? 'mfa' : 'configurar_mfa'
+  return 'pronta'
 }

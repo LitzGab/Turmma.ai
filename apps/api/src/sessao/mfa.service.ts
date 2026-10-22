@@ -7,7 +7,7 @@ import type { AtivacaoPorConvite } from './convite.service.js'
 import type { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
 import { verificarDesafio, type ConsumoDeDesafio, type DesafioVerificado } from './desafio.js'
-import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './login.service.js'
+import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './origem-da-requisicao.js'
 import { ResolucaoDeTenantRepository, type MfaDaConta, type UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
 import { gerarCodigosDeRecuperacao, gerarSegredo, hmacDaRecuperacao, normalizarRecuperacao, passoDoCodigo } from './segundo-fator.js'
 

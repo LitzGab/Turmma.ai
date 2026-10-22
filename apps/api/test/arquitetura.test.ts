@@ -1426,3 +1426,36 @@ describe('arquitetura: o módulo de sessão não depende da operação, e o arqu
     expect(codigoDe('apps/api/src/operacao/operador.repository.ts')).not.toMatch(/\bConferenciaDoAutor\b/)
   })
 })
+
+describe('arquitetura: só o controller e o módulo importam o login.service (X5, 11.0)', () => {
+  /** Provisório: a regra definitiva é a do depcruise, da 12.0, que então substitui estes `it`. */
+  const IMPORTA_O_LOGIN_SERVICE = /\blogin\.service\.js['"]/
+  const ARQUIVO_DO_LOGIN_SERVICE = 'apps/api/src/sessao/login.service.ts'
+
+  /** Quem, fora de teste, importa, reexporta ou carrega por `import()` o `login.service` (ele não cita a si mesmo). */
+  const quemImportaOLoginService = (arquivos: readonly Arquivo[]): string[] =>
+    arquivos
+      .filter((arquivo) => !deTeste(arquivo.caminho))
+      .filter((arquivo) => IMPORTA_O_LOGIN_SERVICE.test(semComentarios(arquivo.texto)))
+      .map((arquivo) => arquivo.caminho)
+      .sort()
+
+  it('fora de teste, só o login-email.controller.ts e o sessao.module.ts o importam', () => {
+    const arquivos = arquivosDoRepositorio()
+    expect(arquivos.filter((arquivo) => arquivo.caminho === ARQUIVO_DO_LOGIN_SERVICE)).toHaveLength(1)
+    expect(quemImportaOLoginService(arquivos)).toEqual(['apps/api/src/sessao/login-email.controller.ts', 'apps/api/src/sessao/sessao.module.ts'])
+  })
+
+  it('a varredura reprova quem mais o importa, reexporta ou carrega por import dinâmico, e deixa o teste e o comentário passarem', () => {
+    const fora = [
+      { caminho: 'apps/api/src/sessao/conclusao-de-login.ts', texto: "import { hashDoRefresh } from './login.service.js'" },
+      { caminho: 'apps/api/src/operacao/sessao.service.ts', texto: "export * from '../sessao/login.service.js'" },
+      { caminho: 'apps/worker/src/atalho.ts', texto: "const modulo = await import('../../api/src/sessao/login.service.js')" },
+    ]
+    const inocentes = [
+      { caminho: 'apps/api/src/sessao/login.service.test.ts', texto: "import * as loginService from './login.service.js'" },
+      { caminho: 'apps/api/src/sessao/convite.service.ts', texto: "/** Antes vinha do './login.service.js'. */\n// e do 'login.service'" },
+    ]
+    expect(quemImportaOLoginService([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho).sort())
+  })
+})

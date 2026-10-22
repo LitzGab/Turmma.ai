@@ -2,7 +2,7 @@ import { ErroDeDominio, sessaoDaRequisicao, type Banco } from '@educa/nucleo'
 import { CodigoDeErro, type PedidoTrocaDeEscola } from '@educa/shared'
 import type { ConclusaoDeLogin } from './conclusao-de-login.js'
 import { verificarDesafio, type ConsumoDeDesafio, type EmissorDeDesafio, type SessaoDeOrigemDaTroca } from './desafio.js'
-import type { OrigemDaRequisicao, ResultadoDoLogin } from './login.service.js'
+import type { OrigemDaRequisicao, ResultadoDoLogin } from './origem-da-requisicao.js'
 import type { ResolucaoDeTenantRepository, UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
 import { SessaoDeOrigemRepository } from './sessao-de-origem.repository.js'
 

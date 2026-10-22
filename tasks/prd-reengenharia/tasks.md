@@ -206,11 +206,11 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
   - [x] 10.2 `ConferenciaDoAutor` vai para `apps/api/src/sessao/conferencia-do-autor.ts`, e todos os importadores trocam o caminho, sem reexportar do lugar antigo
   - [x] 10.3 Testes: caracterização verde antes e depois, e um `it` provisório em `apps/api/test/arquitetura.test.ts`
 
-- [ ] **11.0 — Os 2 ciclos de `login.service` somem**
-  - [ ] 11.1 Caracterização, num commit antes: `ipParaRegistro` (que não tem teste hoje) e os casos de `login.service.test.ts`
-  - [ ] 11.2 `sessao/origem-da-requisicao.ts` (`OrigemDaRequisicao`, `ResultadoDoLogin`, `ipParaRegistro`) e `sessao/identificadores-do-login.ts` (`BYTES_DO_REFRESH`, `hashDoRefresh`, `normalizarEmail`)
-  - [ ] 11.3 `etapaDoLogin` vai para `conclusao-de-login.ts`; os importadores trocam o caminho; `login.service.ts` não reexporta
-  - [ ] 11.4 Testes: os de unidade divididos pelos arquivos novos, e os dois `it` de quem importa o `login.service`
+- [x] **11.0 — Os 2 ciclos de `login.service` somem**
+  - [x] 11.1 Caracterização, num commit antes: `ipParaRegistro` (que não tem teste hoje) e os casos de `login.service.test.ts`
+  - [x] 11.2 `sessao/origem-da-requisicao.ts` (`OrigemDaRequisicao`, `ResultadoDoLogin`, `ipParaRegistro`) e `sessao/identificadores-do-login.ts` (`BYTES_DO_REFRESH`, `hashDoRefresh`, `normalizarEmail`)
+  - [x] 11.3 `etapaDoLogin` vai para `conclusao-de-login.ts`; os importadores trocam o caminho; `login.service.ts` não reexporta
+  - [x] 11.4 Testes: os de unidade divididos pelos arquivos novos, e os dois `it` de quem importa o `login.service`
 
 - [ ] **12.0 — Import contra a direção ou a camada, ou ciclo novo, reprova o lint**
   - [ ] 12.1 `dependency-cruiser@18.7.0` exato em `devDependencies`; `tools/guardas/camadas.cjs` com as regras do §2 da onda, todas `error`

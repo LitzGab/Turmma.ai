@@ -1698,3 +1698,6 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X5, 12.0) A regra do depcruise cobre o que os `it` provisórios da 10.0 olham:** o `it` de `ConferenciaDoAutor` trata de nome de
   tipo e não de caminho de import, e `IMPORTA_A_OPERACAO` não pega import só de efeito (`import '../operacao/x.js'`) nem aspas duplas;
   a 12.0 substitui esses `it` e decide o que fica (`revisor-geral` e `test-engineer`, 10.0, 2ª rodada)
+- [ ] **(X5, 12.0) A regra do depcruise cobre o que os `it` provisórios da 11.0 olham:** a regex `/\blogin\.service\.js['"]/` de
+  `arquitetura.test.ts` casaria `outro-login.service.js` e não pega import sem extensão, e a varredura de `login.service.test.ts` não
+  pega `export default <nome>` nem `export = <nome>`; a 12.0 substitui esses `it` e decide o que fica (`test-engineer`, 11.0, 1ª e 2ª rodadas)
