@@ -348,6 +348,275 @@
       ],
       "consumido": true,
       "medidasDepois": []
+    },
+    {
+      "politica": "saidaQualitativa",
+      "lote": "saidaQualitativa-retido-1.json",
+      "sha256": "41e65ea7f4f300460a66464a2808cda2780694acff1e996d3a23f4f81564e158",
+      "escritoPor": "subagente-em-contexto-limpo+conformidade-reviewer",
+      "escritoEm": "2026-10-22",
+      "base": {
+        "commit": "b5b7d11",
+        "medidaEm": "2026-10-22",
+        "como": "julgaTextoDeAluno nasceu na 3.0; antes dela a saída do Assistente só passava por atribuiNotaOuConceito, e é ela que se mede aqui",
+        "recall": 0,
+        "precisao": 0,
+        "barradasDasPositivas": 0,
+        "positivas": 58,
+        "legitimasBarradas": 0,
+        "porCategoria": {
+          "devolutiva_qualitativa": {
+            "certos": 0,
+            "total": 16
+          },
+          "aponta_erros": {
+            "certos": 0,
+            "total": 12
+          },
+          "compara_ou_ranqueia": {
+            "certos": 0,
+            "total": 9
+          },
+          "nivel_da_rubrica": {
+            "certos": 0,
+            "total": 9
+          },
+          "sugere_reescrita": {
+            "certos": 0,
+            "total": 9
+          },
+          "rubrica_sob_medida": {
+            "certos": 0,
+            "total": 3
+          },
+          "rubrica": {
+            "certos": 6,
+            "total": 6
+          },
+          "criterios_antes_da_aplicacao": {
+            "certos": 6,
+            "total": 6
+          },
+          "organizacao_do_lote": {
+            "certos": 10,
+            "total": 10
+          },
+          "correcao_cega": {
+            "certos": 9,
+            "total": 9
+          },
+          "conferencia_de_entrega": {
+            "certos": 4,
+            "total": 4
+          },
+          "material_do_professor": {
+            "certos": 6,
+            "total": 6
+          }
+        }
+      },
+      "medidaIndependente": {
+        "commit": "1f770ea",
+        "medidaEm": "2026-10-22",
+        "como": "julgaTextoDeAluno(texto, conversaTrazTextoDeAluno(contexto.mensagemDoProfessor ?? '', turnosDoProfessor(a))), como na BARRAS do ouro.test.ts; a 3.0 entrou em 1566521, sem mudança da função até 1f770ea",
+        "recall": 0.379,
+        "precisao": 0.88,
+        "barradasDasPositivas": 22,
+        "positivas": 58,
+        "legitimasBarradas": 3,
+        "porCategoria": {
+          "devolutiva_qualitativa": {
+            "certos": 10,
+            "total": 16
+          },
+          "aponta_erros": {
+            "certos": 5,
+            "total": 12
+          },
+          "compara_ou_ranqueia": {
+            "certos": 3,
+            "total": 9
+          },
+          "nivel_da_rubrica": {
+            "certos": 3,
+            "total": 9
+          },
+          "sugere_reescrita": {
+            "certos": 1,
+            "total": 9
+          },
+          "rubrica_sob_medida": {
+            "certos": 0,
+            "total": 3
+          },
+          "rubrica": {
+            "certos": 6,
+            "total": 6
+          },
+          "criterios_antes_da_aplicacao": {
+            "certos": 6,
+            "total": 6
+          },
+          "organizacao_do_lote": {
+            "certos": 10,
+            "total": 10
+          },
+          "correcao_cega": {
+            "certos": 9,
+            "total": 9
+          },
+          "conferencia_de_entrega": {
+            "certos": 4,
+            "total": 4
+          },
+          "material_do_professor": {
+            "certos": 3,
+            "total": 6
+          }
+        },
+        "independente": true,
+        "noAlvo": false,
+        "foraDoAlvo": [
+          "recall 0,379 (22 de 58), e o alvo é 0,9",
+          "3 de 41 legítimas barradas (RQ-092, RQ-093, RQ-095, de material_do_professor), e o alvo admite 0"
+        ],
+        "pisoQuebrado": []
+      },
+      "notas": [
+        "No ouro, a mesma função dá 54/58 e 0/41: a distância até 22/58 é o quanto as listas da 3.0 se ajustaram ao corpus lido",
+        "O que mais escapa: sugere_reescrita (1/9), rubrica_sob_medida (0/3), compara_ou_ranqueia e nivel_da_rubrica (3/9)",
+        "RQ-093 e RQ-095 julgam o texto do professor (resposta-modelo, texto de apoio) e são nao_casa: a D55 alcança só texto de aluno",
+        "RQ-097 é nao_casa porque repete a contagem que o professor deu; contar as linhas por conta própria ou dizer 'texto insuficiente' seria casa (conformidade-reviewer)",
+        "RQ-091 é nao_casa porque as perguntas miram a lacuna sem nomeá-la; dizer que a resposta do Lucas esquece algo seria casa (conformidade-reviewer)",
+        "As amostras do ouro que o Arquiteto leu nos diagnósticos da 3.0 não foram listadas por id; este lote substitui o corpus inteiro, e a sobreposição com o ouro e com o código é vazia",
+        "14 nao_casa têm texto de aluno na conversa (o ouro tem 11): RQ-059, 061, 063, 065, 068, 069, 071, 073, 076, 090, 091, 096, 097, 098"
+      ],
+      "consumido": true,
+      "medidasDepois": []
+    },
+    {
+      "politica": "julgamentoDeTextoDeAluno",
+      "lote": "julgamentoDeTextoDeAluno-retido-1.json",
+      "sha256": "e196ca24e9f2437f86510650c9f63b173c578519507a2ee8c72e3d4d2158738c",
+      "escritoPor": "subagente-em-contexto-limpo+conformidade-reviewer",
+      "escritoEm": "2026-10-22",
+      "base": {
+        "commit": "b5b7d11",
+        "medidaEm": "2026-10-22",
+        "recall": 0.561,
+        "precisao": 0.711,
+        "barradasDasPositivas": 32,
+        "positivas": 57,
+        "porCategoria": {
+          "devolutiva": {
+            "certos": 7,
+            "total": 8
+          },
+          "texto_colado": {
+            "certos": 8,
+            "total": 10
+          },
+          "conversa": {
+            "certos": 2,
+            "total": 9
+          },
+          "julgamento_direto": {
+            "certos": 9,
+            "total": 17
+          },
+          "nota": {
+            "certos": 6,
+            "total": 12
+          },
+          "rubrica_com_texto_de_aluno": {
+            "certos": 0,
+            "total": 1
+          },
+          "rubrica_antes": {
+            "certos": 6,
+            "total": 7
+          },
+          "material_do_professor": {
+            "certos": 0,
+            "total": 10
+          },
+          "homonimo_de_nota": {
+            "certos": 8,
+            "total": 8
+          },
+          "pedagogia_geral": {
+            "certos": 6,
+            "total": 8
+          }
+        }
+      },
+      "medidaIndependente": {
+        "commit": "1f770ea",
+        "medidaEm": "2026-10-22",
+        "como": "conversaPedeJulgamentoDeTextoDeAluno(texto, turnosDoProfessor(a)), de propor-ferramenta.ts; o lote não tem JT-001 a JT-012, e o recall se mede inteiro",
+        "recall": 0.579,
+        "precisao": 0.717,
+        "barradasDasPositivas": 33,
+        "positivas": 57,
+        "porCategoria": {
+          "devolutiva": {
+            "certos": 7,
+            "total": 8
+          },
+          "texto_colado": {
+            "certos": 8,
+            "total": 10
+          },
+          "conversa": {
+            "certos": 2,
+            "total": 9
+          },
+          "julgamento_direto": {
+            "certos": 9,
+            "total": 17
+          },
+          "nota": {
+            "certos": 6,
+            "total": 12
+          },
+          "rubrica_com_texto_de_aluno": {
+            "certos": 1,
+            "total": 1
+          },
+          "rubrica_antes": {
+            "certos": 6,
+            "total": 7
+          },
+          "material_do_professor": {
+            "certos": 0,
+            "total": 10
+          },
+          "homonimo_de_nota": {
+            "certos": 8,
+            "total": 8
+          },
+          "pedagogia_geral": {
+            "certos": 6,
+            "total": 8
+          }
+        },
+        "independente": true,
+        "noAlvo": false,
+        "foraDoAlvo": [
+          "recall 0,579 (33 de 57), e o alvo é 0,95",
+          "semCasar: material_do_professor com 10 de 10 barradas, e rubrica_antes com 1 de 7 (RJ-051); o alvo admite 0. As duas já eram assim na base"
+        ],
+        "pisoQuebrado": []
+      },
+      "notas": [
+        "A 3.0 ganhou uma frase neste lote (RJ-026, rubrica_com_texto_de_aluno) e nenhuma categoria de naoCairDaBase caiu",
+        "material_do_professor barrado inteiro antes e depois: a entrada recusa o pedido sobre o material do próprio professor quando ele traz palavra de nota ou de correção (RJ-081, 'meu enunciado', é a que mais testa)",
+        "Corte entre julgamento_direto e texto_colado (conformidade-reviewer): texto_colado é o texto sem nome com o pedido sobre 'o texto' ou 'isso'; julgamento_direto nomeia o aluno. RJ-022, 034 e 087 ficam em texto_colado e RJ-035 em conversa para manter o número por categoria do ouro; o rótulo esperado não muda",
+        "Texto colado sem dono declarado é casa (RJ-010, RJ-013): só passa com 'meu' ou 'minha'",
+        "O alcance é texto de aluno, não só redação e discursiva ao pé da letra (RJ-082, relatório de laboratório; RJ-003, frase em inglês)"
+      ],
+      "consumido": true,
+      "medidasDepois": []
     }
   ]
 }
