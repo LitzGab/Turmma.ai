@@ -2,15 +2,13 @@ import { Enfileirador, ErroDeDominio, JobRegistroRepository, type Banco } from '
 import {
   CodigoDeErro,
   esquemaRespostaEstadoDeJob,
+  TIPO_JOB_SINTETICO,
   type PedidoJobSintetico,
   type RespostaEstadoDeJob,
   type RespostaJobAceito,
 } from '@educa/shared'
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { BANCO } from '../banco.module.js'
-
-/** Tipo do job sintético. Fixo aqui: o corpo da requisição não escolhe tipo. */
-export const TIPO_JOB_SINTETICO = 'sintetico'
 
 @Injectable()
 export class JobsSinteticosService {
@@ -28,12 +26,8 @@ export class JobsSinteticosService {
    */
   async enfileirar(pedido: PedidoJobSintetico): Promise<RespostaJobAceito> {
     const jobId = await this.banco.transaction((tx) =>
-      this.enfileirador.enfileirar(tx, {
-        tipo: TIPO_JOB_SINTETICO,
-        fila: pedido.fila,
-        dados: { cpuMs: pedido.cpuMs, falhar: pedido.falhar ?? false },
-        naoUrgente: pedido.naoUrgente,
-      }),
+      // O tipo é sempre o sintético: o corpo da requisição escolhe a fila e o `naoUrgente`, e mais nada.
+      this.enfileirador.enfileirar(tx, TIPO_JOB_SINTETICO, { cpuMs: pedido.cpuMs, falhar: pedido.falhar ?? false }, { fila: pedido.fila, naoUrgente: pedido.naoUrgente }),
     )
     // A linha leva o `requisicaoId` e a escola pelo contexto: é por ele que se segue o job até o worker.
     this.logger.log('job.enfileirado')

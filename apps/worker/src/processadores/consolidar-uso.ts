@@ -18,8 +18,6 @@ import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 import type { MedidorDeStorage } from '../storage/medidor-de-storage.js'
 
-export const TIPO_CONSOLIDAR_USO = 'sistema.consolidar-uso'
-
 /**
  * Pastas seguidas com erro de storage depois das quais a medição desiste e o job falha. Uma pasta com erro é da
  * escola; várias seguidas é o storage fora, e esperar o prazo de cada escola só atrasaria a nova tentativa da fila.

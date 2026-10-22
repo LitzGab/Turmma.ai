@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import { ArmazemEmMemoria, executarNoContexto, type Relogio } from '@educa/nucleo'
 import { ArmazemS3 } from '@educa/nucleo/armazem-s3'
-import { CodigoDeFalhaDeJob, TIPO_DO_JOB_MONTAR_ARQUIVO } from '@educa/shared'
+import { CodigoDeFalhaDeJob, TIPO_MONTAR_ARQUIVO } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
@@ -239,7 +239,7 @@ describe('titular.montar-arquivo', () => {
     const chave = `titular/${escolaId}/${pedidoId}/completa.json`
     onTestFinished(() => armazem.armazem.apagar(chave))
     const jobId = await executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () =>
-      bancada.banco.transaction((tx) => bancada.enfileirador.enfileirar(tx, { tipo: TIPO_DO_JOB_MONTAR_ARQUIVO, fila: 'normal', dados: { pedidoId }, naoUrgente: false })),
+      bancada.banco.transaction((tx) => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId })),
     )
     await expect.poll(async () => (await bancada.estado(jobId))?.estado, { timeout: 20_000, interval: 100 }).toBe('concluido')
     expect(await estadoDo(pedidoId)).toBe('pronto')

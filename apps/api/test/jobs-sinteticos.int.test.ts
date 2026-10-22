@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 import { criarPool, executarNoContexto, type PoolBanco } from '@educa/nucleo'
-import { CodigoDeErro, CodigoDeFalhaDeJob, MENSAGENS_DE_ERRO } from '@educa/shared'
+import { CodigoDeErro, CodigoDeFalhaDeJob, MENSAGENS_DE_ERRO, TIPO_JOB_SINTETICO } from '@educa/shared'
 import type { INestApplication } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import { randomUUID } from 'node:crypto'
@@ -10,7 +10,6 @@ import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { BancadaDeFila, LogEmMemoria } from '../../worker/test/fila-de-teste.js'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { TIPO_JOB_SINTETICO } from '../src/sistema/jobs-sinteticos.service.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
 
@@ -105,6 +104,20 @@ describe('POST e GET /v1/sistema/jobs-sinteticos', () => {
     expect(consulta.status).toBe(200)
     expect(consulta.headers['cache-control']).toBe('no-store')
     expect(consulta.body).toEqual({ estado: 'aguardando', criadoEm: expect.any(String) })
+  })
+
+  it('o corpo escolhe a fila e o não urgente do job: cada combinação grava a fila, a prioridade e o valor que veio', async () => {
+    const combinacoes = [
+      { fila: 'interativa', prioridade: 1, naoUrgente: false },
+      { fila: 'normal', prioridade: 2, naoUrgente: true },
+      { fila: 'lote', prioridade: 3, naoUrgente: false },
+    ] as const
+    for (const { fila, prioridade, naoUrgente } of combinacoes) {
+      const resposta = await request(app.getHttpServer()).post(ROTA).set('Authorization', `Bearer ${tokenA}`).send({ fila, cpuMs: 1, naoUrgente })
+      expect(resposta.status).toBe(202)
+      const { rows } = await pool.query('select fila, prioridade, nao_urgente from job_registro where id = $1', [(resposta.body as { jobId: string }).jobId])
+      expect(rows[0]).toEqual({ fila, prioridade, nao_urgente: naoUrgente })
+    }
   })
 
   it('caminho feliz com despachante e worker: o GET mostra aguardando, ativo e concluido, com as datas', async () => {

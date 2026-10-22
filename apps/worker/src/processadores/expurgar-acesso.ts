@@ -3,8 +3,6 @@ import { CodigoDeFalhaDeJob } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 
-export const TIPO_EXPURGAR_ACESSO = 'sistema.expurgar-acesso'
-
 /** Quantas linhas saíram de cada alvo: um total por alvo, e o compilador recusa o objeto a que falte um. */
 export type TotaisDoExpurgoDeAcesso = Record<AlvoDoExpurgoDeAcesso, number>
 

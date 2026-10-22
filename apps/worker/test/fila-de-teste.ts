@@ -10,6 +10,7 @@ import {
   JobRegistroRepository,
   lerJanelaPadrao,
   nomeDaFilaBullMQ,
+  PRIORIDADE_DA_FILA,
   resolverVagas,
   VagasPorEscola,
   type Banco,
@@ -18,7 +19,6 @@ import {
   type JanelaLetiva,
   type LoggerBase,
   type Meter,
-  type PedidoDeJob,
   type PoolBanco,
   type VagasConfiguradas,
   type VagasPorFila,
@@ -141,6 +141,14 @@ export function esperarORedisNaPrimeiraVez(montado: MontadoQueEspera): void {
   }
 }
 
+/** O que o teste pede à bancada: o job como a linha de `job_registro` o guarda, com o que não vier no valor padrão do sintético. */
+export interface PedidoDaBancada {
+  tipo?: string
+  fila?: Fila
+  naoUrgente?: boolean
+  dados?: Record<string, unknown>
+}
+
 /**
  * O que o teste usa para olhar o banco e as filas por fora: pool próprio, repositories reais, uma
  * `Queue` por fila e as vagas, no mesmo prefixo dos despachantes e workers do teste.
@@ -185,16 +193,22 @@ export class BancadaDeFila {
     return (await criarEscola(this.banco, autor, { id: randomUUID(), redeId, nome: 'Escola sintética da fila', slug: `fila-${randomUUID()}` })).id
   }
 
-  /** Enfileira como a API faz: na transação, com a escola e a requisição no contexto. */
-  enfileirar(escolaId: string, pedido: Partial<PedidoDeJob> & { dados?: Record<string, unknown> } = {}, requisicaoId = randomUUID()): Promise<string> {
+  /**
+   * Grava como o `Enfileirador` grava (na transação, com a escola e a requisição no contexto, pelo mesmo `inserir`), mas sem
+   * conferir a definição do tipo: os testes do despachante e do worker põem na fila dado que nenhuma definição tem (o
+   * `dados.rotulo` que o processador de teste conta) e processadores de teste no lugar dos reais. A definição é provada
+   * pelo `Enfileirador` de verdade, em `execucao.int.test.ts › enfileirar`; a definição injetável da bancada é da 19.0.
+   */
+  enfileirar(escolaId: string, pedido: PedidoDaBancada = {}, requisicaoId = randomUUID()): Promise<string> {
+    const fila = pedido.fila ?? 'interativa'
     return executarNoContexto({ requisicaoId, escolaId }, () =>
       this.banco.transaction((tx) =>
-        this.enfileirador.enfileirar(tx, {
-          tipo: 'sintetico',
-          fila: 'interativa',
-          naoUrgente: false,
-          dados: { cpuMs: 0, falhar: false },
-          ...pedido,
+        this.registro.inserir(tx, {
+          tipo: pedido.tipo ?? 'sintetico',
+          fila,
+          prioridade: PRIORIDADE_DA_FILA[fila],
+          naoUrgente: pedido.naoUrgente ?? false,
+          dados: pedido.dados ?? { cpuMs: 0, falhar: false },
         }),
       ),
     )
