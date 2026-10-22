@@ -27,7 +27,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **43.0**, grande (job estourado dá `TEMPO_ESGOTADO`; infra, llm-integrator, test-engineer, revisor-geral), desde 17:45, 1ª tentativa; prazo de 4 h 21:45. A 48.0 encontrou-se em `41d65df` (spec em `8240170`)
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **ociosa** desde 18:32. A 43.0 encontrou-se em `0eea211` (spec em `143ea0b`). Nada parte: 17.0 e 33.0 esperam a 16.0 (l2); quando a 16.0 se encontrar, partem 17.0 e 33.0 (l1 e l3)
   - **guia (95.0) publicado** pelo `Arquiteto` em `202cb47` (RELATÓRIO às 18:18). Fica para o commit do fim da spec: a
     lista "Conferir depois das pastas" e repor as linhas que ele tirou do guia (dependency-cruiser e complexidade da
     12.0/13.0, API por pastas da 33–35/96, `lerEntrada` da 16.0) quando 12.0, 13.0, 16.0/17.0 e as pastas entrarem
@@ -62,7 +62,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `59ce6a8`. Esteira às 18:18: em `7c1b086` (`39850761696`) rodando, `59ce6a8` (`39856108405`) na fila; cancelei as superadas de `925852f` e `202cb47`; o VERMELHO de `8240170` é só cancelamento; a última concluída, `88c266b` (`39845850533`), VERDE. Vigia ligada
+- **Base:** `spec/reengenharia` em `143ea0b`. Esteira às 18:32: `7c1b086` (`39850761696`) rodando há 53 min; `143ea0b` (`39858107471`) na fila; cancelei a superada de `59ce6a8` (`39856108405`); o VERMELHO de `202cb47` é só cancelamento; a última concluída, `88c266b`, VERDE. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -106,6 +106,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 10.0 | `303cbac` | Sonnet | 2 (test-engineer, revisor-geral aprovados na 2ª) | linha 2, pequena, 17:00–17:39; sem tela; uma falha do portão na unidade sem causa achada, passou em 3 repetições; 1 linha no TODO.md da 12.0 |
 | 9.0 | `02d3412` | Sonnet | 4 (tenancy-guardian 1ª–3ª, test-engineer 2ª–3ª; destravada pelo Arquiteto, R62) | linha 3, pequena, 16:52–18:13; ESCALADA na r2 (diagnóstico), BLOQUEIO na r3 (guarda só olhava `arguments[0]`) |
 | 11.0 | `d58b563` | Sonnet | 2 (test-engineer, revisor-geral aprovados na 2ª) | linha 2, grande, 17:40–18:18; sem tela; esperou o commit da 95.0 no andar da spec para o encontro |
+| 43.0 | `0eea211` | Sonnet | 2 (infra-guardian, llm-integrator, revisor-geral na 1ª; test-engineer na 2ª) | linha 1, grande, 17:45–18:32; sem tela |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
