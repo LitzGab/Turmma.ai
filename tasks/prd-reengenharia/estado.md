@@ -27,21 +27,8 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **6.0**, pequena (tenant), desde 11:27; prazo de 4 h 15:27. Avisado de
-    que o `ouro.test.ts` está vermelho na spec até a base da 3.0 (traz com `git merge spec/reengenharia` antes do portão)
-    **A base virou correção** (R57: o hook trata o `MEDIDAS.json` como código, e `ouro.test.ts:267`/`:273` precisam mudar):
-    pedi ao Implementador da l1 a **correção `ouro-base-qualitativa`** antes de seguir a 6.0 (ordem
-    `.processo/ordens/correcao-ouro-base-qualitativa.md`, copiada para l1; guardiões test-engineer e llm-integrator). O
-    commit `05aa2fe` na l1, segue com o da 6.0; **a esteira da spec fica vermelha nos 3 casos do `ouro.test.ts` até o
-    primeiro encontro que o leve (l1 ou l2)**
-    **DIVERGÊNCIA (ordem) da correção:** gravar a base muda o hash que o `SELO.json` guarda (6 testes do `selo-do-ouro`
-    vermelhos). **O `Arquiteto` gravou a base e o selo na spec** (`256fb62`, R58 em `cef19e6`); retomada enviada: restaurar
-    o `MEDIDAS.json`, trazer a spec, a correção leva só o `ouro.test.ts` e o documento, portão, Mesa, commit; depois a 6.0
-    **DIVERGÊNCIA (portão) da 6.0, 1 de 5198:** `porta-unica.test.ts:56` casa o nome `insercao-de-auditoria` em qualquer
-    texto e acusa o `tools/guardas/escopo-dos-repositories.ts` da 6.0 (só dado, sem import). Par da l1 reiniciado;
-    pedida a **correção `porta-unica-so-import`** (estreitar à importação, mutação do 1_task preservada; guardião
-    privacy-guardian), com os arquivos da 6.0 fora da revisão. **Feita: `9dd7a6b` na l1** (privacy-guardian e
-    test-engineer aprovados). **`PEDIDO de retomada` da 6.0 enviado às 12:38**: portão da tarefa rodando, depois Mesa e commit
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **7.0**, grande (9 repositories para `exigirEscolaDoContexto`), desde
+    12:55, 1ª tentativa; prazo de 4 h 16:55. A 6.0 encontrou-se em `f49c095` (com as correções `05aa2fe` e `9dd7a6b`)
   - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
     **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
     os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
@@ -71,13 +58,13 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     §2.3, `TODO.md`). Ponto de produto para a X6: a entrada recusa pedido do professor sobre o próprio material com palavra
     de nota ou correção (10/10, já antes da 3.0). **Dizer ao Joaquim no fim** que a AIA do Tutor e esta lacuna merecem o
     olhar dele antes do piloto
-  - esteira: `f6913ee` na fila e `3f100df` rodando (ler no próximo encontro); `3b44efe` e `1f770ea` canceladas pelo push
-    seguinte. A vermelha conhecida é a do `arquivo-do-titular` (correção na linha 3)
+  - esteira: às 12:53 seis execuções na fila (`f6913ee` a `e048e36`), nenhum veredito novo; `3b44efe` foi **cancelada**
+    (o `esteira.ts` a lê como VERMELHA: não é falha). Ler de novo no próximo encontro
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`)
-- **Base:** `spec/reengenharia` em `2fe1d73`. Vigia ligada
+- **Base:** `spec/reengenharia` em `e048e36`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -106,6 +93,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 3.0 | `1566521` | Sonnet | 4 | linha 1, grande, 07:47–11:25; divergência (triagem: detalhe), escalada, bloqueio destravado pelo recorte; saidaQualitativa 54/58, 0 legítimas barradas; lacuna declarada no §2.3 |
 | 94.0 | `0975b97` | Sonnet | 2 | linha 2, grande, 11:07–11:36; dentro do prazo de 14:55, escopo inteiro; três recomendações no TODO.md |
 | 51.0 | `50e04d0` | Sonnet | 2 | encontro adiado até o commit dos lotes retidos da 3.0 (`3b44efe`); lacuna da 3.0 em `2fe1d73` (R60); o ponto de produto do material do professor com palavra de nota vai para a X6 |
+| 6.0 | `f49c095` | Sonnet | 2 (test-engineer, revisor-geral; tenancy na 1ª) | linha 1, pequena, 11:27–12:52; duas correções na linha antes dela: `ouro-base-qualitativa` (`05aa2fe`) e `porta-unica-so-import` (`9dd7a6b`, divergência de portão) |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
