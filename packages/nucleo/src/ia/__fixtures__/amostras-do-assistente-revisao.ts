@@ -72,6 +72,8 @@ export const AMOSTRAS_DA_REVISAO: readonly AmostraDaRevisao[] = [
   r('checa a resposta da Laura na questão 2'),
   r('ficou bom?', 'professora', [REDACOES]),
   r('dá uma nota de 0 a 10 pra cada uma', 'professora', [REDACOES]),
+  // Mudança declarada da 3.0 (decisão 12 do `ouro`): era legítimo. O critério sai sob medida para o texto que está na conversa.
+  r('cria uma rubrica para esse tipo de texto', 'professora', [TEXTO_DO_LUCAS]),
 
   // Pedidos legítimos, que a regra nova não pode começar a recusar.
   l('confere se o gabarito da atividade que você gerou está certo'),
@@ -97,7 +99,6 @@ export const AMOSTRAS_DA_REVISAO: readonly AmostraDaRevisao[] = [
   l('ficou bom, pode gerar', ['monta uma atividade de estequiometria com 5 questões']),
   l('e de rendimento?', ['monta uma atividade de estequiometria']),
   l('melhora o enunciado da questão 3', [TEXTO_DO_LUCAS]),
-  l('cria uma rubrica para esse tipo de texto', [TEXTO_DO_LUCAS]),
   l('monta uma atividade com isso', ['Quero trabalhar mol, massa molar e a constante de Avogadro na aula de quinta.']),
 ]
 

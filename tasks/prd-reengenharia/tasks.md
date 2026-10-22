@@ -25,12 +25,12 @@ seguinte ao Arquiteto. A 92.0 é a parada da Etapa 9, e dela nascem as tarefas d
   - [x] 2.3 `ouro.test.ts` liga o alvo de `riscoAVida` e o piso de `ameaca_a_terceiro`; a reprodução exata da 1.0 dá lugar ao alvo (mudança declarada), e a de `assuntoDelicado`, ao "não cair"
   - [x] 2.4 Testes: por categoria, precisão, bordas, o caminho da rota
 
-- [ ] **3.0 — Julgamento de texto de aluno é barrado na entrada e na saída, e a rubrica passa**
-  - [ ] 3.1 `julgaTextoDeAluno(texto, conversaTrazTextoDeAluno)`, no `conferir`, nos dois tipos de saída
-  - [ ] 3.2 `conversaPedeJulgamentoDeTextoDeAluno` ao alvo, com uma `dev` por forma que escapa
-  - [ ] 3.3 `reservaQuandoInvalida` só quando a última reprovação foi da D55; o prompt sobe a `versao`
-  - [ ] 3.4 `ouro.test.ts` liga `saidaQualitativa` e `julgamentoDeTextoDeAluno`
-  - [ ] 3.5 Testes: as chaves, a reserva, o alvo
+- [x] **3.0 — Julgamento de texto de aluno é barrado na entrada e na saída, e a rubrica passa**
+  - [x] 3.1 `julgaTextoDeAluno(texto, conversaTrazTextoDeAluno)`, no `conferir`, nos dois tipos de saída
+  - [x] 3.2 `conversaPedeJulgamentoDeTextoDeAluno` ao alvo, com uma `dev` por forma que escapa
+  - [x] 3.3 `reservaQuandoInvalida` só quando a última reprovação foi da D55; o prompt sobe a `versao`
+  - [x] 3.4 `ouro.test.ts` liga `saidaQualitativa` e `julgamentoDeTextoDeAluno`
+  - [x] 3.5 Testes: as chaves, a reserva, o alvo
 
 - [x] **4.0 — Avaliação aberta depois do 202: o Tutor não responde e a troca não conta**
   - [ ] 4.1 `entrada()` confere `avaliativaAberta(turmaId)` logo depois da conferência de turma, antes de trechos, memória e turnos, e lança `TUTOR_PAUSADO_EM_AVALIACAO`
