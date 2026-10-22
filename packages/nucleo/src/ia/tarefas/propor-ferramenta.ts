@@ -91,6 +91,9 @@ const PEDE_NOTA = new RegExp(
     String.raw`\bquanto\b[^.?!]{0,25}\b(vale|valeria|merece|mereceria|daria|tira|tiraria|tirou|tirariam)\b`,
     String.raw`\b(tira|tiraria|tirou|tirariam)\b[^.?!]{0,15}\bquanto\b`,
     String.raw`\bquantos pontos\b`,
+    // "quanto eu devo dar pra essa resposta?", "quanto você dá?": o verbo de dar com quem dá; "quanto tempo devo dar" é outro assunto.
+    String.raw`\bquanto (?!tempo\b|de tempo\b)[^.?!]{0,25}\b(devo dar|deveria dar|vou dar|posso dar|poderia dar|eu dou|eu poria|eu poderia por|voce da|vc da|voce poria|vc poria|voce colocaria|vc colocaria|voce botaria|vc botaria)\b`,
+    String.raw`\bque numero (voce |vc |tu )?(da|daria|colocaria|poria|botaria|merece|atribuiria)\b`,
     String.raw`\bcredito (parcial|total|integral)\b`,
     String.raw`\b(passa|aprova\w*) ou (reprova\w*|nao)\b|\b(ele|ela|o aluno|a aluna) (passa|reprova|aprova)\b`,
     String.raw`\b(que|qual) (seria |e )?(o )?conceito (merec\w*|voce|vc|daria|dar|cabe|atribu\w*|para|pra|dess\w*|dest\w*|ness\w*|nest\w*|d[oa] (alun|text|respost|redac|trabalh))`,
@@ -147,11 +150,33 @@ const DE_ALUNO = new RegExp(
   ].join('|'),
 )
 /** O que começa com maiúscula e não é nome de pessoa: disciplina, prova, sigla que a escola usa. */
-const NAO_E_PESSOA = new Set('Quimica Fisica Matematica Biologia Historia Geografia Portugues Ingles Espanhol Artes Filosofia Sociologia Ciencias Enem Saeb Bncc Turmma Brasil Assistente Tutor'.split(' '))
+const NAO_E_PESSOA = new Set('Quimica Fisica Matematica Biologia Historia Geografia Portugues Ingles Espanhol Artes Filosofia Sociologia Ciencias Enem Saeb Bncc Turmma Brasil Assistente Tutor Ninguem Alguem Quem Metade Ela Ele Eles Elas Todos Todas Tudo Nada Cada Qual Quais Alguns Algumas Varios Muitos Poucos Nenhum Nenhuma Isso Isto Voce Nos Eu'.split(' '))
 /** Uma pessoa pelo nome: "a Ana", "o Pedro", "do Lucas", "da Maria", "pro Davi". */
 const PESSOA_PELO_NOME = /\b(?:o|a|do|da|pro|pra|que o|que a|e o|e a)\s+([A-Z][a-z]{2,})\b/g
+/** Uma pessoa que faz o que um aluno faz, no começo da frase: "Bianca usou bem os conectivos?", "Davi acertou?". */
+const PESSOA_QUE_FEZ = /(?:^|[.?!:;]\s*)([A-Z][a-z]{2,})\s+(?:(?:nao|ja|tambem|bem|so|ainda|mal|nunca)\s+){0,2}(?:usou|escreveu|acertou|errou|fez|entendeu|respondeu|argumentou|desenvolveu|redigiu|entregou|copiou|compreendeu|dominou|explicou|resolveu)\b/g
 function citaPessoaPeloNome(mensagem: string): boolean {
-  return [...semAcento(mensagem).matchAll(PESSOA_PELO_NOME)].some((achado) => !NAO_E_PESSOA.has(achado[1] ?? ''))
+  const semAcentos = semAcento(mensagem)
+  return [...semAcentos.matchAll(PESSOA_PELO_NOME), ...semAcentos.matchAll(PESSOA_QUE_FEZ)].some((achado) => !NAO_E_PESSOA.has(achado[1] ?? ''))
+}
+/**
+ * De quem é o texto, dito com o nome: "o texto da Ana", "a resposta do Enzo", "o que a Bia escreveu". É a pessoa **com** a marca de
+ * produção de aluno, e não só um nome com maiúscula depois de "a" ou "o" ("a Revolução Francesa", "o Sistema Internacional"):
+ * é o que liga a chave da saída (`conversaTrazTextoDeAluno`).
+ */
+const DONO_DO_TEXTO =
+  /\b(?:text\w+|redac\w+|respost\w+|trabalh\w+|paragraf\w+|producao|producoes|resumo|tese|prova|atividade|dissertacao)\s+(?:d[oa]|de)\s+([A-Z][a-z]{2,})\b|\b(?:o|a)\s+([A-Z][a-z]{2,})\s+(?:escreveu|respondeu|entregou|redigiu|mandou|produziu|colou)\b/g
+/** A mensagem fala de uma parte do que se escreve: as palavras de `TEXTO` e o que se avalia nele (conectivo, vírgula, coesão…). */
+const PARTE_DE_TEXTO = new RegExp(String.raw`\b${TEXTO}\b|\b(conectivos?|ortografia|pontuacao|concordancia|vocabulario|repertorio|coesao|coerencia|argumentacao|acentuacao|virgulas?)\b`, 'i')
+/**
+ * "Bianca usou bem os conectivos?" é a pessoa que faz o que um aluno faz **e** fala de uma parte de texto; "Lavoisier usou uma
+ * balança" é assunto. Só o dono dito com a marca de produção escrita ("o texto da Ana", "a Bia escreveu") liga sem a parte de texto.
+ */
+function pessoaDonaDoTexto(mensagem: string): boolean {
+  const semAcentos = semAcento(mensagem)
+  const ehPessoa = (achado: RegExpMatchArray): boolean => !NAO_E_PESSOA.has(achado[1] ?? achado[2] ?? '')
+  if ([...semAcentos.matchAll(DONO_DO_TEXTO)].some(ehPessoa)) return true
+  return PARTE_DE_TEXTO.test(semAcentos) && [...semAcentos.matchAll(PESSOA_QUE_FEZ)].some(ehPessoa)
 }
 /** Redação e prova discursiva são, por natureza, texto de aluno. */
 const REDACAO_OU_DISCURSIVA = /\b(redac\w+|discursiv\w+|dissertat\w+|producao textual|producoes textuais)\b/
@@ -224,12 +249,64 @@ export function pedeJulgamentoDeTextoDeAluno(mensagem: string): boolean {
 /** Os turnos da conversa, como a tarefa os recebe. */
 type Turno = EntradaDoAssistente['turnosAnteriores'][number]
 
+/**
+ * Uma mensagem do professor traz texto de aluno: colado, de aluno, de uma pessoa **dona do texto** ("o texto da Ana", "Bianca usou
+ * bem…"), ou apontado. **Redação e discursiva sozinhas não ligam a chave**, porque nomear o gênero ("rubrica pra redação do 9º
+ * ano") não põe texto nenhum na conversa; **nem um nome sozinho**, porque "a Revolução Francesa" não é aluno. Na entrada, essas
+ * marcas continuam valendo junto com o pedido de julgamento (`pedeJulgamentoDeTextoDeAluno`).
+ */
+function mensagemTrazTextoDeAluno(mensagem: string): boolean {
+  const texto = paraARegra(mensagem)
+  return trazTextoColado(mensagem) || DE_ALUNO.test(texto) || pessoaDonaDoTexto(mensagem) || TEXTO_APONTADO.test(texto)
+}
+
+/** "Para esse tipo de texto": o demonstrativo, "tipo de" e uma palavra de texto apontam para o que veio antes (decisão 12 do `ouro`). */
+const APONTA_PARA_O_TIPO_DE_TEXTO = new RegExp(String.raw`\b[dn]?(ess[ea]|est[ea])s? tipos? de ${TEXTO}\b`)
+
+/**
+ * A conversa traz texto de aluno: na mensagem de agora, ou em qualquer turno anterior **do professor**. É a chave da
+ * conferência da saída (`julgaTextoDeAluno`): a saída da D55 só é julgamento quando há texto de aluno a julgar.
+ */
+export function conversaTrazTextoDeAluno(mensagem: string, turnosAnteriores: readonly Turno[]): boolean {
+  const doProfessor = turnosAnteriores.filter((turno) => turno.autor === 'professor')
+  // "Esse tipo de texto", havendo turno anterior do professor, aponta para o que ele trouxe: é o texto de aluno da conversa.
+  if (doProfessor.length > 0 && APONTA_PARA_O_TIPO_DE_TEXTO.test(paraARegra(mensagem))) return true
+  return mensagemTrazTextoDeAluno(mensagem) || doProfessor.some((turno) => mensagemTrazTextoDeAluno(turno.texto))
+}
+
 /** A mensagem curta que pede opinião, ou nota, sobre o que veio antes: "e aí, ficou bom?", "e esse?", "dá nota pra cada uma". */
 function pedeOpiniaoSobreOAnterior(mensagem: string): boolean {
   const texto = paraARegra(mensagem)
   // O pedido que diz sobre o que é, e é do material do professor, não se refere ao texto colado antes.
   if (DO_PROPRIO_PROFESSOR.test(texto) || DO_MATERIAL.test(texto) || PEDE_RUBRICA.test(texto)) return false
   return PEDE_OPINIAO.test(texto) || PEDE_JULGAMENTO.test(texto) || PEDE_NOTA.test(texto) || SO_A_NOTA.test(texto.trim())
+}
+
+/**
+ * Mexer no que veio antes, com a referência a ele: "deixa isso mais curto", "reescreve ele", "resume esse texto". A referência solta ("isso", "ele") ou o
+ * demonstrativo seguido de uma palavra de `TEXTO`; "simplifica esse plano" e "torna essa atividade mais simples" falam do material do professor.
+ */
+const MEXE_NO_TEXTO_ANTERIOR = new RegExp(
+  String.raw`\b(?:deix\w+|torn\w+|encurt\w+|resum\w+|simplific\w+|enxug\w+|reescrev\w+|reformul\w+) (?:\w+ ){0,3}(?:isso|isto|ele|ela)\b|\b(?:deix\w+|torn\w+|encurt\w+|resum\w+|simplific\w+|enxug\w+|reescrev\w+|reformul\w+) (?:\w+ ){0,3}(?:ess[ea]s?|est[ea]s?) (?:\w+ )?${TEXTO}\b`,
+)
+
+/**
+ * "deixa isso mais curto" depois de um texto colado é mexer no texto do aluno (D55), e a regra do README do `ouro` é a
+ * referência: "deixa o enunciado da questão 1 mais curto" fala da atividade do professor, e passa.
+ */
+function pedeMexerNoTextoAnterior(mensagem: string): boolean {
+  const texto = paraARegra(mensagem)
+  if (DO_PROPRIO_PROFESSOR.test(texto) || DO_MATERIAL.test(texto)) return false
+  return MEXE_NO_TEXTO_ANTERIOR.test(texto)
+}
+
+/**
+ * Rubrica ou critérios pedidos **depois** de um texto de aluno colado saem sob medida para ele, e isso é pré-correção (D55;
+ * decisão 12 do `ouro`), mesmo com "antes de eu aplicar" e mesmo com "para esse tipo de texto". A rubrica de antes da
+ * aplicação é a pedida sem texto de aluno antes na conversa.
+ */
+function pedeRubricaSobreOAnterior(mensagem: string): boolean {
+  return PEDE_RUBRICA.test(paraARegra(mensagem))
 }
 
 /**
@@ -240,7 +317,7 @@ function pedeOpiniaoSobreOAnterior(mensagem: string): boolean {
  *
  * **O que a regra ainda não pega**, dito com franqueza: pedido escrito de um jeito que estas listas não conhecem
  * ("o que a turma entendeu disso?", ironia, abreviação nova); texto de aluno curto colado sem marca nenhuma e sem pedido;
- * julgamento sobre uma pessoa citada só pelo primeiro nome no começo da frase ("Bianca usou bem os conectivos?"); e o
+ * julgamento sobre uma pessoa citada só pelo primeiro nome com um verbo que a lista de `PESSOA_QUE_FEZ` não tem; e o
  * que vier por um turno de mais de oito mensagens atrás. Esses seguem para o modelo, sob o prompt, que proíbe julgar
  * texto de aluno, e sob a conferência da saída, que recusa nota, conceito e pontuação. Por isso a tarefa declara
  * `levaTextoDeAluno`. A D55 não se resolve só com lista de palavras.
@@ -249,7 +326,8 @@ export function conversaPedeJulgamentoDeTextoDeAluno(mensagem: string, turnosAnt
   if (pedeJulgamentoDeTextoDeAluno(mensagem)) return true
   const doProfessor = turnosAnteriores.filter((turno) => turno.autor === 'professor').map((turno) => turno.texto)
   if (semProposta && pedeJulgamentoDeTextoDeAluno(doProfessor.at(-1) ?? '')) return true
-  return pedeOpiniaoSobreOAnterior(mensagem) && doProfessor.some(trazTextoColado)
+  if (!doProfessor.some(trazTextoColado)) return false
+  return pedeOpiniaoSobreOAnterior(mensagem) || pedeRubricaSobreOAnterior(mensagem) || pedeMexerNoTextoAnterior(mensagem)
 }
 
 /**
@@ -290,6 +368,178 @@ export function atribuiNotaOuConceito(resposta: string): boolean {
 
 const PROBLEMA_DA_NOTA =
   'A resposta atribui nota, conceito ou pontuação. Você não avalia texto nem resposta de aluno: reescreva sem nota, sem conceito e sem pontuação, dizendo que a correção é do professor.'
+
+/** A saída fala de texto concreto: "o texto", "a redação", "o parágrafo 2", "a tese", "o aluno", ou "o que ela escreveu". */
+const SAIDA_FALA_DO_TEXTO = new RegExp(
+  String.raw`\b(textos?|textinhos?|redac\w+|respostas?|trabalhos?|producao|producoes|paragrafos?|introducao|conclusao|tese|argument\w+|desenvolvimento|dissertac\w+|composic\w+|resumos?|resenhas?|relatorios?|escrita|ortografia|conectivos?|vocabulario|repertorio|alun[oa]s?|estudantes?|frases?|trechos?|caligrafia)\b|\bo que (el[ea]|\w+) (escreveu|respondeu|entregou|redigiu)\b|\b[a-z]-\d{1,3}\b|\b(o|a) (primeir[oa]|segund[oa]|terceir[oa]|quart[oa]|quint[oa]|ultim[oa])\b`,
+)
+
+/** A frase que abre com a pessoa e um verbo de quem escreve ou julga: "A Bia ficou…", "O Davi precisa…" (e não "A Revolução Francesa mostrou…"). */
+const PESSOA_NA_SAIDA =
+  /(?:^|[.!?\n;:]\s*)(?:[AO]\s+)?([A-Z][a-z]{2,})\b(?!\s+[A-Z])\s+(?:\w+\s+){0,2}(?:ficou|leu|apresentou|demonstrou|mostrou|precisa|deveria|poderia|conseguiu|soube|tirou|trouxe|citou|mencionou|entendeu|entenderam|compreendeu|compreenderam|dominou|dominaram|aprendeu|aprenderam|assimilou|assimilaram)\b/g
+/** Quem o texto nomeia: "o texto da Bia", "o que a Bia escreveu", ou a frase que abre com a pessoa e um verbo dela. */
+function saidaCitaPessoa(frase: string): boolean {
+  return pessoaDonaDoTexto(frase) || [...semAcento(frase).matchAll(PESSOA_NA_SAIDA)].some((achado) => !NAO_E_PESSOA.has(achado[1] ?? ''))
+}
+
+/**
+ * Cada jeito de julgar o que está escrito, **na mesma frase** em que a saída fala do texto (D55; regra 70, item 2a). Um por
+ * linha, para a mutação tirar um e o teste dizer qual jeito deixou de ser barrado. As listas de palavras são largas de
+ * propósito, porque a regra erra para o lado de barrar; o que protege a rubrica e o lote é a frase precisar falar do
+ * texto, e a conversa precisar trazer texto de aluno.
+ */
+const SAIDA_JULGA_O_TEXTO: readonly RegExp[] = [
+  // O texto é bom, fraco, confuso, claro, bem escrito, original…
+  /\b(bom|boa|bons|boas|otim\w+|excelente\w*|ruim|ruins|pessim\w+|fraco|fraca|fracos|fracas|forte|fortes|confus\w+|vago|vaga|vagos|vagas|superficial\w*|raso|rasa|repetitiv\w+|incoerent\w+|coerent\w+|incoes\w+|coeso|coesa|claro|clara|claros|claras|obscur\w+|insuficiente\w*|adequad\w+|inadequad\w+|satisfatori\w+|insatisfatori\w+|criativ\w+|original|originais|mediocre|razoavel|razoaveis|(bem|mal) (escrit\w+|argumentad\w+|desenvolvid\w+|estruturad\w+|organizad\w+|construid\w+|redigid\w+|fundamentad\w+))\b/,
+  // Parabéns, gostei, bom trabalho, no caminho certo, esforço, promissor
+  /\b(parabens|gostei|caminho certo|bom trabalho|belo trabalho|bonito|capricho\w*|esforc\w+|promissor\w*|impressionante|surpreendente|notavel|destacad\w+|merece (elogio|destaque|atencao))\b/,
+  // O texto tem erro, falha, equívoco, foge do tema, confunde um conceito, está incompleto…
+  /\b(erro|erros|errou|errad[oa]s?|incorret\w+|equivoc\w+|falha|falhas|falhou|problemas?|inconsistenc\w+|contradi\w+|confund\w+|foge|fogem|fugindo|fugiu|fugiram|fuga|desvia\w*|plagi\w+|ambigu\w+|impreciso\w*|imprecisa|incomplet\w+|copiou)\b/,
+  // Não decorre, não procede, contradiz, não tem lógica, o correto é
+  /\bnao (decorre|se sustenta|se segue|procede|condiz|corresponde|bate|fecha)\b|\b(contradiz|sem sentido)\b|\bnao tem (relacao|sentido|logica)\b|\bo (correto|certo) (e|seria)\b/,
+  // Faltou coesão, falta uma conclusão, sem tese, faltou acento…
+  /\b(falt(a|ou|am|aram|ando)|sem|ausencia de)\s+(\w+\s+){0,2}(coesao|coerencia|clareza|argument\w*|exemplos?|conclusao|conclusoes|introducao|tese|desenvolvimento|aprofundamento|conectivos?|pontuacao|paragrafacao|repertorio|detalhes?|precisao|organizacao|fundamentacao|acentos?|acentuacao|virgulas?|crase|concordancia|maiuscula|regencia|citar|mencionar|explicar|justificar)\b/,
+  // Acertou, errou, está correta, está errada
+  /\b(acertou|acertaram|acerto|acertos)\b|\b(esta|estao|ficou|ficaram|foi|e|sao) (totalmente |parcialmente |bem |muito )?(corret[oa]s?|cert[oa]s?)\b/,
+  // Não citou, não explicou, esqueceu, omitiu, trocou um conceito pelo outro, em vez de
+  /\b(nao|nunca) (citou|mencionou|explicou|justificou|desenvolveu|apresentou|respondeu|conseguiu|soube|mostrou|fundamentou|relacionou)\b|\b(esqueceu|omitiu|deixou de|trocou|inverteu|misturou|ignorou)\b|\b(em vez de|no lugar de|ao inves de)\b/,
+  // Demonstra domínio, compreensão, dificuldade, clareza, evolução…
+  /\b(demonstr\w+|mostr\w+|revel\w+|evidenci\w+|apresent\w+|possui|exibe|tem|com) (\w+ ){0,3}(dominio|compreensao|entendimento|dificuldades?|clareza|coesao|coerencia|criatividade|maturidade|profundidade|progresso|evolucao|capacidade|autonomia|fluencia|argumentacao)\b/,
+  // É melhor que, é mais forte que, supera, fica acima das outras, se destaca
+  /\b(melhor|pior|superior|inferior|mais \w+|menos \w+) (do )?(que|do que)\b|\b(o|a) (melhor|pior) d[aeo]s?\b|\b(acima|abaixo|aquem) d[aeo]s? (outr\w+|demais|media|resto|esperad\w+)\b|\b(o|a|os|as) (melhor|pior|melhores|piores) (introduc(ao|oes)|conclus(ao|oes)|teses?|argumentos?|paragrafos?|desenvolvimentos?|textos?|redac(ao|oes))\b|\b(se destaca|destaca-se|supera|superou|perde para|ganha d[ea]|entre (as|os) (melhores|piores))\b|\b(primeiro|segundo|terceiro|ultimo) lugar\b/,
+  // Mais forte, menos completo, mais bem escrito
+  /\b(mais|menos) (forte|fraco|fraca|fortes|fracos|fracas|completo|completa|claro|clara|coerente|criativo|criativa|bem \w+|desenvolvid\w+|elaborad\w+|consistente|convincente|organizad\w+|detalhad\w+)\b/,
+  // O texto é longo demais, o parágrafo está extenso demais: o excesso dito do texto
+  /\b(extens\w+|long\w+|curt\w+|grande|grandes|pequen\w+|breve|breves|compri\w+|detalhad\w+|resumid\w+|enxut\w+|prolix\w+|cansativ\w+|repetitiv\w+) demais\b/,
+  // Reescreva, acrescente, troque: o que mudar no texto, dito em imperativo
+  /^[\s\-*•\d.)]*(reescrev\w*|reformul\w*|refaca|troque|substitua|acrescente|adicione|aprofunde|detalhe|desenvolva|explicite|cite|mencione|revise|ajuste|corrija|inclua)\b/,
+  // Sugiro reescrever, ele deveria trocar, para melhorar acrescente
+  /\b(sugiro|recomendo|sugestao|pode|podem|precisa|precisam|poderia|poderiam|deveria|deveriam|para melhorar|conviria|seria (bom|melhor|interessante|ideal)|tente|tentar)\b[^.!?\n]{0,60}\b(reescrev\w*|reformul\w*|refaz\w*|refaca|reorganiz\w*|reelabor\w*|trocar|troque|substitu\w*|acrescent\w*|adicion\w*|melhor(ar|e)|revis(e|ar)|ajust(e|ar)|aprofund\w*|detalh(e|ar)|desenvolv(a|er)|explicit\w*|cit(e|ar)|mencion(e|ar))\b/,
+  // Uma versão melhor seria, reescrevi assim, ficaria melhor, em vez de X use Y
+  /\b(versao|reescrita|reformulacao|alternativa) (melhorada|reescrita|sugerida|corrigida|ajustada|possivel|melhor)\b|\b(reescrevi|reformulei|refiz|corrigi|ajustei|melhorei)\b|\b(ficaria melhor|melhoraria|seria melhor|para (ficar melhor|reforcar|fortalecer|dar mais forca))\b|\b(use|usar|utilize|utilizar|escreva|escrever|comece|comecar|termine|finalize) [^.!?\n]{0,40}\b(conectivos?|termo|palavra|expressao|verbo|dados?)\b/,
+]
+
+/** Está no nível 3, se enquadra no nível avançado, atende parcialmente: afirmar o nível que um texto tem na rubrica. */
+const SAIDA_AFIRMA_NIVEL: readonly RegExp[] = [
+  /\b(esta|estao|ficou|ficaram|fica|enquadra\w*|encontra\w*|classific\w+|situa\w*|chegou|alcancou|atingiu|atinge|alcanca|corresponde|equivale)\b[^.!?\n]{0,30}\bnivel\b/,
+  /\b(classifico|classifiquei|enquadro|enquadrei|situo|situei|considero|avalio|avaliei|coloco|coloquei|marco|marquei)\b[^.!?\n]{0,40}\bnivel\b/,
+  /\b(nao )?(atende|atendeu|atinge|atingiu|cumpre|cumpriu|satisfaz|satisfez)\b/,
+  /\b(demonstrou|mostrou|apresentou|dominou|evidenciou|compreendeu) (\w+ ){0,3}(plenamente|parcialmente|totalmente|em parte|integralmente|insuficientemente)\b/,
+  /\b(atende|atendeu|atinge|atingiu|alcanca|alcancou|cumpre|cumpriu) (plenamente|parcialmente|totalmente|em parte|integralmente|insuficientemente)\b|\b(parcialmente|plenamente|insuficientemente) (atendid\w+|alcancad\w+|atingid\w+)/,
+]
+
+/** O adjetivo de qualidade que se diz de um texto subentendido: "Está confuso", "Ficou excelente". */
+const QUALIDADE_SEM_SUJEITO = String.raw`bom|boa|otim\w+|excelente|confus\w+|clar[oa]|convincente|superficial|vag[oa]|frac[oa]|forte|coes[oa]|coerente|incoerente|repetitiv\w+|prolix\w+|cansativ\w+|corret\w+|errad\w+|incomplet\w+|complet\w+|ruim|perfeit\w+|(?:bem |mal )?(?:escrit\w+|construid\w+|argumentad\w+|organizad\w+|desenvolvid\w+)`
+
+/** O elogio que uma frase pode ser inteira: "Muito bom", "Parabéns", "É um bom começo"; vários, separados por vírgula. */
+const ELOGIO = String.raw`muito bom|bom trabalho|parabens|(?:e )?(?:um )?bom comeco`
+
+/** Sem frase que fale do texto: o juízo vale por si, porque a conversa já traz texto de aluno. */
+const SAIDA_JULGA_SEM_APONTAR: readonly RegExp[] = [
+  // Pontos fortes, pontos a melhorar, fragilidades
+  /\bpontos? (fortes?|fracos?|a (melhorar|corrigir|revisar|ajustar)|de melhoria|positivos?|negativos?)\b|\bfortalezas?\b|\bfragilidades?\b/,
+  // O que falta da norma: precisa de crase, falta de parágrafo de introdução
+  /\bprecisa(m)? de (\w+ ){0,2}(virgulas?|acentos?|acentuacao|crase|ponto final|paragrafos?|conclus\w+|introduc\w+|conectivos?|revisao|tese)\b|\bfalta de (\w+ ){0,3}(conclus\w+|introduc\w+|tese|paragraf\w+|coesao|argument\w+)\b/,
+  // Está confuso, ficou excelente: o juízo sem sujeito, com o texto subentendido
+  new RegExp(String.raw`(?:^[\s\-*•]*|,\s*)(?:esta|estao|e|ficou|ficaram|parece|soa)\s+(?:(?:muito|bem|pouco|um pouco|bastante|meio|tao)\s+)*(?:${QUALIDADE_SEM_SUJEITO})\b(?!\s+que\b)(?!\s+\w+(?:ar|er|ir)\b)`),
+  // Muito bom, parabéns, bom trabalho, gostei: o elogio sozinho
+  new RegExp(String.raw`^[\s\-*•]*(?:${ELOGIO})(?:\s*,\s*(?:${ELOGIO}))*\s*$|\bparabens (?:pelo|pela|por)\b|\bgostei\b`),
+  // Do mais forte ao mais fraco, ranking, os melhores textos
+  /\bdo (\w+ )?(mais|melhor) \w+ ao (\w+ )?(mais|pior) \w+|\b(melhor|mais forte|mais fraco|pior) (ao|para o|pro|ate o) (pior|melhor|mais fraco|mais forte)\b|\bem ordem (decrescente |crescente )?de (qualidade|desempenho|nivel|merito|forca)\b|\branking\b|\branque\w+|\b(os|as|o|a) (melhor|melhores|pior|piores) (text\w+|redac\w+|trabalh\w+|respost\w+|producao|producoes|paragraf\w+)\b/,
+  // Errou, está errada, incorreto, equívoco, erros de concordância, acertou
+  /\b(errou|errad[oa]s?|incorret\w+|equivoc\w+|acertou|acertaram)\b|\berros? (de|na|no|em|d[ao]) \w+/,
+  // Uma versão melhor do trecho seria: “…”, a frase do aluno já refeita
+  /\b(versao|reescrita|reformulacao|alternativa)\b[^.!?\n:]{0,30}\b(melhor|melhorad\w+|mais \w+|aprimorad\w+|revisad\w+|corrigid\w+)\b[^.!?\n:]{0,20}:/,
+  // Faltou a conclusão, esqueceu de citar, confundiu um conceito, trocou: o defeito dito sem sujeito
+  /\b(falt(a|ou|am|aram|ando)|ausencia de)\s+(\w+\s+){0,2}(coesao|coerencia|clareza|argument\w*|exemplos?|conclusao|conclusoes|introducao|tese|desenvolvimento|aprofundamento|conectivos?|pontuacao|paragrafacao|repertorio|acentos?|acentuacao|virgulas?|crase|concordancia|maiuscula|regencia)\b|\b(confundiu|confundiram|esqueceu|omitiu|deixou de|inverteu|misturou)\b|\bnao (decorre|se sustenta|se segue|procede|condiz)\b/,
+  // Na verdade é, o correto é, é 58,5 e não 60, mas o gabarito é: a correção do que o aluno disse
+  /\b(na verdade|o (correto|certo|gabarito) (e|seria)|mas (o|a) (correto|certo|correta|certa|gabarito|resposta correta)|deveria ser|deveria ter sido)\b|\be nao \d/,
+  // Coesão: nível avançado
+  /\b(coesao|coerencia|tese|argumentacao|ortografia|gramatica|vocabulario|repertorio|organizacao|clareza|intervencao|norma culta|paragrafacao|pontuacao)\b[^.!?\n]{0,25}\b(nivel|conceito)\b/,
+]
+
+/** A frase abre com o descritor de um critério ("Nível 3: tese clara"): é rubrica, de antes da aplicação, e não juízo. */
+const DESCRITOR_DE_CRITERIO = /^[\s\-*•\d.)]*(nivel|descritor|indicador|dimensao|eixo)\b/
+/** "Se o texto…", "textos que…", "o texto deve apresentar…": é o critério dito em geral, e não o texto de alguém. */
+const CRITERIO_EM_GERAL = /^[\s\-*•\d.)]*(se|quando|caso|sempre que)\b|^[\s\-*•\d.)]*(textos?|respostas?|alunos?|redacoes) que\b|\bdev(e|em|erao) (apresentar|conter|ter|trazer|demonstrar|mostrar|incluir|cumprir|atender|desenvolver)\b|\bespera-se\b/
+/** "…fica no nível 2 quando não tem tese": o nível dito como condição é o descritor da rubrica, e não o nível de um texto. */
+const NIVEL_COMO_CONDICAO = /\b(quando|sempre que|caso|desde que|a menos que|dependendo|se (o|a|os|as|ele|ela|nao))\b/
+/** A frase fala do critério, da rubrica ou do barema: é a rubrica sendo escrita, e o que ela diz do texto é descritor. */
+const FALA_DO_CRITERIO = /\b(criterios?|rubricas?|descritores?|baremas?|indicadores?|dimensoes|eixos|competencias|quesitos|aspectos a (avaliar|observar)|matriz de correcao|escala|antes (da|de) (aplicar|aplicacao)|aplicacao)\b/
+/** Critérios ou rubrica feitos para **aquele** texto, e não para o tipo de texto: "critérios para esse texto", "rubrica a partir do texto da Bia". */
+const RUBRICA_SOB_MEDIDA = new RegExp(
+  [
+    String.raw`\b(criterios?|rubrica|barema|descritores?)\b[^.!?\n]{0,60}\b(ess[ea]|est[ea]|dess[ea]|dest[ea]|aquel[ea]|seu|sua|del[ea])s? (\w+ )?(text\w+|redac\w+|respost\w+|trabalh\w+|paragraf\w+|producao)\b`,
+    String.raw`\b(criterios?|rubrica|barema|descritores?)\b[^.!?\n]{0,60}\b(a partir|com base|basead[oa]s?|tendo como base|considerando|sob medida|ajustad[oa]s?|pensad[oa]s?|montad[oa]s?|adaptad[oa]s?|personalizad[oa]s?|feit[oa]s?|criad[oa]s?|elaborad[oa]s?|para (ele|ela)|sobre o que)\b`,
+    String.raw`\b(criterios?|rubrica|barema|descritores?)\b[^.!?\n]{0,60}\bo que (el[ea]|o aluno|a aluna|\w+) (escreveu|respondeu|entregou|redigiu|colou)\b`,
+  ].join('|'),
+)
+/** A rubrica nomeia de quem é o texto: "critérios para o texto da Bia". */
+const RUBRICA_E_TEXTO_DE_PESSOA = /\b(criterios?|rubrica|barema|descritores?)\b[^.!?\n]{0,60}\b(text\w+|redac\w+|respost\w+|trabalh\w+|paragraf\w+|producao)\b/
+
+function rubricaSobMedida(texto: string, frase: string): boolean {
+  return RUBRICA_SOB_MEDIDA.test(texto) || (RUBRICA_E_TEXTO_DE_PESSOA.test(texto) && saidaCitaPessoa(frase))
+}
+
+/** A frase fala ao professor do que ele pode fazer ou decidir, e não do que o aluno escreveu: "você ajusta", "defina", "se quiser", "espera a sua aprovação". */
+const SAIDA_AO_PROFESSOR = /^[\s\-*•\d.)]*(defina|escolha|decida|monte|pense|considere|combine|alinhe|registre|lembre|garanta|deixe)\b|\b(voce|vc|posso|podemos|vamos|vou|sugiro|recomendo|se quiser)\b/
+/** A saída recusa julgar e devolve a correção ao professor: "não avalio", "a correção é sua". É a resposta que a D55 quer. */
+const SAIDA_QUE_RECUSA = /\b(nao (avalio|corrijo|julgo|comento|posso (avaliar|corrigir|julgar|comentar))|correcao e (sua|do professor|da professora)|cabe (a|ao) (voce|professor|professora))\b/
+/** O que se diz da rubrica: o texto, o aluno ou uma pessoa com o nível, o critério ou a pontuação dela. */
+const SAIDA_DE_NIVEL_NA_RUBRICA = /\b(nivel|niveis|pontos?|conceito|faixa)\b/
+
+/** O desempenho de quem escreveu, dito com verbo: "o aluno entendeu", "ele precisa praticar". */
+const SAIDA_DESEMPENHO = /\b(entendeu|entenderam|compreendeu|compreenderam|dominou|dominaram|aprendeu|aprenderam|assimilou|assimilaram)\b|\bprecisa(m)? (de )?(praticar|estudar|treinar|reforcar|melhorar|rever|revisar|exercitar)\b/
+/** O sujeito é uma pessoa: o aluno, o estudante, "ele", "ela", ou alguém pelo nome. */
+const SAIDA_SUJEITO_PESSOA = /\b(alun[oa]s?|estudantes?|el[ea]s?)\b/
+
+type Razao = 'sob_medida' | 'sem_apontar' | 'nivel' | 'julga' | 'desempenho'
+
+/** Uma rubrica inteira (vários critérios ou níveis) é a rubrica de antes da aplicação: o que ela diz do "texto" é descritor. */
+function ehRubricaInteira(frases: readonly string[]): boolean {
+  const textos = frases.map(paraARegra)
+  return textos.filter((texto) => DESCRITOR_DE_CRITERIO.test(texto) || /^[\s\-*•\d.)]*criterios?\b/.test(texto)).length >= 3 || textos.filter((texto) => FALA_DO_CRITERIO.test(texto)).length >= 4
+}
+
+function razaoNaFrase(frase: string, rubricaInteira: boolean): Razao | undefined {
+  const texto = paraARegra(frase)
+  if (rubricaSobMedida(texto, frase)) return 'sob_medida'
+  if (rubricaInteira || CRITERIO_EM_GERAL.test(texto)) return undefined
+  if (SAIDA_JULGA_SEM_APONTAR.some((padrao) => padrao.test(texto))) return 'sem_apontar'
+  const fala = SAIDA_FALA_DO_TEXTO.test(texto) || saidaCitaPessoa(frase)
+  if (fala && !NIVEL_COMO_CONDICAO.test(texto) && (SAIDA_AFIRMA_NIVEL.some((padrao) => padrao.test(texto)) || (FALA_DO_CRITERIO.test(texto) && SAIDA_DE_NIVEL_NA_RUBRICA.test(texto)))) return 'nivel'
+  if (fala && !FALA_DO_CRITERIO.test(texto) && SAIDA_JULGA_O_TEXTO.some((padrao) => padrao.test(texto))) return 'julga'
+  if (SAIDA_AO_PROFESSOR.test(texto) || SAIDA_QUE_RECUSA.test(texto)) return undefined
+  if ((SAIDA_SUJEITO_PESSOA.test(texto) || saidaCitaPessoa(frase)) && !FALA_DO_CRITERIO.test(texto) && SAIDA_DESEMPENHO.test(texto)) return 'desempenho'
+  return undefined
+}
+
+function razaoDoJulgamento(texto: string): Razao[] {
+  const frases = texto.split(/[.!?\n;]+/u)
+  const inteira = ehRubricaInteira(frases)
+  return frases.flatMap((frase) => razaoNaFrase(frase, inteira) ?? [])
+}
+
+/**
+ * A saída **julga texto concreto de aluno**? É a segunda conferência da D55 (regra 70, item 2a): a saída aponta para o
+ * texto ("o parágrafo 2", "seu texto") e diz que está bom, fraco, com erro, no nível 3, melhor que outro, ou o que
+ * reescrever; ou escreve a rubrica sob medida para ele. **Só conta com a segunda chave**: a conversa traz texto de aluno
+ * (`conversaTrazTextoDeAluno`). Sem texto de aluno na conversa, a rubrica, os critérios e a organização do lote passam,
+ * e com ele passam também o agrupamento por tema, a correção cega e a conferência de entrega, que não julgam nada.
+ *
+ * O que ela não pega, dito com franqueza: elogio ou crítica em palavra que as listas não conhecem ("Excelente!", "Muito
+ * bem!", "Confuso e vago."), e o juízo dito sem verbo de desempenho. Está medido e declarado no `onda-0.md` §2.3; o prompt
+ * proíbe julgar texto de aluno, e o refinamento vai medido no lote retido do `ouro`.
+ */
+export function julgaTextoDeAluno(texto: string, conversaTrazTextoDeAluno: boolean): boolean {
+  return conversaTrazTextoDeAluno && razaoDoJulgamento(texto).length > 0
+}
+
+const PROBLEMA_DO_JULGAMENTO =
+  'A resposta julga texto de aluno: diz se está bom ou fraco, aponta erro, compara, dá nível de rubrica ou sugere reescrita. Você não avalia texto nem resposta de aluno: reescreva sem juízo sobre o que ele escreveu, dizendo que a correção é do professor.'
+
+/** Os problemas que são da D55: a reserva só responde a estes. */
+const PROBLEMAS_DA_D55: readonly string[] = [PROBLEMA_DA_NOTA, PROBLEMA_DO_JULGAMENTO]
 
 const PEDE_ADAPTACAO = /\badapt\w*/
 const PEDE_PLANO = /\b(planos? de aulas?|planej\w+|sequencia didatica|roteiro de aula)\b/
@@ -389,12 +639,25 @@ export const proporFerramenta = definirTarefa({
     }
   },
 
+  /**
+   * A reserva da D55: o modelo insistiu em julgar duas vezes, e quem responde é a recusa fixa. Só quando a **última**
+   * reprovação foi da D55: citação inválida sem julgamento segue falha (`IA_SAIDA_INVALIDA`), como o JSON quebrado, que nem
+   * chega aqui. A recusa passa pelas duas conferências da D55 e pelo schema, e a chamada gasta as duas tentativas.
+   */
+  reservaQuandoInvalida(_entrada, problemas = []): SaidaDoAssistente | undefined {
+    if (!problemas.some((problema) => PROBLEMAS_DA_D55.includes(problema))) return undefined
+    return { tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, citacoes: [] }
+  },
+
   conferir(entrada, saida) {
-    // Nota, conceito ou pontuação na resposta é pré-correção (D55): nunca é gravada, venha do pedido que vier.
+    // Nota, conceito ou pontuação, e juízo sobre texto de aluno, na resposta são pré-correção (D55): nunca são gravados,
+    // venha do pedido que vier. A proposta de ferramenta tem o `texto` dela, e é conferida do mesmo jeito.
     const daNota = atribuiNotaOuConceito(saida.texto) ? [PROBLEMA_DA_NOTA] : []
-    if (saida.tipo === 'texto') return [...daNota, ...problemasDasCitacoes(saida.citacoes, entrada.trechos, 'Citações')]
+    const doJulgamento = julgaTextoDeAluno(saida.texto, conversaTrazTextoDeAluno(entrada.mensagem, entrada.turnosAnteriores)) ? [PROBLEMA_DO_JULGAMENTO] : []
+    const daD55 = [...daNota, ...doJulgamento]
+    if (saida.tipo === 'texto') return [...daD55, ...problemasDasCitacoes(saida.citacoes, entrada.trechos, 'Citações')]
     // Quem escolheu só conversar não recebe a mesma pergunta de novo: proposta, aqui, é saída inválida.
-    return [...daNota, ...(entrada.semProposta === true ? ['O professor escolheu só conversar: responda com "tipo": "texto", sem "proposta_de_ferramenta".'] : [])]
+    return [...daD55, ...(entrada.semProposta === true ? ['O professor escolheu só conversar: responda com "tipo": "texto", sem "proposta_de_ferramenta".'] : [])]
   },
 
   falso(entrada): SaidaDoAssistente {

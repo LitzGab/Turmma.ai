@@ -345,6 +345,34 @@ describe('Tutor contra um modelo que não obedece', () => {
       const { rows: perguntas } = await sql(`select questao, material_id, pagina from mensagem_tutor where escola_id = $1 and execucao_id = $2 and autor = 'aluno'`, [a.escolaId, execucao.execucaoId])
       expect(perguntas).toEqual([{ questao: null, material_id: null, pagina: null }])
     })
+
+    it('quando é o modelo que classifica o turno como risco à vida, o aluno recebe a mensagem fixa com o 188, e o professor, o sinal sem referência', async () => {
+      const aluno = await novoAluno()
+      // Nenhum gatilho da regra reconhece esta frase, nem a de assunto delicado: quem a classifica é o modelo, e o texto que ele escreveu é descartado.
+      const frase = 'ontem de noite eu fiquei olhando o frasco de remédio da minha mãe e pensando no que aconteceria'
+      // Só a primeira chamada diz `risco_a_vida`: no turno seguinte o modelo obedece, e o pedido que chega a ele é o que se confere.
+      modelo.responder((pedido, chamada) => (chamada === 1 ? JSON.stringify({ classificacao: 'risco_a_vida', resposta: 'Sinto muito. Respire fundo e converse com alguém de confiança, vai ficar tudo bem.', citacoes: [] }) : obediente(pedido)))
+      const execucao = await turno(aluno, frase, naQuestao(3))
+      expect(execucao.estado).toBe('concluida')
+      // O modelo foi chamado uma vez, e a classificação dele não sai da tarefa: o aluno recebe `assunto_delicado`, nunca `risco_a_vida`.
+      expect(modelo.pedidos).toHaveLength(1)
+      expect(resposta(execucao)).toMatchObject({ tipo: 'assunto_delicado', texto: MENSAGEM_DE_RISCO_A_VIDA })
+      expect(JSON.stringify(execucao)).not.toContain('risco_a_vida')
+      expect(MENSAGEM_DE_RISCO_A_VIDA).toContain('188')
+      expect(await respostasGravadas(aluno)).toEqual([MENSAGEM_DE_RISCO_A_VIDA])
+      const { rows: sinais } = await sql('select tipo, atividade_aplicada_id, questao, material_id, pagina from sinal_tutor where escola_id = $1 and aluno_id = $2', [a.escolaId, aluno.usuarioId])
+      expect(sinais).toEqual([{ tipo: 'atencao_humana', atividade_aplicada_id: null, questao: null, material_id: null, pagina: null }])
+      // A pergunta perde a questão: o turno delicado não é referência a trabalho.
+      const { rows: perguntas } = await sql(`select questao, material_id, pagina from mensagem_tutor where escola_id = $1 and execucao_id = $2 and autor = 'aluno'`, [a.escolaId, execucao.execucaoId])
+      expect(perguntas).toEqual([{ questao: null, material_id: null, pagina: null }])
+      // No turno seguinte do mesmo aluno, o que ele escreveu sobre risco à vida e a mensagem que recebeu não voltam ao modelo (regra 20, item 12).
+      const seguinte = await turno(aluno, 'não entendi a questão 3', naQuestao(3))
+      expect(seguinte.estado).toBe('concluida')
+      expect(modelo.pedidos).toHaveLength(2)
+      expect(modelo.pedidos[1]).toContain('não entendi a questão 3')
+      expect(modelo.pedidos[1]).not.toContain('frasco')
+      expect(modelo.pedidos[1]).not.toContain('Obrigado por me contar')
+    })
   })
 
   describe('a avaliação abre depois do 202 (S12; regra 30, item 10)', () => {
@@ -419,6 +447,19 @@ describe('Tutor contra um modelo que não obedece', () => {
       const [lida] = await execucaoLida(execucaoId)
       expect(lida).toMatchObject({ estado: 'concluida', erro: null, resultado: { tipo: 'mensagem_do_tutor' } })
       expect(await respostasGravadas(aluno)).toEqual([MENSAGEM_DE_ASSUNTO_DELICADO])
+      expect(await sinaisDe(aluno)).toEqual([{ tipo: 'atencao_humana', atividade_aplicada_id: null, questao: null }])
+      expect(await usoDeHoje(aluno)).toBe(1)
+    })
+
+    it('abre antes da conclusão e o modelo classificou risco à vida: a mensagem de risco, com o 188, e o sinal sem referência ficam, e a troca conta', async () => {
+      await executor.ociosa()
+      const aluno = await novoAluno()
+      modelo.responder(() => JSON.stringify({ classificacao: 'risco_a_vida', resposta: 'Sinto muito. Respire fundo e converse com alguém de confiança, vai ficar tudo bem.', citacoes: [] }))
+      const execucaoId = await abrindoDuranteOTurno(aluno, { tabela: 'consumo_ia', evento: 'insert', quando: `new.aluno_id = '${aluno.usuarioId}'::uuid and new.estado = 'concluida'` }, { texto: 'ontem de noite eu fiquei olhando o frasco de remédio da minha mãe e pensando no que aconteceria', ...naQuestao(3) })
+      const [lida] = await execucaoLida(execucaoId)
+      expect(lida).toMatchObject({ estado: 'concluida', erro: null, resultado: { tipo: 'mensagem_do_tutor' } })
+      expect(JSON.stringify(lida)).not.toContain('risco_a_vida')
+      expect(await respostasGravadas(aluno)).toEqual([MENSAGEM_DE_RISCO_A_VIDA])
       expect(await sinaisDe(aluno)).toEqual([{ tipo: 'atencao_humana', atividade_aplicada_id: null, questao: null }])
       expect(await usoDeHoje(aluno)).toBe(1)
     })

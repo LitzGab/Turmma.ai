@@ -1,5 +1,5 @@
 import { esquemaConteudoDaMensagemDoAgente, esquemaConteudoDoResumoDoAnalista, HIPOTESES_DO_ANALISTA } from '@educa/shared'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { AdaptadorRoteirizado } from '../__fixtures__/adaptador-roteirizado.js'
 import { AMOSTRAS_DO_ASSISTENTE } from '../__fixtures__/amostras-do-assistente.js'
 import { AMOSTRAS_DA_REVISAO, SAIDAS_DA_REVISAO } from '../__fixtures__/amostras-do-assistente-revisao.js'
@@ -8,9 +8,10 @@ import { MATERIAL_DE_ESTEQUIOMETRIA } from '../__fixtures__/estequiometria.js'
 import type { AdaptadorDeModelo } from '../adaptador.js'
 import { ConsumoEmMemoria, OrcamentoEmMemoria } from '../consumo.js'
 import { ErroDeIa } from '../erros.js'
+import { PROMPT_PROPOR_FERRAMENTA } from '../prompts/propor-ferramenta.js'
 import { ProvedorDeIa } from '../provedor.js'
 import { SuspensoesEmMemoria } from '../suspensao.js'
-import { atribuiNotaOuConceito, conversaPedeJulgamentoDeTextoDeAluno, pedeJulgamentoDeTextoDeAluno, proporFerramenta, RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, turnosQuePodemIrAoModelo } from './propor-ferramenta.js'
+import { atribuiNotaOuConceito, conversaPedeJulgamentoDeTextoDeAluno, conversaTrazTextoDeAluno, julgaTextoDeAluno, pedeJulgamentoDeTextoDeAluno, proporFerramenta, RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, turnosQuePodemIrAoModelo } from './propor-ferramenta.js'
 import { relatorioDaCorrecao } from './relatorio-da-correcao.js'
 import { resumoDoAnalista } from './resumo-do-analista.js'
 
@@ -224,24 +225,24 @@ describe('propor_ferramenta e a D55: a IA não julga texto de aluno nem dá nota
       expect(atribuiNotaOuConceito(texto)).toBe(false)
     })
 
-    it('o modelo que tenta dar nota duas vezes não tem nada entregue; o que corrige na repetição entrega a resposta sem nota', async () => {
-      // O resíduo da regra: o texto do aluno veio colado sem palavra-chave, e o modelo resolveu avaliá-lo.
+    it('o modelo que tenta dar nota duas vezes entrega a recusa, e o que corrige na repetição entrega a resposta sem nota', async () => {
+      // O resíduo da regra: o texto do aluno veio colado sem palavra-chave, e o modelo resolveu avaliá-lo. Antes da 3.0 isto era
+      // `IA_SAIDA_INVALIDA`; agora a última reprovação é da D55, e a reserva responde com a recusa fixa.
       const entrada = entradaDoAssistente('Segue o que a Bia escreveu. A tecnologia mudou muito a vida das pessoas e hoje todo mundo conversa pelo celular.')
       expect(proporFerramenta.semModelo?.(entrada)).toBeUndefined()
       const comNota = JSON.stringify({ tipo: 'texto', texto: 'O texto da Bia está razoável. Eu daria nota 6,5: falta desenvolver o argumento.', citacoes: [] })
       const insistente = new AdaptadorRoteirizado([comNota, comNota])
       const { ia, consumo } = provedorCom(insistente)
-      const erro: unknown = await ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A }).catch((motivo: unknown) => motivo)
-      expect(erro).toBeInstanceOf(ErroDeIa)
-      expect((erro as ErroDeIa).codigoDeIa).toBe('IA_SAIDA_INVALIDA')
+      const { saida } = await ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A })
+      expect(saida).toEqual({ tipo: 'texto', texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, citacoes: [] })
       expect(insistente.chamadas).toBe(2)
       expect(insistente.correcoes[1]?.problemas.join(' ')).toContain('nota, conceito ou pontuação')
-      expect(consumo.registros).toMatchObject([{ funcao: 'conversa_e_ferramentas', estado: 'falhou', codigoDeErro: 'IA_SAIDA_INVALIDA' }])
-      expect(JSON.stringify(consumo.registros)).not.toMatch(/6,5|razoável/u)
+      expect(consumo.registros).toMatchObject([{ funcao: 'conversa_e_ferramentas', estado: 'concluida', tentativas: 2 }])
+      expect(JSON.stringify(consumo.registros)).not.toMatch(/6,5|razoável|Bia/u)
 
       const semNota = { tipo: 'texto', texto: 'Eu não avalio texto de aluno: a correção é sua.', citacoes: [] }
-      const { saida } = await provedorCom(new AdaptadorRoteirizado([comNota, JSON.stringify(semNota)])).ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A })
-      expect(saida).toEqual(semNota)
+      const { saida: corrigida } = await provedorCom(new AdaptadorRoteirizado([comNota, JSON.stringify(semNota)])).ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A })
+      expect(corrigida).toEqual(semNota)
     })
 
     it('a proposta de ferramenta com nota no texto também é recusada', () => {
@@ -319,6 +320,377 @@ describe('a D55 sobre as amostras escritas sem olhar para a regra (a revisão da
     // E a mensagem curta depois do texto colado é recusada sem modelo.
     expect(proporFerramenta.semModelo?.({ ...entradaDoAssistente('e aí, ficou bom?'), turnosAnteriores: [{ autor: 'professor', texto: colado }] })).toMatchObject({ texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO })
     expect(proporFerramenta.semModelo?.({ ...entradaDoAssistente('ficou bom, pode gerar'), turnosAnteriores: [{ autor: 'professor', texto: 'monta uma atividade de mol' }] })).toBeUndefined()
+  })
+})
+
+describe('propor_ferramenta na tarefa 3.0: juízo sobre texto de aluno, na entrada e na saída (D55)', () => {
+  const COLADO_LONGO =
+    'A tecnologia mudou muito a vida das pessoas porque hoje todo mundo conversa pelo celular e antes não era assim, e por isso a escola precisa pensar em como usar isso a favor do ensino.'
+  const TEXTO_DA_BIA = 'Segue o que a Bia escreveu. A tecnologia mudou muito a vida das pessoas e hoje todo mundo conversa pelo celular.'
+  const EXECUCAO = '0d1e2f3a-4b5c-4d6e-8f70-a1b2c3d4e5f6'
+  const doProfessor = (texto: string) => ({ autor: 'professor' as const, texto })
+  const doAssistente = (texto: string) => ({ autor: 'assistente' as const, texto })
+  const julga = (texto: string) => julgaTextoDeAluno(texto, true)
+  /** Das frases que deviam ser barradas, as que passaram: a lista vazia é o que se espera. */
+  const queEscapam = (frases: readonly string[]) => frases.filter((frase) => !julga(frase))
+  /** Das frases que deviam passar, as que foram barradas: a lista vazia é o que se espera. */
+  const queForamBarradas = (frases: readonly string[]) => frases.filter((frase) => julga(frase))
+
+  describe('a saída: duas chaves, o juízo e o texto de aluno na conversa', () => {
+    it('saída que julga texto concreto é barrada quando a conversa traz texto de aluno, e passa quando não traz', () => {
+      const saidas = ['O parágrafo 2 do texto da turma está sem coesão.', 'A redação da turma ficou fraca e confusa.', 'O texto da Bia está no nível 3 da rubrica.']
+      expect(queEscapam(saidas)).toEqual([])
+      for (const saida of saidas) expect(julgaTextoDeAluno(saida, false), saida).toBe(false)
+    })
+
+    it('com texto de aluno na conversa, a saída que não julga nada passa: lote agrupado, correção cega, conferência de entrega', () => {
+      expect(
+        queForamBarradas([
+          'Os textos da turma ficaram agrupados pelo tema escolhido.',
+          'Escondi o nome de cada aluno e numerei os trabalhos de 1 a 12, para a correção cega.',
+          'Faltam 3 entregas: A-03, A-07 e A-11 ainda não enviaram.',
+          'Separei os trabalhos por turma e por data de entrega.',
+        ]),
+      ).toEqual([])
+    })
+
+    it('a resposta de conteúdo passa com a chave ligada, sem nenhuma palavra de organização, de rubrica ou de material', () => {
+      const conteudo = [
+        'A Revolução Francesa começou em 1789 com a queda da Bastilha.',
+        'A Revolução Francesa mostrou que o poder pode mudar de mãos.',
+        'A Lei de Lavoisier diz que, numa reação, a massa total se conserva.',
+        'Mol é a quantidade de matéria que contém 6,02 × 10²³ entidades elementares.',
+        'Rendimento teórico é a massa máxima de produto prevista pela estequiometria da reação.',
+        'O mol é a unidade de quantidade de matéria no Sistema Internacional.',
+        'O reagente limitante é aquele que acaba primeiro na reação.',
+        'Fotossíntese ocorre nos cloroplastos das células vegetais.',
+        'Um bom exemplo de reação exotérmica é a combustão.',
+        'O resultado da reação é 58,5 g de cloreto de sódio.',
+        'A definição de mol é a quantidade de matéria com 6,02 × 10²³ entidades.',
+        'O cálculo da massa molar soma as massas atômicas de cada átomo.',
+        'A ideia central da fotossíntese é converter luz em açúcar.',
+        'Ele reage com o oxigênio e libera calor.',
+        'Lavoisier usou uma balança de precisão nos experimentos.',
+        'Darwin explicou a seleção natural em A Origem das Espécies.',
+        'É claro que a massa se conserva.',
+        'Ótimo! Aqui está a atividade de mol.',
+        'A reação é rápida demais para ver a olho nu.',
+        'A melhor forma de balancear é por tentativa.',
+        'A resposta correta da questão 2 é a letra C.',
+        'Está claro que a massa se conserva.',
+        'É bom lembrar que a massa se conserva.',
+        'É correto afirmar que o mol é a unidade.',
+        'O resultado da reação é claro: 58,5 g de cloreto de sódio.',
+        'Uma boa definição de mol é a quantidade de matéria com 6,02 × 10²³ entidades.',
+        'Um bom cálculo da massa molar soma as massas atômicas de cada átomo.',
+        'Uma boa ideia para lembrar a fotossíntese é converter luz em açúcar.',
+        'Ele é um ácido forte e reage com metais.',
+        'Lavoisier usou uma boa balança de precisão nos experimentos.',
+        'A Revolução Francesa mostrou grande capacidade de mobilização popular.',
+      ]
+      expect(queForamBarradas(conteudo)).toEqual([])
+      const conversas = [{ ...entradaDoAssistente('explica a Revolução Francesa') }, { ...entradaDoAssistente('e o mol?'), turnosAnteriores: [doProfessor(TEXTO_DA_BIA)] }, entradaDoAssistente(TEXTO_DA_BIA)]
+      for (const entrada of conversas) for (const texto of conteudo) expect(proporFerramenta.conferir?.(entrada, { tipo: 'texto', texto, citacoes: [] }), `${entrada.mensagem} | ${texto}`).toEqual([])
+    })
+
+    it('"coesão é um critério" passa; "o parágrafo 2 está sem coesão" é barrado', () => {
+      expect(julga('A coesão é um critério da rubrica de redação.')).toBe(false)
+      expect(julga('O parágrafo 2 está sem coesão.')).toBe(true)
+    })
+
+    it('rubrica e critérios, em geral e antes da aplicação, passam mesmo com texto de aluno na conversa', () => {
+      const porNivel = ['Critério 1 — Tese', 'Nível 1: o texto não apresenta tese.', 'Nível 2: o texto apresenta tese vaga.', 'Nível 3: o texto apresenta tese clara e argumentos que a sustentam.'].join('\n')
+      const porCriterio = 'O critério de tese vale 2 pontos. O critério de coesão avalia os conectivos do texto. O critério de repertório pede uma citação. O critério de proposta exige agente e ação.'
+      const tresCriterios = ['Critério 1: tese clara.', 'Critério 2: o texto cita um dado.', 'Critério 3: o texto vale 2 pontos.'].join('\n')
+      expect(queForamBarradas([porNivel, porCriterio, tresCriterios])).toEqual([])
+      expect(julga('Critério 3: o texto vale 2 pontos.')).toBe(true)
+      expect(
+        queForamBarradas([
+          'Se o texto não tiver tese, o nível é 1.',
+          'O texto deve apresentar tese clara e conclusão.',
+          'Textos que citam dados ganham o nível 3.',
+          'Textos que apresentam tese clara ganham 2 pontos.',
+          'Espera-se que o texto seja claro.',
+          'Critérios para o texto dissertativo, antes da aplicação.',
+          'Na rubrica da turma, o texto fica no nível 2 quando não tem tese.',
+          'Espera-se que o texto tenha tese.',
+          'No critério de clareza, o texto da turma precisa ser claro.',
+        ]),
+      ).toEqual([])
+      // O mesmo descritor, solto, sem a rubrica em volta, é o texto de alguém.
+      expect(julga('Nível 3: o texto apresenta tese clara e argumentos que a sustentam.')).toBe(true)
+    })
+
+    it('cada jeito de julgar o texto é barrado: bom ou fraco, parabéns, erro, não fecha, sem, correta, ignorou, exibe, melhor que, mais completo, imperativo, sugestão, versão melhorada', () => {
+      expect(
+        queEscapam([
+          'O texto da turma ficou superficial.',
+          'Parabéns à turma pelo texto.',
+          'Há uma falha na redação da turma.',
+          'A conclusão não fecha com o resto do texto da turma.',
+          'O texto da turma ficou sem conectivos.',
+          'A resposta da turma está correta.',
+          'O texto da turma ignorou o contexto.',
+          'O texto da turma exibe maturidade.',
+          'O primeiro texto da turma é melhor que o segundo.',
+          'O texto da turma é mais completo.',
+          'Reescreva a introdução do texto da turma.',
+          'Seria interessante trocar a ordem dos parágrafos do texto da turma.',
+          'A versão melhorada do texto da turma segue abaixo.',
+          'A Bia ficou superficial na turma.',
+          'O texto da turma foge do tema.',
+        ]),
+      ).toEqual([])
+    })
+
+    it('cada jeito de afirmar o nível da rubrica para um texto é barrado', () => {
+      expect(
+        queEscapam([
+          'O texto da turma fica no nível 3.',
+          'Eu coloco o texto da turma no nível 2.',
+          'O texto da turma atende ao esperado.',
+          'O texto da turma demonstrou plenamente o conceito.',
+          'O objetivo foi parcialmente atingido no texto da turma.',
+          'No texto da turma, o critério de coesão está em dois pontos.',
+        ]),
+      ).toEqual([])
+    })
+
+    it('o juízo dito sem apontar o texto, com a conversa trazendo texto de aluno, é barrado', () => {
+      expect(
+        queEscapam([
+          'Pontos fortes da turma neste lote.',
+          'Segue o ranking do lote.',
+          'A turma errou a questão 4.',
+          'A versão aprimorada da frase da turma é: “o celular muda a rotina”.',
+          'Faltou coesão na entrega da turma.',
+          'Na verdade, o gabarito da turma é outro.',
+          'A coesão da turma está em nível avançado.',
+          'Pontos a corrigir no lote.',
+          'O segundo trecho precisa de crase.',
+          'Há falta de parágrafo de introdução na redação.',
+        ]),
+      ).toEqual([])
+    })
+
+    it('o excesso, o aquém do esperado, o superlativo de uma parte do texto e a sugestão com "pode" ou "precisa" são juízo, e a frase tem de falar do texto', () => {
+      expect(
+        queEscapam([
+          'O parágrafo de abertura está extenso demais.',
+          'O trabalho da Lara ficou aquém do esperado para a série.',
+          'Entre os três textos, o do Caio traz a melhor conclusão.',
+          'Ele precisa reformular a tese do primeiro parágrafo.',
+        ]),
+      ).toEqual([])
+    })
+
+    it('o juízo sem sujeito, com o texto subentendido, é barrado; a conversa sem texto de aluno e a resposta de conteúdo não são tocadas', () => {
+      const frases = ['É confuso e pouco convincente.', 'É muito bom.', 'Muito bom, parabéns!', 'Parabéns pelo esforço!', 'É um bom começo.', 'Em geral, está confuso e vago.', 'Está confuso e pouco convincente no geral.', 'Ficou excelente, está muito claro e convincente.', 'Está bem claro e coeso.', 'Muito bom! Está claro, bem construído e convincente.', 'Está ótimo, só poderia ser um pouco mais curto no fim.', 'Gostei.', 'Bom trabalho!']
+      const entrada = entradaDoAssistente(TEXTO_DA_BIA)
+      for (const texto of frases) {
+        expect(proporFerramenta.conferir?.(entrada, { tipo: 'texto', texto, citacoes: [] }), texto).not.toEqual([])
+        expect(proporFerramenta.conferir?.(entradaDoAssistente('explica a Revolução Francesa'), { tipo: 'texto', texto, citacoes: [] }), texto).toEqual([])
+      }
+      expect(queEscapam(['Parabéns!', 'Muito bom!'])).toEqual([])
+    })
+
+    it('rubrica sob medida para o texto colado é barrada, por qualquer um dos três jeitos ou nomeando de quem é o texto; para o gênero, passa', () => {
+      expect(queEscapam(['Segue o critério para essa redação.', 'Montei a rubrica com base na redação da turma.', 'A rubrica acompanha o que ela escreveu.', 'Critérios para o texto da Bia.'])).toEqual([])
+      expect(julga('Critérios para o texto dissertativo-argumentativo.')).toBe(false)
+    })
+
+    it('a frase dirigida ao professor passa, mesmo falando do que o aluno entendeu: imperativo, você, vc, posso, podemos, vamos, vou, sugiro, recomendo, se quiser', () => {
+      expect(
+        queForamBarradas([
+          'Escolha o aluno que entendeu o capítulo para apresentar.',
+          'Vc pode chamar o aluno que dominou o capítulo.',
+          'Você pode chamar o aluno que dominou o capítulo.',
+          'Posso chamar o aluno que dominou o capítulo depois.',
+          'Podemos chamar o aluno que dominou o capítulo depois.',
+          'Vamos chamar o aluno que dominou o capítulo depois.',
+          'Vou chamar o aluno que dominou o capítulo depois.',
+          'Sugiro chamar o aluno que dominou o capítulo.',
+          'Recomendo chamar o aluno que dominou o capítulo.',
+          'Falamos do aluno que dominou o capítulo, se quiser.',
+        ]),
+      ).toEqual([])
+    })
+
+    it('o desempenho de quem escreveu, dito com verbo, é barrado; a menção sem juízo e a que fala do critério passam', () => {
+      expect(queEscapam(['O aluno entendeu o capítulo do livro.', 'Ele precisa praticar bastante mais.', 'Bia demonstrou domínio pleno.', 'A Bia precisa estudar mais o capítulo.', 'A Bia entendeu o tema.', 'Caio dominou o conteúdo.'])).toEqual([])
+      expect(
+        queForamBarradas([
+          'A Bia leu o capítulo do livro.',
+          'O trabalho segue o critério combinado.',
+          'Ele ainda não enviou a atividade.',
+          'Ele segue o critério combinado ontem.',
+          'Ele gostou do capítulo do livro.',
+          'Tudo certo, pode seguir.',
+          'O critério do capítulo vale quando o aluno aprendeu a regra.',
+          'Ela abriu o capítulo do livro às oito.',
+        ]),
+      ).toEqual([])
+      expect(julga('Eu não avalio se o aluno entendeu o texto: a correção é sua.')).toBe(false)
+    })
+  })
+
+  describe('a chave: a conversa traz texto de aluno', () => {
+    it('cada marca da mensagem, sozinha, liga a chave: texto colado, de aluno, pessoa pelo nome, pessoa que fez, texto apontado', () => {
+      const marcas = { colado: COLADO_LONGO, deAluno: 'olha as respostas dos alunos', pessoaDonaDoTexto: 'confere o texto da Ana', pessoaQueFez: 'Bianca usou bem os conectivos?', apontado: 'como ficou esse resumo?', queAPessoaEscreveu: 'o que a Bia escreveu?', parteDeTextoPelaPalavra: 'Bia errou o parágrafo 2?' }
+      for (const [marca, mensagem] of Object.entries(marcas)) expect(conversaTrazTextoDeAluno(mensagem, []), marca).toBe(true)
+    })
+
+    it('redação ou discursiva, sozinhas, e um nome com maiúscula, sozinho, não ligam a chave: nomear o gênero ou o assunto não põe texto na conversa', () => {
+      for (const mensagem of ['rubrica pra redação do 9º ano', 'cria critérios para a discursiva', 'monta uma atividade sobre mol', 'explica a Revolução Francesa', 'monta uma atividade para a Ana', 'fala do Sistema Internacional', 'o que o Napoleão fez?', 'o que a Química escreveu?', 'Lavoisier usou uma balança, monta uma atividade', 'Darwin escreveu A Origem das Espécies?']) {
+        expect(conversaTrazTextoDeAluno(mensagem, []), mensagem).toBe(false)
+      }
+    })
+
+    it('o texto de aluno num turno anterior do professor conta; o do assistente e o turno comum, não', () => {
+      expect(conversaTrazTextoDeAluno('e agora?', [doProfessor(TEXTO_DA_BIA)])).toBe(true)
+      expect(conversaTrazTextoDeAluno('e agora?', [doAssistente(TEXTO_DA_BIA)])).toBe(false)
+      expect(conversaTrazTextoDeAluno('e agora?', [doProfessor('monta uma atividade de mol')])).toBe(false)
+    })
+
+    it('"esse tipo de texto" aponta para o que o professor trouxe antes: com turno dele liga a chave; sem turno dele, não', () => {
+      const pedido = 'cria uma rubrica para esse tipo de texto'
+      expect(conversaTrazTextoDeAluno(pedido, [doProfessor('monta uma atividade de mol')])).toBe(true)
+      expect(conversaTrazTextoDeAluno(pedido, [])).toBe(false)
+      expect(conversaTrazTextoDeAluno(pedido, [doAssistente('Quer que eu abra a ferramenta?')])).toBe(false)
+    })
+  })
+
+  describe('a entrada: as formas de pedir que escapavam', () => {
+    const colado = [doProfessor(COLADO_LONGO)]
+
+    it('nota pedida pelo verbo de dar ou pelo número é recusada; "quanto tempo devo dar" é outro assunto', () => {
+      for (const frase of ['quanto eu devo dar pra essa resposta', 'que número você colocaria?']) expect(pedeJulgamentoDeTextoDeAluno(frase), frase).toBe(true)
+      expect(pedeJulgamentoDeTextoDeAluno('quanto tempo devo dar para a prova?')).toBe(false)
+      expect(pedeJulgamentoDeTextoDeAluno('quanto de tempo devo dar para a prova?')).toBe(false)
+    })
+
+    it('uma pessoa pelo nome que faz o que o aluno faz, no começo da frase, é texto de aluno: "Bianca usou bem os conectivos?"', () => {
+      expect(pedeJulgamentoDeTextoDeAluno('Bianca usou bem os conectivos?')).toBe(true)
+      expect(pedeJulgamentoDeTextoDeAluno('Química usou bem os conectivos?')).toBe(false)
+      expect(pedeJulgamentoDeTextoDeAluno('Davi não acertou a 3?')).toBe(true)
+      for (const pedido of ['Ninguém entendeu estequiometria, monta uma lista de revisão', 'Quem errou a questão 3?', 'Alguém acertou a 5?', 'Metade errou o balanceamento, monta uma lista de revisão', 'Todo mundo errou a questão 3, monta uma lista de revisão', 'Quase ninguém entendeu estequiometria, monta uma lista de revisão', 'Muita gente errou o balanceamento, monta uma lista de revisão', 'Mais da metade errou a 4, monta uma lista']) {
+        expect(pedeJulgamentoDeTextoDeAluno(pedido), pedido).toBe(false)
+      }
+    })
+
+    it('rubrica ou critérios pedidos depois de um texto colado são pré-correção; sem texto antes, passam', () => {
+      for (const pedido of ['monta uma rubrica pra esse tipo de texto', 'cria critérios antes de eu aplicar', 'elabora uma rubrica de redação']) {
+        expect(conversaPedeJulgamentoDeTextoDeAluno(pedido, colado), pedido).toBe(true)
+        expect(conversaPedeJulgamentoDeTextoDeAluno(pedido, []), pedido).toBe(false)
+      }
+      expect(conversaPedeJulgamentoDeTextoDeAluno('cria uma rubrica de redação', [doProfessor('monta uma atividade de mol')])).toBe(false)
+    })
+
+    it('mexer no que veio antes, com a referência a ele, é mexer no texto do aluno; no enunciado ou no que é do professor, não', () => {
+      for (const pedido of ['deixa isso mais curto', 'torna isso mais simples', 'enxuga esse trecho', 'resume esse texto', 'reescreve ele']) {
+        expect(conversaPedeJulgamentoDeTextoDeAluno(pedido, colado), pedido).toBe(true)
+        expect(conversaPedeJulgamentoDeTextoDeAluno(pedido, []), pedido).toBe(false)
+      }
+      const doMaterial = ['deixa o enunciado da questão 1 mais curto', 'resume esse trecho do enunciado', 'resume esse texto que eu escrevi', 'deixa a aula mais curta']
+      const demonstrativoDeMaterial = ['simplifica esse plano', 'torna essa atividade mais simples', 'resume esse capítulo', 'deixa essa questão mais curta']
+      for (const pedido of [...doMaterial, ...demonstrativoDeMaterial]) expect(conversaPedeJulgamentoDeTextoDeAluno(pedido, colado), pedido).toBe(false)
+    })
+  })
+
+  describe('a conferência e a reserva', () => {
+    const juizo = JSON.stringify({ tipo: 'texto', texto: 'O texto da Bia está confuso e fraco, sem coesão.', citacoes: [] })
+    const citacaoInvalida = JSON.stringify({ tipo: 'texto', texto: 'Está na página 1.', citacoes: [{ materialId: MATERIAL_DE_ESTEQUIOMETRIA, pagina: 1, trecho: 'O mol é…' }] })
+    const recusa = { tipo: 'texto' as const, texto: RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, citacoes: [] }
+    const comLog = (roteiro: readonly string[]) => {
+      const consumo = new ConsumoEmMemoria()
+      const logger = { info: vi.fn(), warn: vi.fn() }
+      const adaptador = new AdaptadorRoteirizado(roteiro)
+      const ia = new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000, logger })
+      return { ia, consumo, logger, adaptador }
+    }
+
+    it('a conferência confere os dois tipos de saída: o texto e a proposta de ferramenta', () => {
+      const entrada = entradaDoAssistente(TEXTO_DA_BIA)
+      const julgando = 'O texto da Bia está confuso e fraco.'
+      expect(proporFerramenta.conferir?.(entrada, { tipo: 'texto', texto: julgando, citacoes: [] })).toHaveLength(1)
+      expect(proporFerramenta.conferir?.(entrada, { tipo: 'proposta_de_ferramenta', texto: `${julgando} Quer que eu abra a ferramenta?`, proposta: { ferramenta: 'atividade_objetiva', parametros: { tema: 'mol' } } })).toHaveLength(1)
+      // O texto de aluno pode ter vindo num turno anterior, e a mensagem de agora ser curta.
+      expect(proporFerramenta.conferir?.({ ...entradaDoAssistente('e agora?'), turnosAnteriores: [doProfessor(TEXTO_DA_BIA)] }, { tipo: 'texto', texto: julgando, citacoes: [] })).toHaveLength(1)
+      // Sem texto de aluno na conversa, a mesma frase passa.
+      expect(proporFerramenta.conferir?.(entradaDoAssistente('o que é mol?'), { tipo: 'texto', texto: julgando, citacoes: [] })).toEqual([])
+    })
+
+    it('as saídas do próprio Assistente (proposta, resposta com a página, adaptação, só conversar) passam, mesmo com texto de aluno na conversa', () => {
+      const comTexto = { turnosAnteriores: [doProfessor(TEXTO_DA_BIA)] }
+      const pedidos = ['monta uma atividade com 5 questões sobre reagente limitante', 'preciso de um plano de aula sobre mol', 'o que é rendimento teórico?', 'bom dia', 'quero adaptar a atividade com fonte ampliada']
+      for (const pedido of pedidos) {
+        for (const semProposta of [false, true]) {
+          const entrada = { ...entradaDoAssistente(pedido), ...comTexto, ...(semProposta ? { semProposta } : {}) }
+          const saida = proporFerramenta.falso(entrada)
+          expect(proporFerramenta.conferir?.(entrada, saida), `${pedido} (${String(semProposta)})`).toEqual([])
+        }
+      }
+    })
+
+    it('duas saídas julgadoras entregam a recusa, com duas chamadas; o consumo e o log não levam o texto nem a saída', async () => {
+      const entrada = entradaDoAssistente(TEXTO_DA_BIA)
+      expect(proporFerramenta.semModelo?.(entrada)).toBeUndefined()
+      const { ia, consumo, logger, adaptador } = comLog([juizo, juizo])
+      const { saida } = await ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A, execucaoId: EXECUCAO })
+      expect(saida).toEqual(recusa)
+      expect(adaptador.chamadas).toBe(2)
+      expect(adaptador.correcoes[1]?.problemas.join(' ')).toContain('julga texto de aluno')
+      expect(consumo.registros).toMatchObject([{ funcao: 'conversa_e_ferramentas', estado: 'concluida', tentativas: 2 }])
+      expect(JSON.stringify(consumo.registros)).not.toMatch(/Bia|confuso|coes/u)
+      // Duas linhas, só com id e contagem: a da reserva e a da conclusão. Nenhuma leva o texto, a saída ou a conversa.
+      expect(logger.info.mock.calls).toEqual([
+        [{ evento: 'ia.geracao.reserva', tipo: 'propor_ferramenta', escolaId: ESCOLA_A, execucaoId: EXECUCAO, tentativas: 2 }],
+        [{ evento: 'ia.geracao.concluida', tipo: 'propor_ferramenta', escolaId: ESCOLA_A, execucaoId: EXECUCAO, duracaoMs: expect.any(Number) as number, tentativas: 2 }],
+      ])
+    })
+
+    it('só a nota, duas vezes, entrega a recusa: a última reprovação é da D55 mesmo sem texto de aluno na conversa', async () => {
+      const soNota = JSON.stringify({ tipo: 'texto', texto: 'Eu daria nota 7 para essa atividade.', citacoes: [] })
+      const { ia, adaptador } = comLog([soNota, soNota])
+      const { saida } = await ia.gerar({ tarefa: proporFerramenta, entrada: entradaDoAssistente('monta uma atividade sobre mol'), escolaId: ESCOLA_A })
+      expect(saida).toEqual(recusa)
+      expect(adaptador.chamadas).toBe(2)
+      expect(adaptador.correcoes[1]?.problemas.join(' ')).toContain('nota, conceito ou pontuação')
+      expect(adaptador.correcoes[1]?.problemas.join(' ')).not.toContain('julga texto de aluno')
+    })
+
+    it('a recusa passa nas duas conferências e no schema, em qualquer conversa com texto de aluno', () => {
+      const conversas = [entradaDoAssistente(TEXTO_DA_BIA), entradaDoAssistente(COLADO_LONGO), { ...entradaDoAssistente('e agora?'), turnosAnteriores: [doProfessor(TEXTO_DA_BIA)] }]
+      for (const entrada of conversas) {
+        expect(proporFerramenta.conferir?.(entrada, recusa)).toEqual([])
+      }
+      expect(proporFerramenta.esquemaDeSaida.safeParse(recusa).success).toBe(true)
+      expect(julga(RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO)).toBe(false)
+    })
+
+    it('JSON quebrado duas vezes segue sendo IA_SAIDA_INVALIDA, sem reserva', async () => {
+      const { ia, logger } = comLog(['{quebrado', '{quebrado'])
+      await expect(ia.gerar({ tarefa: proporFerramenta, entrada: entradaDoAssistente(TEXTO_DA_BIA), escolaId: ESCOLA_A })).rejects.toMatchObject({ codigoDeIa: 'IA_SAIDA_INVALIDA' })
+      expect(logger.info).not.toHaveBeenCalled()
+    })
+
+    it('citação inválida duas vezes, sem texto de aluno, segue sendo IA_SAIDA_INVALIDA: a reserva é só da D55', async () => {
+      const { ia } = comLog([citacaoInvalida, citacaoInvalida])
+      await expect(ia.gerar({ tarefa: proporFerramenta, entrada: entradaDoAssistente('o que é mol?'), escolaId: ESCOLA_A })).rejects.toMatchObject({ codigoDeIa: 'IA_SAIDA_INVALIDA' })
+    })
+
+    it('só a última reprovação decide a reserva: juízo e depois citação inválida é falha; citação inválida e depois juízo é a recusa', async () => {
+      const entrada = entradaDoAssistente(TEXTO_DA_BIA)
+      await expect(comLog([juizo, citacaoInvalida]).ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A })).rejects.toMatchObject({ codigoDeIa: 'IA_SAIDA_INVALIDA' })
+      const { saida } = await comLog([citacaoInvalida, juizo]).ia.gerar({ tarefa: proporFerramenta, entrada, escolaId: ESCOLA_A })
+      expect(saida).toEqual(recusa)
+    })
+
+    it('o prompt sobe a versão e proíbe o juízo de qualidade sobre texto de aluno, sem proibir a rubrica em geral nem o lote', () => {
+      expect(PROMPT_PROPOR_FERRAMENTA.versao).toBe('2026-10-22.1')
+      expect(PROMPT_PROPOR_FERRAMENTA.sistema).toContain('Nem juízo de qualidade você dá sobre texto de aluno')
+      expect(PROMPT_PROPOR_FERRAMENTA.sistema).toContain('Rubrica e critérios você escreve em geral')
+    })
   })
 })
 

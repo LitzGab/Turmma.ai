@@ -37,8 +37,9 @@ escreve o guia, e o Arquiteto o revisa com o `revisor-geral` e o põe no commit,
 A 10.0, 11.0, 24.0, 33.0 a 36.0, 90.0, 96.0 e 97.0 só movem pasta, quebram ciclo, declaram dependência ou mexem no
 Dockerfile. Nelas, **os revisores são o `test-engineer`, o `revisor-geral` e no máximo um guardião**, o da área que o
 movimento toca (tabela "Subagentes por tarefa"). **O movimento é feito por script**, nunca à mão: `git mv` mais a
-reescrita de import com ts-morph por `npx` (sem salvar no `package.json`), uma pasta por commit. O script fica no
-`.processo/` da linha, fora do commit, e o documento da tarefa diz como rodá-lo.
+reescrita de import com ts-morph, instalado numa pasta de rascunho (`npm i --prefix .processo/ts-morph ts-morph@<exata>`,
+sem tocar o `package.json`), uma pasta por commit. O script fica no `.processo/` da linha, fora do commit, e o documento
+da tarefa diz como rodá-lo.
 
 ## Lista
 
@@ -56,12 +57,12 @@ reescrita de import com ts-morph por `npx` (sem salvar no `package.json`), uma p
   - [x] 2.3 `ouro.test.ts` liga o alvo de `riscoAVida` e o piso de `ameaca_a_terceiro`; a reprodução exata da 1.0 dá lugar ao alvo (mudança declarada), e a de `assuntoDelicado`, ao "não cair"
   - [x] 2.4 Testes: por categoria, precisão, bordas, o caminho da rota
 
-- [ ] **3.0 — Julgamento de texto de aluno é barrado na entrada e na saída, e a rubrica passa**
-  - [ ] 3.1 `julgaTextoDeAluno(texto, conversaTrazTextoDeAluno)`, no `conferir`, nos dois tipos de saída
-  - [ ] 3.2 `conversaPedeJulgamentoDeTextoDeAluno` ao alvo, com uma `dev` por forma que escapa
-  - [ ] 3.3 `reservaQuandoInvalida` só quando a última reprovação foi da D55; o prompt sobe a `versao`
-  - [ ] 3.4 `ouro.test.ts` liga `saidaQualitativa` e `julgamentoDeTextoDeAluno`
-  - [ ] 3.5 Testes: as chaves, a reserva, o alvo
+- [x] **3.0 — Julgamento de texto de aluno é barrado na entrada e na saída, e a rubrica passa**
+  - [x] 3.1 `julgaTextoDeAluno(texto, conversaTrazTextoDeAluno)`, no `conferir`, nos dois tipos de saída
+  - [x] 3.2 `conversaPedeJulgamentoDeTextoDeAluno` ao alvo, com uma `dev` por forma que escapa
+  - [x] 3.3 `reservaQuandoInvalida` só quando a última reprovação foi da D55; o prompt sobe a `versao`
+  - [x] 3.4 `ouro.test.ts` liga `saidaQualitativa` e `julgamentoDeTextoDeAluno`
+  - [x] 3.5 Testes: as chaves, a reserva, o alvo
 
 - [x] **4.0 — Avaliação aberta depois do 202: o Tutor não responde e a troca não conta**
   - [ ] 4.1 `entrada()` confere `avaliativaAberta(turmaId)` logo depois da conferência de turma, antes de trechos, memória e turnos, e lança `TUTOR_PAUSADO_EM_AVALIACAO`
@@ -79,12 +80,12 @@ reescrita de import com ts-morph por `npx` (sem salvar no `package.json`), uma p
   - [ ] 93.2 As três pioras da 2.0 desfeitas, cada uma com a sua `dev`
   - [ ] 93.3 Testes: as `dev`, a regressão exata do `ouro` v1, o alvo e o piso de `assuntoDelicado`
 
-- [ ] **94.0 — Frase de risco à vida que só o modelo reconhece recebe o 188 e o sinal**
-  - [ ] 94.1 `risco_a_vida` na saída do modelo; o `ajustar` a troca por `assunto_delicado` com a mensagem de risco, e nada sai da tarefa com ela
-  - [ ] 94.2 O prompt classifica pelo que o aluno escreveu, com a `versao` nova
-  - [ ] 94.3 `tools/ia/medir-risco-a-vida.ts`: o padrão ou o modelo, por categoria, em três execuções, valendo a pior
-  - [ ] 94.4 `docs/aia/tutor.md`: o modelo que classifica o risco, a medida e as limitações
-  - [ ] 94.5 Testes: o caminho na tarefa e na rota, com a avaliação aberta, e a ferramenta de medida
+- [x] **94.0 — Frase de risco à vida que só o modelo reconhece recebe o 188 e o sinal**
+  - [x] 94.1 `risco_a_vida` na saída do modelo; o `ajustar` a troca por `assunto_delicado` com a mensagem de risco, e nada sai da tarefa com ela
+  - [x] 94.2 O prompt classifica pelo que o aluno escreveu, com a `versao` nova
+  - [x] 94.3 `tools/ia/medir-risco-a-vida.ts`: o padrão ou o modelo, por categoria, em três execuções, valendo a pior
+  - [x] 94.4 `docs/aia/tutor.md`: o modelo que classifica o risco, a medida e as limitações
+  - [x] 94.5 Testes: o caminho na tarefa e na rota, com a avaliação aberta, e a ferramenta de medida
 
 ### A linha da web — a prova que não perde resposta (regra 80.6) e as pastas da web
 
@@ -100,7 +101,7 @@ reescrita de import com ts-morph por `npx` (sem salvar no `package.json`), uma p
 - [ ] **97.0 — Na web, `areas/professor/` e `areas/coordenacao/` se partem por assunto, com a mesma trava**
   - [ ] 97.1 O `97_task.md` é escrito pelo Arquiteto antes de a tarefa partir: o *feature folder* (bulletproof-react), cada assunto (`turmas/`, `atividades/`, `assistente/`, `material/`…) com as telas, os hooks e o cliente de API dele
   - [ ] 97.2 Só `git mv` e import, uma pasta por commit
-  - [ ] 97.3 A trava da 96.0 vale para `apps/web/src`
+  - [ ] 97.3 Cria a trava: `tools/guardas/tamanho-das-pastas.test.ts`, pasta de produção com mais de 25 arquivos reprova, com as raízes numa lista (hoje `apps/web/src`) e lista fechada de exceções (R56)
 
 ### Tenant — a regra 10 travada por máquina
 
@@ -189,7 +190,7 @@ reescrita de import com ts-morph por `npx` (sem salvar no `package.json`), uma p
 - [ ] **96.0 — Na API, `estrutura/`, `operacao/`, `sala/` e `atividade/` têm uma subpasta por recurso, e pasta de produção com mais de 25 arquivos reprova**
   - [ ] 96.1 O `96_task.md` é escrito pelo Arquiteto antes de a tarefa partir: uma subpasta por recurso, como o `nest g resource` (`estrutura/turma/` com o controller, o service, o repository e os testes dele)
   - [ ] 96.2 Só `git mv` e import, uma pasta por commit
-  - [ ] 96.3 O teste da trava: pasta de produção com mais de 25 arquivos reprova, com lista fechada de exceções e motivo
+  - [ ] 96.3 A trava que a 97.0 criou ganha a raiz `apps/api/src`, com lista fechada de exceções e motivo (R56)
 
 ### Camadas e lint
 
@@ -354,7 +355,7 @@ com as perguntas da §5 do `DIAGNOSTICO.md` marcadas "Para a Etapa 9"):
 | 33.0 | 7.0, 10.0, 11.0, 16.0 | 3.0 a 97.0 |
 | 34.0 | 33.0 | 3.0 a 97.0 |
 | 35.0 | 34.0, 17.0 | 3.0 a 97.0 |
-| 96.0 | 15.0, 16.0, 17.0, 35.0, 51.0 | 3.0 a 97.0 |
+| 96.0 | 15.0, 16.0, 17.0, 35.0, 51.0, 97.0 | 3.0 a 97.0 |
 | 9.0 | 6.0 | 3.0 a 97.0 |
 | 10.0 | — | 3.0 a 97.0 |
 | 11.0 | — | 3.0 a 97.0 |

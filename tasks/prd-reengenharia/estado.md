@@ -11,38 +11,55 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
   já corria, termina normalmente); **sexta 23/10 às 22h nenhuma tarefa nova parte**; pouso com push autorizado com
   validação aprovada e esteira verde; meta sábado 24/10 às 08h; **três linhas ocupadas**; mensagem do "Claude Code #2"
   sobre a X5 vale como palavra dele. Memória: `x5-recorte-autonomia-ate-o-pouso`
-- **Nenhuma partida antes do §7 do recorte**, pedido ao `Arquiteto` (reiniciado no andar da spec) às ~11:00
+- **Esclarecimento do "Claude Code #2" ao §5 (~11:02, vale como palavra do Joaquim), para a onda 0 (3.0, 93.0, 94.0):**
+  o relógio das 4 h conta de 10:55 (vence às 14:55); passar disso ou travar duas vezes **não manda para a X6**: o
+  `Arquiteto` fecha a tarefa com a melhor versão que os revisores com veto aprovem e declara, medida, a lacuna que sobra
+  (`onda-0.md` e AIA do Tutor); só o refinamento do corpus vai para a X6. O limite das três vai ao diagnóstico do
+  `Arquiteto`, nunca ao Joaquim. **Única parada que ainda o chamaria:** decisão que só se resolve afrouxando D1–D81 ou
+  as regras 10, 20, 30, 40, 70 (o Arquiteto não pode decidir isso)
+- **~11:05, ajustes do "Claude Code #2" para acelerar** (palavra do Joaquim), em `.processo/ordens/recorte-ajustes-cc2.md`
+  (andar da spec), enviados ao `Arquiteto` junto do §7: a 95.0 é do Claude Code #2 (entrega em
+  `Educa.ia/.processo/reengenharia/guia/` até ~15h; o Arquiteto revisa com o revisor-geral e commita); todos os
+  documentos de tarefa numa passada (**feito**: os 36); **uma linha só para a web** (36.0, 97.0, 51.0, 53.0) e duas para API e pacotes;
+  tarefa mecânica com test-engineer, revisor-geral e no máximo um guardião, movimento por script (`git mv` + ts-morph via npx)
+- **§7 feito** pelo `Arquiteto` (`16ffbe9`, `d2dea6b`): D81, `tasks.md` com 32 na X5 (36 no quadro), X6 no roadmap, 14.0–17.0
+  reescritas, ajustes do Claude Code #2 (R51–R54). os 36 documentos prontos
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **3.0**, grande, desde 07:47, parada na DIVERGÊNCIA (desenho) de
-    08:05. **Triagem do `Arquiteto` (09:45): detalhe que a spec não previu**, sem mudar desenho nem alvo, em
-    `onda-0.md` §2.3 (sem commit, vai no da 3.0) e `.processo/divergencia-3.0-resposta.md` (l1). `PEDIDO de retomada`
-    enviado ao Implementador. **~10:50, ESCALADA de Mesa** (revisor-geral e test-engineer 2 seguidas, conformidade a
-    2ª; itens 1 e 3 da r2 em sentidos opostos; `saidaQualitativa` 53/58, piso 0,90). Ordem `.processo/ordens/3_task-r2.md`
-    (l1), não enviada; o item 5 é do Arquiteto. `Arquiteto` reiniciado no l1 com o pedido de diagnóstico
-    (`.processo/ordens/diagnostico-3.md`). **Diagnóstico pronto**, substitui a r2 (a saída barrava por exclusão, não por
-    juízo; conferido numa cópia: 53/58, 0 legítimas barradas); item 5 feito no §2.3. `PEDIDO de retomada` enviado.
-    **Espero o `RELATÓRIO` do Implementador** (3ª rodada; nova reprovação do mesmo revisor é o limite)
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **93.0**, grande, 1ª tentativa, desde ~08:40. Observação levada: a
-    correção absorvida em `.processo/ordens/pioras-absorvidas/` (copiada para l3); não abrir `ouro` nem `ouro-retido`
-    **ESCALADA de Mesa 3** (conformidade e revisor-geral, 2 seguidas; "dose letal", exceções de rato e DL50). Ordem
-    `.processo/ordens/93_task-r2.md` (l3), não enviada. `Arquiteto` reiniciado no l3, com o pedido de diagnóstico
-    (`.processo/ordens/diagnostico-93.md`). **Diagnóstico pronto:** "dose letal" volta ao padrão do HEAD, a terceira
-    piora fica e é declarada (separar aula de ciências de aluno exige saber quem fala; §2.1 manda disparar). O
-    diagnóstico substitui os itens 1 e 2 da r2. `PEDIDO de retomada` enviado ao Implementador 3 com os dois.
-    **Espero o `RELATÓRIO` dele** (3ª rodada; nova reprovação do mesmo revisor é o limite)
-  - linha 2: **livre**, esperando o §7 (soltei a correção absorvida à mão no `.processo/linhas.json`; cópia em
-    `linhas.json.antes-de-soltar-l2`)
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **6.0**, pequena (tenant), desde 11:27; prazo de 4 h 15:27. Avisado de
+    que o `ouro.test.ts` está vermelho na spec até a base da 3.0 (traz com `git merge spec/reengenharia` antes do portão)
+    **A base virou correção** (R57: o hook trata o `MEDIDAS.json` como código, e `ouro.test.ts:267`/`:273` precisam mudar):
+    pedi ao Implementador da l1 a **correção `ouro-base-qualitativa`** antes de seguir a 6.0 (ordem
+    `.processo/ordens/correcao-ouro-base-qualitativa.md`, copiada para l1; guardiões test-engineer e llm-integrator). O
+    commit segue com o da 6.0; **a esteira da spec fica vermelha nos 3 casos do `ouro.test.ts` até o encontro da linha 1**
+    **DIVERGÊNCIA (ordem) da correção:** gravar a base muda o hash que o `SELO.json` guarda (6 testes do `selo-do-ouro`
+    vermelhos). **O `Arquiteto` gravou a base e o selo na spec** (`256fb62`, R58 em `cef19e6`); retomada enviada: restaurar
+    o `MEDIDAS.json`, trazer a spec, a correção leva só o `ouro.test.ts` e o documento, portão, Mesa, commit; depois a 6.0
+  - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
+    **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
+    os 5 da 1ª resolvidos. O `Claude Code #2` corrigiu; **3ª rodada pedida ao `Arquiteto`**, só sobre os dois. A lista
+    "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
+  - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
+    aplicar" entraram na lacuna do §2.3 (`0366ce1`)
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **94.0**, grande, onda 0 (prazo 14:55, sem ir para a X6), desde 11:07
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **51.0**, grande, **linha da web** (depois 53.0, 36.0, 97.0), desde
+    11:07; prazo de 4 h: 15:07
 - **Devo ainda:**
+  - **95.0 (guia), entregue pelo Claude Code #2** em `/home/joaquimdp/Documentos/git/Educa.ia/.processo/reengenharia/guia/`
+    (`guia-do-desenvolvedor.md`, `arquitetura.md` corrigido, `LEIA.md` com o que conferir). Quando o `Arquiteto` tiver
+    folga: revisão do `revisor-geral` (pedida às ~11:30). **Publicar (commit) só depois das tarefas de pasta (33–36, 96,
+    97) e da 14.0–17.0**
+  - **antes de a 12.0, a 13.0, a 24.0 e a 25.0 partirem:** pedir ao `Arquiteto` que confira os caminhos de novo, depois
+    das pastas
+  - todos os 36 documentos existem (`504a041`, `43a6ae2`, `bc9241f`); R55 e R56 em `DECISOES.md`. A 96.0 depende da
+    97.0; a 90.0 espera a 24.0; a 43.0 e a 90.0 não correm juntas (`infra/compose.yml`)
   - **depois do commit da 94.0** (que depende da 93.0): pedir ao `Arquiteto` o **lote retido 2**, que mede as duas, antes
     da validação. A 26.0 agora depende da 94.0
-  - ler o veredito da esteira de `b5b7d11`, `63aac92` e `f794080` no próximo encontro
-  - ao fechar a 3.0: se ela não trouxer a base da `saidaQualitativa`, pedi-la ao `Arquiteto`; e pedir o lote retido
-    dos alvos da 3.0, como o da 2.0
+  - ler o veredito da esteira de `975bad2` no próximo encontro (`b5b7d11` e `63aac92` verdes; `f794080` cancelada pelo push seguinte)
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
-- **Base:** `spec/reengenharia` em `f794080`. Vigia ligada
+- **Base:** `spec/reengenharia` em `cef19e6`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -67,6 +84,8 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 4.0 | `de26c03` | Sonnet | 2 (test-engineer, revisor-geral; tenancy, conformidade e infra na 1ª) | linha 2, grande, 20:01–20:32 |
 | 5.0 | `259ca64` | Sonnet | 2 (test-engineer, revisor-geral) | linha 3, pequena, 20:01–20:12 |
 | 2.0 | `66d8b95` | Sonnet | 4 (test-engineer 5) | ouro lido para escrever o padrão: divergência, opção A (lote retido), escalada com diagnóstico, bloqueio destravado pelo Joaquim; npm audit fora do ar ~8 h |
+| 93.0 | `c361eb8` | Sonnet | 3 (test-engineer 4) | linha 3, grande, 09:40–11:00; escalada (dose letal) com diagnóstico: volta ao HEAD, a 3ª piora fica declarada; absorveu a correção das pioras da l2 |
+| 3.0 | `1566521` | Sonnet | 4 | linha 1, grande, 07:47–11:25; divergência (triagem: detalhe), escalada, bloqueio destravado pelo recorte; saidaQualitativa 54/58, 0 legítimas barradas; lacuna declarada no §2.3 |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
@@ -117,6 +136,8 @@ critério de aceite.
 ## O que falhou
 
 ## O que decidi sem perguntar
+- 22/10 ~11:35 — a base da `saidaQualitativa` (correção) foi para a linha 1, antes da 6.0, com a árvore limpa: não havia
+  linha ociosa, e é a 6.0 que precisa dela primeiro. A spec fica vermelha até o encontro da 6.0.
 - 22/10 ~11:00 — soltei a linha 2 da correção absorvida editando o `.processo/linhas.json` (não há comando para
   abandonar uma linha; o Joaquim quer as três ocupadas). Retrospectiva: `linhas.ts abandonar <n>`.
 - 22/10 — a correção das três pioras, pedida na linha 2 porque o Arquiteto disse "sem decisão, já vale", ficou

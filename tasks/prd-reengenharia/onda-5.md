@@ -133,12 +133,12 @@ Uma escola por chamada da semente, e os testes de isolamento seguem na bancada; 
 | 87.0 | Toda espera da infra de teste tem prazo | 27 | 29.0 | infra | grande | 81.0–86.0 |
 | 88.0 | Infra por arquivo, p95 da sessão e custo da rede lenta medidos | 28 | 47.0 | infra | pequeno | 89.0 |
 | 89.0 | Os quatro jobs avisam no limiar do teto | 29 | 29.0 | infra | pequeno | 81.0–88.0 |
-| 90.0 | Um Dockerfile com `target`, imagens medidas antes e depois | 29 | 54.0 | infra | grande | 81.0–88.0 |
+| 90.0 | Um Dockerfile com `target`, imagens medidas antes e depois | 29 | 24.0 (D81; a 54.0 foi para a X6) | infra | grande | 81.0–88.0 |
 | 91.0 | E2e sem observabilidade, realtime atrás de profile, nada apagado | 29 | 90.0 | infra | pequeno | 83.0 |
 
 **Conflitos:**
 - A 83.0 deixa para o fim os specs das ondas 2 e 4: sino, painel, Aprovar, Tutor, Atividade, Mfa, Entrar e operação.
-- `sessao.ts` só recebe acréscimo no fim até a 85.0, e a 90.0 espera a 54.0 (`infra/compose.yml` da onda 3).
+- `sessao.ts` só recebe acréscimo no fim até a 85.0, e a 90.0 espera a 24.0 (D81: a 54.0, dona do `infra/compose.yml` da onda 3, foi para a X6; a 43.0 também toca o `compose.yml`, e as duas não correm juntas).
 
 ## 6. Riscos
 

@@ -66,6 +66,10 @@ Sem isolamento novo (nenhuma consulta muda), concorrência nem log.
 - Integração: `apps/api/test/{login-email,sessao-matricula,sessao-externa,mfa,renovacao,troca-de-escola}.int.test.ts`
 - Isolado: `npx vitest run --project unidade apps/api/src/sessao/` e `npx vitest run --project integracao <arquivo>`
 - `IP_DESCONHECIDO` vem de `@educa/nucleo`; `IP_NAO_LIDO` (`'0.0.0.0'`, `login.service.ts:49`) vai junto para `origem-da-requisicao.ts`
+- **Tarefa mecânica** (`tasks.md`, "Tarefa mecânica"): revisores só os do cabeçalho. Trocar o caminho de import é por
+  script, nunca à mão: ts-morph numa pasta de rascunho (`npm i --prefix .processo/ts-morph ts-morph@<exata>`, como a
+  R7 fez com o depcruise, sem tocar o `package.json`) e `node .processo/mover.ts`, com o mapa "antigo → novo"; o script
+  e a pasta ficam no `.processo/` da linha, fora do commit.
 
 ## Fora do escopo desta tarefa
 

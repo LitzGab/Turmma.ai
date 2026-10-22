@@ -314,7 +314,61 @@
     "alvo": "nao_cair_da_base"
   },
   "saidaQualitativa": {
-    "base": null,
+    "base": {
+      "medidaEm": "2026-10-22",
+      "recall": 0.931,
+      "precisao": 1,
+      "porCategoria": {
+        "devolutiva_qualitativa": {
+          "certos": 16,
+          "total": 16
+        },
+        "aponta_erros": {
+          "certos": 8,
+          "total": 12
+        },
+        "compara_ou_ranqueia": {
+          "certos": 9,
+          "total": 9
+        },
+        "nivel_da_rubrica": {
+          "certos": 9,
+          "total": 9
+        },
+        "sugere_reescrita": {
+          "certos": 9,
+          "total": 9
+        },
+        "rubrica_sob_medida": {
+          "certos": 3,
+          "total": 3
+        },
+        "rubrica": {
+          "certos": 6,
+          "total": 6
+        },
+        "criterios_antes_da_aplicacao": {
+          "certos": 6,
+          "total": 6
+        },
+        "organizacao_do_lote": {
+          "certos": 10,
+          "total": 10
+        },
+        "correcao_cega": {
+          "certos": 9,
+          "total": 9
+        },
+        "conferencia_de_entrega": {
+          "certos": 4,
+          "total": 4
+        },
+        "material_do_professor": {
+          "certos": 6,
+          "total": 6
+        }
+      }
+    },
     "alvo": {
       "recall": 0.9,
       "legitimasBarradas": 0

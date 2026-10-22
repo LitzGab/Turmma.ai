@@ -25,7 +25,7 @@ As pastas da P10 se movem, com o comportamento igual. Nascem quatro leituras pro
 - **`tools/testes/`**: `apps/api/test/{sessao-de-teste,api-com-sessao,configuracao-de-teste,gatilho-de-parada}.ts`,
   `apps/worker/test/fila-de-teste.ts` e o realtime de teste. A 31.0 cria `tools/testes/tsconfig.json` com
   `experimentalDecorators`, no `typecheck`.
-- **`apps/web/src/kit/`**: o kit visual (botão, diálogo, aviso, ícones, onça, peças de IA). As peças de domínio (casca,
+- **`apps/web/src/componentes/ui/`** (R47, D81; com `campos/` e `sobrepostos/`, R56): o kit visual (botão, diálogo, aviso, ícones, onça, peças de IA). As peças de domínio (casca,
   sino, pedidos, meus dados, convite, `EstadoErro`) ficam em `componentes/` (R39).
 
 **Os subcaminhos de `exports`** reexportam sem mover arquivo, como `@educa/nucleo/ciclo-de-vida`:
@@ -41,7 +41,7 @@ As pastas da P10 se movem, com o comportamento igual. Nascem quatro leituras pro
   - só `*.repository.ts` importa `@educa/nucleo/db`;
   - `operacao` nunca importa `ops`;
   - fora de `credencial/` e `sessao/`, só se importa delas pelo `index.ts`;
-  - o kit não importa `api/`, `areas/` nem `sessao/`.
+- O kit não importa `api/`, `areas/` nem `sessao/`: `no-restricted-imports` do ESLint, na 36.0 (D81, R56).
 - **Os barris não vazam (34.0).** O depcruise não vê o reexport em dois passos (`sessao/index.ts` → `export *` de
   `sessao/tenant/index.ts`). Um teste em execução (molde de `arquitetura.test.ts:122-134`) confere que `Object.values` de `sessao/index.js` e `credencial/index.js` não traz
   `ResolucaoDeTenantRepository` nem `ContaGlobalRepository`, sob qualquer nome; a mutação é o reexport em dois passos.
@@ -130,7 +130,7 @@ O índice único parcial (`material.ts:60`) ignora `falhou`; `DialogoDeEnvioDeMa
 | 33.0 | `credencial/` reúne senha, cookie, hash e desafio | 14 | 32.0 | tenancy, infra | grande |
 | 34.0 | `sessao/` só tem fluxos, em subpastas, com `index.ts` | 14 | 33.0 | tenancy, infra | grande |
 | 35.0 | `ops/` só tem terminal; casos de uso em `operacao/`, paginação em `http/` | 14 | 34.0 | tenancy | pequeno |
-| 36.0 | O kit visual mora em `kit/` e não importa API, área nem sessão | 14 | fim da onda 1 | — | grande |
+| 36.0 | O kit visual mora em `componentes/ui/` e não importa API, área nem sessão | 14 | fim da onda 1 | — | grande |
 | 37.0 | O professor lê o "esperando" numa chamada, sem nome de aluno | 15 | 35.0 | tenancy, privacy | grande |
 | 38.0 | A coordenação lê o "esperando" numa chamada, e `turmas` diz quem fica sem professor | 15 | 37.0 | tenancy, privacy, conformidade | grande |
 | 39.0 | `GET /v1/escola/roteiro` diz se a escola está montada | 15 | 38.0 | tenancy | pequeno |

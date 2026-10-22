@@ -25,7 +25,7 @@ import {
   tarefaConcluidaNaLista,
   turnosDoProfessor,
 } from './__fixtures__/ouro.js'
-import { atribuiNotaOuConceito, conversaPedeJulgamentoDeTextoDeAluno } from './tarefas/propor-ferramenta.js'
+import { atribuiNotaOuConceito, conversaPedeJulgamentoDeTextoDeAluno, conversaTrazTextoDeAluno, julgaTextoDeAluno } from './tarefas/propor-ferramenta.js'
 import { ehAssuntoDelicado, mencionaRiscoAVida, pedeRespostaPronta } from './tarefas/turno-do-tutor.js'
 
 /**
@@ -63,16 +63,18 @@ function quaisErraram(amostras: readonly Amostra[], barra: (amostra: Amostra) =>
   return `erraram ${String(erradas.length)}: ${erradas.slice(0, IDS_QUE_A_MENSAGEM_NOMEIA).join('; ')}${demais > 0 ? `; e mais ${String(demais)}` : ''}`
 }
 
-const BARRAS: Record<Exclude<Politica, 'saidaQualitativa'>, (amostra: Amostra) => boolean> = {
+const BARRAS: Record<Politica, (amostra: Amostra) => boolean> = {
   riscoAVida: (amostra) => mencionaRiscoAVida(amostra.texto),
   assuntoDelicado: (amostra) => ehAssuntoDelicado(amostra.texto),
   pedidoDeRespostaPronta: (amostra) => pedeRespostaPronta(entradaDoPedidoDeRespostaPronta(amostra)),
   julgamentoDeTextoDeAluno: (amostra) => conversaPedeJulgamentoDeTextoDeAluno(amostra.texto, turnosDoProfessor(amostra)),
   saidaComNota: (amostra) => atribuiNotaOuConceito(amostra.texto),
+  // README do `ouro`: a saída é o `texto`; a conversa é o pedido (`mensagemDoProfessor`) e os turnos do professor.
+  saidaQualitativa: (amostra) => julgaTextoDeAluno(amostra.texto, conversaTrazTextoDeAluno(amostra.contexto?.mensagemDoProfessor ?? '', turnosDoProfessor(amostra))),
 }
 
 /** O que a política mede hoje: as amostras do alvo e a função do README ("Como medir"). */
-function medirHoje(politica: Exclude<Politica, 'saidaQualitativa'>): { medida: Medida; amostras: Amostra[]; barra: (amostra: Amostra) => boolean } {
+function medirHoje(politica: Politica): { medida: Medida; amostras: Amostra[]; barra: (amostra: Amostra) => boolean } {
   const barra = BARRAS[politica]
   const todas = CORPORA[politica].amostras
   const amostras = politica === 'julgamentoDeTextoDeAluno' ? semOsNaoMedidos(todas, MEDIDAS.julgamentoDeTextoDeAluno.alvo.medidoSem) : todas
@@ -602,14 +604,26 @@ describe('as políticas contra a base e o alvo', () => {
     expect(quedasDaBase(MEDIDAS.pedidoDeRespostaPronta.base, medida)).toEqual([])
   })
 
-  it('julgamentoDeTextoDeAluno reproduz a base sem JT-001 a JT-012, e imprime também com elas', () => {
+  it('julgamentoDeTextoDeAluno alcança o alvo sem JT-001 a JT-012: recall, e imprime também com elas', () => {
     const { medida, amostras, barra } = medirHoje('julgamentoDeTextoDeAluno')
     imprimir(linhaDaMedida('julgamentoDeTextoDeAluno sem JT-001 a JT-012', medida))
-    expect(diferencasDaBase(MEDIDAS.julgamentoDeTextoDeAluno.base, medida), quaisErraram(amostras, barra)).toEqual([])
     expect(medida.positivas).toBe(45)
+    expect(medida.recall, quaisErraram(amostras, barra)).toBeGreaterThanOrEqual(MEDIDAS.julgamentoDeTextoDeAluno.alvo.recall)
     const com = medir(CORPORA.julgamentoDeTextoDeAluno.amostras, barra)
     imprimir(linhaDaMedida('julgamentoDeTextoDeAluno com JT-001 a JT-012', com))
     expect(com.positivas).toBe(57)
+  })
+
+  it('julgamentoDeTextoDeAluno: rubrica_antes e material_do_professor não casam, e as quatro categorias do alvo não caem da base', () => {
+    const { medida, amostras, barra } = medirHoje('julgamentoDeTextoDeAluno')
+    const { semCasar, naoCairDaBase } = MEDIDAS.julgamentoDeTextoDeAluno.alvo
+    expect(semCasar).toEqual(['rubrica_antes', 'material_do_professor'])
+    const casaram = semCasar.flatMap((categoria) => amostras.filter((amostra) => amostra.categoria === categoria && barra(amostra)).map((amostra) => `${amostra.id} ${categoria}`))
+    expect(casaram).toEqual([])
+    const { base } = MEDIDAS.julgamentoDeTextoDeAluno
+    const piso = Object.fromEntries(Object.entries(base.porCategoria).filter(([categoria]) => naoCairDaBase.includes(categoria)))
+    expect(Object.keys(piso).sort()).toEqual([...naoCairDaBase].sort())
+    expect(quedasDaBase({ ...base, porCategoria: piso }, medida)).toEqual([])
   })
 
   it('saidaComNota reproduz a base por categoria', () => {
@@ -623,11 +637,21 @@ describe('as políticas contra a base e o alvo', () => {
     expect(quedasDaBase(MEDIDAS.saidaComNota.base, medida)).toEqual([])
   })
 
-  it('saidaQualitativa não tem função até a 3.0: a base é nula e o alvo é absoluto', () => {
-    const medida = MEDIDAS.saidaQualitativa
-    imprimir(`ouro saidaQualitativa: sem função até a ${String(medida.semBaseAte)}; alvo recall ${String(medida.alvo.recall)} e ${String(medida.alvo.legitimasBarradas)} legítima barrada`)
-    expect(medida.base).toBeNull()
-    expect(medida.semBaseAte).toBe('3.0')
-    expect(CORPORA.saidaQualitativa.amostras.filter((a) => a.esperado === 'nao_casa')).toHaveLength(41)
+  it('saidaQualitativa alcança o alvo: recall nas positivas, e imprime a fração das legítimas barradas', () => {
+    const { medida, amostras, barra } = medirHoje('saidaQualitativa')
+    imprimir(linhaDaMedida('saidaQualitativa', medida))
+    const legitimas = amostras.filter((amostra) => amostra.esperado === 'nao_casa')
+    const barradas = legitimas.filter(barra)
+    // A premissa de custo da Tech Spec (§8) é de 5 % dos pedidos barrados: o teste imprime o que o `ouro` mede.
+    imprimir(`ouro saidaQualitativa: ${String(barradas.length)} de ${String(legitimas.length)} legítimas barradas (${String(Math.round((barradas.length / legitimas.length) * 1000) / 10)} %)`)
+    expect(legitimas).toHaveLength(41)
+    expect(medida.positivas).toBe(58)
+    expect(medida.recall, quaisErraram(amostras, barra)).toBeGreaterThanOrEqual(MEDIDAS.saidaQualitativa.alvo.recall)
+  })
+
+  it('saidaQualitativa alcança o alvo: nenhuma legítima barrada (rubrica, critérios, lote, correção cega, conferência de entrega, material)', () => {
+    const { amostras, barra } = medirHoje('saidaQualitativa')
+    const barradas = amostras.filter((amostra) => amostra.esperado === 'nao_casa' && barra(amostra)).map((amostra) => `${amostra.id} ${amostra.categoria}`)
+    expect(barradas.length, `barradas: ${barradas.join('; ')}`).toBeLessThanOrEqual(MEDIDAS.saidaQualitativa.alvo.legitimasBarradas)
   })
 })

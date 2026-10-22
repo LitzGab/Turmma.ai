@@ -74,6 +74,8 @@ Todo pacote importado está declarado onde é usado, nenhum sobra, e o knip repr
 - Isolado: `npx vitest run --project unidade tools/ci/scripts.test.ts tools/ci/dependencias.test.ts tools/guardas/knip.test.ts`;
   regressão: `npx vitest run --project integracao apps/worker/test/execucao.int.test.ts apps/despachante/test/janela.int.test.ts`.
 - Armadilha: `tools/processo/` não muda antes da 92.0; o portão só vê o `guarda:dependencias`.
+- **Tarefa mecânica** (`tasks.md`, "Tarefa mecânica"): revisores só os do cabeçalho; a lista de dependências que
+  faltam sai do `knip`, e não da leitura à mão.
 
 ## Fora do escopo desta tarefa
 
