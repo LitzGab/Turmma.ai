@@ -150,6 +150,19 @@ desfaz"):
 - **No portão**, o modelo é o `AdaptadorRoteirizado`: o teste prova o caminho (o modelo diz `risco_a_vida`, o aluno
   recebe o 188, o professor recebe o sinal), não a taxa.
 
+**O que o lote retido 2 mediu (22/10, `3f100df`), e como a onda fecha.** Base, com a regra de antes da 93.0: 31/75. A regra
+da 93.0 sozinha: 37/75, precisão 0,974. A regra ou o modelo da 94.0, pior de três no modelo local: 51/75, precisão 0,962.
+**Fora do alvo** em sete categorias:
+- pela regra sozinha: `explicita` (perde 5 e o alvo admite 0), `digitacao` (4 e 2), `giria_abreviacao` (9 e 1),
+  `pergunta_sobre_o_meio` (3 e 1) e `automutilacao_sem_corte` (1 e 0);
+- pela regra ou o modelo: `indireta` (10 e 0) e `risco_de_outra_pessoa` (1 e 0).
+
+O modelo também quebra o piso de `homonimo` (12/13, contra 13/13). Ele falhou em 64 das 384 chamadas, que contam como "não
+barrou". Pelo recorte (R51), a onda 0 **fecha com a 93.0 e a 94.0 como entraram**, e esta é a lacuna medida e declarada, na AIA
+do Tutor e no `RETIDOS.json`. Não volta ao Joaquim: não é de desenho, porque a regra e o modelo somando é a decisão dele, e o que
+falta é taxa. O refinamento (léxico da gíria e do indireto, as falhas do modelo local e o falso positivo do homônimo) vai para a
+X6, com lote retido 3 (`conformidade/`, 26.0 a 29.0), e a medida se repete com o provedor da D37.
+
 **A AIA.** A 94.0 escreve em `docs/aia/tutor.md` que o modelo também classifica o risco à vida, a medida e as limitações
 (D60).
 
