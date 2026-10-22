@@ -10,7 +10,7 @@ categoria. É escrito por um subagente em contexto limpo, que não lê o código
 revisado pelo `conformidade-reviewer`. Frase de sonda de quem revisou ou implementou não entra. Nenhuma frase vem de
 aluno real.
 
-`RETIDOS.json` guarda, por política: o sha256 do lote, a `base` (o padrão de antes da tarefa dona), a
+`RETIDOS.json` guarda, em `lotes`, um registro por lote, com a `politica`: o sha256 do lote, a `base` (o padrão de antes da tarefa dona), a
 `medidaIndependente` (a primeira, contra o padrão congelado da tarefa) e o que ficou fora do alvo do `MEDIDAS.json`.
 Depois da primeira medida o lote está **consumido**. Medida depois de uma correção vai em `medidasDepois`, marcada como não
 independente.
@@ -18,6 +18,7 @@ independente.
 | Lote | Política | Amostras (`casa`) | Base | Medida independente |
 |---|---|---|---|---|
 | `riscoAVida-retido-1.json` | `riscoAVida` (D36), depois da 2.0 | 128 (82), ids `RT-001` a `RT-128` | `ca32720`: 8/75, precisão 0,615 | `66d8b95`: 23/75, precisão 0,92, **fora do alvo** |
+| `riscoAVida-retido-2.json` | `riscoAVida` (D36), depois da 93.0 e da 94.0 | 128 (82), ids `RT-129` a `RT-256` | `66d8b95`: 31/75, precisão 0,969 | `3f100df`: padrão 37/75 (0,974); padrão ou modelo, pior de 3 no modelo local, 51/75 (0,962), piso de `homonimo` quebrado pelo modelo (12/13), **fora do alvo** |
 
 A 26.0 passa a ler esta pasta no `ouro.test.ts` (zod estrito, sha256 do lote contra o `RETIDOS.json`), sem cair da medida
 independente nem da base nas `nao_casa` com piso.
