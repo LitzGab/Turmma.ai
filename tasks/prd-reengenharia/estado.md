@@ -39,11 +39,9 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
   - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **44.0**, pequena (falha final alerta e fica 30 dias; pedido do
     titular até a ação; infra, privacy, llm-integrator, test-engineer, revisor-geral), desde 15:22, 1ª tentativa; prazo de
     2 h 17:22. A 97.0 encontrou-se em `b760b65` (spec em `32edb79`)
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **correção `intermitentes-desafio-e-meus-dados`**, desde ~13:55,
-    1ª tentativa. Os dois testes caíram em `2fe1d73` (só documento sobre `f6913ee`, onde passaram): `desafio.int.test.ts`
-    "falha (15.5): Redis de fila travado… corte dos 100 ms" (NAO_AUTENTICADO em vez de resolver) e o e2e
-    `meus-dados.spec.ts:156` [celular]. Depois dela, a linha 3 pega o que o quadro mostrar (a 19.0 foi para a linha 1). A 18.0
-    encontrou-se em `3ecaa07` (spec em `8b11df1`)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **9.0**, pequena (importar tabela fora de repository reprova o lint;
+    tenancy, test-engineer, revisor-geral), desde 16:52, 1ª tentativa; prazo de 2 h 18:52. A correção
+    `intermitentes-desafio-e-meus-dados` encontrou-se em `6cc6c91` (spec em `554b2c6`)
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -69,7 +67,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `84ef3df`. Esteira: `39830913150` (spec em `32edb79`) VERDE; a de `84ef3df` (`39841560415`) na fila. Vigia ligada
+- **Base:** `spec/reengenharia` em `554b2c6`. Esteira: `39830913150` (spec em `32edb79`) VERDE; a de `84ef3df` (`39841560415`) rodando, a de `554b2c6` (`39843402634`) na fila. O `ouro.test.ts` que o Implementador 3 citou já foi resolvido por `05aa2fe`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -107,6 +105,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 8.0 | `a8398c3` | Sonnet | 2 (tenancy, infra, llm-integrator aprovados na 1ª; test-engineer, revisor-geral na 2ª) | linha 1, grande, 13:27–14:16; sem tela |
 | 36.0 | `88fc287` | Sonnet | 2 (frontend-reviewer, test-engineer, revisor-geral aprovados na 2ª) | linha 2, grande, 13:20–14:18; sem tela |
 | 97.0 | `b760b65` | Sonnet | 2 (frontend-reviewer e test-engineer na 1ª; revisor-geral na 2ª) | linha 2, grande, 14:19–15:20; 49 fotos vistas; um commit só (divergência no 97_task.md) |
+| correção intermitentes-desafio-e-meus-dados | `6cc6c91` | Sonnet | 2 (privacy, frontend, infra na 1ª; test-engineer na 2ª) | linha 3, 14:10–16:50; desafio: defeito do teste; meus dados: foco caía no body (produto) |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
