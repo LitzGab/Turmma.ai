@@ -43,6 +43,18 @@ seguinte ao Arquiteto. A 92.0 é a parada da Etapa 9, e dela nascem as tarefas d
   - [x] 5.3 A sessão de teste que confirma o exit 2 no Claude Code, registrada neste documento
   - [x] 5.4 Testes: carga quebrada sai 2 com a mensagem; hook são sai 0 e o `deny` passa intacto
 
+- [ ] **93.0 — Frase de risco à vida de palavra que o lote retido mostrou escapar recebe a mensagem fixa e o sinal**
+  - [ ] 93.1 Um padrão por jeito de dizer de `93_task.md`, nas cinco categorias de palavra, cada um com a sua `dev`
+  - [ ] 93.2 As três pioras da 2.0 desfeitas, cada uma com a sua `dev`
+  - [ ] 93.3 Testes: as `dev`, a regressão exata do `ouro` v1, o alvo e o piso de `assuntoDelicado`
+
+- [ ] **94.0 — Frase de risco à vida que só o modelo reconhece recebe o 188 e o sinal**
+  - [ ] 94.1 `risco_a_vida` na saída do modelo; o `ajustar` a troca por `assunto_delicado` com a mensagem de risco, e nada sai da tarefa com ela
+  - [ ] 94.2 O prompt classifica pelo que o aluno escreveu, com a `versao` nova
+  - [ ] 94.3 `tools/ia/medir-risco-a-vida.ts`: o padrão ou o modelo, por categoria, em três execuções, valendo a pior
+  - [ ] 94.4 `docs/aia/tutor.md`: o modelo que classifica o risco, a medida e as limitações
+  - [ ] 94.5 Testes: o caminho na tarefa e na rota, com a avaliação aberta, e a ferramenta de medida
+
 ### Onda 1A — escopo, camadas e entrada
 
 - [ ] **6.0 — Repository sem prova de escopo nem motivo reprova o teste**
@@ -420,6 +432,8 @@ seguinte ao Arquiteto. A 92.0 é a parada da Etapa 9, e dela nascem as tarefas d
 | 3.0 | 1.0 e `MEDIDAS` | 2.0, 4.0, 5.0 |
 | 4.0 | — | 1.0, 3.0, 5.0 |
 | 5.0 | — | todas |
+| 93.0 | 2.0 | 3.0, 4.0 |
+| 94.0 | 93.0 | 3.0 |
 | 6.0 | — | 10.0, 11.0, 14.0 |
 | 7.0 | 6.0 | 10.0, 11.0, 14.0 |
 | 8.0 | 7.0 (a mesma lista) | 10.0, 11.0 |
@@ -440,7 +454,7 @@ seguinte ao Arquiteto. A 92.0 é a parada da Etapa 9, e dela nascem as tarefas d
 | 23.0 | 22.0 | 26.0–29.0 |
 | 24.0 | 12.0 | 18.0, 26.0 |
 | 25.0 | 13.0 | 19.0, 20.0, 26.0 |
-| 26.0 | 2.0, 3.0 | 21.0–25.0, 29.0 |
+| 26.0 | 2.0, 3.0, 94.0 | 21.0–25.0, 29.0 |
 | 27.0 | 26.0 | 22.0–25.0, 29.0 |
 | 28.0 | 27.0 | 23.0, 29.0 |
 | 29.0 | 1.0 | 26.0, 27.0 |
@@ -521,6 +535,8 @@ pelos "Arquivos previstos", que é o que `tools/processo/linhas.ts` confere. Dua
 | 3.0 | `llm-integrator`, `test-engineer`, `conformidade-reviewer`, `revisor-geral` |
 | 4.0 | `tenancy-guardian`, `conformidade-reviewer`, `infra-guardian`, `test-engineer`, `revisor-geral` |
 | 5.0 | `test-engineer`, `revisor-geral` |
+| 93.0 | `conformidade-reviewer`, `test-engineer`, `revisor-geral` |
+| 94.0 | `conformidade-reviewer`, `llm-integrator`, `test-engineer`, `revisor-geral` |
 | 6.0 | `tenancy-guardian`, `test-engineer`, `revisor-geral` |
 | 7.0 | `tenancy-guardian`, `test-engineer`, `revisor-geral` |
 | 8.0 | `tenancy-guardian`, `infra-guardian`, `llm-integrator`, `test-engineer`, `revisor-geral` |

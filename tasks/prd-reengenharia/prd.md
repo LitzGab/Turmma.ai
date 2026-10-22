@@ -46,7 +46,7 @@ verificados por máquina, e cada falha conhecida fica contida, visível e recupe
 
 | # | Requisito | Como se prova |
 |---|---|---|
-| RF1 | Frase de risco à vida que hoje escapa ("me jogar", "melhor sem mim", "sumir", as do corpus `ouro`) recebe a mensagem fixa com o CVV e o sinal ao professor (D36, N11) | Recall no `ouro` medido antes e depois, sem cair |
+| RF1 | Frase de risco à vida que hoje escapa ("me jogar", "melhor sem mim", "sumir", as do corpus `ouro`) recebe a mensagem fixa com o CVV e o sinal ao professor (D36, N11) | Recall no `ouro` medido antes e depois, sem cair; e no lote retido, com o padrão e o modelo somados na `indireta` e no `risco_de_outra_pessoa` (`onda-0.md` §2.2a, decisão de 22/10) |
 | RF2 | Saída de IA que julga texto de aluno em discursiva ou redação é barrada também quando é qualitativa, além de nota, conceito e pontuação (D55, N11) | Amostras qualitativas do `ouro` barradas; falsos positivos medidos |
 | RF3 | Se uma avaliação da turma abre entre o pedido do aluno e a execução, o Tutor não responde e a troca não conta (S12) | Teste com a avaliação abrindo entre as duas fases |
 | RF4 | O hook de commit bloqueia quando não consegue carregar (N7) | Import quebrado no hook: commit recusado |
