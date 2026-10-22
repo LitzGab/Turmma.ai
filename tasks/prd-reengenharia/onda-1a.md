@@ -88,6 +88,13 @@ e usam `exigirEscolaDoContexto()`; o `ProvedorDeIa` mantém a conferência de `p
 **Tabela só no repository (9.0).** `guardas/tabela-so-no-repository` (`tools/guardas/index.mjs`) barra importar de
 `@educa/nucleo` um nome de `tools/guardas/tabelas-do-nucleo.mjs` fora de `*.repository.ts`, teste e
 `packages/nucleo/src/db/**`; um teste confere a lista contra as exportações `PgTable`. Hoje só `time.service.ts` viola.
+A guarda não segue valor: reprova onde o pacote (ou um subcaminho dele) está escrito. Fora das exceções, do núcleo só se
+importa pelo nome o que não leva tabela. Por isso reprovam também o objeto `schema`, o tipo `Schema`, o `default`,
+`import * as` e o import padrão, e o texto do pacote em qualquer outro ponto do código (`import()`, `typeof import()`,
+`import … = require()`, `export *` e qualquer chamada ou expressão em volta dele); só a fonte do import pelo nome passa.
+O que ela não vê fica declarado no cabeçalho de `regras-tenant.mjs`: o pacote em variável, montado ou só em comentário,
+o caminho relativo e o `Banco` injetado vão para a 12.0, e a tabela reexportada por arquivo de exceção fica com o
+`tenancy-guardian` (diagnóstico da 9.0 e R62, 22/10/2026).
 
 ### T7 — Camadas e ciclos (RF10)
 

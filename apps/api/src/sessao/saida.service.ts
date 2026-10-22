@@ -1,6 +1,6 @@
 import { sessaoDaRequisicao, type Ambiente, type Banco } from '@educa/nucleo'
 import { COOKIE_SESSAO, serializarCookie } from './cookies.js'
-import { ipParaRegistro } from './login.service.js'
+import { ipParaRegistro } from './origem-da-requisicao.js'
 import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
 import { EscritaDeSessaoRepository } from './escrita-de-sessao.repository.js'
 

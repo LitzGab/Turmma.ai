@@ -5,7 +5,7 @@ import { join, matchesGlob } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { raizRepositorio } from '../ci/executar.ts'
 import { criarEslintDasGuardas, violacoesDasGuardas } from './eslint-das-guardas.ts'
-import { EXCECOES_DAS_GUARDAS, REGRAS_DAS_GUARDAS, REGRAS_DE_LOG, REGRAS_DE_SDK_DE_IA, REGRAS_DE_TESTE, REGRAS_EM_TODO_ARQUIVO } from './index.mjs'
+import { ARQUIVOS_DE_TESTE, EXCECOES_DAS_GUARDAS, REGRAS_DAS_GUARDAS, REGRAS_DE_LOG, REGRAS_DE_SDK_DE_IA, REGRAS_DE_TENANT, REGRAS_DE_TESTE, REGRAS_EM_TODO_ARQUIVO } from './index.mjs'
 import { CHAVES_PESSOAIS, ehChaveOperacional, ehNomePessoal } from './regras-log.mjs'
 
 // Cada fixture em __fixtures__ traz, na própria linha, a marca "reprova: <regra>". O teste passa
@@ -50,6 +50,13 @@ async function lintar(motor: ESLint, fixture: string, caminhoSimulado: string, r
     .filter((mensagem) => mensagem.ruleId !== null && regras.has(mensagem.ruleId))
     .map((mensagem) => `${mensagem.line} ${mensagem.ruleId}`)
     .sort()
+}
+
+/** Arquivos versionados ou prestes a ser, sem os ignorados pelo git. */
+function arquivosDoRepositorio(): string[] {
+  const resultado = spawnSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { cwd: raizRepositorio, encoding: 'utf8' })
+  expect(resultado.status).toBe(0)
+  return resultado.stdout.split('\n').filter(Boolean)
 }
 
 describe('processadores do worker: nenhuma afirmação de tipo (totais do expurgo, A0b)', () => {
@@ -284,6 +291,84 @@ describe('guarda de SDK de provedor de IA', () => {
   )
 })
 
+describe('guarda de tabela fora do repository (regra 00, item 3; regra 10, item 3)', () => {
+  const FIXTURE = 'tabela-fora-do-repository.ts'
+  const REGRA = 'guardas/tabela-so-no-repository'
+  const regras = new Set([REGRA])
+
+  it.each([
+    'apps/api/src/x/x.service.ts',
+    'apps/api/src/x/x.controller.ts',
+    'apps/worker/src/x.ts',
+    'packages/nucleo/src/x/x.service.ts',
+    'infra/scripts/x.ts',
+    'tools/x.ts',
+  ])('reprova trazer do núcleo a tabela, o schema, o módulo inteiro e o texto do pacote em %s', async (caminho) => {
+    expect(await lintar(eslint, FIXTURE, caminho, regras)).toEqual(marcasDeViolacao(FIXTURE))
+  })
+
+  it.each([
+    'apps/api/src/x/x.repository.ts',
+    'packages/nucleo/src/titular/x.repository.ts',
+    'apps/api/src/x/x.int.test.ts',
+    'apps/web/src/x.test.ts',
+    'e2e/x.spec.ts',
+    'packages/nucleo/src/db/schema/x.ts',
+    'packages/nucleo/src/db/banco.ts',
+  ])('deixa a mesma fixture passar onde a tabela mora: %s', async (caminho) => {
+    expect(await lintar(eslint, FIXTURE, caminho, regras)).toEqual([])
+  })
+
+  // A fixture tem a afirmação `<string>x`, que um .tsx não compila: o teste de .tsx confere a exceção com código próprio.
+  it('deixa passar a tabela num teste .tsx, onde a fixture não compila, e reprova no componente .tsx', async () => {
+    const codigo = "import { escola } from '@educa/nucleo'\nexport const x = escola\n"
+    const de = async (caminho: string) => {
+      const [resultado] = await eslint.lintText(codigo, { filePath: join(raizRepositorio, caminho) })
+      return (resultado?.messages ?? []).filter((mensagem) => mensagem.ruleId === REGRA).map((mensagem) => mensagem.line)
+    }
+    expect(await de('apps/web/src/x.test.tsx')).toEqual([])
+    expect(await de('apps/web/src/x.tsx')).toEqual([1])
+  })
+
+  it('o eslint-disable do arquivo inteiro não fura: o ESLint comum aceita o comentário, e a passada sem comentários do npm run lint reprova do mesmo jeito', async () => {
+    const caminho = join(raizRepositorio, 'apps/api/src/x/x.service.ts')
+    const comComentario = [`/* eslint-disable ${REGRA} */`, lerFixture(FIXTURE)].join('\n')
+    const [comum] = await eslint.lintText(comComentario, { filePath: caminho })
+    expect(comum?.messages.filter((mensagem) => mensagem.ruleId === REGRA)).toEqual([])
+    expect(comum?.messages.some((mensagem) => mensagem.ruleId === REGRA_DAS_DIRETIVAS), 'o ESLint comum deixou de reprovar a diretiva').toBe(true)
+    const [dasGuardas] = await eslintDasGuardas.lintText(comComentario, { filePath: caminho })
+    const achadas = (dasGuardas?.messages ?? []).filter((mensagem) => mensagem.ruleId === REGRA).map((mensagem) => `${mensagem.line} ${REGRA}`)
+    expect(achadas.sort()).toEqual(marcas(comComentario))
+  })
+
+  it('o eslint-disable-next-line de um import só o esconde do ESLint comum, e a passada sem comentários o reprova', async () => {
+    const caminho = join(raizRepositorio, 'apps/api/src/x/x.service.ts')
+    const linhas = lerFixture(FIXTURE).split('\n')
+    const escondida = linhas.findIndex((linha) => linha.startsWith("import { escola } from '@educa/nucleo'"))
+    expect(escondida, 'a fixture perdeu a linha do import de escola').toBeGreaterThan(0)
+    const texto = [...linhas.slice(0, escondida), `// eslint-disable-next-line ${REGRA}`, ...linhas.slice(escondida)].join('\n')
+    const doRegra = (resultado: ESLint.LintResult | undefined) =>
+      (resultado?.messages ?? []).filter((mensagem) => mensagem.ruleId === REGRA).map((mensagem) => `${mensagem.line} ${REGRA}`).sort()
+    const todas = marcas(texto)
+    const [comum] = await eslint.lintText(texto, { filePath: caminho })
+    expect(doRegra(comum)).toEqual(todas.filter((marca) => marca !== `${escondida + 2} ${REGRA}`))
+    const [dasGuardas] = await eslintDasGuardas.lintText(texto, { filePath: caminho })
+    expect(doRegra(dasGuardas)).toEqual(todas)
+  })
+
+  it('o repositório de hoje não tem violação: nenhum arquivo fora de *.repository.ts, de teste e de db/ importa tabela do núcleo', async () => {
+    const importam = arquivosDoRepositorio()
+      .filter((arquivo) => /\.(?:[cm]?[jt]s|[jt]sx)$/.test(arquivo) && !arquivo.startsWith('tools/guardas/__fixtures__/') && !arquivo.startsWith('mockups/'))
+      .filter((arquivo) => readFileSync(join(raizRepositorio, arquivo), 'utf8').includes('@educa/nucleo'))
+    expect(importam.length, 'a varredura não achou os arquivos que importam o núcleo').toBeGreaterThan(50)
+    const resultados = await eslintDasGuardas.lintFiles(importam.map((arquivo) => join(raizRepositorio, arquivo)))
+    const violacoes = violacoesDasGuardas(resultados).flatMap((resultado) =>
+      resultado.messages.filter((mensagem) => mensagem.ruleId === REGRA).map((mensagem) => `${resultado.filePath.replace(`${raizRepositorio}`, '')}:${mensagem.line}`),
+    )
+    expect(violacoes).toEqual([])
+  }, 120_000)
+})
+
 describe('guarda desligada por comentário', () => {
   it.each(['desabilitar-na-linha.ts', 'desabilitar-tudo.ts'])(
     'o ESLint reprova a diretiva que desliga uma guarda: %s',
@@ -341,20 +426,25 @@ describe('guarda desligada por comentário', () => {
 })
 
 describe('configuração das guardas', () => {
-  it('as únicas exceções são o SDK nos adaptadores, o teste do redact e a mensagem repassada pelo LoggerDoNest', () => {
+  it('as únicas exceções são o SDK nos adaptadores, a tabela no repository, no teste e no db/ do núcleo, a própria guarda de tabela, o teste do redact e a mensagem repassada pelo LoggerDoNest', () => {
     expect(EXCECOES_DAS_GUARDAS).toEqual([
       { files: ['apps/api/src/ia/adapters/**'], regras: REGRAS_DE_SDK_DE_IA },
+      { files: ['**/*.repository.ts'], regras: REGRAS_DE_TENANT },
+      { files: ARQUIVOS_DE_TESTE, regras: REGRAS_DE_TENANT },
+      { files: ['packages/nucleo/src/db/**'], regras: REGRAS_DE_TENANT },
+      { files: ['tools/guardas/regras-tenant.mjs'], regras: REGRAS_DE_TENANT },
       { files: ['packages/nucleo/src/log/logger.test.ts'], regras: REGRAS_DE_LOG },
       { files: ['packages/nucleo/src/log/logger-do-nest.ts'], regras: ['guardas/log-sem-conteudo-montado'] },
     ])
   })
 
-  /** Arquivos versionados ou prestes a ser, sem os ignorados pelo git. */
-  function arquivosDoRepositorio(): string[] {
-    const resultado = spawnSync('git', ['ls-files', '--cached', '--others', '--exclude-standard'], { cwd: raizRepositorio, encoding: 'utf8' })
-    expect(resultado.status).toBe(0)
-    return resultado.stdout.split('\n').filter(Boolean)
-  }
+  it('a guarda de tabela fica entre as de todo arquivo e entre as que a passada sem comentários roda', () => {
+    expect(REGRAS_DE_TENANT).toEqual(['guardas/tabela-so-no-repository'])
+    for (const regra of REGRAS_DE_TENANT) {
+      expect(REGRAS_EM_TODO_ARQUIVO, regra).toContain(regra)
+      expect(REGRAS_DAS_GUARDAS, regra).toContain(regra)
+    }
+  })
 
   it('não existe eslint.config fora da raiz: numa subpasta ele substituiria a configuração e as guardas', () => {
     const configuracoes = arquivosDoRepositorio().filter((arquivo) => /(?:^|\/)eslint\.config\.[cm]?[jt]s$/.test(arquivo))

@@ -196,21 +196,21 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 
 ### Camadas e lint
 
-- [ ] **9.0 — Importar tabela fora de repository reprova o lint**
-  - [ ] 9.1 `tools/guardas/tabelas-do-nucleo.mjs`: a lista dos nomes de tabela exportados por `@educa/nucleo`
-  - [ ] 9.2 A regra, em `tools/guardas/regras-tenant.mjs`, registrada em `index.mjs` e em `REGRAS_DAS_GUARDAS`, cobrindo import, alias, reexport e namespace
-  - [ ] 9.3 Testes: um `describe` em `tools/guardas/guardas.test.ts` com as fixtures, e o teste da lista contra as exportações `PgTable`
+- [x] **9.0 — Importar tabela fora de repository reprova o lint**
+  - [x] 9.1 `tools/guardas/tabelas-do-nucleo.mjs`: a lista dos nomes de tabela exportados por `@educa/nucleo`
+  - [x] 9.2 A regra, em `tools/guardas/regras-tenant.mjs`, registrada em `index.mjs` e em `REGRAS_DAS_GUARDAS`, cobrindo import, alias, reexport e namespace
+  - [x] 9.3 Testes: um `describe` em `tools/guardas/guardas.test.ts` com as fixtures, e o teste da lista contra as exportações `PgTable`
 
-- [ ] **10.0 — O ciclo do operador e a dependência `sessao` → `operacao` somem**
-  - [ ] 10.1 `SessaoDeOperadorParaGuarda` e `SessaoDeOperadorParaRenovar` passam a morar em `operacao/prazos-da-sessao.ts`, e o repository os importa de lá
-  - [ ] 10.2 `ConferenciaDoAutor` vai para `apps/api/src/sessao/conferencia-do-autor.ts`, e todos os importadores trocam o caminho, sem reexportar do lugar antigo
-  - [ ] 10.3 Testes: caracterização verde antes e depois, e um `it` provisório em `apps/api/test/arquitetura.test.ts`
+- [x] **10.0 — O ciclo do operador e a dependência `sessao` → `operacao` somem**
+  - [x] 10.1 `SessaoDeOperadorParaGuarda` e `SessaoDeOperadorParaRenovar` passam a morar em `operacao/prazos-da-sessao.ts`, e o repository os importa de lá
+  - [x] 10.2 `ConferenciaDoAutor` vai para `apps/api/src/sessao/conferencia-do-autor.ts`, e todos os importadores trocam o caminho, sem reexportar do lugar antigo
+  - [x] 10.3 Testes: caracterização verde antes e depois, e um `it` provisório em `apps/api/test/arquitetura.test.ts`
 
-- [ ] **11.0 — Os 2 ciclos de `login.service` somem**
-  - [ ] 11.1 Caracterização, num commit antes: `ipParaRegistro` (que não tem teste hoje) e os casos de `login.service.test.ts`
-  - [ ] 11.2 `sessao/origem-da-requisicao.ts` (`OrigemDaRequisicao`, `ResultadoDoLogin`, `ipParaRegistro`) e `sessao/identificadores-do-login.ts` (`BYTES_DO_REFRESH`, `hashDoRefresh`, `normalizarEmail`)
-  - [ ] 11.3 `etapaDoLogin` vai para `conclusao-de-login.ts`; os importadores trocam o caminho; `login.service.ts` não reexporta
-  - [ ] 11.4 Testes: os de unidade divididos pelos arquivos novos, e os dois `it` de quem importa o `login.service`
+- [x] **11.0 — Os 2 ciclos de `login.service` somem**
+  - [x] 11.1 Caracterização, num commit antes: `ipParaRegistro` (que não tem teste hoje) e os casos de `login.service.test.ts`
+  - [x] 11.2 `sessao/origem-da-requisicao.ts` (`OrigemDaRequisicao`, `ResultadoDoLogin`, `ipParaRegistro`) e `sessao/identificadores-do-login.ts` (`BYTES_DO_REFRESH`, `hashDoRefresh`, `normalizarEmail`)
+  - [x] 11.3 `etapaDoLogin` vai para `conclusao-de-login.ts`; os importadores trocam o caminho; `login.service.ts` não reexporta
+  - [x] 11.4 Testes: os de unidade divididos pelos arquivos novos, e os dois `it` de quem importa o `login.service`
 
 - [ ] **12.0 — Import contra a direção ou a camada, ou ciclo novo, reprova o lint**
   - [ ] 12.1 `dependency-cruiser@18.7.0` exato em `devDependencies`; `tools/guardas/camadas.cjs` com as regras do §2 da onda, todas `error`
@@ -246,10 +246,10 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 
 ### O guia do desenvolvedor
 
-- [ ] **95.0 — O dev que chega acha cada coisa pelo guia do desenvolvedor (Claude Code #2)**
-  - [ ] 95.1 O Claude Code #2 escreve `docs/guia-do-desenvolvedor.md` e a correção de `docs/arquitetura.md` e entrega em `.processo/reengenharia/guia/` (no térreo) até ~15h de 22/10
-  - [ ] 95.2 O Arquiteto revisa com o `revisor-geral`, aplica no andar da spec, faz o `README.md` apontar para o guia na primeira tela, e põe no commit
-  - [ ] 95.3 Só documento, sem portão de código e sem linha
+- [x] **95.0 — O dev que chega acha cada coisa pelo guia do desenvolvedor (Claude Code #2)**
+  - [x] 95.1 O Claude Code #2 escreve `docs/guia-do-desenvolvedor.md` e a correção de `docs/arquitetura.md` e entrega em `.processo/reengenharia/guia/` (no térreo) até ~15h de 22/10
+  - [x] 95.2 O Arquiteto revisa com o `revisor-geral`, aplica no andar da spec, faz o `README.md` apontar para o guia na primeira tela, e põe no commit
+  - [x] 95.3 Só documento, sem portão de código e sem linha
 
 ## Saíram para a X6 (D81)
 

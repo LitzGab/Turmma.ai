@@ -1675,6 +1675,10 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X5, 97.0) Os dois testes do build de `apps/web/nome-dos-chunks.test.ts` (`describe` "o build de verdade da web", dos
   casos B2 e "as áreas da escola") usam o prazo padrão de 5000 ms** e estouraram com a máquina cheia, antes e depois da
   tarefa: prazo explícito no `it` na próxima tarefa que tocar o arquivo (`test-engineer`, 97.0, 1ª rodada)
+- [ ] **(X5, 9.0) Helper de teste que não termina em `.test.ts` e importa tabela do núcleo:** a guarda `tabela-so-no-repository`
+  usa `ARQUIVOS_DE_TESTE` (`**/*.test.{ts,tsx}`, `e2e/**/*.spec.ts`) como exceção, então um helper em `apps/api/test/` ou
+  `e2e/__fixtures__/` que importe tabela seria reprovado. Hoje nenhum importa. Fixar o lado, com um caso para cada um, muda o
+  que as outras guardas de teste enxergam: decidir quando o primeiro helper precisar (`test-engineer`, 9.0, 1ª rodada)
 - [ ] **(X5, 48.0) O meio-aberto fecha o disjuntor com o provedor ainda fora:** no `AdaptadorResiliente`, a chamada de teste que sai como `ChamadaCancelada`, 429 ou outro 4xx conta como sucesso e fecha o disjuntor, mesmo sem prova de que o provedor voltou. Muda comportamento: pede teste e linha em "Divergências"; a dona do disjuntor é a 49.0 (`infra-guardian`, 48.0, 1ª rodada).
 - [ ] **(X5, 48.0) Cenário de carga « provedor recusando por limite no meio da aula »:** falta em `infra/test/carga.test.ts` o caso com o adaptador falso devolvendo 429 enquanto a escola usa o Tutor; cabe na 47.0 ou na 49.0 (`infra-guardian`, 48.0, 1ª rodada).
 - [ ] **(X5, 44.0) O alerta "Job que falhou de vez" fica aceso 30 dias, e falha nova do mesmo tipo não avisa de novo:** `job_falhos > 0`
@@ -1712,3 +1716,9 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X5, 43.0) Limite de 4 s do caso com `attempts: 3`:** `prazo-do-job.int.test.ts › o estouro com tentativa sobrando também libera a
   vaga da escola` tem uns 0,8 s de folga no pior caminho; a asserção que prova a regra é a da ordem. Se ficar instável na esteira, a
   correção abre com a medição (`test-engineer`, 43.0, 2ª rodada)
+- [ ] **(X5, 12.0) A regra do depcruise cobre o que os `it` provisórios da 10.0 olham:** o `it` de `ConferenciaDoAutor` trata de nome de
+  tipo e não de caminho de import, e `IMPORTA_A_OPERACAO` não pega import só de efeito (`import '../operacao/x.js'`) nem aspas duplas;
+  a 12.0 substitui esses `it` e decide o que fica (`revisor-geral` e `test-engineer`, 10.0, 2ª rodada)
+- [ ] **(X5, 12.0) A regra do depcruise cobre o que os `it` provisórios da 11.0 olham:** a regex `/\blogin\.service\.js['"]/` de
+  `arquitetura.test.ts` casaria `outro-login.service.js` e não pega import sem extensão, e a varredura de `login.service.test.ts` não
+  pega `export default <nome>` nem `export = <nome>`; a 12.0 substitui esses `it` e decide o que fica (`test-engineer`, 11.0, 1ª e 2ª rodadas)

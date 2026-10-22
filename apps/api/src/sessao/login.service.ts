@@ -1,33 +1,17 @@
-import { ErroDeDominio, IP_DESCONHECIDO, type Meter } from '@educa/nucleo'
-import { CodigoDeErro, type EtapaComDesafio, type PedidoLoginEmail, type RespostaLogin } from '@educa/shared'
-import { createHash } from 'node:crypto'
+import { ErroDeDominio, type Meter } from '@educa/nucleo'
+import { CodigoDeErro, type PedidoLoginEmail } from '@educa/shared'
 import type { ConclusaoDeLogin } from './conclusao-de-login.js'
 import type { AtivacaoPorConvite } from './convite.service.js'
 import type { ContadorDeTentativas } from './contador-de-tentativas.js'
 import type { CookieDeDispositivo } from './cookie-dispositivo.js'
 import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
+import { normalizarEmail } from './identificadores-do-login.js'
+import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './origem-da-requisicao.js'
 import type { ResolucaoDeTenantRepository, UsuarioAtivoDaConta, UsuarioComConviteAceito } from './resolucao-de-tenant.repository.js'
 import { baldeDaEquipe, contadorDoRebaixamentoPorIp } from './senha/baldes-de-login.js'
 import type { ConferenciaNaVez, SenhaConferida, TentativaDeSenha } from './senha/conferencia-na-vez.js'
 import { DuracaoDoLogin } from './senha/duracao-do-login.js'
 import type { LimiteDoEmailPorIp } from './senha/limite-email-ip.js'
-
-/** O que o controller tira da requisição HTTP: o IP (o da borda, quando vem dela) e o cabeçalho `Cookie`. */
-export interface OrigemDaRequisicao {
-  readonly ip: string
-  readonly cabecalhoCookie: string | undefined
-  /**
-   * Só nas rotas de login por senha (`@LimiteQueRebaixa()`, 15.0): o IP passou do limite por IP delas. A tentativa não é
-   * recusada: vai para o fim do balde, salvo quem traz o `educa_dispositivo` da conta.
-   */
-  readonly acimaDoLimiteDoIp?: boolean
-}
-
-/** A resposta do login e os `Set-Cookie` que vão com ela. */
-export interface ResultadoDoLogin {
-  readonly resposta: RespostaLogin
-  readonly cookies: readonly string[]
-}
 
 export interface DependenciasDoLogin {
   readonly resolucao: ResolucaoDeTenantRepository
@@ -44,22 +28,6 @@ export interface DependenciasDoLogin {
 
 /** A credencial da conta como a resolução a devolve, pelo e-mail. */
 type CredencialDaConta = Awaited<ReturnType<ResolucaoDeTenantRepository['contaPorEmail']>>
-
-/** O registro de acesso guarda o IP como `inet`: o endereço que não foi lido (socket já fechado) vira o não roteável. */
-const IP_NAO_LIDO = '0.0.0.0'
-
-/** Bytes do refresh: 256 bits sorteados. O banco guarda só o SHA-256, e o cookie leva o valor. */
-export const BYTES_DO_REFRESH = 32
-
-/** O e-mail como a conta o guarda (`citext`): sem espaço nas pontas e sem diferença de caixa. */
-export function normalizarEmail(email: string): string {
-  return email.trim().toLowerCase()
-}
-
-/** O SHA-256 do refresh do cookie `educa_sessao`: é o que `sessao.refresh_hash` guarda e a renovação (5.0) procura. */
-export function hashDoRefresh(refresh: string): string {
-  return createHash('sha256').update(refresh).digest('hex')
-}
 
 /**
  * O login da equipe por e-mail e senha (RF6, RF11, RF14; Tech Spec, seção 5).
@@ -191,20 +159,4 @@ export class LoginService {
  */
 function vaiAoCodigoComOConvite(conviteId: string | undefined, mfaAtivo: boolean, pendente: UsuarioComConviteAceito | undefined, usuarios: readonly UsuarioAtivoDaConta[]): conviteId is string {
   return conviteId !== undefined && mfaAtivo && (pendente !== undefined || usuarios.length === 0)
-}
-
-/**
- * A etapa depois da credencial certa (Tech Spec, seção 5, "Etapas"): mais de um usuário ativo, `escolher`; um só
- * coordenador, o segundo fator (`mfa`, ou `configurar_mfa` quando ainda não tem), a menos que ele já tenha sido
- * cumprido nesta entrada; um só professor, `pronta`.
- */
-export function etapaDoLogin(usuarios: readonly Pick<UsuarioAtivoDaConta, 'papel'>[], mfaAtivo: boolean, mfaCumprido = false): EtapaComDesafio | 'pronta' {
-  if (usuarios.length > 1) return 'escolher'
-  if (usuarios[0]?.papel === 'coordenador' && !mfaCumprido) return mfaAtivo ? 'mfa' : 'configurar_mfa'
-  return 'pronta'
-}
-
-/** O IP como o registro de acesso o grava: o que não foi lido vira o não roteável. */
-export function ipParaRegistro(ip: string): string {
-  return ip === IP_DESCONHECIDO ? IP_NAO_LIDO : ip
 }

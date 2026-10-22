@@ -1,0 +1,63 @@
+/**
+ * Os nomes de tabela do schema que o `@educa/nucleo` exporta (regra 00, item 3; regra 10, item 3): quem os importa fora de um
+ * `*.repository.ts` toca o banco sem passar pelo lugar onde o escopo de tenant é aplicado. A guarda
+ * `guardas/tabela-so-no-repository` (`regras-tenant.mjs`) lê esta lista.
+ *
+ * É mão e não código: o ESLint não carrega o núcleo. `tabelas-do-nucleo.test.ts` confere a lista contra as exportações
+ * `PgTable` do pacote, nos dois sentidos: tabela nova que ficar de fora, e nome que não é tabela, reprovam o teste.
+ * Tabela nova no núcleo entra aqui, na mesma tarefa.
+ */
+export const TABELAS_DO_NUCLEO = [
+  'acessoOperacao',
+  'acessoTurma',
+  'anoLetivo',
+  'arquivoTitular',
+  'artefato',
+  'atividadeAplicada',
+  'auditoriaOperacao',
+  'codigoRecuperacao',
+  'codigoRecuperacaoOperador',
+  'configuracaoOperacionalEscola',
+  'consumoIa',
+  'conta',
+  'contaExterna',
+  'convite',
+  'conviteOperador',
+  'correcao',
+  'credencialMatricula',
+  'disciplina',
+  'entrega',
+  'escola',
+  'execucaoAgente',
+  'expurgoExecucao',
+  'incidente',
+  'incidenteEscola',
+  'jobRegistro',
+  'listaNome',
+  'material',
+  'mensagemAgente',
+  'mensagemTutor',
+  'operador',
+  'pedidoTitular',
+  'provedorEscola',
+  'rede',
+  'registroAcesso',
+  'reivindicacao',
+  'respostaAtividade',
+  'retencaoEscola',
+  'serie',
+  'sessao',
+  'sessaoOperador',
+  'sinalTutor',
+  'suboperador',
+  'suboperadorEscola',
+  'suspensaoDeFuncao',
+  'tentativaAtividade',
+  'threadAgente',
+  'trecho',
+  'turma',
+  'usoInfraDiario',
+  'usuario',
+  'validacaoDoLote',
+  'vinculo',
+]

@@ -33,7 +33,7 @@ export const MENSAGEM_SDK_DE_IA =
 
 const sdkDeIa = new RegExp(REGEX_SDK_DE_IA)
 
-function especificador(no) {
+export function especificador(no) {
   if (no === null || no === undefined) return null
   if (no.type === 'Literal' && typeof no.value === 'string') return no.value
   if (no.type === 'TemplateLiteral' && no.expressions.length === 0) return no.quasis[0].value.cooked

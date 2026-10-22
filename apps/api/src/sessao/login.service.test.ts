@@ -1,34 +1,20 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { etapaDoLogin, hashDoRefresh, normalizarEmail } from './login.service.js'
+import * as loginService from './login.service.js'
 
-describe('etapa do login depois da senha certa', () => {
-  it('um professor só: pronta', () => {
-    expect(etapaDoLogin([{ papel: 'professor' }], false)).toBe('pronta')
+/** Os sete nomes que moravam aqui e foram para `origem-da-requisicao.ts`, `identificadores-do-login.ts` e `conclusao-de-login.ts`. */
+const NOMES_QUE_SAIRAM = ['OrigemDaRequisicao', 'ResultadoDoLogin', 'BYTES_DO_REFRESH', 'normalizarEmail', 'hashDoRefresh', 'etapaDoLogin', 'ipParaRegistro']
+
+describe('o login.service não reexporta o que saiu dele', () => {
+  it('o módulo só exporta o LoginService', () => {
+    expect(Object.keys(loginService)).toEqual(['LoginService'])
   })
 
-  it('um coordenador só: configurar o MFA, ou informá-lo quando já tem; nunca pronta', () => {
-    expect(etapaDoLogin([{ papel: 'coordenador' }], false)).toBe('configurar_mfa')
-    expect(etapaDoLogin([{ papel: 'coordenador' }], true)).toBe('mfa')
-  })
-
-  it('um coordenador só, com o segundo fator já cumprido nesta entrada: pronta', () => {
-    expect(etapaDoLogin([{ papel: 'coordenador' }], true, true)).toBe('pronta')
-    expect(etapaDoLogin([{ papel: 'coordenador' }], true, false)).toBe('mfa')
-  })
-
-  it('usuário ativo em mais de uma escola: escolher, com ou sem coordenação entre elas', () => {
-    expect(etapaDoLogin([{ papel: 'professor' }, { papel: 'professor' }], false)).toBe('escolher')
-    expect(etapaDoLogin([{ papel: 'professor' }, { papel: 'coordenador' }], true)).toBe('escolher')
-    expect(etapaDoLogin([{ papel: 'coordenador' }, { papel: 'coordenador' }], true, true)).toBe('escolher')
-  })
-})
-
-describe('normalização e refresh', () => {
-  it('o e-mail sai sem espaço nas pontas e em minúsculas, como a conta (citext) o compara', () => {
-    expect(normalizarEmail('  Camila@Escola.Invalid ')).toBe('camila@escola.invalid')
-  })
-
-  it('o refresh vira SHA-256 em hex, que é o que a sessão guarda', () => {
-    expect(hashDoRefresh('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad')
+  it('nenhuma exportação do arquivo cita um dos sete nomes, que os tipos não aparecem em Object.keys', () => {
+    const codigo = readFileSync(new URL('./login.service.ts', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    // Lista de nomes (em quantas linhas for), `export *` e declaração: cada uma é uma exportação do módulo.
+    const exportacoes = [...codigo.matchAll(/\bexport\s+(?:type\s+)?\{[^}]*\}|\bexport\s+\*[^\n]*|\bexport\s+(?:declare\s+)?(?:const|let|function|interface|type|class|enum)\s+\w+/g)].map((achado) => achado[0])
+    expect(exportacoes.length).toBeGreaterThan(0)
+    expect(exportacoes.filter((exportacao) => NOMES_QUE_SAIRAM.some((nome) => new RegExp(`\\b${nome}\\b`).test(exportacao)) || /^export\s+\*/.test(exportacao))).toEqual([])
   })
 })

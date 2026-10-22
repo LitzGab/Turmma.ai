@@ -22,14 +22,14 @@ import {
   type RespostaConsultarConvite,
 } from '@educa/shared'
 import { randomBytes, randomUUID } from 'node:crypto'
-import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
 import type { BilheteDeConvite } from './bilhete-de-convite.js'
 import { ConviteRepository } from './convite.repository.js'
 import type { EmissorDeDesafio } from './desafio.js'
 import { BYTES_DO_TOKEN_DE_CONVITE, hashDoToken } from './hash-do-token.js'
 import type { HashDeSenha } from './hash-de-senha.js'
-import { normalizarEmail } from './login.service.js'
+import { normalizarEmail } from './identificadores-do-login.js'
 import { ResolucaoDeTenantRepository, type UsuarioComConviteAceito } from './resolucao-de-tenant.repository.js'
+import type { ConferenciaDoAutor } from './conferencia-do-autor.js'
 
 const registro = new RegistroDeAuditoria()
 

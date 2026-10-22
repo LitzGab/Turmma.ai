@@ -18,9 +18,9 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import { RedeEEscolaRepository, type Criada } from './escola.repository.js'
+import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
 
 // O que é comum aos comandos do operador mora em `comando.ts`; reexportado aqui para quem já o importava daqui.
 export { abrirBancoDeOperacao, ArgumentoInvalido, lerOperador, type BancoDoComando, type SaidaDoComando }

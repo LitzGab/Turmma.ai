@@ -15,8 +15,8 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
 import { abrirBancoDeOperacao, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
+import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
 
 // Mora em `comando.ts` desde a A0; reexportado para quem já o importava daqui (`ops:sessao-sintetica`).
 export { urlDoBancoDeOperacao } from './comando.js'
