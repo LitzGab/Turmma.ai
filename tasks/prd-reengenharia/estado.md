@@ -27,6 +27,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
+  - linha 1: **16:12, matei o vitest travado** na mutação `despachante/src/montagem.ts` (`vagas.int.test.ts`, 41 min a 181% de CPU, segurando a trava de carga das linhas 2 e 3). O `mutacoes.ts` lê a morte como vermelho: mandei `PEDIDO de retomada` para o teste cair em tempo limitado e para o portão rodar de novo
   - linha 1 (`Implementador` e `Mesa`, `…--l1`): **19.0**, grande (o worker valida pela definição; tenancy, infra,
     test-engineer, revisor-geral), desde 14:17, 1ª tentativa; prazo de 4 h 18:17. A 8.0 encontrou-se em `a8398c3` (spec em
     `5e3e01a`)
@@ -157,6 +158,7 @@ recomendado: a ordem da §6, a P4 como não unificar (só extrair o literal) e a
 critério de aceite.
 
 ## O que falhou
+- 22/10 16:12, linha 1, 19.0: mutação que trava o teste (laço síncrono) segurou `/tmp/educa-carga.lock` por 41 min; o `mutacoes.ts` usa `spawnSync` sem timeout e conta a morte do processo como vermelho. Para a retro: timeout por mutação, com o estouro contado como `recusada`
 
 ## O que decidi sem perguntar
 - 22/10, ~12:28 — DIVERGÊNCIA (portão) da 6.0 (l1): a regra do guarda da 1.0 (`porta-unica.test.ts:56`) casa a menção ao
