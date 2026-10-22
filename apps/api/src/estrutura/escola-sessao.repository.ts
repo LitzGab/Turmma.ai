@@ -1,16 +1,9 @@
-import { contextoAtual, escola, type TransacaoBanco } from '@educa/nucleo'
+import { escola, exigirEscolaDoContexto, type TransacaoBanco } from '@educa/nucleo'
 import { eq } from 'drizzle-orm'
 
 export interface InatividadeDaEscola {
   readonly inatividadeAlunoMin: number
   readonly inatividadeEquipeMin: number
-}
-
-/** A escola do contexto, ou falha fechada: a configuração é sempre da escola da sessão (regra 10, item 3). */
-function escolaDoContexto(): string {
-  const escolaId = contextoAtual()?.escolaId
-  if (escolaId === undefined) throw new Error('configuração de sessão sem escola no contexto')
-  return escolaId
 }
 
 /**
@@ -29,7 +22,7 @@ export class EscolaSessaoRepository {
     const [linha] = await this.tx
       .select({ inatividadeAlunoMin: escola.inatividadeAlunoMin, inatividadeEquipeMin: escola.inatividadeEquipeMin })
       .from(escola)
-      .where(eq(escola.id, escolaDoContexto()))
+      .where(eq(escola.id, exigirEscolaDoContexto()))
       .for('no key update')
     return linha
   }
@@ -38,7 +31,7 @@ export class EscolaSessaoRepository {
     const [linha] = await this.tx
       .update(escola)
       .set({ inatividadeAlunoMin: valores.inatividadeAlunoMin, inatividadeEquipeMin: valores.inatividadeEquipeMin })
-      .where(eq(escola.id, escolaDoContexto()))
+      .where(eq(escola.id, exigirEscolaDoContexto()))
       .returning({ inatividadeAlunoMin: escola.inatividadeAlunoMin, inatividadeEquipeMin: escola.inatividadeEquipeMin })
     return linha
   }

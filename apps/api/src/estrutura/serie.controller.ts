@@ -1,7 +1,6 @@
-import { ErroDeDominio, Permite } from '@educa/nucleo'
-import { CodigoDeErro, esquemaPedidoCriarSerie, type RespostaListaDeSeries, type RespostaSerie } from '@educa/shared'
+import { Permite, ZodValidationPipe } from '@educa/nucleo'
+import { esquemaConsultaPaginada, esquemaPedidoCriarSerie, type ConsultaPaginada, type PedidoCriarSerie, type RespostaListaDeSeries, type RespostaSerie } from '@educa/shared'
 import { Body, Controller, Get, Post, Query } from '@nestjs/common'
-import { lerConsultaPaginada } from './entrada.js'
 import { SerieService } from './serie.service.js'
 
 /** `/v1/series`: a coordenação cria e lista as séries da escola da sessão. */
@@ -11,15 +10,13 @@ export class SerieController {
 
   @Post()
   @Permite('serie', 'criar')
-  criar(@Body() corpo: unknown): Promise<RespostaSerie> {
-    const pedido = esquemaPedidoCriarSerie.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    return this.series.criar(pedido.data)
+  criar(@Body(new ZodValidationPipe(esquemaPedidoCriarSerie)) pedido: PedidoCriarSerie): Promise<RespostaSerie> {
+    return this.series.criar(pedido)
   }
 
   @Get()
   @Permite('serie', 'ler')
-  listar(@Query() consulta: unknown): Promise<RespostaListaDeSeries> {
-    return this.series.listar(lerConsultaPaginada(consulta))
+  listar(@Query(new ZodValidationPipe(esquemaConsultaPaginada)) consulta: ConsultaPaginada): Promise<RespostaListaDeSeries> {
+    return this.series.listar(consulta)
   }
 }

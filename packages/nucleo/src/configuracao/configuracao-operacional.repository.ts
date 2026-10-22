@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { contextoAtual } from '../contexto/contexto.js'
+import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
 import type { Banco } from '../db/banco.js'
 import { configuracaoOperacionalEscola, type VagasConfiguradas } from '../db/schema/configuracao-operacional-escola.js'
 
@@ -25,8 +25,7 @@ export class ConfiguracaoOperacionalRepository {
 
   /** A linha da escola do contexto, ou `undefined` se ela não configurou nada. */
   async daEscola(): Promise<LinhaOperacional | undefined> {
-    const escolaId = contextoAtual()?.escolaId
-    if (escolaId === undefined) throw new Error('configuração operacional sem escola no contexto')
+    const escolaId = exigirEscolaDoContexto()
     const [linha] = await this.banco
       .select({
         fuso: configuracaoOperacionalEscola.fuso,

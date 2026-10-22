@@ -31,6 +31,6 @@ describe('repositories do login com escopo: a escola vem do contexto', () => {
     expect(rows).toEqual([{ escola_id: professor.escolaId, evento: 'login', ip: '10.1.2.3' }])
     await expect(
       executarNoContexto({ requisicaoId: randomUUID() }, () => bancada.banco.transaction((tx) => new RegistroDeAcessoRepository(tx).gravar('login', professor.usuarioId, '10.1.2.3'))),
-    ).rejects.toThrow('registro de acesso sem escola no contexto')
+    ).rejects.toThrow('consulta com escopo sem escola no contexto')
   })
 })

@@ -40,7 +40,7 @@ describe('EscritaDeSessaoRepository: toda escrita na sessão fica na escola do c
   it('sem escola no contexto, falha fechada antes de tocar o banco', async () => {
     const repositorio = new EscritaDeSessaoRepository(bancada.banco)
     await executarNoContexto({ requisicaoId: randomUUID() }, async () => {
-      await expect(repositorio.registrarUso(randomUUID())).rejects.toThrow('sem escola no contexto')
+      await expect(repositorio.registrarUso(randomUUID())).rejects.toThrow('consulta com escopo sem escola no contexto')
     })
   })
 

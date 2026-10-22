@@ -111,11 +111,11 @@ da tarefa diz como rodá-lo.
   - [x] 6.3 `SuspensoesDaEscolaRepository` sai de `time.service.ts` para um `*.repository.ts`
   - [x] 6.4 Testes: `repositories-com-escopo.test.ts`, com as fixtures em `tools/guardas/__fixtures__/repositories/`
 
-- [ ] **7.0 — Os 9 repositories com cópia local leem a escola por `exigirEscolaDoContexto`**
-  - [ ] 7.1 Caracterização, num commit antes: os 7 sem caso de "sem escola" ganham o seu, verde com a cópia local
-  - [ ] 7.2 Os nove passam a `exigirEscolaDoContexto`, lida a cada chamada, nunca guardada na instância
-  - [ ] 7.3 Os nove saem de `REPOSITORIES_SEM_ESCOPO` (`tools/guardas/escopo-dos-repositories.ts`)
-  - [ ] 7.4 Testes: isolamento e concorrência por repository, com a mutação de cada um
+- [x] **7.0 — Os 9 repositories com cópia local leem a escola por `exigirEscolaDoContexto`**
+  - [x] 7.1 Caracterização, num commit antes: os 7 sem caso de "sem escola" ganham o seu, verde com a cópia local
+  - [x] 7.2 Os nove passam a `exigirEscolaDoContexto`, lida a cada chamada, nunca guardada na instância
+  - [x] 7.3 Os nove saem de `REPOSITORIES_SEM_ESCOPO` (`tools/guardas/escopo-dos-repositories.ts`)
+  - [x] 7.4 Testes: isolamento e concorrência por repository, com a mutação de cada um
 
 - [ ] **8.0 — A IA tira a escola do contexto, com teste de isolamento**
   - [ ] 8.1 As três portas perdem `escolaId`, e os repositories usam `exigirEscolaDoContexto()`, no orçamento antes do retorno antecipado
@@ -132,11 +132,11 @@ da tarefa diz como rodá-lo.
   - [ ] 14.4 Migram `sistema/`, `ia/`, `entrega/`, `assistente/` e `professores/`
   - [ ] 14.5 Testes: os da tabela
 
-- [ ] **15.0 — Estrutura, sala e governança validam pelo `ZodValidationPipe`**
-  - [ ] 15.1 Caracterização, num commit antes: o inválido e o 404 de cada rota dos três módulos, incluindo a `chave` e o link da sala
-  - [ ] 15.2 Migram os 8 controllers de `estrutura/`, os 4 de `sala/` e os 2 de `governanca/`
-  - [ ] 15.3 Os três módulos entram no `files` do bloco de `no-restricted-syntax`
-  - [ ] 15.4 Testes: os da tabela
+- [x] **15.0 — Estrutura, sala e governança validam pelo `ZodValidationPipe`**
+  - [x] 15.1 Caracterização, num commit antes: o inválido e o 404 de cada rota dos três módulos, incluindo a `chave` e o link da sala
+  - [x] 15.2 Migram os 8 controllers de `estrutura/`, os 4 de `sala/` e os 2 de `governanca/`
+  - [x] 15.3 Os três módulos entram no `files` do bloco de `no-restricted-syntax`
+  - [x] 15.4 Testes: os da tabela
 
 - [ ] **16.0 — Sessão e operação validam pelo `ZodValidationPipe`, sem gastar tentativa com entrada inválida**
   - [ ] 16.1 Caracterização, num commit antes: a ordem dos erros em `mfa`, `sessao/mfa` e `redefinir-mfa`, e o 404 do `slug` e do `provedor`

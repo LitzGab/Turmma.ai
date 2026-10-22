@@ -159,6 +159,24 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
     expect((await usoDoMes(escolaA, '2026-09')).requisicoes).toBe(4)
   })
 
+  it('repository: sem escola no contexto nada é lido nem gravado, e duas escolas gravando o mesmo dia ao mesmo tempo, na mesma instância, cada uma na sua', async () => {
+    const [escolaA, escolaB] = await Promise.all([novaEscola(), novaEscola()])
+    const naEscola = <T>(escolaId: string, funcao: () => Promise<T>) => executarNoContexto({ requisicaoId: randomUUID(), escolaId }, funcao)
+    const semEscola = <T>(funcao: () => Promise<T>) => executarNoContexto({ requisicaoId: randomUUID() }, funcao)
+
+    await expect(semEscola(() => repositorio.gravarDia('2026-09-15', { requisicoes: 1 }))).rejects.toThrow('consulta com escopo sem escola no contexto')
+    await expect(semEscola(() => repositorio.doDia('2026-09-15'))).rejects.toThrow('consulta com escopo sem escola no contexto')
+    await expect(semEscola(() => repositorio.doMes('2026-09'))).rejects.toThrow('consulta com escopo sem escola no contexto')
+
+    // As duas chamadas começam juntas na mesma instância: a escola é a de cada contexto, lida a cada chamada.
+    await Promise.all([naEscola(escolaA, () => repositorio.gravarDia('2026-09-15', { requisicoes: 3, jobs: 1 })), naEscola(escolaB, () => repositorio.gravarDia('2026-09-15', { requisicoes: 8, jobs: 2 }))])
+
+    expect(await usoDoDia(escolaA, '2026-09-15')).toEqual({ requisicoes: 3, jobs: 1, bytesStorage: 0 })
+    expect(await usoDoDia(escolaB, '2026-09-15')).toEqual({ requisicoes: 8, jobs: 2, bytesStorage: 0 })
+    expect(await usoDoMes(escolaA, '2026-09')).toEqual({ requisicoes: 3, jobs: 1, bytesStorage: 0 })
+    expect(await usoDoMes(escolaB, '2026-09')).toEqual({ requisicoes: 8, jobs: 2, bytesStorage: 0 })
+  })
+
   it('concorrência: duas consolidações em paralelo, e uma terceira depois, não dobram o valor', async () => {
     const escolaA = await novaEscola()
     marcarRequisicoes(escolaA, 7)

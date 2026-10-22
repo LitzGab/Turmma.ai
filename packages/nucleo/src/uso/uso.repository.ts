@@ -1,5 +1,5 @@
 import { and, between, eq, sql } from 'drizzle-orm'
-import { contextoAtual } from '../contexto/contexto.js'
+import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
 import type { Banco, TransacaoBanco } from '../db/banco.js'
 import { usoInfraDiario } from '../db/schema/uso-infra-diario.js'
 import { limitesDoMes } from './dia-de-uso.js'
@@ -13,12 +13,6 @@ export interface UsoDoPeriodo {
 }
 
 const SEM_USO: UsoDoPeriodo = { requisicoes: 0, jobs: 0, bytesStorage: 0 }
-
-function escolaDoContexto(): string {
-  const escolaId = contextoAtual()?.escolaId
-  if (escolaId === undefined) throw new Error('uso de infra sem escola no contexto')
-  return escolaId
-}
 
 /**
  * `uso_infra_diario` no escopo da escola do contexto (regra 10, item 3), em toda leitura e escrita.
@@ -39,7 +33,7 @@ export class UsoRepository {
    * perde, mas o total do dia não é trocado por ele. Os bytes são a medição do momento e podem descer.
    */
   async gravarDia(dia: string, valores: Partial<UsoDoPeriodo>): Promise<void> {
-    const escolaId = escolaDoContexto()
+    const escolaId = exigirEscolaDoContexto()
     const { requisicoes, jobs, bytesStorage } = valores
     const informados = {
       ...(requisicoes === undefined ? {} : { requisicoes }),
@@ -62,7 +56,7 @@ export class UsoRepository {
 
   /** O uso da escola do contexto no dia. Dia sem linha é dia sem uso consolidado. */
   async doDia(dia: string): Promise<UsoDoPeriodo> {
-    const escolaId = escolaDoContexto()
+    const escolaId = exigirEscolaDoContexto()
     const [linha] = await this.banco
       .select({ requisicoes: usoInfraDiario.requisicoes, jobs: usoInfraDiario.jobs, bytesStorage: usoInfraDiario.bytesStorage })
       .from(usoInfraDiario)
@@ -76,7 +70,7 @@ export class UsoRepository {
    * storage precisou comportar.
    */
   async doMes(mes: string): Promise<UsoDoPeriodo> {
-    const escolaId = escolaDoContexto()
+    const escolaId = exigirEscolaDoContexto()
     const { primeiro, ultimo } = limitesDoMes(mes)
     const [linha] = await this.banco
       .select({

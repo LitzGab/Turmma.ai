@@ -68,7 +68,7 @@ describe('processadores do worker: nenhuma afirmação de tipo (totais do expurg
 })
 
 describe('a entrada do controller passa pelo pipe (no-restricted-syntax, D81)', () => {
-  const MODULOS_MIGRADOS = ['sistema', 'ia', 'entrega', 'assistente', 'professores']
+  const MODULOS_MIGRADOS = ['sistema', 'ia', 'entrega', 'assistente', 'professores', 'estrutura', 'sala', 'governanca']
   const regras = new Set(['no-restricted-syntax'])
 
   it.each(MODULOS_MIGRADOS)('reprova @Body(), @Query(), @Param(), @Param(\'id\'), @Query(\'termo\'), @Req() e requisicao.body|query|params no controller de %s', async (modulo) => {
@@ -83,7 +83,7 @@ describe('a entrada do controller passa pelo pipe (no-restricted-syntax, D81)', 
   })
 
   it('vale só no controller dos módulos migrados: o mesmo arquivo como service, ou num módulo que ainda não migrou, passa', async () => {
-    for (const caminho of ['apps/api/src/ia/x.service.ts', 'apps/api/src/estrutura/x.controller.ts', 'apps/api/src/ia/x.controller.test.ts']) {
+    for (const caminho of ['apps/api/src/ia/x.service.ts', 'apps/api/src/sessao/x.controller.ts', 'apps/api/src/ia/x.controller.test.ts']) {
       expect(await lintar(eslint, 'entrada-sem-esquema.ts', caminho, regras), caminho).toEqual([])
     }
   })

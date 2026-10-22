@@ -27,8 +27,8 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **7.0**, grande (9 repositories para `exigirEscolaDoContexto`), desde
-    12:55, 1ª tentativa; prazo de 4 h 16:55. A 6.0 encontrou-se em `f49c095` (com as correções `05aa2fe` e `9dd7a6b`)
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **8.0**, grande (a IA tira a escola do contexto, com teste de
+    isolamento), desde 13:27, 1ª tentativa; prazo de 4 h 17:27. A 7.0 encontrou-se em `b59fe0a` (spec em `ea57577`)
   - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
     **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
     os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
@@ -37,11 +37,11 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
   - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **15.0**, desde ~12:25, 1ª tentativa (14.0 encontrada em `2164719`,
-    depois do conserto R61 do `Arquiteto`, `1744468`)
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **53.0** (web), desde ~12:25, 1ª tentativa. A correção
-    `arquivo-do-titular-datas` fechou **sem commit**: não havia defeito (ver "O que decidi sem perguntar"). O quadro
-    sugeria 53.0→l2 e 15.0→l3; inverti para manter a web na linha 3 (ajuste do Claude Code #2)
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **36.0**, grande (kit visual em `componentes/ui/`), desde
+    13:20, 1ª tentativa; prazo de 4 h 17:20. A 15.0 encontrou-se em `0c75678` (spec em `aa3b7e6`)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **18.0**, grande (payload validado no `Enfileirador`), desde
+    13:07, 1ª tentativa; prazo de 4 h 17:07. A web (36.0) está presa à 15.0 por `guardas.test.ts`, por isso a linha 3
+    pega API agora. A 53.0 deixou o despachante e o worker-interativo do `educa-teste-3` parados
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -58,13 +58,15 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     §2.3, `TODO.md`). Ponto de produto para a X6: a entrada recusa pedido do professor sobre o próprio material com palavra
     de nota ou correção (10/10, já antes da 3.0). **Dizer ao Joaquim no fim** que a AIA do Tutor e esta lacuna merecem o
     olhar dele antes do piloto
-  - esteira: às 12:53 seis execuções na fila (`f6913ee` a `e048e36`), nenhum veredito novo; `3b44efe` foi **cancelada**
-    (o `esteira.ts` a lê como VERMELHA: não é falha). Ler de novo no próximo encontro
+  - esteira: às 13:18 VERMELHA em `f6913ee` e `0975b97`, só `ouro.test.ts` (3 testes), que a correção
+    `ouro-base-qualitativa` (`05aa2fe`, já na spec) resolve; sete execuções na fila desde 12:16 (`39803274227` em diante),
+    sem veredito. Às 13:26 todas as execuções da spec seguem `queued` (a mais velha há 1 h, `39804325419`): fila
+    do GitHub, sem veredito. Ler de novo no próximo encontro; se o `ouro.test.ts` cair depois de `05aa2fe`, é correção
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`)
-- **Base:** `spec/reengenharia` em `e048e36`. Vigia ligada
+- **Base:** `spec/reengenharia` em `ea57577`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -94,6 +96,10 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 94.0 | `0975b97` | Sonnet | 2 | linha 2, grande, 11:07–11:36; dentro do prazo de 14:55, escopo inteiro; três recomendações no TODO.md |
 | 51.0 | `50e04d0` | Sonnet | 2 | encontro adiado até o commit dos lotes retidos da 3.0 (`3b44efe`); lacuna da 3.0 em `2fe1d73` (R60); o ponto de produto do material do professor com palavra de nota vai para a X6 |
 | 6.0 | `f49c095` | Sonnet | 2 (test-engineer, revisor-geral; tenancy na 1ª) | linha 1, pequena, 11:27–12:52; duas correções na linha antes dela: `ouro-base-qualitativa` (`05aa2fe`) e `porta-unica-so-import` (`9dd7a6b`, divergência de portão) |
+| 53.0 | `c090987` | Sonnet | 2 (os cinco aprovados na 2ª) | linha 3, web, 12:25–13:05; a Mesa viu 6 fotos; acabamentos do espelho e a falta de atividade "para responder" na vitrine no TODO.md; integração não rodou (só web e shared) |
+| 14.0 | `2164719` | Sonnet | — | linha 2; encontro depois do conserto R61 do `Arquiteto` (`1744468`) |
+| 15.0 | `0c75678` | Sonnet | 2 (tenancy, test-engineer, revisor-geral aprovados na 2ª) | linha 2, ~12:25–13:15; divergências (ordem id e corpo, 15 rotas 404→400; suspender sem finalidade vira corpo fora do esquema) no documento e em `onda-1a.md` T1 |
+| 7.0 | `b59fe0a` | Sonnet | 1 (tenancy, test-engineer, revisor-geral aprovados na 1ª) | linha 1, grande, 12:55–13:26; sem tela |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔

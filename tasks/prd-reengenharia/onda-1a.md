@@ -42,6 +42,12 @@ também (hoje, `SuspensoesDaEscolaRepository`, `apps/api/src/assistente/time.ser
 - **7.0:** os 9 com cópia local de `contextoAtual()?.escolaId` (api: `escola-sessao`, `convite`, `criacao-de-sessao`,
   `escrita-de-sessao`, `redefinicao-de-mfa`, `registro-de-acesso`; nucleo: `configuracao-operacional`, `efeito-sintetico`,
   `uso`) passam a `exigirEscolaDoContexto`.
+  **Duas escolhas da 7.0, declaradas em `7_task.md`:** (i) a caracterização (7.1) entra no commit da tarefa, e não num commit à
+  parte, pelo mesmo motivo da 14.0 (o hook pede portão e rodada a todo commit com código de `apps/` ou `packages/`): os casos
+  foram escritos e rodados verdes contra a cópia local, antes de qualquer repository mudar; (ii) a mutação do `ConviteRepository`
+  é a do `revogar`, do `revogarParaRefazer`, do `revogado` e do `nomeDaEscola`, e não a do `ativarPorConvite`: lá
+  `eq(convite.escolaId, …)` (no `exists`) e `eq(usuario.escolaId, …)` (no `update`) barram o mesmo caso (o convite de A no contexto
+  de B), então tirar uma só deixa a outra de pé e o teste não fica vermelho.
 - **8.0:** `ia/consumo`, `ia/orcamento` e `ia/suspensao`, hoje com `escolaId` por argumento.
 - **Lista:** cinco, `auditoria`, `insercao-de-auditoria` e `job-registro` (escola nula em `sistema.*`), `operacao/operador`
   (a equipe não tem escola) e `nucleo/identidade/sessao` (cria o contexto): 9 + 3 + 5 = 17. Soma-se o `ia/execucao`, que já
@@ -154,6 +160,12 @@ segunda passada ignora `eslint-disable`.
   As asserções dessas rotas foram escritas com o 404 e passaram no código antigo, e foram reescritas para o 400 depois da
   migração. É a ordem entre corpo e caminho que esta seção já aceita ("caracterizada, não forçada"), e não revela existência:
   com o corpo inválido, qualquer id, de outra escola ou inexistente, dá o mesmo 400.
+  **A 15.0 repete a conduta** (caracterização no commit da tarefa, em `apps/api/test/borda-de-entrada.int.test.ts`, rodada verde
+  contra o código antigo antes de qualquer controller mudar) e achou a mesma mudança em 15 rotas, as de `estrutura/`, `sala/` e
+  `governanca/` que leem id ou `chave` do caminho e corpo ou consulta: com os dois inválidos ao mesmo tempo, passam do 404 do
+  id (ou da `chave`) ao 400 do corpo ou da consulta, o último parâmetro. A asserção foi escrita com o 404 e depois reescrita
+  para o 400. Com a entrada inválida, qualquer id (fora do formato, inexistente ou de outra escola) e qualquer `chave` (do
+  catálogo ou fora dele) dão o mesmo 400, e o `retomar` com corpo válido segue dando o 404 igual para as duas.
 
 **A trava é o ESLint core.** Um bloco de `no-restricted-syntax` em `eslint.config.mjs`, para `*.controller.ts`, reprova
 `@Body()`, `@Query()` e `@Param(nome)` sem pipe, `@Req()` e `requisicao.body`, `.query` e `.params`. O `files` do bloco

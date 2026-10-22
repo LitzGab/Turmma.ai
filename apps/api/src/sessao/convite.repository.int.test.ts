@@ -235,7 +235,7 @@ describe('ConviteRepository: o convite e o usuário convidado só na escola do c
   it('sem escola no contexto, falha fechada', async () => {
     const alvo = await convidado()
     await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => new ConviteRepository(bancada.banco).ativarPorConvite(alvo.usuarioId, alvo.conviteId))).rejects.toThrow(
-      'convite sem escola no contexto',
+      'consulta com escopo sem escola no contexto',
     )
   })
 })
