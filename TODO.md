@@ -1679,3 +1679,26 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   usa `ARQUIVOS_DE_TESTE` (`**/*.test.{ts,tsx}`, `e2e/**/*.spec.ts`) como exceção, então um helper em `apps/api/test/` ou
   `e2e/__fixtures__/` que importe tabela seria reprovado. Hoje nenhum importa. Fixar o lado, com um caso para cada um, muda o
   que as outras guardas de teste enxergam: decidir quando o primeiro helper precisar (`test-engineer`, 9.0, 1ª rodada)
+- [ ] **(X5, 48.0) O meio-aberto fecha o disjuntor com o provedor ainda fora:** no `AdaptadorResiliente`, a chamada de teste que sai como `ChamadaCancelada`, 429 ou outro 4xx conta como sucesso e fecha o disjuntor, mesmo sem prova de que o provedor voltou. Muda comportamento: pede teste e linha em "Divergências"; a dona do disjuntor é a 49.0 (`infra-guardian`, 48.0, 1ª rodada).
+- [ ] **(X5, 48.0) Cenário de carga « provedor recusando por limite no meio da aula »:** falta em `infra/test/carga.test.ts` o caso com o adaptador falso devolvendo 429 enquanto a escola usa o Tutor; cabe na 47.0 ou na 49.0 (`infra-guardian`, 48.0, 1ª rodada).
+- [ ] **(X5, 44.0) O alerta "Job que falhou de vez" fica aceso 30 dias, e falha nova do mesmo tipo não avisa de novo:** `job_falhos > 0`
+  é contagem de linhas (a Tech Spec pede a série assim) e só esvazia pelo expurgo ou, no `titular.*`, pela ação do operador. Com a 46.0
+  (X6) dar o comando que esvazia a série, ou trocar por contador `job.falhou_total{tipo}` no worker com `increase(...) > 0`
+  (`infra-guardian` e `revisor-geral`, 44.0, 1ª rodada)
+- [ ] **(X5, 44.0) Duração do lote do expurgo com muitos `falhou` que ficam:** cada lote relê e descarta no começo do índice os `falhou`
+  de `titular.*` e os de 7 a 30 dias; medir o lote depois de uma pane em massa, ou ter caso de carga com milhares deles
+  (`infra-guardian`, `revisor-geral` e `test-engineer`, 44.0, 1ª rodada)
+- [ ] **(X5, 44.0) Nenhum teste liga a linha `falhou` do executor à medição e ao expurgo:** `execucao.int.test.ts › falha permanente…`
+  e os testes da 44.0 semeiam por SQL; um executor que gravasse `falhou` sem `concluido_em` passaria. Teste novo entre `apps/worker` e o
+  expurgo (`test-engineer`, 44.0, 1ª rodada)
+- [ ] **(X5, 44.0) Helper comum para capturar a instrução e rodar o `EXPLAIN`:** o caso de carga de `job.falhos` troca o `pool.query` à
+  mão, como o dos pendentes em `apps/despachante/test/metricas-espera.int.test.ts` (`revisor-geral`, 44.0, 1ª rodada)
+- [ ] **(X5, 44.0) Teto para o `falhou` de `titular.*`:** a linha fica até a ação do operador; registrar um teto que siga o
+  `pedido_titular` (contrato mais 5 anos), para ela não durar mais que o pedido (`privacy-guardian`, 44.0, 1ª rodada)
+- [ ] **(X5, 46.0) O descarte de linha `titular.*` precisa de auditoria com autor e finalidade:** ainda não existe `46_task.md` para
+  receber a nota (`privacy-guardian`, 44.0, 1ª rodada)
+- [ ] **(X5, 43.0) Retenção do tipo de job de IA em lote:** conferir, ao fazer o prazo por tipo, se a retenção é coerente com o limite
+  de passos e de custo (`llm-integrator`, 44.0, 1ª rodada)
+- [ ] **(X5, 12.0) A regra do depcruise cobre o que os `it` provisórios da 10.0 olham:** o `it` de `ConferenciaDoAutor` trata de nome de
+  tipo e não de caminho de import, e `IMPORTA_A_OPERACAO` não pega import só de efeito (`import '../operacao/x.js'`) nem aspas duplas;
+  a 12.0 substitui esses `it` e decide o que fica (`revisor-geral` e `test-engineer`, 10.0, 2ª rodada)

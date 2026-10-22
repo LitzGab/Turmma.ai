@@ -1401,3 +1401,28 @@ describe('arquitetura: o que a auditoria diz de outra pessoa não entra no arqui
     expect(doUsuario).toEqual([...COORDENACAO_OPERACAO_E_ROTINA, ...A_PROPRIA_PESSOA].sort())
   })
 })
+
+describe('arquitetura: o módulo de sessão não depende da operação, e o arquivo de prazos não fecha ciclo com o repository (X5, 10.0)', () => {
+  /** Provisório: a regra definitiva é a do depcruise, da 12.0, que então substitui estes `it`. */
+  const IMPORTA_A_OPERACAO = /from '(\.\.\/)+operacao\/|import\('(\.\.\/)+operacao\//
+  const codigoDe = (caminho: string): string => {
+    const arquivo = arquivosDoRepositorio().find((candidato) => candidato.caminho === caminho)
+    if (arquivo === undefined) throw new Error(`arquivo não encontrado: ${caminho}`)
+    return semComentarios(arquivo.texto)
+  }
+
+  it('nenhum arquivo do módulo de sessão importa o módulo da operação', () => {
+    const sessao = arquivosDoRepositorio().filter((arquivo) => arquivo.caminho.startsWith(MODULO_SESSAO))
+    expect(sessao.length).toBeGreaterThan(40)
+    expect(sessao.some((arquivo) => arquivo.caminho.startsWith(`${MODULO_SESSAO}externa/`))).toBe(true)
+    expect(sessao.filter((arquivo) => IMPORTA_A_OPERACAO.test(semComentarios(arquivo.texto))).map((arquivo) => arquivo.caminho)).toEqual([])
+  })
+
+  it('operacao/prazos-da-sessao.ts não importa operador.repository', () => {
+    expect(codigoDe('apps/api/src/operacao/prazos-da-sessao.ts')).not.toContain('operador.repository')
+  })
+
+  it('operador.repository.ts não declara nem reexporta ConferenciaDoAutor', () => {
+    expect(codigoDe('apps/api/src/operacao/operador.repository.ts')).not.toMatch(/\bConferenciaDoAutor\b/)
+  })
+})

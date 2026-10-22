@@ -62,6 +62,7 @@ export const REGRAS_PROVISIONADAS = {
   incidenteSemConfirmacao: 'educa-incidente-sem-confirmacao',
   arquivoEmPreparacao: 'educa-arquivo-em-preparacao',
   eliminacaoVencida: 'educa-eliminacao-vencida',
+  jobFalhouDeVez: 'educa-job-falhou-de-vez',
 } as const
 
 export const WORKERS_INTERATIVOS = ['worker-interativo-1', 'worker-interativo-2'] as const

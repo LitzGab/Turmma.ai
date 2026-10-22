@@ -52,6 +52,9 @@ export const jobRegistro = pgTable(
       .where(sql`estado not in ('concluido', 'falhou') and not nao_urgente`),
     // O expurgo (11.0) apaga os finalizados antigos sem varrer os pendentes.
     index('job_registro_finalizados_idx').on(tabela.concluidoEm).where(sql`estado in ('concluido', 'falhou')`),
+    // A medição `job.falhos{tipo}` (44.0) salta de tipo em tipo e conta só os `falhou`, que são poucos: sem este índice a
+    // contagem desceria pelo de finalizados atravessando os concluídos de 7 dias, a cada 5 s.
+    index('job_registro_falhos_idx').on(tabela.tipo).where(sql`estado = 'falhou'`),
     // Uma vez só por escola, tipo e chave, entre os que ainda não terminaram (F3, tarefa 3.0).
     uniqueIndex('job_registro_chave_idempotencia_unica')
       .on(tabela.escolaId, tabela.tipo, tabela.chaveIdempotencia)

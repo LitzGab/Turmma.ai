@@ -14,7 +14,7 @@ import {
 } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
 import { and, count, eq, exists, isNull, lt, or, sql } from 'drizzle-orm'
-import { DURACAO_DA_SESSAO_DE_OPERADOR_HORAS } from './prazos-da-sessao.js'
+import { DURACAO_DA_SESSAO_DE_OPERADOR_HORAS, type SessaoDeOperadorParaGuarda, type SessaoDeOperadorParaRenovar } from './prazos-da-sessao.js'
 
 /**
  * Chave do `pg_advisory_xact_lock` que põe em fila o `criar` e o `desativar` do `ops:operador` (Tech Spec da A0, seção
@@ -55,39 +55,9 @@ export type SituacaoDoAutor = 'bootstrap' | 'ativo' | 'recusado'
 /** Quem assina uma escrita do operador: o operador da sessão do painel, pelo id, ou o `OPERADOR` do comando, pelo apelido. */
 export type QuemEscreve = { readonly operadorId: string } | { readonly apelido: string }
 
-/**
- * A conferência do autor de uma escrita do operador (Tech Spec da A0b, seção 5, "Autor"), que o caso de uso chama como
- * **primeira instrução da transação dele** e que devolve o apelido que vai para `autor_operador`. Quem não passa lança:
- * o painel, `SESSAO_ENCERRADA`; o comando, `OperadorRecusado`. O pedido nunca escolhe o autor.
- */
-export type ConferenciaDoAutor = (tx: TransacaoBanco) => Promise<string>
-
 export interface OperadorAlvo {
   readonly id: string
   readonly apelido: string
-}
-
-/**
- * O que a `GuardaDeOperador` lê da sessão do token, numa consulta: os prazos, o encerramento, se o operador está
- * desativado, e a hora do banco, contra a qual os prazos se comparam (a mesma régua do `ultimo_uso_em`, que o banco grava).
- */
-export interface SessaoDeOperadorParaGuarda {
-  readonly encerradaEm: Date | null
-  readonly expiraEm: Date
-  readonly ultimoUsoEm: Date
-  readonly operadorDesativadoEm: Date | null
-  readonly agora: Date
-}
-
-/**
- * O que a renovação lê da sessão do cookie, numa consulta: o que a guarda lê (os prazos, o encerramento, o operador e a
- * hora do banco), mais os ids, se o cookie é o refresh atual ou o anterior, e quando a sessão rotacionou.
- */
-export interface SessaoDeOperadorParaRenovar extends SessaoDeOperadorParaGuarda {
-  readonly id: string
-  readonly operadorId: string
-  readonly pelo: 'atual' | 'anterior'
-  readonly rotacionadoEm: Date | null
 }
 
 /** O convite que ainda vale, pelo hash do token: os dois ids, e nada do operador. */

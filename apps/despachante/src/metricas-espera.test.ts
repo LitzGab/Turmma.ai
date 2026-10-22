@@ -1,4 +1,4 @@
-import { criarLogger, METRICAS, type JanelaLetiva, type MedicaoDePendentes } from '@educa/nucleo'
+import { criarLogger, METRICAS, type JanelaLetiva, type MedicaoDeFalhos, type MedicaoDePendentes } from '@educa/nucleo'
 import type { Fila } from '@educa/shared'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
@@ -52,6 +52,7 @@ describe('esperaDoMaisAntigo', () => {
 describe('MedicaoDaFila', () => {
   let medidor: MedidorDeTeste
   let medicoes: MedicaoDePendentes[] | Error
+  let falhos: MedicaoDeFalhos[] | Error
   let vagas: Map<string, number> | Error
   let agoraMs: number
   let relogio: Date
@@ -60,12 +61,16 @@ describe('MedicaoDaFila', () => {
   beforeEach(() => {
     medidor = new MedidorDeTeste()
     medicoes = []
+    falhos = []
     vagas = new Map()
     agoraMs = 0
     relogio = TERCA_10H
     medicaoDaFila = new MedicaoDaFila(
       {
-        repositorio: { medirPendentes: () => (medicoes instanceof Error ? Promise.reject(medicoes) : Promise.resolve(medicoes)) },
+        repositorio: {
+          medirPendentes: () => (medicoes instanceof Error ? Promise.reject(medicoes) : Promise.resolve(medicoes)),
+          medirFalhos: () => (falhos instanceof Error ? Promise.reject(falhos) : Promise.resolve(falhos)),
+        },
         vagas: { emUso: (fila, escolaId) => (vagas instanceof Error ? Promise.reject(vagas) : Promise.resolve(vagas.get(`${fila}:${escolaId}`) ?? 0)) },
         janelaDaEscola: { daEscola: () => Promise.resolve(JANELA) },
         relogio: { agora: () => relogio },
@@ -137,10 +142,66 @@ describe('MedicaoDaFila', () => {
   it('borda: Postgres fora → a exportação fica sem espera, em vez de repetir a última parada no tempo', async () => {
     medicoes = [medicao({ fila: 'interativa', urgenteCriadoEm: segundosAntes(TERCA_10H, 7) })]
     await medicaoDaFila.medir()
+    falhos = [{ tipo: 'ia.geracao.concluida', falhos: 2 }]
+    await medicaoDaFila.medir()
+    expect(await pontos(METRICAS.falhos)).toEqual([{ tipo: 'ia.geracao.concluida', valor: 2 }])
     medicoes = new Error('connect ECONNREFUSED')
+    falhos = new Error('connect ECONNREFUSED')
     await medicaoDaFila.medir()
     expect(await pontos(METRICAS.esperaMaisAntiga)).toEqual([])
     expect(await pontos(METRICAS.pendentes)).toEqual([])
+    expect(await pontos(METRICAS.falhos)).toEqual([])
+  })
+
+  it('falhos: um ponto por tipo, só com o rótulo `tipo`: nem escola, nem fila, nem código da falha', async () => {
+    falhos = [
+      { tipo: 'titular.montar-arquivo', falhos: 5 },
+      { tipo: 'ia.geracao.concluida', falhos: 1 },
+    ]
+    await medicaoDaFila.medir()
+    expect(await pontos(METRICAS.falhos)).toEqual([
+      { tipo: 'titular.montar-arquivo', valor: 5 },
+      { tipo: 'ia.geracao.concluida', valor: 1 },
+    ])
+    for (const { nome, atributos } of await medidor.atributosDeTodas()) {
+      if (nome === METRICAS.falhos) expect(Object.keys(atributos)).toEqual(['tipo'])
+    }
+  })
+
+  it('falhos: o tipo que o expurgo esvaziou sai da exportação na medição seguinte, e não fica em zero', async () => {
+    falhos = [
+      { tipo: 'titular.eliminar', falhos: 1 },
+      { tipo: 'sistema.expurgar-jobs', falhos: 3 },
+    ]
+    await medicaoDaFila.medir()
+    falhos = [{ tipo: 'titular.eliminar', falhos: 1 }]
+    await medicaoDaFila.medir()
+    expect(await pontos(METRICAS.falhos)).toEqual([{ tipo: 'titular.eliminar', valor: 1 }])
+  })
+
+  it('falhos: a consulta dos falhos que falha tira só `job.falhos` da exportação, e a espera da fila segue medida', async () => {
+    medicoes = [medicao({ fila: 'interativa', urgenteCriadoEm: segundosAntes(TERCA_10H, 7) })]
+    falhos = [{ tipo: 'titular.eliminar', falhos: 1 }]
+    await medicaoDaFila.medir()
+    falhos = new Error('canceling statement due to statement timeout')
+    await medicaoDaFila.medir()
+    expect(await pontos(METRICAS.falhos)).toEqual([])
+    expect(await pontos(METRICAS.esperaMaisAntiga)).toEqual([{ fila: 'interativa', escola_id: ESCOLA_A, valor: 7 }])
+  })
+
+  it('falhos: a consulta dos falhos que falha deixa o aviso `despachante.medicao_indisponivel` no log, porque o alerta volta a normal sem a série', async () => {
+    const linhas: string[] = []
+    const comLog = new MedicaoDaFila({
+      repositorio: { medirPendentes: () => Promise.resolve([]), medirFalhos: () => Promise.reject(new Error('canceling statement due to statement timeout')) },
+      vagas: { emUso: () => Promise.resolve(0) },
+      janelaDaEscola: { daEscola: () => Promise.resolve(JANELA) },
+      relogio: { agora: () => TERCA_10H },
+      logger: criarLogger({ servico: 'teste', destino: { write: (linha: string) => linhas.push(linha) } }),
+      medidor: medidor.medidor,
+    })
+    await comLog.medir()
+    expect(linhas.map((linha) => JSON.parse(linha) as { evento?: string }).filter(({ evento }) => evento === 'despachante.medicao_indisponivel')).toHaveLength(1)
+    await comLog.parar()
   })
 
   it('borda: a fila da escola esvaziou → série em zero, e não a última espera, até a retenção vencer; depois some', async () => {
@@ -170,7 +231,7 @@ describe('MedicaoDaFila', () => {
       [ESCOLA_B, { ...JANELA, diasLetivos: [1, 3, 5] }],
     ])
     const outra = new MedicaoDaFila({
-      repositorio: { medirPendentes: () => Promise.resolve(medicoes as MedicaoDePendentes[]) },
+      repositorio: { medirPendentes: () => Promise.resolve(medicoes as MedicaoDePendentes[]), medirFalhos: () => Promise.resolve([]) },
       vagas: { emUso: () => Promise.resolve(0) },
       janelaDaEscola: {
         daEscola: () => {

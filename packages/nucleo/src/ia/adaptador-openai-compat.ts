@@ -1,10 +1,9 @@
-import { setTimeout as esperar } from 'node:timers/promises'
 import { z } from 'zod'
 import { MOTIVO_SEM_PROVEDOR_ID, type ConfiguracaoDoModelo } from '../config/config-ia.js'
 import { ConfiguracaoInvalida } from '../config/validar-config.js'
 import type { AdaptadorDeModelo, ChamadaAoModelo, RespostaDoModelo } from './adaptador.js'
 import { estimarTokens } from './adaptador-falso.js'
-import { ErroDeIa } from './erros.js'
+import { ErroDoProvedor } from './erros.js'
 import { limparSaidaDoModelo } from './limpar-saida.js'
 import type { Perfil } from './perfis.js'
 import { SEM_ENVIO_EXTERNO, type EnvioDaChamada } from './porta.js'
@@ -117,15 +116,15 @@ export class AdaptadorOpenAICompat implements AdaptadorDeModelo {
       // O modelo local raciocina por padrão. Toda tarefa daqui é de saída estruturada: o raciocínio sai desligado.
       chat_template_kwargs: { enable_thinking: false },
     })
-    const resposta = await this.pedirComRecuo(corpo, chamada.sinal)
+    const resposta = await this.pedir(corpo, chamada.sinal)
     let envelope: unknown
     try {
       envelope = await resposta.json()
     } catch {
-      throw new ErroDeIa(chamada.sinal.aborted ? 'IA_TEMPO_ESGOTADO' : 'IA_INDISPONIVEL')
+      throw new ErroDoProvedor(chamada.sinal.aborted ? 'tempo' : 'servidor')
     }
     const lido = esquemaDaResposta.safeParse(envelope)
-    if (!lido.success) throw new ErroDeIa('IA_INDISPONIVEL')
+    if (!lido.success) throw new ErroDoProvedor('servidor')
     const conteudo = lido.data.choices[0]?.message.content ?? ''
     return {
       texto: limparSaidaDoModelo(conteudo),
@@ -136,38 +135,35 @@ export class AdaptadorOpenAICompat implements AdaptadorDeModelo {
   }
 
   /**
-   * Uma chamada e, em 429 ou 5xx, **uma** repetição depois do recuo (regra 30, item 8). São os dois casos em que
-   * tentar de novo adianta: o provedor está cheio ou tropeçou. Outro 4xx é pedido errado ou configuração errada, e
-   * repetir daria o mesmo. Tudo acontece dentro do prazo da chamada: o sinal que estoura a primeira tentativa
-   * também corta a espera e a repetição.
+   * **Uma** chamada, sem repetição: quem repete, e só no que não cobrou, é o `AdaptadorResiliente`, que sabe o prazo, o
+   * disjuntor e quantas vezes já tentou (regra 30, item 8). Aqui a falha só ganha o nome do que aconteceu
+   * (`FalhaDoProvedor`); o status, o corpo e a mensagem do `fetch` morrem aqui.
    */
-  private async pedirComRecuo(corpo: string, sinal: AbortSignal): Promise<Response> {
-    for (let tentativa = 1; ; tentativa += 1) {
-      let resposta: Response
-      try {
-        resposta = await fetch(this.endereco, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', ...(this.config.chaveApi === undefined ? {} : { authorization: `Bearer ${this.config.chaveApi}` }) },
-          body: corpo,
-          signal: sinal,
-          // Redirecionamento nunca é seguido: um 307 ou 308 faria o `fetch` reenviar o corpo inteiro, com o prompt, para
-          // outra origem. Com o endereço declarado local, a conversa sairia da nossa rede e ficaria gravada como se não
-          // tivesse saído. O servidor que redireciona é tratado como indisponível.
-          redirect: 'error',
-        })
-      } catch {
-        throw new ErroDeIa(sinal.aborted ? 'IA_TEMPO_ESGOTADO' : 'IA_INDISPONIVEL')
-      }
-      if (resposta.ok) return resposta
-      await resposta.body?.cancel().catch(() => undefined)
-      const sugerida = esperaSugerida(resposta)
-      const valeRepetir = tentativa === 1 && (resposta.status === 429 || resposta.status >= 500)
-      // O provedor que pede uma espera maior que o nosso recuo recusaria a repetição de novo: a espera vai para quem chamou.
-      if (!valeRepetir || (sugerida !== undefined && sugerida * 1_000 > this.config.recuoMs)) throw new ErroDeIa('IA_INDISPONIVEL', sugerida)
-      // O prazo que acaba durante o recuo não muda a causa: o provedor estava indisponível.
-      await esperar(this.config.recuoMs, undefined, { signal: sinal }).catch(() => {
-        throw new ErroDeIa('IA_INDISPONIVEL', sugerida)
+  private async pedir(corpo: string, sinal: AbortSignal): Promise<Response> {
+    let resposta: Response
+    try {
+      resposta = await fetch(this.endereco, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...(this.config.chaveApi === undefined ? {} : { authorization: `Bearer ${this.config.chaveApi}` }) },
+        body: corpo,
+        signal: sinal,
+        // Redirecionamento nunca é seguido: um 307 ou 308 faria o `fetch` reenviar o corpo inteiro, com o prompt, para
+        // outra origem. Com o endereço declarado local, a conversa sairia da nossa rede e ficaria gravada como se não
+        // tivesse saído. O servidor que redireciona é tratado como indisponível.
+        redirect: 'error',
       })
+    } catch (erro) {
+      throw new ErroDoProvedor(sinal.aborted ? 'tempo' : conexaoRecusada(erro) ? 'recusada' : 'servidor')
     }
+    if (resposta.ok) return resposta
+    await resposta.body?.cancel().catch(() => undefined)
+    if (resposta.status === 429) throw new ErroDoProvedor('limite', esperaSugerida(resposta))
+    throw new ErroDoProvedor(resposta.status >= 500 ? 'servidor' : 'rejeitada')
   }
+}
+
+/** O `fetch` do Node esconde a causa em `cause.code`: `ECONNREFUSED` é a chamada que nem chegou ao provedor, e por isso se repete. */
+function conexaoRecusada(erro: unknown): boolean {
+  const causa = erro instanceof Error ? erro.cause : undefined
+  return typeof causa === 'object' && causa !== null && 'code' in causa && causa.code === 'ECONNREFUSED'
 }

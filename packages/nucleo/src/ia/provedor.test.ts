@@ -1,12 +1,14 @@
 import { CodigoDeErro } from '@educa/shared'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { executarNoContexto } from '../contexto/contexto.js'
 import { AdaptadorRoteirizado, PROVEDOR_ROTEIRIZADO } from './__fixtures__/adaptador-roteirizado.js'
+import { respostaDoChat, subirServidorLlamaFalso, type ServidorLlamaFalso } from './__fixtures__/servidor-llama-falso.js'
 import { comContextoDaEscolaDoPedido } from './__fixtures__/contexto-da-escola.js'
 import { ALUNO_1, ALUNO_2, atividadeDeEstequiometria, entradaDeAtividade, entradaDoAssistente, entradaDoRelatorio, entradaDoTutor, ESCOLA_A, ESCOLA_B } from './__fixtures__/entradas.js'
 import type { AdaptadorDeModelo } from './adaptador.js'
 import { AdaptadorFalso, MODELO_FALSO } from './adaptador-falso.js'
 import { ConsumoEmMemoria, OrcamentoEmMemoria, type ConsultaDeOrcamento, type ConsumoDeIa, type OrcamentoDeIa, type RegistroDeConsumo } from './consumo.js'
+import type { ConfiguracaoDeIa } from '../config/config-ia.js'
 import { CODIGOS_DE_ERRO_DE_IA, ErroDeIa } from './erros.js'
 import type { EnvioDaChamada, MedicaoDaGeracao } from './porta.js'
 import { criarProvedorDeIa, MODELO_DA_REGRA_FIXA, ProvedorDeIa, type RegistradorDeIa } from './provedor.js'
@@ -18,6 +20,7 @@ import { relatorioDaCorrecao } from './tarefas/relatorio-da-correcao.js'
 import { turnoDoTutor } from './tarefas/turno-do-tutor.js'
 
 const EXECUCAO = '1d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6'
+const PRAZOS = { rapido: 5_000, padrao: 5_000, complexo: 5_000, visao: 5_000 } as const
 const SEMPRE = { consultar: async () => ({ permitido: true as const }) } satisfies OrcamentoDeIa
 
 function registrador(): RegistradorDeIa & { linhas: () => unknown[] } {
@@ -35,7 +38,6 @@ function montar(opcoes: { adaptador?: AdaptadorDeModelo; orcamento?: OrcamentoDe
     registro: opcoes.registro ?? consumo,
     orcamento: opcoes.orcamento ?? SEMPRE,
     suspensao: opcoes.suspensao ?? new SuspensoesEmMemoria(),
-    timeoutMs: 5_000,
     relogio,
     ...(opcoes.logger === undefined ? {} : { logger: opcoes.logger }),
   })
@@ -156,13 +158,13 @@ describe('ProvedorDeIa: saída validada e medição', () => {
 
   it('criarProvedorDeIa: sem nada configurado, a porta é a do adaptador falso', async () => {
     const consumo = new ConsumoEmMemoria()
-    const ia = comContextoDaEscolaDoPedido(criarProvedorDeIa({ adaptador: 'falso', timeoutMs: 5_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 } }, { registro: consumo, orcamento: SEMPRE, suspensao: new SuspensoesEmMemoria() }))
+    const ia = comContextoDaEscolaDoPedido(criarProvedorDeIa({ adaptador: 'falso', prazosMs: PRAZOS, recuoMs: 500, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 } }, { registro: consumo, orcamento: SEMPRE, suspensao: new SuspensoesEmMemoria() }))
     const { medicao } = await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
     expect(medicao.origem).toBe('falso')
   })
 
   it('criarProvedorDeIa: com latenciaFalsaMs a chamada do adaptador falso espera pelo menos isso, e sem ela não espera', async () => {
-    const config = { adaptador: 'falso' as const, timeoutMs: 5_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 } }
+    const config = { adaptador: 'falso' as const, prazosMs: PRAZOS, recuoMs: 500, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 } }
     const portas = { registro: new ConsumoEmMemoria(), orcamento: SEMPRE, suspensao: new SuspensoesEmMemoria() }
     const chamar = async (latenciaFalsaMs?: number): Promise<number> => {
       const ia = comContextoDaEscolaDoPedido(criarProvedorDeIa(latenciaFalsaMs === undefined ? config : { ...config, latenciaFalsaMs }, portas))
@@ -176,6 +178,52 @@ describe('ProvedorDeIa: saída validada e medição', () => {
     expect(com).toBeGreaterThanOrEqual(190)
     // Sem a opção não há espera: a chamada termina antes da que espera 200 ms, qualquer que seja a velocidade da máquina.
     expect(sem).toBeLessThan(com)
+  })
+})
+
+describe('criarProvedorDeIa: o adaptador do provedor sai decorado com o prazo do perfil e o recuo da configuração', () => {
+  let servidor: ServidorLlamaFalso | undefined
+  afterEach(async () => {
+    await servidor?.fechar()
+    servidor = undefined
+  })
+
+  async function provedorComModelo(roteiro: Parameters<typeof subirServidorLlamaFalso>[0], config: { prazosMs: ConfiguracaoDeIa['prazosMs']; recuoMs: number }) {
+    servidor = await subirServidorLlamaFalso(roteiro)
+    const configuracao: ConfiguracaoDeIa = {
+      adaptador: 'openai_compat',
+      ...config,
+      executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 },
+      modelo: { baseUrl: servidor.url, modelos: { rapido: 'm', padrao: 'm', complexo: 'm', visao: 'm' }, processamentoLocal: true },
+    }
+    const consumo = new ConsumoEmMemoria()
+    return comContextoDaEscolaDoPedido(criarProvedorDeIa(configuracao, { registro: consumo, orcamento: SEMPRE, suspensao: new SuspensoesEmMemoria() }))
+  }
+
+  it('o prazo é o do perfil da tarefa: o turno do Tutor (`rapido`) estoura aos 150 ms, e a atividade (`padrao`) espera a mesma demora', async () => {
+    const texto = JSON.stringify(atividadeDeEstequiometria())
+    const ia = await provedorComModelo(() => ({ corpo: respostaDoChat(texto), atrasoMs: 600 }), { prazosMs: { rapido: 150, padrao: 3_000, complexo: 3_000, visao: 3_000 }, recuoMs: 20 })
+    const inicio = performance.now()
+    const tutor = await erroDe(ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi essa'), escolaId: ESCOLA_A, alunoId: ALUNO_1 }))
+    expect(tutor.codigoDeIa).toBe('IA_TEMPO_ESGOTADO')
+    expect(performance.now() - inicio).toBeLessThan(1_100)
+    await expect(ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })).resolves.toBeDefined()
+  })
+
+  it('a repetição do 429 espera o recuo da configuração, com jitter entre metade dele e ele inteiro', async () => {
+    const texto = JSON.stringify(atividadeDeEstequiometria())
+    const chegadas: number[] = []
+    const ia = await provedorComModelo(
+      (_pedido, numero) => {
+        chegadas.push(performance.now())
+        return numero === 1 ? { status: 429, corpo: {} } : { corpo: respostaDoChat(texto) }
+      },
+      { prazosMs: { rapido: 5_000, padrao: 5_000, complexo: 5_000, visao: 5_000 }, recuoMs: 400 },
+    )
+    await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
+    const espera = (chegadas[1] ?? 0) - (chegadas[0] ?? 0)
+    expect(espera).toBeGreaterThanOrEqual(190)
+    expect(espera).toBeLessThan(1_100)
   })
 })
 
@@ -509,7 +557,7 @@ describe('OrcamentoEmMemoria', () => {
     let agora = new Date('2026-10-05T13:00:00Z')
     const consumo = new ConsumoEmMemoria()
     const relogio = { agora: () => agora }
-    const ia = comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador: new AdaptadorFalso(), registro: consumo, orcamento: new OrcamentoEmMemoria(consumo, limites, relogio), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000, relogio }))
+    const ia = comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador: new AdaptadorFalso(), registro: consumo, orcamento: new OrcamentoEmMemoria(consumo, limites, relogio), suspensao: new SuspensoesEmMemoria(), relogio }))
     const tutor = (escolaId: string, alunoId: string) => ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi essa'), escolaId, alunoId })
     return { ia, tutor, avancarPara: (iso: string) => void (agora = new Date(iso)) }
   }

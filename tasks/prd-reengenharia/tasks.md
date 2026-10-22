@@ -172,10 +172,10 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 - [ ] **43.0 — Job estourado dá `TEMPO_ESGOTADO`**
   - [ ] 43.1 O `43_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3b.md`
 
-- [ ] **44.0 — Falha final alerta e fica 30 dias; o pedido do titular, até a ação**
+- [x] **44.0 — Falha final alerta e fica 30 dias; o pedido do titular, até a ação**
   - [ ] 44.1 O `44_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3b.md`
 
-- [ ] **48.0 — Provedor lento, 429 ou fora falha rápido, com orçamento**
+- [x] **48.0 — Provedor lento, 429 ou fora falha rápido, com orçamento**
   - [ ] 48.1 O `48_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
 
 ### Pastas, no projeto inteiro
@@ -201,10 +201,10 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
   - [x] 9.2 A regra, em `tools/guardas/regras-tenant.mjs`, registrada em `index.mjs` e em `REGRAS_DAS_GUARDAS`, cobrindo import, alias, reexport e namespace
   - [x] 9.3 Testes: um `describe` em `tools/guardas/guardas.test.ts` com as fixtures, e o teste da lista contra as exportações `PgTable`
 
-- [ ] **10.0 — O ciclo do operador e a dependência `sessao` → `operacao` somem**
-  - [ ] 10.1 `SessaoDeOperadorParaGuarda` e `SessaoDeOperadorParaRenovar` passam a morar em `operacao/prazos-da-sessao.ts`, e o repository os importa de lá
-  - [ ] 10.2 `ConferenciaDoAutor` vai para `apps/api/src/sessao/conferencia-do-autor.ts`, e todos os importadores trocam o caminho, sem reexportar do lugar antigo
-  - [ ] 10.3 Testes: caracterização verde antes e depois, e um `it` provisório em `apps/api/test/arquitetura.test.ts`
+- [x] **10.0 — O ciclo do operador e a dependência `sessao` → `operacao` somem**
+  - [x] 10.1 `SessaoDeOperadorParaGuarda` e `SessaoDeOperadorParaRenovar` passam a morar em `operacao/prazos-da-sessao.ts`, e o repository os importa de lá
+  - [x] 10.2 `ConferenciaDoAutor` vai para `apps/api/src/sessao/conferencia-do-autor.ts`, e todos os importadores trocam o caminho, sem reexportar do lugar antigo
+  - [x] 10.3 Testes: caracterização verde antes e depois, e um `it` provisório em `apps/api/test/arquitetura.test.ts`
 
 - [ ] **11.0 — Os 2 ciclos de `login.service` somem**
   - [ ] 11.1 Caracterização, num commit antes: `ipParaRegistro` (que não tem teste hoje) e os casos de `login.service.test.ts`

@@ -21,7 +21,7 @@ const doMaterial = (texto: string): boolean => MATERIAL_INTEIRO.includes(normali
 
 function provedorCom(adaptador: AdaptadorFalso | AdaptadorRoteirizado): { ia: ProvedorDeIa; consumo: ConsumoEmMemoria } {
   const consumo = new ConsumoEmMemoria()
-  return { ia: comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 })), consumo }
+  return { ia: comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria() })), consumo }
 }
 
 async function erroDe(promessa: Promise<unknown>): Promise<ErroDeIa> {

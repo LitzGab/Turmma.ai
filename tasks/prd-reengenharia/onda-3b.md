@@ -21,6 +21,14 @@ tentativa termina `EXECUCAO_INTERROMPIDA`, e o que ainda tem tentativa fica `ati
 que fica até a ação do operador: `titular.montar-arquivo` é enfileirado uma vez só (`privacidade.service.ts:238`). O
 `docs/lgpd.md` ganha a linha de `job_registro`: só ids, esses prazos, e a cópia `failed` no Redis por 7 dias.
 
+Como ficou (44.0): a exceção de `titular.*` é só do `falhou` e está no SQL do lote (`tipo not like 'titular.%'`, no ramo do `falhou`),
+no mesmo índice de finalizados; o `concluido` de `titular.*` sai em 7 dias. A medição é `DespachoRepository.medirFalhos` (`@SemEscopo`,
+a mesma justificativa da `medirPendentes`): salta de tipo em tipo pelo índice parcial novo `job_registro_falhos_idx` (migration 0038;
+sem ele a contagem atravessaria os concluídos de 7 dias a cada 5 s) e conta cada tipo até 10.000. O rótulo é só `tipo`: a métrica não está
+em `METRICAS_COM_ESCOLA`. O tipo cuja última linha o expurgo levou sai na medição seguinte, sem série em zero. Falha da consulta tira só
+`job.falhos` da exportação. O alerta dispara com qualquer valor acima de zero e fica aceso enquanto houver linha do tipo (30 dias, ou até a
+ação do operador no `titular.*`); a guarda `toda métrica do código tem painel` pede o painel "Jobs que falharam de vez, por tipo". O prazo que a tela de Retenção da coordenação mostra para `job_registro` (`PRAZOS_FIXOS.tarefa_em_segundo_plano`) diz os mesmos prazos, e um teste no nucleo o liga às constantes do expurgo. Não houve commit de caracterização à parte: o teste do expurgo já fixava o `falhou` saindo em 7 dias.
+
 ### T5 — listar, reprocessar e descartar (46.0; C19, D13)
 
 Em `operacao/`, com `ops/` fino.

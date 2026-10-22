@@ -18,7 +18,7 @@ import { resumoDoAnalista } from './resumo-do-analista.js'
 
 function provedorCom(adaptador: AdaptadorDeModelo): { ia: ProvedorDeIa; consumo: ConsumoEmMemoria } {
   const consumo = new ConsumoEmMemoria()
-  return { ia: comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 })), consumo }
+  return { ia: comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria() })), consumo }
 }
 
 describe('propor_ferramenta: o Assistente pergunta antes de abrir a ferramenta (D18)', () => {
@@ -606,7 +606,7 @@ describe('propor_ferramenta na tarefa 3.0: juízo sobre texto de aluno, na entra
       const consumo = new ConsumoEmMemoria()
       const logger = { info: vi.fn(), warn: vi.fn() }
       const adaptador = new AdaptadorRoteirizado(roteiro)
-      const ia = comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000, logger }))
+      const ia = comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), logger }))
       return { ia, consumo, logger, adaptador }
     }
 

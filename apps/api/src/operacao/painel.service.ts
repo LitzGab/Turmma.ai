@@ -31,8 +31,9 @@ import { Logger } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
 import { criarEscola, criarRede } from '../ops/escola.js'
 import { criarConviteDeCoordenador, refazerConviteDaCoordenacao, revogarConvitePeloOperador } from '../sessao/convite.service.js'
-import { OperadorRepository, type ConferenciaDoAutor } from './operador.repository.js'
+import { OperadorRepository } from './operador.repository.js'
 import { PainelRepository, type ReferenciaDoUso } from './painel.repository.js'
+import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
 
 /**
  * O autor das escritas do painel: o operador da sessão, conferido dentro da transação da escrita (Tech Spec da A0b,

@@ -13,8 +13,8 @@ import { CodigoDeErro } from '@educa/shared'
 import { Inject, Injectable, Logger, type CanActivate, type ExecutionContext, type Provider } from '@nestjs/common'
 import type { IncomingMessage } from 'node:http'
 import { BANCO } from '../banco.module.js'
-import { OperadorRepository, type SessaoDeOperadorParaGuarda } from './operador.repository.js'
-import { sessaoDeOperadorVale } from './prazos-da-sessao.js'
+import { OperadorRepository } from './operador.repository.js'
+import { sessaoDeOperadorVale, type SessaoDeOperadorParaGuarda } from './prazos-da-sessao.js'
 
 /** A configuração de identidade (a chave do HS256) que a `GuardaDeOperador` usa para verificar o token de operador. */
 export const IDENTIDADE_DA_OPERACAO = Symbol('IDENTIDADE_DA_OPERACAO')
