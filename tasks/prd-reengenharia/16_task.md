@@ -1,4 +1,4 @@
-# Tarefa 16.0 — Sessão e operação validam pelo esquema, com a ordem dos erros caracterizada
+# Tarefa 16.0 — Sessão e operação validam pelo `ZodValidationPipe`, sem gastar tentativa com entrada inválida
 
 **Funcionalidade:** reengenharia · **Depende de:** 14.0, 11.0
 **Subagentes obrigatórios:** `tenancy-guardian`, `infra-guardian`, `test-engineer`, `revisor-geral`
@@ -8,13 +8,13 @@
 
 ## Objetivo
 
-`sessao/` e `operacao/` validam pelos decorators da 14.0, com a ordem 401 antes de 400 caracterizada e mantida, sem
-gastar tentativa da conta com entrada inválida.
+`sessao/` e `operacao/` validam pelo `ZodValidationPipe` e pelo `IdPipe` da 14.0 (D81), sem gastar tentativa da conta
+nem alimentar a trava com entrada inválida. O `@Req()` fica só onde se lê cookie e IP.
 
 ## Contexto necessário
 
-- `onda-1a.md` §2, "T1 — Borda de entrada" (o `@IdDoCaminhoOuNada` do `redefinir-mfa`, o `@DoCaminho` do `slug` e do
-  `provedor`, e "Antes da 16.0"); `techspec.md` §6 e §7c
+- `onda-1a.md` §2, "T1" (revista pela D81: o `IdPipe({ invalidAsUndefined: true })` do `redefinir-mfa`, o
+  `errorCode: NAO_ENCONTRADO` do `slug` e do `provedor`, e a ordem dos erros); `techspec.md` §6 e §7c
 - `prd.md` RF5; `.claude/rules/80-infra-e-carga.md` itens 1 e 7 (limite por conta, não por IP), `10-multitenancy.md` item 6
 - `apps/api/src/sessao/mfa.controller.ts:37` (`extrairTokenBearer` antes do `safeParse`) e
   `apps/api/src/sessao/redefinir-mfa.controller.ts:20-25` (corpo primeiro; id inválido devolve 202 sem efeito)
@@ -23,8 +23,8 @@ gastar tentativa da conta com entrada inválida.
 ## Subtarefas
 
 - [ ] 16.1 — Caracterização, num commit antes: a ordem dos erros em `mfa`, `sessao/mfa` e `redefinir-mfa`, e o 404 do `slug` e do `provedor`
-- [ ] 16.2 — Migram os 12 controllers de `sessao/` e os 6 de `operacao/`
-- [ ] 16.3 — Os dois módulos saem da lista de pendentes
+- [ ] 16.2 — Migram os 12 controllers de `sessao/` e os 6 de `operacao/`; o `@Req()` fica só onde se lê cookie e IP, com o motivo no segundo bloco do ESLint
+- [ ] 16.3 — Os dois módulos entram no `files` do bloco de `no-restricted-syntax`
 - [ ] 16.4 — Testes: os da tabela
 
 ## Arquivos previstos
@@ -33,7 +33,7 @@ gastar tentativa da conta com entrada inválida.
 |---|---|
 | `apps/api/src/sessao/*.controller.ts`, `apps/api/src/sessao/externa/externa.controller.ts` | alterado |
 | `apps/api/src/operacao/*.controller.ts` (6) | alterado |
-| `packages/nucleo/src/entrada/` (a lista de pendentes) | alterado |
+| `eslint.config.mjs`, `tools/guardas/guardas.test.ts` | alterado |
 | `apps/api/test/{mfa,login-email,sessao-matricula,sessao-externa,acesso-da-escola,troca-de-escola,semaforo-de-login}.int.test.ts` | alterado |
 | `apps/api/test/{entrada-operador,segundo-fator-operador-concorrencia,painel-leitura,painel-escrita}.int.test.ts` | alterado |
 
@@ -43,16 +43,16 @@ Definidos com o `test-engineer`.
 
 | Cenário | Tipo | Fica vermelho se (a mutação), ou o que prova |
 |---|---|---|
-| `POST /v1/mfa/ativar` sem `Authorization` e com corpo inválido → 401 | integração | o pipe antes do token |
-| `POST /v1/sessao/mfa` com desafio inválido e corpo inválido → 401 | integração | o pipe antes do desafio |
-| `POST /v1/sessao/mfa` com desafio válido e corpo inválido → `ENTRADA_INVALIDA`, sem gastar tentativa | integração | o pipe passar `undefined` |
+| `POST /v1/mfa/ativar` sem `Authorization` e corpo válido → 401; com corpo inválido → 400, sem tentativa (mudança declarada, `onda-1a.md` T1) | integração | o token deixar de ser exigido |
+| `POST /v1/sessao/mfa` com desafio inválido e corpo válido → 401, sem gastar tentativa de ninguém | integração | o desafio deixar de ser conferido |
+| `POST /v1/sessao/mfa` com desafio válido e corpo inválido → `ENTRADA_INVALIDA`, sem gastar tentativa | integração | o pipe passar o valor cru |
 | Login por e-mail ou matrícula com corpo inválido → `ENTRADA_INVALIDA`, sem tentativa nem `registro_acesso` | integração | inválido não alimenta a trava |
 | Login com corpo inválido conta no balde por IP da rota anônima como hoje | integração | a guarda de limite vem antes (regra 80.1) |
 | 35 logins do mesmo IP ao mesmo tempo, verdes depois | integração | o limite por conta não muda |
 | A mesma matrícula com o `slug` de A e de B entra em cada uma | integração | o esquema não perde o `slug` |
 | `slug` fora do formato → o 404 do inexistente | integração | responder 400 |
 | `provedor` desconhecido → o mesmo 404 | integração | responder 400 |
-| `redefinir-mfa`: id fora do formato e corpo válido → 202, sem efeito | integração | `@IdDoCaminho` (404) |
+| `redefinir-mfa`: id fora do formato e corpo válido → 202, sem efeito | integração | `IdPipe` sem `invalidAsUndefined` (404) |
 | `redefinir-mfa`: id fora do formato e corpo inválido → 400 | integração | validar o id antes |
 | `redefinir-mfa`: id de coordenador de B, no contexto de A → 202, MFA dele intacto | integração | tirar o `eq(usuario.escolaId, …)` |
 | Troca para escola sem vínculo → o erro da escola inexistente | integração | regra 10.6 |
@@ -60,7 +60,7 @@ Definidos com o `test-engineer`.
 | Dois segundos fatores do operador ao mesmo tempo, verdes | integração | concorrência mantida |
 | Painel com consulta paginada inválida → `ENTRADA_INVALIDA` | integração | o `safeParse` do `painel.controller.ts` sai |
 | Criar escola com slug fora do formato ou chave a mais não cria rede, escola nem auditoria | integração | sem `.strict()` |
-| Sessão e operação saem da lista de pendentes | unidade | devolver um |
+| Lint: a fixture da 14.0 em `apps/api/src/{sessao,operacao}/x.controller.ts` reprova o corpo sem pipe, e o `@Req()` passa só ali | unidade | tirar o módulo do `files`; o segundo bloco valer em todo controller |
 
 ## Como testar
 
@@ -72,8 +72,9 @@ Definidos com o `test-engineer`.
   tempo, …` (`:227`) roda sem mudança.
 - A corrida do operador: `segundo-fator-operador-concorrencia.int.test.ts` (`:151`, `:173`).
 - Isolado: `npx vitest run --project integracao apps/api/test/mfa.int.test.ts`.
-- Armadilha: se o pipe mudar a ordem 401/400, não "conserte" o teste: escreva a mudança em "Divergências resolvidas" com a
-  seção da onda.
+- Armadilha: a ordem 401/400 muda onde a credencial é lida no handler (`mfa.controller.ts:37`, `:62`), e isso já está
+  decidido em `onda-1a.md` T1: escreva a linha em "Divergências resolvidas" e prove o "sem tentativa". Não mova a leitura
+  do token para dentro do pipe.
 
 ## Fora do escopo desta tarefa
 

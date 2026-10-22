@@ -139,6 +139,7 @@ dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procu
 | D78 | O processo roda no Maestri: um andar e uma branch por spec, que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando (`/seguir`); papéis de terminal em `.claude/agents/` com modelo por papel (Opus orquestra, desenha e valida; Sonnet implementa e conduz a revisão); a Mesa de revisão chama os revisores e traduz a reprovação em ordem de correção; seis paradas são do Joaquim (revisa a D23 e a D53; revista em 09/10/2026: na tarefa roda só o portão da tarefa, com os testes que ela alterou, e o portão completo roda uma vez por spec, antes da validação; e o opencode foi testado no Implementador e saiu (D79); revista em 10/10/2026: o contexto de todo o time é compactado aos 400 mil tokens, a vigia do Orquestrador tem skill própria, e o Orquestrador limpa o próprio contexto a cada tarefa; e a parada segura só a tarefa que depende dela) |
 | D79 | O processo é revisto para tempo, depois do F3: a esteira roda em todo push da spec e ninguém espera por ela; o portão da tarefa prova as mutações; os revisores rodam juntos e a ordem de correção não dita código; tarefa de um comportamento e até três guardiões; a Tech Spec e a lista de tarefas viram aviso com prazo; spec fora da sequência entra no roadmap como `X<n>`; e o modo econômico sai (revisa a D78; revista em 11/10/2026: a construção corre por linhas, até três tarefas ao mesmo tempo, e a vigia só acorda o Orquestrador com o que olhar) |
 | D80 | A pele é o sistema Turmma do mockup de outubro: cor por família, borda de 2 px com degrau, ícone ilustrado, a onça como mascote e avatar dos agentes, modo escuro e até quatro lugares por papel; o que o mockup afrouxa de regra ou depende de fase que não existe não entra; chega em quatro specs, X1 a X4, antes do F2 (revisa a D72, a D73 e a D69) |
+| D81 | Padrão de mercado antes de mecanismo próprio: peça técnica com o nome do framework, em inglês, e conceito do domínio em português; a entrada HTTP pelo `ZodValidationPipe`; a X5 recortada em 32 tarefas, com o resto na X6, sem parada até o pouso (revê a P2 e a P3 da X5) |
 
 > **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
 > da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim
@@ -202,6 +203,10 @@ agente vem de `.claude/agents/`, nunca de responsabilidade do Maestri:** com ela
 da raiz e nenhum hook dispara. Em 11/10/2026, com o F3 medido, o processo foi revisto para tempo
 (D79): o opencode, testado em duas tarefas, saiu, e as tarefas que não se tocam passaram a correr ao
 mesmo tempo, em linhas.
+
+**Nome de peça técnica e mecanismo próprio.** Fechado em 22/10/2026 (D81): a peça técnica tem o nome do framework, em
+inglês (`TurmaController`, `ZodValidationPipe`), e o conceito do domínio fica em português, pelo glossário. Mecanismo
+próprio só com o motivo escrito; o que já existe com nome em português só muda quando a tarefa já mexe nele.
 
 **Nome dos agentes.** O desenho da call tinha nomes próprios; os docs usam função. Fica a
 função (D17).

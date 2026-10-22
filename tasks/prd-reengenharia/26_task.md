@@ -24,7 +24,7 @@ As três políticas do Tutor moram em `packages/nucleo/src/conformidade/`, e o T
 - [ ] 26.3 — `risco-a-vida.ts`, `assunto-delicado.ts`, `pedido-de-resposta.ts`, `index.ts`, e o corpus `dev` fora do `dist/`
 - [ ] 26.4 — `turno-do-tutor.ts` só chama `politicas.x.casa`; as de identidade ficam, com o porquê (D58)
 - [ ] 26.5 — Testes: caracterização, `ouro`, `dev`, contexto, grupos, um lugar só, `dist/`, prompt igual
-- [ ] 26.6 — `ouro.test.ts` lê `riscoAVida-retido-1.json` e `RETIDOS.json` (zod estrito) e não cai da medida independente (`onda-0.md` §2.1, "O lote retido")
+- [ ] 26.6 — `ouro.test.ts` lê `docs/aia/ouro-retido/riscoAVida-retido-1.json` e `RETIDOS.json` (zod estrito; o sha256 do lote confere com o `RETIDOS.json`) e não cai da medida independente (`onda-0.md` §2.1, "O lote retido")
 
 ## Arquivos previstos
 

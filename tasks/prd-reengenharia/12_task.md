@@ -1,6 +1,6 @@
 # Tarefa 12.0 — Import contra a direção ou a camada, ou ciclo novo, reprova o lint
 
-**Funcionalidade:** reengenharia · **Depende de:** 9.0, 10.0, 11.0
+**Funcionalidade:** reengenharia · **Depende de:** 9.0, 10.0, 11.0, 34.0, 35.0, 96.0 (as pastas antes, pelo recorte: os caminhos deste documento são conferidos de novo antes de partir)
 **Subagentes obrigatórios:** `tenancy-guardian`, `infra-guardian`, `test-engineer`, `revisor-geral`
 **Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não.
@@ -15,6 +15,8 @@ O `npm run lint` reprova import contra a direção dos pacotes, contra a camada 
 - `onda-1a.md` §2, "T7"; `techspec.md` §6 e §11; `prd.md` RF10; `.reengenharia/DECISOES.md` R7, R39, N9
 - Regras 00 (camadas) e 10 (cercas)
 - `apps/api/test/arquitetura.test.ts` (:31, :58, :108, :122, :141, :172-183, :878)
+- A regra de só importar `credencial/` e `sessao/` pelo `index.ts` (`onda-2.md`, "As travas") vale para `apps/`, e deixa
+  `e2e/`, `infra/` e `tools/` de fora: o e2e importa `credencial/hash-do-token.ts` direto, de propósito (33.0)
 
 ## Subtarefas
 

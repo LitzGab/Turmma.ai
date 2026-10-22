@@ -11,8 +11,8 @@ Resumo, dado pessoal, conformidade e carga em `techspec.md` §1, §7, §7b e §7
 ### RF17 — prazo por tipo (43.0)
 
 `Processador = (dados, execucao, sinal: AbortSignal) => Promise<void>`, contra o `prazoMs` da definição (onda 1B; os de IA
-na 47.0). O estouro dá `TEMPO_ESGOTADO` e libera a vaga. No SIGTERM, 20 s de graça, e o que sobrou termina
-`EXECUCAO_INTERROMPIDA`.
+na 47.0). O estouro dá `TEMPO_ESGOTADO` e libera a vaga. No SIGTERM, 20 s de graça; o que sobrou na última
+tentativa termina `EXECUCAO_INTERROMPIDA`, e o que ainda tem tentativa fica `ativo` para outra réplica retomar (D49, R55).
 
 ### T5 — a falha final visível (44.0)
 
@@ -90,7 +90,7 @@ Em `operacao/`, com `ops/` fino.
 | Caso | O teste |
 |---|---|
 | Prazo | relógio falso, processador que não resolve: `TEMPO_ESGOTADO`, vaga livre |
-| SIGTERM | relógio falso, além da graça: `EXECUCAO_INTERROMPIDA` |
+| SIGTERM | além da graça: `EXECUCAO_INTERROMPIDA` na última tentativa; com tentativa sobrando, `ativo` |
 | Falha final | cinco falhas: linha `falhou`, `job.falhos{tipo}`, alerta; expurgo com 29 e 31 dias |
 | Pedido do titular | `titular.*` com cinco falhas: fica além de 31 dias, com métrica e alerta |
 | Reprocessar | conclui e a cópia `failed` sai, sem a reconciliação republicar; de duas execuções, uma reprocessa; `ia.*` recusado |

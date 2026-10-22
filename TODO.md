@@ -1585,6 +1585,9 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   (d) a exclusão do padrão de altura vale para a frase inteira: "ovo", "objeto", "experimento", "bola" ou "queda livre" em
   qualquer lugar dela impedem o disparo, mesmo que "altura" e "queda" falem de uma pessoa; prender a exclusão ao sujeito da
   queda é o ajuste, e fica para depois da medida do lote retido
+- **O risco à vida medido com o modelo de produção** (X5, 94.0; `onda-0.md` §2.2a): a `indireta` e o
+  `risco_de_outra_pessoa` são medidos com o padrão ou o modelo, no Ollama. Repetir a medida com o provedor que a D37
+  escolher, com `tools/ia/medir-risco-a-vida.ts` sobre um lote retido novo, antes de a F5 ficar pronta
 - **A ameaça de outra pessoa e a ameaça a terceiro** (X5, 2.0): "meu padrasto quer me matar", "ele disse que vai me matar" e
   "vou matar ele" recebem hoje a mensagem do CVV e o sinal `atencao_humana`, porque a 2.0 não mudou a resposta;
   "o professor quer me matar com essa lista" dispara pelo mesmo jeito de dizer, e "os meninos vão me matar na saída" (a ameaça

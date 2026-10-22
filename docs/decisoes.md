@@ -1308,3 +1308,49 @@ da raiz, não é workspace, e nada dela entra no `apps/web` nem nos `packages/`)
 (`mockups/README.md`). A licença do 21st.dev (P20) não trava a cópia: o mockup de outubro não cola peça
 nova do catálogo (as que ele usa já estão na pasta pública desde 23/09/2026, e o botão com degrau só cita
 as referências), e a conferência continua valendo antes de qualquer peça entrar no código (`TODO.md`).
+
+**D81 — Padrão de mercado antes de mecanismo próprio: a peça técnica tem o nome do framework, o
+conceito do domínio fica em português, e a X5 é recortada para pousar.** *(decidida em 22/10/2026 pelo
+Joaquim, no terminal "Claude Code #2": "faça o melhor para o meu produto, preciso terminar isso, fica
+muito parado porque me pergunta as coisas, não quero, só quero que siga em frente; e quero padrões de
+mercado, então o cara já entra com padrões: se ele usa Spring Boot, já sabe mais ou menos como faz";
+o recorte está em `.processo/reengenharia/RECORTE.md`, copiado para `.reengenharia/RECORTE.md`)*
+(1) **O princípio.** Quando o NestJS, o React, o TanStack Query, o Drizzle, o BullMQ ou o ESLint têm um
+jeito documentado de fazer, usamos esse jeito, com o nome que a documentação usa. Mecanismo próprio só
+entra com o motivo escrito: a regra que ele protege e por que o padrão não serve. O teste: **um dev que
+leu a documentação oficial reconhece isto sem ajuda?** (2) **O idioma.** A peça técnica tem o nome do
+framework, em inglês: `Controller`, `Service`, `Repository`, `Module`, `Pipe`, `Guard`, `Interceptor`,
+`Dto`, `Job`, `Queue`, os hooks `use…` (como já são `TurmaController`, `TurmaService` e
+`turma.repository.ts`). O conceito do domínio fica em português, pelo glossário (regra 60): `turma`,
+`nota`, `matricula`, `anoLetivo`, `reivindicacao`, `escolaId`. Mecanismo técnico nosso e novo leva o
+nome do padrão que implementa (`ZodValidationPipe`, e não `PipeDeEntrada`). **Não se renomeia em massa o
+que já existe**: o nome técnico em português (`Enfileirador`, `ContadorEmJanela`) só muda quando a
+tarefa já mexe nele, e o guia do desenvolvedor (`docs/guia-do-desenvolvedor.md`) dá o equivalente de
+mercado ao lado (`Enfileirador` = transactional outbox; `ContadorEmJanela` = rate limiter por janela de
+tempo, no Redis). (3) **O que muda no desenho da X5** (`.reengenharia/DIAGNOSTICO.md`, T1, T2, T18 e
+T11): a entrada HTTP passa a ser validada pelo `ZodValidationPipe` da documentação do NestJS ("Pipes",
+*Object schema validation*), no parâmetro, com um `IdPipe` no molde do `ParseUUIDPipe` que responde
+`NAO_ENCONTRADO` (regra 10.6) e normaliza para minúsculas, e a trava é o `no-restricted-syntax` do
+ESLint, sem conferência no boot e sem lista de pendentes (revê a P2 da R32); o registro de rotas próprio
+com o OpenAPI derivado (T2) e a documentação gerada do metadado (T18) saem da X5, e o contrato continua
+sendo o `packages/shared` em zod; o OpenAPI entra pelo `@nestjs/swagger` quando houver consumidor fora
+do `apps/web` (revê a P3); mover as políticas para `conformidade/` (T11) sai da X5, porque a regra já
+está protegida pelo teste e pelo `ouro`. Ficam, porque já são padrão: `dependency-cruiser`, as regras
+core do ESLint com supressões nativas, `cockatiel`, `knip`, Dockerfile multi-stage com `target` e as
+definições de job tipadas por zod (o `Job<Dados>` da documentação do BullMQ). A pasta segue o `nest g
+resource`: uma por recurso, partida por assunto quando passa de ~20 arquivos de produção; na web, o
+*feature folder* (bulletproof-react), com o kit visual em `componentes/ui/`. (4) **Como entra:** a X5
+fica com 32 tarefas, na ordem de prioridade do recorte (onda 0, tenant, prova, entrada, jobs,
+resiliência, pastas, camadas e lint, higiene e o guia do desenvolvedor), e o resto vai para a **X6
+`reengenharia-continuacao`**, registrado no `ROADMAP.md`, que não segura a X4 nem o F2. Sexta, 23/10, às
+22h nenhuma tarefa nova parte; tarefa que passa de 4 horas ou bate duas vezes no limite das três
+reprovações vai para a X6 com o diagnóstico do Arquiteto. Até o pouso da X5, nenhuma parada chama o
+Joaquim: o Arquiteto decide com a recomendação dele e registra em `.reengenharia/DECISOES.md`; o pouso
+na `develop`, com push, está autorizado com a validação aprovada e a esteira verde. As decisões D1 a
+D80, as regras 10, 20, 30, 40 e 70, os revisores com veto, o portão da tarefa e a esteira não mudam.
+Motivo: a X5 tinha 94 tarefas e, no ritmo de 21 e 22/10, acabaria em dezembro, com a X4 congelada e o
+piloto esperando; a linha de base mostrou um sistema saudável (97,9 % de linhas cobertas na API, 1,96 %
+de duplicação, nenhuma violação de camada), e a reengenharia trava por máquina o que hoje depende de
+disciplina. E mecanismo próprio é framework nosso para manter: o dev que chega sabe NestJS, não o
+`@Corpo`. O `nestjs-zod` ficou de fora porque a versão 5.5 declara `@nestjs/common` e `@nestjs/swagger`
+só até `^11`, e o projeto usa o 12; entrar com `--legacy-peer-deps` não é padrão de mercado.

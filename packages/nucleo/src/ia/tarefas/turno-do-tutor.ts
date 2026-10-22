@@ -114,12 +114,30 @@ function comTecla(palavra: string, ...excetuando: string[]): string {
 const QUERO = `(?:${comTecla('quero')}|queria|qria|kero|qro)`
 const MORRER = comTecla('morrer')
 const MATAR = comTecla('matar', 'mata')
+/** "Me mato" com a tecla errada; "me ato" (amarro) é outra palavra e fica fora. */
+const MATO = comTecla('mato', 'ato')
+/** "Acabar" com a tecla errada; "acaba com a minha vida" ("esse prazo acaba com a minha vida") é expressão e fica fora. */
+const ACABAR = comTecla('acabar', 'acaba')
+const JOGAR = comTecla('jogar')
 const VIVER = comTecla('viver')
 const CORTAR = comTecla('cortar', 'corta')
 const DESEJO = `(?:${QUERO}|prefiro|preferia|vontade de|penso em|pensando em|pensei em|querendo)`
 /** "Morrer de" mais um estado passageiro é expressão, não desejo (decisão 4 do `ouro`). "Morrer de verdade" não está aqui, e dispara. */
 const ESTADO_PASSAGEIRO = 'vergonha|rir|tedio|calor|frio|fome|sede|sono|saudade|medo|raiva|preguica|cansaco|curiosidade|ciume|inveja|susto|dor de cabeca'
-const SUICIDIO = 's[ui]{1,2}ci?d\\w*'
+/** "Suicídio" e "suicidar", com a tecla errada em qualquer ponto da palavra ("suiidio", "suciidio", "suicidr"), e não só no que vem depois de "suicid". */
+const SUICIDIO = `(?:s[ui]{1,2}ci?d\\w*|${comTecla('suicidio')}|${comTecla('suicidar')})`
+/** Só a palavra "suicídio", sem "suicida" nem "suicidar": "a carta do suicida no conto" é matéria. */
+const SUICIDIO_SO_O_SUBSTANTIVO = `(?:suicidio|${comTecla('suicidio')})`
+/** Os números no lugar das letras ("m0rr3r", "m4t4r", "qu3r0"): a palavra só conta quando traz ao menos um número, para "matar aula" continuar fora. */
+const LEET: Readonly<Record<string, string>> = { o: '[o0]', e: '[e3]', a: '[a4]', i: '[i1]' }
+const leet = (palavra: string): string => [...palavra].map((letra) => LEET[letra] ?? letra).join('')
+const leetComNumero = (palavra: string): string => `(?=[a-z]*\\d)${leet(palavra)}`
+const PARTE_DO_CORPO = '(?:braco|perna|mao|pulso|pele)s?'
+const MINHA_VONTADE = 'minha vontade (?:e|era)'
+const ENFASE = '(?: (?:so|muito|mesmo|logo|agora|hoje|realmente|de verdade|ja))*'
+const NAO_E_ESTADO = `(?! (?:de|do|da) (?:${ESTADO_PASSAGEIRO})\\b)`
+/** Remédios que o aluno nomeia ao perguntar quanto mata. */
+const REMEDIO_NOMEADO = '(?:paracetamol|dipirona|rivotril|ibuprofeno|insulina)'
 const REMEDIO = '(?:remedios?|comprimidos?|cartelas?|pilulas?|medicamentos?)'
 const LUGAR_ALTO = '(?:a |o |um |uma )?(?:janela|predio|ponte|sacada|laje|terraco|viaduto|carro|onibus|trem|metro|caminhao|telhado|penhasco|(?:\\w+ )?andar)'
 
@@ -129,20 +147,25 @@ const LUGAR_ALTO = '(?:a |o |um |uma )?(?:janela|predio|ponte|sacada|laje|terrac
  *
  * **Um padrão por jeito de dizer**, e cada um tem a sua amostra `dev` em `turno-do-tutor.test.ts`: tirar qualquer um deixa
  * uma amostra vermelha. Têm bloco de mutação: cada padrão, cada alternativa que a `dev` ou o `ouro` v1 exercita (este, pela
- * regressão exata de `ouro.test.ts`), e cada alternativa que a tarefa 2.0 acrescentou por ordem. O resto do léxico (sinônimos
- * e conjugações) não tem teste próprio, fica pelo lado de disparar e não sai do padrão por isso (`onda-0.md` §2.1). Erra-se
+ * regressão exata de `ouro.test.ts`), e cada alternativa que as tarefas 2.0 e 93.0 acrescentaram (esta, escrita só pelo jeito de
+ * dizer do README, sem ler o `ouro`). O resto do léxico (sinônimos e conjugações) não tem teste próprio, fica pelo lado de
+ * disparar e não sai do padrão por isso (`onda-0.md` §2.1). Erra-se
  * para o lado de disparar (decisões 4 e 7 do `ouro`): o custo do falso negativo é uma vida, e o do falso positivo é um 188 a mais.
  *
  * **O que não dispara, por padrão que estreita** (cada um com a sua `dev` `nao_casa`):
  * - a expressão ("vou me matar de estudar", "morrer de rir") e o agente que é outro ("essa prova vai me matar", "a professora
  *   me corta");
  * - o acidente ("quase me cortei", "me cortei com o papel") e o objeto que não é o corpo ("bati o recorde de propósito");
- * - a matéria nomeada: "suicídio" sem a primeira pessoa, "overdose no livro", o remédio que mata a bactéria e a queda do ovo na
- *   física. A pergunta sobre o meio **com matéria nomeada** não dispara; sem ela ("na prova", "no trabalho") dispara.
+ * - a matéria nomeada: "suicídio" sem a primeira pessoa, "overdose no livro", o remédio que mata a bactéria, a dor ou a formiga,
+ *   e a queda do ovo na física. A pergunta sobre o meio **com matéria nomeada** não dispara; sem ela ("na prova", "no
+ *   laboratório") dispara;
+ * - a carta de suicídio de quem a escreveu em outra época ("a carta de suicídio do Getúlio Vargas"), e "a carta do suicida no
+ *   conto"; a de gente do aluno ("do meu primo", "de novo", "de despedida") dispara.
  *
- * **O que dispara e talvez não devesse**, e fica assim de propósito: "dose letal" e "queda fatal" numa aula de ciências; "o
- * professor quer me matar com essa lista", porque "meu padrasto quer me matar" é o mesmo jeito de dizer; e a ameaça contada
- * ("ele disse que vai me matar"), porque quem a conta precisa de um adulto. A ameaça a terceiro ("vou matar ele") continua como
+ * **O que dispara e talvez não devesse**, e fica assim de propósito: "dose letal" em qualquer frase, também na aula de
+ * ciências, com a sigla DL50 ou com o rato ("a dose letal para ratos"), e "queda fatal"; "o Getúlio deixou uma carta de suicídio", que só se separaria de
+ * "meu primo deixou uma carta de suicídio" sabendo quem escreve; "quero o suicídio do Durkheim explicado", pela mesma razão; "o professor quer me matar com essa lista", porque "meu padrasto quer me matar" é o mesmo jeito de dizer; e a
+ * ameaça contada ("ele disse que vai me matar"), porque quem a conta precisa de um adulto. A ameaça a terceiro ("vou matar ele") continua como
  * estava: a resposta a ela é decisão de produto em aberto (`TODO.md`).
  */
 export const GATILHOS_DE_RISCO_A_VIDA: readonly RegExp[] = [
@@ -160,12 +183,41 @@ export const GATILHOS_DE_RISCO_A_VIDA: readonly RegExp[] = [
   /\b(?:quero|queria) que (?:tudo|isso tudo|isso) (?:acabe|acabasse|termine|terminasse)\b/,
   new RegExp(String.raw`\b(?:to|tou|estou) (?:muito |tao |bem )?(?:cansad[oa]|farto|farta|saturad[oa]|enjoad[oa]) (?:de|da) (?:${VIVER}|vida|existir)\b`),
   // Tirar a própria vida, com a palavra "suicídio" só na primeira pessoa: "suicídio na Revolução Francesa" é matéria.
-  new RegExp(String.raw`\b(?:${comTecla('tirar')}|acabar com) (?:a )?minha (?:propria )?${comTecla('vida')}\b`),
-  /\b(?:penso|pensando|pensei|quero|queria|vou|vo|decidi|vontade de) (?:em )?(?:tirar|acabar com) (?:a )?(?:propria )?vida\b/,
+  new RegExp(String.raw`\b(?:${comTecla('tirar')}|${ACABAR} com) (?:a )?minha (?:propria )?${comTecla('vida')}\b`),
+  new RegExp(String.raw`\b(?:penso|pensando|pensei|quero|queria|vou|vo|decidi|vontade de) (?:em )?(?:tirar|${ACABAR} com) (?:a )?(?:propria )?vida\b`),
   new RegExp(String.raw`\b(?:pens\w+ (?:em|no)|ideia\w* (?:de|com)|vontade de|tentei|tentar|tentando|planejo|planejei|vou|vo|quero|queria|decidi|pretendo|penso) (?:cometer |fazer |tentar )?(?:o |um )?${SUICIDIO}`),
   new RegExp(String.raw`\bme ${SUICIDIO}`),
+  // Morrer como desejo ou merecimento, fora de "quero" e "vou": "eu devia morrer", "eu mereço morrer", "preferia já ter morrido", "minha vontade é morrer". "Morrer de rir" continua expressão.
+  new RegExp(String.raw`\b(?:eu (?:devia|merecia)|mereco) (?:ter )?(?:${MORRER}|morrido)\b${NAO_E_ESTADO}`),
+  new RegExp(String.raw`\bmelhor eu ${MORRER}\b`),
+  /\b(?:preferia|queria) (?:ja )?ter morrido\b/,
+  new RegExp(String.raw`\b${MINHA_VONTADE} ${MORRER}\b`),
+  // Dar fim à própria vida, e a data da morte: "dar fim na própria vida", "o dia da minha morte". "Dar fim na vida do personagem" não tem "minha" nem "própria" e não casa.
+  /\b(?:dar|dei) (?:um )?fim (?:na|a) (?:(?:minha|propria) )+vida\b/,
+  /\b(?:data|dia) da minha morte\b/,
+  // Eufemismo e gíria: "bater as botas", "virar estrelinha", "dar game over na vida", "mrr", "sui". Só com "quero", "vou" ou "vontade de" na frente.
+  new RegExp(String.raw`\b(?:${DESEJO}|vou|vo) (?:bater as botas|partir dessa pra melhor|virar estrelinha|virar presunto|(?:ir )?de arrasta pra cima)\b`),
+  /\bdar (?:game over|logout) (?:na|da) (?:minha )?vida\b/,
+  new RegExp(String.raw`\b(?:${DESEJO}|vou|vo) mrr\b`),
+  new RegExp(String.raw`\b(?:${DESEJO}|vou|vo|ideias? de) (?:me )?sui\b`),
+  // O inglês da internet.
+  /\b(?:wanna|want to) die\b/,
+  /\bkill(?:ing)? myself\b/,
+  /\b(?:ending it|end it all|end my life)\b/,
+  /\bsewer ?slide\b/,
+  /\b(?:wanna|gonna) rope\b/,
+  // Números no lugar das letras ("m0rr3r", "m4t4r", "su1c1d10"): só vale a palavra que traz número, para "matar aula" continuar fora.
+  new RegExp(String.raw`\b(?:${DESEJO}|${leet('quero')}|vou|vo) ${leetComNumero('morrer')}\b`),
+  new RegExp(String.raw`\b(?:vou|vo|${QUERO}|${leet('quero')}) me ${leetComNumero('matar')}\b`),
+  new RegExp(String.raw`\b(?:${DESEJO}|${leet('quero')}|vou|vo) (?:o |um )?${leetComNumero('suicidio')}`),
+  // "Suicídio" como desejo ou saída, com uma palavra de ênfase entre o verbo e ele: "quero muito suicídio", "minha vontade é suicídio", "só me resta o suicídio". "Quero saber sobre suicídio" e "suicídio do Durkheim" são matéria.
+  new RegExp(String.raw`\b(?:${DESEJO}|${MINHA_VONTADE}|me resta)${ENFASE} (?:o |um )?${SUICIDIO}\b(?! d[oa]s? )`),
+  // A carta de quem escreve a despedida com a palavra: "deixei uma carta de suicídio", "bilhete de suicídio". A carta "do/da" mais um nome ("do Getúlio Vargas", "do Werther") é matéria; "do meu amigo", "de novo" e "de despedida" não. "Carta do suicida" é matéria e não casa.
+  new RegExp(String.raw`\b(?:${comTecla('carta')}|${comTecla('bilhete')}) (?:de|do) ${SUICIDIO_SO_O_SUBSTANTIVO}\b(?! d[oa]s? (?!(?:meus?|minhas?)\b))`),
+  // Se ferir sem corte: queimar, esfregar, apertar, com a parte do corpo e o fim ("até abrir", "de propósito", "pra doer"). "Sem querer" é acidente (decisão 6).
+  new RegExp(String.raw`\b(?:queim|esfreg|apert)\w* (?:\w+ ){0,2}${PARTE_DO_CORPO}\b.{0,30}\b(?:ate (?:abrir|sangrar|ficar rox[oa])|com (?:um |o )?isqueiro|de proposito|pra doer)\b(?!.{0,15}sem querer)`),
   // Se matar, com a palavra de quem escreve: "essa prova vai me matar" e "vou me matar de estudar" são expressão.
-  new RegExp(String.raw`(?<!\b(?:vai|vao|ia|iam|vem) )\bme (?:${MATAR}|mato)\b(?! de (?:estudar|trabalhar|correr|rir|treinar)\b)`),
+  new RegExp(String.raw`(?<!\b(?:vai|vao|ia|iam|vem) )\bme (?:${MATAR}|${MATO})\b(?! de (?:estudar|trabalhar|correr|rir|treinar)\b)`),
   /\b(?:vou|vo|quero|qro|kero) me mata\b/,
   // A ameaça contada por quem a ouviu: "vai me matar" sozinho é expressão, "ele disse que vai me matar" não.
   /\b(?:disse que|falou que|ameacou que|jurou que) (?:vai|vao|ia|iam) me matar\b/,
@@ -189,7 +241,7 @@ export const GATILHOS_DE_RISCO_A_VIDA: readonly RegExp[] = [
   /\bse eu (?:nao existisse|nao estivesse (?:mais )?(?:aqui|nesse mundo|vivo|viva)|nao tivesse nascido|morresse|desaparecesse)\b/,
   /\b(?:queria|quero|preferia|prefiro|melhor|bem melhor) (?:se eu )?(?:nao|nunca) (?:ter nascido|tivesse nascido)\b/,
   /\b(?:pensando em|penso em|pensei em|vou|vo|quero|queria|decidi|resolvi) (?:acabar com tudo|dar um fim (?:em tudo|nisso tudo|na minha))\b/,
-  new RegExp(String.raw`\b(?:vou|vo|vai|vao|quero|queria|penso em|pensando em|pensei em|vontade de|ameacou) (?:me )?(?:jogar|pular|atirar) (?:d[aoe]s?|pel[ao]s?|em cima d[aoe]s?|de cima d[aoe]s?|na frente d[aoe]s?|(?:em|de)baixo d[aoe]s?) ${LUGAR_ALTO}\b`),
+  new RegExp(String.raw`\b(?:vou|vo|vai|vao|quero|queria|penso em|pensando em|pensei em|vontade de|ameacou) (?:me )?(?:${JOGAR}|pular|atirar) (?:d[aoe]s?|pel[ao]s?|em cima d[aoe]s?|de cima d[aoe]s?|na frente d[aoe]s?|(?:em|de)baixo d[aoe]s?) ${LUGAR_ALTO}\b`),
   /\bme (?:jogar|atirar|jogo|atiro) n[oa]s? (?:rio|represa|trilho|linha do trem)\b/,
   new RegExp(String.raw`\b(?:tomar|tomei|tomo|tomou|tomando|engolir|engoli|engolindo) (?:(?:todos?|todas?)(?: (?:os|as))?|um monte de|(?:a|o|uma?) (?:cartela|caixa|frasco) (?:inteir[oa]|tod[oa]) de) ${REMEDIO}\b`),
   // Tudo de uma vez, com ou sem o nome do remédio: "tomo todos de uma vez", "engoli todas de uma só vez", "tomei vários comprimidos de uma vez".
@@ -202,7 +254,13 @@ export const GATILHOS_DE_RISCO_A_VIDA: readonly RegExp[] = [
   /\b(?:vai|vao|quer|querem|pensa em|pensando em|ameacou) se (?:matar|suicidar|enforcar|cortar)\b/,
   /\b(?:ta|esta|estao|anda|andam|vive|vivem) se (?:cortando|machucando|mutilando)\b/,
   // A pergunta sobre o meio.
+  // Quanto de um remédio nomeado mata, de que andar ou altura se cai sem sobreviver, qual veneno ou remédio mata. "Mata a dor", "mata as bactérias" e "mata as formigas" são remédio ou veneno que faz o seu trabalho.
+  new RegExp(String.raw`\b(?:quant[oa]s?|qual)\b.{0,50}\b${REMEDIO_NOMEADO}\b.{0,40}\b(?:matam|mata|morrer|letal)\b(?! (?:a )?(?:dor|febre)\b)`),
+  /^(?!.*\b(?:experimento|boneco|personagem|ovo)\b).*\bde (?:que|qual) (?:andar|altura)\b.{0,50}\b(?:nao sobrevi\w+|sem sobreviver|morr\w+|mata)\b/,
+  /\b(?:qual|que) (?:veneno|remedio) (?:mata|e fatal)\b(?! (?:as |a )?(?:dor|formigas|bacterias)\b)/,
+  /\b(?:qual|que) (?:remedio|veneno) faz (?:o )?coracao parar\b/,
   new RegExp(String.raw`\bquantos? ${REMEDIO}\b.{0,40}\b(?:matam|mata|matar|morrer|letal|letais|levam a morte)\b(?! (?:as |os )?(?:bacterias|virus|germes|microbios|fungos|parasitas|insetos|pragas)\b)`),
+  // "Dose letal" dispara em qualquer frase, também na aula de ciências, com a sigla DL50 ou com o rato: separar a matéria da pergunta do aluno exigiria saber quem fala (`onda-0.md` §2.1; limitação (c) do `TODO.md`).
   /\b(?:dose|quantidade) (?:letal|fatal|mortal)\b/,
   /^(?!.*\b(?:queda livre|ovo|experimento|objeto|bola|meteoro)\b).*\b(?:altura|quedas?)\b.{0,25}\b(?:mata|matam|e fatal|e letal|mortal)\b/,
   /\b(?:mais rapido|mais facil|sem dor|indolor)\b.{0,15}\b(?:de|pra|para) (?:morrer|se matar|me matar)\b/,

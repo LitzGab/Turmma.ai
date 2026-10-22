@@ -46,7 +46,7 @@ verificados por máquina, e cada falha conhecida fica contida, visível e recupe
 
 | # | Requisito | Como se prova |
 |---|---|---|
-| RF1 | Frase de risco à vida que hoje escapa ("me jogar", "melhor sem mim", "sumir", as do corpus `ouro`) recebe a mensagem fixa com o CVV e o sinal ao professor (D36, N11) | Recall no `ouro` medido antes e depois, sem cair |
+| RF1 | Frase de risco à vida que hoje escapa ("me jogar", "melhor sem mim", "sumir", as do corpus `ouro`) recebe a mensagem fixa com o CVV e o sinal ao professor (D36, N11) | Recall no `ouro` medido antes e depois, sem cair; e no lote retido, com o padrão e o modelo somados na `indireta` e no `risco_de_outra_pessoa` (`onda-0.md` §2.2a, decisão de 22/10) |
 | RF2 | Saída de IA que julga texto de aluno em discursiva ou redação é barrada também quando é qualitativa, além de nota, conceito e pontuação (D55, N11) | Amostras qualitativas do `ouro` barradas; falsos positivos medidos |
 | RF3 | Se uma avaliação da turma abre entre o pedido do aluno e a execução, o Tutor não responde e a troca não conta (S12) | Teste com a avaliação abrindo entre as duas fases |
 | RF4 | O hook de commit bloqueia quando não consegue carregar (N7) | Import quebrado no hook: commit recusado |
@@ -158,3 +158,33 @@ turno do Tutor, além das metas dos RF10 e RF24.
 - Se o p95 da sessão passar no k6, a regra 80.5 muda de texto na Etapa 9 (N2)
 - A rede lenta no e2e volta ao Joaquim com a medida (N8)
 - As perguntas do harness ficam para a Etapa 9 ⛔ (`DIAGNOSTICO.md` §5)
+
+## 11. O recorte de 22/10/2026 (D81)
+
+Pedido do Joaquim em 22/10/2026 (`.reengenharia/RECORTE.md`): a X5 pousa até sábado, 24/10, com 32 tarefas, e o resto vai
+para a **X6 `reengenharia-continuacao`**. **Esta seção vale por cima das anteriores**, e o Validador valida cada RF pela
+coluna "Na X5".
+
+| RF | Na X5 | Na X6 |
+|---|---|---|
+| RF1, RF2, RF3, RF4 | inteiros (1.0 a 5.0, 93.0, 94.0) | — |
+| RF5 | **revisto pela D81:** toda rota que recebe corpo, consulta ou id valida pelo `ZodValidationPipe` ou pelo `IdPipe`, e **o lint reprova** o controller que recebe entrada sem pipe (no lugar de "a API não sobe"). Aceite: fixture do lint vermelha, entrada inválida com o mesmo erro tipado (14.0 a 17.0) | — |
+| RF6, RF7 | — | inteiros (o OpenAPI pelo `@nestjs/swagger`, com consumidor fora do `apps/web`; 20.0) |
+| RF8, RF9, RF10, RF11, RF13 | inteiros (18.0, 19.0; 6.0 a 9.0; 10.0 a 12.0; 13.0; 24.0, 25.0), **salvo o que a regra do corte deixar fora**, registrado na X6 | o que o corte deixar |
+| RF12 | os padrões da onda 0, no `ouro` | o módulo `conformidade/`, a mutação por padrão e a trava do `ouro` (26.0 a 29.0) |
+| RF14 | **revisto:** uma pasta por recurso (`nest g resource`), partida por assunto acima de ~20 arquivos; na web, *feature folder* e o kit em `componentes/ui/`; travado por teste de mais de 25 arquivos (33.0 a 36.0, 96.0, 97.0) | os subcaminhos de `shared` e `nucleo` e o `tools/testes/` (30.0 a 32.0) |
+| RF15 | — | inteiro (37.0 a 41.0) |
+| RF16 | — | inteiro (42.0, 45.0, 47.0) |
+| RF17 | inteiro (43.0) | — |
+| RF18 | o alerta, o runbook e os 30 dias (44.0) | reprocessar e descartar por comando (46.0) |
+| RF19 | prazo, retentativa no idempotente e disjuntor (48.0) | tokens por minuto e a degradação 80.4 (49.0) |
+| RF20, RF22 | — | inteiros (50.0, 54.0) |
+| RF21 | o envio atrasado e o F5 (51.0, 53.0) | "envio pendurado não trava os outros" (52.0) |
+| RF23 a RF28 | — | inteiros (as ondas 4 e 5) |
+| RF29 | o Dockerfile com `target` (90.0) | e2e sem observabilidade e o realtime atrás de profile (91.0) |
+| RF30 | — | sai: no lugar entra o guia do desenvolvedor (95.0) |
+| RF31 | **revisto:** `docs/guia-do-desenvolvedor.md` ("Se você vem do Spring Boot", "Onde fica cada coisa", as receitas, "As travas"), `docs/arquitetura.md` corrigido para o que existe, o `README.md` apontando para o guia, e `.reengenharia/` apagado com o que importa migrado (95.0 e o fechamento) | as oito perguntas da Etapa 11 que o guia não cobrir |
+| RF32, RF33 | inteiros; o relatório diz também o que foi para a X6 | — |
+
+A Etapa 9 ⛔ (92.0, o harness) sai inteira para a X6, com as perguntas da §5 do `DIAGNOSTICO.md` marcadas "Para a
+Etapa 9": o processo não muda no meio da corrida.

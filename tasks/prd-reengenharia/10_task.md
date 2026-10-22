@@ -62,6 +62,10 @@ Sem isolamento novo (nenhuma consulta muda), concorrência nem log.
   `npx vitest run --project integracao apps/api/test/convite-operador.int.test.ts apps/api/test/ops-operador.int.test.ts`
 - Armadilha: mudança só de `import type` não muda o comportamento, mas o hook conta como código; o `typecheck` e o
   `arquitetura.test.ts` são o que prova
+- **Tarefa mecânica** (`tasks.md`, "Tarefa mecânica"): revisores só os do cabeçalho. Trocar o caminho de import é por
+  script, nunca à mão: ts-morph numa pasta de rascunho (`npm i --prefix .processo/ts-morph ts-morph@<exata>`, como a
+  R7 fez com o depcruise, sem tocar o `package.json`) e `node .processo/mover.ts`, com o mapa "antigo → novo"; o script
+  e a pasta ficam no `.processo/` da linha, fora do commit.
 
 ## Fora do escopo desta tarefa
 

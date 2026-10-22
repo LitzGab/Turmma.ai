@@ -1,4 +1,4 @@
-# Tarefa 15.0 — Estrutura, sala e governança validam pelo esquema
+# Tarefa 15.0 — Estrutura, sala e governança validam pelo `ZodValidationPipe`
 
 **Funcionalidade:** reengenharia · **Depende de:** 14.0
 **Subagentes obrigatórios:** `tenancy-guardian`, `test-engineer`, `revisor-geral`
@@ -8,21 +8,22 @@
 
 ## Objetivo
 
-Os controllers de `estrutura/`, `sala/` e `governanca/` recebem a entrada pelos decorators da 14.0, sem `lerEntrada`,
-`idDoCaminho`, `lerConsultaPaginada` nem `safeParse`, e saem da lista de pendentes.
+Os controllers de `estrutura/`, `sala/` e `governanca/` recebem a entrada pelo `ZodValidationPipe` e pelo `IdPipe` da
+14.0 (D81), sem `lerEntrada`, `idDoCaminho`, `lerConsultaPaginada` nem `safeParse`, e entram no bloco do ESLint.
 
 ## Contexto necessário
 
-- `onda-1a.md` §2, "T1 — Borda de entrada" (o `@DoCaminho` da `chave`, `governanca.controller.ts:52`); `techspec.md` §6
+- `onda-1a.md` §2, "T1" (revista pela D81: o `ZodValidationPipe` com `errorCode: NAO_ENCONTRADO` na `chave`,
+  `governanca.controller.ts:52`); `techspec.md` §6
 - `prd.md` RF5; `.claude/rules/10-multitenancy.md` itens 4 a 6, `80-infra-e-carga.md` item 7, `60-dominio.md` itens 5 e 6
-- O que a 14.0 entregou em `packages/nucleo/src/entrada/` e a lista de pendentes dela
+- O que a 14.0 entregou em `packages/nucleo/src/entrada/` e o bloco de `no-restricted-syntax` em `eslint.config.mjs`
 - `apps/api/src/governanca/governanca.controller.ts:20` (`chaveDoCaminho`, avaliada antes do corpo)
 
 ## Subtarefas
 
 - [ ] 15.1 — Caracterização, num commit antes: o inválido e o 404 de cada rota dos três módulos, incluindo a `chave` e o link da sala
 - [ ] 15.2 — Migram os 8 controllers de `estrutura/`, os 4 de `sala/` e os 2 de `governanca/`
-- [ ] 15.3 — Os três módulos saem da lista de pendentes
+- [ ] 15.3 — Os três módulos entram no `files` do bloco de `no-restricted-syntax`
 - [ ] 15.4 — Testes: os da tabela
 
 ## Arquivos previstos
@@ -32,7 +33,7 @@ Os controllers de `estrutura/`, `sala/` e `governanca/` recebem a entrada pelos 
 | `apps/api/src/estrutura/*.controller.ts` (8) | alterado |
 | `apps/api/src/sala/*.controller.ts` (4) | alterado |
 | `apps/api/src/governanca/governanca.controller.ts`, `analista.controller.ts` | alterado |
-| `packages/nucleo/src/entrada/` (a lista de pendentes) | alterado |
+| `eslint.config.mjs`, `tools/guardas/guardas.test.ts` | alterado |
 | `apps/api/test/{estrutura,estrutura-isolamento,escola-sessao,lista,vinculo,virada-do-ano,salas-reivindicar,acesso-da-turma}.int.test.ts` | alterado |
 | `apps/api/src/governanca/governanca.int.test.ts` | alterado |
 
@@ -54,10 +55,10 @@ Definidos com o `test-engineer`.
 | Sala: dois pedidos no mesmo nome ao mesmo tempo (`Promise.all`) → um fica, o outro com o código de hoje | integração | a restrição do banco continua |
 | Sala: link ou código fora do formato → o 404 do inexistente | integração | responder 400 |
 | Governança: `chave` fora de `FUNCOES` → 404 | integração | `ENTRADA_INVALIDA` |
-| Governança: `chave` e corpo inválidos juntos → 404, como hoje | integração | validar o corpo antes |
+| Governança: `chave` de outra função e a inexistente, com o mesmo corpo (válido ou inválido), respondem igual | integração | regra 10.6 |
 | Governança: suspender sem finalidade → `ENTRADA_INVALIDA`, função ativa, sem auditoria | integração | inválido não suspende |
 | Governança: suspender em A não suspende em B | integração | tirar o `eq(…escolaId…)` da escrita |
-| Os três módulos saem da lista de pendentes | unidade | devolver um |
+| Lint: a fixture da 14.0 em `apps/api/src/{estrutura,sala,governanca}/x.controller.ts` reprova | unidade | tirar o módulo do `files` |
 
 ## Como testar
 
@@ -71,6 +72,7 @@ Definidos com o `test-engineer`.
   gravado nem revogado`.
 - Isolado: `npx vitest run --project integracao apps/api/test/escola-sessao.int.test.ts` (troque pelo arquivo do módulo).
 - Armadilha: a caracterização entra num commit antes da migração; o corpo do erro se compara inteiro, não só o status.
+  Se a ordem entre corpo e caminho mudar (a do Nest), escreva em "Divergências resolvidas", com `onda-1a.md` T1.
 
 ## Fora do escopo desta tarefa
 

@@ -297,16 +297,24 @@ recomendação e a registra em `DECISOES.md`. Nada em `.claude/` nem em `tools/p
 das ondas da Etapa 9, salvo o que destrave a própria missão. A missão e as respostas da Etapa 0
 estão em `.processo/reengenharia/` (`MISSAO.md` e `RESPOSTAS.md`; onde divergem, vale a segunda).
 
-**Pronto quando:** comparado com a linha de base, a tipagem, o lint, as guardas, a unidade, a
-integração, o e2e e o infra rodam verdes, com os resultados reais registrados; o código morto
-removido tem evidência de que era morto; toda fronteira relevante tem contrato explícito e testado;
-cada mecanismo de resiliência novo tem um teste que simula a falha que ele cobre; os gargalos de
-escala estão tratados ou registrados com plano; a estrutura de pastas é coerente e travada por
-ferramenta onde fizer sentido; skills, agentes, regras e orquestração são descobertos e executados
-pela plataforma, sem contradição entre eles; os fluxos que não podem quebrar (os e2e obrigatórios da
-regra 40) e as invariantes das regras 10 e 70 continuam provados; a documentação oficial está
-atualizada e `.reengenharia/` foi apagado sem perder nada necessário; e o relatório final diz o que
-foi feito, o que foi medido e o que ficou pendente, sem número que não foi coletado.
+**Recortada em 22/10/2026 (D81).** A lista tinha 94 tarefas e, no ritmo de 21 e 22/10, acabaria em dezembro. Ficam 32,
+na ordem do recorte (`.reengenharia/RECORTE.md`): os defeitos de conformidade da onda 0, o tenant travado por máquina, a
+prova que não perde resposta, a entrada pelo `ZodValidationPipe` do NestJS, os jobs tipados, a resiliência (prazo, falha
+final, provedor), as pastas do projeto inteiro, as camadas e o lint, a higiene e o guia do desenvolvedor. O resto vai para
+a X6. Sexta, 23/10, às 22h nenhuma tarefa nova parte; a meta é o pouso no sábado, 24/10, às 8h. Até o pouso, nenhuma
+parada chama o Joaquim: o Arquiteto decide e registra em `DECISOES.md`, e o pouso com push está autorizado com a
+validação aprovada e a esteira verde. A Etapa 9 ⛔ (o harness) foi para a X6: o processo não muda no meio da corrida.
+
+**Pronto quando:** comparado com a linha de base, a tipagem, o lint, as guardas, a unidade, a integração, o e2e e o infra
+rodam verdes, com os resultados reais registrados; os defeitos de conformidade da onda 0 estão fechados, com o `ouro` no
+alvo; todo repository prova o escopo de tenant ou declara a exceção, e os três da IA tiram a escola do contexto; na prova,
+resposta atrasada não sobrescreve a mais nova e a escolha pendente sobrevive ao F5; toda rota valida a entrada pelo
+`ZodValidationPipe` e o lint reprova o controller que não valida; todo job tem definição tipada, recusada ao enfileirar e
+no worker; job estourado, falha final e provedor fora têm cada um o teste que simula a falha; as pastas seguem uma
+convenção só, travada por teste; o que entrou de camadas, catraca, dependências e erro tipado está travado por
+ferramenta; o guia do desenvolvedor existe e o `docs/arquitetura.md` diz o que existe; os e2e obrigatórios da regra 40 e
+as invariantes das regras 10 e 70 continuam provados; `.reengenharia/` foi apagado com o que importa migrado; e o
+relatório final diz o que foi feito, o que foi medido e o que foi para a X6, sem número que não foi coletado.
 
 ## A pele nova — X1 a X4 (D80)
 
@@ -429,6 +437,26 @@ reivindicação; o F2 completa com a grade, o calendário, o Classroom, o reset 
 grade e calendário importados, 35 alunos reivindicando nomes no mesmo minuto não geram
 duplicidade nem erro cru, e o Assistente tem de onde abrir o dia do professor ("seu dia e sua
 semana", D32 revista).
+
+## X6 — `reengenharia-continuacao` [ ]
+**Depende de:** X5 · **não segura a X4 nem o F2**
+
+O que a X5 deixou de fora no recorte de 22/10/2026 (D81), registrado para não se perder. As tarefas guardam o número da
+X5, e a lista está em "Saíram para a X6" de `tasks/prd-reengenharia/tasks.md`, com o desenho nos `onda-<n>.md` (revisto
+pela D81 onde ela diz). Entra também o que a regra do corte da X5 deixar fora. Cada parte entra no momento dela:
+
+- **Antes do portão do piloto:** a IA e o PDF no worker (42.0, 45.0 a 47.0, 49.0, 50.0), o prazo do cliente com "Tentar
+  de novo" (52.0) e o Redis fora sem gastar tentativa (54.0)
+- **Junto da X4 ou do F2:** a onda 4, de tela (55.0 a 80.0): a rede de teste da web, a cobertura por pasta e o corte das
+  telas grandes
+- **O resto:** o OpenAPI, pelo `@nestjs/swagger` 12, quando houver consumidor fora do `apps/web` (no lugar do registro de
+  rotas próprio, 21.0 a 23.0); a web tolerante ao campo extra (20.0); as políticas em `conformidade/`, com a mutação por
+  padrão e a trava do `ouro` (26.0 a 29.0); os subcaminhos e as leituras prontas da onda 2 (30.0 a 32.0, 37.0 a 41.0); a
+  onda 5 (81.0 a 89.0, 91.0); e a Etapa 9 ⛔, o harness revisto com o Joaquim (92.0), com as perguntas da §5 do
+  `DIAGNOSTICO.md` marcadas "Para a Etapa 9"
+
+**Pronto quando:** cada parte cumpre o critério do RF dela no PRD da X5 (`tasks/prd-reengenharia/prd.md`, §5 e §11),
+com o processo completo; o OpenAPI só entra com o consumidor que o pede.
 
 ## F3 — `lgpd-e-titular` [x]
 Concluída em 11/10/2026, validada em tasks/prd-lgpd-e-titular/validacao.md.

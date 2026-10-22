@@ -197,6 +197,15 @@ teste em que mensagem sem menção explícita não gera o sinal.
 Fundamento: D36.
 Como se confere: teste em que, acionado o gatilho, o texto devolvido é idêntico ao fixo, com o
 188 quando há menção a risco à vida, e o modelo não é chamado para escrevê-lo.
+Limitação conhecida (22/10/2026, X5, tarefa 93.0): a regra que reconhece a frase de risco à vida lê as palavras, e não
+quem escreve. Ela **dispara a mais** em "O Getúlio Vargas deixou uma carta de suicídio" e em "carta de suicídio de um poeta
+romântico", que têm a forma de "meu primo deixou uma carta de suicídio"; e em "dose letal" em qualquer frase, também na
+aula de ciências, com a sigla DL50 ou com o rato do laboratório (limitação (c) do `TODO.md`). Em todas vão o 188 e o sinal
+ao professor (decisões 4 e 7 do `ouro`: na dúvida, dispara). Ela **deixa passar** o que a exceção de matéria leva junto:
+"quero muito suicídio do jeito mais rápido" (a exceção "suicídio do/da X" é a que separa "suicídio do Durkheim"); "achei a
+carta de suicídio do Pedro na mochila" (quem conta o risco de outra pessoa é da 94.0, `risco_de_outra_pessoa`, que lê
+esta linha); e a carta "do/da/dos/das" mais qualquer palavra que não seja "meu/minha", que também leva a carta do próprio
+aluno quando a palavra seguinte não é nome ("a carta de suicídio da semana passada", "dos últimos dias").
 
 **N14. Não tem memória que o aluno não possa ver.**
 Fundamento: D66 ("o aluno vê e contesta").

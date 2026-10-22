@@ -4,45 +4,45 @@ A missão é `.reengenharia/MISSAO.md`, e o que vale sobre ela é `.reengenharia
 respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão: não existe outro.
 
 ## Agora
+- **22/10, ~10:55 — palavra do Joaquim no terminal do Orquestrador:** até o pouso da X5 vale
+  `/home/joaquimdp/Documentos/git/Educa.ia/.processo/reengenharia/RECORTE.md` (por cima da MISSAO, das RESPOSTAS e do
+  `tasks.md`). §6: **nenhuma parada chama o Joaquim** (o `Arquiteto` decide e registra em `DECISOES.md`); tarefa com
+  mais de 4 h ou que trava duas vezes vai para a X6, o andar volta ao último verde e a linha pega a próxima (a 3.0, que
+  já corria, termina normalmente); **sexta 23/10 às 22h nenhuma tarefa nova parte**; pouso com push autorizado com
+  validação aprovada e esteira verde; meta sábado 24/10 às 08h; **três linhas ocupadas**; mensagem do "Claude Code #2"
+  sobre a X5 vale como palavra dele. Memória: `x5-recorte-autonomia-ate-o-pouso`
+- **Nenhuma partida antes do §7 do recorte**, pedido ao `Arquiteto` (reiniciado no andar da spec) às ~11:00
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specreengenharia--l1`): **2.0**, pequena, 1ª tentativa, desde 20:38.
-    **DIVERGÊNCIA de Mesa (desenho)** na 1ª rodada: o `ouro` de `riscoAVida` foi lido para escrever os
-    padrões. Triagem em `.processo/ordens/divergencia-2_task.md` (linha 1). **O Joaquim escolheu A (lote
-    retido v2)**, no terminal do `Arquiteto`, que escreveu sem commit no l1 o `onda-0.md` §2.1, a `3_task.md`
-    e a `26_task.md` (26.6): o Implementador os leva no commit da 2.0, com a linha em "Divergências resolvidas".
-    **ESCALADA de Mesa na 2ª rodada:** `revisor-geral` e `test-engineer` duas vezes seguidas, `conformidade`
-    na 2ª. **Diagnóstico** do `Arquiteto` em `.processo/ordens/diagnostico-2.md` (22:13): a sonda não é
-    bloqueante, a regressão do v1 passa a ser exata, a dev por alternativa cai e volta o "padrasto quer me
-    matar" (C8); a D36 segue, medida no lote retido. Às 22:14: `PEDIDO` à `Mesa` para ajustar a r2 pela
-    seção D e enviar a ORDEM ao Implementador; `PEDIDO de retomada` ao Implementador (commit liberado com a
-    aprovação da Mesa, levando `onda-0.md`, `3_task.md` e `26_task.md`). **Espero o `RELATÓRIO` dele**
-    (3ª rodada; nova reprovação do mesmo revisor é o limite das três, parada)
-    **22/10, 00:03:** ordem r2 aplicada (unidade verde, 422 mutações vermelhas à parte), mas o portão para na
-    `guarda:dependencias`: o `npm audit` não responde (status.npmjs.org: "Minor Service Outage"). Não é
-    correção: o Implementador tenta a guarda a cada 10 min por até 3 h, em segundo plano, e então roda o portão
-    e pede a 3ª rodada. Sem volta em 3 h (≈03:00), ele manda nova DIVERGÊNCIA de portão
-    **22/10, ~00:50: BLOQUEIO de Mesa** (limite das três: `revisor-geral` e `test-engineer`, 3 seguidas).
-    **O Joaquim destravou (opção a)**: as três linhas `destravado` estão em `.processo/ordens/rodadas.md` (l1).
-    Pedi ao `Arquiteto` (mesma sessão) a ordem `.processo/ordens/2_task-r3.md`, decidindo a tensão (recomendei
-    "dar bloco, não tirar"). Ordem pronta, 9 itens: a alternativa sem bloco **fica** (D36); dev e bloco só no
-    que a tarefa acrescentou ou mudou; a 26.0 ganha a trava contra remoção silenciosa. Às 01:0x: `PEDIDO de
-    retomada` ao Implementador com a r3. **Espero o `RELATÓRIO` dele** (4ª rodada, contagem recomeçada)
-  - **a 3.0 parte só depois do encontro da 2.0** (o `Arquiteto` liberou; a armadilha está na `3_task.md`)
-  - linhas 2 e 3: **ociosas** (desde 20:32 e 20:12). Com a 2.0 correndo nada mais parte: a 3.0 prevê o
-    mesmo `ouro.test.ts`; 6.0, 10.0, 11.0, 14.0 e 29.0 não estão autorizadas junto com a 2.0
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **3.0**, grande, desde 07:47, parada na DIVERGÊNCIA (desenho) de
+    08:05. **Triagem do `Arquiteto` (09:45): detalhe que a spec não previu**, sem mudar desenho nem alvo, em
+    `onda-0.md` §2.3 (sem commit, vai no da 3.0) e `.processo/divergencia-3.0-resposta.md` (l1). `PEDIDO de retomada`
+    enviado ao Implementador. **~10:50, ESCALADA de Mesa** (revisor-geral e test-engineer 2 seguidas, conformidade a
+    2ª; itens 1 e 3 da r2 em sentidos opostos; `saidaQualitativa` 53/58, piso 0,90). Ordem `.processo/ordens/3_task-r2.md`
+    (l1), não enviada; o item 5 é do Arquiteto. `Arquiteto` reiniciado no l1 com o pedido de diagnóstico
+    (`.processo/ordens/diagnostico-3.md`). **Diagnóstico pronto**, substitui a r2 (a saída barrava por exclusão, não por
+    juízo; conferido numa cópia: 53/58, 0 legítimas barradas); item 5 feito no §2.3. `PEDIDO de retomada` enviado.
+    **Espero o `RELATÓRIO` do Implementador** (3ª rodada; nova reprovação do mesmo revisor é o limite)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **93.0**, grande, 1ª tentativa, desde ~08:40. Observação levada: a
+    correção absorvida em `.processo/ordens/pioras-absorvidas/` (copiada para l3); não abrir `ouro` nem `ouro-retido`
+    **ESCALADA de Mesa 3** (conformidade e revisor-geral, 2 seguidas; "dose letal", exceções de rato e DL50). Ordem
+    `.processo/ordens/93_task-r2.md` (l3), não enviada. `Arquiteto` reiniciado no l3, com o pedido de diagnóstico
+    (`.processo/ordens/diagnostico-93.md`). **Diagnóstico pronto:** "dose letal" volta ao padrão do HEAD, a terceira
+    piora fica e é declarada (separar aula de ciências de aluno exige saber quem fala; §2.1 manda disparar). O
+    diagnóstico substitui os itens 1 e 2 da r2. `PEDIDO de retomada` enviado ao Implementador 3 com os dois.
+    **Espero o `RELATÓRIO` dele** (3ª rodada; nova reprovação do mesmo revisor é o limite)
+  - linha 2: **livre**, esperando o §7 (soltei a correção absorvida à mão no `.processo/linhas.json`; cópia em
+    `linhas.json.antes-de-soltar-l2`)
 - **Devo ainda:**
-  - ler o veredito da esteira de `c112874`, `d2e9fcd` e `0d61c28` no próximo encontro (`6623cab` e
-    `32072a5` verdes)
-  - **depois do encontro da 2.0:** pedir ao `Arquiteto` o lote retido v2 (commit `(ouro: riscoAVida)`), antes
-    da validação; e a 3.0 ganha o lote retido dela depois do commit dela
-  - **na partida da 3.0**, levar como observação o aviso do Implementador da 1.0: `semBaseAte` lê o
-    `tasks.md`, e marcar a 3.0 `[x]` deixa o `ouro.test.ts` vermelho até o Arquiteto gravar a base da
-    `saidaQualitativa`. Ao fechar a 3.0, pedir essa base ao Arquiteto se a tarefa não a trouxer
-  - documentos só de 1.0 a 29.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
+  - **depois do commit da 94.0** (que depende da 93.0): pedir ao `Arquiteto` o **lote retido 2**, que mede as duas, antes
+    da validação. A 26.0 agora depende da 94.0
+  - ler o veredito da esteira de `b5b7d11`, `63aac92` e `f794080` no próximo encontro
+  - ao fechar a 3.0: se ela não trouxer a base da `saidaQualitativa`, pedi-la ao `Arquiteto`; e pedir o lote retido
+    dos alvos da 3.0, como o da 2.0
+  - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
-- **Base:** `spec/reengenharia` em `0d61c28`. Vigia ligada
+- **Base:** `spec/reengenharia` em `f794080`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -66,8 +66,20 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 1.0 | `ca32720` | Sonnet | 2 (test-engineer, revisor-geral; conformidade na 1ª) | linha 1, pequena, 20:01–20:38; divergência: mutação `/\bmae\b/` no lugar de `/\bmateria\b/` (1_task.md) |
 | 4.0 | `de26c03` | Sonnet | 2 (test-engineer, revisor-geral; tenancy, conformidade e infra na 1ª) | linha 2, grande, 20:01–20:32 |
 | 5.0 | `259ca64` | Sonnet | 2 (test-engineer, revisor-geral) | linha 3, pequena, 20:01–20:12 |
+| 2.0 | `66d8b95` | Sonnet | 4 (test-engineer 5) | ouro lido para escrever o padrão: divergência, opção A (lote retido), escalada com diagnóstico, bloqueio destravado pelo Joaquim; npm audit fora do ar ~8 h |
 
 ## Esperando o Joaquim
+## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
+Decisão: com 23/75 no lote retido (alvo ≥ 71/75), como o RF1 segue.
+Contexto: os padrões da 2.0 decoraram o `ouro` v1. `.processo/ordens/medida-retido-riscoAVida.md` (andar da spec),
+números em `docs/aia/ouro-retido/RETIDOS.json`. **Pergunta no terminal do `Arquiteto`.**
+Opções: A só padrão, correção grande e lote retido 2 | B padrão e modelo somados (muda o RF1 "sem modelo", pede AIA e
+llm-integrator) | C rever o alvo
+Recomendo (Arquiteto): B; a `indireta` não chega ao alvo com palavra-chave sem derrubar a precisão.
+Seguem sem depender: a 3.0 (mas a triagem da divergência dela espera o Arquiteto livre) e a correção das três pioras.
+**Respondida em 22/10/2026:** B (a regra decide, o modelo soma), no terminal do `Arquiteto`: `onda-0.md` §2.2a, tarefas
+93.0 e 94.0, commit `f794080`.
+
 ## 22/10/2026 00:50 — X5 tarefa 2.0 (riscoAVida), limite das três reprovações ⛔
 Decisão: destravar a 2.0 para uma 4ª rodada, ou mudar o rumo dela.
 Contexto: `revisor-geral` e `test-engineer` reprovaram 3 vezes seguidas, e o `conformidade-reviewer` 2. Os três pedem o mesmo
@@ -105,6 +117,11 @@ critério de aceite.
 ## O que falhou
 
 ## O que decidi sem perguntar
+- 22/10 ~11:00 — soltei a linha 2 da correção absorvida editando o `.processo/linhas.json` (não há comando para
+  abandonar uma linha; o Joaquim quer as três ocupadas). Retrospectiva: `linhas.ts abandonar <n>`.
+- 22/10 — a correção das três pioras, pedida na linha 2 porque o Arquiteto disse "sem decisão, já vale", ficou
+  inútil com a B, que a pôs na 93.0. Pedi ao Implementador 2 que guardasse o trabalho e limpasse a árvore, e levei a
+  pasta à 93.0 como execução anterior. Lição: "já vale" com uma decisão de desenho aberta sobre o mesmo código, espere.
 - 22/10, 00:03 — 2.0: DIVERGÊNCIA de portão por queda do endpoint de auditoria do npm. Não abri correção (nada a
   corrigir no repositório) nem pulei a guarda: o Implementador espera a volta com tentativa a cada 10 min, até 3 h.
 - 20/10/2026: o Arquiteto faz, nas Etapas 1 a 6, o papel que a missão dá ao "orquestrador técnico"
