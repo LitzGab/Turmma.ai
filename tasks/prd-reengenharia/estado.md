@@ -28,22 +28,19 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
   - linha 1 (`Implementador` e `Mesa`, `…--l1`): **43.0**, grande (job estourado dá `TEMPO_ESGOTADO`; infra, llm-integrator, test-engineer, revisor-geral), desde 17:45, 1ª tentativa; prazo de 4 h 21:45. A 48.0 encontrou-se em `41d65df` (spec em `8240170`)
-  - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
-    **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
-    os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
-    `REVISAO.md`; **4ª rodada APROVADA** (sem bloqueante). Na publicação, o `Arquiteto` aplica as duas recomendações de
-    redação, a lista "Conferir depois das pastas" e a linha no `README.md`. A lista
-    "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
+  - **guia (95.0)**: aprovado pelo revisor-geral na 4ª rodada (`Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
+    **~18:15: `Arquiteto` reiniciado no andar da spec e `PEDIDO` da publicação (95.2)** enviado: recomendações de redação,
+    caminhos conferidos, `README.md`, `[x]` no `tasks.md`, commit de documento com push. A lista "Conferir depois das
+    pastas" fica para o commit do fim da spec (passo 4 da 95.0). A 95.0 não parte em linha (o quadro a oferece à
+    linha 3 por engano: ignorar)
   - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
   - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **11.0**, grande (os 2 ciclos de `login.service` somem;
     test-engineer, revisor-geral), desde 17:40, 1ª tentativa; prazo de 4 h 21:40. A 10.0 encontrou-se em
     `303cbac` (spec em `7c1b086`)
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **9.0**, pequena (importar tabela fora de repository reprova o lint;
-    tenancy, test-engineer, revisor-geral), desde 16:52, 1ª tentativa; prazo de 2 h 18:52. **17:25: ESCALADA da Mesa 3**
-    (tenancy-guardian reprovou 2× seguidas, test-engineer na 2ª; ordem `.processo/ordens/9_task-r2.md`). `Arquiteto`
-    reiniciado no checkout da l3, diagnóstico pedido (`diagnostico-9.md`). **17:44:** diagnóstico em `diagnostico-9.md` (l3; substitui a r2; decisão em `onda-1a.md` T6, vai no commit da tarefa); par da l3 reiniciado e `PEDIDO de retomada` enviado; espero a rodada 3. **~17:50: BLOQUEIO da Mesa 3** (r3, árvore `313e858`: tenancy-guardian 3× seguidas, test-engineer 2×; revisor-geral aprovou; resumo `.processo/ordens/9_task-bloqueio-r3.md` na l3): a guarda de `tools/guardas/regras-tenant.mjs` só olha `arguments[0]` e só `Literal`; remédio (a) fechar a classe ou (b) estreitar o cabeçalho. **1º limite das três** desta tarefa: pelo RECORTE §6 decide o `Arquiteto` (não o Joaquim); **~17:55: o `Arquiteto` destravou** com (a), fechar a classe (R62 em `DECISOES.md`, `95576ae`); ordem `.processo/ordens/9_task-r4.md` (l3). Linha `destravado` no `rodadas.md` da l3; par da l3 reiniciado e `PEDIDO de retomada` enviado; **espero a rodada 4**. Um 2º limite das três, ou passar de 4 h (20:52), manda a 9.0 para a X6 (RECORTE §5). O lote retido da 3.0 e a publicação do guia voltam ao Arquiteto depois A correção
-    `intermitentes-desafio-e-meus-dados` encontrou-se em `6cc6c91` (spec em `554b2c6`)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **ociosa**. A 9.0 passou na 4ª rodada (destravada pelo
+    `Arquiteto`, R62) e encontrou-se em `02d3412` (spec em `925852f`) às 18:13. Nada parte para ela: o resto está preso
+    em 11.0 (l2) e 16.0. Na próxima vez, o lote retido da 3.0 volta ao `Arquiteto` depois da 95.0
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -111,6 +108,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 44.0 | `ccdba9a` | Sonnet | 2 (infra, privacy, llm-integrator, test-engineer, revisor-geral aprovados na 2ª) | linha 2, pequena, 15:22–16:59; sem tela; migration 0038 e painel/uid do alerta como divergências registradas; 8 linhas no TODO.md |
 | 48.0 | `41d65df` | Sonnet | 2 (test-engineer, revisor-geral; infra e llm-integrator na 1ª) | linha 1, grande, 16:38–17:40; 48.1 sem commit à parte (onda-3c.md T10); 2 linhas no TODO.md, 49.0 dona do disjuntor |
 | 10.0 | `303cbac` | Sonnet | 2 (test-engineer, revisor-geral aprovados na 2ª) | linha 2, pequena, 17:00–17:39; sem tela; uma falha do portão na unidade sem causa achada, passou em 3 repetições; 1 linha no TODO.md da 12.0 |
+| 9.0 | `02d3412` | Sonnet | 4 (tenancy-guardian 1ª–3ª, test-engineer 2ª–3ª; destravada pelo Arquiteto, R62) | linha 3, pequena, 16:52–18:13; ESCALADA na r2 (diagnóstico), BLOQUEIO na r3 (guarda só olhava `arguments[0]`) |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
@@ -159,6 +157,7 @@ recomendado: a ordem da §6, a P4 como não unificar (só extrair o literal) e a
 critério de aceite.
 
 ## O que falhou
+- 22/10 18:13: o `esteira.ts` leu como VERMELHA a execução `39849855954` (8240170), que foi **cancelada** por um push mais novo (todos os jobs "caíram"); a última concluída, `39845850533`, é verde. Não abri correção. Para a retro: `cancelled` não é vermelho
 - 22/10 16:12, linha 1, 19.0: mutação que trava o teste (laço síncrono) segurou `/tmp/educa-carga.lock` por 41 min; o `mutacoes.ts` usa `spawnSync` sem timeout e conta a morte do processo como vermelho. Para a retro: timeout por mutação, com o estouro contado como `recusada`
 
 ## O que decidi sem perguntar
