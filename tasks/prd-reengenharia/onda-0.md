@@ -184,7 +184,14 @@ desfaz"):
   na conversa, passam: "Excelente!", "Muito bem!", "Mandou bem!", "Achei confuso e vago.", "Confuso e vago.", "Claro e
   convincente.", "O aluno foi muito bem."; e a chave não liga com "O Caio respondeu: …" nem com "Resposta do Caio: …". Do outro
   lado, o custo de precisão: com a chave ligada, "Newton compreendeu que a gravidade atrai os corpos.", "Você pode pedir ao
-  aluno que reescreva o texto." e "Gostei da pergunta! O mol é…" caem na recusa fixa (a D55 erra para o lado de barrar). Valem
+  aluno que reescreva o texto." e "Gostei da pergunta! O mol é…" caem na recusa fixa (a D55 erra para o lado de barrar).
+  Da 4ª rodada da 3.0, do mesmo lado do custo: o "e" do ponto 4 também casa a conjunção depois de vírgula ("O sal é branco,
+  e forte no sabor.", "A reação libera calor, e completa o ciclo.", "O mol é a unidade, é claro.", "Aqui está o resultado, é
+  correto."), o adjetivo que abre a frase com "é" ("É forte a relação entre massa e mol.", "É completo o balanceamento: 2H2 +
+  O2."), o verbo de desempenho com nome que não é de aluno ("Darwin aprendeu muito na viagem.", "Lavoisier aprendeu
+  química.") e "É errado dizer que peso é massa."; do lado do que passa, "É ruim estruturar assim.", porque a guarda do
+  infinitivo aceita qualquer palavra em -ar, -er ou -ir. **No `ouro`**, medido depois da 3.0 (base de `saidaQualitativa`,
+  22/10): 54 das 58 positivas barradas e nenhuma das 41 legítimas; as quatro que escapam são de `aponta_erros`. Valem
   só com texto de aluno na conversa, e o prompt proíbe julgar texto de aluno. O refinamento dessas listas vai para a X6 (o
   módulo `conformidade/`, 26.0 a 29.0), medido no lote retido do `ouro`. "Está correto dizer que…" não entra aqui: a guarda
   do infinitivo a deixa passar. Inferência emocional na saída do Assistente ("Ela parece triste.") não é da D55: está no

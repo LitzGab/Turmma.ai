@@ -14,8 +14,8 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       o `e` do "É forte"/"É confuso" também casa a conjunção depois de vírgula; a guarda do infinitivo pega qualquer `-ar/-er/-ir`
       ("É ruim estruturar assim." passa); `aprendeu`, `compreendeu`, `assimilou` e os plurais de `PESSOA_NA_SAIDA` sem frase de teste
       ("O Caio aprendeu a regra."); partes opcionais de `ELOGIO` sem bloco ("Um bom começo!"); a docstring de `SAIDA_AO_PROFESSOR`
-      ainda cita "espera a sua aprovação"; a linha "O que a conferência não pega" do `onda-0.md` §2.3 ganha os exemplos da 4ª rodada
-      (`.processo/ordens/3_task-r4.md`)
+      ainda cita "espera a sua aprovação"; os exemplos da 4ª rodada já estão na linha "O que a conferência não pega" do `onda-0.md`
+      §2.3, e o `aponta_erros` do `ouro` (4 de 12 escapam) entra na mesma medida
 - [ ] AIA do Assistente (D57): a saída que infere emoção ou estado do aluno ("Ela parece triste.") não é da D55 e a conferência da
       tarefa 3.0 não a pega; entra na avaliação de impacto do Assistente, antes do PRD que o expõe ao aluno
 - [ ] O pedido do titular (acesso e portabilidade, F3, `ciclo-de-vida.service.ts`) cobre também a `lista_nome` e a
