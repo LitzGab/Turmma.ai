@@ -12,7 +12,7 @@ import {
   VALIDADE_DA_VAGA_MS,
   type VagasPorEscola,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, type Fila } from '@educa/shared'
+import { CodigoDeFalhaDeJob, TIPO_EXPURGAR_JOBS, type Fila } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as esperar } from 'node:timers/promises'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
@@ -474,8 +474,8 @@ describe('vagas por escola e filas por prioridade', () => {
 
       expect(await naEscola(ESCOLA_A)).toEqual({ fuso: null, diasLetivos: null, inicio: null, fim: null, limiteReqUsuarioMin: null, limiteReqEscolaMin: 10, vagas: { lote: 5 } })
       expect(await naEscola(ESCOLA_B)).toBeUndefined()
-      await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => repositorio.daEscola())).rejects.toThrow('sem escola no contexto')
-      await expect(executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => repositorio.daEscola())).rejects.toThrow('sem escola no contexto')
+      await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => repositorio.daEscola())).rejects.toThrow('consulta com escopo sem escola no contexto')
+      await expect(executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => repositorio.daEscola())).rejects.toThrow('consulta com escopo sem escola no contexto')
     })
   })
 
@@ -498,7 +498,7 @@ describe('vagas por escola e filas por prioridade', () => {
     const [reservaVencida = ''] = await inserirJobs(ESCOLA_C, 'normal', 1, 'C')
     await bancada.pool.query(`update job_registro set estado = 'reservado', reservado_ate = now() - interval '1 second' where id = $1`, [reservaVencida])
     await executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () =>
-      bancada.banco.transaction((tx) => bancada.enfileirador.enfileirar(tx, { tipo: 'sistema.expurgar-jobs', fila: 'lote', naoUrgente: true, dados: {} })),
+      bancada.banco.transaction((tx) => bancada.enfileirador.enfileirar(tx, TIPO_EXPURGAR_JOBS, {})),
     )
 
     const lista = await bancada.despacho.listarEscolasComPendentes()

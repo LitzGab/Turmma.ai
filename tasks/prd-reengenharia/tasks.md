@@ -111,17 +111,17 @@ da tarefa diz como rodá-lo.
   - [x] 6.3 `SuspensoesDaEscolaRepository` sai de `time.service.ts` para um `*.repository.ts`
   - [x] 6.4 Testes: `repositories-com-escopo.test.ts`, com as fixtures em `tools/guardas/__fixtures__/repositories/`
 
-- [ ] **7.0 — Os 9 repositories com cópia local leem a escola por `exigirEscolaDoContexto`**
-  - [ ] 7.1 Caracterização, num commit antes: os 7 sem caso de "sem escola" ganham o seu, verde com a cópia local
-  - [ ] 7.2 Os nove passam a `exigirEscolaDoContexto`, lida a cada chamada, nunca guardada na instância
-  - [ ] 7.3 Os nove saem de `REPOSITORIES_SEM_ESCOPO` (`tools/guardas/escopo-dos-repositories.ts`)
-  - [ ] 7.4 Testes: isolamento e concorrência por repository, com a mutação de cada um
+- [x] **7.0 — Os 9 repositories com cópia local leem a escola por `exigirEscolaDoContexto`**
+  - [x] 7.1 Caracterização, num commit antes: os 7 sem caso de "sem escola" ganham o seu, verde com a cópia local
+  - [x] 7.2 Os nove passam a `exigirEscolaDoContexto`, lida a cada chamada, nunca guardada na instância
+  - [x] 7.3 Os nove saem de `REPOSITORIES_SEM_ESCOPO` (`tools/guardas/escopo-dos-repositories.ts`)
+  - [x] 7.4 Testes: isolamento e concorrência por repository, com a mutação de cada um
 
-- [ ] **8.0 — A IA tira a escola do contexto, com teste de isolamento**
-  - [ ] 8.1 As três portas perdem `escolaId`, e os repositories usam `exigirEscolaDoContexto()`, no orçamento antes do retorno antecipado
-  - [ ] 8.2 Os chamadores não passam a escola; `SuspensoesEmMemoria` lê o contexto
-  - [ ] 8.3 `ia/consumo`, `ia/orcamento` e `ia/suspensao` saem de `REPOSITORIES_SEM_ESCOPO`
-  - [ ] 8.4 Testes: isolamento por porta, sem contexto, concorrência e o tipo
+- [x] **8.0 — A IA tira a escola do contexto, com teste de isolamento**
+  - [x] 8.1 As três portas perdem `escolaId`, e os repositories usam `exigirEscolaDoContexto()`, no orçamento antes do retorno antecipado
+  - [x] 8.2 Os chamadores não passam a escola; `SuspensoesEmMemoria` lê o contexto
+  - [x] 8.3 `ia/consumo`, `ia/orcamento` e `ia/suspensao` saem de `REPOSITORIES_SEM_ESCOPO`
+  - [x] 8.4 Testes: isolamento por porta, sem contexto, concorrência e o tipo
 
 ### Entrada no padrão NestJS (D81)
 
@@ -152,11 +152,11 @@ da tarefa diz como rodá-lo.
 
 ### Jobs tipados
 
-- [ ] **18.0 — Payload inválido é recusado ao enfileirar, e tipo sem definição não compila**
-  - [ ] 18.1 Caracterização, num commit antes, dos 8 tipos
-  - [ ] 18.2 `DEFINICOES_DE_JOB` em `packages/shared/src/sistema/definicoes-de-job.ts`, com as constantes `TIPO_*`; o sintético `.strict()`
-  - [ ] 18.3 `enfileirar` e `enfileirarUmaVez` validam antes de gravar; os chamadores migram
-  - [ ] 18.4 Testes: os da tabela
+- [x] **18.0 — Payload inválido é recusado ao enfileirar, e tipo sem definição não compila**
+  - [x] 18.1 Caracterização, num commit antes, dos 8 tipos
+  - [x] 18.2 `DEFINICOES_DE_JOB` em `packages/shared/src/sistema/definicoes-de-job.ts`, com as constantes `TIPO_*`; o sintético `.strict()`
+  - [x] 18.3 `enfileirar` e `enfileirarUmaVez` validam antes de gravar; os chamadores migram
+  - [x] 18.4 Testes: os da tabela
 
 - [ ] **19.0 — O worker valida pela definição, e o teste liga tipo, fila e processador**
   - [ ] 19.1 Caracterização, num commit antes: as opções de publicação como literal

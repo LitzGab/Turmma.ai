@@ -27,8 +27,9 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **7.0**, grande (9 repositories para `exigirEscolaDoContexto`), desde
-    12:55, 1ª tentativa; prazo de 4 h 16:55. A 6.0 encontrou-se em `f49c095` (com as correções `05aa2fe` e `9dd7a6b`)
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **19.0**, grande (o worker valida pela definição; tenancy, infra,
+    test-engineer, revisor-geral), desde 14:17, 1ª tentativa; prazo de 4 h 18:17. A 8.0 encontrou-se em `a8398c3` (spec em
+    `5e3e01a`)
   - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
     **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
     os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
@@ -37,11 +38,13 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
   - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **15.0**, desde ~12:25, 1ª tentativa (14.0 encontrada em `2164719`,
-    depois do conserto R61 do `Arquiteto`, `1744468`)
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **18.0**, grande (payload validado no `Enfileirador`), desde
-    13:07, 1ª tentativa; prazo de 4 h 17:07. A web (36.0) está presa à 15.0 por `guardas.test.ts`, por isso a linha 3
-    pega API agora. A 53.0 deixou o despachante e o worker-interativo do `educa-teste-3` parados
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **36.0**, grande (kit visual em `componentes/ui/`), desde
+    13:20, 1ª tentativa; prazo de 4 h 17:20. A 15.0 encontrou-se em `0c75678` (spec em `aa3b7e6`)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **correção `intermitentes-desafio-e-meus-dados`**, desde ~13:55,
+    1ª tentativa. Os dois testes caíram em `2fe1d73` (só documento sobre `f6913ee`, onde passaram): `desafio.int.test.ts`
+    "falha (15.5): Redis de fila travado… corte dos 100 ms" (NAO_AUTENTICADO em vez de resolver) e o e2e
+    `meus-dados.spec.ts:156` [celular]. Depois dela, a linha 3 pega o que o quadro mostrar (a 19.0 foi para a linha 1). A 18.0
+    encontrou-se em `3ecaa07` (spec em `8b11df1`)
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -58,13 +61,15 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     §2.3, `TODO.md`). Ponto de produto para a X6: a entrada recusa pedido do professor sobre o próprio material com palavra
     de nota ou correção (10/10, já antes da 3.0). **Dizer ao Joaquim no fim** que a AIA do Tutor e esta lacuna merecem o
     olhar dele antes do piloto
-  - esteira: às 12:53 seis execuções na fila (`f6913ee` a `e048e36`), nenhum veredito novo; `3b44efe` foi **cancelada**
-    (o `esteira.ts` a lê como VERMELHA: não é falha). Ler de novo no próximo encontro
+  - esteira: veredito mais novo VERMELHO em `2fe1d73` (`39803274227`): `ouro.test.ts` (resolvido por `05aa2fe`) e os
+    dois intermitentes da correção da linha 3. Às ~13:50 cancelei 10 execuções superadas na fila (9 da spec, 1 da l1).
+    Às 14:17 cancelei a de `8b11df1` (`39820055294`), superada; fica a de `5e3e01a` (`39821256963`). Ler de novo no
+    próximo encontro. O `esteira.ts` lê execução **cancelada** como VERMELHA (`aca066e`): conferir com `gh run list`
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
-    (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`)
-- **Base:** `spec/reengenharia` em `5e71bef`. Vigia ligada
+    (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
+- **Base:** `spec/reengenharia` em `5e3e01a`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -95,6 +100,11 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 51.0 | `50e04d0` | Sonnet | 2 | encontro adiado até o commit dos lotes retidos da 3.0 (`3b44efe`); lacuna da 3.0 em `2fe1d73` (R60); o ponto de produto do material do professor com palavra de nota vai para a X6 |
 | 6.0 | `f49c095` | Sonnet | 2 (test-engineer, revisor-geral; tenancy na 1ª) | linha 1, pequena, 11:27–12:52; duas correções na linha antes dela: `ouro-base-qualitativa` (`05aa2fe`) e `porta-unica-so-import` (`9dd7a6b`, divergência de portão) |
 | 53.0 | `c090987` | Sonnet | 2 (os cinco aprovados na 2ª) | linha 3, web, 12:25–13:05; a Mesa viu 6 fotos; acabamentos do espelho e a falta de atividade "para responder" na vitrine no TODO.md; integração não rodou (só web e shared) |
+| 14.0 | `2164719` | Sonnet | — | linha 2; encontro depois do conserto R61 do `Arquiteto` (`1744468`) |
+| 15.0 | `0c75678` | Sonnet | 2 (tenancy, test-engineer, revisor-geral aprovados na 2ª) | linha 2, ~12:25–13:15; divergências (ordem id e corpo, 15 rotas 404→400; suspender sem finalidade vira corpo fora do esquema) no documento e em `onda-1a.md` T1 |
+| 7.0 | `b59fe0a` | Sonnet | 1 (tenancy, test-engineer, revisor-geral aprovados na 1ª) | linha 1, grande, 12:55–13:26; sem tela |
+| 18.0 | `3ecaa07` | Sonnet | 2 (tenancy, privacy, test-engineer, revisor-geral aprovados na 2ª) | linha 3, grande, 13:07–13:50; sem tela |
+| 8.0 | `a8398c3` | Sonnet | 2 (tenancy, infra, llm-integrator aprovados na 1ª; test-engineer, revisor-geral na 2ª) | linha 1, grande, 13:27–14:16; sem tela |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔

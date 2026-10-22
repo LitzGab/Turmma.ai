@@ -11,6 +11,7 @@ import {
   proporFerramenta,
   threadAgente,
   turnoDoTutor,
+  type ConsultaDeOrcamento,
   type ConsumoDeIa,
   type ContextoDaRequisicao,
   type ExecutorNoProcesso,
@@ -87,6 +88,8 @@ describe('camada de IA na API', () => {
     anoLetivoId: escola.anoLetivoId,
   })
   const como = <T>(escola: Escola, sessao: SessaoDeTeste, papel: PapelDeUsuario, funcao: () => T): T => executarNoContexto(contextoDe(escola, sessao, papel), funcao)
+  /** Só a escola, sem pessoa: o contexto que as portas de IA leem, a escola de quem pede (8.0). */
+  const noContextoDe = <T>(escola: Escola, funcao: () => T): T => executarNoContexto({ requisicaoId: randomUUID(), escolaId: escola.escolaId }, funcao)
 
   interface ExecucaoGravada {
     readonly id: string
@@ -339,13 +342,24 @@ describe('camada de IA na API', () => {
       const suspensao = new SuspensaoRepository(bancada.banco)
       await suspender(b, 'adaptacao')
       try {
-        expect(await suspensao.estaSuspensa(b.escolaId, 'adaptacao')).toBe(true)
-        expect(await suspensao.estaSuspensa(a.escolaId, 'adaptacao')).toBe(false)
-        expect(await suspensao.estaSuspensa(b.escolaId, 'correcao_de_objetiva')).toBe(false)
+        expect(await noContextoDe(b, () => suspensao.estaSuspensa('adaptacao'))).toBe(true)
+        expect(await noContextoDe(a, () => suspensao.estaSuspensa('adaptacao'))).toBe(false)
+        expect(await noContextoDe(b, () => suspensao.estaSuspensa('correcao_de_objetiva'))).toBe(false)
       } finally {
         await retomar(b, 'adaptacao')
       }
-      expect(await suspensao.estaSuspensa(b.escolaId, 'adaptacao')).toBe(false)
+      expect(await noContextoDe(b, () => suspensao.estaSuspensa('adaptacao'))).toBe(false)
+    })
+
+    it('sem escola no contexto, lança antes de ler: nem a suspensão da escola B responde por ninguém', async () => {
+      await suspender(b, 'adaptacao')
+      try {
+        const suspensao = new SuspensaoRepository(bancada.banco)
+        await expect(suspensao.estaSuspensa('adaptacao')).rejects.toThrow('consulta com escopo sem escola no contexto')
+        await expect(executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => suspensao.estaSuspensa('adaptacao'))).rejects.toThrow('consulta com escopo sem escola no contexto')
+      } finally {
+        await retomar(b, 'adaptacao')
+      }
     })
 
     it('função suspensa recusa antes de gravar: nenhuma execução, nenhum consumo, e o que o pacote gravaria não é gravado', async () => {
@@ -364,7 +378,9 @@ describe('camada de IA na API', () => {
 
         // Pela porta, direto, a recusa é a mesma e também não grava consumo.
         const ia = api.app.get<LLMProvider>(LLM_PROVIDER)
-        const direto = await erroDe(ia.gerar({ tarefa: proporFerramenta, escolaId: a.escolaId, entrada: { mensagem: 'bom dia', contexto: { serie: '2º ano', disciplina: 'Química' }, trechos: [], turnosAnteriores: [] } }))
+        const direto = await erroDe(
+          noContextoDe(a, () => ia.gerar({ tarefa: proporFerramenta, escolaId: a.escolaId, entrada: { mensagem: 'bom dia', contexto: { serie: '2º ano', disciplina: 'Química' }, trechos: [], turnosAnteriores: [] } })),
+        )
         expect(direto.codigo).toBe(CodigoDeErro.FUNCAO_SUSPENSA)
         expect(await contar('consumo_ia', a.escolaId)).toBe(consumoAntes)
 
@@ -378,13 +394,13 @@ describe('camada de IA na API', () => {
       } finally {
         await retomar(a, 'conversa_e_ferramentas')
       }
-      expect(await api.app.get<SuspensaoDeFuncao>(SUSPENSAO_DE_FUNCAO).estaSuspensa(a.escolaId, 'conversa_e_ferramentas')).toBe(false)
+      expect(await noContextoDe(a, () => api.app.get<SuspensaoDeFuncao>(SUSPENSAO_DE_FUNCAO).estaSuspensa('conversa_e_ferramentas'))).toBe(false)
     })
   })
 
   describe('ConsumoRepository: o consumo fica na escola de quem gastou', () => {
-    const consumoDe = (escola: Escola, extra: Record<string, unknown> = {}) => ({
-      escolaId: escola.escolaId,
+    // Sem `escolaId`: o registro fica na escola do contexto em que é gravado (`registrarEm`), e o tipo não aceita outra.
+    const consumoDe = (extra: Record<string, unknown> = {}) => ({
       tarefa: 'gerar_atividade_objetiva' as const,
       funcao: 'conversa_e_ferramentas' as const,
       perfil: 'padrao' as const,
@@ -404,26 +420,39 @@ describe('camada de IA na API', () => {
       ...extra,
     })
 
-    it('grava na escola do registro, e a outra escola não ganha linha', async () => {
+    const registrarEm = (escola: Escola, consumo: ConsumoDeIa, repositorio = new ConsumoRepository(bancada.banco)) => noContextoDe(escola, () => repositorio.registrar(consumo))
+
+    it('grava na escola do contexto, e a outra escola não ganha linha', async () => {
       const [antesA, antesB] = [await contar('consumo_ia', a.escolaId), await contar('consumo_ia', b.escolaId)]
-      await new ConsumoRepository(bancada.banco).registrar(consumoDe(a))
+      // B primeiro: a tabela já tem uma linha de outra escola quando A grava, e a gravação que errasse de escola a acharia.
+      await registrarEm(b, consumoDe())
+      expect(await contar('consumo_ia', b.escolaId)).toBe(antesB + 1)
+      await registrarEm(a, consumoDe())
       expect(await contar('consumo_ia', a.escolaId)).toBe(antesA + 1)
-      expect(await contar('consumo_ia', b.escolaId)).toBe(antesB)
+      expect(await contar('consumo_ia', b.escolaId)).toBe(antesB + 1)
+    })
+
+    it('sem escola no contexto, lança antes de gravar: nenhuma linha em escola nenhuma', async () => {
+      const antes = [await contar('consumo_ia', a.escolaId), await contar('consumo_ia', b.escolaId)]
+      const repositorio = new ConsumoRepository(bancada.banco)
+      await expect(repositorio.registrar(consumoDe())).rejects.toThrow('consulta com escopo sem escola no contexto')
+      await expect(executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => repositorio.registrar(consumoDe()))).rejects.toThrow('consulta com escopo sem escola no contexto')
+      expect([await contar('consumo_ia', a.escolaId), await contar('consumo_ia', b.escolaId)]).toEqual(antes)
     })
 
     it('grava o provedor de quem recebeu o conteúdo, e nulo onde nada saiu; as quatro formas válidas entram, e o par inválido o tipo da porta e o check do banco já barram', async () => {
       const repositorio = new ConsumoRepository(bancada.banco)
       const modelo = `modelo-${randomUUID()}`
-      const externo = { ...consumoDe(a), modelo, envioExterno: true as const, provedorId: 'provedor-de-teste' }
+      const externo = { ...consumoDe(), modelo, envioExterno: true as const, provedorId: 'provedor-de-teste' }
       const chamadas: ConsumoDeIa[] = [
         externo,
         // O que falhou depois de sair também deixa o rastro do provedor.
         { ...externo, provedorId: 'outro-provedor', origem: 'openai_compat', estado: 'falhou', codigoDeErro: 'IA_INDISPONIVEL' },
         // Local, adaptador falso e regra fixa: nada saiu, e a linha entra como sempre entrou.
-        { ...consumoDe(a), modelo },
-        { ...consumoDe(a), modelo, origem: 'regra_fixa', tentativas: 0 },
+        { ...consumoDe(), modelo },
+        { ...consumoDe(), modelo, origem: 'regra_fixa', tentativas: 0 },
       ]
-      for (const chamada of chamadas) await expect(repositorio.registrar(chamada)).resolves.toBeUndefined()
+      for (const chamada of chamadas) await expect(registrarEm(a, chamada, repositorio)).resolves.toBeUndefined()
       const { rows } = await sql('select provedor, envio_externo from consumo_ia where escola_id = $1 and modelo = $2 order by provedor nulls last', [a.escolaId, modelo])
       expect(rows).toEqual([
         { provedor: 'outro-provedor', envio_externo: true },
@@ -435,34 +464,36 @@ describe('camada de IA na API', () => {
 
     it('o consumo de A não aponta para execução de B: o banco recusa', async () => {
       const deB = await execucaoPendente(b, b.professor)
-      await expect(new ConsumoRepository(bancada.banco).registrar(consumoDe(a, { execucaoId: deB.id }))).rejects.toThrow()
+      await expect(registrarEm(a, consumoDe({ execucaoId: deB.id }))).rejects.toThrow()
       const daA = await execucaoPendente(a, a.professor)
-      await expect(new ConsumoRepository(bancada.banco).registrar(consumoDe(a, { execucaoId: daA.id }))).resolves.toBeUndefined()
+      await expect(registrarEm(a, consumoDe({ execucaoId: daA.id }))).resolves.toBeUndefined()
     })
 
     it('nas funções do Tutor, entrada e saída só entram nulas: texto de aluno não se duplica na tabela de métrica', async () => {
       const doTutor = { tarefa: 'turno_do_tutor' as const, funcao: 'tutor_com_o_aluno' as const, perfil: 'rapido' as const, alunoId: a.aluno.usuarioId }
-      await expect(new ConsumoRepository(bancada.banco).registrar(consumoDe(a, doTutor))).rejects.toThrow()
-      await expect(new ConsumoRepository(bancada.banco).registrar(consumoDe(a, { ...doTutor, entrada: undefined, saida: undefined }))).resolves.toBeUndefined()
+      await expect(registrarEm(a, consumoDe(doTutor))).rejects.toThrow()
+      await expect(registrarEm(a, consumoDe({ ...doTutor, entrada: undefined, saida: undefined }))).resolves.toBeUndefined()
     })
   })
 
   describe('OrcamentoRepository: o freio diário do Tutor', () => {
-    const consulta = (escola: Escola, aluno: SessaoDeTeste) => ({ escolaId: escola.escolaId, funcao: 'tutor_com_o_aluno' as const, alunoId: aluno.usuarioId, turmaId: escola.turma })
+    const consulta = (escola: Escola, aluno: SessaoDeTeste) => ({ funcao: 'tutor_com_o_aluno' as const, alunoId: aluno.usuarioId, turmaId: escola.turma })
+    /** A consulta feita no contexto da escola: é de lá que a porta lê a escola, e a consulta não a traz (8.0). */
+    const consultarEm = (escola: Escola, orcamento: OrcamentoDeIa, pergunta: ConsultaDeOrcamento) => noContextoDe(escola, () => orcamento.consultar(pergunta))
 
     it('recusa a 61ª troca do aluno no dia, e não a de outro aluno; a pergunta que falhou não conta', async () => {
       const orcamento = api.app.get<OrcamentoDeIa>(ORCAMENTO_DE_IA)
       const perguntas = await perguntasAoTutor(a, a.aluno, TROCAS_POR_DIA_PADRAO_DO_TUTOR - 1)
       // Com 59 perguntas no dia, a 60ª ainda cabe.
-      expect(await orcamento.consultar(consulta(a, a.aluno))).toEqual({ permitido: true })
+      expect(await consultarEm(a, orcamento, consulta(a, a.aluno))).toEqual({ permitido: true })
       perguntas.push(...(await perguntasAoTutor(a, a.aluno, 1)))
       // Com 60, a 61ª é recusada, com o código do freio do dia.
-      expect(await orcamento.consultar(consulta(a, a.aluno))).toEqual({ permitido: false, codigo: 'LIMITE_DIARIO_DO_TUTOR' })
+      expect(await consultarEm(a, orcamento, consulta(a, a.aluno))).toEqual({ permitido: false, codigo: 'LIMITE_DIARIO_DO_TUTOR' })
       // O colega da mesma turma continua perguntando.
-      expect(await orcamento.consultar(consulta(a, a.outroAluno))).toEqual({ permitido: true })
+      expect(await consultarEm(a, orcamento, consulta(a, a.outroAluno))).toEqual({ permitido: true })
 
       // De dentro da execução da 60ª pergunta, ela mesma não conta contra si.
-      expect(await orcamento.consultar({ ...consulta(a, a.aluno), execucaoId: perguntas.at(-1) ?? '' })).toEqual({ permitido: true })
+      expect(await consultarEm(a, orcamento, { ...consulta(a, a.aluno), execucaoId: perguntas.at(-1) ?? '' })).toEqual({ permitido: true })
 
       // A 61ª, agendada assim mesmo, falha com o código do freio, sem resposta e sem consumo de modelo.
       const { pedido, aoConcluir } = pedidoDoTutor(a, a.aluno, 'como eu acho o reagente limitante?')
@@ -473,29 +504,36 @@ describe('camada de IA na API', () => {
 
       // A pergunta que o modelo não respondeu não gasta o dia: a falha devolve a vez.
       await sql(`update execucao_agente set estado = 'falhou', erro = 'IA_INDISPONIVEL', concluida_em = now() where escola_id = $1 and id = $2`, [a.escolaId, perguntas[0]])
-      expect(await orcamento.consultar(consulta(a, a.aluno))).toEqual({ permitido: true })
+      expect(await consultarEm(a, orcamento, consulta(a, a.aluno))).toEqual({ permitido: true })
     })
 
     it('o limite é o da configuração da escola, quando ela tem', async () => {
       await sql('insert into configuracao_operacional_escola (escola_id, tutor_trocas_por_dia) values ($1, 2) on conflict (escola_id) do update set tutor_trocas_por_dia = 2', [b.escolaId])
       const orcamento = new OrcamentoRepository(bancada.banco)
       await perguntasAoTutor(b, b.aluno, 1)
-      expect(await orcamento.consultar(consulta(b, b.aluno))).toEqual({ permitido: true })
+      expect(await consultarEm(b, orcamento, consulta(b, b.aluno))).toEqual({ permitido: true })
       await perguntasAoTutor(b, b.aluno, 1)
-      expect(await orcamento.consultar(consulta(b, b.aluno))).toEqual({ permitido: false, codigo: 'LIMITE_DIARIO_DO_TUTOR' })
+      expect(await consultarEm(b, orcamento, consulta(b, b.aluno))).toEqual({ permitido: false, codigo: 'LIMITE_DIARIO_DO_TUTOR' })
     })
 
     it('as perguntas de um aluno de B não contam na escola A, nem com o id dele', async () => {
-      // O aluno de B tem duas perguntas hoje, o limite da escola dele (caso acima). A escola A fica com o mesmo limite
-      // de duas: se a contagem alcançasse as linhas de B, a consulta de A, com o id dele, seria recusada.
-      await sql('insert into configuracao_operacional_escola (escola_id, tutor_trocas_por_dia) values ($1, 2) on conflict (escola_id) do update set tutor_trocas_por_dia = 2', [a.escolaId])
+      // Um aluno de B com duas perguntas hoje e o limite de duas nas duas escolas: se a contagem de A alcançasse as linhas
+      // de B, a consulta de A, com o id dele, seria recusada. O teste monta o próprio aluno e tira as perguntas no fim, para
+      // valer sozinho e não mexer na conta do pacote do caso seguinte.
+      const [alunoDeB] = await bancada.sessoes(b.escolaId, { papel: 'aluno', quantidade: 1 })
+      if (alunoDeB === undefined) throw new Error('aluno de teste não criado')
+      for (const escola of [a, b]) {
+        await sql('insert into configuracao_operacional_escola (escola_id, tutor_trocas_por_dia) values ($1, 2) on conflict (escola_id) do update set tutor_trocas_por_dia = 2', [escola.escolaId])
+      }
+      await perguntasAoTutor(b, alunoDeB, 2)
       const orcamento = new OrcamentoRepository(bancada.banco)
       try {
-        expect(await orcamento.consultar({ escolaId: a.escolaId, funcao: 'tutor_com_o_aluno', alunoId: b.aluno.usuarioId })).toEqual({ permitido: true })
+        expect(await consultarEm(a, orcamento, { funcao: 'tutor_com_o_aluno', alunoId: alunoDeB.usuarioId })).toEqual({ permitido: true })
+        expect(await consultarEm(b, orcamento, { funcao: 'tutor_com_o_aluno', alunoId: alunoDeB.usuarioId })).toMatchObject({ permitido: false })
       } finally {
+        await sql('delete from mensagem_tutor where escola_id = $1 and aluno_id = $2', [b.escolaId, alunoDeB.usuarioId])
         await sql('delete from configuracao_operacional_escola where escola_id = $1', [a.escolaId])
       }
-      expect(await orcamento.consultar({ escolaId: b.escolaId, funcao: 'tutor_com_o_aluno', alunoId: b.aluno.usuarioId })).toMatchObject({ permitido: false })
     })
 
     it('o pacote do mês é da turma: as trocas de todos os alunos somadas, contra o limite por aluno vezes os alunos da turma', async () => {
@@ -504,12 +542,63 @@ describe('camada de IA na API', () => {
       const orcamento = new OrcamentoRepository(bancada.banco)
       // B já tem duas perguntas do primeiro aluno. Com mais uma do segundo, são 3 de 4: cabe.
       await perguntasAoTutor(b, b.outroAluno, 1)
-      expect(await orcamento.consultar(consulta(b, b.outroAluno))).toEqual({ permitido: true })
+      expect(await consultarEm(b, orcamento, consulta(b, b.outroAluno))).toEqual({ permitido: true })
       await perguntasAoTutor(b, b.outroAluno, 1)
-      expect(await orcamento.consultar(consulta(b, b.outroAluno))).toEqual({ permitido: false, codigo: 'PACOTE_DO_TUTOR_ESGOTADO' })
-      expect(await orcamento.consultar(consulta(b, b.aluno))).toEqual({ permitido: false, codigo: 'PACOTE_DO_TUTOR_ESGOTADO' })
+      expect(await consultarEm(b, orcamento, consulta(b, b.outroAluno))).toEqual({ permitido: false, codigo: 'PACOTE_DO_TUTOR_ESGOTADO' })
+      expect(await consultarEm(b, orcamento, consulta(b, b.aluno))).toEqual({ permitido: false, codigo: 'PACOTE_DO_TUTOR_ESGOTADO' })
       // Fora do Tutor, o orçamento não segura: o contrato ainda não tem teto de IA por escola.
-      expect(await orcamento.consultar({ escolaId: b.escolaId, funcao: 'conversa_e_ferramentas' })).toEqual({ permitido: true })
+      expect(await consultarEm(b, orcamento, { funcao: 'conversa_e_ferramentas' })).toEqual({ permitido: true })
+    })
+
+    it('em A, a turma de B não infla o pacote: os alunos contados são os da escola do contexto, e não os da turma pelo id', async () => {
+      // A turma de B tem alunos confirmados (os dois de B, ao menos). Uma pergunta da escola A aponta para ela, o que a FK
+      // composta nunca deixa gravar: só a conexão com as FKs desligadas (`replica`, só dentro da transação desta conexão)
+      // monta o estado, e é ele que prova que a contagem de alunos tem a cláusula de escola por si. A linha sai no fim.
+      // Depende de o papel do banco de teste ser superusuário: é o `POSTGRES_USUARIO` do compose, na máquina e na esteira
+      // (o mesmo que `arquivo-do-titular.int.test.ts` e `expurgo-da-escola.int.test.ts` já usam).
+      // Na escola A o pacote é 1 troca por aluno: sem aluno da escola A na turma, vale 1 (`Math.max(1, …)`), e a pergunta
+      // grava 1 troca no mês, que já o esgota. Se a contagem alcançasse os alunos de B, o pacote subiria e a consulta passaria.
+      await sql('insert into configuracao_operacional_escola (escola_id, tutor_trocas_por_dia, tutor_trocas_por_mes) values ($1, 50, 1) on conflict (escola_id) do update set tutor_trocas_por_dia = 50, tutor_trocas_por_mes = 1', [a.escolaId])
+      const [alunoDeA] = await bancada.sessoes(a.escolaId, { papel: 'aluno', quantidade: 1 })
+      if (alunoDeA === undefined) throw new Error('aluno de teste não criado')
+      const alunosDaTurmaDeB = Number(((await sql(`select count(*) as total from vinculo where escola_id = $1 and turma_id = $2 and papel = 'aluno' and estado = 'confirmado'`, [b.escolaId, b.turma])).rows as { total: string }[])[0]?.total)
+      expect(alunosDaTurmaDeB).toBeGreaterThanOrEqual(2)
+      const execucao = await execucaoPendente(a, a.professor, 'turno_do_tutor', 'tutor_com_o_aluno')
+      const cliente = await bancada.pool.connect()
+      try {
+        try {
+          await cliente.query('begin')
+          await cliente.query('set local session_replication_role = replica')
+          await cliente.query(
+            `insert into mensagem_tutor (escola_id, ano_letivo_id, turma_id, aluno_id, execucao_id, autor, texto) values ($1, $2, $3, $4, $5, 'aluno', 'pergunta sintética')`,
+            [a.escolaId, a.anoLetivoId, b.turma, alunoDeA.usuarioId, execucao.id],
+          )
+          await cliente.query('commit')
+        } catch (erro) {
+          // O cliente volta ao pool sem transação aberta, ainda que o `insert` falhe.
+          await cliente.query('rollback')
+          throw erro
+        }
+        const orcamento = new OrcamentoRepository(bancada.banco)
+        const decisao = await noContextoDe(a, () => orcamento.consultar({ funcao: 'tutor_com_o_aluno', alunoId: alunoDeA.usuarioId, turmaId: b.turma }))
+        expect(decisao).toEqual({ permitido: false, codigo: 'PACOTE_DO_TUTOR_ESGOTADO' })
+      } finally {
+        cliente.release()
+        await sql('delete from mensagem_tutor where escola_id = $1 and execucao_id = $2', [a.escolaId, execucao.id])
+        await sql('delete from configuracao_operacional_escola where escola_id = $1', [a.escolaId])
+      }
+    })
+
+    it('sem escola no contexto, o Tutor não é consultado: lança antes de ler o limite, o dia ou o pacote', async () => {
+      const orcamento = new OrcamentoRepository(bancada.banco)
+      await expect(orcamento.consultar({ funcao: 'tutor_com_o_aluno', alunoId: a.aluno.usuarioId, turmaId: a.turma })).rejects.toThrow('consulta com escopo sem escola no contexto')
+      await expect(executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => orcamento.consultar(consulta(a, a.aluno)))).rejects.toThrow('consulta com escopo sem escola no contexto')
+    })
+
+    it('sem escola no contexto, a função que não é o Tutor também lança: o exigir vem antes do "permitido" que ela receberia', async () => {
+      const orcamento = new OrcamentoRepository(bancada.banco)
+      await expect(orcamento.consultar({ funcao: 'conversa_e_ferramentas' })).rejects.toThrow('consulta com escopo sem escola no contexto')
+      await expect(orcamento.consultar({ funcao: 'tutor_com_o_aluno' })).rejects.toThrow('consulta com escopo sem escola no contexto')
     })
   })
 
@@ -533,9 +622,67 @@ describe('camada de IA na API', () => {
         await perguntasAoTutor(a, alunoDeA, 1)
         await perguntasAoTutor(b, alunoDeB, 1)
         // Uma pergunta em cada escola. Em A, com limite 1, a próxima não cabe; em B, com limite 3, cabe.
-        expect(await orcamento.consultar({ escolaId: a.escolaId, funcao: 'tutor_com_o_aluno', alunoId: alunoDeA.usuarioId })).toEqual({ permitido: false, codigo: 'LIMITE_DIARIO_DO_TUTOR' })
-        expect(await orcamento.consultar({ escolaId: b.escolaId, funcao: 'tutor_com_o_aluno', alunoId: alunoDeB.usuarioId })).toEqual({ permitido: true })
+        expect(await noContextoDe(a, () => orcamento.consultar({ funcao: 'tutor_com_o_aluno', alunoId: alunoDeA.usuarioId }))).toEqual({ permitido: false, codigo: 'LIMITE_DIARIO_DO_TUTOR' })
+        expect(await noContextoDe(b, () => orcamento.consultar({ funcao: 'tutor_com_o_aluno', alunoId: alunoDeB.usuarioId }))).toEqual({ permitido: true })
       } finally {
+        await sql('delete from configuracao_operacional_escola where escola_id = any($1::uuid[])', [[a.escolaId, b.escolaId]])
+      }
+    })
+  })
+
+  describe('as três portas, com A e B ao mesmo tempo nas mesmas instâncias', () => {
+    it('cada turno do Tutor lê a suspensão, consulta o orçamento e grava o consumo na escola de quem o fez, e nenhuma escola herda a do primeiro a chegar', async () => {
+      const limitar = (escola: Escola, porDia: number) =>
+        sql('insert into configuracao_operacional_escola (escola_id, tutor_trocas_por_dia, tutor_trocas_por_mes) values ($1, $2, null) on conflict (escola_id) do update set tutor_trocas_por_dia = $2, tutor_trocas_por_mes = null', [escola.escolaId, porDia])
+      // As duas com o freio de 1 e uma pergunta de cada aluno: no contexto certo as duas consultas são recusadas, e na
+      // escola errada (onde o aluno não tem pergunta) seriam permitidas, qualquer que seja a escola que se herdou.
+      await limitar(a, 1)
+      await limitar(b, 1)
+      await sql('insert into suspensao_de_funcao (escola_id, funcao, suspensa_por) values ($1, $2, $3)', [b.escolaId, 'tutor_com_o_aluno', b.coordenacao.usuarioId])
+      try {
+        const [alunoDeA] = await bancada.sessoes(a.escolaId, { papel: 'aluno', quantidade: 1 })
+        const [alunoDeB] = await bancada.sessoes(b.escolaId, { papel: 'aluno', quantidade: 1 })
+        if (alunoDeA === undefined || alunoDeB === undefined) throw new Error('alunos de teste não criados')
+        await perguntasAoTutor(a, alunoDeA, 1)
+        await perguntasAoTutor(b, alunoDeB, 1)
+        // As instâncias são uma só de cada, como as do módulo: o que muda de uma chamada para a outra é o contexto.
+        const suspensao = new SuspensaoRepository(bancada.banco)
+        const orcamento = new OrcamentoRepository(bancada.banco)
+        const consumo = new ConsumoRepository(bancada.banco)
+        const modelo = `modelo-${randomUUID()}`
+        const doTutor: ConsumoDeIa = {
+          tarefa: 'turno_do_tutor',
+          funcao: 'tutor_com_o_aluno',
+          perfil: 'rapido',
+          origem: 'falso',
+          modelo,
+          promptVersao: '2026-10-04.1',
+          tokensDeEntrada: 10,
+          tokensDeSaida: 5,
+          duracaoMs: 3,
+          envioExterno: false,
+          provedorId: null,
+          tentativas: 1,
+          estado: 'concluida',
+          em: new Date(),
+        }
+        const turno = (escola: Escola, aluno: SessaoDeTeste) =>
+          noContextoDe(escola, async () => {
+            const suspensa = await suspensao.estaSuspensa('tutor_com_o_aluno')
+            const decisao = await orcamento.consultar({ funcao: 'tutor_com_o_aluno', alunoId: aluno.usuarioId })
+            await consumo.registrar({ ...doTutor, alunoId: aluno.usuarioId })
+            return { suspensa, decisao }
+          })
+        const turnos = Array.from({ length: 5 }, () => [turno(a, alunoDeA), turno(b, alunoDeB)]).flat()
+        const resultados = await Promise.all(turnos)
+        // A cada turno, a resposta é a da escola dele: A não tem suspensão e B tem; nas duas o freio de 1 já fechou.
+        const recusada = { permitido: false, codigo: 'LIMITE_DIARIO_DO_TUTOR' }
+        expect(resultados.filter((_, indice) => indice % 2 === 0)).toEqual(Array.from({ length: 5 }, () => ({ suspensa: false, decisao: recusada })))
+        expect(resultados.filter((_, indice) => indice % 2 === 1)).toEqual(Array.from({ length: 5 }, () => ({ suspensa: true, decisao: recusada })))
+        const gravadas = (escola: Escola) => contar('consumo_ia', escola.escolaId, `modelo = '${modelo}'`)
+        expect([await gravadas(a), await gravadas(b)]).toEqual([5, 5])
+      } finally {
+        await sql(`update suspensao_de_funcao set retomada_em = now(), retomada_por = $2 where escola_id = $1 and funcao = 'tutor_com_o_aluno' and retomada_em is null`, [b.escolaId, b.coordenacao.usuarioId])
         await sql('delete from configuracao_operacional_escola where escola_id = any($1::uuid[])', [[a.escolaId, b.escolaId]])
       }
     })
@@ -544,6 +691,7 @@ describe('camada de IA na API', () => {
   describe('AgendadorDeExecucoes', () => {
     it('grava a execução pendente, responde o id e roda depois, no contexto de quem pediu; a tela lê o resultado pela rota', async () => {
       const { pedido, aoGravar, aoConcluir, contextoVisto } = pedidoDoAssistente(a)
+      const [consumoAntesDeA = 0, consumoAntesDeB = 0] = [await contar('consumo_ia', a.escolaId), await contar('consumo_ia', b.escolaId)]
       const { execucaoId } = await como(a, a.professor, 'professor', () => agendador.agendar(pedido))
       expect(aoGravar).toHaveBeenCalledTimes(1)
       // O id volta antes de a tarefa rodar: o que a execução produz só é gravado depois de a rota responder.
@@ -551,6 +699,8 @@ describe('camada de IA na API', () => {
 
       await executor.ociosa()
       expect(contextoVisto).toMatchObject([{ escolaId: a.escolaId, usuarioId: a.professor.usuarioId, anoLetivoId: a.anoLetivoId, papel: 'professor' }])
+      // O consumo da execução, gravada depois do 202, é da escola de quem pediu: uma linha em A, e B sem mudança.
+      expect([await contar('consumo_ia', a.escolaId), await contar('consumo_ia', b.escolaId)]).toEqual([consumoAntesDeA + 1, consumoAntesDeB])
       const resposta = await get(a.professor, `/v1/execucoes/${execucaoId}`)
       expect(resposta.status).toBe(200)
       expect(esquemaRespostaExecucao.safeParse(resposta.corpo).success).toBe(true)

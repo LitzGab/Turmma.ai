@@ -8,13 +8,10 @@ import {
   type LoggerBase,
   type Relogio,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, TIPO_DO_JOB_ELIMINAR_TITULAR } from '@educa/shared'
+import { CodigoDeFalhaDeJob } from '@educa/shared'
 import { z } from 'zod'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
-
-/** O job que elimina o titular no 8º dia (F3, tarefa 15.0): fila de lote, não urgente, só com o id do pedido (regra 20, itens 9 e 12). */
-export const TIPO_ELIMINAR_TITULAR = TIPO_DO_JOB_ELIMINAR_TITULAR
 
 /** O job leva **só o id do pedido**: o titular, o nome e todo o resto são lidos aqui dentro, na escola do job. */
 const esquemaDoJob = z.strictObject({ pedidoId: z.uuid() })

@@ -10,12 +10,9 @@ import {
   type LoggerBase,
   type Relogio,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob } from '@educa/shared'
+import { CodigoDeFalhaDeJob, TIPO_EXPURGAR_ESCOLA } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
-import { TIPO_EXPURGAR_ESCOLA } from './expurgar-escola.js'
-
-export const TIPO_EXPURGAR_DADO_PESSOAL = 'sistema.expurgar-dado-pessoal'
 
 /** A data local de `agora` no `fuso`, `AAAA-MM-DD`: a chave de idempotência do expurgo da escola naquela noite. */
 export function chaveDaNoite(fuso: string, agora: Date): string {
@@ -55,7 +52,7 @@ export function criarRotinaDeExpurgo({ escolas, banco, enfileirador, janelaDaEsc
       try {
         const resultado = await executarNoContexto({ requisicaoId: contexto.requisicaoId, escolaId }, async () => {
           const { fuso } = await janelaDaEscola.daEscola()
-          return banco.transaction((tx) => enfileirador.enfileirarUmaVez(tx, { tipo: TIPO_EXPURGAR_ESCOLA, fila: 'lote', naoUrgente: true, dados: {} }, chaveDaNoite(fuso, agora)))
+          return banco.transaction((tx) => enfileirador.enfileirarUmaVez(tx, TIPO_EXPURGAR_ESCOLA, {}, chaveDaNoite(fuso, agora)))
         })
         if (resultado.situacao === 'enfileirado') enfileiradosTotal += 1
         else jaEnfileiradosTotal += 1

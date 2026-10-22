@@ -3,7 +3,6 @@ import {
   ehAssuntoDelicado,
   ErroDeDominio,
   ErroDeIa,
-  exigirEscolaDoContexto,
   MODELO_DA_REGRA_FIXA,
   relogioDoSistema,
   sessaoDaRequisicao,
@@ -159,7 +158,7 @@ export class TutorService {
     const alcance = await this.#alcance(pedido)
     const onde: ReferenciaDaPergunta = { atividadeAplicadaId: alcance.atividade?.id ?? null, questao: pedido.questao ?? null, materialId: alcance.material?.id ?? null, pagina: pedido.pagina ?? null }
     const { turmaId } = alcance.turma
-    const { escolaId, usuarioId: alunoId } = sessaoDaRequisicao()
+    const { usuarioId: alunoId } = sessaoDaRequisicao()
 
     // O reenvio com a mesma chave devolve a mesma execução, mesmo que o freio tenha fechado ou a avaliação aberto depois.
     const jaAceita = await new ExecucaoDaSessaoRepository(this.banco).daChave(pedido.chaveEnvio)
@@ -177,7 +176,7 @@ export class TutorService {
 
     if (jaAceita === undefined) {
       // Sem a trava: recusa na hora quem já está no limite. A conta que vale é a de dentro da transação, abaixo.
-      const decisao = await this.orcamento.consultar({ escolaId, funcao: FUNCAO_DO_TUTOR, alunoId, turmaId })
+      const decisao = await this.orcamento.consultar({ funcao: FUNCAO_DO_TUTOR, alunoId, turmaId })
       if (!decisao.permitido) throw new ErroDeIa(decisao.codigo, decisao.tenteDeNovoEmSegundos)
     }
 
@@ -193,7 +192,7 @@ export class TutorService {
       aoGravar: async (tx, execucaoId) => {
         const tutor = new TutorDoAlunoRepository(tx, this.relogio)
         await tutor.travarAluno()
-        const decisao = await new OrcamentoRepository(tx, this.relogio).consultar({ escolaId, funcao: FUNCAO_DO_TUTOR, alunoId, turmaId, execucaoId })
+        const decisao = await new OrcamentoRepository(tx, this.relogio).consultar({ funcao: FUNCAO_DO_TUTOR, alunoId, turmaId, execucaoId })
         // Recusar aqui desfaz a transação: nem a execução nem a pergunta ficam gravadas, e a troca não é contada.
         if (!decisao.permitido) throw new ErroDeIa(decisao.codigo, decisao.tenteDeNovoEmSegundos)
         await tutor.gravarPergunta(execucaoId, turmaId, pedido.texto, onde)
@@ -311,7 +310,7 @@ export class TutorService {
       return mensagemId
     }
     const mensagemId = await tutor.gravarResposta(pergunta, { tipo: 'texto', texto: saida.resposta, citacoes: saida.citacoes })
-    if (await this.suspensao.estaSuspensa(exigirEscolaDoContexto(), FUNCAO_DOS_SINAIS)) return mensagemId
+    if (await this.suspensao.estaSuspensa(FUNCAO_DOS_SINAIS)) return mensagemId
     if (saida.classificacao === 'pediu_resposta_pronta' && pergunta.atividadeAplicadaId !== null && pergunta.questao !== null) {
       await tutor.gravarSinal(execucaoId, turmaId, { tipo: 'resposta_pronta', atividadeAplicadaId: pergunta.atividadeAplicadaId, questao: pergunta.questao })
     }
@@ -354,7 +353,6 @@ export class TutorService {
       const estados = new ExecucaoRepository(tx)
       if (!(await estados.marcarRodando(execucao)) || !(await estados.concluirRodando(execucao, { tipo: 'mensagem_do_tutor', mensagemId }))) throw new ErroDeIa('IA_INDISPONIVEL')
       await new ConsumoRepository(tx).registrar({
-        escolaId,
         alunoId,
         execucaoId: nova,
         tarefa: turnoDoTutor.nome,
@@ -393,10 +391,10 @@ export class TutorService {
     const pagina = linhas.slice(0, limite)
     const anterior = linhas.length > limite ? pagina.at(-1)?.id : undefined
     const avaliacaoAberta = (await tutor.avaliativaAberta(turmaId)) ?? null
-    const { escolaId, usuarioId: alunoId } = sessaoDaRequisicao()
+    const { usuarioId: alunoId } = sessaoDaRequisicao()
     let estado: EstadoDoTutor = 'ligado'
     if (avaliacaoAberta !== null) estado = 'avaliacao'
-    else if (!(await this.orcamento.consultar({ escolaId, funcao: FUNCAO_DO_TUTOR, alunoId, turmaId })).permitido) estado = 'limite'
+    else if (!(await this.orcamento.consultar({ funcao: FUNCAO_DO_TUTOR, alunoId, turmaId })).permitido) estado = 'limite'
     return esquemaRespostaConversaDoTutor.parse({ estado, uso: await tutor.usoDeHoje(), avaliacaoAberta, mensagens: pagina.reverse().map(paraATela), ...(anterior === undefined ? {} : { anterior }) })
   }
 

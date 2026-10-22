@@ -1,4 +1,4 @@
-import { contextoAtual, sessao, usuario, type MetodoDeSessao, type TransacaoBanco } from '@educa/nucleo'
+import { exigirEscolaDoContexto, sessao, usuario, type MetodoDeSessao, type TransacaoBanco } from '@educa/nucleo'
 import type { PapelDeUsuario } from '@educa/shared'
 import { sql } from 'drizzle-orm'
 
@@ -16,13 +16,6 @@ export interface SessaoNova {
   readonly duracaoHoras: number
 }
 
-/** A escola do contexto, ou falha fechada: nada é criado sem escola (regra 10, item 3). */
-function escolaDoContexto(): string {
-  const escolaId = contextoAtual()?.escolaId
-  if (escolaId === undefined) throw new Error('criação de usuário ou sessão sem escola no contexto')
-  return escolaId
-}
-
 /**
  * Grava usuário e sessão na escola do contexto, nunca na de um argumento. A FK composta `(escola_id, usuario_id)` da
  * sessão recusa usuário de outra escola, mesmo que o id chegue trocado.
@@ -33,7 +26,7 @@ export class CriacaoDeSessaoRepository {
   /** Os usuários criados, com a conta de cada um: quem chama casa pela conta, sem depender da ordem do `returning`. */
   async criarUsuarios(novos: readonly UsuarioNovo[]): Promise<Array<{ id: string; contaId: string | null }>> {
     if (novos.length === 0) return []
-    const escolaId = escolaDoContexto()
+    const escolaId = exigirEscolaDoContexto()
     return this.tx
       .insert(usuario)
       .values(novos.map((novo) => ({ ...novo, escolaId })))
@@ -43,7 +36,7 @@ export class CriacaoDeSessaoRepository {
   /** As sessões criadas, com o usuário de cada uma. */
   async criarSessoes(novas: readonly SessaoNova[]): Promise<Array<{ id: string; usuarioId: string }>> {
     if (novas.length === 0) return []
-    const escolaId = escolaDoContexto()
+    const escolaId = exigirEscolaDoContexto()
     const criadas = await this.tx
       .insert(sessao)
       .values(

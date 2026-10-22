@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { contextoAtual } from '../contexto/contexto.js'
+import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
 import type { Banco } from '../db/banco.js'
 
 /**
@@ -38,8 +38,7 @@ export class EfeitoSinteticoRepository {
 
   /** Grava o efeito da execução. Devolve `false` quando outra execução do mesmo job já o gravou. */
   async gravar({ chaveIdempotencia, tentativa }: EfeitoDaExecucao): Promise<boolean> {
-    const escolaId = contextoAtual()?.escolaId
-    if (escolaId === undefined) throw new Error('efeito sintético sem escola no contexto')
+    const escolaId = exigirEscolaDoContexto()
     const resultado = await this.banco.execute(sql`
       insert into ${sql.identifier(TABELA_DO_EFEITO_SINTETICO)} (escola_id, chave_idempotencia, tentativa)
       values (${escolaId}, ${chaveIdempotencia}, ${tentativa})

@@ -40,6 +40,20 @@ arredondado para cima; a onda 3 confirma.
 só quando o tipo começa com `sistema.` (check `job_registro_escola_ou_sistema`); as `filas` casam com
 `job_registro_fila_valida`; nenhum esquema tem chave de `CHAVES_PESSOAIS` (`tools/guardas/regras-log.mjs`).
 
+**Como a 18.0 ficou (o que a implementação fixou):**
+- A assinatura é `enfileirar(tx, tipo, dados, ...opcoes)` e `enfileirarUmaVez(tx, tipo, dados, chave, ...opcoes)`; as opções são
+  obrigatórias só no tipo `'do-pedido'` (o sintético). O pedido recusado é `PedidoDeJobRecusado` (`packages/nucleo/src/fila`), com
+  motivo fixo e sem `issues` nem valor: é defeito de quem chamou, e não erro de domínio (responde 500, e o log não leva o dado).
+- `definirJob` confere em execução que o esquema é estrito: no zod, `z.object()` e `z.strictObject()` têm o mesmo tipo, então só
+  o tipo "frouxo" (`looseObject`, `.catchall()`) é barrado na compilação.
+- A caracterização dos 8 tipos (18.1) entra no commit da tarefa, como na 14.0 e na 51.0: o hook só aceita commit com código, e um
+  commit só de teste pediria tudo duas vezes. O teste foi escrito e passou contra o código antigo antes da migração.
+- `BancadaDeFila.enfileirar` (`apps/worker/test/fila-de-teste.ts`) grava pelo repository, sem a definição, porque os testes do
+  despachante e do worker enfileiram tipos de teste e `dados.rotulo`; a 19.0 troca isso pela definição injetável.
+- Os testes de tipo são `@ts-expect-error` provados pelo `tsc` do portão (o vitest não checa tipo), e não por mutação.
+- O `prazoMs` de cada tipo é provisório até a 43.0 conferir; a retentativa é a de hoje (5 tentativas, 2 s, 0,5), igual à
+  `OPCOES_DE_JOB_PUBLICADO`, e a 19.0 liga uma à outra.
+
 ### T3 — Leitor tolerante (RF7)
 
 `lerResposta(esquema, corpo)` sai de `apps/web/src/api/cliente.ts`, exportada e usada também por `api/material.ts`.

@@ -134,27 +134,15 @@ describe('a lista real só encolhe', () => {
   it('é exatamente esta, por arquivo e por método: uma entrada a mais ou a menos muda este teste', () => {
     expect(REPOSITORIES_SEM_ESCOPO.map((entrada) => [entrada.arquivo, entrada.metodos])).toEqual([
       ['apps/api/src/assistente/turma-do-professor.repository.ts', ['comVinculoConfirmadoDoProfessor', 'disciplinaDoArtefato', 'disciplinaDaEntrega']],
-      ['apps/api/src/estrutura/escola-sessao.repository.ts', ['lerParaAlterar', 'alterar']],
-      ['apps/api/src/ia/consumo.repository.ts', ['registrar']],
       ['apps/api/src/ia/execucao.repository.ts', ['marcarRodando', 'marcarConcluida', 'concluirRodando', 'marcarFalhou']],
-      ['apps/api/src/ia/orcamento.repository.ts', ['consultar']],
-      ['apps/api/src/ia/suspensao.repository.ts', ['estaSuspensa']],
       ['apps/api/src/operacao/operador.repository.ts', ['autorAtivoNaTransacao', 'travarOperadores', 'situacaoDoAutor', 'ativoParaAtualizar', 'contarAtivos', 'criar', 'criarConvite', 'revogarConvitePendente', 'desativar', 'apagarCodigosDeRecuperacao', 'encerrarSessoes', 'lerSessaoParaGuarda', 'marcarUsoDaSessao', 'sessaoParaRenovar', 'rotacionarSessao', 'encerrarSessao', 'encerrarSessaoPelaSaida', 'daSessao', 'conviteValidoPorHash', 'aceitarConvite', 'gravarSegredoParaConfigurar', 'trocarCodigosDeRecuperacao', 'ativoParaSegundoFator', 'avancarPassoDoSegundoFator', 'usarCodigoDeRecuperacao', 'ativarSegundoFator', 'abrirSessao', 'credencialDeEntrada', 'registrarFalhaDeEntrada', 'registrarAcesso', 'auditar']],
       ['apps/api/src/ops/operacao-privacidade.repository.ts', ['cadastrar', 'travarVigente', 'encerrar', 'registrarIncidente']],
       ['apps/api/src/privacidade/titulares.repository.ts', ['homonimo']],
-      ['apps/api/src/sessao/convite.repository.ts', ['nomeDaEscola', 'usuarioConvidado', 'criarConvite', 'travarEscola', 'dadosDaCoordenacao', 'revogado', 'ativarPorConvite', 'revogarParaRefazer', 'revogar', 'dadosDoProfessor']],
-      ['apps/api/src/sessao/criacao-de-sessao.repository.ts', ['criarUsuarios', 'criarSessoes']],
-      ['apps/api/src/sessao/escrita-de-sessao.repository.ts', ['rotacionar', 'encerrarFamilia', 'encerrar', 'registrarUso']],
-      ['apps/api/src/sessao/redefinicao-de-mfa.repository.ts', ['contaDoUsuarioAtivo']],
-      ['apps/api/src/sessao/registro-de-acesso.repository.ts', ['gravar']],
       ['packages/nucleo/src/auditoria/auditoria.repository.ts', ['listarDaEscola']],
       ['packages/nucleo/src/auditoria/insercao-de-auditoria.repository.ts', ['inserirAuditoria']],
-      ['packages/nucleo/src/configuracao/configuracao-operacional.repository.ts', ['daEscola']],
-      ['packages/nucleo/src/fila/efeito-sintetico.repository.ts', ['gravar']],
       ['packages/nucleo/src/fila/job-registro.repository.ts', ['inserir', 'inserirUmaVez', 'buscarDaEscola', 'localizarParaExecucao', 'iniciarExecucao', 'concluir', 'avisarVagaLivre', 'registrarFalha']],
       ['packages/nucleo/src/identidade/sessao.repository.ts', ['lerParaGuarda', 'marcarAtualApresentado']],
       ['packages/nucleo/src/titular/compartilhamento.repository.ts', ['datasDeReferencia']],
-      ['packages/nucleo/src/uso/uso.repository.ts', ['gravarDia', 'doDia', 'doMes']],
     ])
   })
 

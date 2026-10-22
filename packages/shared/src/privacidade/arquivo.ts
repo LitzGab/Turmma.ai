@@ -8,12 +8,6 @@ import { ESTADOS_DO_PEDIDO, TIPOS_DE_PEDIDO_DO_TITULAR } from './titular.js'
  * coordenação baixa a versão da escola só quando ele não tem conta ativa. O JSON nunca é renderizado: sai como arquivo.
  */
 
-/**
- * O tipo do job que monta o arquivo (Tech Spec do F3, seção 5), na fila normal e só com o id do pedido. A API o enfileira no
- * registro do pedido de acesso ou de portabilidade, e o worker o processa: o nome é um só, nos dois lados.
- */
-export const TIPO_DO_JOB_MONTAR_ARQUIVO = 'titular.montar-arquivo'
-
 /** Os tipos de pedido que geram arquivo (RF11): acesso e portabilidade. Os outros três não têm o que montar. */
 export const TIPOS_DE_PEDIDO_COM_ARQUIVO = ['acesso', 'portabilidade'] as const satisfies readonly (typeof TIPOS_DE_PEDIDO_DO_TITULAR)[number][]
 

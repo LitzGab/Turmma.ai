@@ -1,5 +1,6 @@
 import { esquemaConteudoDaMensagemDoAgente, esquemaConteudoDoResumoDoAnalista, HIPOTESES_DO_ANALISTA } from '@educa/shared'
 import { describe, expect, it, vi } from 'vitest'
+import { comContextoDaEscolaDoPedido } from '../__fixtures__/contexto-da-escola.js'
 import { AdaptadorRoteirizado } from '../__fixtures__/adaptador-roteirizado.js'
 import { AMOSTRAS_DO_ASSISTENTE } from '../__fixtures__/amostras-do-assistente.js'
 import { AMOSTRAS_DA_REVISAO, SAIDAS_DA_REVISAO } from '../__fixtures__/amostras-do-assistente-revisao.js'
@@ -17,7 +18,7 @@ import { resumoDoAnalista } from './resumo-do-analista.js'
 
 function provedorCom(adaptador: AdaptadorDeModelo): { ia: ProvedorDeIa; consumo: ConsumoEmMemoria } {
   const consumo = new ConsumoEmMemoria()
-  return { ia: new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 }), consumo }
+  return { ia: comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 })), consumo }
 }
 
 describe('propor_ferramenta: o Assistente pergunta antes de abrir a ferramenta (D18)', () => {
@@ -605,7 +606,7 @@ describe('propor_ferramenta na tarefa 3.0: juízo sobre texto de aluno, na entra
       const consumo = new ConsumoEmMemoria()
       const logger = { info: vi.fn(), warn: vi.fn() }
       const adaptador = new AdaptadorRoteirizado(roteiro)
-      const ia = new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000, logger })
+      const ia = comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000, logger }))
       return { ia, consumo, logger, adaptador }
     }
 

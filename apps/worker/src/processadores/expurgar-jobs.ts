@@ -3,8 +3,6 @@ import { CodigoDeFalhaDeJob } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 
-export const TIPO_EXPURGAR_JOBS = 'sistema.expurgar-jobs'
-
 export interface DependenciasDoExpurgo {
   repositorio: Pick<ExpurgoDeJobsRepository, 'apagarLoteVencido'>
   logger: LoggerBase

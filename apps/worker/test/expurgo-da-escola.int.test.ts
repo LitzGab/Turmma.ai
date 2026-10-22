@@ -23,7 +23,7 @@ import {
   type PrazoDoLote,
   type Relogio,
 } from '@educa/nucleo'
-import { AUTOR_DA_ROTINA, CATEGORIAS_DE_RETENCAO, CHAVES_DE_RETENCAO, CodigoDeFalhaDeJob } from '@educa/shared'
+import { AUTOR_DA_ROTINA, CATEGORIAS_DE_RETENCAO, CHAVES_DE_RETENCAO, CodigoDeFalhaDeJob, TIPO_EXPURGAR_ESCOLA } from '@educa/shared'
 import { PgDialect } from 'drizzle-orm/pg-core'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest'
@@ -37,7 +37,7 @@ import { MedicaoDoExpurgo } from '../src/medicao-do-expurgo.js'
 import { GovernancaRepository } from '../../api/src/governanca/governanca.repository.js'
 import { montarWorker } from '../src/montagem.js'
 import { chaveDaNoite, criarRotinaDeExpurgo } from '../src/processadores/expurgar-dado-pessoal.js'
-import { criarExpurgoDaEscola, TIPO_EXPURGAR_ESCOLA } from '../src/processadores/expurgar-escola.js'
+import { criarExpurgoDaEscola } from '../src/processadores/expurgar-escola.js'
 import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
 
 // O expurgo noturno da escola (F3, tarefas 3.0 a 5.0), contra o Postgres do compose de teste: a conversa do Tutor, os
@@ -1069,8 +1069,7 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
     it('[P] a mesma chave ao mesmo tempo dá um job só, e as duas gravações devolvem o mesmo id', async () => {
       const a = await escolaNova()
       const chave = `chave-${randomUUID()}`
-      const pedido = { tipo: TIPO_EXPURGAR_ESCOLA, fila: 'lote' as const, naoUrgente: true, dados: {} }
-      const gravar = () => executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () => bancada.banco.transaction((tx) => bancada.enfileirador.enfileirarUmaVez(tx, pedido, chave)))
+      const gravar = () => executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () => bancada.banco.transaction((tx) => bancada.enfileirador.enfileirarUmaVez(tx, TIPO_EXPURGAR_ESCOLA, {}, chave)))
       // A primeira para depois de inserir, sem confirmar; a segunda chega e espera no índice único; só então a primeira segue.
       const gatilho = new GatilhoDeParada(bancada.pool, { tabela: 'job_registro', evento: 'insert', quando: `new.chave_idempotencia = '${chave}'` })
       await gatilho.armar()
@@ -1113,7 +1112,6 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
     it('o despachante é acordado quando o job da chave entra, e não na colisão', async () => {
       const a = await escolaNova()
       const chave = `chave-${randomUUID()}`
-      const pedido = { tipo: TIPO_EXPURGAR_ESCOLA, fila: 'lote' as const, naoUrgente: true, dados: {} }
       const ouvinte = await bancada.pool.connect()
       let avisos = 0
       ouvinte.on('notification', ({ channel }) => {
@@ -1121,7 +1119,7 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
       })
       try {
         await ouvinte.query('listen job')
-        const gravar = () => executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () => bancada.banco.transaction((tx) => bancada.enfileirador.enfileirarUmaVez(tx, pedido, chave)))
+        const gravar = () => executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () => bancada.banco.transaction((tx) => bancada.enfileirador.enfileirarUmaVez(tx, TIPO_EXPURGAR_ESCOLA, {}, chave)))
         await gravar()
         await expect.poll(() => avisos, { timeout: 5_000, interval: 20 }).toBe(1)
         expect((await gravar()).situacao).toBe('ja_enfileirado')
@@ -2997,7 +2995,7 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
       onTestFinished(() => worker.encerrar())
       bancada.despachante(log, { relogio }).iniciar()
       const enfileirado = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () =>
-        bancada.banco.transaction((tx) => bancada.enfileirador.enfileirarUmaVez(tx, { tipo: TIPO_EXPURGAR_ESCOLA, fila: 'lote', naoUrgente: true, dados: {} }, chaveDaNoite('America/Sao_Paulo', QUARTA_1H))),
+        bancada.banco.transaction((tx) => bancada.enfileirador.enfileirarUmaVez(tx, TIPO_EXPURGAR_ESCOLA, {}, chaveDaNoite('America/Sao_Paulo', QUARTA_1H))),
       )
       await expect.poll(async () => (await bancada.estado(enfileirado.id ?? ''))?.estado, { timeout: 20_000, interval: 100 }).toBe('concluido')
       expect(await existe('mensagem_tutor', vencida)).toBe(false)

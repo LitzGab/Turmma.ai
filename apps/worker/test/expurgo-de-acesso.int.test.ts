@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 import { ALVOS_DO_EXPURGO_DE_ACESSO, executarNoContexto, ExpurgoDeAcessoRepository, instrucaoDoLoteDeAcesso, LOTE_DO_EXPURGO, type AlvoDoExpurgoDeAcesso } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob } from '@educa/shared'
+import { CodigoDeFalhaDeJob, TIPO_EXPURGAR_ACESSO } from '@educa/shared'
 import { Queue } from 'bullmq'
 import { PgDialect } from 'drizzle-orm/pg-core'
 import { randomBytes, randomUUID } from 'node:crypto'
@@ -10,7 +10,7 @@ import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { AGENDAMENTOS, FILA_DOS_AGENDAMENTOS } from '../src/agendamentos.js'
 import type { ConfiguracaoStorage } from '../src/config.js'
 import { montarWorker, type WorkerMontado } from '../src/montagem.js'
-import { criarExpurgoDeAcesso, TIPO_EXPURGAR_ACESSO, type TotaisDoExpurgoDeAcesso } from '../src/processadores/expurgar-acesso.js'
+import { criarExpurgoDeAcesso, type TotaisDoExpurgoDeAcesso } from '../src/processadores/expurgar-acesso.js'
 import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
 
 // `registro_acesso`, `sessao` e `convite` do Postgres do compose de teste, com linhas de duas escolas (e a falha de

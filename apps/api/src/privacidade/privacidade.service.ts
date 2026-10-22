@@ -39,7 +39,7 @@ import {
   PRAZOS_FIXOS,
   retencaoDaEscola,
   TEXTO_DO_PRAZO_LEGAL_DO_INCIDENTE,
-  TIPO_DO_JOB_MONTAR_ARQUIVO,
+  TIPO_MONTAR_ARQUIVO,
   TIPOS_DE_PEDIDO_COM_ARQUIVO,
   VALIDADE_DA_URL_DO_ARQUIVO_SEGUNDOS,
   type FinalidadeDoArquivo,
@@ -235,7 +235,7 @@ export class PrivacidadeService {
       const registrado = await this.#gravarPedido(pedidos, { ...pedido, papelTitular: titular.papel, homonimo, compartilhamento, estado })
       const id = registrado?.id
       if (registrado !== undefined) {
-        if (geraArquivo) await this.dependencias.enfileirador.enfileirar(tx, { tipo: TIPO_DO_JOB_MONTAR_ARQUIVO, fila: 'normal', dados: { pedidoId: registrado.id }, naoUrgente: false })
+        if (geraArquivo) await this.dependencias.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId: registrado.id })
         await registro.gravar(tx, 'pedido.registrado', {
           entidadeId: registrado.id,
           depois: { titularId: titular.id, papelTitular: titular.papel, tipo: pedido.tipo, solicitante: pedido.solicitante, chegouEm: pedido.chegouEm },

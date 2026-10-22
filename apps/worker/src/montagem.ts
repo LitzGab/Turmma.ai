@@ -38,24 +38,34 @@ import {
   type Meter,
   type Relogio,
 } from '@educa/nucleo'
-import type { Fila } from '@educa/shared'
+import {
+  TIPO_CONSOLIDAR_USO,
+  TIPO_ELIMINAR_TITULAR,
+  TIPO_EXPURGAR_ACESSO,
+  TIPO_EXPURGAR_DADO_PESSOAL,
+  TIPO_EXPURGAR_ESCOLA,
+  TIPO_EXPURGAR_JOBS,
+  TIPO_JOB_SINTETICO,
+  TIPO_MONTAR_ARQUIVO,
+  type Fila,
+} from '@educa/shared'
 import { ArmazemS3 } from '@educa/nucleo/armazem-s3'
 import { Queue, Worker } from 'bullmq'
 import { Redis } from 'ioredis'
 import { AGENDAMENTOS, criarDisparoDeAgendamento, FILA_DOS_AGENDAMENTOS, registrarAgendamentos, type Agendamento } from './agendamentos.js'
 import type { ConfiguracaoStorage, ConfiguracaoWorker } from './config.js'
 import { AvisoDeVagaLivre, ExecutorDeJobs, type Processador } from './executor.js'
-import { criarConsolidacaoDeUso, TIPO_CONSOLIDAR_USO } from './processadores/consolidar-uso.js'
-import { criarExpurgoDeAcesso, TIPO_EXPURGAR_ACESSO } from './processadores/expurgar-acesso.js'
-import { criarExpurgoDeJobs, TIPO_EXPURGAR_JOBS } from './processadores/expurgar-jobs.js'
-import { criarRotinaDeExpurgo, TIPO_EXPURGAR_DADO_PESSOAL } from './processadores/expurgar-dado-pessoal.js'
-import { criarEliminacaoDoTitular, TIPO_ELIMINAR_TITULAR } from './processadores/eliminar-titular.js'
-import { criarExpurgoDaEscola, TIPO_EXPURGAR_ESCOLA } from './processadores/expurgar-escola.js'
+import { criarConsolidacaoDeUso } from './processadores/consolidar-uso.js'
+import { criarExpurgoDeAcesso } from './processadores/expurgar-acesso.js'
+import { criarExpurgoDeJobs } from './processadores/expurgar-jobs.js'
+import { criarRotinaDeExpurgo } from './processadores/expurgar-dado-pessoal.js'
+import { criarEliminacaoDoTitular } from './processadores/eliminar-titular.js'
+import { criarExpurgoDaEscola } from './processadores/expurgar-escola.js'
 import { MedicaoDaEliminacao } from './medicao-da-eliminacao.js'
 import { MedicaoDoArquivo } from './medicao-do-arquivo.js'
 import { MedicaoDoExpurgo } from './medicao-do-expurgo.js'
 import { MedicaoDoIncidente } from './medicao-do-incidente.js'
-import { criarMontagemDoArquivo, TIPO_MONTAR_ARQUIVO } from './processadores/montar-arquivo.js'
+import { criarMontagemDoArquivo } from './processadores/montar-arquivo.js'
 import { criarProcessadorSintetico, SandboxDeCpu } from './processadores/sintetico.js'
 import { criarClienteS3, MedidorDeStorage } from './storage/medidor-de-storage.js'
 
@@ -148,7 +158,7 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
   const executor = new ExecutorDeJobs({
     repositorio,
     aoLiberarVaga: avisoDeVagaLivre.avisar,
-    processadores: opcoes.processadores ?? { sintetico: criarProcessadorSintetico(sandbox, new EfeitoSinteticoRepository(banco)), ...rotinas?.processadores, ...montagemDoArquivo },
+    processadores: opcoes.processadores ?? { [TIPO_JOB_SINTETICO]: criarProcessadorSintetico(sandbox, new EfeitoSinteticoRepository(banco)), ...rotinas?.processadores, ...montagemDoArquivo },
     logger,
     uso,
     ...(aguardandoVaga === undefined ? {} : { aoAguardarVaga: (fila: Fila, escolaId: string | null) => aguardandoVaga.add(1, { fila, escola_id: escolaId ?? DONO_DAS_VAGAS_DO_SISTEMA }) }),

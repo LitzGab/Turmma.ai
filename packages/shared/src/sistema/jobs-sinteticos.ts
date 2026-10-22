@@ -26,12 +26,16 @@ export type PedidoJobSintetico = z.infer<typeof esquemaPedidoJobSintetico>
  * `efeito` é o modo de referência da entrega pelo menos uma vez (D49): o processador grava uma linha em
  * `efeito_sintetico` com a chave de idempotência do job, e a reexecução não grava outra. A tabela não
  * tem migration: só existe no teste de integração que a cria. Por isso o modo não está no corpo do `POST`.
+ *
+ * Estrito, como todo `dados` de job (`definicoes-de-job.ts`): chave a mais, como `escolaId`, é recusada ao enfileirar.
  */
-export const esquemaDadosJobSintetico = z.object({
-  cpuMs: z.number().int().min(0).max(CPU_MS_MAXIMO_SINTETICO),
-  falhar: z.boolean(),
-  efeito: z.boolean().optional(),
-})
+export const esquemaDadosJobSintetico = z
+  .object({
+    cpuMs: z.number().int().min(0).max(CPU_MS_MAXIMO_SINTETICO),
+    falhar: z.boolean(),
+    efeito: z.boolean().optional(),
+  })
+  .strict()
 
 export type DadosJobSintetico = z.infer<typeof esquemaDadosJobSintetico>
 

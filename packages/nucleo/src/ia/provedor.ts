@@ -97,7 +97,9 @@ export class ProvedorDeIa implements LLMProvider {
 
     // A escola do pedido é a de quem está pedindo. Com contexto de escola (a requisição, ou a execução em segundo
     // plano), pedir em nome de outra escola é defeito de quem chamou: recusa antes de consultar, gastar ou registrar
-    // na escola errada (regra 10, item 3). Sem contexto (rotina nossa, teste de unidade) não há com o que comparar.
+    // na escola errada (regra 10, item 3). Sem escola no contexto não há com o que comparar aqui, e quem recusa é a porta
+    // da suspensão, logo abaixo, que lê a escola do contexto e falha fechada (`IA_INDISPONIVEL`): nada executa, nem
+    // consulta orçamento, nem registra consumo.
     const escolaDoContexto = contextoAtual()?.escolaId
     if (escolaDoContexto !== undefined && escolaDoContexto !== pedido.escolaId) {
       const tipo = tarefa.nome
@@ -115,7 +117,7 @@ export class ProvedorDeIa implements LLMProvider {
 
     // Função suspensa pela escola não executa nada: nem modelo, nem regra fixa, nem consulta de orçamento (D60).
     try {
-      await exigirFuncaoAtiva(this.dependencias.suspensao, pedido.escolaId, tarefa.funcao)
+      await exigirFuncaoAtiva(this.dependencias.suspensao, tarefa.funcao)
     } catch (erro) {
       this.avisar(pedido, erro instanceof ErroDeIa ? erro.codigoDeIa : 'IA_INDISPONIVEL', inicio, 0)
       throw erro
@@ -159,7 +161,6 @@ export class ProvedorDeIa implements LLMProvider {
     let tenteDeNovoEmSegundos: number | undefined
     try {
       const decisao = await this.dependencias.orcamento.consultar({
-        escolaId: pedido.escolaId,
         funcao: pedido.tarefa.funcao,
         ...(pedido.alunoId === undefined ? {} : { alunoId: pedido.alunoId }),
         ...(pedido.turmaId === undefined ? {} : { turmaId: pedido.turmaId }),
@@ -240,7 +241,6 @@ export class ProvedorDeIa implements LLMProvider {
     resultado: Pick<ConsumoDeIa, 'entrada' | 'saida' | 'estado' | 'codigoDeErro'>,
   ): ConsumoDeIa {
     return {
-      escolaId: pedido.escolaId,
       // O aluno só entra no consumo das funções que são dele (o Tutor): nas outras, o consumo não tem pessoa (D64).
       ...(pedido.alunoId === undefined || !FUNCOES_COM_ORCAMENTO_POR_ALUNO.has(pedido.tarefa.funcao) ? {} : { alunoId: pedido.alunoId }),
       ...(pedido.execucaoId === undefined ? {} : { execucaoId: pedido.execucaoId }),

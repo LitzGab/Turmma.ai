@@ -7,8 +7,25 @@ import {
   RETENCAO_JOB_CONCLUIDO_SEGUNDOS,
   RETENCAO_JOB_FALHO_SEGUNDOS,
   TENTATIVAS_DE_JOB,
+  MotivoDaRecusaDoJob,
+  PedidoDeJobRecusado,
+  resumirErro,
+  type ContextoDaRequisicao,
+  type ResultadoDaChave,
+  type TransacaoBanco,
 } from '@educa/nucleo'
-import { CodigoDeErro, CodigoDeFalhaDeJob } from '@educa/shared'
+import {
+  CodigoDeErro,
+  CodigoDeFalhaDeJob,
+  TIPO_CONSOLIDAR_USO,
+  TIPO_ELIMINAR_TITULAR,
+  TIPO_EXPURGAR_ACESSO,
+  TIPO_EXPURGAR_DADO_PESSOAL,
+  TIPO_EXPURGAR_ESCOLA,
+  TIPO_EXPURGAR_JOBS,
+  TIPO_JOB_SINTETICO,
+  TIPO_MONTAR_ARQUIVO,
+} from '@educa/shared'
 import { Worker } from 'bullmq'
 import { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
@@ -256,6 +273,17 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
 
   describe('enfileirar', () => {
     const contar = async () => Number((await bancada.pool.query<{ total: string }>('select count(*) as total from job_registro')).rows[0]?.total)
+    const naEscola = (escolaId: string, fazer: (tx: TransacaoBanco) => Promise<unknown>) =>
+      executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => bancada.banco.transaction((tx) => fazer(tx)))
+    /** A recusa do `Enfileirador`, com o motivo, ou falha o teste: outro erro (o do banco, por exemplo) não vale. */
+    const recusa = async (pedido: Promise<unknown>): Promise<PedidoDeJobRecusado> => {
+      const erro = await pedido.then(
+        () => undefined,
+        (falha: unknown) => falha,
+      )
+      if (!(erro instanceof PedidoDeJobRecusado)) throw new Error('o pedido devia ter sido recusado pela definição do tipo')
+      return erro
+    }
 
     it('o job é gravado na transação de quem pede: se ela desfaz, não sobra linha nem publicação', async () => {
       const logDespachante = new LogEmMemoria('despachante')
@@ -263,7 +291,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
       await expect(
         executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () =>
           bancada.banco.transaction(async (tx) => {
-            await bancada.enfileirador.enfileirar(tx, { tipo: 'sintetico', fila: 'normal', naoUrgente: false, dados: { cpuMs: 0, falhar: false } })
+            await bancada.enfileirador.enfileirar(tx, TIPO_JOB_SINTETICO, { cpuMs: 0, falhar: false }, { fila: 'normal', naoUrgente: false })
             throw new Error('o que originou o job não foi gravado')
           }),
         ),
@@ -274,17 +302,161 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
       expect(logDespachante.doEvento('job.publicado')).toEqual([])
     })
 
-    it('job de escola sem escola no contexto, e job de sistema vindo de escola ou de rota anônima, são recusados antes de gravar', async () => {
-      const pedido = (tipo: string) => ({ tipo, fila: 'lote' as const, naoUrgente: true, dados: {} })
-      const tentar = (contexto: Parameters<typeof executarNoContexto>[0], tipo: string) =>
-        executarNoContexto(contexto, () => bancada.banco.transaction((tx) => bancada.enfileirador.enfileirar(tx, pedido(tipo))))
+    // Caracterização (18.1): o que cada um dos 8 tipos grava, escrita contra o `enfileirar` anterior, com a chamada no formato
+    // dele, e verde com ele. O que se afirma é a linha de `job_registro`, e só a chamada de cada caso mudou na migração.
+    it('caracterização: cada um dos 8 tipos grava a fila, o não urgente, a prioridade e o escopo de hoje', async () => {
+      const primeiroGravado = async (resultado: Promise<ResultadoDaChave>): Promise<string> => {
+        const lido = await resultado
+        if (lido.situacao !== 'enfileirado') throw new Error('a chave já tinha job')
+        return lido.id
+      }
+      const pedidoId = randomUUID()
+      const doSistema = { requisicaoId: randomUUID(), rotinaDoSistema: true as const }
+      const daEscola = { requisicaoId: randomUUID(), escolaId: ESCOLA_A }
+      const nada = { fila: 'lote', prioridade: 3, naoUrgente: true, dados: {} }
+      const casos = [
+        { tipo: 'titular.montar-arquivo', contexto: daEscola, esperado: { fila: 'normal', prioridade: 2, naoUrgente: false, dados: { pedidoId } }, enfileirar: (tx: TransacaoBanco) => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId }) },
+        { tipo: 'titular.eliminar', contexto: daEscola, esperado: { fila: 'lote', prioridade: 3, naoUrgente: true, dados: { pedidoId } }, enfileirar: (tx: TransacaoBanco) => primeiroGravado(bancada.enfileirador.enfileirarUmaVez(tx, TIPO_ELIMINAR_TITULAR, { pedidoId }, `eliminacao:${pedidoId}`)) },
+        { tipo: 'retencao.expurgar-escola', contexto: daEscola, esperado: nada, enfileirar: (tx: TransacaoBanco) => primeiroGravado(bancada.enfileirador.enfileirarUmaVez(tx, TIPO_EXPURGAR_ESCOLA, {}, 'noite')) },
+        { tipo: 'sistema.consolidar-uso', contexto: doSistema, esperado: nada, enfileirar: (tx: TransacaoBanco) => bancada.enfileirador.enfileirar(tx, TIPO_CONSOLIDAR_USO, {}) },
+        { tipo: 'sistema.expurgar-acesso', contexto: doSistema, esperado: nada, enfileirar: (tx: TransacaoBanco) => bancada.enfileirador.enfileirar(tx, TIPO_EXPURGAR_ACESSO, {}) },
+        { tipo: 'sistema.expurgar-jobs', contexto: doSistema, esperado: nada, enfileirar: (tx: TransacaoBanco) => bancada.enfileirador.enfileirar(tx, TIPO_EXPURGAR_JOBS, {}) },
+        { tipo: 'sistema.expurgar-dado-pessoal', contexto: doSistema, esperado: nada, enfileirar: (tx: TransacaoBanco) => bancada.enfileirador.enfileirar(tx, TIPO_EXPURGAR_DADO_PESSOAL, {}) },
+        // O sintético é o único em que a fila e o não urgente vêm do corpo do `POST`: aqui, as três filas.
+        ...(['interativa', 'normal', 'lote'] as const).map((fila) => ({
+          tipo: 'sintetico',
+          contexto: daEscola,
+          esperado: { fila, prioridade: { interativa: 1, normal: 2, lote: 3 }[fila], naoUrgente: fila === 'lote', dados: { cpuMs: 5, falhar: false } },
+          enfileirar: (tx: TransacaoBanco) => bancada.enfileirador.enfileirar(tx, TIPO_JOB_SINTETICO, { cpuMs: 5, falhar: false }, { fila, naoUrgente: fila === 'lote' }),
+        })),
+      ]
+      for (const caso of casos) {
+        const id = await executarNoContexto(caso.contexto, () => bancada.banco.transaction((tx) => caso.enfileirar(tx)))
+        const { rows } = await bancada.pool.query<{ tipo: string; fila: string; prioridade: number; naoUrgente: boolean; escolaId: string | null; dados: unknown }>(
+          'select tipo, fila, prioridade, nao_urgente as "naoUrgente", escola_id as "escolaId", dados from job_registro where id = $1',
+          [id],
+        )
+        expect(rows[0], `${caso.tipo} / ${caso.esperado.fila}`).toEqual({ tipo: caso.tipo, ...caso.esperado, escolaId: caso.tipo.startsWith('sistema.') ? null : ESCOLA_A })
+      }
+    })
 
-      await expect(tentar({ requisicaoId: randomUUID() }, 'sintetico')).rejects.toThrow('job de escola sem escola no contexto')
-      await expect(tentar({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, 'sistema.expurgar-jobs')).rejects.toThrow('job de sistema só nasce de rotina do sistema')
-      await expect(tentar({ requisicaoId: randomUUID() }, 'sistema.expurgar-jobs')).rejects.toThrow('job de sistema só nasce de rotina do sistema')
+    it('a fila vem do pedido só dentro das filas do tipo: com o tipo de uma fila só, a outra é recusada, sem linha', async () => {
+      const pedidoId = randomUUID()
+      // @ts-expect-error o titular.montar-arquivo só nasce na fila normal
+      const naLote = naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId }, { fila: 'lote' }))
+      expect((await recusa(naLote)).motivo).toBe(MotivoDaRecusaDoJob.FILA_FORA_DA_DEFINICAO)
+      // @ts-expect-error o titular.eliminar só nasce na fila de lote
+      const naNormal = naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirarUmaVez(tx, TIPO_ELIMINAR_TITULAR, { pedidoId }, 'chave', { fila: 'normal' }))
+      expect((await recusa(naNormal)).motivo).toBe(MotivoDaRecusaDoJob.FILA_FORA_DA_DEFINICAO)
+      expect(await contar()).toBe(0)
+    })
+
+    it('o não urgente de quem pede só vale onde a definição o deixa: nos outros tipos é recusado, tenha o valor que tiver', async () => {
+      const pedidoId = randomUUID()
+      const motivos = await Promise.all([
+        // @ts-expect-error o titular.montar-arquivo fixa o não urgente em `false`
+        recusa(naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId }, { naoUrgente: true }))),
+        // @ts-expect-error nem o mesmo valor da definição se escolhe
+        recusa(naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId }, { naoUrgente: false }))),
+        // @ts-expect-error o titular.eliminar fixa o não urgente em `true`
+        recusa(naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirarUmaVez(tx, TIPO_ELIMINAR_TITULAR, { pedidoId }, 'chave', { naoUrgente: false }))),
+      ])
+      expect(motivos.map(({ motivo }) => motivo)).toEqual(Array(3).fill(MotivoDaRecusaDoJob.NAO_URGENTE_FIXO))
+      expect(await contar()).toBe(0)
+    })
+
+    it('o tipo que deixa o não urgente com quem pede o exige: sem as opções, ou sem o campo nelas, é recusado', async () => {
+      const dados = { cpuMs: 0, falhar: false }
+      const motivos = await Promise.all([
+        // @ts-expect-error o sintético exige as opções
+        recusa(naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirar(tx, TIPO_JOB_SINTETICO, dados))),
+        // @ts-expect-error o sintético exige o não urgente nas opções
+        recusa(naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirar(tx, TIPO_JOB_SINTETICO, dados, { fila: 'lote' }))),
+      ])
+      expect(motivos.map(({ motivo }) => motivo)).toEqual(Array(2).fill(MotivoDaRecusaDoJob.NAO_URGENTE_AUSENTE))
+      expect(await contar()).toBe(0)
+    })
+
+    it('chave a mais no payload é recusada antes de gravar', async () => {
+      // @ts-expect-error o payload do titular.montar-arquivo é só o pedidoId
+      const comSobra = naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId: randomUUID(), tema: 'x' }))
+      expect((await recusa(comSobra)).motivo).toBe(MotivoDaRecusaDoJob.DADOS_INVALIDOS)
+      expect(await contar()).toBe(0)
+    })
+
+    it('campo obrigatório ausente é recusado antes de gravar', async () => {
+      // @ts-expect-error falta o pedidoId
+      const semPedido = naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, {}))
+      expect((await recusa(semPedido)).motivo).toBe(MotivoDaRecusaDoJob.DADOS_INVALIDOS)
+      expect(await contar()).toBe(0)
+    })
+
+    it('o pedidoId que não é um uuid é recusado antes de gravar', async () => {
+      const naoUuid = naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId: 'abc' }))
+      expect((await recusa(naoUuid)).motivo).toBe(MotivoDaRecusaDoJob.DADOS_INVALIDOS)
+      expect(await contar()).toBe(0)
+    })
+
+    it('a recusa chega como promessa rejeitada, e não como exceção na chamada: quem engole com `.catch` a engole de verdade', async () => {
+      await naEscola(ESCOLA_A, async (tx) => {
+        const chamadas = [
+          () => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId: 'abc' }),
+          () => bancada.enfileirador.enfileirarUmaVez(tx, TIPO_ELIMINAR_TITULAR, { pedidoId: 'abc' }, 'eliminacao:abc'),
+        ]
+        for (const chamar of chamadas) {
+          let pedido: Promise<unknown> | undefined
+          expect(() => {
+            pedido = chamar()
+          }).not.toThrow()
+          expect((await recusa(pedido ?? Promise.resolve())).motivo).toBe(MotivoDaRecusaDoJob.DADOS_INVALIDOS)
+          await expect(chamar().catch(() => undefined)).resolves.toBeUndefined()
+        }
+      })
+      expect(await contar()).toBe(0)
+    })
+
+    it('o escolaId de outra escola no payload é recusado: a escola do job é só a do contexto', async () => {
+      // @ts-expect-error o payload não tem escolaId
+      const deOutraEscola = naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId: randomUUID(), escolaId: ESCOLA_B }))
+      expect((await recusa(deOutraEscola)).motivo).toBe(MotivoDaRecusaDoJob.DADOS_INVALIDOS)
+      expect(await contar()).toBe(0)
+    })
+
+    it('a recusa não leva o valor nem as issues: nem na mensagem, nem no que o log escreve do erro', async () => {
+      const sentinela = `sentinela-${randomUUID()}`
+      const erro = await recusa(naEscola(ESCOLA_A, (tx) => bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId: randomUUID(), [sentinela]: sentinela })))
+      const dito = [erro.message, String(erro), JSON.stringify(erro), JSON.stringify(resumirErro(erro)), erro.stack?.split('\n')[0] ?? '']
+      for (const texto of dito) expect(texto).not.toContain(sentinela)
+      expect(Object.keys(erro).sort()).toEqual(['motivo', 'name', 'tipo'])
+      expect(erro.cause).toBeUndefined()
+      expect(erro.message).toBe('pedido de job recusado: titular.montar-arquivo (DADOS_INVALIDOS)')
+    })
+
+    it('tipo e opções que a definição aceita compilam; o que ela não descreve não compila', () => {
+      // O que não compila não chega ao banco: o compilador é o teste, e cada linha abaixo precisa do seu `@ts-expect-error`.
+      const naoChamada = (tx: TransacaoBanco) => [
+        // @ts-expect-error tipo que não está em DEFINICOES_DE_JOB
+        bancada.enfileirador.enfileirar(tx, 'tipo.inexistente', {}),
+        // @ts-expect-error os dados são os de outro tipo
+        bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { cpuMs: 0, falhar: false }),
+        // @ts-expect-error a fila fora das filas do tipo
+        bancada.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId: 'x' }, { fila: 'interativa' }),
+      ]
+      expect(naoChamada).toBeTypeOf('function')
+    })
+
+    it('job de escola sem escola no contexto, e job de sistema vindo de escola ou de rota anônima, são recusados antes de gravar', async () => {
+      const tentarDeEscola = (contexto: ContextoDaRequisicao) =>
+        executarNoContexto(contexto, () => bancada.banco.transaction((tx) => bancada.enfileirador.enfileirar(tx, TIPO_JOB_SINTETICO, { cpuMs: 0, falhar: false }, { fila: 'lote', naoUrgente: true })))
+      const tentarDoSistema = (contexto: ContextoDaRequisicao) =>
+        executarNoContexto(contexto, () => bancada.banco.transaction((tx) => bancada.enfileirador.enfileirar(tx, TIPO_EXPURGAR_JOBS, {})))
+
+      await expect(tentarDeEscola({ requisicaoId: randomUUID() })).rejects.toThrow('job de escola sem escola no contexto')
+      await expect(tentarDoSistema({ requisicaoId: randomUUID(), escolaId: ESCOLA_A })).rejects.toThrow('job de sistema só nasce de rotina do sistema')
+      await expect(tentarDoSistema({ requisicaoId: randomUUID() })).rejects.toThrow('job de sistema só nasce de rotina do sistema')
       expect(await contar()).toBe(0)
 
-      const doSistema = await tentar({ requisicaoId: randomUUID(), rotinaDoSistema: true }, 'sistema.expurgar-jobs')
+      const doSistema = await tentarDoSistema({ requisicaoId: randomUUID(), rotinaDoSistema: true })
       expect(await bancada.estado(doSistema)).toEqual({ estado: 'aguardando', escolaId: null, codigoFalha: null })
     })
   })

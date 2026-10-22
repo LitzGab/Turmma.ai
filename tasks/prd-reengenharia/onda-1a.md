@@ -42,6 +42,12 @@ também (hoje, `SuspensoesDaEscolaRepository`, `apps/api/src/assistente/time.ser
 - **7.0:** os 9 com cópia local de `contextoAtual()?.escolaId` (api: `escola-sessao`, `convite`, `criacao-de-sessao`,
   `escrita-de-sessao`, `redefinicao-de-mfa`, `registro-de-acesso`; nucleo: `configuracao-operacional`, `efeito-sintetico`,
   `uso`) passam a `exigirEscolaDoContexto`.
+  **Duas escolhas da 7.0, declaradas em `7_task.md`:** (i) a caracterização (7.1) entra no commit da tarefa, e não num commit à
+  parte, pelo mesmo motivo da 14.0 (o hook pede portão e rodada a todo commit com código de `apps/` ou `packages/`): os casos
+  foram escritos e rodados verdes contra a cópia local, antes de qualquer repository mudar; (ii) a mutação do `ConviteRepository`
+  é a do `revogar`, do `revogarParaRefazer`, do `revogado` e do `nomeDaEscola`, e não a do `ativarPorConvite`: lá
+  `eq(convite.escolaId, …)` (no `exists`) e `eq(usuario.escolaId, …)` (no `update`) barram o mesmo caso (o convite de A no contexto
+  de B), então tirar uma só deixa a outra de pé e o teste não fica vermelho.
 - **8.0:** `ia/consumo`, `ia/orcamento` e `ia/suspensao`, hoje com `escolaId` por argumento.
 - **Lista:** cinco, `auditoria`, `insercao-de-auditoria` e `job-registro` (escola nula em `sistema.*`), `operacao/operador`
   (a equipe não tem escola) e `nucleo/identidade/sessao` (cria o contexto): 9 + 3 + 5 = 17. Soma-se o `ia/execucao`, que já
@@ -60,6 +66,24 @@ provas (é a lista, arquivo por arquivo); 11 com `@SemEscopo` em algum método; 
 
 **A IA pelo contexto (8.0).** `SuspensaoDeFuncao.estaSuspensa`, `ConsultaDeOrcamento` e `ConsumoDeIa` perdem `escolaId`
 e usam `exigirEscolaDoContexto()`; o `ProvedorDeIa` mantém a conferência de `pedido.escolaId` (`provedor.ts:101`).
+
+**Escolhas da 8.0, declaradas em `8_task.md`:**
+- **O orçamento lê a escola antes do retorno antecipado** (`OrcamentoRepository.consultar`): a função que não é o Tutor
+  também lança sem escola no contexto, em vez de receber o `permitido: true` sem olhar para ninguém.
+- **Sem escola no contexto, quem recusa é a porta da suspensão** (`exigirFuncaoAtiva` traduz o erro em `IA_INDISPONIVEL`,
+  antes do adaptador, do orçamento e do consumo): `provedor.ts:101` continua só comparando quando há contexto, e não ganhou
+  um segundo caminho de recusa. Os fakes em memória (`SuspensoesEmMemoria`, `ConsumoEmMemoria`, `OrcamentoEmMemoria`) leem o
+  contexto do mesmo jeito; `suspender` e `retomar` seguem recebendo a escola, porque preparam o cenário e não consultam.
+- **Teste de unidade que roda `ProvedorDeIa` sem tratar de isolamento** (`ia/tarefas/*.test.ts`,
+  `adaptador-openai-compat.test.ts`, o `montar` do `provedor.test.ts`) roda no contexto da escola do pedido
+  (`ia/__fixtures__/contexto-da-escola.ts`, que respeita o contexto que já traz escola). A medida do risco à vida
+  (`tools/ia/medir-risco-a-vida.ts`) também: recebe `executarNoContexto` do núcleo, no `dist`.
+- **"Em A, a turma de B não infla o pacote"** monta o estado com a FK desligada na conexão do teste (`session_replication_role
+  = replica`, precedente em `arquivo-do-titular.int.test.ts`), porque a FK composta de `mensagem_tutor` impede a pergunta da
+  escola A de apontar para a turma de B; a turma de B tem os dois alunos de B, e não 30: basta mais de um para o pacote
+  subir. Sem esse estado a cláusula `eq(vinculo.escolaId, …)` seria equivalente à de `turma_id`, e não provável por teste.
+- **A concorrência** do teste fecha com as duas escolas **recusadas** (freio de 1) e a suspensão só em B: na escola errada
+  a consulta seria permitida, então a escola herdada do primeiro a chegar aparece nos dois sentidos.
 
 **Tabela só no repository (9.0).** `guardas/tabela-so-no-repository` (`tools/guardas/index.mjs`) barra importar de
 `@educa/nucleo` um nome de `tools/guardas/tabelas-do-nucleo.mjs` fora de `*.repository.ts`, teste e

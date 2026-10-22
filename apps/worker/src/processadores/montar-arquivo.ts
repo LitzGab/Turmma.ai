@@ -8,13 +8,10 @@ import {
   type LoggerBase,
   type Relogio,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, TIPO_DO_JOB_MONTAR_ARQUIVO, TIPOS_DE_PEDIDO_COM_ARQUIVO, type VersaoDoArquivo } from '@educa/shared'
+import { CodigoDeFalhaDeJob, TIPOS_DE_PEDIDO_COM_ARQUIVO, type VersaoDoArquivo } from '@educa/shared'
 import { z } from 'zod'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
-
-/** O job que monta o arquivo do titular (F3, tarefa 13.0): `normal`, só com o id do pedido (regra 20, itens 9 e 12). */
-export const TIPO_MONTAR_ARQUIVO = TIPO_DO_JOB_MONTAR_ARQUIVO
 
 /** O job leva **só o id do pedido**: o nome e todo o resto são lidos aqui dentro, na escola do job (Tech Spec do F3, seção 5). */
 const esquemaDoJob = z.strictObject({ pedidoId: z.uuid() })

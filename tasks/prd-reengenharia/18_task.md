@@ -25,10 +25,10 @@ saem da definição.
 
 ## Subtarefas
 
-- [ ] 18.1 — Caracterização, num commit antes, dos 8 tipos
-- [ ] 18.2 — `DEFINICOES_DE_JOB` em `packages/shared/src/sistema/definicoes-de-job.ts`, com as constantes `TIPO_*`; o sintético `.strict()`
-- [ ] 18.3 — `enfileirar` e `enfileirarUmaVez` validam antes de gravar; os chamadores migram
-- [ ] 18.4 — Testes: os da tabela
+- [x] 18.1 — Caracterização, num commit antes, dos 8 tipos
+- [x] 18.2 — `DEFINICOES_DE_JOB` em `packages/shared/src/sistema/definicoes-de-job.ts`, com as constantes `TIPO_*`; o sintético `.strict()`
+- [x] 18.3 — `enfileirar` e `enfileirarUmaVez` validam antes de gravar; os chamadores migram
+- [x] 18.4 — Testes: os da tabela
 
 ## Arquivos previstos
 
@@ -92,6 +92,13 @@ reprovações na A1). Sem nenhuma, escreva "nenhuma".
 
 | Divergência | Motivo | Onde está na spec (`techspec.md` §, id do `cenarios.md`, documento da seção 11) |
 |---|---|---|
+| A caracterização dos 8 tipos (18.1) entra no commit da tarefa, e não num commit antes. | O hook só aceita commit com código, e um commit só de teste pediria portão e revisão duas vezes (mesma regra da 14.0 e da 51.0). O teste foi escrito e passou contra o código antigo antes da migração. | `onda-1b.md` §2 "T4 — Registro de jobs", "Como a 18.0 ficou" |
+| `BancadaDeFila.enfileirar` (`fila-de-teste.ts`) grava pelo repository, sem passar pela definição. | Os testes do despachante e do worker enfileiram tipos de teste e `dados.rotulo`, que a definição recusaria. A 19.0 troca isso pela definição injetável. | `onda-1b.md` §2 T4, "19.0, no worker" (a definição é injetável) e "Como a 18.0 ficou" |
+| `definirJob` confere em execução que o esquema é estrito, além do tipo. | No zod 4, `z.object()` e `z.strictObject()` têm o mesmo tipo: só o esquema "frouxo" (`looseObject`, `.catchall()`) é barrado na compilação. | `onda-1b.md` §2 T4, "Como a 18.0 ficou"; `techspec.md` §6 |
+| Os casos de "não compila" são `@ts-expect-error` provados pelo `tsc` do portão, sem bloco de mutação. | O vitest não checa tipo, e a mutação só roda o vitest; o `tsc` falha se o `@ts-expect-error` não tiver erro a esconder. | `onda-1b.md` §2 T4, "Como a 18.0 ficou" |
+| `PedidoDeJobRecusado` não é `ErroDeDominio`: lança com motivo fixo, sem `issues` nem valor, e responde 500. | É defeito de quem enfileirou (código), e não escolha do usuário; mensagem sem dado cumpre a regra 20, item 9. | `techspec.md` §7; `onda-1b.md` §2 T4, "Como a 18.0 ficou" |
+| `prazoMs` e retentativa de cada tipo são os de hoje, provisórios. | O `prazoMs` só é aplicado na onda 3 (43.0, que o confere); a retentativa é a de `OPCOES_DE_JOB_PUBLICADO` até a 19.0 ligar uma à outra (o teste de `tools/guardas` as mantém iguais). | `onda-1b.md` §2 T4, "O `prazoMs`" e "Como a 18.0 ficou" |
+| `enfileirarUmaVez` ficou `(tx, tipo, dados, chave, ...opcoes)`, e o `PedidoDeJob` saiu do nucleo. | O pedido virou os três argumentos tipados pelo registro; os erros de escopo do repository seguem como estavam (mesmo texto). | `onda-1b.md` §2 T4, "18.0, ao enfileirar" (`enfileirarUmaVez` idem) |
 
 ## Mutações
 
@@ -102,10 +109,205 @@ O portão da tarefa aplica cada bloco, roda o teste citado e exige vermelho. Lin
 `teste:` (só em teste de e2e; sem ela o caso roda no `chromebook`). Sem cláusula nova, escreva "nenhuma".
 
 ```mutacao
-arquivo: [caminho do arquivo que tem a cláusula]
-teste: [caminho do teste] › [nome do caso]
-  [linha de contexto, que fica]
-- [a cláusula que sai]
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/api/test/jobs-sinteticos.int.test.ts › o corpo escolhe a fila e o não urgente
+- const fila = opcoes?.fila ?? definicao.filas[0]
++ const fila = definicao.filas[0]
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/worker/test/execucao.int.test.ts › a fila vem do pedido só dentro das filas
+  const fila = opcoes?.fila ?? definicao.filas[0]
+- if (!definicao.filas.includes(fila)) throw new PedidoDeJobRecusado(tipo, MotivoDaRecusaDoJob.FILA_FORA_DA_DEFINICAO)
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/worker/test/execucao.int.test.ts › chave a mais no payload
+  const lidos = definicao.dados.safeParse(dados)
+- if (!lidos.success) throw new PedidoDeJobRecusado(tipo, MotivoDaRecusaDoJob.DADOS_INVALIDOS)
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/worker/test/execucao.int.test.ts › o escolaId de outra escola no payload
+- const lidos = definicao.dados.safeParse(dados)
++ const lidos = definicao.dados.strip().safeParse(dados)
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/worker/test/execucao.int.test.ts › a recusa não leva o valor
+  const lidos = definicao.dados.safeParse(dados)
+- if (!lidos.success) throw new PedidoDeJobRecusado(tipo, MotivoDaRecusaDoJob.DADOS_INVALIDOS)
++ if (!lidos.success) throw new Error(lidos.error.message)
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/worker/test/execucao.int.test.ts › a recusa não leva o valor
+  const lidos = definicao.dados.safeParse(dados)
+- if (!lidos.success) throw new PedidoDeJobRecusado(tipo, MotivoDaRecusaDoJob.DADOS_INVALIDOS)
++ if (!lidos.success) throw Object.assign(new PedidoDeJobRecusado(tipo, MotivoDaRecusaDoJob.DADOS_INVALIDOS), { cause: lidos.error })
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/worker/test/execucao.int.test.ts › a recusa chega como promessa rejeitada
+- async enfileirar<Tipo extends TipoDeJob>(tx: TransacaoBanco, tipo: Tipo, dados: DadosDoJob<Tipo>, ...opcoes: ArgumentosDeOpcoes<Tipo>): Promise<string> {
++ enfileirar<Tipo extends TipoDeJob>(tx: TransacaoBanco, tipo: Tipo, dados: DadosDoJob<Tipo>, ...opcoes: ArgumentosDeOpcoes<Tipo>): Promise<string> {
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/worker/test/execucao.int.test.ts › a recusa chega como promessa rejeitada
+- async enfileirarUmaVez<Tipo extends TipoDeJob>(
++ enfileirarUmaVez<Tipo extends TipoDeJob>(
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/worker/test/execucao.int.test.ts › o não urgente de quem pede só vale onde
+  if (definicao.naoUrgente !== 'do-pedido') {
+- if (opcoes?.naoUrgente !== undefined) throw new PedidoDeJobRecusado(tipo, MotivoDaRecusaDoJob.NAO_URGENTE_FIXO)
+  return definicao.naoUrgente
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/worker/test/execucao.int.test.ts › o tipo que deixa o não urgente com quem pede o exige
+- if (opcoes?.naoUrgente === undefined) throw new PedidoDeJobRecusado(tipo, MotivoDaRecusaDoJob.NAO_URGENTE_AUSENTE)
+  return opcoes.naoUrgente
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/enfileirador.ts
+teste: apps/worker/test/eliminar-titular.int.test.ts › o payload inválido de
+- return this.repositorio.inserirUmaVez(tx, linhaDoPedido(tipo, dados, opcoes[0]), chaveIdempotencia)
++ return this.repositorio.inserirUmaVez(tx, { tipo, fila: 'lote', prioridade: 3, dados, naoUrgente: true }, chaveIdempotencia)
+```
+
+```mutacao
+arquivo: packages/shared/src/sistema/definicoes-de-job.ts
+teste: packages/shared/src/sistema/definicoes-de-job.test.ts › recusa, ao carregar
+- if (!esquemaRecusaChaveAMais(definicao.dados)) throw new TypeError('os dados de um job são um objeto estrito: use z.strictObject ou .strict()')
+  return definicao
+```
+
+```mutacao
+arquivo: packages/shared/src/sistema/definicoes-de-job.ts
+teste: packages/shared/src/sistema/definicoes-de-job.test.ts › recusa, ao carregar
+  function esquemaRecusaChaveAMais(esquema: EsquemaDosDadosDoJob): boolean {
+- return esquema._zod.def.catchall?._zod.def.type === 'never'
++ return true
+```
+
+```mutacao
+arquivo: packages/shared/src/sistema/jobs-sinteticos.ts
+teste: packages/shared/src/sistema/jobs-sinteticos.test.ts › recusam chave a mais
+    efeito: z.boolean().optional(),
+  })
+- .strict()
+```
+
+```mutacao
+arquivo: packages/shared/src/sistema/definicoes-de-job.ts
+teste: apps/worker/test/execucao.int.test.ts › caracterização
+  [TIPO_MONTAR_ARQUIVO]: definirJob({
+- filas: ['normal'],
++ filas: ['lote'],
+```
+
+```mutacao
+arquivo: packages/shared/src/sistema/definicoes-de-job.ts
+teste: packages/shared/src/sistema/definicoes-de-job.test.ts › o escopo é
+  [TIPO_EXPURGAR_ESCOLA]: definirJob({
+  filas: ['lote'],
+- escopo: 'escola',
++ escopo: 'sistema',
+```
+
+```mutacao
+arquivo: packages/shared/src/sistema/definicoes-de-job.ts
+teste: tools/guardas/definicoes-de-job.test.ts › toda fila de toda definição
+  [TIPO_JOB_SINTETICO]: definirJob({
+- filas: ['interativa', 'normal', 'lote'],
++ filas: ['interativa', 'normal', 'lote', 'urgente'],
+```
+
+```mutacao
+arquivo: packages/shared/src/sistema/definicoes-de-job.ts
+teste: apps/worker/test/execucao.int.test.ts › campo obrigatório ausente
+- const esquemaDoPedido = z.strictObject({ pedidoId: z.uuid() })
++ const esquemaDoPedido = z.strictObject({ pedidoId: z.uuid().optional() })
+```
+
+```mutacao
+arquivo: packages/shared/src/sistema/definicoes-de-job.ts
+teste: apps/worker/test/execucao.int.test.ts › o pedidoId que não é um uuid
+- const esquemaDoPedido = z.strictObject({ pedidoId: z.uuid() })
++ const esquemaDoPedido = z.strictObject({ pedidoId: z.string() })
+```
+
+```mutacao
+arquivo: packages/shared/src/sistema/definicoes-de-job.ts
+teste: tools/guardas/definicoes-de-job.test.ts › nenhum esquema do registro
+- const semDados = z.strictObject({})
++ const semDados = z.strictObject({ nomeDoAluno: z.string().optional() })
+```
+
+```mutacao
+arquivo: packages/shared/src/sistema/definicoes-de-job.ts
+teste: tools/guardas/definicoes-de-job.test.ts › a retentativa de todo tipo
+- const RETENTATIVA_DE_HOJE: RetentativaDeJob = { tentativas: 5, recuoMs: 2_000, jitter: 0.5 }
++ const RETENTATIVA_DE_HOJE: RetentativaDeJob = { tentativas: 3, recuoMs: 2_000, jitter: 0.5 }
+```
+
+```mutacao
+arquivo: apps/worker/src/processadores/expurgar-jobs.ts
+teste: tools/guardas/definicoes-de-job.test.ts › o worker não declara constante
+  import type { Processador } from '../executor.js'
+- import { FalhaDeJob } from '../falha-de-job.js'
++ import { FalhaDeJob } from '../falha-de-job.js'
++ export const TIPO_EXPURGAR_JOBS = 'sistema.expurgar-jobs'
+```
+
+```mutacao
+arquivo: apps/api/src/privacidade/privacidade.service.ts
+teste: apps/api/test/pedido-titular.int.test.ts › o job que a definição recusa desfaz a transação
+- if (geraArquivo) await this.dependencias.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId: registrado.id })
++ if (geraArquivo) await this.dependencias.enfileirador.enfileirar(tx, TIPO_MONTAR_ARQUIVO, { pedidoId: registrado.id }).catch(() => undefined)
+```
+
+```mutacao
+arquivo: apps/api/src/sistema/jobs-sinteticos.service.ts
+teste: apps/api/test/jobs-sinteticos.int.test.ts › o corpo escolhe a fila e o não urgente
+- { fila: pedido.fila, naoUrgente: pedido.naoUrgente }
++ { fila: pedido.fila, naoUrgente: false }
+```
+
+```mutacao
+arquivo: apps/worker/src/agendamentos.ts
+teste: apps/worker/test/uso.int.test.ts › o disparo grava o job da rotina em job_registro
+  const agendamento = agendamentos.find(({ tipo }) => tipo === job.name)
+- if (agendamento === undefined) return Promise.reject(new UnrecoverableError('agendamento desconhecido'))
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/job-registro.repository.ts
+teste: apps/worker/test/execucao.int.test.ts › job de escola sem escola no contexto
+  const doSistema = linha.tipo.startsWith(PREFIXO_TIPO_SISTEMA)
+- if (!doSistema && contexto?.escolaId === undefined) throw new Error('job de escola sem escola no contexto')
+```
+
+```mutacao
+arquivo: packages/nucleo/src/fila/job-registro.repository.ts
+teste: apps/worker/test/expurgo-da-escola.int.test.ts › a mesma chave ao mesmo tempo
+- .onConflictDoNothing({
+- target: [jobRegistro.escolaId, jobRegistro.tipo, jobRegistro.chaveIdempotencia],
+- where: sql`chave_idempotencia is not null and estado not in ('concluido', 'falhou')`,
+- })
 ```
 
 ## Recomendações sem aplicar
@@ -117,9 +319,39 @@ não promessa. "Anularia as aprovações" não é motivo (`/executar-task`, pass
 
 | Revisor e rodada | Recomendação | Destino ou motivo |
 |---|---|---|
+| privacy-guardian (1ª) | `chavesPessoaisDe` olha só o primeiro nível (`esquema.shape`); descer recursivamente quando um tipo trouxer objeto ou array de objetos | `TODO.md`: linha escrita no commit da tarefa, para a tarefa da onda 3 que trouxer o primeiro payload aninhado (toca `tools/guardas/definicoes-de-job.test.ts`) |
+| privacy-guardian (1ª) | `BancadaDeFila.enfileirar` grava pelo repository sem a definição; conferir na 19.0 que nada fora de `test/` usa `JobRegistroRepository.inserir` direto | `19_task.md`, subtarefa 19.3 (definição injetável em `fila-de-teste.ts`); a conferência do uso direto vai com ela |
+| privacy-guardian (1ª) | Teste HTTP de que o corpo do 500 de `PedidoDeJobRecusado` não traz `message` nem `stack` | `TODO.md`: linha escrita no commit da tarefa (o filtro geral de erro já existia e esta tarefa não o altera) |
+| tenancy-guardian (1ª) | `contar()` do `describe('enfileirar')` filtrar por `escola_id` | Recusada: a linha de job `sistema.*` não tem `escola_id`, e o caso `sistema.*` recusado (`execucao.int.test.ts`, "job de escola sem escola no contexto, e job de sistema…") precisa ver a tabela inteira; o `limparRegistro` do `beforeEach` isola o arquivo |
+| tenancy-guardian (1ª) | O campo `escopo` da definição não é lido em execução; a repository decide pelo prefixo `sistema.` | `19_task.md`: a linha "Linha `sistema.*` com `escola_id` (por SQL) não roda" confere o escopo da definição no executor |
+| revisor-geral (1ª) | Os dois `esquemaDoJob` do worker (`montar-arquivo.ts`, `eliminar-titular.ts`) repetem `esquemaDoPedido`; a 19.0 deve apagá-los | `19_task.md`, subtarefa 19.2 (o executor valida pela definição) |
+| revisor-geral (1ª) | `PedidoDaBancada.tipo?: string` aceita qualquer texto; voltar a tipar com a definição injetável | `19_task.md`, subtarefa 19.3 |
+| test-engineer (1ª) | Caso que distingue gravar `lidos.data` do payload original (hoje nenhum esquema tem `default` nem `transform`) | `TODO.md`: linha escrita no commit da tarefa, para quando o primeiro esquema com `default` ou `transform` entrar |
+| test-engineer (1ª) | A mutação do `agendamentos.ts` fica vermelha por `TypeError` ao desestruturar, e não pela mensagem `'agendamento desconhecido'` | Recusada: o bloco exige vermelho e fica vermelho; o próprio revisor diz que não muda o veredito |
+| tenancy-guardian (2ª) | `contar()` do `describe('enfileirar')` filtrar por `escola_id` se a tabela passar a ser compartilhada | Recusada, como na 1ª rodada: a linha `sistema.*` não tem `escola_id`, e o `limparRegistro` do `beforeEach` isola o arquivo |
+| revisor-geral (2ª) | No caso novo de `execucao.int.test.ts`, trocar `pedido ?? Promise.resolve()` por leitura direta | Recusada: o próprio revisor diz que, se a chamada lançar na hora, quem falha é o `expect(...).not.toThrow()`, com a falha certa |
+| test-engineer (2ª) | Comentário de uma linha dizendo que `chamar()` roda duas vezes na mesma transação | Recusada: hoje a recusa vem antes de qualquer consulta ao banco; quem passar a validar com leitura do banco reescreve o caso |
+| revisor-geral (2ª) e test-engineer (2ª) | As três linhas novas do `TODO.md` saíram sem a caixa `- [ ]` | Aplicada: a caixa `- [ ]` está nas três linhas, no commit da tarefa |
 
 <!-- A seção "Revisões" é criada no fim deste arquivo pelo hook tools/processo/revisoes.ts,
      quando o primeiro revisor termina, e o que os revisores exigem vai para
      achados/<este arquivo>, resumido em achados/indice.md. Não escreva nenhum dos três à mão
      e não acrescente seção depois de "Revisões". -->
 
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-10-22 13:53:35 | 2026-10-22 13:54:16 | `privacy-guardian` | 1 | APROVADO | aa2678c734d7c8f30 |
+| 2026-10-22 13:53:31 | 2026-10-22 13:54:28 | `tenancy-guardian` | 1 | APROVADO | a5a37c2bdd9fd8fea |
+| 2026-10-22 13:53:44 | 2026-10-22 13:54:51 | `revisor-geral` | 1 | APROVADO | a4a3489c7c0eae36e |
+| 2026-10-22 13:53:40 | 2026-10-22 13:55:59 | `test-engineer` | 1 | APROVADO | a32e732ff4bb89ded |
+| 2026-10-22 14:06:33 | 2026-10-22 14:06:51 | `tenancy-guardian` | 2 | APROVADO | a26e8a194f302d953 |
+| 2026-10-22 14:06:41 | 2026-10-22 14:07:01 | `privacy-guardian` | 2 | APROVADO | a2950c0711a1ecb16 |
+| 2026-10-22 14:06:57 | 2026-10-22 14:07:18 | `revisor-geral` | 2 | APROVADO | a256f9516959db2fb |
+| 2026-10-22 14:06:50 | 2026-10-22 14:07:32 | `test-engineer` | 2 | APROVADO | aafbf1b6c23faa987 |

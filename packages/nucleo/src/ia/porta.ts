@@ -10,7 +10,8 @@ export type OrigemDaSaida = OrigemDaSaidaDeIa
 
 /**
  * Uma chamada de IA. A tarefa já declara a função e o perfil (regra 30, item 2); quem chama diz de que escola é o
- * gasto e, no Tutor, de que aluno. Não há campo para modelo nem para provedor: isso é configuração.
+ * gasto (que o provedor confere com a do contexto: as portas de suspensão, orçamento e consumo leem só a do contexto)
+ * e, no Tutor, de que aluno. Não há campo para modelo nem para provedor: isso é configuração.
  */
 export interface PedidoDeGeracao<Entrada, Saida> {
   readonly tarefa: DefinicaoDeTarefa<Entrada, Saida>

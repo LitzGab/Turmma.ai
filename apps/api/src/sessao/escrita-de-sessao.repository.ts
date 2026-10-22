@@ -1,12 +1,5 @@
-import { contextoAtual, sessao, type Banco, type MotivoDeEncerramento, type TransacaoBanco } from '@educa/nucleo'
+import { exigirEscolaDoContexto, sessao, type Banco, type MotivoDeEncerramento, type TransacaoBanco } from '@educa/nucleo'
 import { and, eq, isNull, sql } from 'drizzle-orm'
-
-/** A escola do contexto, ou falha fechada: nenhuma sessão muda sem escola (regra 10, item 3). */
-function escolaDoContexto(): string {
-  const escolaId = contextoAtual()?.escolaId
-  if (escolaId === undefined) throw new Error('alteração de sessão sem escola no contexto')
-  return escolaId
-}
 
 /**
  * As escritas na sessão depois de a escola ser conhecida: rotação do cookie, encerramento, e o último uso. Toda
@@ -32,7 +25,7 @@ export class EscritaDeSessaoRepository {
         atualApresentado: false,
         rotacionadoEm: sql`now()`,
       })
-      .where(and(eq(sessao.escolaId, escolaDoContexto()), eq(sessao.id, sessaoId)))
+      .where(and(eq(sessao.escolaId, exigirEscolaDoContexto()), eq(sessao.id, sessaoId)))
       .returning({ rotacionadoEm: sessao.rotacionadoEm })
     return linha?.rotacionadoEm ?? undefined
   }
@@ -42,7 +35,7 @@ export class EscritaDeSessaoRepository {
     const encerradas = await this.banco
       .update(sessao)
       .set({ encerradaEm: sql`now()`, motivo })
-      .where(and(eq(sessao.escolaId, escolaDoContexto()), eq(sessao.familia, familia), isNull(sessao.encerradaEm)))
+      .where(and(eq(sessao.escolaId, exigirEscolaDoContexto()), eq(sessao.familia, familia), isNull(sessao.encerradaEm)))
       .returning({ id: sessao.id })
     return encerradas.length
   }
@@ -52,7 +45,7 @@ export class EscritaDeSessaoRepository {
     const encerradas = await this.banco
       .update(sessao)
       .set({ encerradaEm: sql`now()`, motivo })
-      .where(and(eq(sessao.escolaId, escolaDoContexto()), eq(sessao.id, sessaoId), isNull(sessao.encerradaEm)))
+      .where(and(eq(sessao.escolaId, exigirEscolaDoContexto()), eq(sessao.id, sessaoId), isNull(sessao.encerradaEm)))
       .returning({ id: sessao.id })
     return encerradas.length > 0
   }
@@ -65,7 +58,7 @@ export class EscritaDeSessaoRepository {
     const movidas = await this.banco
       .update(sessao)
       .set({ ultimoUsoEm: sql`now()` })
-      .where(and(eq(sessao.escolaId, escolaDoContexto()), eq(sessao.id, sessaoId), isNull(sessao.encerradaEm)))
+      .where(and(eq(sessao.escolaId, exigirEscolaDoContexto()), eq(sessao.id, sessaoId), isNull(sessao.encerradaEm)))
       .returning({ id: sessao.id })
     return movidas.length > 0
   }

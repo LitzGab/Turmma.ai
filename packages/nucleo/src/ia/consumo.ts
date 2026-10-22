@@ -1,4 +1,5 @@
 import type { ChaveDeFuncao, EstadoDeConsumoDeIa, TarefaDeIa } from '@educa/shared'
+import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
 import { relogioDoSistema, type Relogio } from '../relogio.js'
 import { diaDeUso } from '../uso/dia-de-uso.js'
 import type { CodigoDeErroDeIa } from './erros.js'
@@ -13,9 +14,11 @@ import type { EnvioDaChamada, OrigemDaSaida } from './porta.js'
  * pessoa (`levaTextoLivreDePessoa`: o turno do Tutor e a conversa do professor com o Assistente) elas não vêm: o
  * registro da conversa é `mensagem_tutor` ou `mensagem_agente`, com o dono, o acesso restrito e a retenção de lá
  * (regra 20, item 14; regra 70, item 8), e `consumo_ia`, que a coordenação consulta, não vira uma cópia dela.
+ *
+ * **Não há `escolaId` aqui**: o registro fica na escola do contexto de quem gastou (`exigirEscolaDoContexto()`), e a
+ * porta não aceita outra (regra 10, item 3).
  */
 interface DadosDoConsumo {
-  readonly escolaId: string
   /** Só no Tutor. O id, nunca o nome. */
   readonly alunoId?: string
   readonly execucaoId?: string
@@ -41,13 +44,13 @@ interface DadosDoConsumo {
 /** Com `envioExterno`, o `provedorId` de quem recebeu o conteúdo; sem ele, nulo (`consumo_ia.provedor`). */
 export type ConsumoDeIa = DadosDoConsumo & EnvioDaChamada
 
-/** Porta do registro. A implementação em Postgres grava em `consumo_ia`, com o escopo da escola do próprio registro. */
+/** Porta do registro. A implementação em Postgres grava em `consumo_ia`, na escola do contexto. */
 export interface RegistroDeConsumo {
   registrar(consumo: ConsumoDeIa): Promise<void>
 }
 
+/** A escola consultada é a do contexto de quem pergunta, e não vem na consulta (regra 10, item 3). */
 export interface ConsultaDeOrcamento {
-  readonly escolaId: string
   readonly funcao: ChaveDeFuncao
   /** Presente no Tutor: além do teto da escola, vale o freio diário do aluno (D38). */
   readonly alunoId?: string
@@ -75,12 +78,15 @@ export interface OrcamentoDeIa {
   consultar(consulta: ConsultaDeOrcamento): Promise<DecisaoDoOrcamento>
 }
 
-/** Registro em memória, para teste e para a demonstração enquanto `consumo_ia` não está ligada. */
+/** O que o registro em memória guarda: o consumo e a escola do contexto em que ele foi registrado. */
+export type RegistroEmMemoria = ConsumoDeIa & { readonly escolaId: string }
+
+/** Registro em memória, para teste e para a demonstração enquanto `consumo_ia` não está ligada. Sem escola no contexto, lança. */
 export class ConsumoEmMemoria implements RegistroDeConsumo {
-  readonly registros: ConsumoDeIa[] = []
+  readonly registros: RegistroEmMemoria[] = []
 
   async registrar(consumo: ConsumoDeIa): Promise<void> {
-    this.registros.push(consumo)
+    this.registros.push({ ...consumo, escolaId: exigirEscolaDoContexto() })
   }
 }
 
@@ -91,7 +97,7 @@ export interface LimitesDoOrcamentoEmMemoria {
   readonly trocasPorAlunoNoDia?: number
 }
 
-/** Orçamento em memória, lido do registro em memória. O dia e o mês viram no fuso do uso, como o resto do sistema. */
+/** Orçamento em memória, lido do registro em memória, da escola do contexto. O dia e o mês viram no fuso do uso, como o resto do sistema. */
 export class OrcamentoEmMemoria implements OrcamentoDeIa {
   constructor(
     private readonly consumo: ConsumoEmMemoria,
@@ -100,9 +106,10 @@ export class OrcamentoEmMemoria implements OrcamentoDeIa {
   ) {}
 
   async consultar(consulta: ConsultaDeOrcamento): Promise<DecisaoDoOrcamento> {
+    const escolaId = exigirEscolaDoContexto()
     const hoje = diaDeUso(this.relogio.agora())
     const mes = hoje.slice(0, 7)
-    const daEscola = this.consumo.registros.filter((registro) => registro.escolaId === consulta.escolaId)
+    const daEscola = this.consumo.registros.filter((registro) => registro.escolaId === escolaId)
     if (this.limites.tokensPorEscolaNoMes !== undefined) {
       const gastos = daEscola
         .filter((registro) => diaDeUso(registro.em).startsWith(mes))
