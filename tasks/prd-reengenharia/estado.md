@@ -37,6 +37,11 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     **DIVERGÊNCIA (ordem) da correção:** gravar a base muda o hash que o `SELO.json` guarda (6 testes do `selo-do-ouro`
     vermelhos). **O `Arquiteto` gravou a base e o selo na spec** (`256fb62`, R58 em `cef19e6`); retomada enviada: restaurar
     o `MEDIDAS.json`, trazer a spec, a correção leva só o `ouro.test.ts` e o documento, portão, Mesa, commit; depois a 6.0
+    **DIVERGÊNCIA (portão) da 6.0, 1 de 5198:** `porta-unica.test.ts:56` casa o nome `insercao-de-auditoria` em qualquer
+    texto e acusa o `tools/guardas/escopo-dos-repositories.ts` da 6.0 (só dado, sem import). Par da l1 reiniciado;
+    pedida a **correção `porta-unica-so-import`** (estreitar à importação, mutação do 1_task preservada; guardião
+    privacy-guardian), com os arquivos da 6.0 fora da revisão. **Feita: `9dd7a6b` na l1** (privacy-guardian e
+    test-engineer aprovados). **`PEDIDO de retomada` da 6.0 enviado às 12:38**: portão da tarefa rodando, depois Mesa e commit
   - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
     **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
     os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
@@ -51,6 +56,8 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     `arquivo-do-titular-datas` fechou **sem commit**: não havia defeito (ver "O que decidi sem perguntar"). O quadro
     sugeria 53.0→l2 e 15.0→l3; inverti para manter a web na linha 3 (ajuste do Claude Code #2)
 - **Devo ainda:**
+  - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
+    `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
   - **95.0 (guia), entregue pelo Claude Code #2** em `/home/joaquimdp/Documentos/git/Educa.ia/.processo/reengenharia/guia/`
     (`guia-do-desenvolvedor.md`, `arquitetura.md` corrigido, `LEIA.md` com o que conferir). Quando o `Arquiteto` tiver
     folga: revisão do `revisor-geral` (pedida às ~11:30). **Publicar (commit) só depois das tarefas de pasta (33–36, 96,
@@ -149,6 +156,9 @@ critério de aceite.
 ## O que falhou
 
 ## O que decidi sem perguntar
+- 22/10, ~12:28 — DIVERGÊNCIA (portão) da 6.0 (l1): a regra do guarda da 1.0 (`porta-unica.test.ts:56`) casa a menção ao
+  nome, não a importação. Aceitei a proposta do Implementador (estreitar à importação) como correção `porta-unica-so-import`
+  na l1, e recusei a alternativa de quebrar o caminho em pedaços para a varredura não ver.
 - 22/10, ~12:25 — correção `arquivo-do-titular-datas` (l3): DIVERGÊNCIA (ordem) do Implementador 3. Não havia defeito:
   as datas não vencem (relógio injetado); o vermelho local vinha do despachante e do worker-interativo do compose
   `educa-teste-3`, de pé, consumindo o job do teste. Com eles parados, 38/38; a integração da esteira (39797493843,
