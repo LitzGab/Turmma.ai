@@ -27,19 +27,21 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **3.0**, grande, desde 07:47, parada na DIVERGÊNCIA (desenho) de
-    08:05. **Triagem do `Arquiteto` (09:45): detalhe que a spec não previu**, sem mudar desenho nem alvo, em
-    `onda-0.md` §2.3 (sem commit, vai no da 3.0) e `.processo/divergencia-3.0-resposta.md` (l1). `PEDIDO de retomada`
-    enviado ao Implementador. **~10:50, ESCALADA de Mesa** (revisor-geral e test-engineer 2 seguidas, conformidade a
-    2ª; itens 1 e 3 da r2 em sentidos opostos; `saidaQualitativa` 53/58, piso 0,90). Ordem `.processo/ordens/3_task-r2.md`
-    (l1), não enviada; o item 5 é do Arquiteto. `Arquiteto` reiniciado no l1 com o pedido de diagnóstico
-    (`.processo/ordens/diagnostico-3.md`). **Diagnóstico pronto**, substitui a r2 (a saída barrava por exclusão, não por
-    juízo; conferido numa cópia: 53/58, 0 legítimas barradas); item 5 feito no §2.3. `PEDIDO de retomada` enviado.
-    **11:09, BLOQUEIO de Mesa** (revisor-geral e test-engineer 3 seguidas, conformidade 2; llm-integrator aprovou). Pelo
-    recorte, o limite é do `Arquiteto` e a 3.0 (onda 0) não vai para a X6. Destravado registrado no `rodadas.md` (l1).
-    Diagnóstico pedido ao `Arquiteto` (na fila dele, no andar da spec, como prioridade): `…--l1/.processo/ordens/diagnostico-3b.md`.
-    **Diagnóstico 3b pronto** (cinco pontos estreitos + a lacuna medida no §2.3; a 4ª rodada avalia só isso).
-    `PEDIDO de retomada` enviado. **Espero o `RELATÓRIO` do Implementador**
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **6.0**, pequena (tenant), desde 11:27; prazo de 4 h 15:27. Avisado de
+    que o `ouro.test.ts` está vermelho na spec até a base da 3.0 (traz com `git merge spec/reengenharia` antes do portão)
+    **A base virou correção** (R57: o hook trata o `MEDIDAS.json` como código, e `ouro.test.ts:267`/`:273` precisam mudar):
+    pedi ao Implementador da l1 a **correção `ouro-base-qualitativa`** antes de seguir a 6.0 (ordem
+    `.processo/ordens/correcao-ouro-base-qualitativa.md`, copiada para l1; guardiões test-engineer e llm-integrator). O
+    commit segue com o da 6.0; **a esteira da spec fica vermelha nos 3 casos do `ouro.test.ts` até o encontro da linha 1**
+    **DIVERGÊNCIA (ordem) da correção:** gravar a base muda o hash que o `SELO.json` guarda (6 testes do `selo-do-ouro`
+    vermelhos). **O `Arquiteto` gravou a base e o selo na spec** (`256fb62`, R58 em `cef19e6`); retomada enviada: restaurar
+    o `MEDIDAS.json`, trazer a spec, a correção leva só o `ouro.test.ts` e o documento, portão, Mesa, commit; depois a 6.0
+  - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
+    **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
+    os 5 da 1ª resolvidos. O `Claude Code #2` corrigiu; **3ª rodada pedida ao `Arquiteto`**, só sobre os dois. A lista
+    "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
+  - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
+    aplicar" entraram na lacuna do §2.3 (`0366ce1`)
   - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **94.0**, grande, onda 0 (prazo 14:55, sem ir para a X6), desde 11:07
   - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **51.0**, grande, **linha da web** (depois 53.0, 36.0, 97.0), desde
     11:07; prazo de 4 h: 15:07
@@ -55,11 +57,9 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
   - **depois do commit da 94.0** (que depende da 93.0): pedir ao `Arquiteto` o **lote retido 2**, que mede as duas, antes
     da validação. A 26.0 agora depende da 94.0
   - ler o veredito da esteira de `975bad2` no próximo encontro (`b5b7d11` e `63aac92` verdes; `f794080` cancelada pelo push seguinte)
-  - ao fechar a 3.0: se ela não trouxer a base da `saidaQualitativa`, pedi-la ao `Arquiteto`; e pedir o lote retido
-    dos alvos da 3.0, como o da 2.0
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
-- **Base:** `spec/reengenharia` em `d2dea6b`. Vigia ligada
+- **Base:** `spec/reengenharia` em `cef19e6`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -85,6 +85,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 5.0 | `259ca64` | Sonnet | 2 (test-engineer, revisor-geral) | linha 3, pequena, 20:01–20:12 |
 | 2.0 | `66d8b95` | Sonnet | 4 (test-engineer 5) | ouro lido para escrever o padrão: divergência, opção A (lote retido), escalada com diagnóstico, bloqueio destravado pelo Joaquim; npm audit fora do ar ~8 h |
 | 93.0 | `c361eb8` | Sonnet | 3 (test-engineer 4) | linha 3, grande, 09:40–11:00; escalada (dose letal) com diagnóstico: volta ao HEAD, a 3ª piora fica declarada; absorveu a correção das pioras da l2 |
+| 3.0 | `1566521` | Sonnet | 4 | linha 1, grande, 07:47–11:25; divergência (triagem: detalhe), escalada, bloqueio destravado pelo recorte; saidaQualitativa 54/58, 0 legítimas barradas; lacuna declarada no §2.3 |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
@@ -135,6 +136,8 @@ critério de aceite.
 ## O que falhou
 
 ## O que decidi sem perguntar
+- 22/10 ~11:35 — a base da `saidaQualitativa` (correção) foi para a linha 1, antes da 6.0, com a árvore limpa: não havia
+  linha ociosa, e é a 6.0 que precisa dela primeiro. A spec fica vermelha até o encontro da 6.0.
 - 22/10 ~11:00 — soltei a linha 2 da correção absorvida editando o `.processo/linhas.json` (não há comando para
   abandonar uma linha; o Joaquim quer as três ocupadas). Retrospectiva: `linhas.ts abandonar <n>`.
 - 22/10 — a correção das três pioras, pedida na linha 2 porque o Arquiteto disse "sem decisão, já vale", ficou
