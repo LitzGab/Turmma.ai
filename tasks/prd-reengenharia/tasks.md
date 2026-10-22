@@ -246,10 +246,10 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 
 ### O guia do desenvolvedor
 
-- [ ] **95.0 — O dev que chega acha cada coisa pelo guia do desenvolvedor (Claude Code #2)**
-  - [ ] 95.1 O Claude Code #2 escreve `docs/guia-do-desenvolvedor.md` e a correção de `docs/arquitetura.md` e entrega em `.processo/reengenharia/guia/` (no térreo) até ~15h de 22/10
-  - [ ] 95.2 O Arquiteto revisa com o `revisor-geral`, aplica no andar da spec, faz o `README.md` apontar para o guia na primeira tela, e põe no commit
-  - [ ] 95.3 Só documento, sem portão de código e sem linha
+- [x] **95.0 — O dev que chega acha cada coisa pelo guia do desenvolvedor (Claude Code #2)**
+  - [x] 95.1 O Claude Code #2 escreve `docs/guia-do-desenvolvedor.md` e a correção de `docs/arquitetura.md` e entrega em `.processo/reengenharia/guia/` (no térreo) até ~15h de 22/10
+  - [x] 95.2 O Arquiteto revisa com o `revisor-geral`, aplica no andar da spec, faz o `README.md` apontar para o guia na primeira tela, e põe no commit
+  - [x] 95.3 Só documento, sem portão de código e sem linha
 
 ## Saíram para a X6 (D81)
 
