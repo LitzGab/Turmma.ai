@@ -38,8 +38,9 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
   - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **36.0**, grande (kit visual em `componentes/ui/`), desde
-    13:20, 1ª tentativa; prazo de 4 h 17:20. A 15.0 encontrou-se em `0c75678` (spec em `aa3b7e6`)
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **97.0**, grande (web: `areas/professor/` e `areas/coordenacao/`
+    por assunto; frontend-reviewer, test-engineer, revisor-geral), desde 14:19, 1ª tentativa; prazo de 4 h 18:19. A 36.0
+    encontrou-se em `88fc287` (spec em `f7a835c`)
   - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **correção `intermitentes-desafio-e-meus-dados`**, desde ~13:55,
     1ª tentativa. Os dois testes caíram em `2fe1d73` (só documento sobre `f6913ee`, onde passaram): `desafio.int.test.ts`
     "falha (15.5): Redis de fila travado… corte dos 100 ms" (NAO_AUTENTICADO em vez de resolver) e o e2e
@@ -63,13 +64,13 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     olhar dele antes do piloto
   - esteira: veredito mais novo VERMELHO em `2fe1d73` (`39803274227`): `ouro.test.ts` (resolvido por `05aa2fe`) e os
     dois intermitentes da correção da linha 3. Às ~13:50 cancelei 10 execuções superadas na fila (9 da spec, 1 da l1).
-    Às 14:17 cancelei a de `8b11df1` (`39820055294`), superada; fica a de `5e3e01a` (`39821256963`). Ler de novo no
+    Às 14:17–14:19 cancelei as de `8b11df1`, `5e3e01a` e `f89c847`, superadas; fica a de `f7a835c` (`39821539919`). Ler de novo no
     próximo encontro. O `esteira.ts` lê execução **cancelada** como VERMELHA (`aca066e`): conferir com `gh run list`
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `5e3e01a`. Vigia ligada
+- **Base:** `spec/reengenharia` em `f7a835c`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -105,6 +106,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 7.0 | `b59fe0a` | Sonnet | 1 (tenancy, test-engineer, revisor-geral aprovados na 1ª) | linha 1, grande, 12:55–13:26; sem tela |
 | 18.0 | `3ecaa07` | Sonnet | 2 (tenancy, privacy, test-engineer, revisor-geral aprovados na 2ª) | linha 3, grande, 13:07–13:50; sem tela |
 | 8.0 | `a8398c3` | Sonnet | 2 (tenancy, infra, llm-integrator aprovados na 1ª; test-engineer, revisor-geral na 2ª) | linha 1, grande, 13:27–14:16; sem tela |
+| 36.0 | `88fc287` | Sonnet | 2 (frontend-reviewer, test-engineer, revisor-geral aprovados na 2ª) | linha 2, grande, 13:20–14:18; sem tela |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
