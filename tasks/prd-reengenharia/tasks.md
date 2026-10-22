@@ -9,8 +9,8 @@ toca arquivo de outra em andamento (`tools/processo/linhas.ts`, pelos "Arquivos 
 em "Saíram para a X6", sem caixa de seleção: não são apagadas, e o `estado.ts` não as conta nem as escolhe.
 
 O `N_task.md` que falta é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento; o aviso "o
-documento N_task.md não existe" do `estado.ts` é o sinal para o Orquestrador pedi-lo. **A 95.0 é do Arquiteto**: o
-Orquestrador a pede a ele, no andar da spec, e não a manda a uma linha; o `revisor-geral` a revisa.
+documento N_task.md não existe" do `estado.ts` é o sinal para o Orquestrador pedi-lo. **A 95.0 é do Claude Code #2**: ele
+escreve o guia, e o Arquiteto o revisa com o `revisor-geral` e o põe no commit, no andar da spec; nenhuma linha a pega.
 
 ## A regra do corte
 
@@ -24,6 +24,21 @@ Orquestrador a pede a ele, no andar da spec, e não a manda a uma linha; o `revi
 - Até o pouso, nenhuma parada chama o Joaquim: o Arquiteto decide com a recomendação dele e registra em
   `.reengenharia/DECISOES.md` (RECORTE §6). A ressalva menor da validação vai para a X6; a crítica vira correção.
 - **A 95.0 sai até sexta às 20h**, aconteça o que acontecer com as outras.
+- **A onda 0 (3.0, 93.0, 94.0) não vai para a X6** (ajuste do Claude Code #2, 22/10, 11h02): o relógio das 4 horas
+  conta de 10h55, e, se passar delas ou bater duas vezes no limite, o Arquiteto fecha a tarefa com a melhor versão que os
+  revisores com veto aprovem e declara, medida, a lacuna que sobra no `onda-0.md` e na AIA do Tutor (`docs/aia/tutor.md`);
+  só o refinamento do corpus vai para a X6. O limite das três reprovações vai ao diagnóstico do Arquiteto, nunca ao
+  Joaquim.
+- A única parada que ainda chama o Joaquim antes do pouso é a decisão que só se resolve afrouxando D1 a D81 ou as regras
+  10, 20, 30, 40 e 70.
+
+## Tarefa mecânica
+
+A 10.0, 11.0, 24.0, 33.0 a 36.0, 90.0, 96.0 e 97.0 só movem pasta, quebram ciclo, declaram dependência ou mexem no
+Dockerfile. Nelas, **os revisores são o `test-engineer`, o `revisor-geral` e no máximo um guardião**, o da área que o
+movimento toca (tabela "Subagentes por tarefa"). **O movimento é feito por script**, nunca à mão: `git mv` mais a
+reescrita de import com ts-morph por `npx` (sem salvar no `package.json`), uma pasta por commit. O script fica no
+`.processo/` da linha, fora do commit, e o documento da tarefa diz como rodá-lo.
 
 ## Lista
 
@@ -59,7 +74,7 @@ Orquestrador a pede a ele, no andar da spec, e não a manda a uma linha; o `revi
   - [x] 5.3 A sessão de teste que confirma o exit 2 no Claude Code, registrada neste documento
   - [x] 5.4 Testes: carga quebrada sai 2 com a mensagem; hook são sai 0 e o `deny` passa intacto
 
-- [ ] **93.0 — Frase de risco à vida de palavra que o lote retido mostrou escapar recebe a mensagem fixa e o sinal**
+- [x] **93.0 — Frase de risco à vida de palavra que o lote retido mostrou escapar recebe a mensagem fixa e o sinal**
   - [ ] 93.1 Um padrão por jeito de dizer de `93_task.md`, nas cinco categorias de palavra, cada um com a sua `dev`
   - [ ] 93.2 As três pioras da 2.0 desfeitas, cada uma com a sua `dev`
   - [ ] 93.3 Testes: as `dev`, a regressão exata do `ouro` v1, o alvo e o piso de `assuntoDelicado`
@@ -70,6 +85,22 @@ Orquestrador a pede a ele, no andar da spec, e não a manda a uma linha; o `revi
   - [ ] 94.3 `tools/ia/medir-risco-a-vida.ts`: o padrão ou o modelo, por categoria, em três execuções, valendo a pior
   - [ ] 94.4 `docs/aia/tutor.md`: o modelo que classifica o risco, a medida e as limitações
   - [ ] 94.5 Testes: o caminho na tarefa e na rota, com a avaliação aberta, e a ferramenta de medida
+
+### A linha da web — a prova que não perde resposta (regra 80.6) e as pastas da web
+
+- [ ] **51.0 — Resposta atrasada não sobrescreve, nem depois do F5 nem em outra aba**
+  - [ ] 51.1 O `51_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
+
+- [ ] **53.0 — Pendente sobrevive ao F5 e à sessão vencida**
+  - [ ] 53.1 O `53_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
+
+- [ ] **36.0 — O kit visual mora em `componentes/ui/` e não importa API, área nem sessão**
+  - [ ] 36.1 O `36_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-2.md`, com o nome `componentes/ui/` da D81 no lugar de `kit/`
+
+- [ ] **97.0 — Na web, `areas/professor/` e `areas/coordenacao/` se partem por assunto, com a mesma trava**
+  - [ ] 97.1 O `97_task.md` é escrito pelo Arquiteto antes de a tarefa partir: o *feature folder* (bulletproof-react), cada assunto (`turmas/`, `atividades/`, `assistente/`, `material/`…) com as telas, os hooks e o cliente de API dele
+  - [ ] 97.2 Só `git mv` e import, uma pasta por commit
+  - [ ] 97.3 A trava da 96.0 vale para `apps/web/src`
 
 ### Tenant — a regra 10 travada por máquina
 
@@ -90,14 +121,6 @@ Orquestrador a pede a ele, no andar da spec, e não a manda a uma linha; o `revi
   - [ ] 8.2 Os chamadores não passam a escola; `SuspensoesEmMemoria` lê o contexto
   - [ ] 8.3 `ia/consumo`, `ia/orcamento` e `ia/suspensao` saem de `REPOSITORIES_SEM_ESCOPO`
   - [ ] 8.4 Testes: isolamento por porta, sem contexto, concorrência e o tipo
-
-### Prova — nenhuma resposta se perde (regra 80.6)
-
-- [ ] **51.0 — Resposta atrasada não sobrescreve, nem depois do F5 nem em outra aba**
-  - [ ] 51.1 O `51_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
-
-- [ ] **53.0 — Pendente sobrevive ao F5 e à sessão vencida**
-  - [ ] 53.1 O `53_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
 
 ### Entrada no padrão NestJS (D81)
 
@@ -163,18 +186,10 @@ Orquestrador a pede a ele, no andar da spec, e não a manda a uma linha; o `revi
 - [ ] **35.0 — `ops/` só tem terminal; casos de uso em `operacao/`, paginação em `http/`**
   - [ ] 35.1 O `35_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-2.md`
 
-- [ ] **36.0 — O kit visual mora em `componentes/ui/` e não importa API, área nem sessão**
-  - [ ] 36.1 O `36_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-2.md`, com o nome `componentes/ui/` da D81 no lugar de `kit/`
-
 - [ ] **96.0 — Na API, `estrutura/`, `operacao/`, `sala/` e `atividade/` têm uma subpasta por recurso, e pasta de produção com mais de 25 arquivos reprova**
   - [ ] 96.1 O `96_task.md` é escrito pelo Arquiteto antes de a tarefa partir: uma subpasta por recurso, como o `nest g resource` (`estrutura/turma/` com o controller, o service, o repository e os testes dele)
   - [ ] 96.2 Só `git mv` e import, uma pasta por commit
   - [ ] 96.3 O teste da trava: pasta de produção com mais de 25 arquivos reprova, com lista fechada de exceções e motivo
-
-- [ ] **97.0 — Na web, `areas/professor/` e `areas/coordenacao/` se partem por assunto, com a mesma trava**
-  - [ ] 97.1 O `97_task.md` é escrito pelo Arquiteto antes de a tarefa partir: o *feature folder* (bulletproof-react), cada assunto (`turmas/`, `atividades/`, `assistente/`, `material/`…) com as telas, os hooks e o cliente de API dele
-  - [ ] 97.2 Só `git mv` e import, uma pasta por commit
-  - [ ] 97.3 A trava da 96.0 vale para `apps/web/src`
 
 ### Camadas e lint
 
@@ -228,11 +243,10 @@ Orquestrador a pede a ele, no andar da spec, e não a manda a uma linha; o `revi
 
 ### O guia do desenvolvedor
 
-- [ ] **95.0 — O dev que chega acha cada coisa pelo guia do desenvolvedor (Arquiteto)**
-  - [ ] 95.1 `docs/guia-do-desenvolvedor.md`: "Se você vem do Spring Boot", "Onde fica cada coisa", as receitas (endpoint, tabela, job, tela, teste de isolamento) e "As travas"
-  - [ ] 95.2 `docs/arquitetura.md` corrigido para o que existe: os módulos montados e as filas `interativa`, `normal` e `lote`
-  - [ ] 95.3 O `README.md` aponta para o guia na primeira tela
-  - [ ] 95.4 Revisão do `revisor-geral`; só documento, sem portão de código
+- [ ] **95.0 — O dev que chega acha cada coisa pelo guia do desenvolvedor (Claude Code #2)**
+  - [ ] 95.1 O Claude Code #2 escreve `docs/guia-do-desenvolvedor.md` e a correção de `docs/arquitetura.md` e entrega em `.processo/reengenharia/guia/` (no térreo) até ~15h de 22/10
+  - [ ] 95.2 O Arquiteto revisa com o `revisor-geral`, aplica no andar da spec, faz o `README.md` apontar para o guia na primeira tela, e põe no commit
+  - [ ] 95.3 Só documento, sem portão de código e sem linha
 
 ## Saíram para a X6 (D81)
 
@@ -319,13 +333,15 @@ com as perguntas da §5 do `DIAGNOSTICO.md` marcadas "Para a Etapa 9"):
 | 3.0 | — | 3.0 a 97.0 |
 | 4.0 | — | — (concluída) |
 | 5.0 | — | — (concluída) |
-| 93.0 | 2.0 | 3.0 a 97.0 |
+| 93.0 | 2.0 | — (concluída) |
 | 94.0 | 93.0 | 3.0 a 97.0 |
+| 51.0 | — | 3.0 a 35.0, 43.0 a 48.0, 90.0 a 96.0 |
+| 53.0 | 51.0 | 3.0 a 35.0, 43.0 a 48.0, 90.0 a 96.0 |
+| 36.0 | 51.0, 53.0 | 3.0 a 35.0, 43.0 a 48.0, 90.0 a 96.0 |
+| 97.0 | 36.0 | 3.0 a 35.0, 43.0 a 48.0, 90.0 a 96.0 |
 | 6.0 | — | 3.0 a 97.0 |
 | 7.0 | 6.0 | 3.0 a 97.0 |
 | 8.0 | 7.0 | 3.0 a 97.0 |
-| 51.0 | — | 3.0 a 97.0 |
-| 53.0 | 51.0 | 3.0 a 97.0 |
 | 14.0 | — | 3.0 a 97.0 |
 | 15.0 | 14.0 | 3.0 a 97.0 |
 | 16.0 | 14.0, 11.0 | 3.0 a 97.0 |
@@ -338,9 +354,7 @@ com as perguntas da §5 do `DIAGNOSTICO.md` marcadas "Para a Etapa 9"):
 | 33.0 | 7.0, 10.0, 11.0, 16.0 | 3.0 a 97.0 |
 | 34.0 | 33.0 | 3.0 a 97.0 |
 | 35.0 | 34.0, 17.0 | 3.0 a 97.0 |
-| 36.0 | 51.0, 53.0 | 3.0 a 97.0 |
 | 96.0 | 15.0, 16.0, 17.0, 35.0, 51.0 | 3.0 a 97.0 |
-| 97.0 | 36.0 | 3.0 a 97.0 |
 | 9.0 | 6.0 | 3.0 a 97.0 |
 | 10.0 | — | 3.0 a 97.0 |
 | 11.0 | — | 3.0 a 97.0 |
@@ -351,9 +365,14 @@ com as perguntas da §5 do `DIAGNOSTICO.md` marcadas "Para a Etapa 9"):
 | 90.0 | 24.0 | 3.0 a 97.0 |
 | 95.0 | — | 3.0 a 97.0 |
 
-**O paralelo é amplo de propósito (RECORTE §3):** toda tarefa pode correr ao lado de qualquer outra da X5, e quem
-segura é o `linhas.ts`, que não junta duas tarefas com arquivo previsto em comum, nem duas com migration, schema ou
+**O paralelo é amplo de propósito (RECORTE §3):** toda tarefa pode correr ao lado de qualquer outra da X5, menos as
+da web entre si, e quem segura é o `linhas.ts`, que não junta duas tarefas com arquivo previsto em comum, nem duas com migration, schema ou
 `packages/shared`. Por isso os "Arquivos previstos" de cada `N_task.md` precisam ser completos.
+
+**Uma linha para a web, duas para a API e os pacotes** (ajuste do Claude Code #2). A 51.0, 53.0, 36.0 e 97.0 não correm
+juntas (o paralelo delas não cita as outras, e as dependências já as põem em fila), e estão logo depois da onda 0 na
+lista: quando uma delas está livre, é a primeira que uma linha ociosa pega. Assim há no máximo uma tarefa de web por vez,
+e as outras duas linhas ficam com a API.
 
 **Pastas depois da lógica.** Cada pasta se move depois que as tarefas de lógica que tocam nela fecharam (33.0 depois da
 7.0, 10.0, 11.0 e 16.0; 35.0 e 96.0 depois da 17.0; 36.0 depois da prova), para nenhum documento ficar com caminho
@@ -371,11 +390,13 @@ pastas; o Arquiteto confere os caminhos do `N_task.md` delas, e da 24.0 e da 25.
 | 5.0 | `test-engineer`, `revisor-geral` |
 | 93.0 | `conformidade-reviewer`, `test-engineer`, `revisor-geral` |
 | 94.0 | `conformidade-reviewer`, `llm-integrator`, `test-engineer`, `revisor-geral` |
+| 51.0 | `infra-guardian`, `tenancy-guardian`, `frontend-reviewer`, `test-engineer`, `revisor-geral` |
+| 53.0 | `privacy-guardian`, `infra-guardian`, `frontend-reviewer`, `test-engineer`, `revisor-geral` |
+| 36.0 | `frontend-reviewer`, `test-engineer`, `revisor-geral` |
+| 97.0 | `frontend-reviewer`, `test-engineer`, `revisor-geral` |
 | 6.0 | `tenancy-guardian`, `test-engineer`, `revisor-geral` |
 | 7.0 | `tenancy-guardian`, `test-engineer`, `revisor-geral` |
 | 8.0 | `tenancy-guardian`, `infra-guardian`, `llm-integrator`, `test-engineer`, `revisor-geral` |
-| 51.0 | `infra-guardian`, `tenancy-guardian`, `frontend-reviewer`, `test-engineer`, `revisor-geral` |
-| 53.0 | `privacy-guardian`, `infra-guardian`, `frontend-reviewer`, `test-engineer`, `revisor-geral` |
 | 14.0 | `tenancy-guardian`, `test-engineer`, `revisor-geral` |
 | 15.0 | `tenancy-guardian`, `test-engineer`, `revisor-geral` |
 | 16.0 | `tenancy-guardian`, `infra-guardian`, `test-engineer`, `revisor-geral` |
@@ -385,12 +406,10 @@ pastas; o Arquiteto confere os caminhos do `N_task.md` delas, e da 24.0 e da 25.
 | 43.0 | `infra-guardian`, `llm-integrator`, `test-engineer`, `revisor-geral` |
 | 44.0 | `infra-guardian`, `privacy-guardian`, `llm-integrator`, `test-engineer`, `revisor-geral` |
 | 48.0 | `infra-guardian`, `llm-integrator`, `test-engineer`, `revisor-geral` |
-| 33.0 | `tenancy-guardian`, `infra-guardian`, `test-engineer`, `revisor-geral` |
-| 34.0 | `tenancy-guardian`, `infra-guardian`, `test-engineer`, `revisor-geral` |
+| 33.0 | `infra-guardian`, `test-engineer`, `revisor-geral` |
+| 34.0 | `tenancy-guardian`, `test-engineer`, `revisor-geral` |
 | 35.0 | `tenancy-guardian`, `test-engineer`, `revisor-geral` |
-| 36.0 | `frontend-reviewer`, `test-engineer`, `revisor-geral` |
 | 96.0 | `tenancy-guardian`, `test-engineer`, `revisor-geral` |
-| 97.0 | `frontend-reviewer`, `test-engineer`, `revisor-geral` |
 | 9.0 | `tenancy-guardian`, `test-engineer`, `revisor-geral` |
 | 10.0 | `test-engineer`, `revisor-geral` |
 | 11.0 | `test-engineer`, `revisor-geral` |
@@ -399,7 +418,7 @@ pastas; o Arquiteto confere os caminhos do `N_task.md` delas, e da 24.0 e da 25.
 | 24.0 | `infra-guardian`, `test-engineer`, `revisor-geral` |
 | 25.0 | `test-engineer`, `revisor-geral` |
 | 90.0 | `infra-guardian`, `test-engineer`, `revisor-geral` |
-| 95.0 | `revisor-geral` |
+| 95.0 | `revisor-geral` (revisão do Arquiteto) |
 
 ## Critério de pronto da funcionalidade
 
