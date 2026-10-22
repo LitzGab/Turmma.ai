@@ -43,7 +43,7 @@ seguinte ao Arquiteto. A 92.0 é a parada da Etapa 9, e dela nascem as tarefas d
   - [x] 5.3 A sessão de teste que confirma o exit 2 no Claude Code, registrada neste documento
   - [x] 5.4 Testes: carga quebrada sai 2 com a mensagem; hook são sai 0 e o `deny` passa intacto
 
-- [ ] **93.0 — Frase de risco à vida de palavra que o lote retido mostrou escapar recebe a mensagem fixa e o sinal**
+- [x] **93.0 — Frase de risco à vida de palavra que o lote retido mostrou escapar recebe a mensagem fixa e o sinal**
   - [ ] 93.1 Um padrão por jeito de dizer de `93_task.md`, nas cinco categorias de palavra, cada um com a sua `dev`
   - [ ] 93.2 As três pioras da 2.0 desfeitas, cada uma com a sua `dev`
   - [ ] 93.3 Testes: as `dev`, a regressão exata do `ouro` v1, o alvo e o piso de `assuntoDelicado`
