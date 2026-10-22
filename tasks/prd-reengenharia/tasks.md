@@ -105,11 +105,11 @@ da tarefa diz como rodá-lo.
 
 ### Tenant — a regra 10 travada por máquina
 
-- [ ] **6.0 — Repository sem prova de escopo nem motivo reprova o teste**
-  - [ ] 6.1 O analisador, com `PROVAS_DE_ESCOPO` e `REPOSITORIES_SEM_ESCOPO` (`{ arquivo, motivo, metodos }`)
-  - [ ] 6.2 A lista exata, por método e com evidência: os 9 da 7.0, os 3 da 8.0 e os seis da `onda-1a.md` T6
-  - [ ] 6.3 `SuspensoesDaEscolaRepository` sai de `time.service.ts` para um `*.repository.ts`
-  - [ ] 6.4 Testes: `repositories-com-escopo.test.ts`, com as fixtures em `tools/guardas/__fixtures__/repositories/`
+- [x] **6.0 — Repository sem prova de escopo nem motivo reprova o teste**
+  - [x] 6.1 O analisador, com `PROVAS_DE_ESCOPO` e `REPOSITORIES_SEM_ESCOPO` (`{ arquivo, motivo, metodos }`)
+  - [x] 6.2 A lista exata, por método e com evidência: os 9 da 7.0, os 3 da 8.0 e os seis da `onda-1a.md` T6
+  - [x] 6.3 `SuspensoesDaEscolaRepository` sai de `time.service.ts` para um `*.repository.ts`
+  - [x] 6.4 Testes: `repositories-com-escopo.test.ts`, com as fixtures em `tools/guardas/__fixtures__/repositories/`
 
 - [ ] **7.0 — Os 9 repositories com cópia local leem a escola por `exigirEscolaDoContexto`**
   - [ ] 7.1 Caracterização, num commit antes: os 7 sem caso de "sem escola" ganham o seu, verde com a cópia local
