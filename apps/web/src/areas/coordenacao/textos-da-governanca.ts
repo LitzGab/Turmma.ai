@@ -17,8 +17,8 @@ import {
   type TipoDeEntrega,
 } from '@educa/shared'
 import { aparenciaDaFalha } from '../../api/ciclo-de-execucao'
-import type { Aprovacao } from '../../componentes/ia/aprovacao'
-import type { OpcoesDoSegmentado } from '../../componentes/Segmentado'
+import type { Aprovacao } from '../../componentes/ui/ia/aprovacao'
+import type { OpcoesDoSegmentado } from '../../componentes/ui/campos/Segmentado'
 import { formatarNumero, formatarQuantidade } from '../../formatar'
 
 /**

@@ -1,8 +1,8 @@
 import { AVISO_DO_COMPLEMENTO, CONTESTACOES_DE_VINCULO, EFEITO_DA_CONTESTACAO, NOME_DA_CONTESTACAO, TAMANHO_MAXIMO_DO_COMPLEMENTO, type ContestacaoDeVinculo, type Vinculo } from '@educa/shared'
 import { useId, type FormEvent } from 'react'
 import { mensagemDoErro } from '../../api/cliente'
-import { Botao } from '../../componentes/Botao'
-import { PainelLado } from '../../componentes/PainelLado'
+import { Botao } from '../../componentes/ui/Botao'
+import { PainelLado } from '../../componentes/ui/sobrepostos/PainelLado'
 import { LadrilhoDoVinculo, nomeDoVinculo } from './vinculo-na-tela'
 
 /** A contestação que está sendo escrita, no estado de `Turmas`: a lista pode recarregar por baixo sem levá-la junto. */

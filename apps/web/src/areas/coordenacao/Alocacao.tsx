@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useId, useState } from 'react'
 import { alocarProfessor, consultaDisciplinas, consultaTurmas } from '../../api/estrutura'
 import { DialogoDeFormulario, useEnvioUnico } from '../../componentes/dialogos'
-import { CLASSES_DO_SELETOR } from '../../componentes/seletor'
+import { CLASSES_DO_SELETOR } from '../../componentes/ui/campos/seletor'
 import { textoDaFalha } from '../../componentes/texto-da-falha'
 import { ordenarPeloNome, ordenarTurmas } from './ordem'
 

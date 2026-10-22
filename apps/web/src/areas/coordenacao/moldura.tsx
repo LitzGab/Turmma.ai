@@ -1,8 +1,8 @@
 import { createContext, Suspense, useCallback, useContext, useRef, type ReactNode } from 'react'
 import { useLocation } from 'wouter'
-import { Abas, type Aba } from '../../componentes/Abas'
+import { Abas, type Aba } from '../../componentes/ui/Abas'
 import { EstadoCarregando } from '../../componentes/estado'
-import { Tela } from '../../componentes/Tela'
+import { Tela } from '../../componentes/ui/Tela'
 import { useTituloDaTela } from '../../titulo'
 import { O_MIOLO_QUE_ROLA } from './miolo-que-rola'
 

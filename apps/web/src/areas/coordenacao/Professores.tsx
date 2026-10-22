@@ -7,15 +7,15 @@ import { CHAVE_DA_ESTRUTURA, consultaAnosLetivos, consultaVinculos } from '../..
 import { consultaProfessores, mutacaoDoCadastroDeProfessor, mutacaoDoRefazerConviteDoProfessor, revogarConviteDoProfessor } from '../../api/professores'
 import { aoTrocarDeSessao } from '../../api/sessao'
 import { PARAMETRO_DO_PROFESSOR } from '../../caminhos'
-import { Aviso } from '../../componentes/Aviso'
-import { Botao } from '../../componentes/Botao'
-import { Dialogo } from '../../componentes/Dialogo'
-import { useDialogoDaTela } from '../../componentes/dialogo-aberto'
+import { Aviso } from '../../componentes/ui/Aviso'
+import { Botao } from '../../componentes/ui/Botao'
+import { Dialogo } from '../../componentes/ui/sobrepostos/Dialogo'
+import { useDialogoDaTela } from '../../componentes/ui/sobrepostos/dialogo-aberto'
 import { DialogoDeConviteNovo, DialogoDeConviteRefeito } from '../../componentes/DialogoDoConvite'
 import { ConfirmacaoDePerigo } from '../../componentes/dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
-import { Estado } from '../../componentes/SeloDeEstado'
-import { Tabela, type ColunaDaTabela } from '../../componentes/Tabela'
+import { Estado } from '../../componentes/ui/SeloDeEstado'
+import { Tabela, type ColunaDaTabela } from '../../componentes/ui/Tabela'
 import {
   falhaDoCadastroDeProfessor,
   falhaDoRefazerConviteDeProfessor,

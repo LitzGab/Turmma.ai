@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { corDoToken, TEMAS } from '../../__fixtures__/cor-das-classes'
 import { semComentarios } from '../../__fixtures__/importadores'
-import { FAMILIAS_DE_COR } from '../../componentes/Contador'
+import { FAMILIAS_DE_COR } from '../../componentes/ui/Contador'
 import { DESENHO_DA_FERRAMENTA, IconeDeFerramenta } from './icones-de-ferramenta'
 
 /**

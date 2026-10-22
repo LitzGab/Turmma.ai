@@ -1,5 +1,5 @@
 import { mensagemDoErro } from '../../api/cliente'
-import { Botao } from '../Botao'
+import { Botao } from '../ui/Botao'
 
 interface Props {
   /** O erro da consulta. A mensagem vem do catálogo pelo código; status HTTP nunca aparece. */

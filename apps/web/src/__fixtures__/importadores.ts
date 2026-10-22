@@ -1,7 +1,7 @@
 import { posix } from 'node:path'
 
 /**
- * O que `componentes/ia/avatar-so-nas-duas-pecas.test.ts` usa para dizer **quem importa** uma peça ou uma pasta: a
+ * O que `componentes/ui/ia/avatar-so-nas-duas-pecas.test.ts` usa para dizer **quem importa** uma peça ou uma pasta: a
  * cadeia fechada da onça (`docs/interface.md` 9.7; Tech Spec da X1, 7b). Fica fora do teste para a regra de achar o
  * importador ser, ela mesma, uma peça com mutação declarada.
  *
@@ -11,7 +11,7 @@ import { posix } from 'node:path'
  */
 
 export interface ArquivoDaWeb {
-  /** O caminho a partir de `apps/web/src`, com `/` e a extensão: `componentes/ia/AssinaturaIA.tsx`. */
+  /** O caminho a partir de `apps/web/src`, com `/` e a extensão: `componentes/ui/ia/AssinaturaIA.tsx`. */
   readonly nome: string
   readonly conteudo: string
 }
@@ -29,8 +29,8 @@ export function especificadoresDe(conteudo: string): string[] {
 }
 
 /**
- * Os arquivos de `arquivos` que importam `alvo`. O alvo é um arquivo sem extensão (`componentes/ia/AvatarAgente`) ou uma
- * pasta, com a barra no fim (`componentes/onca/`): o arquivo da pasta, e a pasta pelo `index`, contam.
+ * Os arquivos de `arquivos` que importam `alvo`. O alvo é um arquivo sem extensão (`componentes/ui/ia/AvatarAgente`) ou uma
+ * pasta, com a barra no fim (`componentes/ui/onca/`): o arquivo da pasta, e a pasta pelo `index`, contam.
  */
 export function importadoresDe(arquivos: readonly ArquivoDaWeb[], alvo: string): string[] {
   const ehPasta = alvo.endsWith('/')

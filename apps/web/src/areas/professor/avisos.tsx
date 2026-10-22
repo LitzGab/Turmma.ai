@@ -1,9 +1,9 @@
 import { MENSAGENS_DE_ERRO, type ChaveDeFuncao, type CodigoDeErro } from '@educa/shared'
 import { Hourglass, PauseCircle } from 'lucide-react'
 import { aparenciaDaFalha } from '../../api/ciclo-de-execucao'
-import { Botao } from '../../componentes/Botao'
-import { Faixa } from '../../componentes/Faixa'
-import { AvisoFila } from '../../componentes/ia/AvisoFila'
+import { Botao } from '../../componentes/ui/Botao'
+import { Faixa } from '../../componentes/ui/Faixa'
+import { AvisoFila } from '../../componentes/ui/ia/AvisoFila'
 
 /**
  * O que a tela diz quando a escola suspendeu uma função do Assistente (D60): o que parou, que foi a coordenação, e o que

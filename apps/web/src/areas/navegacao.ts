@@ -3,17 +3,17 @@ import { FolderLock, Lock, MessageCircleQuestion, School, type LucideIcon } from
 import { ROTAS } from '../caminhos'
 // Só tipos, que o compilador apaga: o `Contador` e os ícones ilustrados são peças da entrada ou fora dela, e este arquivo
 // não importa nenhuma (o item 4 do guia acima). O que ele diz é qual ícone e qual família, e a casca é quem desenha.
-import type { FamiliaDeCor } from '../componentes/Contador'
-import type { NomeDoLugar } from '../componentes/icones/lugares'
+import type { FamiliaDeCor } from '../componentes/ui/Contador'
+import type { NomeDoLugar } from '../componentes/ui/icones/lugares'
 
 /*
  * COMO ENTRA UMA TELA NOVA NUMA ÁREA (MVP de apresentação; `apps/web/nome-dos-chunks.ts` e o teste dele sobre o build):
  * 1. A tela é um arquivo em `areas/<area>/` com `export default`, declarada no `rotas.tsx` da área por `const Tela = lazy(() => import('./Tela'))`; o `Suspense` e a fronteira de erro da área já a cobrem. Sai em `tela-<area>-<Tela>-*.js`, com teto de 30 kB em brotli.
  * 2. Tela nova nunca entra por `import` direto no `rotas.tsx`: o teto da fachada (`<area>-*.js`) é o das telas da A1, que ficam como estão.
- * 3. Peça se importa pelo arquivo dela (`../../componentes/ia/CaixaPedido`, `../../componentes/Cartao`), sem arquivo-barril.
- * 4. Nada da entrada (`src/rotas.tsx`, `paginas/`, a casca, este arquivo) importa peça de `componentes/ia/` ou da lista `PECAS_FORA_DA_ENTRADA`, nem módulo de `areas/<area>/`.
+ * 3. Peça se importa pelo arquivo dela (`../../componentes/ui/ia/CaixaPedido`, `../../componentes/ui/Cartao`), sem arquivo-barril.
+ * 4. Nada da entrada (`src/rotas.tsx`, `paginas/`, a casca, este arquivo) importa peça de `componentes/ui/ia/` ou da lista `PECAS_FORA_DA_ENTRADA`, nem módulo de `areas/<area>/`.
  * 5. Tela de uma área não importa módulo de outra área: o que duas áreas dividem mora em `componentes/`. O build reprova a tela do professor que o aluno baixaria.
- * Como usar cada peça (aprovação, conversa, barra presa, o que a peça não dá): `src/componentes/ia/README.md`.
+ * Como usar cada peça (aprovação, conversa, barra presa, o que a peça não dá): `src/componentes/ui/ia/README.md`.
  */
 
 /**

@@ -9,7 +9,7 @@ import {
 } from '@educa/shared'
 import type { FalhaDoConvite } from '../../componentes/DialogoDoConvite'
 import { pedidoDeConvitePelo, type ValidacaoDoConvite } from '../../componentes/pedido-de-convite'
-import type { FamiliaDeEstado } from '../../componentes/SeloDeEstado'
+import type { FamiliaDeEstado } from '../../componentes/ui/SeloDeEstado'
 import { listaMudou, textoDaFalha } from '../../componentes/texto-da-falha'
 import { TEXTO_DO_CONVITE_QUE_MUDOU, TEXTO_DO_CONVITE_QUE_NAO_VALE } from '../../componentes/textos-do-convite'
 

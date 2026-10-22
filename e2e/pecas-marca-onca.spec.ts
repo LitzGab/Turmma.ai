@@ -8,8 +8,8 @@ import { corDoToken, IMPACTOS_QUE_REPROVAM, larguraExcedente, TAGS_WCAG } from '
 /**
  * A onça como avatar dos três agentes, na galeria (`/galeria`), nos projetos `chromebook` e `celular` e nos dois temas
  * (X1, tarefa 8.0; RF10; `docs/interface.md` 9.7). O que o `jsdom` prova — as props, o bloco com nome e selo, dois renders
- * iguais, nenhum temporizador, a cadeia fechada de importação — está em `componentes/onca/CabecaOnca.test.tsx` e em
- * `componentes/ia/avatar-*.test.ts(x)`; aqui está o que só o navegador calcula: a cor resolvida, a medida e o que se mexe.
+ * iguais, nenhum temporizador, a cadeia fechada de importação — está em `componentes/ui/onca/CabecaOnca.test.tsx` e em
+ * `componentes/ui/ia/avatar-*.test.ts(x)`; aqui está o que só o navegador calcula: a cor resolvida, a medida e o que se mexe.
  *
  * A onça **de corpo inteiro não aparece**: ela vem com o primeiro uso (X2 e X4), com parecer próprio.
  */

@@ -1,6 +1,6 @@
 import { esquemaPedidoAdaptarArtefato, esquemaPedidoGerarComFerramenta, FERRAMENTAS, ROTULOS_DA_ADAPTACAO, TIPOS_DE_ADAPTACAO } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
-import { problemaDaDescricao, validarFormulario, valoresPadrao } from '../../componentes/ia/motor-formulario'
+import { problemaDaDescricao, validarFormulario, valoresPadrao } from '../../componentes/ui/ia/motor-formulario'
 import { CATALOGO_DE_FERRAMENTAS, CATEGORIAS_DE_FERRAMENTA, catalogoPorCategoria, COMO_VAI_SAIR, descricaoDaFerramenta, ehFerramenta, iniciaisDoPedido, montarPedido, TEMPOS_EXTRAS, type OpcoesDaDescricao } from './ferramentas'
 
 const TURMA = '0190f5a0-0000-7000-8000-00000000002b'

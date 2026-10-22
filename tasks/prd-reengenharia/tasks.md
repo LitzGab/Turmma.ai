@@ -95,7 +95,7 @@ da tarefa diz como rodá-lo.
 - [x] **53.0 — Pendente sobrevive ao F5 e à sessão vencida**
   - [x] 53.1 O `53_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
 
-- [ ] **36.0 — O kit visual mora em `componentes/ui/` e não importa API, área nem sessão**
+- [x] **36.0 — O kit visual mora em `componentes/ui/` e não importa API, área nem sessão**
   - [ ] 36.1 O `36_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-2.md`, com o nome `componentes/ui/` da D81 no lugar de `kit/`
 
 - [ ] **97.0 — Na web, `areas/professor/` e `areas/coordenacao/` se partem por assunto, com a mesma trava**

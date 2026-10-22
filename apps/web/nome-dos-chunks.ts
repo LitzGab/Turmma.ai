@@ -21,7 +21,7 @@
  *   conferido pelo teste do build, porque o glob do `size-limit` soma os arquivos e não mede um por um;
  * - o que sai de `src/galeria/` é `galeria-*.js`: a galeria das peças está no build porque o e2e roda sobre ele, e só
  *   quem digita o endereço dela a baixa;
- * - o pedaço **sem fachada** que só tem peças do MVP de apresentação (`componentes/ia/` e as peças gerais listadas em
+ * - o pedaço **sem fachada** que só tem peças do MVP de apresentação (`componentes/ui/ia/` e as peças gerais listadas em
  *   `PECAS_FORA_DA_ENTRADA`) é `pecas-*.js`. É o pedaço que o Rolldown cria sozinho para o que duas áreas dividem. Como
  *   `parte-*`, ele contaria no teto do primeiro carregamento sem nunca ser baixado nele: as peças só chegam por
  *   `import()`, com a tela que as usa. O teste do build de verdade prova as duas metades — nenhuma peça na entrada nem
@@ -84,47 +84,47 @@ const PASTA_DA_GALERIA = '/apps/web/src/galeria/'
 
 const PASTA_DA_WEB = '/apps/web/src/'
 const PASTA_DOS_COMPONENTES = '/apps/web/src/componentes/'
-const PASTA_DAS_PECAS_DE_IA = '/apps/web/src/componentes/ia/'
+const PASTA_DAS_PECAS_DE_IA = '/apps/web/src/componentes/ui/ia/'
 
 /**
  * As peças gerais do MVP de apresentação (`docs/mvp-rapido.md` 9.3) que **não** estão no primeiro carregamento: os
- * arquivos de `src/componentes/`, sem a extensão. As de IA são a pasta `componentes/ia/` inteira. O `Botao`, o `Dialogo`,
+ * arquivos de `src/componentes/`, sem a extensão. As de IA são a pasta `componentes/ui/ia/` inteira. O `Botao`, o `Dialogo`,
  * o `Campo` e os estados não entram na lista: a entrada os usa, e eles pesam no teto dela.
  *
  * A peça que uma tela da entrada passar a usar **sai daqui**: o teste do build reprova a peça da lista que aparecer no
  * primeiro carregamento, em vez de deixá-la passar sem ser medida.
  */
 export const PECAS_FORA_DA_ENTRADA = [
-  'Abas',
-  'Aviso',
-  'barra',
-  'BarraPresa',
-  'BarraRotulada',
-  'Busca',
-  'CampoLongo',
-  'Cartao',
-  'Contador',
-  'DialogoDeConfirmacao',
-  'Faixa',
-  'flutuante',
-  'Interruptor',
-  'Linha',
-  'Menu',
-  'midia',
-  'NumeroPainel',
-  'onca/CabecaOnca',
-  'Opcao',
-  'PainelLado',
-  'Selecao',
-  'SeloDeEstado',
   'sino/leitura-do-sino',
   'sino/Sino',
-  'Tabela',
-  'teclado-das-abas',
-  'teclado-do-menu',
-  'Tela',
-  'texto-longo',
-  'Toque',
+  'ui/Abas',
+  'ui/Aviso',
+  'ui/barra',
+  'ui/BarraPresa',
+  'ui/BarraRotulada',
+  'ui/campos/Busca',
+  'ui/campos/CampoLongo',
+  'ui/campos/Interruptor',
+  'ui/campos/Opcao',
+  'ui/campos/Selecao',
+  'ui/campos/texto-longo',
+  'ui/Cartao',
+  'ui/Contador',
+  'ui/Faixa',
+  'ui/Linha',
+  'ui/midia',
+  'ui/NumeroPainel',
+  'ui/onca/CabecaOnca',
+  'ui/SeloDeEstado',
+  'ui/sobrepostos/DialogoDeConfirmacao',
+  'ui/sobrepostos/flutuante',
+  'ui/sobrepostos/Menu',
+  'ui/sobrepostos/PainelLado',
+  'ui/sobrepostos/teclado-do-menu',
+  'ui/Tabela',
+  'ui/teclado-das-abas',
+  'ui/Tela',
+  'ui/Toque',
 ] as const
 
 /** O módulo é uma peça que fica fora do primeiro carregamento? */

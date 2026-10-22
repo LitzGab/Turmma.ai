@@ -3,7 +3,7 @@ import { CodigoDeErro, MENSAGENS_DE_ERRO } from '@educa/shared'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, posix } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Inbox } from 'lucide-react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -141,18 +141,19 @@ describe('os três moram na entrada', () => {
   }
 
   it('nenhum importa `Aviso`, `Contador`, `Toque` nem peça de `PECAS_FORA_DA_ENTRADA`', () => {
-    const proibidas = new Set<string>([...PECAS_FORA_DA_ENTRADA, 'Aviso', 'Contador', 'Toque'])
+    const proibidas = new Set<string>([...PECAS_FORA_DA_ENTRADA, 'ui/Aviso', 'ui/Contador', 'ui/Toque'])
     for (const arquivo of ['EstadoCarregando.tsx', 'EstadoErro.tsx', 'EstadoVazio.tsx']) {
       for (const caminho of importadosDe(arquivo)) {
         // Só o que é do repositório: `lucide-react` e `@educa/shared` não são peça.
         if (!caminho.startsWith('.')) continue
-        const nome = caminho.split('/').at(-1) ?? ''
+        // A peça é o caminho a partir de `componentes/`, como a lista a escreve: `../ui/Aviso` de `estado/` é `ui/Aviso`.
+        const nome = posix.normalize(posix.join('estado', caminho))
         expect(proibidas.has(nome), `${arquivo} importa ${caminho}`).toBe(false)
       }
     }
   })
 
   it('a lista fechada tem as três peças novas: elas ficam fora, e quem as usa as baixa com a tela', () => {
-    for (const nova of ['Aviso', 'Contador', 'Toque']) expect(PECAS_FORA_DA_ENTRADA as readonly string[], nova).toContain(nova)
+    for (const nova of ['ui/Aviso', 'ui/Contador', 'ui/Toque']) expect(PECAS_FORA_DA_ENTRADA as readonly string[], nova).toContain(nova)
   })
 })

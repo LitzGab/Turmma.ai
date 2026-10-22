@@ -5,7 +5,7 @@ import { StrictMode } from 'react'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { classesDoBotao } from '../../componentes/botao-secundario'
+import { classesDoBotao } from '../../componentes/ui/botao-secundario'
 import { prepararTela, redeFalsa, renderizarTela, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
 import Aprovar from './Aprovar'
 

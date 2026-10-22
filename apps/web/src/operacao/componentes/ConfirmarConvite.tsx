@@ -1,10 +1,10 @@
 import type { EscolaDoPainel } from '@educa/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useRef } from 'react'
-import { Botao } from '../../componentes/Botao'
+import { Botao } from '../../componentes/ui/Botao'
 import { CHAVE_DAS_ESCOLAS, revogarConviteNoPainel } from '../api/painel'
 import { falhaDoConvite } from '../textos'
-import { CLASSES_DO_BOTAO_SECUNDARIO } from '../../componentes/botao-secundario'
+import { CLASSES_DO_BOTAO_SECUNDARIO } from '../../componentes/ui/botao-secundario'
 import { DialogoDaOperacao } from './DialogoDaOperacao'
 
 interface Props {

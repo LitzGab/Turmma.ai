@@ -4,7 +4,7 @@ import { useLocation } from 'wouter'
 import { consultaMeusVinculos } from '../../api/vinculos'
 import { caminhoDaTurmaDoProfessor, ROTAS_DO_PROFESSOR } from '../../caminhos'
 import { EstadoCarregando, EstadoErro } from '../../componentes/estado'
-import { Tela } from '../../componentes/Tela'
+import { Tela } from '../../componentes/ui/Tela'
 import { useTituloDaTela } from '../../titulo'
 import { enderecoDaAba } from './endereco-da-turma'
 

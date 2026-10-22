@@ -1,5 +1,5 @@
 import { useContext, useEffect } from 'react'
-import { Dialogo, type PropsDoDialogo } from '../../componentes/Dialogo'
+import { Dialogo, type PropsDoDialogo } from '../../componentes/ui/sobrepostos/Dialogo'
 import { AvisoNoDialogo, ContextoDoAviso } from './AvisoDeInatividade'
 
 /**

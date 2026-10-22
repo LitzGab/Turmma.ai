@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState, type Ref, type RefObject } from 'react'
-import { Botao } from './Botao'
-import { CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
+import { Botao } from './ui/Botao'
+import { CLASSES_DO_BOTAO_SECUNDARIO } from './ui/botao-secundario'
 import { copiarLink } from './link-do-convite'
-import { CAIXA_DO_CAMPO } from './seletor'
+import { CAIXA_DO_CAMPO } from './ui/campos/seletor'
 
 /**
  * As peças do diálogo cujo link aparece uma vez só: a pergunta antes de fechar sem copiar, a cópia e o que é dito dela, o

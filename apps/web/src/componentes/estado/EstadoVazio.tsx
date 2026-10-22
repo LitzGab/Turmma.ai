@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Botao } from '../Botao'
+import { Botao } from '../ui/Botao'
 
 interface Props {
   titulo: string

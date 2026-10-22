@@ -6,7 +6,7 @@ import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { prepararTela, redeFalsa, renderizarTela, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
 import type * as Sessao from '../../api/sessao'
-import { classesDoBotao } from '../../componentes/botao-secundario'
+import { classesDoBotao } from '../../componentes/ui/botao-secundario'
 import Escola from './Escola'
 import Material from './Material'
 

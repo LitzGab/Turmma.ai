@@ -1,8 +1,8 @@
 import { BookOpen, Settings } from 'lucide-react'
-import { FAMILIAS_DE_COR } from '../../componentes/Contador'
-import { Icone, type TamanhoDoIcone } from '../../componentes/Icone'
-import { NOMES_DOS_LUGARES, type NomeDoLugar } from '../../componentes/icones/lugares'
-import { Ladrilho, type TamanhoDoLadrilho } from '../../componentes/Ladrilho'
+import { FAMILIAS_DE_COR } from '../../componentes/ui/Contador'
+import { Icone, type TamanhoDoIcone } from '../../componentes/ui/Icone'
+import { NOMES_DOS_LUGARES, type NomeDoLugar } from '../../componentes/ui/icones/lugares'
+import { Ladrilho, type TamanhoDoLadrilho } from '../../componentes/ui/Ladrilho'
 import { Secao } from '../Secao'
 
 /** Os tamanhos em que o ícone ilustrado aparece na casca e nas telas: o menor da lista, o da lateral e o grande. */

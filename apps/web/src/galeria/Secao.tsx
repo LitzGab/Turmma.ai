@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CabecalhoDeSecao } from '../componentes/Tela'
+import { CabecalhoDeSecao } from '../componentes/ui/Tela'
 
 /**
  * Um bloco da galeria: o título e a peça nos estados dela. O `data-galeria` é o nome que o e2e usa para achar o bloco

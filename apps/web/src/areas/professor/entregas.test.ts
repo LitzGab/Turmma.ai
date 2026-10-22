@@ -1,7 +1,7 @@
 import { esquemaPedidoDecidirEntrega, type Entrega } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
-import { textoDaAprovacao, motivoDaRejeicao } from '../../componentes/ia/aprovacao'
-import { problemaDoTexto } from '../../componentes/texto-longo'
+import { textoDaAprovacao, motivoDaRejeicao } from '../../componentes/ui/ia/aprovacao'
+import { problemaDoTexto } from '../../componentes/ui/campos/texto-longo'
 import { aprovacaoDaEntrega, avisoDaFuncaoSuspensa, decideAqui, podeRenomear, saidaEmPdf, entregasDoFiltro, falaDaEntrega, LIMITES_DA_JUSTIFICATIVA, resumoDaAprovacao, textoDaAdaptacao } from './entregas'
 
 const TURMA = '0190f5a0-0000-7000-8000-00000000002b'

@@ -4,8 +4,8 @@ import { useLocation } from 'wouter'
 import { ErroDaApi } from '../api/cliente'
 import { descartarSessaoVencida, entrarPorEmail, entrarPorMatricula, quemEstaNaSessao } from '../api/sessao'
 import { ROTA_DA_ETAPA, ROTAS } from '../caminhos'
-import { Botao } from './Botao'
-import { CAIXA_DO_CAMPO } from './seletor'
+import { Botao } from './ui/Botao'
+import { CAIXA_DO_CAMPO } from './ui/campos/seletor'
 
 /** O campo do login, igual ao do `Campo`: 48 px, canto de 12, borda de 2 px em `borda-campo` e fundo `campo`. */
 const CLASSES_DO_CAMPO_DO_LOGIN = `min-h-12 px-3.5 py-2 t-corpo ${CAIXA_DO_CAMPO}`

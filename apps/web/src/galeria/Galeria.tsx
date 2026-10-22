@@ -1,11 +1,11 @@
 import type { ComponentType } from 'react'
 import { Aparencia } from '../componentes/Aparencia'
-import { Tela } from '../componentes/Tela'
+import { Tela } from '../componentes/ui/Tela'
 import { useTituloDaTela } from '../titulo'
 
 /**
  * A galeria das peças (`docs/mvp-rapido.md` 9.3; `docs/interface.md` 10): uma tela só, fora da navegação, onde cada peça de
- * `componentes/` e de `componentes/ia/` aparece nos seus estados. É nela que o Playwright prova as peças, nos projetos
+ * `componentes/` e de `componentes/ui/ia/` aparece nos seus estados. É nela que o Playwright prova as peças, nos projetos
  * `chromebook` e `celular` (`e2e/pecas-*.spec.ts`), antes de as telas existirem, e nos dois temas (`Aparencia`, no topo).
  *
  * **Uma seção por arquivo**, em `secoes/<grupo>.tsx`, registradas por `import.meta.glob`: peça nova entra criando ou

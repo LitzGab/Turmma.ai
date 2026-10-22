@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ErroDaApi } from '../../api/cliente'
 import { consultaMinhaTurma } from '../../api/minha-turma'
 import { EstadoCarregando, EstadoErro } from '../../componentes/estado'
-import { Tela } from '../../componentes/Tela'
+import { Tela } from '../../componentes/ui/Tela'
 import { useTituloDaTela } from '../../titulo'
 
 /**
