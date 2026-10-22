@@ -1,4 +1,4 @@
-import { diaDeUso, executarNoContexto } from '@educa/nucleo'
+import { ArmazemEmMemoria, diaDeUso, Enfileirador, executarNoContexto, JobRegistroRepository, PedidoDeJobRecusado } from '@educa/nucleo'
 import { CicloDeVidaService } from '@educa/nucleo/ciclo-de-vida'
 import {
   CodigoDeErro,
@@ -11,6 +11,7 @@ import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
+import { PrivacidadeService } from '../src/privacidade/privacidade.service.js'
 import { TitularesRepository } from '../src/privacidade/titulares.repository.js'
 import { EmissorDeDesafio } from '../src/sessao/desafio.js'
 import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from './api-com-sessao.js'
@@ -447,6 +448,31 @@ describe('pedido do titular (F3, tarefa 11.0): busca, prévia, registro, lista, 
       }
       // O que não é imutável muda: o `concluir` conclui o mesmo pedido.
       expect(resposta(await concluir(a.coordenacao, id))).toEqual({ status: 204, corpo: {} })
+    })
+  })
+
+  describe('o job do arquivo ao registrar o pedido (reengenharia, 18.0)', () => {
+    it('o job que a definição recusa desfaz a transação de quem pede: o pedido de acesso não fica, nem o job, nem a auditoria; sem o defeito, o mesmo pedido entra', async () => {
+      const escola = await escolaComPessoas()
+      const aluno = escola.alunos[0]
+      if (aluno === undefined) throw new Error('aluno de teste não criado')
+      const real = new Enfileirador(new JobRegistroRepository(bancada.banco))
+      // O serviço manda o pedidoId certo; o que se estraga é só o payload, no caminho até o `Enfileirador` de verdade.
+      const comPayloadEstragado: Pick<Enfileirador, 'enfileirar'> = { enfileirar: (tx, tipo, dados, ...opcoes) => real.enfileirar(tx, tipo, Object.assign({}, dados, { escolaId: escola.escolaId }), ...opcoes) }
+      const comoCoordenacao = { requisicaoId: randomUUID(), escolaId: escola.escolaId, usuarioId: escola.coordenacao.usuarioId, papel: 'coordenador' as const, sessaoId: escola.coordenacao.sessaoId, anoLetivoId: null }
+      const registro = () => ({ titularId: aluno.id, tipo: 'acesso' as const, solicitante: 'titular' as const, chegouEm: HOJE(), chaveEnvio: randomUUID() })
+      const jobs = async () => Number((await bancada.pool.query<{ total: string }>('select count(*) as total from job_registro where escola_id = $1', [escola.escolaId])).rows[0]?.total)
+
+      const comDefeito = new PrivacidadeService(bancada.banco, { enfileirador: comPayloadEstragado, armazem: new ArmazemEmMemoria() })
+      await expect(executarNoContexto(comoCoordenacao, () => comDefeito.registrarPedido(registro()))).rejects.toBeInstanceOf(PedidoDeJobRecusado)
+      expect(await pedidosNoBanco(escola.escolaId)).toEqual([])
+      expect(await jobs()).toBe(0)
+      expect(await auditoriasDa(escola.escolaId, 'pedido.registrado')).toEqual([])
+
+      const semDefeito = new PrivacidadeService(bancada.banco, { enfileirador: real, armazem: new ArmazemEmMemoria() })
+      const pedido = await executarNoContexto(comoCoordenacao, () => semDefeito.registrarPedido(registro()))
+      expect((await pedidosNoBanco(escola.escolaId)).map((linha) => linha['id'])).toEqual([pedido.id])
+      expect(await jobs()).toBe(1)
     })
   })
 

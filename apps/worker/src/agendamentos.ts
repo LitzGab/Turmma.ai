@@ -1,10 +1,7 @@
 import { executarNoContexto, type Banco, type Enfileirador, type LoggerBase } from '@educa/nucleo'
+import { TIPO_CONSOLIDAR_USO, TIPO_EXPURGAR_ACESSO, TIPO_EXPURGAR_DADO_PESSOAL, TIPO_EXPURGAR_JOBS, type TipoDeJob } from '@educa/shared'
 import { UnrecoverableError, type Job, type Queue } from 'bullmq'
 import { randomUUID } from 'node:crypto'
-import { TIPO_CONSOLIDAR_USO } from './processadores/consolidar-uso.js'
-import { TIPO_EXPURGAR_ACESSO } from './processadores/expurgar-acesso.js'
-import { TIPO_EXPURGAR_DADO_PESSOAL } from './processadores/expurgar-dado-pessoal.js'
-import { TIPO_EXPURGAR_JOBS } from './processadores/expurgar-jobs.js'
 
 /**
  * A fila do BullMQ onde só moram os disparos agendados. O disparo não executa a rotina: grava o job
@@ -16,9 +13,12 @@ export const FILA_DOS_AGENDAMENTOS = 'agendamentos'
 /** O fuso do horário dos agendamentos: "2h" é 2h em São Paulo, e não em UTC. */
 export const FUSO_DOS_AGENDAMENTOS = 'America/Sao_Paulo'
 
+/** Os tipos que a rotina noturna dispara: os do sistema, sem escola e sem dados. */
+export type TipoAgendado = Extract<TipoDeJob, `sistema.${string}`>
+
 export interface Agendamento {
   /** O tipo do job gravado, que é também o id do agendador no BullMQ. */
-  tipo: string
+  tipo: TipoAgendado
   /** Cron, no fuso `FUSO_DOS_AGENDAMENTOS`. */
   padrao: string
 }
@@ -82,12 +82,12 @@ export function criarDisparoDeAgendamento(
   logger: LoggerBase,
   agendamentos: readonly Agendamento[] = AGENDAMENTOS,
 ): (job: Pick<Job, 'name'>) => Promise<string> {
-  const tipos = new Set(agendamentos.map(({ tipo }) => tipo))
   return (job) => {
-    if (!tipos.has(job.name)) return Promise.reject(new UnrecoverableError('agendamento desconhecido'))
-    const tipo = job.name
+    const agendamento = agendamentos.find(({ tipo }) => tipo === job.name)
+    if (agendamento === undefined) return Promise.reject(new UnrecoverableError('agendamento desconhecido'))
+    const { tipo } = agendamento
     return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, async () => {
-      const jobId = await banco.transaction((tx) => enfileirador.enfileirar(tx, { tipo, fila: 'lote', naoUrgente: true, dados: {} }))
+      const jobId = await banco.transaction((tx) => enfileirador.enfileirar(tx, tipo, {}))
       logger.info({ evento: 'agendamento.disparado', tipo, jobId })
       return jobId
     })

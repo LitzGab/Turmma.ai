@@ -1651,3 +1651,12 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X5, 53.0) Acabamentos do espelho:** (1) o comentário de `apps/web/src/api/sessao.ts:76-78` ainda aponta para `areas/aluno/espelho-da-fila.ts` e diz só "sai no 'Sair'": citar `api/espelho-da-fila.ts`, a suspensão e a troca de dono feita pela casca; (2) a limpeza no "Sair" só vale porque a `CascaDaEscola` é importada direto, sem `lazy`: importar o espelho em `main.tsx` (ou registrar o gancho por função chamada ali) e acrescentar em `CascaDaEscola.test.tsx` o caso que clica em "Sair" e confere o `sessionStorage` vazio sem a Atividade carregada; (3) `api/espelho-da-fila.ts` importa o tipo `EscolhaPendente` de `areas/aluno/respostas`: derivar de `EspelhoDaFila['pendentes'][number]` (ou mover para `packages/shared`); (4) caso que fixe que a troca de escola da mesma pessoa apaga as pendentes da escola anterior (`revisor-geral` e `test-engineer`, 53.0, 2ª rodada).
 - [ ] **(X5, 8.0) `onda-1a.md` acima do teto:** o arquivo tem cerca de 2.700 palavras e o teto da `techspec.md` é 1.500 (já passava, com 2.442 no HEAD); enxugar ou partir na próxima tarefa da onda 1a que o tocar (`revisor-geral`, 8.0, 1ª rodada).
 - [ ] **(X5, 8.0) Fixture no `dist` do núcleo:** `packages/nucleo/tsconfig.build.json` só exclui `src/**/*.test.ts`, então `ia/__fixtures__/contexto-da-escola.ts` (e os outros `__fixtures__`) vão para o `dist`; acrescentar `src/**/__fixtures__/**` ao `exclude` (`revisor-geral`, 8.0, 1ª rodada).
+- [ ] **A guarda de chave pessoal olha só o primeiro nível do esquema** (X5, 18.0; `tools/guardas/definicoes-de-job.test.ts`,
+  `chavesPessoaisDe` lê `esquema.shape`): descer recursivamente na tarefa da onda 3 que trouxer o primeiro payload de job com
+  objeto ou lista de objetos, porque `{ aluno: { nome } }` hoje passaria (`privacy-guardian`, 18.0, 1ª rodada)
+- [ ] **O 500 de `PedidoDeJobRecusado` sem teste HTTP** (X5, 18.0): a recusa é defeito de quem enfileirou e responde 500 pelo
+  filtro geral de erro, que não leva `message` nem `stack`; falta o caso de integração que fixe isso para este erro. Escrever na
+  próxima tarefa que mexer no filtro de erro (`privacy-guardian`, 18.0, 1ª rodada)
+- [ ] **O `Enfileirador` grava `lidos.data`, e nenhum esquema tem `default` nem `transform`** (X5, 18.0): quando o primeiro esquema
+  de `DEFINICOES_DE_JOB` ganhar um, acrescentar o caso que distingue gravar o dado lido do payload original, com a mutação
+  `dados: dados` no lugar de `dados: lidos.data` em `enfileirador.ts` (`test-engineer`, 18.0, 1ª rodada)

@@ -59,7 +59,7 @@ export { FILAS_POR_PRIORIDADE, nomeDaFilaBullMQ, OPCOES_DO_POOL_POR_FILA } from 
 export type { OpcoesDoPool } from './fila/filas.js'
 export { DONO_DAS_VAGAS_DO_SISTEMA, INTERVALO_RENOVACAO_DA_VAGA_MS, VagasPorEscola, VALIDADE_DA_VAGA_MS } from './fila/vagas-por-escola.js'
 export { Enfileirador, PRIORIDADE_DA_FILA } from './fila/enfileirador.js'
-export type { PedidoDeJob } from './fila/enfileirador.js'
+export { MotivoDaRecusaDoJob, PedidoDeJobRecusado } from './fila/pedido-de-job-recusado.js'
 export { CANAL_NOTIFICACAO_JOB, JobRegistroRepository, PREFIXO_TIPO_SISTEMA } from './fila/job-registro.repository.js'
 export type { EstadoRegistrado, JobParaExecutar, ResultadoDaChave, ResultadoDoInicio } from './fila/job-registro.repository.js'
 export { EfeitoSinteticoRepository, TABELA_DO_EFEITO_SINTETICO } from './fila/efeito-sintetico.repository.js'

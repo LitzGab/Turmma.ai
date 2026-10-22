@@ -1,4 +1,4 @@
-import { AUTOR_DA_ROTINA, CodigoDeErro, HORAS_PARA_REENFILEIRAR_A_ELIMINACAO, TIPO_DO_JOB_ELIMINAR_TITULAR, type CategoriaDeRetencao } from '@educa/shared'
+import { AUTOR_DA_ROTINA, CodigoDeErro, HORAS_PARA_REENFILEIRAR_A_ELIMINACAO, TIPO_ELIMINAR_TITULAR, type CategoriaDeRetencao } from '@educa/shared'
 import { and, desc, eq, sql, type SQL } from 'drizzle-orm'
 import { CicloDeVidaService } from '../ciclo-de-vida/ciclo-de-vida.service.js'
 import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
@@ -474,11 +474,7 @@ export class ExpurgoDaEscolaRepository {
       let enfileirados = 0
       let jaEnfileirados = 0
       for (const { id } of marcados.rows) {
-        const resultado = await enfileirador.enfileirarUmaVez(
-          tx,
-          { tipo: TIPO_DO_JOB_ELIMINAR_TITULAR, fila: 'lote', naoUrgente: true, dados: { pedidoId: id } },
-          `eliminacao:${id}`,
-        )
+        const resultado = await enfileirador.enfileirarUmaVez(tx, TIPO_ELIMINAR_TITULAR, { pedidoId: id }, `eliminacao:${id}`)
         if (resultado.situacao === 'enfileirado') enfileirados += 1
         else jaEnfileirados += 1
       }

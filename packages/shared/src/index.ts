@@ -29,6 +29,28 @@ export type { Aviso, RespostaAvisos } from './sistema/avisos.js'
 export { CODIGOS_DE_FALHA_DE_JOB, CodigoDeFalhaDeJob, ESTADOS_DE_JOB, FILAS } from './sistema/jobs.js'
 export type { EstadoDeJob, Fila } from './sistema/jobs.js'
 export {
+  DEFINICOES_DE_JOB,
+  definirJob,
+  TIPO_CONSOLIDAR_USO,
+  TIPO_ELIMINAR_TITULAR,
+  TIPO_EXPURGAR_ACESSO,
+  TIPO_EXPURGAR_DADO_PESSOAL,
+  TIPO_EXPURGAR_ESCOLA,
+  TIPO_EXPURGAR_JOBS,
+  TIPO_JOB_SINTETICO,
+  TIPO_MONTAR_ARQUIVO,
+} from './sistema/definicoes-de-job.js'
+export type {
+  DadosDoJob,
+  DefinicaoDeJob,
+  EscopoDeJob,
+  EsquemaDosDadosDoJob,
+  ExecutorDeJob,
+  OpcoesDoJob,
+  RetentativaDeJob,
+  TipoDeJob,
+} from './sistema/definicoes-de-job.js'
+export {
   CPU_MS_MAXIMO_SINTETICO,
   esquemaDadosJobSintetico,
   esquemaPedidoJobSintetico,
@@ -826,7 +848,6 @@ export {
   FINALIDADES_DO_ARQUIVO_DA_ESCOLA,
   HORAS_EM_PREPARACAO_PARA_ALERTAR,
   nomeDoArquivoDoTitular,
-  TIPO_DO_JOB_MONTAR_ARQUIVO,
   TIPOS_DE_PEDIDO_COM_ARQUIVO,
   VALIDADE_DA_URL_DO_ARQUIVO_SEGUNDOS,
   VALIDADE_DO_ARQUIVO_DIAS,
@@ -890,7 +911,6 @@ export {
   HORAS_AGENDADO_PARA_ALERTAR,
   HORAS_PARA_REENFILEIRAR_A_ELIMINACAO,
   PRAZO_DA_ELIMINACAO_DIAS,
-  TIPO_DO_JOB_ELIMINAR_TITULAR,
   SOLICITANTES_DO_PEDIDO,
   TIPOS_DE_PEDIDO_DO_TITULAR,
 } from './privacidade/titular.js'

@@ -9,13 +9,15 @@ import {
   ExpurgoDaEscolaRepository,
   haHomonimoDoTitular,
   padraoDoNome,
+  PedidoDeJobRecusado,
   resolverJanela,
   RetencaoDaEscolaRepository,
   TrocaDeNome,
   type JanelaLetiva,
   type Relogio,
+  type TransacaoBanco,
 } from '@educa/nucleo'
-import { AUTOR_DA_ROTINA, CodigoDeFalhaDeJob, TIPO_DO_JOB_ELIMINAR_TITULAR } from '@educa/shared'
+import { AUTOR_DA_ROTINA, CodigoDeFalhaDeJob, TIPO_ELIMINAR_TITULAR } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
@@ -23,7 +25,7 @@ import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import type { ConfiguracaoStorage } from '../src/config.js'
 import { montarWorker } from '../src/montagem.js'
 import { FalhaDeJob } from '../src/falha-de-job.js'
-import { criarEliminacaoDoTitular, TIPO_ELIMINAR_TITULAR } from '../src/processadores/eliminar-titular.js'
+import { criarEliminacaoDoTitular } from '../src/processadores/eliminar-titular.js'
 import { criarExpurgoDaEscola } from '../src/processadores/expurgar-escola.js'
 import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
 
@@ -945,6 +947,25 @@ describe('titular.eliminar', () => {
     })
   })
 
+  describe('o job da eliminação ao enfileirar', () => {
+    it('o payload inválido de `enfileirarUmaVez` é recusado sem gravar e sem ocupar a chave: o válido, com a mesma chave, entra depois', async () => {
+      const escolaId = await bancada.escola()
+      const pedidoId = randomUUID()
+      const chave = `eliminacao:${pedidoId}`
+      const naEscola = <T>(fazer: (tx: TransacaoBanco) => Promise<T>) => executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => bancada.banco.transaction((tx) => fazer(tx)))
+      const jobs = async () => Number((await bancada.pool.query<{ total: string }>('select count(*) as total from job_registro where escola_id = $1', [escolaId])).rows[0]?.total)
+
+      // @ts-expect-error o payload da eliminação é só o pedidoId
+      const invalido = naEscola((tx) => bancada.enfileirador.enfileirarUmaVez(tx, TIPO_ELIMINAR_TITULAR, { pedidoId, escolaId }, chave))
+      await expect(invalido).rejects.toBeInstanceOf(PedidoDeJobRecusado)
+      expect(await jobs()).toBe(0)
+
+      const valido = await naEscola((tx) => bancada.enfileirador.enfileirarUmaVez(tx, TIPO_ELIMINAR_TITULAR, { pedidoId }, chave))
+      expect(valido.situacao).toBe('enfileirado')
+      expect(await jobs()).toBe(1)
+    })
+  })
+
   describe('montado no worker de lote', () => {
     it('o job enfileirado pela rotina é despachado e executado pelo worker: o pedido vencido conclui e a pessoa sai', async () => {
       const c = await cenario()
@@ -960,7 +981,7 @@ describe('titular.eliminar', () => {
       bancada.despachante(log, { relogio }).iniciar()
       const enfileirado = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: c.escolaId }, () =>
         bancada.banco.transaction((tx) =>
-          bancada.enfileirador.enfileirarUmaVez(tx, { tipo: TIPO_DO_JOB_ELIMINAR_TITULAR, fila: 'lote', naoUrgente: true, dados: { pedidoId } }, `eliminacao:${pedidoId}`),
+          bancada.enfileirador.enfileirarUmaVez(tx, TIPO_ELIMINAR_TITULAR, { pedidoId }, `eliminacao:${pedidoId}`),
         ),
       )
       await expect.poll(async () => (await bancada.estado(enfileirado.id ?? ''))?.estado, { timeout: 20_000, interval: 100 }).toBe('concluido')
@@ -991,7 +1012,6 @@ describe('titular.eliminar', () => {
 
     it('o tipo do job é o do contrato', () => {
       expect(TIPO_ELIMINAR_TITULAR).toBe('titular.eliminar')
-      expect(TIPO_DO_JOB_ELIMINAR_TITULAR).toBe('titular.eliminar')
     })
   })
 })

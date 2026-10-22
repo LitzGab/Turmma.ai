@@ -19,9 +19,6 @@ import { CodigoDeFalhaDeJob, retencaoDaEscola } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 
-/** O job da escola que a rotina noturna grava, um por escola e noite (`sistema.expurgar-dado-pessoal`). */
-export const TIPO_EXPURGAR_ESCOLA = 'retencao.expurgar-escola'
-
 /** Quantos arquivos do titular o expurgo apaga por volta: cada um é uma chamada ao storage, e são poucos por escola. */
 export const LOTE_DOS_ARQUIVOS_DO_TITULAR = 100
 

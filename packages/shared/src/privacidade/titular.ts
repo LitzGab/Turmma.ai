@@ -37,12 +37,6 @@ export type EstadoDoPedido = (typeof ESTADOS_DO_PEDIDO)[number]
 export const PRAZO_DA_ELIMINACAO_DIAS = 7
 
 /**
- * O tipo do job da eliminação do titular (F3, tarefa 15.0; Tech Spec do F3, seção 5), na fila de lote, não urgente, só
- * com o id do pedido. Quem o grava é o job da escola do expurgo (`retencao.expurgar-escola`), e quem o processa é o worker.
- */
-export const TIPO_DO_JOB_ELIMINAR_TITULAR = 'titular.eliminar'
-
-/**
  * Depois de quantas horas do enfileiramento o pedido `agendado` e vencido volta à fila (Tech Spec do F3, seção 5): o job
  * que a janela letiva interrompeu, ou que se perdeu, é retomado na noite seguinte; menos que isto, o job ainda pode estar
  * rodando. Vinte horas cabem entre duas noites seguidas do expurgo.

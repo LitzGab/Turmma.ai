@@ -152,11 +152,11 @@ da tarefa diz como rodá-lo.
 
 ### Jobs tipados
 
-- [ ] **18.0 — Payload inválido é recusado ao enfileirar, e tipo sem definição não compila**
-  - [ ] 18.1 Caracterização, num commit antes, dos 8 tipos
-  - [ ] 18.2 `DEFINICOES_DE_JOB` em `packages/shared/src/sistema/definicoes-de-job.ts`, com as constantes `TIPO_*`; o sintético `.strict()`
-  - [ ] 18.3 `enfileirar` e `enfileirarUmaVez` validam antes de gravar; os chamadores migram
-  - [ ] 18.4 Testes: os da tabela
+- [x] **18.0 — Payload inválido é recusado ao enfileirar, e tipo sem definição não compila**
+  - [x] 18.1 Caracterização, num commit antes, dos 8 tipos
+  - [x] 18.2 `DEFINICOES_DE_JOB` em `packages/shared/src/sistema/definicoes-de-job.ts`, com as constantes `TIPO_*`; o sintético `.strict()`
+  - [x] 18.3 `enfileirar` e `enfileirarUmaVez` validam antes de gravar; os chamadores migram
+  - [x] 18.4 Testes: os da tabela
 
 - [ ] **19.0 — O worker valida pela definição, e o teste liga tipo, fila e processador**
   - [ ] 19.1 Caracterização, num commit antes: as opções de publicação como literal
