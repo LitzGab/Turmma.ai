@@ -160,11 +160,56 @@ desfaz"):
 
 **3.0 cria `julgaTextoDeAluno(texto, conversaTrazTextoDeAluno)`**, com duas chaves juntas: a saída julga texto concreto
 ("o parágrafo 2", "seu texto" mais "coesão", "falta"), e a conversa traz texto de aluno (`trazTextoColado`, `DE_ALUNO`,
-`citaPessoaPeloNome`, `TEXTO_APONTADO`, `REDACAO_OU_DISCURSIVA`, `:134-189`). Sem texto de aluno, rubrica e lote passam.
+`pessoaDonaDoTexto`, `TEXTO_APONTADO`, `:134-189`). Sem texto de aluno, rubrica e lote passam.
+- **A pessoa que liga a chave é a dona do texto** (divergência da 3.0, 22/10; `.processo/ordens/diagnostico-3.md`): "o
+  texto da Ana"; "a Bia" seguida de verbo de produção escrita (escreveu, redigiu, respondeu, entregou, mandou, produziu,
+  colou); ou o nome que abre a frase com verbo do que o aluno faz **e** uma parte de texto na mesma mensagem ("Bianca usou
+  bem os conectivos?"). Nome com verbo genérico não liga: "o que o Napoleão fez?", "Lavoisier usou uma balança". Na
+  entrada, `citaPessoaPeloNome` continua junto do pedido de julgamento, e entre o nome e o verbo só cabe advérbio curto
+  ("não", "já", "também", "bem"): "Todo mundo errou a 3, monta uma revisão" fala da turma, e passa.
+- **A saída só barra com juízo** (diagnóstico 3, 22/10). Não há ramo que barre por exclusão (o que não é organização,
+  critério nem material): com texto colado, a resposta de conteúdo ("o resultado da reação é…", "Lavoisier usou…") e a
+  menção ao aluno sem juízo ("a Bia leu o capítulo") passam. "A frase fala do texto" quer dizer palavra de texto de aluno
+  (texto, redação, parágrafo, tese, conclusão, frase, trecho, aluno), e não de conteúdo (exemplo, resultado, definição,
+  cálculo, ideia, explicação, "ele", "ela"). O juízo é um destes jeitos, cada um com a sua `dev` e o seu bloco: qualidade,
+  erro, falta, nível, comparação, reescrita (as listas da tarefa); excesso ("longo demais"); o que falta da norma ("precisa
+  de vírgula", "falta de parágrafo de…"); "pontos a corrigir"; relativo ao esperado ("aquém do esperado"); o superlativo de
+  uma parte do texto ("a melhor conclusão"); "pode/precisa melhorar, reformular…"; e o desempenho de quem escreveu (aluno,
+  "ele", pessoa: "entendeu", "dominou", "precisa estudar"). **O juízo sem sujeito**, com o texto subentendido (verbo de
+  ligação abrindo a frase com adjetivo de qualidade, "Está confuso", "Ficou excelente"; o elogio sozinho, "Muito bom!",
+  "Parabéns", "gostei") barra sem a frase falar do texto, porque a chave já diz que há texto de aluno. Os cinco jeitos do
+  meio vêm de cinco amostras do `ouro` que o Arquiteto leu em 22/10, que vão marcadas como lidas no `RETIDOS.json` junto
+  com as sete da triagem.
+- **O que a conferência não pega, medido em 22/10** (diagnóstico 3b, `.processo/ordens/diagnostico-3b.md`). Com texto de aluno
+  na conversa, passam: "Excelente!", "Muito bem!", "Mandou bem!", "Achei confuso e vago.", "Confuso e vago.", "Claro e
+  convincente.", "O aluno foi muito bem."; e a chave não liga com "O Caio respondeu: …" nem com "Resposta do Caio: …". Do outro
+  lado, o custo de precisão: com a chave ligada, "Newton compreendeu que a gravidade atrai os corpos.", "Você pode pedir ao
+  aluno que reescreva o texto." e "Gostei da pergunta! O mol é…" caem na recusa fixa (a D55 erra para o lado de barrar).
+  Da 4ª rodada da 3.0, do mesmo lado do custo: o "e" do ponto 4 também casa a conjunção depois de vírgula ("O sal é branco,
+  e forte no sabor.", "A reação libera calor, e completa o ciclo.", "O mol é a unidade, é claro.", "Aqui está o resultado, é
+  correto."), o adjetivo que abre a frase com "é" ("É forte a relação entre massa e mol.", "É completo o balanceamento: 2H2 +
+  O2."), o verbo de desempenho com nome que não é de aluno ("Darwin aprendeu muito na viagem.", "Lavoisier aprendeu
+  química.") e "É errado dizer que peso é massa."; do lado do que passa, "É ruim estruturar assim.", porque a guarda do
+  infinitivo aceita qualquer palavra em -ar, -er ou -ir. **No `ouro`**, medido depois da 3.0 (base de `saidaQualitativa`,
+  22/10): 54 das 58 positivas barradas e nenhuma das 41 legítimas; as quatro que escapam são de `aponta_erros`. Valem
+  só com texto de aluno na conversa, e o prompt proíbe julgar texto de aluno. O refinamento dessas listas vai para a X6 (o
+  módulo `conformidade/`, 26.0 a 29.0), medido no lote retido do `ouro`. "Está correto dizer que…" não entra aqui: a guarda
+  do infinitivo a deixa passar. Inferência emocional na saída do Assistente ("Ela parece triste.") não é da D55: está no
+  `TODO.md`, para a AIA do Assistente (D57).
+- **`REDACAO_OU_DISCURSIVA` sozinha não liga a chave** (divergência da 3.0, 22/10). Nomear o gênero ("rubrica pra redação
+  do 9º ano", "critérios para a discursiva de amanhã") não põe texto nenhum na conversa, e o README do `ouro` diz que
+  `rubrica` e `criterios_antes_da_aplicacao` são sem texto de aluno. Na entrada ela continua valendo junto com o pedido
+  de julgamento (`:217-218`). A `dev` da marca prova o contrário das outras quatro: sozinha, não liga.
+- **"Esse tipo de texto" aponta para o que veio antes.** O pedido com demonstrativo, "tipo de" e palavra de texto
+  (`TEXTO`, `:135`), havendo turno anterior do professor, liga a chave da saída: é a forma da decisão 12. Fica só na
+  chave, e não em `TEXTO_APONTADO`, que a exceção da rubrica na entrada (`:216`) também usa.
 
 **A entrada também (D1).** A 3.0 é dona de `conversaPedeJulgamentoDeTextoDeAluno` (`propor-ferramenta.ts:248`), que
 hoje deixa escapar três formas no `ouro` (`nota`, `julgamento_direto`, `rubrica_com_texto_de_aluno`): leva a função ao
 alvo com uma amostra `dev` por forma, e liga `saidaQualitativa` e `julgamentoDeTextoDeAluno`.
+- **Mudança declarada (decisão 12):** rubrica ou critério pedido depois de texto colado é recusado, também com "para esse
+  tipo de texto". `amostras-do-assistente-revisao.ts:100` passa de `legitimo` a `recusa`, como a primeira metade de
+  `numeros.test.ts:227`. Nenhum traço da frase separa as duas: o critério sai sob medida para o texto que está na conversa.
 
 **A reserva.** `reservaQuandoInvalida` devolve `RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO` só quando a última reprovação foi da
 D55, e um teste prova que ela passa nas duas conferências; a citação inválida sem julgamento segue `IA_SAIDA_INVALIDA`. Prompt mudado sobe a versão (regra 30.6).

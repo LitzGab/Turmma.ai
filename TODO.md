@@ -10,6 +10,14 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] Indicar encarregado (DPO) e publicar canal de contato
 - [ ] Relatório de impacto (RIPD) — dado de menor, volume alto, IA no fluxo
 - [ ] Definir prazos de retenção com uma escola real (varia por rede)
+- [ ] Refinar as listas da conferência da saída do Assistente (X6, `conformidade/`, 26.0 a 29.0), medido no lote retido do `ouro`:
+      o `e` do "É forte"/"É confuso" também casa a conjunção depois de vírgula; a guarda do infinitivo pega qualquer `-ar/-er/-ir`
+      ("É ruim estruturar assim." passa); `aprendeu`, `compreendeu`, `assimilou` e os plurais de `PESSOA_NA_SAIDA` sem frase de teste
+      ("O Caio aprendeu a regra."); partes opcionais de `ELOGIO` sem bloco ("Um bom começo!"); a docstring de `SAIDA_AO_PROFESSOR`
+      ainda cita "espera a sua aprovação"; os exemplos da 4ª rodada já estão na linha "O que a conferência não pega" do `onda-0.md`
+      §2.3, e o `aponta_erros` do `ouro` (4 de 12 escapam) entra na mesma medida
+- [ ] AIA do Assistente (D57): a saída que infere emoção ou estado do aluno ("Ela parece triste.") não é da D55 e a conferência da
+      tarefa 3.0 não a pega; entra na avaliação de impacto do Assistente, antes do PRD que o expõe ao aluno
 - [ ] O pedido do titular (acesso e portabilidade, F3, `ciclo-de-vida.service.ts`) cobre também a `lista_nome` e a
       `reivindicacao` da A1, para a pergunta de fechamento da regra 20 continuar respondida por código: o pedido se liga
       ao aluno por `lista_nome_id` enquanto a linha da lista existe, e depois do `set null` já não se liga a ninguém

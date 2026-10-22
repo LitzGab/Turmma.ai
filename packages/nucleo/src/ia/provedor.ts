@@ -188,6 +188,7 @@ export class ProvedorDeIa implements LLMProvider {
     const { tarefa } = pedido
     let correcao: CorrecaoPedida | undefined
     let reprovadaNaConferencia = false
+    let problemasDaUltima: readonly string[] = []
     while (gasto.tentativas < TENTATIVAS_MAXIMAS) {
       gasto.tentativas += 1
       // Um prazo por chamada. O sinal de quem chamou (o executor) cancela junto.
@@ -201,9 +202,10 @@ export class ProvedorDeIa implements LLMProvider {
       if (interpretada.ok) return interpretada.saida
       correcao = { respostaAnterior: resposta.texto, problemas: interpretada.problemas }
       reprovadaNaConferencia = interpretada.naConferencia === true
+      problemasDaUltima = interpretada.problemas
     }
     // Só quando o modelo respondeu na forma certa e errou no conteúdo: modelo que devolve lixo continua sendo falha.
-    const reserva = reprovadaNaConferencia ? tarefa.reservaQuandoInvalida?.(entrada) : undefined
+    const reserva = reprovadaNaConferencia ? tarefa.reservaQuandoInvalida?.(entrada, problemasDaUltima) : undefined
     if (reserva !== undefined) {
       const validada = validar(tarefa, entrada, reserva)
       if (validada.ok) {

@@ -82,8 +82,11 @@ export interface DefinicaoDeTarefa<Entrada, Saida> {
    * certos, conteúdo errado; JSON quebrado continua sendo falha). Só onde falhar é pior
    * que responder por regra: no Tutor, a recusa da resposta pronta que o modelo não soube escrever sem nomear a
    * alternativa. Passa pelo schema e pela conferência como qualquer outra; reprovada, a chamada falha como antes.
+   *
+   * `problemas` são os da **última** reprovação da conferência, em texto fixo, para a reserva responder só ao motivo que é
+   * dela: no Assistente, a recusa da D55 não cobre uma citação inválida.
    */
-  reservaQuandoInvalida?(entrada: Entrada): Saida | undefined
+  reservaQuandoInvalida?(entrada: Entrada, problemas?: readonly string[]): Saida | undefined
   /**
    * O que o schema não alcança: página citada que não veio nos trechos, gabarito trocado na adaptação, Tutor
    * entregando a resposta. Devolve os problemas em texto fixo, que voltam ao modelo na repetição; lista vazia é aprovado.
