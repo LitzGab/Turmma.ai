@@ -32,19 +32,26 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     **A base virou correção** (R57: o hook trata o `MEDIDAS.json` como código, e `ouro.test.ts:267`/`:273` precisam mudar):
     pedi ao Implementador da l1 a **correção `ouro-base-qualitativa`** antes de seguir a 6.0 (ordem
     `.processo/ordens/correcao-ouro-base-qualitativa.md`, copiada para l1; guardiões test-engineer e llm-integrator). O
-    commit segue com o da 6.0; **a esteira da spec fica vermelha nos 3 casos do `ouro.test.ts` até o encontro da linha 1**
+    commit `05aa2fe` na l1, segue com o da 6.0; **a esteira da spec fica vermelha nos 3 casos do `ouro.test.ts` até o
+    primeiro encontro que o leve (l1 ou l2)**
     **DIVERGÊNCIA (ordem) da correção:** gravar a base muda o hash que o `SELO.json` guarda (6 testes do `selo-do-ouro`
     vermelhos). **O `Arquiteto` gravou a base e o selo na spec** (`256fb62`, R58 em `cef19e6`); retomada enviada: restaurar
     o `MEDIDAS.json`, trazer a spec, a correção leva só o `ouro.test.ts` e o documento, portão, Mesa, commit; depois a 6.0
   - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
     **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
-    os 5 da 1ª resolvidos. O `Claude Code #2` corrigiu; **3ª rodada pedida ao `Arquiteto`**, só sobre os dois. A lista
+    os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
+    `REVISAO.md`; **4ª rodada APROVADA** (sem bloqueante). Na publicação, o `Arquiteto` aplica as duas recomendações de
+    redação, a lista "Conferir depois das pastas" e a linha no `README.md`. A lista
     "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
   - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **94.0**, grande, onda 0 (prazo 14:55, sem ir para a X6), desde 11:07
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **51.0**, grande, **linha da web** (depois 53.0, 36.0, 97.0), desde
-    11:07; prazo de 4 h: 15:07
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **14.0**, grande (entrada no padrão NestJS, D81), desde 11:38; prazo 15:38
+    12:00, DIVERGÊNCIA de portão (os 3 casos do `ouro.test.ts`): mandei trazer o `05aa2fe` da `spec/reengenharia--l1` (o
+    único commit dela além da spec) e rodar o portão de novo
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **51.0 pronta** (`50e04d0`, 2 rodadas), **encontro recusado** porque o
+    andar da spec tem os `docs/aia/ouro-retido/*-retido-1.json` do `Arquiteto` sem commit. Avisei-o. Com o relatório dele:
+    `encontro 3`, e então, **antes da 53.0, a correção do `apps/api/test/arquivo-do-titular.int.test.ts`** (3 a 4 casos de
+    data fixa vencidos desde 19/10, vermelhos com ou sem a 51.0, deixam a esteira vermelha) na linha 3
 - **Devo ainda:**
   - **95.0 (guia), entregue pelo Claude Code #2** em `/home/joaquimdp/Documentos/git/Educa.ia/.processo/reengenharia/guia/`
     (`guia-do-desenvolvedor.md`, `arquitetura.md` corrigido, `LEIA.md` com o que conferir). Quando o `Arquiteto` tiver
@@ -54,12 +61,13 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     das pastas
   - todos os 36 documentos existem (`504a041`, `43a6ae2`, `bc9241f`); R55 e R56 em `DECISOES.md`. A 96.0 depende da
     97.0; a 90.0 espera a 24.0; a 43.0 e a 90.0 não correm juntas (`infra/compose.yml`)
-  - **depois do commit da 94.0** (que depende da 93.0): pedir ao `Arquiteto` o **lote retido 2**, que mede as duas, antes
-    da validação. A 26.0 agora depende da 94.0
+  - **lote retido 2 feito** (`0ff264c`, `1f770ea`, R59): regra 37/75, regra ou modelo local 51/75 (alvo ≥ 71); fecha
+    abaixo do alvo pelo recorte, com a lacuna em `onda-0.md` §2.2a, AIA do Tutor, `RETIDOS.json` e `TODO.md`; refinamento
+    e lote 3 na X6. **Pedi o lote retido dos alvos da 3.0** (saidaQualitativa, julgamentoDeTextoDeAluno), antes da validação
   - ler o veredito da esteira de `975bad2` no próximo encontro (`b5b7d11` e `63aac92` verdes; `f794080` cancelada pelo push seguinte)
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
-- **Base:** `spec/reengenharia` em `cef19e6`. Vigia ligada
+- **Base:** `spec/reengenharia` em `1f770ea`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -86,6 +94,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 2.0 | `66d8b95` | Sonnet | 4 (test-engineer 5) | ouro lido para escrever o padrão: divergência, opção A (lote retido), escalada com diagnóstico, bloqueio destravado pelo Joaquim; npm audit fora do ar ~8 h |
 | 93.0 | `c361eb8` | Sonnet | 3 (test-engineer 4) | linha 3, grande, 09:40–11:00; escalada (dose letal) com diagnóstico: volta ao HEAD, a 3ª piora fica declarada; absorveu a correção das pioras da l2 |
 | 3.0 | `1566521` | Sonnet | 4 | linha 1, grande, 07:47–11:25; divergência (triagem: detalhe), escalada, bloqueio destravado pelo recorte; saidaQualitativa 54/58, 0 legítimas barradas; lacuna declarada no §2.3 |
+| 94.0 | `0975b97` | Sonnet | 2 | linha 2, grande, 11:07–11:36; dentro do prazo de 14:55, escopo inteiro; três recomendações no TODO.md |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
@@ -136,6 +145,10 @@ critério de aceite.
 ## O que falhou
 
 ## O que decidi sem perguntar
+- 22/10 12:00 — a linha 2 trouxe a correção `05aa2fe` da `spec/reengenharia--l1` (merge, mesmo commit) para o portão da
+  14.0 passar, em vez de esperar o encontro da 6.0.
+- 22/10 11:40 — cancelei 7 execuções da esteira na fila da `spec/reengenharia` que o `3f100df` já cobria (pushes de
+  documento acumulavam execuções inteiras).
 - 22/10 ~11:35 — a base da `saidaQualitativa` (correção) foi para a linha 1, antes da 6.0, com a árvore limpa: não havia
   linha ociosa, e é a 6.0 que precisa dela primeiro. A spec fica vermelha até o encontro da 6.0.
 - 22/10 ~11:00 — soltei a linha 2 da correção absorvida editando o `.processo/linhas.json` (não há comando para
