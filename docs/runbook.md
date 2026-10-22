@@ -75,6 +75,46 @@ coordenação da escola afetada (seção "Como avisar as escolas") de que as fer
 **Depois:** registre no `TODO.md` a escola (id), o horário, a causa e quanto o job esperou, pelo
 `jobId` em `job_registro` (só ids). Causa nova vira tarefa com teste que a reproduz.
 
+## Job que falhou de vez
+
+**Dispara quando:** há job de um tipo que terminou `falhou` e ainda está em `job_registro`, por 1 min
+(`max by (tipo) (job_falhos) > 0`, regra `infra/grafana/alertas/job-falhou-de-vez.yaml`; X5, tarefa 44.0). `falhou` é o job que
+esgotou as tentativas (5, com recuo) ou que falhou de forma definitiva. O despachante mede a cada 5 s e o alerta traz o `tipo`, nunca
+a escola nem o `dados`. A linha `falhou` fica 30 dias em `job_registro` (o `concluido` sai em 7) e o expurgo a leva; a de `titular.*`
+fica até a ação do operador. **O alerta não zera quando alguém olha**: fica aceso enquanto houver linha do tipo, e a lista de falhos
+está no "Primeiro olhar". Antes da 46.0 (X6) não há comando para reprocessar nem para descartar: a linha sai pelo prazo.
+
+**Impacto:** depende do tipo. `titular.montar-arquivo` e `titular.eliminar`: o pedido de um titular (LGPD, art. 18) não andou, e o job foi
+enfileirado uma vez só, então ninguém vai tentar de novo sozinho. `ia.*`: a ferramenta ou o tutor da escola não entregou o que a pessoa
+pediu. `retencao.*`: o expurgo de dado de uma escola não terminou. `sistema.*`: a rotina volta na próxima rodada agendada.
+
+**Primeiro olhar:** quais são, por tipo e escola, só com ids, códigos e datas (nunca `dados`):
+`docker compose exec postgres psql -U educa -c "select id, escola_id, tipo, codigo_falha, concluido_em from job_registro where estado = 'falhou' order by concluido_em desc limit 50"`.
+O log do worker, pelo `jobId`, traz as tentativas (`job.tentativa_falhou`, com o código e o erro resumido) e o fim (`job.falhou`).
+No painel "Fundação — rota, fila e escola": "Jobs que falharam de vez, por tipo".
+
+**Causas prováveis:**
+1. Dependência fora durante as cinco tentativas (storage, provedor de IA, Redis de fila): o `codigo_falha` repete em vários jobs do mesmo
+   tipo e a hora é a mesma → com a dependência de volta, o próximo job do tipo passa. O falho que ficou não é refeito sozinho: registre-o
+   (veja "Depois") e, no `titular.*`, abra correção com o id do pedido.
+2. Defeito de código num tipo (o mesmo `codigo_falha` em todo job dele, de várias escolas, depois de um deploy) → volte o código
+   (`docker compose up -d` com a imagem anterior) e abra correção com o tipo, o código e o `jobId`.
+3. Defeito de uma escola só (um dado que o processador não tratou) → siga o `jobId` no log do worker; abra correção com o `sqlstate`
+   ou o código, nunca com a mensagem do Postgres, que pode citar o texto da linha.
+4. A série não some depois dos 30 dias → o expurgo de jobs não rodou (veja "Rotina do sistema sem rodar"), ou a linha é de `titular.*`,
+   que não sai por prazo.
+5. O alerta volta a normal sem ninguém ter tratado o job, com o Postgres de pé → a consulta dos falhos falhou (por exemplo, estourou o
+   `statement_timeout`): a medição tira só `job.falhos` da exportação, e a regra de 5xx não vê isso. Procure o aviso
+   `despachante.medicao_indisponivel` no log (`docker compose logs --since 10m despachante-1 despachante-2`) e confira a lista do
+   "Primeiro olhar" direto no banco, que é a verdade; abra correção com o erro resumido do aviso.
+
+**Se nada disso resolver:** não apague a linha à mão nem mude o `estado` por `update`: a linha é o rastro de que o job não terminou, e o
+caso de uso que grava a auditoria vem na 46.0. Escale ao dono do produto e, se o tipo é `titular.*` ou `ia.*`, avise a coordenação da
+escola de que o pedido ou a ferramenta atrasou, sem mandar nome nem conteúdo por mensagem.
+
+**Depois:** registre no `TODO.md` o tipo, o `jobId`, a escola (id), o `codigo_falha` e a data, só com ids. Causa nova vira tarefa com
+teste que a reproduz.
+
 ## Seguro de limite ativo
 
 **Dispara quando:** numa instância da API, por 2 min seguidos, metade ou mais das requisições

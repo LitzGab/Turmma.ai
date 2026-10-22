@@ -64,6 +64,7 @@ export const NOMES_NO_PROMETHEUS = {
   duracaoHttp: ['http_server_request_duration_seconds_bucket', 'http_server_request_duration_seconds_count', 'http_server_request_duration_seconds_sum'],
   esperaMaisAntiga: ['job_espera_mais_antiga_s'],
   pendentes: ['job_pendentes'],
+  falhos: ['job_falhos'],
   aguardandoVaga: ['job_aguardando_vaga_total'],
   vagasEmUso: ['fila_vagas_em_uso'],
   jobsStalled: ['fila_jobs_stalled_total'],

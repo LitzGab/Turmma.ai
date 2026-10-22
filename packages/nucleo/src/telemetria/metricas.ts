@@ -19,6 +19,12 @@ export const METRICAS = {
   esperaMaisAntiga: 'job.espera_mais_antiga_s',
   /** Quantos jobs ainda não começaram, por fila e escola, com teto na contagem. */
   pendentes: 'job.pendentes',
+  /**
+   * Quantos jobs de cada `tipo` terminaram `falhou` e ainda estão em `job_registro` (44.0), com teto na contagem. Só o tipo:
+   * nunca a escola, o `dados` nem o código da falha. A série some quando o expurgo leva a última linha do tipo (30 dias; o
+   * `titular.*` fica até a ação do operador). O alerta "Job que falhou de vez" dispara com qualquer valor acima de zero.
+   */
+  falhos: 'job.falhos',
   /** Quantas vezes um job chegou ao worker sem vaga e voltou a esperar, por fila e escola. */
   aguardandoVaga: 'job.aguardando_vaga',
   /** Vagas tomadas agora, por fila e escola. */

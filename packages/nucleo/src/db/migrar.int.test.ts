@@ -71,6 +71,7 @@ describe('migrar', () => {
     )
     expect(indices.map((indice) => indice.indexname)).toEqual([
       'job_registro_chave_idempotencia_unica',
+      'job_registro_falhos_idx',
       'job_registro_finalizados_idx',
       'job_registro_pendentes_idx',
       'job_registro_pendentes_urgentes_idx',
@@ -79,6 +80,8 @@ describe('migrar', () => {
     const definicao = (nome: string) => indices.find((indice) => indice.indexname === nome)?.indexdef
     expect(definicao('job_registro_pendentes_idx')).toMatch(/\(fila, escola_id, criado_em\) WHERE \(estado <> ALL \(ARRAY\['concluido'::text, 'falhou'::text\]\)\)$/)
     expect(definicao('job_registro_finalizados_idx')).toMatch(/\(concluido_em\) WHERE \(estado = ANY \(ARRAY\['concluido'::text, 'falhou'::text\]\)\)/)
+    // A medição de falhas por tipo (X5, tarefa 44.0): só os `falhou`.
+    expect(definicao('job_registro_falhos_idx')).toMatch(/\(tipo\) WHERE \(estado = 'falhou'::text\)$/)
     // O da reserva no horário letivo: só os urgentes pendentes.
     expect(definicao('job_registro_pendentes_urgentes_idx')).toMatch(/\(fila, escola_id, criado_em\) WHERE \(\(estado <> ALL \(ARRAY\['concluido'::text, 'falhou'::text\]\)\) AND \(NOT nao_urgente\)\)$/)
     // A chave de idempotência (F3, tarefa 3.0): única por escola e tipo, só entre os que não terminaram.

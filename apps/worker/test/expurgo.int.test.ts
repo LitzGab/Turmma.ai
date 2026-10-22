@@ -57,7 +57,12 @@ describe('sistema.expurgar-jobs', () => {
   const contar = async (condicao: string): Promise<number> =>
     Number((await bancada.pool.query<{ total: string }>(`select count(*) as total from job_registro where ${condicao}`)).rows[0]?.total)
 
-  const vencidosRestantes = () => contar(`estado in ('concluido', 'falhou') and concluido_em < now() - interval '7 days'`)
+  /** O que o prazo já devia ter levado: o concluído há mais de 7 dias e o falho há mais de 30 (o de `titular.*` não vence). */
+  const vencidosRestantes = () =>
+    contar(
+      `(estado = 'concluido' and concluido_em < now() - interval '7 days')
+       or (estado = 'falhou' and tipo not like 'titular.%' and concluido_em < now() - interval '30 days')`,
+    )
 
   /** Os que o expurgo nunca pode tocar, pelo id. */
   const protegidosRestantes = async () =>
@@ -68,27 +73,30 @@ describe('sistema.expurgar-jobs', () => {
     await bancada.limparRegistro()
     ;[ESCOLA_A, ESCOLA_B] = await Promise.all([bancada.escola(), bancada.escola()])
     log.linhas.length = 0
-    // Vencidos das duas escolas, concluídos e falhos, entre 8 e 30 dias atrás.
+    // Vencidos das duas escolas: o concluído, de 8 a 29 dias atrás, e o falho, de 31 a 52 (o prazo dele é de 30).
     await bancada.pool.query(
       `insert into job_registro (escola_id, fila, prioridade, tipo, estado, criado_em, iniciado_em, concluido_em, codigo_falha)
        select case when n % 2 = 0 then $1::uuid else $2::uuid end, 'lote', 3, 'sintetico',
               case when n % 3 = 0 then 'falhou' else 'concluido' end,
-              now() - interval '31 days', now() - interval '31 days', now() - interval '8 days' - (n % 22) * interval '1 day',
+              now() - interval '60 days', now() - interval '60 days',
+              now() - case when n % 3 = 0 then interval '31 days' else interval '8 days' end - (n % 22) * interval '1 day',
               case when n % 3 = 0 then 'FALHA_SINTETICA' else null end
        from generate_series(1, $3::int) as n`,
-      [ESCOLA_A, ESCOLA_B, VENCIDOS - 2],
+      [ESCOLA_A, ESCOLA_B, VENCIDOS - 3],
     )
-    const inserir = async (estado: string, criadoHa: string, concluidoHa: string | null): Promise<string> => {
+    const inserir = async (estado: string, criadoHa: string, concluidoHa: string | null, tipo = 'sintetico'): Promise<string> => {
       const { rows } = await bancada.pool.query<{ id: string }>(
         `insert into job_registro (escola_id, fila, prioridade, tipo, estado, criado_em, iniciado_em, concluido_em)
-         values ($1, 'lote', 3, 'sintetico', $2, now() - $3::interval, now() - $3::interval, now() - $4::interval) returning id`,
-        [ESCOLA_A, estado, criadoHa, concluidoHa],
+         values ($1, 'lote', 3, $5, $2, now() - $3::interval, now() - $3::interval, now() - $4::interval) returning id`,
+        [ESCOLA_A, estado, criadoHa, concluidoHa, tipo],
       )
       return rows[0]?.id ?? ''
     }
-    // O outro lado da borda: vencidos há pouco mais de 7 dias também saem (retenção de 8 dias reprovaria).
+    // O outro lado da borda: o concluído há pouco mais de 7 dias e o falho há pouco mais de 30 também saem (retenção de 8 e de 31 dias reprovaria).
     await inserir('concluido', '8 days', '7 days 1 hour')
-    await inserir('falhou', '8 days', '7 days 1 hour')
+    await inserir('falhou', '32 days', '30 days 1 hour')
+    // O concluído de `titular.*` não tem exceção: sai em 7 dias como os outros.
+    await inserir('concluido', '9 days', '8 days', 'titular.montar-arquivo')
     protegidos = {
       // Ativo há 30 dias (preso, ou um lote enorme): nunca é histórico.
       ativoAntigo: await inserir('ativo', '30 days', null),
@@ -98,7 +106,13 @@ describe('sistema.expurgar-jobs', () => {
       publicadoAntigo: await inserir('publicado', '30 days', null),
       reservadoAntigo: await inserir('reservado', '30 days', null),
       concluidoRecente: await inserir('concluido', '6 days', '6 days'),
-      falhouQuaseVencido: await inserir('falhou', '7 days', '6 days 23 hours'),
+      // O falho tem 30 dias, e não 7: o de 8 e o de 29 ficam, e o de 29 dias e 23 horas é o último a ficar.
+      falhouDeOitoDias: await inserir('falhou', '9 days', '8 days'),
+      falhouDe29Dias: await inserir('falhou', '31 days', '29 days'),
+      falhouQuaseVencido: await inserir('falhou', '31 days', '29 days 23 hours'),
+      // O pedido do titular é enfileirado uma vez só: a linha `falhou` fica até o operador agir, por mais velha que seja.
+      titularMontarArquivo: await inserir('falhou', '40 days', '31 days', 'titular.montar-arquivo'),
+      titularEliminar: await inserir('falhou', '90 days', '60 days', 'titular.eliminar'),
     }
   }, 60_000)
 
@@ -115,6 +129,47 @@ describe('sistema.expurgar-jobs', () => {
     expect(await protegidosRestantes()).toBe(Object.keys(protegidos).length)
     expect(await contar('true')).toBe(Object.keys(protegidos).length)
     expect(log.doEvento('job_registro.expurgado')).toMatchObject([{ total: VENCIDOS, lotesTotal: 3 }])
+  })
+
+  /** Roda o expurgo sobre só estas linhas e devolve os ids que sobraram. */
+  async function sobramDe(linhas: Array<{ chave: string; estado: 'concluido' | 'falhou'; tipo?: string; ha: string }>): Promise<string[]> {
+    await bancada.pool.query('delete from job_registro')
+    const ids = new Map<string, string>()
+    for (const { chave, estado, tipo = 'sintetico', ha } of linhas) {
+      const { rows } = await bancada.pool.query<{ id: string }>(
+        `insert into job_registro (escola_id, fila, prioridade, tipo, estado, criado_em, iniciado_em, concluido_em, codigo_falha)
+         values ($1, 'lote', 3, $2, $3, now() - $4::interval - interval '1 day', now() - $4::interval - interval '1 day', now() - $4::interval, $5) returning id`,
+        [ESCOLA_A, tipo, estado, ha, estado === 'falhou' ? 'FALHA_SINTETICA' : null],
+      )
+      ids.set(rows[0]?.id ?? '', chave)
+    }
+    await expurgar()
+    const { rows } = await bancada.pool.query<{ id: string }>('select id from job_registro')
+    return rows.map(({ id }) => ids.get(id) ?? id).sort()
+  }
+
+  it('o concluído sai com 8 dias, e o falho fica até os 30: com 29 dias fica, com 31 sai', async () => {
+    expect(
+      await sobramDe([
+        { chave: 'concluido-8', estado: 'concluido', ha: '8 days' },
+        { chave: 'concluido-6', estado: 'concluido', ha: '6 days' },
+        { chave: 'falhou-8', estado: 'falhou', ha: '8 days' },
+        { chave: 'falhou-29', estado: 'falhou', ha: '29 days' },
+        { chave: 'falhou-31', estado: 'falhou', ha: '31 days' },
+      ]),
+    ).toEqual(['concluido-6', 'falhou-29', 'falhou-8'])
+  })
+
+  it('o falho de `titular.*` fica depois dos 30 dias, nos dois tipos; o concluído de `titular.*` sai em 8 dias; o falho de outro tipo sai', async () => {
+    expect(
+      await sobramDe([
+        { chave: 'titular-montar-31', estado: 'falhou', tipo: 'titular.montar-arquivo', ha: '31 days' },
+        { chave: 'titular-eliminar-31', estado: 'falhou', tipo: 'titular.eliminar', ha: '31 days' },
+        { chave: 'titular-eliminar-400', estado: 'falhou', tipo: 'titular.eliminar', ha: '400 days' },
+        { chave: 'titular-concluido-8', estado: 'concluido', tipo: 'titular.montar-arquivo', ha: '8 days' },
+        { chave: 'ia-31', estado: 'falhou', tipo: 'ia.geracao.concluida', ha: '31 days' },
+      ]),
+    ).toEqual(['titular-eliminar-31', 'titular-eliminar-400', 'titular-montar-31'])
   })
 
   it('cada instrução apaga no máximo um lote, e rodar de novo depois do fim não apaga nada', async () => {

@@ -267,6 +267,13 @@
       "when": 1792678307172,
       "tag": "0037_sequencia_da_resposta",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1792693560262,
+      "tag": "0038_falhos_por_tipo",
+      "breakpoints": true
     }
   ]
 }

@@ -30,6 +30,18 @@ export type JobReservado = {
 export const TETO_DA_CONTAGEM_DE_PENDENTES = 10_000
 
 /**
+ * Teto da contagem de jobs `falhou` por tipo na medição (44.0): a consulta para de contar aí, por tipo, e o custo não
+ * cresce com a lista de falhas que ninguém tratou. O tipo é o que a medição agrupa; a escola nunca entra.
+ */
+export const TETO_DA_CONTAGEM_DE_FALHOS = 10_000
+
+/** Quantos jobs de um tipo terminaram `falhou` e ainda estão em `job_registro` (até `TETO_DA_CONTAGEM_DE_FALHOS`). */
+export type MedicaoDeFalhos = {
+  tipo: string
+  falhos: number
+}
+
+/**
  * Uma escola (ou a rotina do sistema, sem escola) com job ainda não terminado numa fila, medida para a
  * observação: o mais antigo que ainda não começou, urgente e não urgente, e quantos ainda não começaram.
  */
@@ -207,6 +219,39 @@ export class DespachoRepository {
       naoUrgenteCriadoEm: instante(linha.naoUrgenteCriadoEmMs),
       pendentes: Number(linha.pendentes),
     }))
+  }
+
+  /**
+   * Por tipo de job, quantos terminaram `falhou` e ainda estão em `job_registro`: é a base de `job.falhos{tipo}` (44.0).
+   * Salta de tipo em tipo pelo índice parcial `job_registro_falhos_idx` (uma descida por tipo, o custo é o número de
+   * tipos que falharam, e não o de linhas) e a contagem de cada tipo para no `TETO_DA_CONTAGEM_DE_FALHOS`. O falho de
+   * `titular.*` fica até a ação do operador e entra na contagem enquanto estiver na tabela; o de tipo que o expurgo já
+   * levou sai dela. Não devolve escola nem `dados`: só o nome do tipo e a quantidade.
+   */
+  @SemEscopo(JUSTIFICATIVA_DA_MEDICAO)
+  async medirFalhos(): Promise<MedicaoDeFalhos[]> {
+    const resultado = await this.banco.execute<{ tipo: string; falhos: number | string }>(sql`
+      with recursive tipos as (
+        (select tipo from job_registro where estado = 'falhou' order by tipo limit 1)
+        union all
+        select proximo.tipo
+        from tipos cross join lateral (
+          select job.tipo from job_registro as job
+          where job.estado = 'falhou' and job.tipo > tipos.tipo
+          order by job.tipo
+          limit 1
+        ) as proximo
+      )
+      select tipos.tipo, (
+        select count(*)::int from (
+          select 1 from job_registro as job
+          where job.estado = 'falhou' and job.tipo = tipos.tipo
+          limit ${TETO_DA_CONTAGEM_DE_FALHOS}
+        ) as limitados
+      ) as falhos
+      from tipos
+    `)
+    return resultado.rows.map((linha) => ({ tipo: linha.tipo, falhos: Number(linha.falhos) }))
   }
 
   /**
