@@ -238,3 +238,35 @@ describe('a barra de topo do celular (RF14, RF15)', () => {
     expect(classesDo(sair).has('min-w-11')).toBe(true)
   })
 })
+
+describe('o espelho da prova de quem saiu não fica ao alcance de quem entrou (53.0, regra 20)', () => {
+  const ATIVIDADE_DE_A = '0197a1c0-0000-7000-8000-0000000000c1'
+  const ATIVIDADE_DE_B = '0197a1c0-0000-7000-8000-0000000000c2'
+  const guardar = (atividade: string, dono: string) =>
+    window.sessionStorage.setItem(`educa.escolhas-pendentes.${atividade}`, JSON.stringify({ dono, atividade, pendentes: [{ questao: 1, alternativa: 2, sequencia: 3 }] }))
+  const guardada = (atividade: string) => window.sessionStorage.getItem(`educa.escolhas-pendentes.${atividade}`) !== null
+
+  it('o `/v1/eu` de quem entrou apaga o espelho dos outros donos, sem nenhuma atividade aberta, e deixa o dele', async () => {
+    window.sessionStorage.clear()
+    guardar(ATIVIDADE_DE_A, PESSOA_A)
+    guardar(ATIVIDADE_DE_B, PESSOA_B)
+    const rede = redeFalsa()
+    await abrirCasca(rede, 'aluno', 'larga', ROTAS.inicio)
+
+    await waitFor(() => expect(guardada(ATIVIDADE_DE_B)).toBe(false))
+    expect(guardada(ATIVIDADE_DE_A)).toBe(true)
+  })
+
+  it('a pessoa da sessão troca sob a mesma tela: o espelho da anterior sai com o `/v1/eu` novo', async () => {
+    window.sessionStorage.clear()
+    guardar(ATIVIDADE_DE_A, PESSOA_A)
+    const rede = redeFalsa()
+    const { cliente } = await abrirCasca(rede, 'aluno', 'larga', ROTAS.inicio)
+    expect(guardada(ATIVIDADE_DE_A)).toBe(true)
+
+    rede.responder(respostaEu('aluno', PESSOA_B, 'Beatriz Lima'))
+    await cliente.refetchQueries({ queryKey: consultaEu.queryKey })
+
+    await waitFor(() => expect(guardada(ATIVIDADE_DE_A)).toBe(false))
+  })
+})

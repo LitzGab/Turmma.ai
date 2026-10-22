@@ -6,6 +6,7 @@ import { Link } from 'wouter'
 import { consultaMeuDiagnostico, consultaProva, enviarAtividade } from '../../api/atividades-do-aluno'
 import { CHAVE_DAS_MINHAS_ATIVIDADES } from '../../api/chaves-do-aluno'
 import { ErroDaApi, mensagemDoErro } from '../../api/cliente'
+import { consultaEu } from '../../api/eu'
 import { caminhoDoTutorNaAtividade, ROTAS_DO_ALUNO } from '../../caminhos'
 import { BarraRotulada } from '../../componentes/BarraRotulada'
 import { Botao } from '../../componentes/Botao'
@@ -378,6 +379,12 @@ export default function Atividade({ atividadeAplicadaId }: { atividadeAplicadaId
   const prova = useQuery(consultaProva(atividadeAplicadaId))
   const fila = filaDaAtividade(cliente, atividadeAplicadaId)
   const estadoDaFila = useSyncExternalStore(fila.assinar, fila.ler)
+  // Quem é o aluno da sessão, lido do cache (a casca é quem busca o `/v1/eu`): `enabled: false` assina sem buscar de novo.
+  const alunoDaSessao = useQuery({ ...consultaEu, enabled: false }).data?.usuarioId
+  // As escolhas que o servidor ainda não confirmou e ficaram no espelho (o F5, a sessão vencida) voltam e saem, só com o mesmo aluno.
+  useEffect(() => {
+    fila.hidratar()
+  }, [alunoDaSessao, fila])
   const topo = useRef<HTMLDivElement>(null)
   useTituloDaTela(prova.data?.titulo ?? 'Atividade')
 

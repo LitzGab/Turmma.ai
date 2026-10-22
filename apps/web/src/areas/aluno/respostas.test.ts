@@ -1,11 +1,18 @@
 import { CodigoDeErro, type RespostaQuestaoSalva } from '@educa/shared'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ErroDaApi } from '../../api/cliente'
 import { criarFilaDeRespostas, provaComRespostaSalva } from './fila-de-respostas'
-import { adotarLeitura, alteradaEmOutraJanela, comecarEnvio, confirmarEnvio, escolher, esperaAntesDeTentar, falharEnvio, FILA_VAZIA, MAIOR_ESPERA_DA_FILA_MS, proximoEnvio, tipoDaFalha, type EstadoDaFila } from './respostas'
+import { adotarLeitura, alteradaEmOutraJanela, comecarEnvio, confirmarEnvio, escolher, esperaAntesDeTentar, falharEnvio, FILA_VAZIA, hidratarDoEspelho, MAIOR_ESPERA_DA_FILA_MS, proximoEnvio, tipoDaFalha, type EstadoDaFila } from './respostas'
 
 /** A confirmação do servidor de uma escolha que ele gravou como veio. */
 const gravada = (questao: number, alternativa: number, sequencia: number) => ({ questao, alternativa, sequencia })
+
+/** O sorteio do jitter parado no meio: 0,5 dá a espera exata (100 %). */
+const semJitter = () => vi.spyOn(Math, 'random').mockReturnValue(0.5)
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('a fila das respostas ainda não salvas (regra 80, item 6)', () => {
   it('a escolha entra na fila na hora, e a última escolha da mesma questão é a que vale', () => {
@@ -65,7 +72,35 @@ describe('a fila das respostas ainda não salvas (regra 80, item 6)', () => {
   })
 
   it('a espera entre as tentativas cresce e tem teto: a escola inteira atrás da mesma rede não martela a API', () => {
+    semJitter()
     expect([1, 2, 3, 4, 9].map(esperaAntesDeTentar)).toEqual([2_000, 4_000, 8_000, MAIOR_ESPERA_DA_FILA_MS, MAIOR_ESPERA_DA_FILA_MS])
+  })
+
+  it('o jitter deixa a espera entre 75 % e 125 % da base, e nunca passa do teto (53.4)', () => {
+    const sorteio = vi.spyOn(Math, 'random')
+    // Sorteio no piso, no meio e no teto, nas três primeiras esperas e na do teto (15 s).
+    const esperas = (valor: number) => {
+      sorteio.mockReturnValue(valor)
+      return [1, 2, 3, 9].map(esperaAntesDeTentar)
+    }
+    expect(esperas(0)).toEqual([1_500, 3_000, 6_000, 11_250])
+    expect(esperas(0.5)).toEqual([2_000, 4_000, 8_000, 15_000])
+    // 125 % de 2 s, 4 s e 8 s; no teto, 125 % de 15 s seria 18,75 s, e fica em 15 s.
+    expect(esperas(1)).toEqual([2_500, 5_000, 10_000, MAIOR_ESPERA_DA_FILA_MS])
+    // Duas alunas que falharam no mesmo instante não voltam no mesmo instante.
+    sorteio.mockReturnValueOnce(0.1).mockReturnValueOnce(0.9)
+    expect(esperaAntesDeTentar(3)).not.toBe(esperaAntesDeTentar(3))
+  })
+
+  it('a pendente que o espelho guardou volta à fila, com a mesma sequência, antes das que já estavam; o que o servidor já tem não volta', () => {
+    const guardadas = [{ questao: 3, alternativa: 1, sequencia: 4 }, { questao: 5, alternativa: 0, sequencia: 2 }]
+    expect(hidratarDoEspelho(FILA_VAZIA, guardadas)).toMatchObject({ pendentes: guardadas, conhecidas: { 3: { alternativa: 1, sequencia: 4 }, 5: { alternativa: 0, sequencia: 2 } } })
+    // A aluna já marcou a questão 3 de novo antes de a fila saber quem ela é: a escolha dela é a mais nova e fica.
+    const jaMarcou = escolher(FILA_VAZIA, 3, 2)
+    expect(hidratarDoEspelho(jaMarcou, guardadas).pendentes).toEqual([{ questao: 5, alternativa: 0, sequencia: 2 }, { questao: 3, alternativa: 2, sequencia: 1 }])
+    // A leitura da prova chegou primeiro: o servidor tem a 3 com sequência 4 (igual) e a 5 com 7 (maior). Nenhuma das duas volta.
+    const lida = adotarLeitura(FILA_VAZIA, [{ questao: 3, alternativa: 1, sequencia: 4 }, { questao: 5, alternativa: 3, sequencia: 7 }])
+    expect(hidratarDoEspelho(lida, guardadas)).toBe(lida)
   })
 })
 
@@ -226,6 +261,7 @@ const assentar = () => new Promise<void>((resolver) => setTimeout(resolver, 0))
 
 describe('o reenvio das respostas', () => {
   it('a resposta que falha ao salvar continua marcada e é mandada de novo sozinha, com a mesma escolha, até o servidor confirmar', async () => {
+    semJitter()
     const servidor = servidorDeMentira()
     const relogio = relogioDeMentira()
     const salvas: RespostaQuestaoSalva[] = []

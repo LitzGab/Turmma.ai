@@ -27,16 +27,8 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **6.0**, pequena (tenant), desde 11:27; prazo de 4 h 15:27. Avisado de
-    que o `ouro.test.ts` está vermelho na spec até a base da 3.0 (traz com `git merge spec/reengenharia` antes do portão)
-    **A base virou correção** (R57: o hook trata o `MEDIDAS.json` como código, e `ouro.test.ts:267`/`:273` precisam mudar):
-    pedi ao Implementador da l1 a **correção `ouro-base-qualitativa`** antes de seguir a 6.0 (ordem
-    `.processo/ordens/correcao-ouro-base-qualitativa.md`, copiada para l1; guardiões test-engineer e llm-integrator). O
-    commit `05aa2fe` na l1, segue com o da 6.0; **a esteira da spec fica vermelha nos 3 casos do `ouro.test.ts` até o
-    primeiro encontro que o leve (l1 ou l2)**
-    **DIVERGÊNCIA (ordem) da correção:** gravar a base muda o hash que o `SELO.json` guarda (6 testes do `selo-do-ouro`
-    vermelhos). **O `Arquiteto` gravou a base e o selo na spec** (`256fb62`, R58 em `cef19e6`); retomada enviada: restaurar
-    o `MEDIDAS.json`, trazer a spec, a correção leva só o `ouro.test.ts` e o documento, portão, Mesa, commit; depois a 6.0
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **7.0**, grande (9 repositories para `exigirEscolaDoContexto`), desde
+    12:55, 1ª tentativa; prazo de 4 h 16:55. A 6.0 encontrou-se em `f49c095` (com as correções `05aa2fe` e `9dd7a6b`)
   - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
     **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
     os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
@@ -45,15 +37,14 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
   - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **14.0 pronta** (`ca057e8`, 2 rodadas; tenancy, test-engineer,
-    revisor-geral). **Encontro recusado** por falso positivo: o merge `7f6ed10` (l1 → l2, que eu mandei) não traz
-    resolução (`--remerge-diff` vazio), mas `linhas.ts` julga merge de linha pelo diff contra o 1º pai. Pedi ao `Arquiteto`
-    a decisão e o conserto (merge julgado pelo `--remerge-diff`). Com o relatório dele: `encontro 2`, depois a partida da
-    linha 2 (o quadro diz qual; 15.0 espera a 14.0)
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **correção `arquivo-do-titular-datas`** desde ~12:20 (casos de data
-    fixa vencidos em `apps/api/test/arquivo-do-titular.int.test.ts`, esteira vermelha; guardião privacy-guardian). É correção
-    de esteira: tem encontro próprio. Depois dela, a linha 3 pega a **53.0** (o quadro já a mostra)
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **15.0**, desde ~12:25, 1ª tentativa (14.0 encontrada em `2164719`,
+    depois do conserto R61 do `Arquiteto`, `1744468`)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **53.0** (web), desde ~12:25, 1ª tentativa. A correção
+    `arquivo-do-titular-datas` fechou **sem commit**: não havia defeito (ver "O que decidi sem perguntar"). O quadro
+    sugeria 53.0→l2 e 15.0→l3; inverti para manter a web na linha 3 (ajuste do Claude Code #2)
 - **Devo ainda:**
+  - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
+    `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
   - **95.0 (guia), entregue pelo Claude Code #2** em `/home/joaquimdp/Documentos/git/Educa.ia/.processo/reengenharia/guia/`
     (`guia-do-desenvolvedor.md`, `arquitetura.md` corrigido, `LEIA.md` com o que conferir). Quando o `Arquiteto` tiver
     folga: revisão do `revisor-geral` (pedida às ~11:30). **Publicar (commit) só depois das tarefas de pasta (33–36, 96,
@@ -67,13 +58,13 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     §2.3, `TODO.md`). Ponto de produto para a X6: a entrada recusa pedido do professor sobre o próprio material com palavra
     de nota ou correção (10/10, já antes da 3.0). **Dizer ao Joaquim no fim** que a AIA do Tutor e esta lacuna merecem o
     olhar dele antes do piloto
-  - esteira: `f6913ee` na fila e `3f100df` rodando (ler no próximo encontro); `3b44efe` e `1f770ea` canceladas pelo push
-    seguinte. A vermelha conhecida é a do `arquivo-do-titular` (correção na linha 3)
+  - esteira: às 12:53 seis execuções na fila (`f6913ee` a `e048e36`), nenhum veredito novo; `3b44efe` foi **cancelada**
+    (o `esteira.ts` a lê como VERMELHA: não é falha). Ler de novo no próximo encontro
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`)
-- **Base:** `spec/reengenharia` em `2fe1d73`. Vigia ligada
+- **Base:** `spec/reengenharia` em `e048e36`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -102,6 +93,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 3.0 | `1566521` | Sonnet | 4 | linha 1, grande, 07:47–11:25; divergência (triagem: detalhe), escalada, bloqueio destravado pelo recorte; saidaQualitativa 54/58, 0 legítimas barradas; lacuna declarada no §2.3 |
 | 94.0 | `0975b97` | Sonnet | 2 | linha 2, grande, 11:07–11:36; dentro do prazo de 14:55, escopo inteiro; três recomendações no TODO.md |
 | 51.0 | `50e04d0` | Sonnet | 2 | encontro adiado até o commit dos lotes retidos da 3.0 (`3b44efe`); lacuna da 3.0 em `2fe1d73` (R60); o ponto de produto do material do professor com palavra de nota vai para a X6 |
+| 6.0 | `f49c095` | Sonnet | 2 (test-engineer, revisor-geral; tenancy na 1ª) | linha 1, pequena, 11:27–12:52; duas correções na linha antes dela: `ouro-base-qualitativa` (`05aa2fe`) e `porta-unica-so-import` (`9dd7a6b`, divergência de portão) |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
@@ -152,6 +144,16 @@ critério de aceite.
 ## O que falhou
 
 ## O que decidi sem perguntar
+- 22/10, ~12:28 — DIVERGÊNCIA (portão) da 6.0 (l1): a regra do guarda da 1.0 (`porta-unica.test.ts:56`) casa a menção ao
+  nome, não a importação. Aceitei a proposta do Implementador (estreitar à importação) como correção `porta-unica-so-import`
+  na l1, e recusei a alternativa de quebrar o caminho em pedaços para a varredura não ver.
+- 22/10, ~12:25 — correção `arquivo-do-titular-datas` (l3): DIVERGÊNCIA (ordem) do Implementador 3. Não havia defeito:
+  as datas não vencem (relógio injetado); o vermelho local vinha do despachante e do worker-interativo do compose
+  `educa-teste-3`, de pé, consumindo o job do teste. Com eles parados, 38/38; a integração da esteira (39797493843,
+  `3f100df`) está verde. O vermelho da esteira é o `ouro.test.ts`, que já é a correção `ouro-base-qualitativa` da l1.
+  Não abri nenhuma das duas correções propostas: fechei a l3 sem commit (quadro editado à mão, cópia em
+  `.processo/linhas.json.antes-de-soltar-l3`; o encontro recusa correção sem commit). Para a retro: o portão não derruba
+  os despachantes do compose de teste antes da integração, e falta `linhas.ts abandonar <n>`
 - 22/10 12:00 — a linha 2 trouxe a correção `05aa2fe` da `spec/reengenharia--l1` (merge, mesmo commit) para o portão da
   14.0 passar, em vez de esperar o encontro da 6.0.
 - 22/10 11:40 — cancelei 7 execuções da esteira na fila da `spec/reengenharia` que o `3f100df` já cobria (pushes de

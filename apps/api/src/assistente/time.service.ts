@@ -1,22 +1,6 @@
-import { exigirEscolaDoContexto, suspensaoDeFuncao, type Banco } from '@educa/nucleo'
-import { esquemaRespostaTime, montarTime, type ChaveDeFuncao, type RespostaTime } from '@educa/shared'
-import { and, eq, isNull } from 'drizzle-orm'
-
-/**
- * As funções com suspensão vigente na escola do contexto (D60): a que não foi retomada. No máximo uma linha por função
- * (índice único parcial), e no máximo seis funções: a leitura não precisa de página. A escola vem do contexto.
- */
-export class SuspensoesDaEscolaRepository {
-  constructor(private readonly banco: Banco) {}
-
-  async vigentes(): Promise<ChaveDeFuncao[]> {
-    const linhas = await this.banco
-      .select({ funcao: suspensaoDeFuncao.funcao })
-      .from(suspensaoDeFuncao)
-      .where(and(eq(suspensaoDeFuncao.escolaId, exigirEscolaDoContexto()), isNull(suspensaoDeFuncao.retomadaEm)))
-    return linhas.map((linha) => linha.funcao)
-  }
-}
+import { type Banco } from '@educa/nucleo'
+import { esquemaRespostaTime, montarTime, type RespostaTime } from '@educa/shared'
+import { SuspensoesDaEscolaRepository } from './suspensoes-da-escola.repository.js'
 
 /**
  * `GET /v1/time` (MVP, A2 e A5; D9, D32, D60; regra 70, item 5): os três agentes, as funções de cada um, a autonomia em

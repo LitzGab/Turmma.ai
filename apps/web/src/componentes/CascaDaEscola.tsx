@@ -3,6 +3,7 @@ import { Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from 'react'
 import { Link, useLocation } from 'wouter'
 import { consultaEu } from '../api/eu'
+import { esquecerEspelhosDeOutroDono } from '../api/espelho-da-fila'
 import { assinarSessao, estadoDaSessao, lembrarQuemEsta, sair } from '../api/sessao'
 import { MENU_DA_PESSOA, NAVEGACAO, NOME_DO_RODAPE, RODAPE_DA_LATERAL, type ItemDaNavegacao } from '../areas/navegacao'
 import { ROTAS } from '../caminhos'
@@ -186,6 +187,8 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
     // Outra pessoa entrou depois de a sessão anterior vencer: é o Chromebook do carrinho passando de mão. A tela que
     // estava aberta sai da frente dela, e com ela o que a pessoa anterior tinha escrito (RF13 do F1).
     if (lembrarQuemEsta(dados)) navegar(ROTAS.inicio, { replace: true })
+    // A escolha de prova que a pessoa anterior deixou no espelho não fica ao alcance de quem entrou, abra ela uma atividade ou não (53.0).
+    esquecerEspelhosDeOutroDono(dados.usuarioId)
   }, [dados, navegar])
   // Com a sessão já vencida, o relógio para: quem conta o tempo daí em diante é o login por cima da tela.
   useInatividade({ inatividadeMin: dados?.inatividadeMin, ativa: estado === 'aberta' })

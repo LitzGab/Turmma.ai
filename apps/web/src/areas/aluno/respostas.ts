@@ -11,7 +11,9 @@ import { CodigoDeErro, type RespostaQuestaoSalva, type RespostaSalva } from '@ed
  * o que o servidor diz estar gravado e avisa a pessoa. O próximo clique sai uma acima e vence.
  *
  * Aqui mora só a regra, sem rede e sem relógio. Vive em memória (`fila-de-respostas.ts`), nunca em `localStorage`: o
- * que foi salvo de verdade é do servidor, lido pela consulta da prova.
+ * que foi salvo de verdade é do servidor, lido pela consulta da prova. A única cópia fora da memória é o espelho das
+ * pendentes em `sessionStorage` (`espelho-da-fila.ts`, 53.0): só ids, do aluno da sessão, para o F5 e a sessão vencida
+ * não perderem a escolha que o servidor ainda não confirmou.
  */
 
 export interface EscolhaPendente {
@@ -149,13 +151,32 @@ export function falharEnvio(estado: EstadoDaFila, codigo: CodigoDeErro): EstadoD
 
 export const PRIMEIRA_ESPERA_DA_FILA_MS = 2_000
 export const MAIOR_ESPERA_DA_FILA_MS = 15_000
+/** Quanto a espera varia para cima e para baixo: ±25 %. */
+export const JITTER_DA_FILA = 0.25
 
 /**
- * Quanto esperar antes da tentativa seguinte: 2 s, 4 s, 8 s e, daí em diante, 15 s. Com a escola inteira atrás da mesma
- * rede que caiu, trinta alunos tentando a cada segundo é o que impediria a API de voltar (regra 80).
+ * Quanto esperar antes da tentativa seguinte: 2 s, 4 s, 8 s e, daí em diante, 15 s, cada uma com **±25 % de jitter** e
+ * nunca acima do teto. Com a escola inteira atrás da mesma rede que caiu, trinta alunos tentando a cada segundo é o que
+ * impediria a API de voltar (regra 80); e trinta alunos que falharam no mesmo instante, com a mesma espera exata,
+ * voltariam todos no mesmo instante também.
  */
 export function esperaAntesDeTentar(tentativas: number): number {
-  return Math.min(MAIOR_ESPERA_DA_FILA_MS, PRIMEIRA_ESPERA_DA_FILA_MS * 2 ** Math.max(0, tentativas - 1))
+  const base = Math.min(MAIOR_ESPERA_DA_FILA_MS, PRIMEIRA_ESPERA_DA_FILA_MS * 2 ** Math.max(0, tentativas - 1))
+  return Math.min(MAIOR_ESPERA_DA_FILA_MS, Math.round(base * (1 - JITTER_DA_FILA + 2 * JITTER_DA_FILA * Math.random())))
+}
+
+/**
+ * As escolhas que o espelho guardou (o F5, a aba reaberta, a sessão que venceu e o mesmo aluno voltou) voltam para a
+ * fila, com a `sequencia` com que saíram: o servidor grava uma vez só. A questão que já tem escolha na fila, ou que o
+ * servidor já tem com `sequencia` igual ou maior (a leitura da prova chegou primeiro), fica como está: a do espelho
+ * perderia de qualquer jeito. As do espelho são mais antigas que as da fila, e saem primeiro.
+ */
+export function hidratarDoEspelho(estado: EstadoDaFila, guardadas: readonly EscolhaPendente[]): EstadoDaFila {
+  const entram = guardadas.filter((guardada) => pendenteDaQuestao(estado, guardada.questao) === undefined && guardada.sequencia > (estado.conhecidas[guardada.questao]?.sequencia ?? 0))
+  if (entram.length === 0) return estado
+  const conhecidas = { ...estado.conhecidas }
+  for (const { questao, alternativa, sequencia } of entram) conhecidas[questao] = { alternativa, sequencia }
+  return { ...estado, pendentes: [...entram, ...estado.pendentes], conhecidas }
 }
 
 /** A escolha da questão que ainda não foi confirmada, se houver. */

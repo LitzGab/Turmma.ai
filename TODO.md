@@ -1615,6 +1615,13 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   direta, sem verbo que a conte) não dispara, porque "vão me matar" é a forma da expressão ("a prova vai me matar"). A decisão
   de produto é mandar a ameaça de outra pessoa ao `assuntoDelicado`, e não ao 188, e decidir o caso da ameaça direta; decidir
   junto da linha acima sobre ameaça a terceiro, com o `conformidade-reviewer` e advogado, antes de aluno real
+- **A trava de tenant, `tools/guardas/escopo-dos-repositories.ts`, e o teste dela** (X5, 6.0): na próxima tarefa que mexer num dos
+  dois arquivos, (a) tratar no analisador `export { f }`, `export default f`, o parâmetro desestruturado e o alias de tipo local,
+  que o cabeçalho hoje declara como limites, com uma fixture e uma mutação para cada; (b) acertar a frase do cabeçalho "nenhum
+  existe hoje no código", que o primeiro limite contradiz (a função de `homonimo.ts` existe, e só passa sem acusação porque
+  `titulares.homonimo` está na lista); (c) renomear, em `repositories-com-escopo.test.ts`, o caso "cada entrada diz o motivo com
+  pelo menos 30 caracteres", que diz 30 por extenso enquanto o corpo usa `TAMANHO_MINIMO_JUSTIFICATIVA_SEM_ESCOPO`, e os blocos
+  de mutação que o citam
 - **Os pedidos sem corpo, tipados pelo `shared`** (X5, 14.0, recomendação do `revisor-geral`): o `professores.controller.ts` declara
   `_corpo: Record<string, never>` e monta o esquema com `.default({})` localmente, e a "armadilha" da tarefa manda declarar o tipo
   com o de `@educa/shared`. Exportar `PedidoSemCorpoDoConviteDeProfessor` (e o esquema com `.default({})`) de
@@ -1636,3 +1643,6 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X5, 51.0) Cenário de carga da prova em `infra/k6/`:** o `PUT` de resposta com `sequencia` (escola inteira respondendo ao mesmo tempo, com reenvio) cabe junto da 52.0 e da 53.0, com o adaptador falso e sem provedor pago (`infra-guardian`, 51.0, 1ª rodada).
 - [ ] **(X5, 51.0) Dizer nos fixtures que o `PUT` sem `sequencia` é o cliente antigo:** `apps/api/test/atividade-de-teste.ts` e `e2e/__fixtures__/aluno-pela-api.ts` mandam a resposta sem `sequencia`, e quem lê não sabe que isso é o caminho do cliente antigo (`infra-guardian`, 51.0, 1ª rodada).
 - [ ] **(X5, 51.0) `arquivo-do-titular.int.test.ts` com data fixa:** três a quatro casos de data e de validade vencem desde 19/10/2026 e deixam a esteira vermelha, com e sem a 51.0 (verificado revertendo `leitura-do-titular.ts`). Corrigir (data relativa ao relógio do teste) **antes do pouso**, fora da 51.0 (`revisor-geral`, 51.0, 1ª rodada).
+- [ ] **(X5, 53.0) Dado sintético com atividade "para responder" na vitrine:** `tools/vitrine/` não tem atividade aberta com respostas ainda não salvas, e o estado "não salva" e o "Tentar de novo" não são fotografados a 360 px (`frontend-reviewer`, 53.0, 1ª rodada).
+- [ ] **(X5, 53.0) `aoAbrirSessao(tentarTodas)` sem a variação do recuo:** a fila manda na hora em que a sessão volta, sem o jitter de `esperaAntesDeTentar`; só pesa se a sessão passar a voltar sozinha de muitas abas ao mesmo tempo, o que hoje não existe (`infra-guardian`, 53.0, 1ª rodada).
+- [ ] **(X5, 53.0) Acabamentos do espelho:** (1) o comentário de `apps/web/src/api/sessao.ts:76-78` ainda aponta para `areas/aluno/espelho-da-fila.ts` e diz só "sai no 'Sair'": citar `api/espelho-da-fila.ts`, a suspensão e a troca de dono feita pela casca; (2) a limpeza no "Sair" só vale porque a `CascaDaEscola` é importada direto, sem `lazy`: importar o espelho em `main.tsx` (ou registrar o gancho por função chamada ali) e acrescentar em `CascaDaEscola.test.tsx` o caso que clica em "Sair" e confere o `sessionStorage` vazio sem a Atividade carregada; (3) `api/espelho-da-fila.ts` importa o tipo `EscolhaPendente` de `areas/aluno/respostas`: derivar de `EspelhoDaFila['pendentes'][number]` (ou mover para `packages/shared`); (4) caso que fixe que a troca de escola da mesma pessoa apaga as pendentes da escola anterior (`revisor-geral` e `test-engineer`, 53.0, 2ª rodada).

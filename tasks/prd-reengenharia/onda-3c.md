@@ -73,6 +73,24 @@ nem `any` (`chrome99`), **ligado ao sinal de quem chamou**: o estouro vira `TEMP
 `{ dono: usuarioId, atividade, pendentes: [{ questao, alternativa, sequencia }] }`, só ids, por esquema estrito, hidratado
 só com o mesmo dono. Limpo no envio, no "Sair" e na troca de dono, e **não** na sessão vencida (RF21: a rede cai, a
 sessão vence, o mesmo aluno volta). O recuo ganha ±25 % de jitter.
+- **Onde mora o esquema:** `esquemaEspelhoDaFila` está em `packages/shared/src/atividade/prova.ts` (`strictObject`, sem
+  coerção: a questão em texto também descarta), porque a web não depende de `zod` e lê os esquemas do `shared`.
+  `espelho-da-fila.ts` só lê, grava e apaga, tudo em `try/catch`.
+- **O dono vem do `/v1/eu` desta sessão, no cache de consultas**, e não de `quemEstaNaSessao()`: na sessão vencida a
+  memória da aba ainda guarda a pessoa anterior até a casca rodar `lembrarQuemEsta`, e a fila nova, criada nesse
+  intervalo, hidrataria as escolhas dela com o token de quem acabou de entrar. O cache é esvaziado a cada troca de
+  sessão (`resetQueries`), então só há dono depois que o `/v1/eu` do aluno novo chega. A fila lê o dono quando grava e
+  quando hidrata; `Atividade.tsx` assina o `/v1/eu` com `enabled: false` e chama `fila.hidratar()` quando ele chega.
+- **A limpeza mora em `apps/web/src/api/espelho-da-fila.ts`, que a casca da escola sempre carrega, e não na fila**
+  (a fila só é importada pela Atividade, que é `lazy`: com a limpeza nela, o "Sair" depois de um F5 fora da Atividade
+  deixaria o espelho no navegador). O módulo registra o próprio `aoTrocarDeSessao`, que lê `estadoDaSessao()`: `vencida`
+  e `aberta` deixam o espelho; `anonima` (o "Sair") e `suspensa` apagam o de todas as atividades. **A troca de dono é a
+  casca:** `CascaDaEscola` chama `esquecerEspelhosDeOutroDono(usuarioId)` a cada `/v1/eu` novo, e a hidratação da fila
+  faz o mesmo, de modo que o espelho da pessoa anterior sai na entrada de quem quer que seja, abra ela uma atividade ou
+  não. O F5 não passa pelo gancho (a aba nova abre `anonima` sem trocar de sessão), e por isso o espelho sobrevive a ele.
+  O `usuarioId` é **por escola** (o seletor troca de `usuarioId`): na troca de escola da mesma pessoa, as pendentes da
+  escola anterior saem, de propósito (regra 10). "Limpa no envio" é o espelho seguir as pendentes: a chave sai quando a
+  última é confirmada, e a atividade só se envia sem pendente (`impedimentoDoEnvio`).
 
 ### RF22 — N3 (54.0)
 
