@@ -125,7 +125,7 @@ da tarefa diz como rodá-lo.
 
 ### Entrada no padrão NestJS (D81)
 
-- [ ] **14.0 — Corpo, consulta ou id fora do esquema não chegam ao service; sistema, IA, entrega, assistente e professores migram**
+- [x] **14.0 — Corpo, consulta ou id fora do esquema não chegam ao service; sistema, IA, entrega, assistente e professores migram**
   - [ ] 14.1 Caracterização, num commit antes: o inválido e o 404 de cada rota dos cinco módulos, e o uuid em maiúsculas
   - [ ] 14.2 `ZodValidationPipe` e `IdPipe` em `packages/nucleo/src/entrada/` (D81), sem `issues` na resposta nem no log
   - [ ] 14.3 O bloco de `no-restricted-syntax` em `eslint.config.mjs`: `@Body()`, `@Query()` e `@Param()` sem pipe, `@Req()` e `requisicao.body`, `.query` e `.params`, valendo nos cinco módulos migrados

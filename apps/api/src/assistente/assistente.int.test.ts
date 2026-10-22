@@ -1,11 +1,12 @@
 import { executarNoContexto, RECUSA_DE_CORRECAO_DE_TEXTO_DE_ALUNO, type ExecutorDeAgente, type ExecutorNoProcesso, type LLMProvider, type SuspensaoDeFuncao } from '@educa/nucleo'
-import { esquemaRespostaConversaDoAssistente, esquemaRespostaTime, FUNCOES, type ChaveDeFuncao } from '@educa/shared'
+import { esquemaRespostaConversaDoAssistente, esquemaRespostaTime, FUNCOES, MENSAGENS_DE_ERRO, type ChaveDeFuncao } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
+import { CapturaDeDadoPessoal } from '../../test/captura-de-dado-pessoal.js'
 import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from '../../test/api-com-sessao.js'
 import {
   comoPessoa,
@@ -188,6 +189,34 @@ describe('Assistente de ensino', () => {
       }
       expect((await post(a.professora, '/v1/assistente/mensagens', { ...mensagem(a, 'x'), chaveEnvio: undefined })).status).toBe(400)
       expect(await contarNaEscola(bancada, 'execucao_agente', a.escolaId)).toBe(antes)
+    })
+
+    it('o corpo e a consulta inválidos: nenhuma execução nem consumo; a resposta é só o código do catálogo e o que foi mandado não vai ao log; o limite 100 passa e o 101 não', async () => {
+      const SENTINELA = `sentinela-do-corpo-${randomUUID()}`
+      const captura = new CapturaDeDadoPessoal(linhasDeLog)
+      const execucoesAntes = await contarNaEscola(bancada, 'execucao_agente', a.escolaId)
+      const consumoAntes = await contarNaEscola(bancada, 'consumo_ia', a.escolaId)
+      const corpoInvalido = await captura.capturar(post(a.professora, '/v1/assistente/mensagens', mensagem(a, SENTINELA, { escolaId: b.escolaId, [SENTINELA]: SENTINELA })))
+      expect(corpoInvalido.status).toBe(400)
+      expect(corpoInvalido.corpo).toEqual({ erro: { codigo: 'ENTRADA_INVALIDA', mensagem: MENSAGENS_DE_ERRO.ENTRADA_INVALIDA, requisicaoId: expect.any(String) } })
+      const consultaInvalida = await captura.capturar(get(a.professora, `/v1/assistente/conversa?limite=101&${SENTINELA}=${SENTINELA}`))
+      expect(consultaInvalida.corpo).toEqual({ erro: { codigo: 'ENTRADA_INVALIDA', mensagem: MENSAGENS_DE_ERRO.ENTRADA_INVALIDA, requisicaoId: expect.any(String) } })
+      captura.varrerTudo([SENTINELA])
+      expect(await contarNaEscola(bancada, 'execucao_agente', a.escolaId)).toBe(execucoesAntes)
+      expect(await contarNaEscola(bancada, 'consumo_ia', a.escolaId)).toBe(consumoAntes)
+      expect((await get(a.professora, '/v1/assistente/conversa?limite=100')).status).toBe(200)
+    })
+
+    it('a guarda responde antes do pipe: sem sessão, 401; a coordenação, que não conversa com o Assistente, 404; o corpo inválido não é lido e nada é gravado', async () => {
+      const antes = await contarNaEscola(bancada, 'execucao_agente', a.escolaId)
+      const auditoriaAntes = await contarNaEscola(bancada, 'auditoria', a.escolaId)
+      const invalido = { ...mensagem(a, 'x'), escolaId: b.escolaId }
+      expect((await chamar(api.url, 'POST', '/v1/assistente/mensagens', undefined, invalido)).status).toBe(401)
+      expect((await chamar(api.url, 'GET', '/v1/assistente/conversa?limite=101', undefined)).status).toBe(401)
+      expect(await post(a.coordenacao, '/v1/assistente/mensagens', invalido)).toMatchObject({ status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO' } } })
+      expect(await get(a.coordenacao, '/v1/assistente/conversa?limite=101')).toMatchObject({ status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO' } } })
+      expect(await contarNaEscola(bancada, 'execucao_agente', a.escolaId)).toBe(antes)
+      expect(await contarNaEscola(bancada, 'auditoria', a.escolaId)).toBe(auditoriaAntes)
     })
   })
 

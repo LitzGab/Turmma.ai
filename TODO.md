@@ -1606,3 +1606,8 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   direta, sem verbo que a conte) não dispara, porque "vão me matar" é a forma da expressão ("a prova vai me matar"). A decisão
   de produto é mandar a ameaça de outra pessoa ao `assuntoDelicado`, e não ao 188, e decidir o caso da ameaça direta; decidir
   junto da linha acima sobre ameaça a terceiro, com o `conformidade-reviewer` e advogado, antes de aluno real
+- **Os pedidos sem corpo, tipados pelo `shared`** (X5, 14.0, recomendação do `revisor-geral`): o `professores.controller.ts` declara
+  `_corpo: Record<string, never>` e monta o esquema com `.default({})` localmente, e a "armadilha" da tarefa manda declarar o tipo
+  com o de `@educa/shared`. Exportar `PedidoSemCorpoDoConviteDeProfessor` (e o esquema com `.default({})`) de
+  `packages/shared/src/professores/professores.ts`, e trocar o controller, quando alguma tarefa mexer em contrato compartilhado
+  (a 15.0 e a 16.0 repetem o mesmo corpo vazio em `sala` e `operacao`): é contrato compartilhado, que a 14.0 não toca

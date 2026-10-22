@@ -1,15 +1,12 @@
-import { ErroDeDominio, Permite } from '@educa/nucleo'
+import { IdPipe, Permite, ZodValidationPipe } from '@educa/nucleo'
 import {
-  CodigoDeErro,
   esquemaPedidoJobSintetico,
+  type PedidoJobSintetico,
   type RespostaEstadoDeJob,
   type RespostaJobAceito,
 } from '@educa/shared'
 import { Body, Controller, Get, Header, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
-import { z } from 'zod'
 import { JobsSinteticosService } from './jobs-sinteticos.service.js'
-
-const esquemaId = z.uuid()
 
 /**
  * Cria job sintético, para teste e cenário de carga. Só é registrado com `ROTAS_SINTETICAS=true`
@@ -23,10 +20,8 @@ export class JobsSinteticosController {
   @Permite('sistema_job_sintetico', 'criar')
   @HttpCode(HttpStatus.ACCEPTED)
   @Header('Cache-Control', 'no-store')
-  criar(@Body() corpo: unknown): Promise<RespostaJobAceito> {
-    const pedido = esquemaPedidoJobSintetico.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    return this.jobs.enfileirar(pedido.data)
+  criar(@Body(new ZodValidationPipe(esquemaPedidoJobSintetico)) pedido: PedidoJobSintetico): Promise<RespostaJobAceito> {
+    return this.jobs.enfileirar(pedido)
   }
 }
 
@@ -38,9 +33,7 @@ export class JobsSinteticosConsultaController {
   @Get(':id')
   @Permite('sistema_job_sintetico', 'ler')
   @Header('Cache-Control', 'no-store')
-  consultar(@Param('id') id: string): Promise<RespostaEstadoDeJob> {
-    // Id fora do formato responde como id inexistente: nem o formato confirma nada.
-    if (!esquemaId.safeParse(id).success) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-    return this.jobs.consultar(id.toLowerCase())
+  consultar(@Param('id', IdPipe) id: string): Promise<RespostaEstadoDeJob> {
+    return this.jobs.consultar(id)
   }
 }

@@ -24,12 +24,14 @@ export const REGRAS_DE_SDK_DE_IA = ['@typescript-eslint/no-restricted-imports', 
 /** Guardas que valem em todo arquivo do repositório. */
 export const REGRAS_EM_TODO_ARQUIVO = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA]
 export const REGRAS_DE_TESTE = ['guardas/esperar-servico-do-compose', 'guardas/teste-sem-desligar']
+/** A entrada do controller passa pelo pipe no parâmetro (D81): a regra é a do ESLint, com os seletores em `eslint.config.mjs`. */
+export const REGRAS_DE_ENTRADA = ['no-restricted-syntax']
 /**
  * Só em teste: a espera do serviço se justifica pelo orçamento do teste (cenário de carga derruba serviço de
  * propósito), e `.skip` fora de teste é só o nome de um método.
  */
 export const ARQUIVOS_DE_TESTE = ['**/*.test.{ts,tsx}', 'e2e/**/*.spec.ts']
-export const REGRAS_DAS_GUARDAS = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA, ...REGRAS_DE_TESTE]
+export const REGRAS_DAS_GUARDAS = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA, ...REGRAS_DE_TESTE, ...REGRAS_DE_ENTRADA]
 
 const TODOS_OS_ARQUIVOS = ['**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}']
 

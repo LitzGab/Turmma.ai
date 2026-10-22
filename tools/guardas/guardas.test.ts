@@ -67,6 +67,53 @@ describe('processadores do worker: nenhuma afirmação de tipo (totais do expurg
   })
 })
 
+describe('a entrada do controller passa pelo pipe (no-restricted-syntax, D81)', () => {
+  const MODULOS_MIGRADOS = ['sistema', 'ia', 'entrega', 'assistente', 'professores']
+  const regras = new Set(['no-restricted-syntax'])
+
+  it.each(MODULOS_MIGRADOS)('reprova @Body(), @Query(), @Param(), @Param(\'id\'), @Query(\'termo\'), @Req() e requisicao.body|query|params no controller de %s', async (modulo) => {
+    const fixture = 'entrada-sem-esquema.ts'
+    expect(await lintar(eslint, fixture, `apps/api/src/${modulo}/x.controller.ts`, regras)).toEqual(marcasDeViolacao(fixture))
+  })
+
+  it('o jeito certo passa: o pipe no parâmetro, o IdPipe com e sem invalidAsUndefined, o errorCode, @UploadedFile() e @Res()', async () => {
+    for (const modulo of MODULOS_MIGRADOS) {
+      expect(await lintar(eslint, 'entrada-com-esquema.ts', `apps/api/src/${modulo}/x.controller.ts`, regras), modulo).toEqual([])
+    }
+  })
+
+  it('vale só no controller dos módulos migrados: o mesmo arquivo como service, ou num módulo que ainda não migrou, passa', async () => {
+    for (const caminho of ['apps/api/src/ia/x.service.ts', 'apps/api/src/estrutura/x.controller.ts', 'apps/api/src/ia/x.controller.test.ts']) {
+      expect(await lintar(eslint, 'entrada-sem-esquema.ts', caminho, regras), caminho).toEqual([])
+    }
+  })
+
+  it('o eslint-disable-next-line de uma violação só esconde essa violação do ESLint comum, e a passada sem comentários as reprova todas', async () => {
+    const caminho = join(raizRepositorio, 'apps/api/src/ia/x.controller.ts')
+    const linhas = lerFixture('entrada-sem-esquema.ts').split('\n')
+    const escondida = linhas.findIndex((linha) => linha.includes('criar(@Body()'))
+    expect(escondida, 'a fixture perdeu a linha de criar(@Body())').toBeGreaterThan(0)
+    const texto = [...linhas.slice(0, escondida), '    // eslint-disable-next-line no-restricted-syntax', ...linhas.slice(escondida)].join('\n')
+    const doRegra = (resultado: ESLint.LintResult | undefined) =>
+      (resultado?.messages ?? []).filter((mensagem) => mensagem.ruleId === 'no-restricted-syntax').map((mensagem) => `${mensagem.line} no-restricted-syntax`).sort()
+    const todas = marcas(texto)
+    const [comum] = await eslint.lintText(texto, { filePath: caminho })
+    expect(doRegra(comum)).toEqual(todas.filter((marca) => marca !== `${escondida + 2} no-restricted-syntax`))
+    const [dasGuardas] = await eslintDasGuardas.lintText(texto, { filePath: caminho })
+    expect(doRegra(dasGuardas)).toEqual(todas)
+  })
+
+  it('o eslint-disable não fura: o ESLint comum aceita o comentário, e a passada sem comentários do npm run lint reprova do mesmo jeito', async () => {
+    const caminho = join(raizRepositorio, 'apps/api/src/ia/x.controller.ts')
+    const comComentario = ['/* eslint-disable no-restricted-syntax */', lerFixture('entrada-sem-esquema.ts')].join('\n')
+    const [comum] = await eslint.lintText(comComentario, { filePath: caminho })
+    expect(comum?.messages.filter((mensagem) => mensagem.ruleId === 'no-restricted-syntax')).toEqual([])
+    const [dasGuardas] = await eslintDasGuardas.lintText(comComentario, { filePath: caminho })
+    const achadas = (dasGuardas?.messages ?? []).filter((mensagem) => mensagem.ruleId === 'no-restricted-syntax').map((mensagem) => `${mensagem.line} no-restricted-syntax`)
+    expect(achadas.sort()).toEqual(marcas(comComentario))
+  })
+})
+
 describe('guarda de espera do serviço do compose', () => {
   it('reprova subir serviço e medir sem esperar, e deixa passar quem espera ou usa --wait', async () => {
     expect(await lintar(eslint, 'esperar-servico.ts', 'apps/despachante/test/fila.int.test.ts')).toEqual(marcasDeViolacao('esperar-servico.ts'))

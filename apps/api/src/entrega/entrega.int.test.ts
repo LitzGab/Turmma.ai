@@ -283,6 +283,33 @@ describe('entregas', () => {
       expect((await noBanco(loteId)).estado).toBe('pendente')
       expect(await decidir(a.professora, loteId, { decisao: 'rejeitar', justificativa: 'A correção contou errado a questão 1.' })).toMatchObject({ status: 200, corpo: { estado: 'rejeitada', tipo: 'lote_de_correcao' } })
     })
+
+    it('o id do caminho: fora do formato e o de outra escola, também em maiúsculas, respondem como o inexistente; o da própria, em maiúsculas, decide', async () => {
+      const { entregaId } = await entregaPendente(a, atividadeDeA)
+      const deB = await entregaPendente(b, atividadeDeB)
+      const antesDeB = await noBanco(deB.entregaId)
+      const recusas = await Promise.all(['nao-e-uuid', randomUUID(), deB.entregaId, deB.entregaId.toUpperCase()].map((id) => decidir(a.professora, id, { decisao: 'aprovar' })))
+      for (const recusa of recusas) expect(semId(recusa)).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+      expect(new Set(recusas.map((recusa) => JSON.stringify({ ...recusa.corpo.erro, requisicaoId: undefined }))).size).toBe(1)
+      // Com o id e o corpo inválidos ao mesmo tempo, o Nest dá o erro do corpo, que é o último parâmetro (antes era o do id,
+      // 404). Não revela existência: com o corpo inválido, qualquer id, de B ou inexistente, dá o mesmo 400.
+      for (const id of ['nao-e-uuid', randomUUID(), deB.entregaId]) expect(semId(await decidir(a.professora, id, {})), id).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
+      expect(await noBanco(deB.entregaId)).toEqual(antesDeB)
+      expect(await auditoriasDa(deB.entregaId)).toEqual([])
+
+      expect(await decidir(a.professora, entregaId.toUpperCase(), { decisao: 'aprovar' })).toMatchObject({ status: 200, corpo: { id: entregaId, estado: 'aprovada' } })
+      expect(await noBanco(entregaId)).toMatchObject({ estado: 'aprovada', decidida_por: a.professora.usuarioId })
+    })
+
+    it('a guarda responde antes do pipe: sem sessão, 401; a coordenação, que não decide, 404; nenhum corpo inválido é lido nem auditado', async () => {
+      const { entregaId } = await entregaPendente(a, atividadeDeA)
+      const semSessao = await chamar(api.url, 'POST', `/v1/entregas/${entregaId}/decidir`, undefined, { decisao: 'talvez', escolaId: b.escolaId })
+      expect(semId(semSessao)).toEqual({ status: 401, codigo: 'NAO_AUTENTICADO' })
+      expect(semId(await decidir(a.coordenacao, entregaId, { decisao: 'talvez', escolaId: b.escolaId }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+      expect(semId(await pedir(a.coordenacao, 'GET', `/v1/entregas?limite=101`))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+      expect(await noBanco(entregaId)).toMatchObject({ estado: 'pendente', decidida_por: null })
+      expect(await auditoriasDa(entregaId)).toEqual([])
+    })
   })
 
   describe('só uma pessoa decide', () => {
@@ -347,6 +374,13 @@ describe('entregas', () => {
       for (const consulta of ['?estado=aberta', '?limite=101', `?escolaId=${b.escolaId}`, `?professorId=${a.colega.usuarioId}`]) {
         expect(semId(await pedir(a.professora, 'GET', `/v1/entregas${consulta}`))).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
       }
+    })
+
+    it('a consulta fora do esquema responde ENTRADA_INVALIDA, e o limite 100 passa e o 101 não', async () => {
+      for (const consulta of ['?estado=aberta', '?limite=101', '?limite=0', `?escolaId=${b.escolaId}`, `?professorId=${a.colega.usuarioId}`, '?turmaId=nao-e-uuid']) {
+        expect(semId(await pedir(a.professora, 'GET', `/v1/entregas${consulta}`)), consulta).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
+      }
+      expect((await pedir(a.professora, 'GET', '/v1/entregas?limite=100')).status).toBe(200)
     })
 
     it('a entrega pendente de uma função suspensa continua na lista, diz de que função é, e pode ser aprovada ou rejeitada; o time diz que a função está suspensa', async () => {
