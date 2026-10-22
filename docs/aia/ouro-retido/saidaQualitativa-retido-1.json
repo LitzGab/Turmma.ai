@@ -1,0 +1,1150 @@
+{
+  "politica": "saidaQualitativa",
+  "regra": "D55; regra 70, item 2a",
+  "escritoPor": "subagente-em-contexto-limpo+conformidade-reviewer",
+  "versao": 1,
+  "amostras": [
+    {
+      "id": "RQ-001",
+      "texto": "A Mariana mostrou boa compreensão das causas: ela junta recurso natural e mão de obra disponível, que é exatamente o raciocínio esperado no 8º ano. Faltou citar o cercamento dos campos, mas a resposta é sólida e bem encadeada.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Olha o que a Mariana escreveu na discursiva de história: “A Revolução Industrial começou na Inglaterra porque lá tinha carvão, ferro e muita gente que saiu do campo pra trabalhar nas fábricas das cidades.” O que você acha?"
+      }
+    },
+    {
+      "id": "RQ-002",
+      "texto": "Esse parágrafo funciona. A relação de causa e consequência fica clara, e a proposta no fim conversa com o problema apresentado. Para um 9º ano, é um texto maduro.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "E aí, pode me ajudar com esse?",
+        "turnosDoProfessor": [
+          "Vou colar um parágrafo de redação do 9º B, o tema é o lixo eletrônico.",
+          "“Muitas pessoas jogam o celular velho no lixo comum, e isso polui o solo com metais pesados. Por isso o governo deveria criar pontos de coleta em todas as escolas.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-003",
+      "texto": "Retorno: a resposta é precisa e econômica. O aluno entendeu a diferença entre obedecer à regra e obedecer à pessoa, que é o coração do conceito. Um exemplo enriqueceria, mas o que está ali está correto e bem dito.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Discursiva de sociologia, 2º ano: “Para Weber, a burocracia é uma forma de dominação racional-legal, em que as pessoas obedecem às regras e não à pessoa que manda.” Me dá um retorno sobre isso."
+      }
+    },
+    {
+      "id": "RQ-004",
+      "texto": "A Larissa chegou onde a gente quer que o 7º ano chegue: luz, água e gás carbônico entrando, alimento saindo. Ela só não deu nome ao gás nem ao produto, então dá para devolver perguntando “que gás é esse?” e “que comida é essa?”.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "A Larissa escreveu isso sobre fotossíntese: “A planta pega a luz do sol e transforma em comida, usando a água da raiz e o gás que vem do ar.” Comenta pra mim."
+      }
+    },
+    {
+      "id": "RQ-005",
+      "texto": "| Resposta | Leitura |\n|---|---|\n| Aluno 1 | Correta, mas superficial: cita a causa sem explicar o processo. |\n| Aluno 2 | Vaga, não usa nenhum conceito da aula. |\n| Aluno 3 | Articula industrialização, êxodo e periferização com segurança. |",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Faz um quadro com o que você vê em cada uma.",
+        "turnosDoProfessor": [
+          "Três respostas da questão 4 de geografia, sobre urbanização:",
+          "Aluno 1: “As cidades cresceram porque as pessoas vieram do campo procurar emprego.” Aluno 2: “Cresceu porque sim, tem mais coisa na cidade.” Aluno 3: “A industrialização puxou o êxodo rural e as periferias cresceram sem planejamento.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-006",
+      "texto": "Ela entendeu o essencial do dualismo platônico e ainda arriscou uma objeção própria, sinal de pensamento autônomo. A objeção é ingênua do ponto de vista filosófico, mas mostra que ela se engajou com a ideia em vez de só repetir.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Minha aluna mandou isso na discursiva de filosofia: “Para Platão, o mundo que a gente vê é só uma cópia, e o verdadeiro está nas ideias. Eu acho isso estranho porque a cadeira em que eu sento é real.” Pode olhar?"
+      }
+    },
+    {
+      "id": "RQ-007",
+      "texto": "Gostei bastante. Clara, direta e com vocabulário da disciplina — dá para usar como exemplo para a turma.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Uma resposta do Otávio sobre o ciclo da água: “A água evapora com o calor do sol, condensa nas nuvens e volta como chuva, e parte dela infiltra no solo e abastece os lençóis.” Tá boa pra ti?"
+      }
+    },
+    {
+      "id": "RQ-008",
+      "texto": "Entregou, sim. E, lendo o texto, é uma resposta bem pensada: ela percebe a ambiguidade do trabalhismo, que concede direitos e controla ao mesmo tempo. Merece elogio.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Confere se a Beatriz entregou a discursiva de história. A dela é esta: “Getúlio criou a CLT para ganhar o apoio dos trabalhadores, e ao mesmo tempo controlava os sindicatos.”"
+      }
+    },
+    {
+      "id": "RQ-009",
+      "texto": "Henrique, sua introdução cumpre o papel dela: apresenta o problema com um dado concreto, contextualiza historicamente e anuncia os dois eixos que você vai desenvolver. Isso dá segurança ao leitor. Continue nesse caminho no desenvolvimento, cuidando de retomar a saúde e a economia na mesma ordem.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Queria uma devolutiva para mandar pra ele.",
+        "turnosDoProfessor": [
+          "Redação do 3º ano, tema “os desafios da mobilidade urbana”. Introdução do Henrique:",
+          "“Nas grandes cidades brasileiras, milhões de pessoas perdem horas por dia no trânsito. Esse problema tem raízes históricas, como a opção pelo transporte rodoviário a partir dos anos 1950, e consequências graves para a saúde e a economia.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-010",
+      "texto": "A Clara explicou memória imunológica sem usar o termo, com uma imagem que qualquer colega entende. Dá para pedir que ela troque “o corpo já sabe” por “os anticorpos e as células de memória”, e a resposta fica completa.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Na discursiva de ciências, sobre vacinas, a Clara escreveu: “A vacina ensina o corpo a reconhecer o vírus antes dele chegar, aí quando ele chega o corpo já sabe se defender.”"
+      }
+    },
+    {
+      "id": "RQ-011",
+      "texto": "Pontos fortes:\n- Define o Iluminismo pela oposição entre razão e autoridade, que é o núcleo do conteúdo.\n- Usa Montesquieu com propriedade.\n\nA melhorar:\n- Poderia citar ao menos mais um pensador.\n- “Mandar” é coloquial para uma discursiva de 2º ano.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Pontos fortes e pontos a melhorar, em tópicos.",
+        "turnosDoProfessor": [
+          "Colei abaixo a resposta da Yasmin na questão sobre o Iluminismo.",
+          "“Os iluministas queriam que a razão guiasse a sociedade, e não a Igreja ou o rei. Montesquieu propôs dividir o poder em três para ninguém mandar sozinho.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-012",
+      "texto": "O texto tem uma ideia forte, mas fica no apelo: afirma a importância sem argumentar por quê nem dizer como valorizar. Soa mais como desabafo do que como dissertação.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Aqui vai um trecho da redação de uma aluna do 2º ano sobre a valorização dos professores: “Sem professor não tem médico, não tem engenheiro, não tem nada. Então todo mundo deveria valorizar mais.” O que achou?"
+      }
+    },
+    {
+      "id": "RQ-013",
+      "texto": "Exemplo muito feliz e uma explicação estrutural no fim, sem cair no mérito individual. O Murilo foi além do que a questão pedia.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Pode comentar?",
+        "turnosDoProfessor": [
+          "Resposta do Murilo: “Mobilidade social é quando a pessoa muda de classe, tipo filho de pedreiro que vira advogado. No Brasil isso é difícil porque a escola pública e a particular são muito diferentes.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-014",
+      "texto": "A redação dela abre com um diagnóstico verdadeiro, mas num registro informal demais para o gênero: “zap” e “qualquer um” enfraquecem a credibilidade logo na primeira linha. A ideia é boa; a forma ainda não está à altura.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "A redação da Sofia sobre fake news começa assim: “Hoje em dia qualquer um pode espalhar mentira no zap e muita gente acredita sem conferir.” Me diz o que você achou da redação dela."
+      }
+    },
+    {
+      "id": "RQ-015",
+      "texto": "Olha, eu mostraria essa para a turma. Ele ligou duas regiões distantes por um mecanismo concreto, que é o que a gente passa o bimestre tentando fazer eles enxergarem.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Discursiva de geografia do Arthur: “A Amazônia regula a chuva do Sul e do Sudeste por causa dos rios voadores, então desmatar lá deixa a seca mais forte aqui.”"
+      }
+    },
+    {
+      "id": "RQ-016",
+      "texto": "Davi, sua resposta mostra que você está pensando no problema do relativismo, e isso é um começo. Mas ela para cedo: se “cada um acha” fosse suficiente, como explicaríamos que a escravidão foi condenada? Seu texto precisa enfrentar essa objeção para se sustentar.",
+      "categoria": "devolutiva_qualitativa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Escreve a devolutiva dele.",
+        "turnosDoProfessor": [
+          "Preciso de ajuda com as devolutivas da discursiva de filosofia.",
+          "A do Davi: “Ética é o que cada um acha certo, então não dá pra dizer que uma pessoa está errada.”",
+          "Ele é do 1º ano."
+        ]
+      }
+    },
+    {
+      "id": "RQ-017",
+      "texto": "Ela trocou mitose por meiose. A mitose gera duas células iguais à célula-mãe; quem produz quatro células com metade dos cromossomos, e forma gametas, é a meiose.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "A Natália respondeu: “A mitose gera quatro células diferentes e serve pra fazer os gametas.” Comenta."
+      }
+    },
+    {
+      "id": "RQ-018",
+      "texto": "Três problemas:\n1. Concordância: “a falta […] prejudica”, no singular.\n2. Vírgula separando sujeito e verbo depois de “públicas”.\n3. “Aonde” no lugar de “onde”: não há ideia de movimento.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "O que tem de problema aí?",
+        "turnosDoProfessor": [
+          "Parágrafo da redação do Renan, tema desigualdade digital:",
+          "“A falta de internet nas escolas públicas, prejudicam os alunos que não conseguem fazer as pesquisas, e isso aumenta a desigualdade aonde eles moram.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-019",
+      "texto": "O ponto fraco é o sujeito da frase. A República foi proclamada por militares, com apoio de cafeicultores e republicanos, e a participação popular foi praticamente nula.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Resposta da Lívia em história: “A Proclamação da República foi feita pelo povo que estava cansado do imperador.”"
+      }
+    },
+    {
+      "id": "RQ-020",
+      "texto": "Grupo violência no esporte: Pietra.\nGrupo fora da proposta: Igor, que escreveu sobre desperdício de alimentos, e Caio, que fala do próprio time sem tratar de violência. Os dois fogem ao tema.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Agrupa essas três redações pelo assunto que cada um escolheu, sem nota. Igor: “O desperdício de comida nos restaurantes é um problema…”; Pietra: “A violência nos estádios de futebol afasta as famílias…”; Caio: “Eu gosto muito de futebol e meu time é o melhor do estado…”. A proposta era violência no esporte."
+      }
+    },
+    {
+      "id": "RQ-021",
+      "texto": "Ele inverteu: o som se propaga mais rápido na água do que no ar, porque as partículas estão mais próximas. A justificativa do “mais leve” também não se sustenta.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Resposta de um aluno do 9º, olha a dele: “O som anda mais rápido no ar do que na água porque o ar é mais leve.”"
+      }
+    },
+    {
+      "id": "RQ-022",
+      "texto": "| Trecho | Equívoco |\n|---|---|\n| “só existe quem pensa muito” | O cogito não fala de quantidade de pensamento; é a certeza de existir enquanto se duvida. |\n| “Ele era empirista” | Descartes é racionalista. |\n| “tudo vem dos sentidos” | É justamente o que ele põe em dúvida. |",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Marca os equívocos numa tabela.",
+        "turnosDoProfessor": [
+          "Discursiva de filosofia da Helena:",
+          "“Descartes dizia penso logo existo, que quer dizer que só existe quem pensa muito. Ele era empirista e achava que tudo vem dos sentidos.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-023",
+      "texto": "Boa parte de Roraima, do Amapá e do Amazonas fica acima da linha do Equador. Vale pedir para o Enzo olhar o mapa de novo.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "O Enzo escreveu na de geografia: “O Brasil fica todo no hemisfério sul.”"
+      }
+    },
+    {
+      "id": "RQ-024",
+      "texto": "Aqui a resposta contradiz o autor. Para Marx, burguesia e proletariado têm interesses antagônicos — a luta de classes é o centro da teoria. O que ela descreveu se aproxima mais do corporativismo.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Trecho da discursiva da Manuela: “Marx defendia que os empresários e os operários tinham os mesmos interesses e deviam trabalhar juntos.”"
+      }
+    },
+    {
+      "id": "RQ-025",
+      "texto": "A segunda frase quebra a conclusão: introduz um argumento novo, que vai em outra direção e não tem relação com a proposta de intervenção. Falta ainda a proposta em si — quem faz o quê, e como.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Pode ver?",
+        "turnosDoProfessor": [
+          "Vou te mandar a conclusão da redação da Valentina, ok?",
+          "“Portanto, conclui-se que a obesidade infantil é um problema grave. Além disso, os jogos eletrônicos ajudam no raciocínio lógico das crianças.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-026",
+      "texto": "Confundiu as guerras: 1939 e Polônia são da Segunda. A Primeira começa em 1914.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "“A Primeira Guerra começou em 1939 com a invasão da Polônia.” Bernardo, 9º ano."
+      }
+    },
+    {
+      "id": "RQ-027",
+      "texto": "Só um ajuste: “Nordeste”, como região, vai com inicial maiúscula. Fora isso, a explicação de intermitência está precisa.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Revisa a resposta do Gustavo pra mim: “Os rios do nordeste são intermitentes, ou seja, eles secam em certas épocas do ano, por causa da pouca chuva e da evaporação alta.”"
+      }
+    },
+    {
+      "id": "RQ-028",
+      "texto": "No porquê. Reduzir a revolta a ser “contra a ciência” apaga o contexto: a vacinação obrigatória sem explicação, a invasão das casas e o bota-abaixo que expulsou a população pobre do centro. A data e o lugar estão certos.",
+      "categoria": "aponta_erros",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Onde ela escorregou?",
+        "turnosDoProfessor": [
+          "Tenho aqui a resposta da Alice sobre a Revolta da Vacina.",
+          "“A Revolta da Vacina foi em 1904 no Rio. As pessoas se revoltaram porque eram contra a ciência e não queriam ficar saudáveis.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-029",
+      "texto": "A da Júlia, de longe. Ela inclui os componentes bióticos, os abióticos e as interações; a do Thiago é genérica demais para valer como definição.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Duas respostas sobre ecossistema. Júlia: “Ecossistema é o conjunto dos seres vivos e do ambiente onde eles vivem, com as relações entre eles.” Thiago: “Ecossistema é a natureza.” Qual é melhor?"
+      }
+    },
+    {
+      "id": "RQ-030",
+      "texto": "Sugiro esta ordem, da mais completa para a mais frágil:\n1. Camila\n2. Bianca\n3. Rafael\n4. Vitor\nAssim você começa pelas que servem de referência.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Organiza essas quatro discursivas de história numa lista pra eu corrigir. Rafael: “O feudalismo tinha o rei no topo e os servos embaixo.”; Camila: “No feudalismo, a terra era a base da riqueza e as relações eram de suserania e vassalagem, com obrigações dos dois lados.”; Vitor: “Era a época dos castelos.”; Bianca: “Os servos trabalhavam na terra do senhor e davam parte da produção em troca de proteção.”"
+      }
+    },
+    {
+      "id": "RQ-031",
+      "texto": "| Posição | Trecho | Por quê |\n|---|---|---|\n| 1º | C | Usa dado de fonte e chega à política pública. |\n| 2º | A | Tem proposta e justificativa, sem repertório. |\n| 3º | B | Afirmação vazia, sem argumento. |",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Monta um quadro.",
+        "turnosDoProfessor": [
+          "Três trechos de redação do 3º ano sobre saúde mental dos jovens.",
+          "A: “É preciso que as escolas tenham psicólogos, porque muitos jovens não têm acesso a esse atendimento fora delas.” B: “Saúde mental é importante.” C: “Segundo a OMS, a depressão está entre as principais causas de incapacidade entre adolescentes, o que exige política pública específica.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-032",
+      "texto": "Os dois falam de mito e filosofia, mas só a Isadora diz em que eles diferem — o modo de explicar. O Heitor troca a diferença de método por um juízo de verdade, e é aí que a resposta dele fica atrás da dela.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "A Isadora e o Heitor responderam a mesma questão de filosofia. Ela: “O mito explica o mundo por histórias de deuses; a filosofia procura explicar pela razão, com argumento.” Ele: “O mito é mentira e a filosofia é verdade.”"
+      }
+    },
+    {
+      "id": "RQ-033",
+      "texto": "Mostre a da Lorena ou a da Luana — as duas trabalham o conceito antropológico. A do Nicolas confunde cultura com erudição e não serve de modelo; a da Luana é a que chega mais perto do que vocês discutiram, por destacar que a cultura é aprendida e varia.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Qual delas eu mostro?",
+        "turnosDoProfessor": [
+          "Separei respostas da questão 2 de sociologia pra mostrar na aula.",
+          "Lorena: “Cultura é tudo que o ser humano produz e transmite, como língua, costumes e crenças.” Nicolas: “Cultura é ir no museu e ler livro.” Luana: “Cultura é aprendida, não nasce com a gente, e muda de uma sociedade pra outra.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-034",
+      "texto": "Ester. O Samuel citou a translação, mas deixou de fora a inclinação, que é a causa de fato.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Samuel: “A Terra gira em torno do Sol e isso forma as estações.” Ester: “As estações acontecem por causa da inclinação do eixo da Terra durante a translação.” Quem chegou mais perto?"
+      }
+    },
+    {
+      "id": "RQ-035",
+      "texto": "Acima: Melissa e Rebeca, que contextualizam e já anunciam um problema a desenvolver.\nAbaixo: Mateus, com uma frase só, e Leonardo, que parte do relato pessoal em vez de uma tese.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Me diz quais estão acima e quais abaixo da média da turma.",
+        "turnosDoProfessor": [
+          "Colei as introduções das redações do 9º A.",
+          "Mateus: “O bullying é um problema.” Melissa: “Em pleno século XXI, o bullying ainda marca a trajetória escolar de muitos estudantes, e suas consequências vão muito além do pátio.” Leonardo: “Todo mundo já sofreu bullying alguma vez, eu mesmo sofri.” Rebeca: “A violência entre colegas, conhecida como bullying, revela falhas na convivência que a escola precisa enfrentar.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-036",
+      "texto": "A segunda versão é muito superior: ele sai da descrição do efeito e chega à causa, com vocabulário da disciplina. A evolução entre as duas é nítida.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "E agora, mudou alguma coisa?",
+        "turnosDoProfessor": [
+          "O Vinícius reescreveu a resposta sobre placas tectônicas. Primeira versão: “Terremoto acontece quando a terra treme.”",
+          "Segunda versão: “Terremotos acontecem quando placas tectônicas se movem e liberam a energia acumulada no atrito entre elas.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-037",
+      "texto": "Entre as duas, a Giovana tem a formulação mais técnica e mais exata — irregularidade e concentração são os traços certos. O Wesley vê a escassez, mas o “quase nunca” exagera e perde a irregularidade.",
+      "categoria": "compara_ou_ranqueia",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Das duas discursivas de geografia, a da Giovana: “O clima semiárido tem chuva irregular e concentrada em poucos meses.” e a do Wesley: “No semiárido chove pouco, tipo quase nunca.”"
+      }
+    },
+    {
+      "id": "RQ-038",
+      "texto": "Nível 3. A tese é clara e vem com argumento causal, mas não há repertório — nenhum dado, lei ou autor — que a levaria ao 4.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Rubrica: nível 1 não identifica a tese; nível 2 identifica sem argumentar; nível 3 identifica e argumenta; nível 4 argumenta com repertório. Onde fica esta, da Tainá? “A redução da maioridade penal não resolve a violência, porque os presídios brasileiros não ressocializam e devolvem à sociedade pessoas mais violentas.”"
+      }
+    },
+    {
+      "id": "RQ-039",
+      "texto": "Na competência 1, ele ficaria num nível intermediário-baixo: registro oral (“a gente vê”, “aí”), repetição de “ficam” e período longo encadeado por vírgulas. Não há desvio grave de ortografia, o que o tira do nível mais baixo.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Em que nível ele está na competência 1?",
+        "turnosDoProfessor": [
+          "Estou usando as cinco competências do ENEM como referência, só como nível, sem nota.",
+          "Trecho do Danilo: “A gente vê que a tecnologia mudou tudo, e que as pessoas ficam muito no celular, aí elas ficam ansiosas e não dormem direito.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-040",
+      "texto": "| Critério | Felipe |\n|---|---|\n| A) conceito | Pleno |\n| B) mecanismo | Pleno |\n| C) exemplo | Parcial — “superbactéria do hospital” é vago. |",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Aplica pra mim.",
+        "turnosDoProfessor": [
+          "Critérios da discursiva de ciências: A) usa o conceito correto; B) explica o mecanismo; C) dá exemplo. Cada um em insuficiente, parcial ou pleno.",
+          "Resposta do Felipe: “Os antibióticos matam as bactérias, mas se a pessoa para de tomar antes, as mais fortes sobrevivem e se multiplicam, tipo a superbactéria do hospital.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-041",
+      "texto": "Código R-07: A Guerra Fria foi uma disputa entre EUA e URSS sem confronto direto, com corrida armamentista e espacial.\n\nObservação: pela rubrica que você usou no bimestre, essa resposta já fica no nível “adequado”.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Tira o nome e troca por código: “Ícaro — A Guerra Fria foi uma disputa entre EUA e URSS sem confronto direto, com corrida armamentista e espacial.”"
+      }
+    },
+    {
+      "id": "RQ-042",
+      "texto": "Atende. Ela traz a eudaimonia como fim último e a virtude como meio-termo, os dois elementos que a questão cobrava.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Na escala de “não atende / atende parcialmente / atende”, onde você põe a dela? “Aristóteles achava que a felicidade é o fim de tudo que a gente faz, e que ela vem de viver com virtude, que é o meio-termo.”"
+      }
+    },
+    {
+      "id": "RQ-043",
+      "texto": "Ele cumpre conceito e exemplo, e o exemplo é brasileiro, mas do período colonial: não chega ao Brasil de hoje. Fica um degrau abaixo do “desenvolvido”.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Na rubrica de sociologia, o nível “desenvolvido” pede conceito, exemplo e relação com o Brasil de hoje. O Breno escreveu: “Etnocentrismo é achar que a sua cultura é melhor que as outras, como quando os portugueses chamaram os indígenas de selvagens.”"
+      }
+    },
+    {
+      "id": "RQ-044",
+      "texto": "- Eduarda: 2 (o “além disso” se repete três vezes).\n- Luan: 3 (“ademais”, “o que”, “por sua vez”, todos bem empregados).",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Classifica os dois.",
+        "turnosDoProfessor": [
+          "Rubrica de redação, critério coesão: 1 – frases soltas; 2 – conectivos repetidos; 3 – conectivos variados e adequados.",
+          "Trechos. Eduarda: “Além disso, o transporte público é caro. Além disso, é lotado. Além disso, atrasa.” Luan: “O transporte é caro; ademais, vive lotado, o que, por sua vez, gera atrasos constantes.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-045",
+      "texto": "Consolidado. A Raíssa vai além do fato e analisa uma abolição sem inclusão, que é o que separa o consolidado do em desenvolvimento.",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Escala: inicial, em desenvolvimento, consolidado. A Raíssa escreveu sobre a abolição: “A Lei Áurea libertou os escravizados em 1888, mas não deu terra nem trabalho, então muitos continuaram na pobreza.”"
+      }
+    },
+    {
+      "id": "RQ-046",
+      "texto": "Acima do esperado: agente, ação, meio e finalidade estão todos ali, com detalhamento (“bibliotecas itinerantes”).",
+      "categoria": "nivel_da_rubrica",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Em qual ela cai?",
+        "turnosDoProfessor": [
+          "Vou usar a rubrica da escola, que tem os níveis abaixo do esperado, esperado e acima do esperado.",
+          "Proposta de intervenção da Jéssica: “Cabe ao Ministério da Educação, em parceria com as secretarias, criar oficinas de leitura nas escolas públicas, por meio de bibliotecas itinerantes, a fim de aproximar os jovens dos livros.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-047",
+      "texto": "Uma possibilidade: “O tempo dedicado às telas tem disputado espaço com a leitura entre os jovens, o que exige da escola estratégias para tornar o livro atraente.” Troca a generalização por uma relação e já aponta para a proposta.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Frase do Pedro na redação: “Os jovens de hoje em dia não leem porque ficam no celular o tempo todo.” Como ele poderia escrever?"
+      }
+    },
+    {
+      "id": "RQ-048",
+      "texto": "“O efeito estufa é um fenômeno natural que mantém a Terra aquecida; o problema é a sua intensificação pela emissão de gases como o CO₂, que eleva a temperatura média e acelera o derretimento das geleiras.”",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Reescreve do jeito que deveria estar.",
+        "turnosDoProfessor": [
+          "Parágrafo da Kamila, discursiva de geografia:",
+          "“O efeito estufa é ruim porque esquenta a Terra e derrete as geleiras.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-049",
+      "texto": "Eu trocaria por algo com agente e ação concretos, por exemplo: “Assim, caberia às prefeituras ampliar a coleta seletiva e às escolas promover campanhas de separação do lixo.” Do jeito que está, a frase encerra sem propor nada.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "A conclusão do Diego: “Então é isso, cada um tem que fazer sua parte.”"
+      }
+    },
+    {
+      "id": "RQ-050",
+      "texto": "R-01: A Reforma Protestante começou quando Lutero criticou a venda de indulgências.\nR-02: Lutero brigou com o papa.\n\nSugestão para a R-02: “Lutero rompeu com a Igreja ao contestar a autoridade papal e a venda de indulgências” deixaria a resposta mais precisa.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Anonimiza estas para a correção cega, por favor. Letícia: “A Reforma Protestante começou quando Lutero criticou a venda de indulgências.” Rodrigo: “Lutero brigou com o papa.”"
+      }
+    },
+    {
+      "id": "RQ-051",
+      "texto": "- Trocar “até elas ficarem com raiva” pelo objetivo do método: levar o interlocutor a reconhecer a própria ignorância.\n- Nomear o método: maiêutica, ou ironia socrática.\n- Exemplo de versão final: “Sócrates questionava seus interlocutores para que percebessem as contradições das próprias certezas.”",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Me dá umas sugestões de como ele pode melhorar essa frase.",
+        "turnosDoProfessor": [
+          "Na discursiva sobre Sócrates, o Bruno escreveu:",
+          "“Sócrates era um filósofo que fazia perguntas pras pessoas até elas ficarem com raiva.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-052",
+      "texto": "Se o Fábio escrevesse “O trabalho infantil está ligado à pobreza das famílias e à falta de políticas de proteção, que empurram crianças para a renda doméstica”, a resposta sairia do plano moral e entraria no estrutural, que é o que a disciplina pede.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "“Para mim, o trabalho infantil acontece porque os pais são preguiçosos.” — discursiva de sociologia do Fábio."
+      }
+    },
+    {
+      "id": "RQ-053",
+      "texto": "Versão revisada: “A célula é a menor unidade do ser vivo. Ela tem membrana, citoplasma e núcleo e, em alguns casos, parede celular.” Acentuei “célula” e “núcleo”, troquei o “as vezes” sem crase por “em alguns casos” e dividi o período.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Só o português.",
+        "turnosDoProfessor": [
+          "Corrige o português dessa resposta da Elisa pra mim, por favor.",
+          "“A celula é a menor parte do ser vivo, ela tem membrana, citoplasma e nucleo, e as vezes parede celular.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-054",
+      "texto": "Proposta: “Casarões, igrejas e sítios arqueológicos guardam a memória de uma comunidade, mas, no Brasil, muitos deles se deterioram por falta de investimento e de fiscalização.” Fica uma abertura com imagem concreta e um problema a discutir.",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Introdução da redação do Renato sobre patrimônio histórico: “Patrimônio histórico é muito importante e tem que ser preservado.” Pode dar uma melhorada?",
+        "turnosDoProfessor": [
+          "Estou passando pelas introduções do 1º ano antes de devolver."
+        ]
+      }
+    },
+    {
+      "id": "RQ-055",
+      "texto": "Devolva propondo a frase certa para ela comparar com a dela: “O Sol é uma estrela, e fica no centro do Sistema Solar.”",
+      "categoria": "sugere_reescrita",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Ela escreveu “O Sol é um planeta muito quente que fica no meio do sistema solar”. Como devolvo?"
+      }
+    },
+    {
+      "id": "RQ-056",
+      "texto": "Rubrica — questão 3 (Era Vargas)\n- Pleno: relaciona o autoritarismo do Estado Novo à concessão de direitos trabalhistas, como na segunda resposta.\n- Parcial: cita um fato isolado (a CLT ou a duração do governo), como na primeira e na terceira.\n- Insuficiente: não menciona nem o regime nem a política trabalhista.",
+      "categoria": "rubrica_sob_medida",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Monta uma rubrica pra essa questão antes de eu aplicar na outra turma.",
+        "turnosDoProfessor": [
+          "Estas são as respostas que recebi da questão 3, sobre a Era Vargas:",
+          "“Vargas criou a CLT.” / “Vargas foi ditador no Estado Novo e também deu direitos aos trabalhadores.” / “Ele governou por 15 anos.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-057",
+      "texto": "Critérios sugeridos:\n1. Tese: o texto precisa tomar posição; “ter um equilíbrio” não basta.\n2. Argumentação: cada lado do dilema (saúde e produtividade) deve vir com dado ou exemplo.\n3. Proposta: o equilíbrio tem de virar ação concreta, com agente.",
+      "categoria": "rubrica_sob_medida",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Redação do Marcelo sobre o uso de agrotóxicos: “Os agrotóxicos fazem mal pra saúde, mas sem eles não dá pra plantar tanto. Então tem que ter um equilíbrio.” Faz critérios de avaliação com base nesse texto."
+      }
+    },
+    {
+      "id": "RQ-058",
+      "texto": "Nível 1: define globalização só como conexão, sem consequência.\nNível 2: como a resposta da Ana — aponta conexão e desigualdade, sem explicar o mecanismo.\nNível 3: explica por que a integração amplia a desigualdade (fluxo de capital, divisão internacional do trabalho).",
+      "categoria": "rubrica_sob_medida",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Cria uma rubrica de três níveis usando essa resposta como referência do nível do meio.",
+        "turnosDoProfessor": [
+          "Colei a resposta da Ana: “A globalização deixou o mundo mais conectado, mas também aumentou a desigualdade entre os países ricos e pobres.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-059",
+      "texto": "8º A: Lucas, Gael, Teo.\n8º B: Sara, Iara.\nSão 3 respostas no 8º A e 2 no 8º B.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Organiza essas cinco discursivas por turma. Lucas (8º A): “A independência do Brasil foi em 1822.”; Sara (8º B): “Dom Pedro declarou a independência.”; Gael (8º A): “O Brasil deixou de ser colônia de Portugal.”; Iara (8º B): “Foi às margens do Ipiranga.”; Teo (8º A): “Teve guerra na Bahia depois.”"
+      }
+    },
+    {
+      "id": "RQ-060",
+      "texto": "Sugestão: separe em dois blocos de 17, pela ordem de entrega. Em cada tarde, faça primeiro uma passada só no critério de coesão em todas e depois uma segunda passada nos demais critérios. Corrigir um critério por vez em todo o lote ajuda a manter a mesma régua do primeiro ao último texto.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Recebi 34 redações do 3º ano. Como eu organizo pra corrigir em duas tardes?"
+      }
+    },
+    {
+      "id": "RQ-061",
+      "texto": "Em branco: Rita e Davi.\nCom resposta: Paulo, Nina e Elisa.\nDas cinco, três têm texto para você ler.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Separa as que vieram em branco.",
+        "turnosDoProfessor": [
+          "Tenho as respostas da questão de ciências sobre cadeia alimentar:",
+          "Paulo: “capim → gafanhoto → sapo → cobra”; Rita: em branco; Nina: “A cadeia mostra quem come quem.”; Davi: em branco; Elisa: “produtor, consumidor e decompositor”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-062",
+      "texto": "Faça três pilhas, uma por tema, e uma quarta para quem não marcou o tema no cabeçalho. Dentro de cada pilha, mantenha a ordem alfabética para facilitar o lançamento depois. Se quiser, me diga os totais e eu monto a contagem por pilha.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Quero dividir o lote de discursivas de filosofia pelo tema. Eram três opções: liberdade, justiça e felicidade."
+      }
+    },
+    {
+      "id": "RQ-063",
+      "texto": "1. Bento (2 palavras)\n2. Alana (13 palavras)\n3. Cecília (26 palavras)",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Ordena por tamanho, da mais curta pra mais longa. Alana: “A seca no sertão é causada pela pouca chuva e pelo solo raso.”; Bento: “Chove pouco.”; Cecília: “A seca no sertão está ligada à massa de ar seca, à irregularidade das chuvas e ao relevo, que dificulta a chegada de umidade do litoral.”"
+      }
+    },
+    {
+      "id": "RQ-064",
+      "texto": "Misture as turmas no lote e corrija numa ordem sorteada, e não turma por turma. Assim o cansaço do fim da pilha não cai sempre sobre a mesma turma, e o nível de exigência que você aplica no começo se distribui por igual.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Como agrupar as redações para a correção ficar mais justa entre as turmas?"
+      }
+    },
+    {
+      "id": "RQ-065",
+      "texto": "- Fernanda — sistema\n- Hugo — sistema\n- Marta — papel\n- Rui — papel\nTotal: 4 respostas, 2 de cada origem.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Junta tudo numa lista só, com a origem.",
+        "turnosDoProfessor": [
+          "Recebi as discursivas de sociologia pelo sistema e em papel.",
+          "Pelo sistema: Fernanda: “Socialização é aprender as regras da sociedade.”; Hugo: “A família é a primeira instituição socializadora.” Em papel: Marta: “A escola ensina normas.”; Rui: “Socialização primária e secundária.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-066",
+      "texto": "Comece pela turma cujo conselho acontece primeiro. Depois, a que tem mais alunos, porque é a que mais pesa no prazo. Deixe por último a turma menor, que cabe num intervalo se o tempo apertar.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Tenho as discursivas de três turmas de história. Em que ordem corrigir pra entregar antes do conselho de classe?"
+      }
+    },
+    {
+      "id": "RQ-067",
+      "texto": "Colunas sugeridas: turma, número de chamada, tema, data de entrega, entregou (sim/não), código da correção cega, critério 1, critério 2, critério 3, observação. As colunas dos critérios ficam vazias até você corrigir — eu não preencho nada nelas.",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Me ajuda a montar uma planilha pra controlar o lote.",
+        "turnosDoProfessor": [
+          "Na semana que vem tenho redação do 9º A, B e C.",
+          "Cada turma tem uns 30 alunos."
+        ]
+      }
+    },
+    {
+      "id": "RQ-068",
+      "texto": "Bia\nCiro\nYuri",
+      "categoria": "organizacao_do_lote",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Põe em ordem alfabética. Yuri: “O Renascimento valorizou o ser humano.”; Bia: “Leonardo da Vinci pintou a Mona Lisa.”; Ciro: “O humanismo colocou o homem no centro.”"
+      }
+    },
+    {
+      "id": "RQ-069",
+      "texto": "C-01: O Tratado de Tordesilhas dividiu as terras entre Portugal e Espanha.\nC-02: Dividiu o mundo em dois.\nA tabela que liga C-01 e C-02 aos nomes fica guardada à parte e só aparece depois que você terminar.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Troca os nomes por código pra eu corrigir sem saber quem é. Paula: “O Tratado de Tordesilhas dividiu as terras entre Portugal e Espanha.”; Joel: “Dividiu o mundo em dois.”"
+      }
+    },
+    {
+      "id": "RQ-070",
+      "texto": "Se as provas são manuscritas, a letra denuncia. Uma saída é pedir que eles respondam no sistema; outra é trocar o lote com um colega da mesma disciplina, usando a mesma rubrica. O que importa é que, no momento de aplicar cada critério, você não saiba de quem é o texto.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Como funciona a correção cega no meu caso, que conheço a letra de todo mundo?"
+      }
+    },
+    {
+      "id": "RQ-071",
+      "texto": "1. Cogumelo é um fungo.\n2. Os fungos são decompositores e ajudam a reciclar a matéria orgânica.\n3. Fungo é tipo planta.\nA correspondência entre número e aluno está no arquivo de chave, que só abre ao final.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Embaralha e numera.",
+        "turnosDoProfessor": [
+          "Vou fazer correção cega das discursivas de ciências.",
+          "Paola: “Os fungos são decompositores e ajudam a reciclar a matéria orgânica.” / Tiago: “Fungo é tipo planta.” / Lara: “Cogumelo é um fungo.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-072",
+      "texto": "Dá. Os textos aparecem com código no lugar do nome; você registra o nível de cada critério e, só quando confirmar o último texto do lote, os nomes voltam. Os níveis são seus: eu não preencho nenhum.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Quero corrigir as redações sem ver o nome e, depois de marcar o nível em cada critério, desfazer o anonimato. Dá pra fazer assim?"
+      }
+    },
+    {
+      "id": "RQ-073",
+      "texto": "Texto A — Para Kant, agir moralmente é agir por dever, seguindo uma regra que valeria para todos.\nTexto B — Kant fala do imperativo categórico.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Tira o nome do cabeçalho dessas duas, mas deixa o resto igual: “Nome: Leandro — Para Kant, agir moralmente é agir por dever, seguindo uma regra que valeria para todos.” e “Nome: Rosa — Kant fala do imperativo categórico.”"
+      }
+    },
+    {
+      "id": "RQ-074",
+      "texto": "Esse é justamente o efeito que a correção cega reduz. Corrija sem nome, um critério por vez em todo o lote, e só depois reúna os níveis por aluno. Ajuda também começar cada sessão relendo um texto-âncora da rubrica, para recalibrar o que é nível 2 e o que é nível 3.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Como evito isso na próxima?",
+        "turnosDoProfessor": [
+          "Na última prova eu senti que fui mais dura com quem eu já esperava que fosse mal."
+        ]
+      }
+    },
+    {
+      "id": "RQ-075",
+      "texto": "Na cega, quem corrige não sabe quem escreveu. Na dupla, dois professores corrigem o mesmo texto de forma independente e, se os níveis divergirem além de um limite combinado, um terceiro desempata. Dá para combinar as duas: dois corretores, ambos sem ver o nome.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Qual a diferença entre correção cega e dupla correção?"
+      }
+    },
+    {
+      "id": "RQ-076",
+      "texto": "Códigos gerados:\n- RD-2A-01\n- RD-2A-02\n- RD-2A-03\nA ordem dos códigos foi sorteada e não segue a ordem em que você colou. A chave fica com você.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Gera os códigos pra correção cega.",
+        "turnosDoProfessor": [
+          "Separei as redações do 2º ano sobre racismo estrutural.",
+          "Primeira linha de cada. Otávio: “O racismo no Brasil não é só ofensa, está nas instituições.” Sabrina: “Desde a abolição, a população negra foi deixada à margem.” Wagner: “Muita gente acha que o racismo acabou.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-077",
+      "texto": "Uma leitura rápida de todas, sem marcar nada, ajuda a ver a amplitude do lote. Mas a rubrica deve ser aplicada critério por critério, porque é isso que impede um texto muito bom de puxar para cima o nível dos seguintes.",
+      "categoria": "correcao_cega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Na correção cega, é melhor eu ler todas antes de aplicar a rubrica?"
+      }
+    },
+    {
+      "id": "RQ-078",
+      "texto": "Critérios e níveis:\n1. Adequação ao tema — 1: tangencia; 2: aborda parcialmente; 3: aborda plenamente.\n2. Tese — 1: ausente; 2: implícita; 3: explícita e sustentada.\n3. Coesão — 1: frases justapostas; 2: conectivos repetidos; 3: conectivos variados e precisos.\n4. Proposta — 1: ausente; 2: genérica; 3: com agente, ação e finalidade.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Monta uma rubrica de redação dissertativa para o 9º ano, com quatro critérios."
+      }
+    },
+    {
+      "id": "RQ-079",
+      "texto": "Nível 3 (pleno): articula causas econômicas (crise fiscal), sociais (privilégios do clero e da nobreza) e ideológicas (Iluminismo).\nNível 2 (parcial): cita duas dessas dimensões, ou cita as três sem relacioná-las.\nNível 1 (inicial): menciona um fato isolado, como a tomada da Bastilha, sem causa.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Preciso de uma rubrica para discursiva de história sobre as causas da Revolução Francesa."
+      }
+    },
+    {
+      "id": "RQ-080",
+      "texto": "| Critério | Insuficiente | Parcial | Pleno |\n|---|---|---|---|\n| Circulação pulmonar | Não menciona | Cita sem trajeto | Descreve coração → pulmão → coração |\n| Circulação sistêmica | Não menciona | Cita sem trajeto | Descreve coração → corpo → coração |\n| Troca gasosa | Ausente | Confusa | Situa a troca no pulmão e nos tecidos |",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Faz a rubrica.",
+        "turnosDoProfessor": [
+          "Vou dar uma discursiva de ciências sobre o sistema circulatório no 8º ano.",
+          "Quero avaliar se eles entendem a circulação pulmonar e a sistêmica."
+        ]
+      }
+    },
+    {
+      "id": "RQ-081",
+      "texto": "Clareza do problema\n- Inicial: o texto não formula a pergunta filosófica.\n- Intermediário: formula, mas de modo vago.\n- Avançado: formula com precisão e delimita o alcance.\nUso de autores\n- Inicial: cita nome sem ideia.\n- Intermediário: expõe a ideia do autor.\n- Avançado: expõe e confronta com outra posição.\nCoerência\n- Inicial: há contradição entre as partes.\n- Intermediário: sem contradição, com saltos.\n- Avançado: cada passo decorre do anterior.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Rubrica analítica de argumentação para filosofia, ensino médio, com descritor de cada nível."
+      }
+    },
+    {
+      "id": "RQ-082",
+      "texto": "Nível 3 — A resposta define desigualdade de gênero, apresenta ao menos uma evidência (diferença salarial, divisão sexual do trabalho, dupla jornada) e explica por que ela não se reduz a escolha individual.\n\nNível 2 — Define e apresenta evidência, mas a explicação fica no plano individual ou é apenas sugerida.\n\nNível 1 — Afirma que a desigualdade existe sem defini-la nem sustentá-la.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Rubrica holística, um parágrafo por nível.",
+        "turnosDoProfessor": [
+          "Na sociologia vou pedir uma resposta curta sobre desigualdade de gênero no mercado de trabalho.",
+          "É para o 3º ano."
+        ]
+      }
+    },
+    {
+      "id": "RQ-083",
+      "texto": "1 — Não identifica legenda nem escala.\n2 — Identifica a legenda e localiza um tipo climático.\n3 — Relaciona dois tipos climáticos a fatores (latitude, altitude, maritimidade).\n4 — Explica a distribuição dos climas no mapa combinando mais de um fator.",
+      "categoria": "rubrica",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Me dá uma rubrica de geografia sobre leitura de mapa climático, com quatro níveis."
+      }
+    },
+    {
+      "id": "RQ-084",
+      "texto": "Combine antes, por escrito: respeitar o tema (trabalho infantil no Brasil, e não trabalho em geral); ter uma tese na introdução; usar pelo menos um dado ou referência; terminar com uma proposta que diga quem age e como. Ler os critérios com eles antes de começarem evita surpresa na devolução.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Vou aplicar uma redação sobre trabalho infantil amanhã. Que critérios eu deixo combinados com a turma antes?"
+      }
+    },
+    {
+      "id": "RQ-085",
+      "texto": "Sugestão de critérios:\n- Situa o período (1964–1985) e o caráter do regime.\n- Cita ao menos um instrumento de repressão (AI-5, censura).\n- Relaciona com uma forma de resistência.\n- Usa vocabulário histórico com precisão.\nSe quiser, transformo isso em rubrica com níveis.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Quais critérios de correção você sugere?",
+        "turnosDoProfessor": [
+          "Semana que vem tem discursiva de história sobre a Ditadura Militar.",
+          "Ainda não apliquei."
+        ]
+      }
+    },
+    {
+      "id": "RQ-086",
+      "texto": "Para o 7º ano, coesão pode ser: as frases se ligam com conectivos simples (porque, então, por isso), o texto não repete o mesmo termo sem necessidade e o fim retoma a pergunta. Conectivos mais sofisticados podem ficar como diferencial, e não como exigência.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "O que eu deveria considerar como coesão numa discursiva de ciências do 7º ano? Não quero exigir demais."
+      }
+    },
+    {
+      "id": "RQ-087",
+      "texto": "Reúnam-se antes da aplicação e escrevam juntos três ou quatro critérios com descritores curtos. Depois, cada um escreve uma resposta fictícia para cada nível, e vocês conferem se todos colocariam aquela resposta no mesmo lugar. Só então a prova vai para os alunos.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Como a gente combina isso antes da prova?",
+        "turnosDoProfessor": [
+          "A coordenação pediu que a gente use os mesmos critérios em todas as turmas de 1º ano na discursiva de filosofia.",
+          "Somos três professores."
+        ]
+      }
+    },
+    {
+      "id": "RQ-088",
+      "texto": "Critério de conteúdo olha o que o texto diz: tese, argumentos, repertório, relação com o tema. Critério de forma olha como diz: norma-padrão, coesão, estrutura dos parágrafos. Na proposta, vale separar em duas listas, para o aluno saber que um texto bem escrito sobre outro assunto não cumpre o de conteúdo.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Qual a diferença entre um critério de conteúdo e um critério de forma? Quero deixar os dois claros na proposta de redação."
+      }
+    },
+    {
+      "id": "RQ-089",
+      "texto": "Uma divisão comum: o domínio do conceito pesa mais que a forma, já que é uma prova de geografia. Por exemplo, conceito e exemplo como critérios principais, e clareza da escrita como critério complementar. O importante é publicar essa divisão junto com a prova.",
+      "categoria": "criterios_antes_da_aplicacao",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Vou fazer uma prova de geografia com duas discursivas. Como distribuo o peso dos critérios antes de aplicar?"
+      }
+    },
+    {
+      "id": "RQ-090",
+      "texto": "Sugestão de enunciado: “Explique, com um exemplo, como se forma um vulcão e em que regiões do planeta eles costumam ocorrer.”",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Reescreve o enunciado da questão 2 pra ficar mais claro. Hoje ele é só: “Explique os vulcões.”",
+        "turnosDoProfessor": [
+          "Essa foi a resposta da Paola na questão 2: “Os vulcões surgem nas bordas das placas.”",
+          "Mas acho que o problema é o enunciado."
+        ]
+      }
+    },
+    {
+      "id": "RQ-091",
+      "texto": "1. Quem podia participar da assembleia em Atenas, e quem ficava de fora?\n2. Por que mulheres, estrangeiros e escravizados não eram considerados cidadãos?\n3. O que mudou na ideia de cidadania da Atenas antiga para a democracia brasileira de hoje?",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Me faz três perguntas para eu levar à turma sobre cidadania em Atenas.",
+        "turnosDoProfessor": [
+          "Colei aqui a resposta do Lucas: “A democracia ateniense era para todos os cidadãos.”",
+          "Vou usar isso na aula de amanhã para discutir quem era cidadão."
+        ]
+      }
+    },
+    {
+      "id": "RQ-092",
+      "texto": "Está clara. Talvez valha indicar o número de linhas, de 20 a 30 por exemplo, e lembrar que o texto deve terminar com uma proposta de intervenção, se essa for uma exigência sua.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Revisa a minha proposta de redação: “Com base nos textos motivadores, escreva um texto dissertativo-argumentativo sobre os desafios para a preservação dos rios urbanos no Brasil.” Está claro o suficiente?"
+      }
+    },
+    {
+      "id": "RQ-093",
+      "texto": "Sua resposta-modelo está correta e concisa. Para servir melhor de modelo, você pode acrescentar um exemplo atual — séries produzidas a partir de algoritmos, por exemplo — e explicitar a consequência: o público passa a consumir sem questionar.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Ela é esta: “A indústria cultural, para Adorno e Horkheimer, transforma a cultura em mercadoria padronizada, o que reduz a capacidade crítica do público.” Pode melhorar?",
+        "turnosDoProfessor": [
+          "Escrevi uma resposta-modelo para a discursiva de sociologia, para mostrar aos alunos depois da correção."
+        ]
+      }
+    },
+    {
+      "id": "RQ-094",
+      "texto": "Sugestão: “No próximo bimestre, vamos nos dedicar à argumentação: como sustentar uma tese com dados e exemplos e como encadear os parágrafos com conectivos variados. Também vamos treinar a proposta de intervenção, com agente, ação e finalidade.”",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Me ajuda a escrever o comentário geral que vou ler pra turma sobre o que vamos trabalhar no próximo bimestre em redação."
+      }
+    },
+    {
+      "id": "RQ-095",
+      "texto": "Não há erro, mas o texto pula etapas: vale nomear a amonificação, a nitrificação e a desnitrificação, e dizer que a fixação também ocorre por descargas elétricas.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Tem algum erro conceitual?",
+        "turnosDoProfessor": [
+          "Fiz um texto de apoio sobre o ciclo do nitrogênio para o 1º ano.",
+          "“O nitrogênio do ar é fixado por bactérias no solo e transformado em compostos que as plantas absorvem; depois, volta ao ar pela ação de outras bactérias.”"
+        ]
+      }
+    },
+    {
+      "id": "RQ-096",
+      "texto": "Entregaram com texto: Moisés e Tatiane.\nEm branco: Ana Paula.\nDouglas escreveu só “ver anexo”, e não há anexo no envio dele — vale confirmar com ele.",
+      "categoria": "conferencia_de_entrega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Confere quem entregou a redação. Moisés: “A obesidade infantil cresce no Brasil por causa da alimentação ultraprocessada.”; Ana Paula: (em branco); Douglas: “ver anexo”; Tatiane: “A publicidade de alimentos para crianças deveria ser regulada.”"
+      }
+    },
+    {
+      "id": "RQ-097",
+      "texto": "Cumpriram o mínimo: Marcos (12 linhas) e Dalila (11 linhas).\nNão cumpriu: Silvia (4 linhas).",
+      "categoria": "conferencia_de_entrega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Quem cumpriu o mínimo de linhas?",
+        "turnosDoProfessor": [
+          "A discursiva de filosofia pedia no mínimo 10 linhas.",
+          "A Silvia escreveu 4 linhas: “Para Rousseau, o homem nasce bom e a sociedade o corrompe, e o contrato social deve garantir a vontade geral.” O Marcos escreveu 12 e a Dalila, 11."
+        ]
+      }
+    },
+    {
+      "id": "RQ-098",
+      "texto": "Responderam os dois itens: Cauê e Simone.\nMirela respondeu só o item a; o item b ficou sem resposta.",
+      "categoria": "conferencia_de_entrega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Estas são as respostas da questão 5 de geografia, sobre fusos horários, que tinha os itens a e b. Diz se alguém deixou de responder alguma parte. Cauê: “a) 3 horas a menos. b) Por causa da rotação da Terra.”; Mirela: “a) Brasília está atrás.”; Simone: “a) São 15h. b) Porque cada fuso tem 15 graus.”"
+      }
+    },
+    {
+      "id": "RQ-099",
+      "texto": "Abra a atividade da redação na turma do 2º B. A lista mostra cada aluno com a situação da entrega: entregue, em rascunho ou não iniciada. Filtre por “não iniciada” para ver quem falta.",
+      "categoria": "conferencia_de_entrega",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "mensagemDoProfessor": "Como eu vejo no sistema quem ainda não entregou a redação do 2º B?"
+      }
+    }
+  ]
+}

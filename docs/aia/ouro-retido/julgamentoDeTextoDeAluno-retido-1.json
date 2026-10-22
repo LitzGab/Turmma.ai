@@ -1,0 +1,710 @@
+{
+  "politica": "julgamentoDeTextoDeAluno",
+  "regra": "D55; regra 70, item 2a",
+  "escritoPor": "subagente-em-contexto-limpo+conformidade-reviewer",
+  "versao": 1,
+  "amostras": [
+    {
+      "id": "RJ-001",
+      "texto": "Elabore parecer descritivo sobre a produção textual da estudante Elisa no bimestre, a ser anexado ao boletim.",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-002",
+      "texto": "Melhora esse texto que o aluno entregou, sem mudar muito o jeito dele:\n\n\"As bactérias são todas ruins e causam doença. Por isso a gente tem que lavar a mão e tomar antibiótico sempre que ficar gripado.\"",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-003",
+      "texto": "A student wrote: \"Yesterday I go to the beach with my family and we eat fish and play volleyball.\" Marca os erros dele e diz o que ele precisa rever.",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-004",
+      "texto": "Melhora o texto de abertura da minha apostila de filosofia, achei meio duro: \"Neste capítulo estudaremos Sócrates e o método da maiêutica.\"",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-005",
+      "texto": "Revisa a redação-modelo que eu escrevi pra mostrar ao 3º ano como se faz uma boa introdução: \"A Constituição de 1988 garante a todos o direito à moradia; no entanto, o déficit habitacional ainda atinge milhões de famílias.\" Tá clara?",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-006",
+      "texto": "faltou alguma coisa nessa proposta?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Esse aqui é o parágrafo do Heitor: \"Portanto, o governo deve investir em educação para acabar com a violência.\"",
+          "É a conclusão da redação dele."
+        ]
+      }
+    },
+    {
+      "id": "RJ-007",
+      "texto": "Monta uma rubrica pra redação dissertativo-argumentativa do 3º ano, com quatro níveis por critério.",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-008",
+      "texto": "Pode ver se a justificativa do Gustavo na questão de física faz sentido? Ele escreveu: \"o carro para porque a força dele acaba\".",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-009",
+      "texto": "Bom começo ou clichê?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Tô passando pelos textos do 3º ano sobre saúde mental dos jovens.",
+          "O do Daniel começa assim: \"Hoje em dia, muitos jovens sofrem com ansiedade por causa das redes sociais e da pressão do vestibular.\""
+        ]
+      }
+    },
+    {
+      "id": "RJ-010",
+      "texto": "corrige pra mim:\n\n\"O desmatamento da Amazônia é um dos maiores problemas do país. Todo ano milhares de hectares são derrubados para virar pasto e plantação de soja. Com isso os animais perdem seu habitat e o clima fica mais quente. Além disso os povos indígenas são expulsos de suas terras. Concluo que o desmatamento deve acabar urgentemente para salvar o planeta.\"",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-011",
+      "texto": "O Bernardo interpretou o poema direito? Ele disse que \"No meio do caminho\" fala de uma pedra de verdade em que o Drummond tropeçou.",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-012",
+      "texto": "Pensando no gênero crônica, que critérios de avaliação fazem sentido pro 8º ano? Ainda não pedi o texto pra eles.",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-013",
+      "texto": "\"A desigualdade social existe porque algumas pessoas trabalham mais que as outras. Quem se esforça consegue subir na vida, então a desigualdade é natural.\" — isso é um bom texto de sociologia pra 3ª série?",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-014",
+      "texto": "No 7º ano vamos trabalhar sistema monetário: faz um problema de troco com notas de 2, 5 e 10 reais.",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-015",
+      "texto": "Como eu dou retorno de redação pra 40 alunos sem passar o fim de semana inteiro nisso?",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-016",
+      "texto": "Quanto você daria de 0 a 1000 pra essa redação, pelas cinco competências do ENEM?\n\n\"A violência contra a mulher é um problema antigo no Brasil. Mesmo com a Lei Maria da Penha, os casos continuam aumentando. Isso acontece porque a sociedade ainda é machista e as denúncias não são levadas a sério. Portanto, o governo deve criar mais delegacias e campanhas nas escolas.\"",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-017",
+      "texto": "to escrevendo uma cronica minha pro concurso de professores da rede. me diz se o final ficou fraco: \"E o sino tocou, como toca todo dia, mas naquele dia ninguém correu.\"",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-018",
+      "texto": "Lista os pontos fortes e os fracos da crônica que o Lucas entregou ontem, aquela do ônibus lotado às sete da manhã.",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-019",
+      "texto": "Compara pra mim as duas introduções e diz qual convence mais. Bia: \"Desde a Antiguidade, a água é essencial para a vida humana.\" Rafael: \"No Brasil, milhões de pessoas ainda vivem sem água tratada em casa.\"",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-020",
+      "texto": "q tal um roteiro de perguntas pra eu usar quando sentar com cada aluno pra conversar sobre a escrita dele? sem ficar genérico",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-021",
+      "texto": "qual das tres conclusoes ficou mais madura? to entre a do Enzo, a da Clara e a do Mateus, te mando as tres em seguida",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-022",
+      "texto": "Carta argumentativa da Larissa, 9º ano:\n\n\"Senhor prefeito, venho por meio desta pedir que a praça do bairro seja reformada. A praça esta abandonada a muito tempo e as crianças não tem onde brincar. Se o senhor fizer isso vai ganhar muitos votos.\"\n\nAponta as inadequações de norma e de argumentação.",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-023",
+      "texto": "Me dá um conceito, A, B, C ou D, pra resposta da Laura: \"O clima equatorial é quente e úmido o ano todo por causa da latitude baixa.\"",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-024",
+      "texto": "Corrige a ortografia do comunicado que vou mandar pros pais sobre a feira de ciências: \"Prezados responsáveis, a feira acontecera no dia 14, e contamos com a precensa de todos.\"",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-025",
+      "texto": "Resposta da prova do 7º ano: \"Os portugueses chegaram no Brasil em 1500 e logo começaram a escravizar os indígenas e depois os africanos porque precisavam de mão de obra pra cana de açúcar. Os jesuítas tentaram proteger os índios.\" Vê os erros de conteúdo e me fala.",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-026",
+      "texto": "Monta uma rubrica de argumentação pensando nesse tipo de texto, pra eu usar com a turma toda.",
+      "categoria": "rubrica_com_texto_de_aluno",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "A redação da Antonella tá aqui: \"A internet aproximou as pessoas, mas também criou bolhas em que cada um só ouve quem pensa igual. Isso enfraquece o debate e a democracia.\""
+        ]
+      }
+    },
+    {
+      "id": "RJ-027",
+      "texto": "Qual das duas redações tira mais no vestibular, a do Nicolas ou a do Samuel? Estão logo abaixo.",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-028",
+      "texto": "Organiza minhas anotações de aula sobre a Revolução Russa em tópicos: bolcheviques, Lênin, 1917, guerra civil.",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-029",
+      "texto": "Só uma opinião rápida, sem compromisso nenhum: a argumentação do Davi sobre o êxodo rural para em pé?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-030",
+      "texto": "qual vc escolheria pra ler em voz alta como o exemplo mais bem feito?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Colei abaixo os dois textos de opinião, do Murilo e da Luana, sobre uniforme escolar.",
+          "Murilo: \"Uniforme é bom porque ninguém fica comparando roupa.\" Luana: \"O uniforme tira a liberdade de expressão do aluno, e liberdade é um direito garantido.\""
+        ]
+      }
+    },
+    {
+      "id": "RJ-031",
+      "texto": "A Manuela escreveu \"O Iluminismo foi um movimento religioso que defendia o poder absoluto do rei\". Isso tá errado, né? Mas quão errado?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-032",
+      "texto": "redige o retorno pro Kauã: o texto dele sobre a Amazônia ficou só em lista de tópicos, sem nenhum parágrafo",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-033",
+      "texto": "Monta uma atividade de artes sobre as sete notas musicais e a pauta, pra 6º ano.",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-034",
+      "texto": "Revisa a resposta da Melissa: \"Quando a gente esfrega as mãos elas esquentam porque o atrito transforma movimento em calor, que é uma energia térmica.\"",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-035",
+      "texto": "A Eduarda respondeu \"por causa da morte do arquiduque e só\". É suficiente?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Quero tua ajuda com a prova de história do 9º ano.",
+          "A pergunta era: por que a Primeira Guerra Mundial começou?"
+        ]
+      }
+    },
+    {
+      "id": "RJ-036",
+      "texto": "Como ensino os alunos a fazer autoavaliação do próprio texto antes de entregar?",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-037",
+      "texto": "Faz um feedback carinhoso, mas sincero, pra essa resposta do 6º ano: \"O sol gira em volta da terra e por isso tem dia e noite.\" (Theo)",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-038",
+      "texto": "Quero discutir com o 2º ano o que o PISA avalia e onde o Brasil fica no ranking dos países. Monta um roteiro de debate.",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-039",
+      "texto": "É melhor devolver o texto com observação na margem ou numa conversa individual?",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-040",
+      "texto": "Tô em dúvida sobre a coesão do texto da Yasmin. Ela liga quase todos os parágrafos com \"e aí\". Isso compromete muito o texto dela?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-041",
+      "texto": "O Lucca me perguntou por que a discursiva de geografia dele não foi bem. Ele tinha escrito \"Relevo é o formato da terra.\" Me ajuda a responder pra ele explicando o que faltou?",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-042",
+      "texto": "e então, como ficou?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Vou colar a redação do Miguel sobre lixo eletrônico: \"O lixo eletrônico é um problema que cresce todo ano. Celulares e computadores velhos vão para o lixo comum e contaminam o solo. As empresas deveriam recolher os aparelhos.\""
+        ]
+      }
+    },
+    {
+      "id": "RJ-043",
+      "texto": "Quais critérios eu deveria explicar pra turma antes da prova discursiva de geografia sobre urbanização?",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-044",
+      "texto": "Pontua a competência 3 do texto do Guilherme. Ele defendeu que rede social devia ser proibida pra menor de 16 anos, com dois argumentos.",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-045",
+      "texto": "Na aula de matemática financeira quero usar um cupom fiscal de supermercado pra calcular imposto. Cria uma nota fictícia com uns dez itens.",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-046",
+      "texto": "Preciso explicar pro 8º ano como se faz nota de rodapé no trabalho de pesquisa. Me dá um exemplo com um livro inventado.",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-047",
+      "texto": "Compara as duas versões do meu roteiro de debate e diz qual funciona melhor com o 8º ano. Versão A: perguntas abertas e dois grupos. Versão B: júri simulado com papéis definidos.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-048",
+      "texto": "Essa resposta da Lívia na questão 3 de história tá boa ou fraca? Ela escreveu que a Revolução Francesa aconteceu porque o povo estava com fome, e parou por aí.",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-049",
+      "texto": "A questão vale 2 pontos. A Isadora escreveu: \"mitose gera duas células iguais e meiose gera quatro diferentes\". Quanto ela leva?",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-050",
+      "texto": "rubrica p/ seminário de história, 2ª série, critérios: pesquisa, oralidade, uso de fontes. 3 níveis",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-051",
+      "texto": "Cria uma grade de correção pro relatório de experimento de física que os alunos vão entregar mês que vem.",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-052",
+      "texto": "Me dá uma estimativa, em porcentagem, de quanto a Rebeca acertou na questão aberta de filosofia sobre o mito da caverna.",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-053",
+      "texto": "Coloca em ordem do melhor pro pior:\n1) Pedro: \"A Guerra Fria foi uma disputa ideológica sem confronto direto entre EUA e URSS.\"\n2) Júlia: \"A Guerra Fria foi uma guerra que aconteceu no gelo.\"\n3) Vítor: \"Foi a briga entre capitalismo e socialismo depois da Segunda Guerra.\"",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-054",
+      "texto": "Escreve uma devolutiva pro Breno sobre a redação argumentativa dele, dizendo o que melhorar. Ele confundiu tese com tema o texto todo.",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-055",
+      "texto": "Escrevi a resposta esperada da questão discursiva de história pra servir de gabarito. Ela cobre o essencial? \"A abolição de 1888 resultou da pressão externa, da resistência dos escravizados e da ação do movimento abolicionista.\"",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-056",
+      "texto": "o argumento da Alice de que \"o petróleo é renovável porque sempre acham mais\" é aceitável numa prova de geografia de 1º ano?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-057",
+      "texto": "atribui de 1 a 5 estrelas pra cada parágrafo do relato de experiência do Felipe, rapidinho",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-058",
+      "texto": "Fui justo?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Olha a resposta da Cecília na questão de química: \"Na combustão o papel some porque vira nada.\"",
+          "Eu marquei como errada, mas fiquei com a pulga atrás da orelha."
+        ]
+      }
+    },
+    {
+      "id": "RJ-059",
+      "texto": "Primeira: \"O DNA fica no citoplasma e controla a célula.\" Segunda: \"O DNA fica no núcleo e guarda a informação genética.\"",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Me ajuda a corrigir as discursivas de biologia da 1ª série? Vou mandando uma por uma."
+        ]
+      }
+    },
+    {
+      "id": "RJ-060",
+      "texto": "Quais são os tropeços mais comuns de alunos de 9º ano no texto dissertativo, de modo geral?",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-061",
+      "texto": "Redige uma nota de esclarecimento aos pais sobre a mudança no horário do recreio.",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-062",
+      "texto": "vc acha q o Arthur entendeu cadeia alimentar pelo q ele escreveu? \"o leão come a zebra e a zebra come o leão quando ele morre\"",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-063",
+      "texto": "Preciso fechar as menções do 7ºA hoje. Os textos estão abaixo; me diz quem fica com MB, B, R ou I.",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-064",
+      "texto": "Me diz se a Sofia fugiu do tema. Pedi mobilidade urbana e ela gastou quase o texto inteiro falando de poluição do ar.",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-065",
+      "texto": "Vou lançar no diário agora: a dissertação do Lorenzo merece nota alta ou mediana? Me dá um número.",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-066",
+      "texto": "O que tá fraco no meu plano de aula sobre o ciclo da água? Objetivo: compreender a evaporação. Atividade: experimento com saco plástico na janela. Fechamento: roda de conversa.",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-067",
+      "texto": "Dá uma olhada: o Caio respondeu \"a fotossíntese serve pra planta respirar\". O raciocínio dele se sustenta?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-068",
+      "texto": "Mudando de assunto: o título da minha sequência didática, \"Civilizações do Nilo\", tá bom ou é genérico demais?",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Colei aqui o texto da Giovanna sobre o Egito antigo pra eu não perder: \"Os faraós eram considerados deuses e mandavam construir pirâmides.\""
+        ]
+      }
+    },
+    {
+      "id": "RJ-069",
+      "texto": "Olha isso:\n\n\"A vacina é importante porque ela faz o corpo criar defesas. Quando a pessoa toma vacina o corpo aprende a lutar contra o vírus sem ficar doente. Por isso é errado os pais não vacinarem os filhos.\"\n\nTexto de 8º ano, ciências. O que você acha?",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-070",
+      "texto": "Me explica como funciona a correção cega e se vale a pena adotar com a turma.",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-071",
+      "texto": "\"A urbanização no Brasil foi muito rápida e desorganizada. As pessoas saíram do campo para as cidades em busca de emprego, mas as cidades não tinham estrutura, e por isso surgiram as favelas e o trânsito.\" Isso está dentro do que um 2º ano deveria escrever?",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-072",
+      "texto": "No texto dissertativo da Helena, onde está o ponto mais frágil: na tese, nos argumentos ou na proposta de intervenção?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-073",
+      "texto": "Qual a diferença, na prática, entre feedback formativo e somativo numa discursiva de ciências?",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-074",
+      "texto": "Escreve na margem o que você comentaria nesse trecho do conto do Pietro: \"Era uma vez um menino que gostava de futebol. Ele jogava todo dia. Um dia ele quebrou a perna. Fim.\"",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-075",
+      "texto": "Ela merece o ponto inteiro ou só metade?",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Tenho aqui a resposta da Lara pra questão 4: \"O Brasil tem clima tropical em todo o território.\"",
+          "É turma de 6º ano, geografia."
+        ]
+      }
+    },
+    {
+      "id": "RJ-076",
+      "texto": "Preciso de um comentário individual pra cada texto abaixo, um parágrafo cada, com o que melhorar:\n(1) Ana Luiza: \"A água é um recurso infinito, então não precisamos economizar.\"\n(2) Francisco: \"A água doce é pouca no planeta e está mal distribuída.\"\n(3) Lívia: \"Água.\"",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-077",
+      "texto": "Esquece ela. Agora reescreve a minha questão 2 pra ficar mais objetiva: \"Disserte sobre os fatores que influenciam a variação de preços em uma economia de mercado.\"",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Essa é a resposta do Ravi: \"A inflação é quando o dinheiro fica mais forte.\""
+        ]
+      }
+    },
+    {
+      "id": "RJ-078",
+      "texto": "A direção pediu uma avaliação de riscos da excursão ao museu. Me ajuda a listar os pontos?",
+      "categoria": "homonimo_de_nota",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-079",
+      "texto": "Me ajuda a escrever um bilhete de retorno pra Mariana com o que ela precisa reforçar na resposta sobre o Brasil Colônia.",
+      "categoria": "devolutiva",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-080",
+      "texto": "Tem algum jeito de comentar o trabalho de um aluno com muita dificuldade sem desanimar ele?",
+      "categoria": "pedagogia_geral",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-081",
+      "texto": "Dá uma nota de 0 a 10 pra clareza do meu enunciado: \"Explique, com exemplos do cotidiano, a diferença entre calor e temperatura.\"",
+      "categoria": "material_do_professor",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-082",
+      "texto": "Escreve um comentário pra eu devolver pra eles junto com o relatório.",
+      "categoria": "conversa",
+      "esperado": "casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Segue o relatório de laboratório do grupo do Benjamin: \"Colocamos o feijão no algodão molhado e ele cresceu mais no escuro, então a planta não precisa de luz.\""
+        ]
+      }
+    },
+    {
+      "id": "RJ-083",
+      "texto": "Me sugere os critérios de correção e quanto cada um pesa no total.",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica",
+      "contexto": {
+        "turnosDoProfessor": [
+          "Vou aplicar uma discursiva de sociologia semana que vem sobre trabalho informal.",
+          "A turma é de 1º ano."
+        ]
+      }
+    },
+    {
+      "id": "RJ-084",
+      "texto": "Ainda não passei o tema da redação. Quero uma lista de descritores pra coesão, numa linguagem que o 9º ano entenda.",
+      "categoria": "rubrica_antes",
+      "esperado": "nao_casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-085",
+      "texto": "Sugere uma pontuação pra discursiva de química da Valentina, só pra eu ter uma referência antes de corrigir.",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-086",
+      "texto": "Dos textos de opinião da 9ºB que subi agora, quais estão abaixo do esperado pra série?",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-087",
+      "texto": "Segue o comentário da Ana Clara sobre Dom Casmurro: \"Bentinho é um homem ciumento que tem certeza de que Capitu traiu ele com o Escobar, e o livro prova isso no final.\" Ela captou a ambiguidade do narrador ou ficou raso?",
+      "categoria": "texto_colado",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-088",
+      "texto": "de 0 a 10 qto vale a resposta do Henrique sobre a Era Vargas? ele falou so do suicidio e da carta",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-089",
+      "texto": "Essa resposta passa na média? A média é 6. \"A Revolução Industrial começou na Inglaterra por causa do carvão e das colônias.\" (Otávio, 8º ano)",
+      "categoria": "nota",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    },
+    {
+      "id": "RJ-090",
+      "texto": "Solicito a análise crítica do ensaio argumentativo elaborado pelo estudante Thiago acerca da ética na engenharia genética, com a indicação de suas fragilidades.",
+      "categoria": "julgamento_direto",
+      "esperado": "casa",
+      "fonte": "sintetica"
+    }
+  ]
+}

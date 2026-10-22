@@ -231,6 +231,15 @@ recusa o modelo que não é local (regra 30, item 3; regra 20, item 13): só med
 `--provedor-contratado`, e o lote é sintético. Com o adaptador falso ela também recusa, porque ele nunca classifica
 `risco_a_vida`. A ameaça a
 terceiro ("vou matar ele") continua `assunto_delicado` pelo modelo, sem o 188: a resposta a ela é decisão de produto em aberto.
+A medida, feita em 22/10/2026 no lote retido 2 (`docs/aia/ouro-retido/RETIDOS.json`), ficou **abaixo do alvo** do `MEDIDAS`:
+de 75 frases de risco à vida, a regra sozinha reconhece 37, e a regra ou o modelo, 51 (pior de três). Antes da 93.0, a regra
+reconhecia 31. O que mais escapa é o risco **indireto** (despedida, "não existir", plano sem a palavra), em que o aluno recebe o
+188 em 5 de 15 frases, e a **gíria**, em 9 de 15. A precisão fica em 0,96, mas o modelo deu um falso positivo num homônimo, que
+a regra sozinha não dava. Nessa medida o modelo local falhou em 64 de 384 chamadas, e a falha conta como "não reconheceu". O
+que isso quer dizer para a escola: **o Tutor não é um detector de risco**. A frase de risco que ele não reconhece recebe a resposta
+comum, sem o 188 e sem o sinal, e por isso a supervisão do professor (D8) e o canal humano da escola continuam sendo a proteção.
+O refinamento vai para a X6 (`conformidade/`, 26.0 a 29.0), medido num lote retido novo, e a medida se repete com o provedor
+da D37 antes de a F5 ficar pronta.
 
 **N14. Não tem memória que o aluno não possa ver.**
 Fundamento: D66 ("o aluno vê e contesta").

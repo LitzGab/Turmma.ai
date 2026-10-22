@@ -265,10 +265,10 @@ export const LEITURAS_DO_ARQUIVO: Readonly<Record<string, LeituraDaTabela>> = {
   },
   resposta_atividade: {
     descricao: 'As suas respostas nas atividades',
-    colunas: ['id', 'ano_letivo_id', 'atividade_aplicada_id', 'questao', 'alternativa', 'respondida_em'],
+    colunas: ['id', 'ano_letivo_id', 'atividade_aplicada_id', 'questao', 'alternativa', 'sequencia', 'respondida_em'],
     fora: { escola_id: ESCOPO, aluno_id: 'o próprio titular' },
     consultas: ({ escolaId, titularId }) => [
-      sql`select ${colunasDoSelect('id', 'ano_letivo_id', 'atividade_aplicada_id', 'questao', 'alternativa', 'respondida_em')} from resposta_atividade t where t.escola_id = ${escolaId} and t.aluno_id = ${titularId}`,
+      sql`select ${colunasDoSelect('id', 'ano_letivo_id', 'atividade_aplicada_id', 'questao', 'alternativa', 'sequencia', 'respondida_em')} from resposta_atividade t where t.escola_id = ${escolaId} and t.aluno_id = ${titularId}`,
     ],
   },
   correcao: {

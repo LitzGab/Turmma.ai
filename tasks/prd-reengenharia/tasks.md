@@ -89,8 +89,8 @@ da tarefa diz como rodá-lo.
 
 ### A linha da web — a prova que não perde resposta (regra 80.6) e as pastas da web
 
-- [ ] **51.0 — Resposta atrasada não sobrescreve, nem depois do F5 nem em outra aba**
-  - [ ] 51.1 O `51_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
+- [x] **51.0 — Resposta atrasada não sobrescreve, nem depois do F5 nem em outra aba**
+  - [x] 51.1 O `51_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`
 
 - [ ] **53.0 — Pendente sobrevive ao F5 e à sessão vencida**
   - [ ] 53.1 O `53_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3c.md`

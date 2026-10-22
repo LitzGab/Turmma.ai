@@ -165,7 +165,7 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     await acionar(alternativa(page, 1), hasTouch)
     await expect(estadoDaResposta(page)).toHaveText('Resposta salva', { timeout: PRAZO_DA_TELA_MS })
     await expect(principal(page).getByRole('radio', { name: /^B\./ })).toBeChecked()
-    expect(api.pedidosEm(/\/respostas\/1$/)).toEqual([{ metodo: 'PUT', caminho: `/v1/atividades-aplicadas/${atividade.id}/respostas/1`, corpo: { alternativa: 1 } }])
+    expect(api.pedidosEm(/\/respostas\/1$/)).toEqual([{ metodo: 'PUT', caminho: `/v1/atividades-aplicadas/${atividade.id}/respostas/1`, corpo: { alternativa: 1, sequencia: 1 } }])
     await expect(mapa(page).getByRole('button', { name: 'Questão 1, respondida' })).toHaveAttribute('aria-current', 'step')
 
     // Pelo teclado: o rádio nativo anda com as setas, e a troca também é salva.
@@ -173,7 +173,7 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
       await principal(page).getByRole('radio', { name: /^B\./ }).focus()
       await page.keyboard.press('ArrowDown')
       await expect(principal(page).getByRole('radio', { name: /^C\./ })).toBeChecked()
-      await expect.poll(() => api.provas.get(atividade.id)?.respostas).toEqual([{ questao: 1, alternativa: 2 }])
+      await expect.poll(() => api.provas.get(atividade.id)?.respostas).toEqual([{ questao: 1, alternativa: 2, sequencia: 2 }])
       await expect(estadoDaResposta(page)).toHaveText('Resposta salva', { timeout: PRAZO_DA_TELA_MS })
     }
 
@@ -247,10 +247,11 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     // A rota volta: sem o aluno fazer nada, a mesma escolha é mandada de novo e passa a constar como salva.
     api.trocar('responder')
     await expect(estadoDaResposta(page)).toHaveText('Resposta salva', { timeout: PRAZO_DO_REENVIO_MS })
-    expect(api.provas.get(atividade.id)?.respostas).toEqual([{ questao: 1, alternativa: 3 }])
+    expect(api.provas.get(atividade.id)?.respostas).toEqual([{ questao: 1, alternativa: 3, sequencia: 1 }])
     const envios = api.pedidosEm(/\/respostas\/1$/)
     expect(envios.length).toBeGreaterThanOrEqual(2)
-    for (const envio of envios) expect(envio.corpo).toEqual({ alternativa: 3 })
+    // O reenvio leva a mesma `sequencia` do primeiro: o servidor grava uma vez só.
+    for (const envio of envios) expect(envio.corpo).toEqual({ alternativa: 3, sequencia: 1 })
     await expect(mapa(page).getByRole('button', { name: 'Questão 1, respondida' })).toBeVisible()
     await expect(principal(page).getByRole('radio', { name: /^D\./ })).toBeChecked()
   })
@@ -260,7 +261,7 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     const atividade = minhaAtividade({ situacao: 'em_andamento', respondidas: 2 })
     const { api, colega } = await entrar(page, hasTouch, (simulada) => {
       simulada.atividades = [atividade]
-      simulada.provas.set(atividade.id, provaDa(atividade, { respostas: [{ questao: 1, alternativa: 1 }, { questao: 2, alternativa: 0 }] }))
+      simulada.provas.set(atividade.id, provaDa(atividade, { respostas: [{ questao: 1, alternativa: 1, sequencia: 1 }, { questao: 2, alternativa: 0, sequencia: 1 }] }))
     })
     await abrirAtividade(page, 'Lista de estequiometria', hasTouch)
     // Quem volta continua de onde parou: as respostas salvas vêm marcadas.

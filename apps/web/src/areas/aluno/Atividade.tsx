@@ -23,6 +23,7 @@ import { formatarDiaEHora } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import {
   alternativaMarcada,
+  AVISO_DE_OUTRA_JANELA,
   avisoDeEscolhasPerdidas,
   contarRespostas,
   faseDaAtividade,
@@ -41,7 +42,7 @@ import {
 } from './atividade'
 import { AVISO_DA_AVALIACAO, TEXTO_DA_ESPERA_PELA_CORRECAO } from './atividades'
 import { filaDaAtividade, type FilaDeRespostas } from './fila-de-respostas'
-import type { EstadoDaFila } from './respostas'
+import { alteradaEmOutraJanela, type EstadoDaFila } from './respostas'
 
 /** O aluno não alcança o título do material (`GET /v1/materiais` é do professor e da coordenação): o chip diz a página. */
 const SEM_TITULOS = {}
@@ -196,6 +197,7 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
           {marca === 'salvando' && <span className="text-sutil">{TEXTO_DA_MARCA.salvando}</span>}
           {marca === 'nao_salva' && estadoDaFila.falha === 'passageira' && <span className="min-w-0 break-words text-erro">{TEXTO_DA_MARCA.nao_salva}</span>}
           {marca === 'nao_salva' && estadoDaFila.falha === 'recusada' && <span className="min-w-0 break-words text-erro">Não foi possível salvar esta resposta. Chame quem dá a aula.</span>}
+          {alteradaEmOutraJanela(estadoDaFila, numero) && <span className="min-w-0 break-words text-apoio">{AVISO_DE_OUTRA_JANELA}</span>}
         </div>
         {marca === 'nao_salva' && estadoDaFila.falha === 'passageira' && (
           <Botao variante="secundario" onClick={fila.tentarAgora} className="self-start">
@@ -378,6 +380,12 @@ export default function Atividade({ atividadeAplicadaId }: { atividadeAplicadaId
   const estadoDaFila = useSyncExternalStore(fila.assinar, fila.ler)
   const topo = useRef<HTMLDivElement>(null)
   useTituloDaTela(prova.data?.titulo ?? 'Atividade')
+
+  // O que o servidor tem de mais novo que esta janela (uma leitura da prova, ou o que o `PUT` que perdeu devolveu) é adotado.
+  const respostasLidas = prova.data?.respostas
+  useEffect(() => {
+    if (respostasLidas !== undefined) fila.adotar(respostasLidas)
+  }, [respostasLidas, fila])
 
   // O servidor recusou uma resposta porque a atividade foi encerrada: a tela relê a atividade, que agora diz isso.
   const encerradaNoServidor = estadoDaFila.falha === 'encerrada'

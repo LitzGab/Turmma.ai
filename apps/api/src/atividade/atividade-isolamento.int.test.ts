@@ -223,8 +223,8 @@ describe('isolamento da atividade e da correção', () => {
       const daBia = esquemaRespostaProva.parse((await rotas.prova(bia, aberta)).corpo)
       expect(daBia.respostas).toEqual([])
       expect((await rotas.responder(bia, aberta, 1, 3)).status).toBe(200)
-      expect(esquemaRespostaProva.parse((await rotas.prova(a.aluno, aberta)).corpo).respostas).toEqual([{ questao: 1, alternativa: 0 }])
-      expect(esquemaRespostaProva.parse((await rotas.prova(bia, aberta)).corpo).respostas).toEqual([{ questao: 1, alternativa: 3 }])
+      expect(esquemaRespostaProva.parse((await rotas.prova(a.aluno, aberta)).corpo).respostas).toEqual([{ questao: 1, alternativa: 0, sequencia: 1 }])
+      expect(esquemaRespostaProva.parse((await rotas.prova(bia, aberta)).corpo).respostas).toEqual([{ questao: 1, alternativa: 3, sequencia: 1 }])
       expect(await sql('select aluno_id, alternativa from resposta_atividade where atividade_aplicada_id = $1 order by alternativa', [aberta])).toEqual([
         { aluno_id: a.aluno.usuarioId, alternativa: 0 },
         { aluno_id: bia.usuarioId, alternativa: 3 },

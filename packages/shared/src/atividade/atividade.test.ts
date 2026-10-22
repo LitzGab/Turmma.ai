@@ -29,7 +29,7 @@ const conteudo: ConteudoDeAtividade = {
     { enunciado: 'Quantos mols de água se formam?', alternativas: ['1', '2', '3', '4'], gabarito: 1, habilidade, citacao, explicacao: 'A proporção é de 2 para 2.' },
   ],
 }
-const prova = { atividadeAplicadaId: UM_ID, titulo: 'Lista de estequiometria', avaliativa: false, estado: 'aberta', adaptacao: null, questoes: questoesDaProva(conteudo), respostas: [{ questao: 1, alternativa: 2 }], enviadaEm: null }
+const prova = { atividadeAplicadaId: UM_ID, titulo: 'Lista de estequiometria', avaliativa: false, estado: 'aberta', adaptacao: null, questoes: questoesDaProva(conteudo), respostas: [{ questao: 1, alternativa: 2, sequencia: 3 }], enviadaEm: null }
 
 describe('a prova que o aluno recebe: sem gabarito e sem explicação', () => {
   it('as questões da prova saem do artefato só com número, enunciado e alternativas', () => {
@@ -62,7 +62,7 @@ describe('a prova que o aluno recebe: sem gabarito e sem explicação', () => {
     // Na prova inteira também não: nem o gabarito em lista, nem o artefato de carona.
     expect(esquemaRespostaProva.safeParse({ ...prova, gabarito: [0, 1] }).success).toBe(false)
     expect(esquemaRespostaProva.safeParse({ ...prova, conteudo }).success).toBe(false)
-    expect(esquemaRespostaProva.safeParse({ ...prova, respostas: [{ questao: 1, alternativa: 2, correta: false }] }).success).toBe(false)
+    expect(esquemaRespostaProva.safeParse({ ...prova, respostas: [{ questao: 1, alternativa: 2, sequencia: 3, correta: false }] }).success).toBe(false)
   })
 
   it('a prova adaptada leva só os tipos da adaptação, e a lista do aluno não traz acerto nem colega', () => {
@@ -75,13 +75,19 @@ describe('a prova que o aluno recebe: sem gabarito e sem explicação', () => {
 
   it('a resposta é o índice da alternativa, de 0 a 3, numa questão de 1 a 20; o salvo não diz se está certo', () => {
     expect(esquemaPedidoResponderQuestao.parse({ alternativa: 3 })).toEqual({ alternativa: 3 })
+    // A `sequencia` é opcional (cliente antigo), inteira e não negativa; o zero é a escala da linha anterior à coluna.
+    expect(esquemaPedidoResponderQuestao.parse({ alternativa: 3, sequencia: 0 })).toEqual({ alternativa: 3, sequencia: 0 })
+    for (const sequencia of [-1, 1.5, '2', null]) expect(esquemaPedidoResponderQuestao.safeParse({ alternativa: 1, sequencia }).success, String(sequencia)).toBe(false)
     for (const alternativa of [-1, 4, 1.5, 'a', null]) expect(esquemaPedidoResponderQuestao.safeParse({ alternativa }).success, String(alternativa)).toBe(false)
     expect(esquemaPedidoResponderQuestao.safeParse({ alternativa: 1, alunoId: UM_ID }).success).toBe(false)
     // O número da questão chega como texto no caminho.
     expect(esquemaNumeroDaQuestao.parse('3')).toBe(3)
     for (const numero of ['0', '21', 'tres', '1.5']) expect(esquemaNumeroDaQuestao.safeParse(numero).success, numero).toBe(false)
-    const salva = { questao: 1, alternativa: 2, respondidaEm: AGORA }
+    const salva = { questao: 1, alternativa: 2, sequencia: 4, respondidaEm: AGORA }
     expect(esquemaRespostaQuestaoSalva.safeParse(salva).success).toBe(true)
+    // O que ficou gravado sempre diz a sua `sequencia`: é com ela que a tela sabe se perdeu.
+    expect(esquemaRespostaQuestaoSalva.safeParse({ questao: 1, alternativa: 2, respondidaEm: AGORA }).success).toBe(false)
+    expect(esquemaRespostaProva.safeParse({ ...prova, respostas: [{ questao: 1, alternativa: 2 }] }).success).toBe(false)
     expect(esquemaRespostaQuestaoSalva.safeParse({ ...salva, correta: true }).success).toBe(false)
   })
 })

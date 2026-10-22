@@ -1,10 +1,10 @@
-import type { RespostaProva, RespostaQuestaoSalva } from '@educa/shared'
+import type { RespostaProva, RespostaQuestaoSalva, RespostaSalva } from '@educa/shared'
 import type { QueryClient } from '@tanstack/react-query'
 import { responderQuestao, consultaProva } from '../../api/atividades-do-aluno'
 import { CHAVE_DAS_MINHAS_ATIVIDADES } from '../../api/chaves-do-aluno'
 import { codigoDoErro } from '../../api/ciclo-de-execucao'
 import { aoAbrirSessao, aoTrocarDeSessao } from '../../api/sessao'
-import { comecarEnvio, confirmarEnvio, escolher, esperaAntesDeTentar, falharEnvio, FILA_VAZIA, proximoEnvio, type EstadoDaFila } from './respostas'
+import { adotarLeitura, comecarEnvio, confirmarEnvio, escolher, esperaAntesDeTentar, falharEnvio, FILA_VAZIA, proximoEnvio, type EstadoDaFila } from './respostas'
 
 /**
  * A fila de respostas de uma atividade, ligada à rede e ao relógio (regra 80, item 6). A regra é de `respostas.ts`; aqui
@@ -17,8 +17,10 @@ import { comecarEnvio, confirmarEnvio, escolher, esperaAntesDeTentar, falharEnvi
 export interface FilaDeRespostas {
   readonly ler: () => EstadoDaFila
   readonly assinar: (ouvinte: () => void) => () => void
-  /** O aluno marcou uma alternativa: entra na fila e é mandada. */
+  /** O aluno marcou uma alternativa: entra na fila, com a `sequencia` seguinte, e é mandada. */
   readonly escolher: (questao: number, alternativa: number) => void
+  /** A prova foi lida, ou o cache acertado: o que o servidor tem de mais novo que esta janela é adotado, com o aviso se a alternativa mudou. */
+  readonly adotar: (lidas: readonly RespostaSalva[]) => void
   /** Tenta agora, sem esperar o relógio: a rede voltou, a sessão voltou, ou a pessoa pediu. */
   readonly tentarAgora: () => void
   /** A sessão acabou ou mudou de dono: nada mais sai, e o que estava guardado é esquecido. */
@@ -26,8 +28,8 @@ export interface FilaDeRespostas {
 }
 
 interface PartesDaFila {
-  readonly salvar: (questao: number, alternativa: number) => Promise<RespostaQuestaoSalva>
-  /** O servidor confirmou: a tela acerta o que ela lê como salvo. */
+  readonly salvar: (questao: number, alternativa: number, sequencia: number) => Promise<RespostaQuestaoSalva>
+  /** O servidor respondeu com o que ficou gravado (a escolha mandada, ou a mais nova de outra janela): a tela acerta o que ela lê como salvo. */
   readonly aoSalvar: (salva: RespostaQuestaoSalva) => void
   /** Chama a função depois da espera; devolve o cancelamento. No teste, um relógio que o teste adianta. */
   readonly agendar?: (funcao: () => void, esperaMs: number) => () => void
@@ -57,11 +59,12 @@ export function criarFilaDeRespostas({ salvar, aoSalvar, agendar = agendarNoRelo
     const proximo = proximoEnvio(estado)
     if (proximo === undefined) return
     publicar(comecarEnvio(estado))
-    salvar(proximo.questao, proximo.alternativa).then(
+    salvar(proximo.questao, proximo.alternativa, proximo.sequencia).then(
       (salva) => {
         if (parada) return
         aoSalvar(salva)
-        publicar(confirmarEnvio(estado))
+        // Se o servidor tinha uma mais nova, a escolha sai da fila sem ser reenviada: a tela já mostra a gravada.
+        publicar(confirmarEnvio(estado, salva))
         bombear()
       },
       (erro: unknown) => {
@@ -86,6 +89,10 @@ export function criarFilaDeRespostas({ salvar, aoSalvar, agendar = agendarNoRelo
       publicar(escolher(estado, questao, alternativa))
       bombear()
     },
+    adotar: (lidas) => {
+      if (parada) return
+      publicar(adotarLeitura(estado, lidas))
+    },
     tentarAgora: bombear,
     parar: () => {
       parada = true
@@ -96,9 +103,15 @@ export function criarFilaDeRespostas({ salvar, aoSalvar, agendar = agendarNoRelo
   }
 }
 
-/** A prova no cache com a resposta que o servidor acabou de confirmar: é dela que a tela lê "Resposta salva". */
-export function provaComRespostaSalva(prova: RespostaProva, salva: Pick<RespostaQuestaoSalva, 'questao' | 'alternativa'>): RespostaProva {
-  return { ...prova, respostas: [...prova.respostas.filter((resposta) => resposta.questao !== salva.questao), { questao: salva.questao, alternativa: salva.alternativa }] }
+/**
+ * A prova no cache com a resposta que o servidor acabou de dizer ter gravada: é dela que a tela lê "Resposta salva". A
+ * resposta que chega **atrasada**, com `sequencia` menor que a que o cache já tem (uma leitura mais nova passou na
+ * frente), não a troca.
+ */
+export function provaComRespostaSalva(prova: RespostaProva, salva: Pick<RespostaQuestaoSalva, 'questao' | 'alternativa' | 'sequencia'>): RespostaProva {
+  const atual = prova.respostas.find((resposta) => resposta.questao === salva.questao)
+  if (atual !== undefined && atual.sequencia > salva.sequencia) return prova
+  return { ...prova, respostas: [...prova.respostas.filter((resposta) => resposta.questao !== salva.questao), { questao: salva.questao, alternativa: salva.alternativa, sequencia: salva.sequencia }] }
 }
 
 /** As filas desta aba, uma por atividade. Só em memória: some com a aba e com a sessão. */
@@ -123,7 +136,7 @@ export function filaDaAtividade(cliente: QueryClient, atividadeAplicadaId: strin
   const existente = filas.get(atividadeAplicadaId)
   if (existente !== undefined) return existente
   const fila = criarFilaDeRespostas({
-    salvar: (questao, alternativa) => responderQuestao(atividadeAplicadaId, questao, alternativa),
+    salvar: (questao, alternativa, sequencia) => responderQuestao(atividadeAplicadaId, questao, alternativa, sequencia),
     aoSalvar: (salva) => {
       cliente.setQueryData(consultaProva(atividadeAplicadaId).queryKey, (prova) => (prova === undefined ? prova : provaComRespostaSalva(prova, salva)))
       // A lista de atividades conta as respondidas: ela é lida de novo quando o aluno voltar a ela.
