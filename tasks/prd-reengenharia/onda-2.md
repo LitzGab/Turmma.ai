@@ -40,7 +40,9 @@ As pastas da P10 se movem, com o comportamento igual. Nascem quatro leituras pro
 - No depcruise da 12.0:
   - só `*.repository.ts` importa `@educa/nucleo/db`;
   - `operacao` nunca importa `ops`;
-  - fora de `credencial/` e `sessao/`, só se importa delas pelo `index.ts`;
+  - fora de `credencial/` e `sessao/`, só se importa delas pelo `index.ts`, em `apps/api/{src,test}`; `e2e/`, `infra/`, `tools/` e `apps/worker` ficam no arquivo, e
+    também o arquivo de `apps/api/src` que o e2e carrega (`operacao/token-do-convite.ts`, que importa `credencial/hash-do-token.js`): o Playwright roda o
+    `.ts` sem compilar, e o `index.ts` arrastaria a `credencial/` inteira (33.0);
 - O kit não importa `api/`, `areas/` nem `sessao/`: `no-restricted-imports` do ESLint, na 36.0 (D81, R56).
 - **Os barris não vazam (34.0).** O depcruise não vê o reexport em dois passos (`sessao/index.ts` → `export *` de
   `sessao/tenant/index.ts`). Um teste em execução (molde de `arquitetura.test.ts:122-134`) confere que `Object.values` de `sessao/index.js` e `credencial/index.js` não traz

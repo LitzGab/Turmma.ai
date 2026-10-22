@@ -1,6 +1,6 @@
 import { ConfiguracaoInvalida, PROVEDORES_EXTERNOS, type ProvedorExterno } from '@educa/nucleo'
 import { hkdfSync } from 'node:crypto'
-import { TAMANHO_MINIMO_CHAVE_DE_LOGIN } from '../configuracao-de-login.js'
+import { TAMANHO_MINIMO_CHAVE_DE_LOGIN } from './configuracao-de-login.js'
 
 /** O caminho do retorno, o mesmo para os dois provedores: o provedor do login em andamento vai no cookie `educa_oidc`. */
 export const CAMINHO_DO_RETORNO = '/v1/sessao/externa/retorno'

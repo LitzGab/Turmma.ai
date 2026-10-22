@@ -10,7 +10,7 @@ const ROTA_MATRICULA = '**/v1/sessao/matricula'
 const PRAZO_DA_ENTRADA_MS = 20_000
 /** O login pela conta da escola passa por três navegações e o discovery do provedor. */
 const PRAZO_DO_LOGIN_EXTERNO_MS = 40_000
-/** Quantas senhas erradas seguidas seguram a conta (`FALHAS_ANTES_DE_SEGURAR`, apps/api/src/sessao/contador-de-tentativas.ts). */
+/** Quantas senhas erradas seguidas seguram a conta (`FALHAS_ANTES_DE_SEGURAR`, apps/api/src/credencial/contador-de-tentativas.ts). */
 const FALHAS_ATE_SEGURAR = 5
 
 /** Os usuários sintéticos do `oidc-falso` (infra/oidc-falso/config.json), escolhidos pelo nome digitado no login dele. */

@@ -2,7 +2,7 @@ import { ErroDeDominio, erroDoPostgresEm, RegistroDeAuditoria, TENTE_DE_NOVO_PAD
 import { CodigoDeErro, esquemaRespostaAcessoDaTurma, esquemaRespostaAcessoGerado, type PedidoGerarAcesso, type RespostaAcessoDaTurma, type RespostaAcessoGerado } from '@educa/shared'
 import { TurmaRepository } from '../estrutura/turma.repository.js'
 import { AcessoDaTurmaRepository } from './acesso-da-turma.repository.js'
-import { hashDoToken } from '../sessao/hash-do-token.js'
+import { hashDoToken } from '../credencial/index.js'
 import { hmacDoCodigoDaTurma, sortearTokenDaSala, type SorteioDoCodigo } from './codigo-da-sala.js'
 
 const registro = new RegistroDeAuditoria()

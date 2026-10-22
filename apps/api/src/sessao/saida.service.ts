@@ -1,8 +1,8 @@
 import { sessaoDaRequisicao, type Ambiente, type Banco } from '@educa/nucleo'
-import { COOKIE_SESSAO, serializarCookie } from './cookies.js'
-import { ipParaRegistro } from './origem-da-requisicao.js'
-import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
-import { EscritaDeSessaoRepository } from './escrita-de-sessao.repository.js'
+import { COOKIE_SESSAO, serializarCookie } from '../credencial/cookies.js'
+import { ipParaRegistro } from '../credencial/origem-da-requisicao.js'
+import { RegistroDeAcessoRepository } from '../credencial/registro-de-acesso.repository.js'
+import { EscritaDeSessaoRepository } from '../credencial/escrita-de-sessao.repository.js'
 
 /**
  * "Sair" (RF13, RF5): encerra a sessão da requisição com motivo `saida` e grava `saida` no registro de acesso, numa

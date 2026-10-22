@@ -4,7 +4,7 @@ import { lerAmbienteDeCarga, lerAmbienteDeTeste, lerAmbienteExemplo } from '../.
 import { MOTIVO_ADAPTADOR_FALSO_EM_PRODUCAO, TIMEOUT_COMANDO_REDIS_API_MS, TIMEOUT_COMANDO_REDIS_FILA_MS } from '@educa/nucleo'
 import { ConfiguracaoInvalida, lerConfiguracao, MOTIVO_AVISOS_SEM_JSON, MOTIVO_ROTAS_SINTETICAS_EM_PRODUCAO } from './config.js'
 import { MOTIVO_CHAVE_DA_SALA_REPETIDA } from './sala/configuracao-da-sala.js'
-import { lerConfiguracaoLogin, MOTIVO_PRAZO_DO_REDIS_DO_LOGIN, PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS } from './sessao/configuracao-de-login.js'
+import { lerConfiguracaoLogin, MOTIVO_PRAZO_DO_REDIS_DO_LOGIN, PRAZO_MINIMO_DO_REDIS_DO_LOGIN_MS } from './credencial/index.js'
 
 const ambienteValido = {
   API_PORTA: '3000',

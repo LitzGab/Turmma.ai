@@ -1,6 +1,6 @@
 import type { ProvedorExterno } from '@educa/nucleo'
 import * as oidc from 'openid-client'
-import type { ConfiguracaoLoginExterno, ProvedorConfigurado } from './configuracao-externa.js'
+import type { ConfiguracaoLoginExterno, ProvedorConfigurado } from '../../credencial/configuracao-externa.js'
 import { ProvedorExternoFalhou, type ContaNoProvedor, type ConferenciasDoRetorno, type InicioNoProvedor, type ProvedorExternoPort } from './provedor-externo.port.js'
 
 /** Prazo de cada operação com o provedor, somando discovery, token e chaves: o login não fica pendurado nele (regra 80). */

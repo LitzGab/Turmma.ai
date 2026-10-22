@@ -1,15 +1,15 @@
 import { ErroDeDominio, METRICAS, relogioDoSistema, type Banco, type Meter, type Relogio } from '@educa/nucleo'
 import { CodigoDeErro, type EtapaComDesafio, type PedidoMfa, type RespostaAtivarMfa, type RespostaConfigurarMfa } from '@educa/shared'
-import type { CifraDoSegredo } from './cifra-do-segredo.js'
+import type { CifraDoSegredo } from '../credencial/cifra-do-segredo.js'
 import type { ConclusaoDeLogin } from './conclusao-de-login.js'
-import type { ContadorDeTentativas } from './contador-de-tentativas.js'
+import type { ContadorDeTentativas } from '../credencial/contador-de-tentativas.js'
 import type { AtivacaoPorConvite } from './convite.service.js'
-import type { CookieDeDispositivo } from './cookie-dispositivo.js'
-import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
-import { verificarDesafio, type ConsumoDeDesafio, type DesafioVerificado } from './desafio.js'
-import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './origem-da-requisicao.js'
+import type { CookieDeDispositivo } from '../credencial/cookie-dispositivo.js'
+import { COOKIE_DISPOSITIVO, lerCookie } from '../credencial/cookies.js'
+import { verificarDesafio, type ConsumoDeDesafio, type DesafioVerificado } from '../credencial/desafio.js'
+import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from '../credencial/origem-da-requisicao.js'
 import { ResolucaoDeTenantRepository, type MfaDaConta, type UsuarioAtivoDaConta } from './resolucao-de-tenant.repository.js'
-import { gerarCodigosDeRecuperacao, gerarSegredo, hmacDaRecuperacao, normalizarRecuperacao, passoDoCodigo } from './segundo-fator.js'
+import { gerarCodigosDeRecuperacao, gerarSegredo, hmacDaRecuperacao, normalizarRecuperacao, passoDoCodigo } from '../credencial/segundo-fator.js'
 
 export interface DependenciasDoMfa {
   readonly banco: Banco

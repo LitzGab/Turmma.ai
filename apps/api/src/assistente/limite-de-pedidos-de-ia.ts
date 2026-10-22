@@ -1,7 +1,7 @@
 import { ErroDeDominio, limiteDoSeguro, segundosParaTentarDeNovo, sessaoDaRequisicao, type LoggerBase } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
 import { Logger } from '@nestjs/common'
-import type { ContadorEmJanela } from '../sessao/senha/contador-em-janela.js'
+import type { ContadorEmJanela } from '../credencial/index.js'
 
 /** A janela dos dois contadores: "por minuto". */
 export const JANELA_DOS_PEDIDOS_DE_IA_MS = 60_000

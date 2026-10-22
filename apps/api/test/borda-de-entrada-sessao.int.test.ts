@@ -2,7 +2,7 @@ import { CodigoDeErro } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { SemaforoDeHash } from '../src/sessao/senha/semaforo-de-hash.js'
+import { SemaforoDeHash } from '../src/credencial/index.js'
 import { subirApi, type ApiDeTeste } from './api-com-sessao.js'
 
 /**

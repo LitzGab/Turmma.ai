@@ -1,5 +1,5 @@
 import { TIMEOUT_COMANDO_REDIS_FILA_MS, type ConfiguracaoBanco } from '@educa/nucleo'
-import type { ConfiguracaoLogin } from '../src/sessao/configuracao-de-login.js'
+import type { ConfiguracaoLogin } from '../src/credencial/index.js'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { lerConfiguracao, type ConfiguracaoApi } from '../src/config.js'
 

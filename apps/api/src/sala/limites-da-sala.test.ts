@@ -4,7 +4,7 @@ import type { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
-import { ContadorEmJanela } from '../sessao/senha/contador-em-janela.js'
+import { ContadorEmJanela } from '../credencial/index.js'
 import {
   ESPERA_ACIMA_DO_TETO_DA_ESCOLA_MS,
   JANELA_DOS_LIMITES_DA_SALA_MS,

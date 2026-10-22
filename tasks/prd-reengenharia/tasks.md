@@ -180,8 +180,8 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 
 ### Pastas, no projeto inteiro
 
-- [ ] **33.0 — `credencial/` reúne senha, cookie, hash e desafio**
-  - [ ] 33.1 O `33_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-2.md`
+- [x] **33.0 — `credencial/` reúne senha, cookie, hash e desafio**
+  - [x] 33.1 O `33_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-2.md`
 
 - [ ] **34.0 — `sessao/` só tem fluxos, em subpastas, com `index.ts`**
   - [ ] 34.1 O `34_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-2.md`

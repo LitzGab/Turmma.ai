@@ -11,7 +11,7 @@ export interface CredencialDoAluno {
 
 /**
  * A credencial por matrícula (tarefa 11.0), sempre na escola do contexto (regra 10, item 3). No login, esse contexto é
- * o da escola do slug, aberto pela `ResolucaoDeTenantRepository` antes de ler a credencial: a matrícula nunca é
+ * o da escola do slug, aberto pela resolução de tenant (em `sessao/`) antes de ler a credencial: a matrícula nunca é
  * procurada fora da escola, e a mesma matrícula em outra escola é outra conta (regra 60, item 6).
  */
 export class CredencialMatriculaRepository {

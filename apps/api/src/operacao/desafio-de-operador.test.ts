@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { Logger } from '@nestjs/common'
 import type { Redis } from 'ioredis'
 import { describe, expect, it, vi } from 'vitest'
-import { EmissorDeDesafio, verificarDesafio } from '../sessao/desafio.js'
+import { EmissorDeDesafio, verificarDesafio } from '../credencial/index.js'
 import { AUDIENCIA_DESAFIO_DE_OPERADOR, ConsumoDeDesafioDeOperador, EmissorDeDesafioDeOperador, VALIDADE_DESAFIO_DE_OPERADOR_SEGUNDOS, verificarDesafioDeOperador } from './desafio-de-operador.js'
 
 const OPERADOR = '0190f5a0-0000-7000-8000-0000000000e1'

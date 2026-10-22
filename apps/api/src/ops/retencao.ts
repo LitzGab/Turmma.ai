@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { AcessoDaEscolaRepository } from '../sessao/acesso-publico.repository.js'
+import { AcessoDaEscolaRepository } from '../credencial/index.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
 

@@ -1,6 +1,6 @@
 import { ErroDeDominio, type Banco, type ProvedorExterno } from '@educa/nucleo'
 import { CodigoDeErro, PROVEDORES_DE_CONTA_DA_ESCOLA, type RespostaAcessoDaEscola } from '@educa/shared'
-import { AcessoDaEscolaRepository } from './acesso-publico.repository.js'
+import { AcessoDaEscolaRepository } from '../credencial/acesso-publico.repository.js'
 import { naEscolaSemUsuario } from './escola-sem-usuario.js'
 import type { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
 

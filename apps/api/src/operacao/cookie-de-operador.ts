@@ -1,6 +1,5 @@
 import { COOKIE_SESSAO_DE_OPERADOR, type Ambiente } from '@educa/nucleo'
-import { MAX_AGE_DO_COOKIE_DISPOSITIVO_SEGUNDOS, type CookieDeDispositivo } from '../sessao/cookie-dispositivo.js'
-import { lerCookie, serializarCookie } from '../sessao/cookies.js'
+import { type CookieDeDispositivo, lerCookie, MAX_AGE_DO_COOKIE_DISPOSITIVO_SEGUNDOS, serializarCookie } from '../credencial/index.js'
 import { COOKIE_DISPOSITIVO_DE_OPERADOR } from './dispositivo-de-operador.js'
 import { DURACAO_DA_SESSAO_DE_OPERADOR_HORAS } from './prazos-da-sessao.js'
 

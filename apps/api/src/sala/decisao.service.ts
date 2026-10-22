@@ -15,10 +15,7 @@ import {
 import { paginar } from '../estrutura/entrada.js'
 import { TurmaRepository } from '../estrutura/turma.repository.js'
 import { VinculoRepository } from '../estrutura/vinculo.repository.js'
-import type { ContadorDeTentativas } from '../sessao/contador-de-tentativas.js'
-import { CredencialMatriculaRepository } from '../sessao/credencial-matricula.repository.js'
-import { CriacaoDeSessaoRepository } from '../sessao/criacao-de-sessao.repository.js'
-import { identificadorDoAluno } from '../sessao/matricula.service.js'
+import { type ContadorDeTentativas, CredencialMatriculaRepository, CriacaoDeSessaoRepository, identificadorDoAluno } from '../credencial/index.js'
 import { DecisaoRepository, type AlcanceDoPedido } from './decisao.repository.js'
 
 const registro = new RegistroDeAuditoria()

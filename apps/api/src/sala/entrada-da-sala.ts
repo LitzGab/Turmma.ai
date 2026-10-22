@@ -1,5 +1,5 @@
 import type { EntradaDaSala } from '../sessao/acesso-da-sala.js'
-import { hashDoToken } from '../sessao/hash-do-token.js'
+import { hashDoToken } from '../credencial/index.js'
 import { hmacDoCodigoDaTurma } from './codigo-da-sala.js'
 
 /**

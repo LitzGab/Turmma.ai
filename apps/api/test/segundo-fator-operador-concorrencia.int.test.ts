@@ -9,8 +9,7 @@ import { ConsumoDeDesafioDeOperador } from '../src/operacao/desafio-de-operador.
 import { PREFIXO_DO_CONTADOR_DA_OPERACAO } from '../src/operacao/entrada.service.js'
 import { OperadorRepository } from '../src/operacao/operador.repository.js'
 import { desativarOperador } from '../src/ops/operador.js'
-import { ContadorDeTentativas } from '../src/sessao/contador-de-tentativas.js'
-import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
+import { CLIENTE_REDIS_LOGIN, ContadorDeTentativas } from '../src/credencial/index.js'
 import {
   ativarNoBanco,
   barreira,

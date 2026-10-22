@@ -2,7 +2,7 @@ import { ErroDeDominio, limiteDoSeguro, METRICAS, segundosParaTentarDeNovo, type
 import { CodigoDeErro } from '@educa/shared'
 import { Logger } from '@nestjs/common'
 import type { GuardaDoCodigo } from '../sessao/acesso-da-sala.js'
-import type { ContadorEmJanela } from '../sessao/senha/contador-em-janela.js'
+import type { ContadorEmJanela } from '../credencial/index.js'
 
 /** A janela dos três contadores da sala (Tech Spec da A1, 7c): 10 min desde a primeira soma de cada chave. */
 export const JANELA_DOS_LIMITES_DA_SALA_MS = 10 * 60_000

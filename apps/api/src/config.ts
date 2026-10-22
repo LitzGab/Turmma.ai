@@ -18,8 +18,7 @@ import { esquemaAviso, MAXIMO_DE_AVISOS, type Aviso } from '@educa/shared'
 import { z } from 'zod'
 import { lerConfiguracaoDoArmazem, type ConfiguracaoDoArmazemDaApi } from './privacidade/configuracao-do-armazem.js'
 import { lerConfiguracaoSala, type ConfiguracaoSala } from './sala/configuracao-da-sala.js'
-import { lerConfiguracaoLogin, type ConfiguracaoLogin } from './sessao/configuracao-de-login.js'
-import { lerConfiguracaoLoginExterno, type ConfiguracaoLoginExterno } from './sessao/externa/configuracao-externa.js'
+import { type ConfiguracaoLogin, type ConfiguracaoLoginExterno, lerConfiguracaoLogin, lerConfiguracaoLoginExterno } from './credencial/index.js'
 
 export { ConfiguracaoInvalida }
 

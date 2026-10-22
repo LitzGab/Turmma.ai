@@ -6,7 +6,7 @@ import { setTimeout as esperar } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
 import pg from 'pg'
 import type { criarEscola, criarRede } from '../../apps/api/src/ops/escola.ts'
-import type { HashDeSenha } from '../../apps/api/src/sessao/hash-de-senha.ts'
+import type { HashDeSenha } from '../../apps/api/src/credencial/hash-de-senha.ts'
 import type { criarAlunosComMatricula, criarSessoesSinteticas } from '../../apps/api/src/sessao/sessoes-sinteticas.ts'
 import type { criarBanco, criarPool } from '@educa/nucleo'
 import { raizRepositorio } from '../../tools/ci/executar.ts'
@@ -311,7 +311,7 @@ async function importarDaApi(): Promise<ModulosDaApi> {
     nucleo: await importar('packages/nucleo/dist/index.js'),
     escolas: await importar('apps/api/dist/ops/escola.js'),
     sessoes: await importar('apps/api/dist/sessao/sessoes-sinteticas.js'),
-    hash: await importar('apps/api/dist/sessao/hash-de-senha.js'),
+    hash: await importar('apps/api/dist/credencial/hash-de-senha.js'),
   }
 }
 

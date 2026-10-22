@@ -20,9 +20,7 @@ import { COOKIE_DISPOSITIVO_DE_OPERADOR, cookieDeDispositivoDeOperador } from '.
 import { PREFIXO_DO_CONTADOR_DA_OPERACAO } from '../src/operacao/entrada.service.js'
 import { SegundoFatorDoOperadorService } from '../src/operacao/segundo-fator.service.js'
 import { gerarConviteDeOperador } from '../src/ops/operador.js'
-import { ContadorDeTentativas, type OrigemDaTentativa } from '../src/sessao/contador-de-tentativas.js'
-import { COOKIE_SESSAO } from '../src/sessao/cookies.js'
-import { CLIENTE_REDIS_LOGIN } from '../src/sessao/sessao.module.js'
+import { CLIENTE_REDIS_LOGIN, ContadorDeTentativas, COOKIE_SESSAO, type OrigemDaTentativa } from '../src/credencial/index.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { caminhoConcreto, rotasDe } from './rotas-registradas.js'
 import {

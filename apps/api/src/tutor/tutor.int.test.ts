@@ -45,7 +45,7 @@ import { TETO_DE_PEDIDOS_DE_IA_POR_USUARIO } from '../assistente/limite-de-pedid
 import { EXECUTOR_DE_AGENTE } from '../ia/ia.module.js'
 import { CLIENTE_REDIS_CACHE } from '../limite.module.js'
 import { BuscaDeTrechos } from '../material/busca-de-trechos.js'
-import { CLIENTE_REDIS_LOGIN } from '../sessao/sessao.module.js'
+import { CLIENTE_REDIS_LOGIN } from '../credencial/index.js'
 import { TROCAS_SEGUIDAS_PARA_TRAVOU } from './sinais-do-turno.js'
 import { SupervisaoDoTutorRepository } from './supervisao.repository.js'
 import { TutorDoAlunoRepository } from './tutor.repository.js'

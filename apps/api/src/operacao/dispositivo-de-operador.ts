@@ -1,7 +1,5 @@
 import { createHmac } from 'node:crypto'
-import type { ConfiguracaoLogin } from '../sessao/configuracao-de-login.js'
-import { CookieDeDispositivo } from '../sessao/cookie-dispositivo.js'
-
+import { type ConfiguracaoLogin, CookieDeDispositivo } from '../credencial/index.js'
 /**
  * O cookie de dispositivo do operador (Tech Spec da A0, seção 5, "Entrada"): o mesmo formato do `educa_dispositivo` do
  * F1, com nome, caminho e chave próprios. Decide só a origem `conhecido`/`outro` do contador `login-op:` e a passagem

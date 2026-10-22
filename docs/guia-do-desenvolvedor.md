@@ -133,13 +133,13 @@ quando passa de ~20 arquivos de produção, e um teste reprova a que passar de 2
 apps/api/src/
   app.module.ts                módulos montados, guardas globais
   <modulo>/                    estrutura, professores, material, ia, assistente, artefato, entrega,
-                               atividade, tutor, governanca, privacidade, sala, operacao, sistema, sessao
+                               atividade, tutor, governanca, privacidade, sala, operacao, sistema, sessao, credencial
     <modulo>.module.ts
     turma.controller.ts        um trio por recurso, direto na pasta do módulo
     turma.service.ts
     turma.repository.ts
     *.test.ts                  unidade, ao lado do código
-  sessao/senha/                senha, hash, ContadorEmJanela, SemaforoDeHash: primitivas que outros módulos usam
+  credencial/senha/            senha, hash, ContadorEmJanela, SemaforoDeHash: primitivas que outros módulos usam
   estrutura/entrada.ts         paginar e paginarPor, o corte da página de uma listagem
   ops/                         só comandos de terminal (npm run ops:*), finos, sobre os casos de uso de operacao/
 apps/api/test/                 testes de integração: entre outros, os que cruzam módulos, os de arquitetura e os

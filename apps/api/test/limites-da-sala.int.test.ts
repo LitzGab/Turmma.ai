@@ -14,10 +14,7 @@ import {
   TETO_DE_HASHES_SEM_PEDIDO_POR_TURMA,
   TETO_DE_MATRICULAS_ERRADAS_POR_NOME,
 } from '../src/sala/limites-da-sala.js'
-import { HashDeSenha } from '../src/sessao/hash-de-senha.js'
-import type { BaldeDeLogin } from '../src/sessao/senha/baldes-de-login.js'
-import { ContadorEmJanela, JANELA_DO_CONTADOR_POR_IP_MS } from '../src/sessao/senha/contador-em-janela.js'
-import { SemaforoDeHash } from '../src/sessao/senha/semaforo-de-hash.js'
+import { type BaldeDeLogin, ContadorEmJanela, HashDeSenha, JANELA_DO_CONTADOR_POR_IP_MS, SemaforoDeHash } from '../src/credencial/index.js'
 import { subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { aguardar } from './gatilho-de-parada.js'
 import { FerramentasDaSala, pedidoDaSala, semRequisicao, SENHA_DA_SALA, type NomeDaLista, type RespostaDaSala, type SalaDeTeste } from './sala-de-teste.js'

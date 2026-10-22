@@ -1,18 +1,19 @@
 import { ErroDeDominio, FORMATO_SLUG, TAMANHO_MAXIMO_SLUG, type Banco, type Meter } from '@educa/nucleo'
 import { CodigoDeErro, type PedidoLoginMatricula } from '@educa/shared'
 import type { ConclusaoDeLogin } from './conclusao-de-login.js'
-import type { ContadorDeTentativas } from './contador-de-tentativas.js'
-import type { CookieDeDispositivo } from './cookie-dispositivo.js'
-import { COOKIE_DISPOSITIVO, lerCookie } from './cookies.js'
-import { CredencialMatriculaRepository } from './credencial-matricula.repository.js'
+import type { ContadorDeTentativas } from '../credencial/contador-de-tentativas.js'
+import type { CookieDeDispositivo } from '../credencial/cookie-dispositivo.js'
+import { COOKIE_DISPOSITIVO, lerCookie } from '../credencial/cookies.js'
+import { CredencialMatriculaRepository } from '../credencial/credencial-matricula.repository.js'
 import { naEscolaSemUsuario } from './escola-sem-usuario.js'
-import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from './origem-da-requisicao.js'
-import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
+import { identificadorDoAluno } from '../credencial/identificador-do-aluno.js'
+import { ipParaRegistro, type OrigemDaRequisicao, type ResultadoDoLogin } from '../credencial/origem-da-requisicao.js'
+import { RegistroDeAcessoRepository } from '../credencial/registro-de-acesso.repository.js'
 import type { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
-import { baldeDaEscola, baldeDaEscolaDesconhecida, contadorDoRebaixamentoPorIp } from './senha/baldes-de-login.js'
-import type { ConferenciaNaVez, TentativaDeSenha } from './senha/conferencia-na-vez.js'
-import { DuracaoDoLogin } from './senha/duracao-do-login.js'
-import type { RebaixamentoPorEscola } from './senha/rebaixamento.js'
+import { baldeDaEscola, baldeDaEscolaDesconhecida, contadorDoRebaixamentoPorIp } from '../credencial/senha/baldes-de-login.js'
+import type { ConferenciaNaVez, TentativaDeSenha } from '../credencial/senha/conferencia-na-vez.js'
+import { DuracaoDoLogin } from '../credencial/senha/duracao-do-login.js'
+import type { RebaixamentoPorEscola } from '../credencial/senha/rebaixamento.js'
 
 /**
  * A "escola desconhecida" do slug que não existe: entra no lugar do `escola_id` na chave do contador e na entrada do
@@ -41,11 +42,6 @@ interface ChaveDaTentativa {
   readonly chave: string
   readonly identificador: string
   readonly conhecido: boolean
-}
-
-/** O identificador da conta do aluno no contador e no cookie: a escola e a matrícula, nunca a matrícula sozinha. */
-export function identificadorDoAluno(escolaId: string, matricula: string): string {
-  return `${escolaId}|${matricula}`
 }
 
 /**

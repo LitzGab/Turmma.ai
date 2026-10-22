@@ -3,7 +3,7 @@ import { exigirEscolaDoContexto, registroAcesso, type Banco, type EventoDeAcesso
 /**
  * O registro de acesso (Marco Civil, art. 15) de quem já tem escola: login, renovação e saída, gravados na escola do
  * contexto, nunca na de um argumento (regra 10, item 3). A falha por e-mail, antes de haver escola, é a única exceção
- * e fica na `ResolucaoDeTenantRepository`. A falha por matrícula (11.0) já tem a escola do slug, e fica aqui.
+ * e fica na resolução de tenant (em `sessao/`). A falha por matrícula (11.0) já tem a escola do slug, e fica aqui.
  *
  * Grava só evento, usuário, IP e hora: nada de e-mail, cookie ou navegador (`docs/lgpd.md`).
  */

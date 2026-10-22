@@ -12,8 +12,8 @@ import {
 import { CodigoDeErro, type PapelDeUsuario } from '@educa/shared'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import { CredencialMatriculaRepository } from './credencial-matricula.repository.js'
-import { CriacaoDeSessaoRepository } from './criacao-de-sessao.repository.js'
+import { CredencialMatriculaRepository } from '../credencial/credencial-matricula.repository.js'
+import { CriacaoDeSessaoRepository } from '../credencial/criacao-de-sessao.repository.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
 
 /** Sessões de uma vez, no máximo: o cenário de carga pede cerca de mil de uma escola. */

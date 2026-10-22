@@ -1,7 +1,7 @@
 import { PROVEDORES_EXTERNOS, type Ambiente, type ProvedorExterno } from '@educa/nucleo'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { z } from 'zod'
-import { serializarCookie } from '../cookies.js'
+import { serializarCookie } from '../../credencial/cookies.js'
 
 /** O cookie do login pela conta da escola em andamento, do `iniciar` ao `retorno`. */
 export const COOKIE_OIDC = 'educa_oidc'

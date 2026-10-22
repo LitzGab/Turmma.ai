@@ -16,7 +16,11 @@ O `npm run lint` reprova import contra a direção dos pacotes, contra a camada 
 - Regras 00 (camadas) e 10 (cercas)
 - `apps/api/test/arquitetura.test.ts` (:31, :58, :108, :122, :141, :172-183, :878)
 - A regra de só importar `credencial/` e `sessao/` pelo `index.ts` (`onda-2.md`, "As travas") vale para `apps/`, e deixa
-  `e2e/`, `infra/` e `tools/` de fora: o e2e importa `credencial/hash-do-token.ts` direto, de propósito (33.0)
+  `e2e/`, `infra/` e `tools/` de fora: o e2e importa `credencial/hash-do-token.ts` direto, de propósito (33.0). Também fica de fora
+  o arquivo de `apps/api/src` que o e2e carrega: `operacao/token-do-convite.ts` importa `credencial/hash-do-token.js` direto, porque o
+  Playwright roda o `.ts` sem compilar (`erasableSyntaxOnly`) e o `index.ts` arrasta toda a `credencial/`, com `constructor(private readonly …)` e
+  `@educa/*` pelo nome (`tools/ci/playwright.test.ts › nada que o e2e carrega importa um pacote @educa/* pelo nome…` fica vermelho). A regra
+  precisa dessa exceção, por arquivo, com o motivo
 
 ## Subtarefas
 

@@ -26,7 +26,7 @@ import { raizRepositorio } from '../ci/executar.ts'
 
 export const ARQUIVO_DA_VITRINE = '.processo/vitrine.json'
 
-/** O período do TOTP da API (`apps/api/src/sessao/segundo-fator.ts`): 30 s, com um passo de janela para cada lado. */
+/** O período do TOTP da API (`apps/api/src/credencial/segundo-fator.ts`): 30 s, com um passo de janela para cada lado. */
 const PERIODO_TOTP_MS = 30_000
 const JANELA_TOTP = 1
 

@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { criarEscola, criarRede } from '../src/ops/escola.js'
-import { CriacaoDeSessaoRepository } from '../src/sessao/criacao-de-sessao.repository.js'
+import { CriacaoDeSessaoRepository } from '../src/credencial/index.js'
 import { criarAlunosComMatricula, criarSessoesSinteticas, emissorDeTokenSintetico, NOME_SINTETICO, type AlunoComMatriculaSintetico } from '../src/sessao/sessoes-sinteticas.js'
 
 /** O operador que os testes gravam na auditoria da rede e da escola que criam. */

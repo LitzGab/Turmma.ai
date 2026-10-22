@@ -1,12 +1,12 @@
 import { justificativaSemEscopo, TAMANHO_MINIMO_JUSTIFICATIVA_SEM_ESCOPO } from '@educa/nucleo'
 import { describe, expect, it } from 'vitest'
 import { ConviteRepository } from './convite.repository.js'
-import { CriacaoDeSessaoRepository } from './criacao-de-sessao.repository.js'
+import { CriacaoDeSessaoRepository } from '../credencial/criacao-de-sessao.repository.js'
 import { EuRepository } from './eu.repository.js'
-import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
-import { EscritaDeSessaoRepository } from './escrita-de-sessao.repository.js'
+import { RegistroDeAcessoRepository } from '../credencial/registro-de-acesso.repository.js'
+import { EscritaDeSessaoRepository } from '../credencial/escrita-de-sessao.repository.js'
 import { RedefinicaoDeMfaRepository } from './redefinicao-de-mfa.repository.js'
-import { SessaoDeOrigemRepository } from './sessao-de-origem.repository.js'
+import { SessaoDeOrigemRepository } from '../credencial/sessao-de-origem.repository.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
 
 const metodosDe = (classe: { prototype: object }) => Object.getOwnPropertyNames(classe.prototype).filter((nome) => nome !== 'constructor').sort()

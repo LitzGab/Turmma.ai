@@ -7,9 +7,8 @@ import { POOL_BANCO } from './banco.module.js'
 import { lerConfiguracao } from './config.js'
 import { configurarAplicacao } from './configurar-app.js'
 import { CLIENTE_REDIS_CACHE } from './limite.module.js'
-import { SeguroDoLogin } from './sessao/seguro-do-login.js'
+import { CLIENTE_REDIS_LOGIN, SeguroDoLogin } from './credencial/index.js'
 import { LimitesDaSala } from './sala/limites-da-sala.js'
-import { CLIENTE_REDIS_LOGIN } from './sessao/sessao.module.js'
 import { CLIENTE_REDIS_USO } from './uso.module.js'
 
 const config = lerConfiguracao(process.env)

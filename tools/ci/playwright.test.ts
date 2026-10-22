@@ -73,7 +73,7 @@ describe('projetos do Playwright (playwright.config.ts)', () => {
   it('nada que o e2e carrega importa um pacote @educa/* pelo nome: o Playwright o resolveria para o dist, que a esteira não constrói', () => {
     const varredura = varrerImports(arquivosDeCodigoEm(join(raizRepositorio, 'e2e')))
     // A travessia sai de e2e/: sem isto, uma varredura que parasse no primeiro salto passaria sem olhar a API.
-    expect(varredura.vistos).toContain(join(raizRepositorio, 'apps/api/src/sessao/hash-do-token.ts'))
+    expect(varredura.vistos).toContain(join(raizRepositorio, 'apps/api/src/credencial/hash-do-token.ts'))
     expect(varredura.naoResolvidos.map((item) => relativoARaiz(item))).toEqual([])
     expect(varredura.peloNome.map((item) => relativoARaiz(item))).toEqual([])
   })

@@ -10,8 +10,7 @@ import { AppModule } from '../src/app.module.js'
 import type { ConfiguracaoApi } from '../src/config.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
 import { EmissorDeDesafioDeOperador, type EtapaDoDesafioDeOperador } from '../src/operacao/desafio-de-operador.js'
-import { CifraDoSegredo } from '../src/sessao/cifra-do-segredo.js'
-import { gerarCodigosDeRecuperacao, gerarSegredo, hmacDaRecuperacao, PERIODO_TOTP_SEGUNDOS } from '../src/sessao/segundo-fator.js'
+import { CifraDoSegredo, gerarCodigosDeRecuperacao, gerarSegredo, hmacDaRecuperacao, PERIODO_TOTP_SEGUNDOS } from '../src/credencial/index.js'
 import { configuracaoDeTeste, MONTAGEM_DE_TESTE } from './configuracao-de-teste.js'
 
 /**

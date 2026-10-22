@@ -151,6 +151,21 @@ describe('arquitetura: a conta global só pelo módulo sessao e pelo ciclo de vi
     // O subcaminho do ciclo de vida é o que a API e o worker usam: o serviço sai por ele.
     expect(Object.keys(cicloDeVida)).toContain('CicloDeVidaService')
   })
+
+  it('nem o barrel de credencial/ exporta a ResolucaoDeTenantRepository nem a ContaGlobalRepository, com o nome dela ou outro (33.0)', async () => {
+    const credencial = await import('../src/credencial/index.js')
+    const { ContaGlobalRepository } = await import('@educa/nucleo/conta-global')
+    const { ResolucaoDeTenantRepository } = await import('../src/sessao/resolucao-de-tenant.repository.js')
+    // O barrel é lido de verdade: sem isto, um import que falhasse em silêncio deixaria as duas conferências abaixo verdes.
+    expect(Object.keys(credencial)).toContain('HashDeSenha')
+    for (const [nome, classe] of [
+      ['ResolucaoDeTenantRepository', ResolucaoDeTenantRepository],
+      ['ContaGlobalRepository', ContaGlobalRepository],
+    ] as const) {
+      expect(Object.keys(credencial), nome).not.toContain(nome)
+      expect(Object.values(credencial), nome).not.toContain(classe)
+    }
+  })
 })
 
 /**

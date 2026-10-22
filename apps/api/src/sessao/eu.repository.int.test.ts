@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { afterAll, describe, expect, it } from 'vitest'
 import { BancadaDeSessoes } from '../../test/sessao-de-teste.js'
 import { EuRepository } from './eu.repository.js'
-import { RegistroDeAcessoRepository } from './registro-de-acesso.repository.js'
+import { RegistroDeAcessoRepository } from '../credencial/registro-de-acesso.repository.js'
 
 describe('repositories do login com escopo: a escola vem do contexto', () => {
   const bancada = new BancadaDeSessoes()

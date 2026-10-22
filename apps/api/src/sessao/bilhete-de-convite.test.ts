@@ -3,7 +3,7 @@ import { decodeJwt, decodeProtectedHeader } from 'jose'
 import { randomUUID } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { AUDIENCIA_BILHETE, BilheteDeConvite, TIPO_BILHETE, VALIDADE_BILHETE_SEGUNDOS } from './bilhete-de-convite.js'
-import { EmissorDeDesafio, verificarDesafio } from './desafio.js'
+import { EmissorDeDesafio, verificarDesafio } from '../credencial/desafio.js'
 
 const CHAVE = new TextEncoder().encode('chave-de-teste-da-assinatura-com-32-bytes')
 const CONTA = '0190f5a0-0000-7000-8000-0000000000c1'

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { codigoDoAutenticador, codigoDoPassoAnterior, esperaPelaViradaDoPasso } from '../../e2e/__fixtures__/sessao.ts'
-import { gerarSegredo, passoDoCodigo, PERIODO_TOTP_SEGUNDOS } from '../../apps/api/src/sessao/segundo-fator.ts'
+import { gerarSegredo, passoDoCodigo, PERIODO_TOTP_SEGUNDOS } from '../../apps/api/src/credencial/segundo-fator.ts'
 
 /**
  * O código que o e2e digita no lugar do aplicativo autenticador (`e2e/__fixtures__/sessao.ts`). O caso que ativa o segundo
