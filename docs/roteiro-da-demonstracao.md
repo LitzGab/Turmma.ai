@@ -313,13 +313,14 @@ contêiner `127.0.0.1` é o próprio contêiner: por isso o repasse abaixo, liga
    LLM_BASE_URL=http://host.docker.internal:18080/v1 \
    LLM_MODELO=qwen3.6-35b-a3b \
    LLM_PROCESSAMENTO_LOCAL=true \
-   LLM_TIMEOUT_MS=120000 IA_EXECUCAO_TIMEOUT_MS=300000 \
+   LLM_TIMEOUT_MS=120000 LLM_TIMEOUT_MS_RAPIDO=120000 LLM_TIMEOUT_MS_PADRAO=120000 IA_EXECUCAO_TIMEOUT_MS=300000 \
    docker compose -f compose.yaml -f /tmp/turmma-modelo-local.yml up -d --wait api-1 api-2
    ```
 
    `LLM_PROCESSAMENTO_LOCAL=true` só é aceito com endereço local (`host.docker.internal` é): o registro de consumo
    grava que nada saiu da máquina. Os prazos maiores são porque o modelo local leva dezenas de segundos numa atividade
-   de cinco questões; o da execução precisa ser maior que o da chamada.
+   de cinco questões, e cada perfil tem o seu (`rapido` 20 s e `padrao` 60 s por padrão); o da execução precisa ser maior que
+   o maior deles.
 5. Conferir: `docker compose logs api-1 | tail` sem erro de configuração, e uma conversa de teste na professora antes
    da reunião. Alternativa sem o arquivo do passo 3: `LLM_BASE_URL=http://172.17.0.1:18080/v1` (IP privado, também
    aceito como local).

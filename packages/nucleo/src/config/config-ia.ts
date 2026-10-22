@@ -22,10 +22,12 @@ export const MOTIVO_LLM_SEM_MODELO = 'IA_ADAPTADOR=openai_compat precisa de LLM_
 export const MOTIVO_PROCESSAMENTO_LOCAL_EM_ENDERECO_DE_FORA =
   'LLM_PROCESSAMENTO_LOCAL=true só vale com LLM_BASE_URL nesta máquina ou em rede privada: declarar local um provedor de fora apagaria o registro de envio externo'
 export const MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA =
-  'IA_EXECUCAO_TIMEOUT_MS precisa ser maior que LLM_TIMEOUT_MS: senão a execução estoura antes de a chamada ao modelo terminar'
-export const MOTIVO_RECUO_MAIOR_QUE_O_PRAZO = 'LLM_RECUO_MS precisa ser menor que LLM_TIMEOUT_MS: a repetição acontece dentro do prazo da chamada, não depois dele'
+  'IA_EXECUCAO_TIMEOUT_MS precisa ser maior que o maior prazo de chamada (LLM_TIMEOUT_MS, LLM_TIMEOUT_MS_RAPIDO e LLM_TIMEOUT_MS_PADRAO): senão a execução estoura antes de a chamada ao modelo terminar'
+export const MOTIVO_RECUO_MAIOR_QUE_O_PRAZO =
+  'LLM_RECUO_MS precisa ser menor que o menor prazo de chamada (LLM_TIMEOUT_MS, LLM_TIMEOUT_MS_RAPIDO e LLM_TIMEOUT_MS_PADRAO): a repetição acontece dentro do prazo da chamada, não depois dele'
 export const MOTIVO_VAGAS_DE_IA_INCOERENTES = 'IA_EXECUCOES_POR_ESCOLA não pode passar de IA_EXECUCOES_TOTAL: uma escola sozinha ocuparia todas as vagas'
-export const MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO = 'IA_LATENCIA_FALSA_MS precisa ser menor que LLM_TIMEOUT_MS: senão toda chamada ao adaptador falso estoura o prazo'
+export const MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO =
+  'IA_LATENCIA_FALSA_MS precisa ser menor que o prazo de todo perfil (LLM_TIMEOUT_MS, LLM_TIMEOUT_MS_RAPIDO e LLM_TIMEOUT_MS_PADRAO): senão toda chamada ao adaptador falso, em algum perfil, estoura o prazo'
 
 /** O mesmo formato da chave do suboperador (Tech Spec do F3, seção 3): é por ela que a chamada se liga ao cadastro. */
 export const FORMATO_DO_PROVEDOR_ID = /^[a-z][a-z0-9_-]{1,39}$/
@@ -78,8 +80,13 @@ export const esquemaAmbienteDeIa = z
     LLM_MODELO_VISAO: modelo,
     /** Só para provedor que exige chave. Nunca vai para log, erro nem registro. */
     LLM_CHAVE_API: opcional(z.string().min(1).optional()),
+    /** O prazo da chamada de cada perfil que não tem o seu: `complexo` e `visao`. */
     LLM_TIMEOUT_MS: inteiro(1_000, 600_000, 60_000),
-    /** Quanto esperar antes da única repetição depois de um 429 ou de um 5xx do provedor. */
+    /** O prazo do `rapido` (o turno do Tutor, o aluno esperando): curto, para o disjuntor ver o provedor lento cedo. */
+    LLM_TIMEOUT_MS_RAPIDO: inteiro(1_000, 600_000, 20_000),
+    /** O prazo do `padrao` (a ferramenta com o professor esperando): a normal leva ~50 s. */
+    LLM_TIMEOUT_MS_PADRAO: inteiro(1_000, 600_000, 60_000),
+    /** Quanto esperar antes da única repetição depois de um 429 ou de uma conexão recusada do provedor. */
     LLM_RECUO_MS: inteiro(0, 60_000, 500),
     LLM_PROCESSAMENTO_LOCAL: opcional(z.enum(['true', 'false']).default('false')),
     /** Quem recebe o conteúdo quando ele sai da nossa rede. Não é segredo: vai para `consumo_ia.provedor`. */
@@ -96,10 +103,13 @@ export const esquemaAmbienteDeIa = z
   .superRefine((valores, contexto) => {
     const problema = (variavel: string, message: string): void => contexto.addIssue({ code: 'custom', path: [variavel], message })
     if (valores.AMBIENTE === 'producao' && valores.IA_ADAPTADOR === 'falso') problema('IA_ADAPTADOR', MOTIVO_ADAPTADOR_FALSO_EM_PRODUCAO)
-    if (valores.LLM_RECUO_MS >= valores.LLM_TIMEOUT_MS) problema('LLM_RECUO_MS', MOTIVO_RECUO_MAIOR_QUE_O_PRAZO)
-    if (valores.IA_EXECUCAO_TIMEOUT_MS <= valores.LLM_TIMEOUT_MS) problema('IA_EXECUCAO_TIMEOUT_MS', MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA)
+    // Os três prazos são o de cada perfil: o recuo e a latência falsa cabem no menor, a execução cobre o maior.
+    const prazos = [valores.LLM_TIMEOUT_MS, valores.LLM_TIMEOUT_MS_RAPIDO, valores.LLM_TIMEOUT_MS_PADRAO]
+    const menorPrazo = Math.min(...prazos)
+    if (valores.LLM_RECUO_MS >= menorPrazo) problema('LLM_RECUO_MS', MOTIVO_RECUO_MAIOR_QUE_O_PRAZO)
+    if (valores.IA_EXECUCAO_TIMEOUT_MS <= Math.max(...prazos)) problema('IA_EXECUCAO_TIMEOUT_MS', MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA)
     if (valores.IA_EXECUCOES_POR_ESCOLA > valores.IA_EXECUCOES_TOTAL) problema('IA_EXECUCOES_POR_ESCOLA', MOTIVO_VAGAS_DE_IA_INCOERENTES)
-    if (valores.IA_LATENCIA_FALSA_MS >= valores.LLM_TIMEOUT_MS) problema('IA_LATENCIA_FALSA_MS', MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO)
+    if (valores.IA_LATENCIA_FALSA_MS >= menorPrazo) problema('IA_LATENCIA_FALSA_MS', MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO)
     if (valores.IA_ADAPTADOR !== 'openai_compat') return
     if (valores.LLM_BASE_URL === undefined) problema('LLM_BASE_URL', MOTIVO_LLM_SEM_ENDERECO)
     else if (valores.LLM_PROCESSAMENTO_LOCAL === 'true' && !enderecoDaNossaRede(valores.LLM_BASE_URL)) {
@@ -121,8 +131,6 @@ export interface ConfiguracaoDoModelo {
   readonly processamentoLocal: boolean
   /** O id do provedor que recebe o conteúdo (`IA_PROVEDOR_ID`). Obrigatório quando o processamento não é local; o local não tem provedor. */
   readonly provedorId?: string
-  /** Espera antes da única repetição em 429 e 5xx (regra 30, item 8). */
-  readonly recuoMs: number
 }
 
 export interface ConfiguracaoDoExecutor {
@@ -137,8 +145,10 @@ export interface ConfiguracaoDeIa {
   readonly adaptador: AdaptadorDeIa
   /** Só com `openai_compat`. */
   readonly modelo?: ConfiguracaoDoModelo
-  /** Prazo de cada chamada ao modelo. */
-  readonly timeoutMs: number
+  /** O prazo de cada chamada ao modelo, por perfil: cobre a chamada e a repetição, e o disjuntor conta quem o estoura. */
+  readonly prazosMs: Readonly<Record<Perfil, number>>
+  /** Espera antes da única repetição em 429 e conexão recusada (regra 30, item 8): cabe no menor prazo. */
+  readonly recuoMs: number
   readonly executor: ConfiguracaoDoExecutor
   /** Só do adaptador falso: a espera simulada de cada chamada (`IA_LATENCIA_FALSA_MS`). Ausente é sem espera. */
   readonly latenciaFalsaMs?: number
@@ -148,7 +158,8 @@ export function lerConfiguracaoDeIa(ambiente: Record<string, string | undefined>
   const valores = validarAmbiente(esquemaAmbienteDeIa, ambiente)
   const base = {
     adaptador: valores.IA_ADAPTADOR,
-    timeoutMs: valores.LLM_TIMEOUT_MS,
+    prazosMs: { rapido: valores.LLM_TIMEOUT_MS_RAPIDO, padrao: valores.LLM_TIMEOUT_MS_PADRAO, complexo: valores.LLM_TIMEOUT_MS, visao: valores.LLM_TIMEOUT_MS },
+    recuoMs: valores.LLM_RECUO_MS,
     executor: { vagasPorEscola: valores.IA_EXECUCOES_POR_ESCOLA, vagasNoTotal: valores.IA_EXECUCOES_TOTAL, timeoutMs: valores.IA_EXECUCAO_TIMEOUT_MS },
     ...(valores.IA_LATENCIA_FALSA_MS > 0 ? { latenciaFalsaMs: valores.IA_LATENCIA_FALSA_MS } : {}),
   }
@@ -169,7 +180,6 @@ export function lerConfiguracaoDeIa(ambiente: Record<string, string | undefined>
       ...(valores.LLM_CHAVE_API === undefined ? {} : { chaveApi: valores.LLM_CHAVE_API }),
       processamentoLocal: valores.LLM_PROCESSAMENTO_LOCAL === 'true',
       ...(valores.IA_PROVEDOR_ID === undefined ? {} : { provedorId: valores.IA_PROVEDOR_ID }),
-      recuoMs: valores.LLM_RECUO_MS,
     },
   }
 }

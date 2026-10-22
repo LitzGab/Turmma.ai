@@ -8,9 +8,9 @@ import { ErroDeDominio } from '../erro/erro-de-dominio.js'
  * mensagem do `fetch`) nunca sai da camada: ele pode repetir o prompt, e o prompt do Tutor é texto de aluno.
  */
 export const CODIGOS_DE_ERRO_DE_IA = [
-  /** O provedor não respondeu, recusou (429) ou falhou (5xx), mesmo depois da repetição. */
+  /** O provedor não respondeu, recusou (429, mesmo depois da única repetição), falhou (5xx) ou está com o disjuntor aberto. */
   CodigoDeErro.IA_INDISPONIVEL,
-  /** A chamada passou do prazo (`LLM_TIMEOUT_MS`) ou a execução passou do dela. */
+  /** A chamada passou do prazo do perfil (`LLM_TIMEOUT_MS`, `_RAPIDO` ou `_PADRAO`) ou a execução passou do dela. */
   CodigoDeErro.IA_TEMPO_ESGOTADO,
   /** A saída não passou no schema ou na conferência da tarefa, nem depois da repetição. */
   CodigoDeErro.IA_SAIDA_INVALIDA,
@@ -38,5 +38,30 @@ export class ErroDeIa extends ErroDeDominio {
     super(codigoDeIa, undefined, tenteDeNovoEmSegundos)
     this.name = 'ErroDeIa'
     this.codigoDeIa = codigoDeIa
+  }
+}
+
+/**
+ * Como a chamada ao provedor falhou, do jeito que a resiliência decide o que fazer (`adaptador-resiliente.ts`):
+ * - `limite`: 429. O provedor não cobrou; repete-se uma vez, e não pesa no disjuntor.
+ * - `recusada`: conexão recusada (`ECONNREFUSED`). A chamada nem chegou; repete-se uma vez, e pesa no disjuntor.
+ * - `servidor`: 5xx, rede que caiu no meio, resposta que não é do padrão. Pode ter cobrado: não se repete, e pesa.
+ * - `tempo`: o prazo acabou. Pode ter cobrado: não se repete, e pesa.
+ * - `rejeitada`: outro 4xx. O pedido ou a configuração está errada e repetir daria o mesmo: não se repete e não pesa.
+ */
+export type FalhaDoProvedor = 'limite' | 'recusada' | 'servidor' | 'tempo' | 'rejeitada'
+
+/**
+ * O erro que o adaptador do provedor lança: um `ErroDeIa` que diz também **por que** falhou. Continua sem texto livre,
+ * e por isso o corpo do provedor, que pode repetir o prompt, não tem como sair dele. A camada de resiliência o troca por
+ * um `ErroDeIa` simples antes de devolver, e quem está acima dela não conhece o `falha`.
+ */
+export class ErroDoProvedor extends ErroDeIa {
+  constructor(
+    readonly falha: FalhaDoProvedor,
+    tenteDeNovoEmSegundos?: number,
+  ) {
+    super(falha === 'tempo' ? 'IA_TEMPO_ESGOTADO' : 'IA_INDISPONIVEL', tenteDeNovoEmSegundos)
+    this.name = 'ErroDoProvedor'
   }
 }

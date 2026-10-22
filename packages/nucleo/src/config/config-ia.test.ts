@@ -21,6 +21,7 @@ const LOCAL = { AMBIENTE: 'local' }
 /** Fora da nossa rede (o padrão) o provedor tem de ter id; o teste que prova a exigência o tira. */
 const LLAMA = { ...LOCAL, IA_ADAPTADOR: 'openai_compat', LLM_BASE_URL: 'http://127.0.0.1:8080/v1', LLM_MODELO: 'qwen3-8b', IA_PROVEDOR_ID: 'provedor-de-teste' }
 const SEM_PROVEDOR = { IA_PROVEDOR_ID: undefined }
+const PRAZOS_PADRAO = { rapido: 20_000, padrao: 60_000, complexo: 60_000, visao: 60_000 }
 
 function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInvalida {
   try {
@@ -34,7 +35,15 @@ function erroDe(ambiente: Record<string, string | undefined>): ConfiguracaoInval
 
 describe('lerConfiguracaoDeIa', () => {
   it('sem nenhuma variável de IA, sobe com o adaptador falso: nada novo é obrigatório', () => {
-    expect(lerConfiguracaoDeIa(LOCAL)).toEqual({ adaptador: 'falso', timeoutMs: 60_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 150_000 } })
+    expect(lerConfiguracaoDeIa(LOCAL)).toEqual({ adaptador: 'falso', prazosMs: PRAZOS_PADRAO, recuoMs: 500, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 150_000 } })
+  })
+
+  it('o prazo de cada perfil: 20 s no `rapido`, 60 s no `padrao`, e o `LLM_TIMEOUT_MS` nos que não têm o seu', () => {
+    expect(lerConfiguracaoDeIa(LOCAL).prazosMs).toEqual({ rapido: 20_000, padrao: 60_000, complexo: 60_000, visao: 60_000 })
+    // Um valor para cada variável: trocar uma pela outra, ou esquecer uma, muda o que sai.
+    const ambiente = { ...LOCAL, LLM_TIMEOUT_MS: '45000', LLM_TIMEOUT_MS_RAPIDO: '15000', LLM_TIMEOUT_MS_PADRAO: '90000' }
+    expect(lerConfiguracaoDeIa(ambiente).prazosMs).toEqual({ rapido: 15_000, padrao: 90_000, complexo: 45_000, visao: 45_000 })
+    expect(lerConfiguracaoDeIa({ ...ambiente, LLM_TIMEOUT_MS_RAPIDO: '', LLM_TIMEOUT_MS_PADRAO: '' }).prazosMs).toEqual({ rapido: 20_000, padrao: 60_000, complexo: 45_000, visao: 45_000 })
   })
 
   it('variável vazia, como o compose entrega a que não tem valor, vale como ausente', () => {
@@ -63,21 +72,28 @@ describe('lerConfiguracaoDeIa', () => {
   it('o modelo local: endereço, um id comum para os quatro perfis e processamento local declarado', () => {
     expect(lerConfiguracaoDeIa({ ...LLAMA, ...SEM_PROVEDOR, LLM_PROCESSAMENTO_LOCAL: 'true', LLM_TIMEOUT_MS: '45000' })).toEqual({
       adaptador: 'openai_compat',
-      timeoutMs: 45_000,
+      prazosMs: { rapido: 20_000, padrao: 60_000, complexo: 45_000, visao: 45_000 },
+      recuoMs: 500,
       executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 150_000 },
       modelo: {
         baseUrl: 'http://127.0.0.1:8080/v1',
         modelos: { rapido: 'qwen3-8b', padrao: 'qwen3-8b', complexo: 'qwen3-8b', visao: 'qwen3-8b' },
         processamentoLocal: true,
-        recuoMs: 500,
       },
     })
   })
 
-  it('o recuo da repetição em 429 e 5xx é configurável e precisa caber no prazo da chamada', () => {
-    expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_RECUO_MS: '1500' }).modelo?.recuoMs).toBe(1_500)
-    expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_RECUO_MS: '0' }).modelo?.recuoMs).toBe(0)
+  it('o recuo da repetição em 429 e conexão recusada é configurável e precisa caber no prazo da chamada, de todo perfil', () => {
+    expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_RECUO_MS: '1500' }).recuoMs).toBe(1_500)
+    expect(lerConfiguracaoDeIa({ ...LLAMA, LLM_RECUO_MS: '0' }).recuoMs).toBe(0)
     expect(erroDe({ ...LLAMA, LLM_RECUO_MS: '60000', LLM_TIMEOUT_MS: '60000' })).toMatchObject({ variaveis: ['LLM_RECUO_MS'], motivos: [MOTIVO_RECUO_MAIOR_QUE_O_PRAZO] })
+    // O menor prazo manda, qualquer que seja o perfil dele: um caso para cada variável de prazo, no limite e logo abaixo.
+    const prazos = ['LLM_TIMEOUT_MS', 'LLM_TIMEOUT_MS_RAPIDO', 'LLM_TIMEOUT_MS_PADRAO'] as const
+    for (const variavel of prazos) {
+      const outros = Object.fromEntries(prazos.filter((outro) => outro !== variavel).map((outro) => [outro, '90000']))
+      expect(erroDe({ ...LLAMA, ...outros, [variavel]: '4000', LLM_RECUO_MS: '4000', IA_EXECUCAO_TIMEOUT_MS: '200000' }), variavel).toMatchObject({ variaveis: ['LLM_RECUO_MS'], motivos: [MOTIVO_RECUO_MAIOR_QUE_O_PRAZO] })
+      expect(lerConfiguracaoDeIa({ ...LLAMA, ...outros, [variavel]: '4000', LLM_RECUO_MS: '3999', IA_EXECUCAO_TIMEOUT_MS: '200000' }).recuoMs, variavel).toBe(3_999)
+    }
   })
 
   it('o id por perfil vence o comum, e só o perfil declarado muda', () => {
@@ -180,8 +196,13 @@ describe('lerConfiguracaoDeIa', () => {
     expect(`${erro.message} ${JSON.stringify(erro.motivos)}`).not.toContain(chave)
   })
 
-  it('o prazo da execução precisa ser maior que o da chamada, e uma escola não pode ter mais vagas que o total', () => {
+  it('o prazo da execução precisa ser maior que o da chamada, de todo perfil, e uma escola não pode ter mais vagas que o total', () => {
     expect(erroDe({ ...LOCAL, LLM_TIMEOUT_MS: '60000', IA_EXECUCAO_TIMEOUT_MS: '60000' })).toMatchObject({ variaveis: ['IA_EXECUCAO_TIMEOUT_MS'], motivos: [MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA] })
+    // O maior prazo manda, qualquer que seja o perfil dele: o `rapido` e o `padrao` também seguram a execução.
+    for (const variavel of ['LLM_TIMEOUT_MS_RAPIDO', 'LLM_TIMEOUT_MS_PADRAO']) {
+      expect(erroDe({ ...LOCAL, [variavel]: '150000', IA_EXECUCAO_TIMEOUT_MS: '150000' }), variavel).toMatchObject({ variaveis: ['IA_EXECUCAO_TIMEOUT_MS'], motivos: [MOTIVO_EXECUCAO_MAIS_CURTA_QUE_A_CHAMADA] })
+      expect(lerConfiguracaoDeIa({ ...LOCAL, [variavel]: '149999', IA_EXECUCAO_TIMEOUT_MS: '150000' }).executor.timeoutMs, variavel).toBe(150_000)
+    }
     expect(erroDe({ ...LOCAL, IA_EXECUCOES_POR_ESCOLA: '9', IA_EXECUCOES_TOTAL: '8' })).toMatchObject({ variaveis: ['IA_EXECUCOES_POR_ESCOLA'], motivos: [MOTIVO_VAGAS_DE_IA_INCOERENTES] })
     expect(lerConfiguracaoDeIa({ ...LOCAL, IA_EXECUCOES_POR_ESCOLA: '3', IA_EXECUCOES_TOTAL: '12', IA_EXECUCAO_TIMEOUT_MS: '90000' }).executor).toEqual({ vagasPorEscola: 3, vagasNoTotal: 12, timeoutMs: 90_000 })
   })
@@ -195,7 +216,7 @@ describe('lerConfiguracaoDeIa', () => {
     expect(erroDe({ ...LOCAL, IA_LATENCIA_FALSA_MS: '-1' }).variaveis).toEqual(['IA_LATENCIA_FALSA_MS'])
     expect(erroDe({ ...LOCAL, IA_LATENCIA_FALSA_MS: '60001' }).variaveis).toEqual(['IA_LATENCIA_FALSA_MS'])
     // Com o prazo da chamada maior que o teto, é o teto da variável (60 s) que recusa, e não a comparação com o prazo.
-    const comPrazoLongo = { ...LOCAL, LLM_TIMEOUT_MS: '120000', IA_EXECUCAO_TIMEOUT_MS: '300000' }
+    const comPrazoLongo = { ...LOCAL, LLM_TIMEOUT_MS: '120000', LLM_TIMEOUT_MS_RAPIDO: '120000', LLM_TIMEOUT_MS_PADRAO: '120000', IA_EXECUCAO_TIMEOUT_MS: '300000' }
     expect(lerConfiguracaoDeIa({ ...comPrazoLongo, IA_LATENCIA_FALSA_MS: '60000' }).latenciaFalsaMs).toBe(60_000)
     expect(erroDe({ ...comPrazoLongo, IA_LATENCIA_FALSA_MS: '60001' }).variaveis).toEqual(['IA_LATENCIA_FALSA_MS'])
     expect(erroDe({ ...LOCAL, LLM_TIMEOUT_MS: '5000', IA_LATENCIA_FALSA_MS: '5000' })).toMatchObject({
@@ -205,9 +226,24 @@ describe('lerConfiguracaoDeIa', () => {
     expect(lerConfiguracaoDeIa({ ...LOCAL, LLM_TIMEOUT_MS: '5000', IA_LATENCIA_FALSA_MS: '4999' }).latenciaFalsaMs).toBe(4_999)
   })
 
+  it('a latência simulada cabe no prazo de cada perfil, e não só no global: o `rapido` e o `padrao` têm o seu', () => {
+    // Com o prazo padrão de 20 s no `rapido`, 20 s de latência estourariam toda chamada do Tutor ao adaptador falso.
+    expect(erroDe({ ...LOCAL, IA_LATENCIA_FALSA_MS: '20000' })).toMatchObject({ variaveis: ['IA_LATENCIA_FALSA_MS'], motivos: [MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO] })
+    expect(lerConfiguracaoDeIa({ ...LOCAL, IA_LATENCIA_FALSA_MS: '19999' }).latenciaFalsaMs).toBe(19_999)
+    expect(erroDe({ ...LOCAL, LLM_TIMEOUT_MS_PADRAO: '5000', IA_LATENCIA_FALSA_MS: '5000' })).toMatchObject({ variaveis: ['IA_LATENCIA_FALSA_MS'], motivos: [MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO] })
+    expect(lerConfiguracaoDeIa({ ...LOCAL, LLM_TIMEOUT_MS_PADRAO: '5000', IA_LATENCIA_FALSA_MS: '4999' }).latenciaFalsaMs).toBe(4_999)
+    expect(erroDe({ ...LOCAL, LLM_TIMEOUT_MS_RAPIDO: '5000', IA_LATENCIA_FALSA_MS: '5000' })).toMatchObject({ variaveis: ['IA_LATENCIA_FALSA_MS'], motivos: [MOTIVO_LATENCIA_FALSA_MAIOR_QUE_O_PRAZO] })
+    expect(lerConfiguracaoDeIa({ ...LOCAL, LLM_TIMEOUT_MS_RAPIDO: '5000', IA_LATENCIA_FALSA_MS: '4999' }).latenciaFalsaMs).toBe(4_999)
+  })
+
   it.each([
     ['IA_ADAPTADOR', 'ollama'],
     ['LLM_TIMEOUT_MS', '0'],
+    ['LLM_TIMEOUT_MS_RAPIDO', '999'],
+    ['LLM_TIMEOUT_MS_RAPIDO', '600001'],
+    ['LLM_TIMEOUT_MS_PADRAO', '0'],
+    ['LLM_TIMEOUT_MS_PADRAO', '600001'],
+    ['LLM_TIMEOUT_MS_PADRAO', 'um minuto'],
     ['LLM_PROCESSAMENTO_LOCAL', 'sim'],
     ['IA_EXECUCOES_POR_ESCOLA', '0'],
     ['IA_EXECUCAO_TIMEOUT_MS', 'dois minutos'],

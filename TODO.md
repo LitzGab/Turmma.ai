@@ -1667,3 +1667,5 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X5, 97.0) Os dois testes do build de `apps/web/nome-dos-chunks.test.ts` (`describe` "o build de verdade da web", dos
   casos B2 e "as áreas da escola") usam o prazo padrão de 5000 ms** e estouraram com a máquina cheia, antes e depois da
   tarefa: prazo explícito no `it` na próxima tarefa que tocar o arquivo (`test-engineer`, 97.0, 1ª rodada)
+- [ ] **(X5, 48.0) O meio-aberto fecha o disjuntor com o provedor ainda fora:** no `AdaptadorResiliente`, a chamada de teste que sai como `ChamadaCancelada`, 429 ou outro 4xx conta como sucesso e fecha o disjuntor, mesmo sem prova de que o provedor voltou. Muda comportamento: pede teste e linha em "Divergências"; a dona do disjuntor é a 49.0 (`infra-guardian`, 48.0, 1ª rodada).
+- [ ] **(X5, 48.0) Cenário de carga « provedor recusando por limite no meio da aula »:** falta em `infra/test/carga.test.ts` o caso com o adaptador falso devolvendo 429 enquanto a escola usa o Tutor; cabe na 47.0 ou na 49.0 (`infra-guardian`, 48.0, 1ª rodada).

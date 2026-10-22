@@ -31,7 +31,7 @@ import {
 
 function montar(adaptador: AdaptadorDeModelo = new AdaptadorFalso()): { ia: ProvedorDeIa; consumo: ConsumoEmMemoria } {
   const consumo = new ConsumoEmMemoria()
-  return { ia: comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 })), consumo }
+  return { ia: comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria() })), consumo }
 }
 
 async function turno(entrada: EntradaDoTutor, adaptador?: AdaptadorDeModelo): Promise<SaidaDoTutor> {
