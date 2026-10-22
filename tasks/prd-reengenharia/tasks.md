@@ -196,10 +196,10 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 
 ### Camadas e lint
 
-- [ ] **9.0 — Importar tabela fora de repository reprova o lint**
-  - [ ] 9.1 `tools/guardas/tabelas-do-nucleo.mjs`: a lista dos nomes de tabela exportados por `@educa/nucleo`
-  - [ ] 9.2 A regra, em `tools/guardas/regras-tenant.mjs`, registrada em `index.mjs` e em `REGRAS_DAS_GUARDAS`, cobrindo import, alias, reexport e namespace
-  - [ ] 9.3 Testes: um `describe` em `tools/guardas/guardas.test.ts` com as fixtures, e o teste da lista contra as exportações `PgTable`
+- [x] **9.0 — Importar tabela fora de repository reprova o lint**
+  - [x] 9.1 `tools/guardas/tabelas-do-nucleo.mjs`: a lista dos nomes de tabela exportados por `@educa/nucleo`
+  - [x] 9.2 A regra, em `tools/guardas/regras-tenant.mjs`, registrada em `index.mjs` e em `REGRAS_DAS_GUARDAS`, cobrindo import, alias, reexport e namespace
+  - [x] 9.3 Testes: um `describe` em `tools/guardas/guardas.test.ts` com as fixtures, e o teste da lista contra as exportações `PgTable`
 
 - [ ] **10.0 — O ciclo do operador e a dependência `sessao` → `operacao` somem**
   - [ ] 10.1 `SessaoDeOperadorParaGuarda` e `SessaoDeOperadorParaRenovar` passam a morar em `operacao/prazos-da-sessao.ts`, e o repository os importa de lá

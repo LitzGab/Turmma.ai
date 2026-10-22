@@ -1675,3 +1675,7 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X5, 97.0) Os dois testes do build de `apps/web/nome-dos-chunks.test.ts` (`describe` "o build de verdade da web", dos
   casos B2 e "as áreas da escola") usam o prazo padrão de 5000 ms** e estouraram com a máquina cheia, antes e depois da
   tarefa: prazo explícito no `it` na próxima tarefa que tocar o arquivo (`test-engineer`, 97.0, 1ª rodada)
+- [ ] **(X5, 9.0) Helper de teste que não termina em `.test.ts` e importa tabela do núcleo:** a guarda `tabela-so-no-repository`
+  usa `ARQUIVOS_DE_TESTE` (`**/*.test.{ts,tsx}`, `e2e/**/*.spec.ts`) como exceção, então um helper em `apps/api/test/` ou
+  `e2e/__fixtures__/` que importe tabela seria reprovado. Hoje nenhum importa. Fixar o lado, com um caso para cada um, muda o
+  que as outras guardas de teste enxergam: decidir quando o primeiro helper precisar (`test-engineer`, 9.0, 1ª rodada)

@@ -2,6 +2,7 @@ import comentarios from '@eslint-community/eslint-plugin-eslint-comments'
 import { logSemConteudoMontado, logSemDadoPessoal } from './regras-log.mjs'
 import { MENSAGEM_SDK_DE_IA, PASTA_DOS_ADAPTADORES, REGEX_SDK_DE_IA, sdkDeIaSoNoAdaptador } from './regras-ia.mjs'
 import { esperarServicoDoCompose, testeSemDesligar } from './regras-teste.mjs'
+import { tabelaSoNoRepository } from './regras-tenant.mjs'
 
 /**
  * Guardas da esteira (RF11): o que as regras 20 e 30 proíbem reprova no lint, sem depender de
@@ -16,13 +17,16 @@ export const guardas = {
     'sdk-de-ia-so-no-adaptador': sdkDeIaSoNoAdaptador,
     'esperar-servico-do-compose': esperarServicoDoCompose,
     'teste-sem-desligar': testeSemDesligar,
+    'tabela-so-no-repository': tabelaSoNoRepository,
   },
 }
 
 export const REGRAS_DE_LOG = ['guardas/log-sem-dado-pessoal', 'guardas/log-sem-conteudo-montado']
 export const REGRAS_DE_SDK_DE_IA = ['@typescript-eslint/no-restricted-imports', 'guardas/sdk-de-ia-so-no-adaptador']
+/** A tabela do schema só aparece no repository, onde o escopo de tenant é aplicado (regra 00, item 3; regra 10, item 3). */
+export const REGRAS_DE_TENANT = ['guardas/tabela-so-no-repository']
 /** Guardas que valem em todo arquivo do repositório. */
-export const REGRAS_EM_TODO_ARQUIVO = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA]
+export const REGRAS_EM_TODO_ARQUIVO = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA, ...REGRAS_DE_TENANT]
 export const REGRAS_DE_TESTE = ['guardas/esperar-servico-do-compose', 'guardas/teste-sem-desligar']
 /**
  * O `no-restricted-syntax` do ESLint, com os seletores em `eslint.config.mjs`, serve a dois blocos: a entrada do
@@ -41,7 +45,14 @@ export const ARQUIVOS_DE_TESTE = ['**/*.test.{ts,tsx}', 'e2e/**/*.spec.ts']
  * (o mesmo seletor-regra serve ao controller e ao kit) e por isso não se repete aqui.
  */
 export const REGRAS_DO_KIT = ['no-restricted-imports']
-export const REGRAS_DAS_GUARDAS = [...REGRAS_DE_LOG, ...REGRAS_DE_SDK_DE_IA, ...REGRAS_DE_TESTE, ...REGRAS_DE_ENTRADA, ...REGRAS_DO_KIT]
+export const REGRAS_DAS_GUARDAS = [
+  ...REGRAS_DE_LOG,
+  ...REGRAS_DE_SDK_DE_IA,
+  ...REGRAS_DE_TENANT,
+  ...REGRAS_DE_TESTE,
+  ...REGRAS_DE_ENTRADA,
+  ...REGRAS_DO_KIT,
+]
 
 const TODOS_OS_ARQUIVOS = ['**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}']
 
@@ -54,6 +65,26 @@ export const EXCECOES_DAS_GUARDAS = [
     // O adaptador é o único lugar onde o SDK do provedor existe (regra 30, item 1).
     files: [PASTA_DOS_ADAPTADORES],
     regras: REGRAS_DE_SDK_DE_IA,
+  },
+  {
+    // A tabela é do repository, onde o escopo de tenant é aplicado a partir do token (regra 00, item 3; regra 10, item 3).
+    files: ['**/*.repository.ts'],
+    regras: REGRAS_DE_TENANT,
+  },
+  {
+    // Teste monta e confere o estado direto na tabela; o código que ele prova é que não pode.
+    files: ARQUIVOS_DE_TESTE,
+    regras: REGRAS_DE_TENANT,
+  },
+  {
+    // O schema e a camada do banco do núcleo são onde a tabela nasce.
+    files: ['packages/nucleo/src/db/**'],
+    regras: REGRAS_DE_TENANT,
+  },
+  {
+    // A guarda de tabela nomeia o pacote que procura: o texto `@educa/nucleo` dela não carrega nada.
+    files: ['tools/guardas/regras-tenant.mjs'],
+    regras: REGRAS_DE_TENANT,
   },
   {
     // O teste do redact precisa entregar chave pessoal ao logger para provar que ela sai removida.
@@ -76,6 +107,7 @@ export const configuracaoDasGuardas = [
       'guardas/log-sem-dado-pessoal': 'error',
       'guardas/log-sem-conteudo-montado': 'error',
       'guardas/sdk-de-ia-so-no-adaptador': 'error',
+      'guardas/tabela-so-no-repository': 'error',
       '@typescript-eslint/no-restricted-imports': [
         'error',
         { patterns: [{ regex: REGEX_SDK_DE_IA, message: MENSAGEM_SDK_DE_IA }] },
