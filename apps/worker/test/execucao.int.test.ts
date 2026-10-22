@@ -550,11 +550,11 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
   })
   describe('dependência fora e desligamento', () => {
     /** Publica como o despachante, com as opções de retentativa de verdade, ou com mais tentativas. */
-    async function publicado(tentativas = 5): Promise<string> {
-      const id = await bancada.enfileirar(ESCOLA_A)
-      await bancada.reservar(ESCOLA_A)
-      await bancada.fila.add('sintetico', { escolaId: ESCOLA_A, requisicaoId: null }, { ...opcoesDeJob(TIPO_JOB_SINTETICO), attempts: tentativas, jobId: id })
-      await executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => bancada.despacho.marcarPublicados([id]))
+    async function publicado(tentativas = 5, escolaId = ESCOLA_A): Promise<string> {
+      const id = await bancada.enfileirar(escolaId)
+      await bancada.reservar(escolaId)
+      await bancada.fila.add('sintetico', { escolaId, requisicaoId: null }, { ...opcoesDeJob(TIPO_JOB_SINTETICO), attempts: tentativas, jobId: id })
+      await executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => bancada.despacho.marcarPublicados([id]))
       return id
     }
 
@@ -600,8 +600,8 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
       }
     }, 60_000)
 
-    it('SIGTERM com job que passa da graça: o encerramento força a saída no prazo, sem marcar falha, e o job segue na fila para outra réplica', async () => {
-      const id = await publicado()
+    it('SIGTERM com job que passa da graça e tentativas sobrando: o encerramento força a saída no prazo, sem marcar falha, e o job segue na fila para outra réplica', async () => {
+      const id = await publicado(5)
       const logWorker = new LogEmMemoria('worker')
       const graca = 1_000
       // Um job que não termina: só a graça encerra o worker.
@@ -620,6 +620,44 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
       expect(await bancada.estado(id)).toEqual({ estado: 'ativo', escolaId: ESCOLA_A, codigoFalha: null })
       expect(await (await bancada.fila.getJob(id))?.getState()).toBe('active')
       expect(logWorker.doEvento('job.falhou')).toEqual([])
+      // A vaga fica com o job: quem o retomar a confirma, e a escola não ganha um lugar que o job ainda ocupa.
+      expect(await bancada.vagas.membros('interativa', ESCOLA_A)).toEqual([id])
+    })
+
+    it('SIGTERM com job na última tentativa além da graça: a linha termina falhou/EXECUCAO_INTERROMPIDA, a vaga sai, e a réplica que retoma o job pelo stalled não o executa', async () => {
+      const id = await publicado(1)
+      const logWorker = new LogEmMemoria('worker')
+      const montado = bancada.worker(logWorker, { graca: 1_000, processadores: { sintetico: () => new Promise<void>(() => undefined) } })
+      await aguardarEstado(bancada, id, 'ativo')
+      expect(await bancada.vagas.membros('interativa', ESCOLA_A)).toEqual([id])
+
+      await montado.encerrar()
+      expect(await bancada.estado(id)).toEqual({ estado: 'falhou', escolaId: ESCOLA_A, codigoFalha: CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA })
+      expect(await bancada.vagas.membros('interativa', ESCOLA_A)).toEqual([])
+      expect(logWorker.doEvento('job.falhou')).toEqual([expect.objectContaining({ jobId: id, codigo: CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA })])
+
+      // O lock do job que ficou na fila vence (10 s) e o stalled de outra réplica o devolve: ela vê a linha final e não o executa.
+      const logSobrevivente = new LogEmMemoria('worker')
+      const executados: string[] = []
+      bancada.worker(logSobrevivente, { processadores: { sintetico: (_dados, execucao) => (executados.push(execucao.jobId), Promise.resolve()) } })
+      await expect.poll(async () => (await bancada.fila.getJob(id))?.getState(), { timeout: 45_000, interval: 500 }).toBe('completed')
+      expect(executados).toEqual([])
+      expect(logSobrevivente.doEvento('job.ja_finalizado')).toEqual([expect.objectContaining({ jobId: id })])
+      expect(await bancada.estado(id)).toEqual({ estado: 'falhou', escolaId: ESCOLA_A, codigoFalha: CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA })
+    }, 90_000)
+
+    it('SIGTERM com duas escolas na última tentativa: cada falha grava só a linha da própria escola, e cada vaga sai da própria escola', async () => {
+      const [idA, idB] = [await publicado(1, ESCOLA_A), await publicado(1, ESCOLA_B)]
+      const logWorker = new LogEmMemoria('worker')
+      const montado = bancada.worker(logWorker, { graca: 1_000, processadores: { sintetico: () => new Promise<void>(() => undefined) } })
+      await aguardarEstado(bancada, idA, 'ativo')
+      await aguardarEstado(bancada, idB, 'ativo')
+
+      await montado.encerrar()
+      expect(await bancada.estado(idA)).toEqual({ estado: 'falhou', escolaId: ESCOLA_A, codigoFalha: CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA })
+      expect(await bancada.estado(idB)).toEqual({ estado: 'falhou', escolaId: ESCOLA_B, codigoFalha: CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA })
+      expect(await bancada.vagas.membros('interativa', ESCOLA_A)).toEqual([])
+      expect(await bancada.vagas.membros('interativa', ESCOLA_B)).toEqual([])
     })
   })
 })

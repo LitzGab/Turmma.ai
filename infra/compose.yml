@@ -338,7 +338,7 @@ services:
 
   # Workers por prioridade, duas réplicas de cada, com pools separados: o worker-interativo atende as
   # filas interativa e normal, e o worker-lote só a de lote, então lote nenhum ocupa a vez de um
-  # interativo. No SIGTERM, cada worker espera os jobs em andamento por até 30 s; morto no meio
+  # interativo. No SIGTERM, cada worker espera os jobs em andamento por até 20 s; morto no meio
   # (kill -9), o lock do job vence e a outra réplica o retoma pelo stalled do BullMQ.
   worker-interativo-1: &worker-interativo
     image: educa-worker:local
@@ -372,8 +372,9 @@ services:
       # Métricas OTLP para a observabilidade local. Sem depends_on: fora do ar, perde-se a métrica, e só.
       TELEMETRIA_OTLP_URL: http://observabilidade:4318
       TELEMETRIA_INTERVALO_MS: ${TELEMETRIA_INTERVALO_MS:?defina TELEMETRIA_INTERVALO_MS}
-    # Acima dos 30 s de graça do worker.close(): o Docker só manda SIGKILL depois dela.
-    stop_grace_period: 35s
+    # Acima dos 20 s de graça do worker.close() (`GRACA_DO_DESLIGAMENTO_MS`, com a folga de `interromper()` e do fim do processo): o
+    # Docker só manda SIGKILL depois dela. Um teste liga os dois (`apps/worker/src/desligamento.test.ts`).
+    stop_grace_period: 25s
     depends_on:
       migrar:
         condition: service_completed_successfully

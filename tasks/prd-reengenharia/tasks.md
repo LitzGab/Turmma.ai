@@ -169,7 +169,7 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 
 ### Resiliência
 
-- [ ] **43.0 — Job estourado dá `TEMPO_ESGOTADO`**
+- [x] **43.0 — Job estourado dá `TEMPO_ESGOTADO`**
   - [ ] 43.1 O `43_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-3b.md`
 
 - [x] **44.0 — Falha final alerta e fica 30 dias; o pedido do titular, até a ação**

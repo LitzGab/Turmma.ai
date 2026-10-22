@@ -33,7 +33,11 @@ export interface ExecucaoDoJob {
   readonly tentativa: number
   /** Igual ao id do job em toda tentativa, em toda reentrega pelo stalled e em toda republicação pela reconciliação. */
   readonly chaveIdempotencia: string
-  /** O prazo de uma tentativa, da definição do tipo (`DEFINICOES_DE_JOB`). O worker só o entrega: aplicá-lo é da onda 3 (43.0). */
+  /**
+   * O prazo de uma tentativa, da definição do tipo (`DEFINICOES_DE_JOB`). O executor corta a tentativa nele: aborta o `sinal`,
+   * falha com `TEMPO_ESGOTADO` e libera a vaga. O processador que ignora o `sinal` segue rodando depois do corte, e só a
+   * idempotência o protege (D49).
+   */
   readonly prazoMs: number
 }
 
@@ -41,8 +45,12 @@ export interface ExecucaoDoJob {
  * Processa os dados de um tipo de job, lidos do Postgres e validados pelo esquema estrito do tipo (`DEFINICOES_DE_JOB`), no
  * contexto da escola do job. O tipo de `dados` é o da definição: ler campo que ela não tem não compila. Precisa tolerar
  * reexecução: pode rodar de novo depois de ter gravado o efeito, e até ao mesmo tempo que outra execução.
+ *
+ * O `sinal` aborta quando a tentativa passa do `prazoMs` ou quando o worker é desligado além da graça; o executor sempre o
+ * entrega, e é opcional só para o teste que chama o processador direto. Trabalho que pode durar passa o `sinal` adiante e
+ * para quando ele aborta; o que não o escuta continua depois do corte e depende de ser idempotente.
  */
-export type Processador<Tipo extends TipoDeJob = TipoDeJob> = (dados: DadosLidosDoJob<Tipo>, execucao: ExecucaoDoJob) => Promise<void>
+export type Processador<Tipo extends TipoDeJob = TipoDeJob> = (dados: DadosLidosDoJob<Tipo>, execucao: ExecucaoDoJob, sinal?: AbortSignal) => Promise<void>
 
 /** Os processadores de uma réplica, um por tipo: o de cada chave recebe os dados do tipo dela. */
 export type ProcessadoresDeJob = { readonly [Tipo in TipoDeJob]?: Processador<Tipo> }
@@ -52,7 +60,7 @@ export type ProcessadoresDeJob = { readonly [Tipo in TipoDeJob]?: Processador<Ti
  * `ProcessadoresDeJob`: este é o único ponto sem prova de tipo, e o que o protege é o executor passar a ele só o que o esquema
  * do mesmo tipo leu.
  */
-type ProcessadorSemTipo = (dados: never, execucao: ExecucaoDoJob) => Promise<void>
+type ProcessadorSemTipo = (dados: never, execucao: ExecucaoDoJob, sinal: AbortSignal) => Promise<void>
 
 export type JobDaFila = Pick<Job, 'id' | 'data' | 'attemptsMade' | 'opts' | 'moveToDelayed'>
 
@@ -118,6 +126,31 @@ interface VagaDoJob {
   jobId: string
 }
 
+/**
+ * A tentativa que roda agora neste worker. `interromper` (o SIGTERM além da graça) percorre o conjunto delas: o `controle` aborta o
+ * processador, o `contexto` é o da escola do job (a falha grava só a linha dela) e `ultimaTentativa` diz se há outra para repetir.
+ */
+interface TentativaEmAndamento {
+  readonly vaga: VagaDoJob
+  readonly contexto: ContextoDaRequisicao
+  readonly controle: AbortController
+  readonly ultimaTentativa: boolean
+  /** O `interromper` já tratou esta tentativa: o que o processador devolver depois não é falha dele nem mexe na vaga. */
+  interrompida: boolean
+}
+
+/** A tentativa passou do `prazoMs` do tipo. Não é definitiva: segue a retentativa do tipo, e a vaga sai em toda tentativa estourada. */
+class TempoEsgotado extends FalhaDeJob {
+  constructor() {
+    super(CodigoDeFalhaDeJob.TEMPO_ESGOTADO)
+  }
+}
+
+/** A tentativa em curso é a última que a fila dá ao job (`attempts`, uma só quando a fila não diz). Quem decide a falha final e o desligamento usam a mesma conta. */
+function esgotouAsTentativas(job: JobDaFila): boolean {
+  return job.attemptsMade + 1 >= (job.opts.attempts ?? 1)
+}
+
 /** Erro que já saiu com a mensagem limpa (só o código) e pode ir para o Redis como está. */
 class ErroParaAFila extends Error {
   override readonly name = 'ErroParaAFila'
@@ -175,6 +208,7 @@ export class ExecutorDeJobs {
   readonly #intervaloRenovacaoMs: number
   readonly #definicoes: RegistroDeJobs
   readonly #processadores: Readonly<Record<string, ProcessadorSemTipo | undefined>>
+  readonly #emAndamento = new Set<TentativaEmAndamento>()
 
   constructor(private readonly dependencias: DependenciasDoExecutor) {
     this.#intervaloRenovacaoMs = dependencias.intervaloRenovacaoMs ?? INTERVALO_RENOVACAO_DA_VAGA_MS
@@ -196,7 +230,7 @@ export class ExecutorDeJobs {
       ...(dados.data.escolaId === null ? { rotinaDoSistema: true } : { escolaId: dados.data.escolaId }),
     }
     return executarNoContexto(contexto, () =>
-      this.executar(job, jobId, token).catch((erro: unknown) => {
+      this.executar(job, jobId, token, contexto).catch((erro: unknown) => {
         if (erro instanceof UnrecoverableError || erro instanceof ErroParaAFila || erro instanceof DelayedError) throw erro
         // Banco fora ao marcar o estado: a tentativa conta, e a mensagem original não vai ao Redis.
         logger.warn({ evento: 'job.estado_nao_gravado', jobId, erro: resumirErro(erro) })
@@ -205,7 +239,7 @@ export class ExecutorDeJobs {
     )
   }
 
-  private async executar(job: JobDaFila, jobId: string, token: string | undefined): Promise<void> {
+  private async executar(job: JobDaFila, jobId: string, token: string | undefined, contexto: ContextoDaRequisicao): Promise<void> {
     const { repositorio, logger } = this.dependencias
     const alvo = await repositorio.localizarParaExecucao(jobId)
     if (alvo === undefined) {
@@ -237,12 +271,21 @@ export class ExecutorDeJobs {
     this.dependencias.uso.marcar('jobs')
     logger.info({ evento: 'job.iniciado', jobId, tentativa })
     const renovacao = new RenovacaoDaVaga(() => this.renovarVaga(vaga), this.#intervaloRenovacaoMs)
+    const emAndamento: TentativaEmAndamento = { vaga, contexto, controle: new AbortController(), ultimaTentativa: esgotouAsTentativas(job), interrompida: false }
+    this.#emAndamento.add(emAndamento)
     try {
       try {
-        await this.rodarProcessador(inicio.tipo, inicio.dados, vaga, { jobId, tentativa, chaveIdempotencia: jobId })
+        // A tentativa deixa de ser interrompível assim que o processador termina: o `finally` roda antes de a continuação ver o desfecho,
+        // então o `interromper` não acha uma tentativa que está em `concluir` ou em `falhar` e não grava uma segunda falha sobre o desfecho dela.
+        await this.rodarProcessador(inicio.tipo, inicio.dados, vaga, { jobId, tentativa, chaveIdempotencia: jobId }, emAndamento.controle).finally(() => {
+          this.#emAndamento.delete(emAndamento)
+        })
       } catch (erro) {
+        // O `interromper` já gravou a falha da última tentativa e liberou a vaga; com tentativa sobrando, o job fica `ativo` para outra réplica (D49).
+        if (emAndamento.interrompida) throw new ErroParaAFila(CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA)
         const falha = await this.falhar(job, jobId, erro)
-        if (falha instanceof UnrecoverableError) {
+        // O estouro libera a vaga também quando a fila vai repetir: o processador que ignora o `sinal` não segura a escola.
+        if (falha instanceof UnrecoverableError || erro instanceof TempoEsgotado) {
           await renovacao.parar()
           await this.liberarVaga(vaga)
         }
@@ -263,8 +306,17 @@ export class ExecutorDeJobs {
    * definição contra a escola da linha, os dados contra o esquema estrito do tipo e o processador da réplica. Toda recusa é
    * definitiva e leva só o código: o `issues` do zod repete chave e valor, e iria ao log e ao Redis. O worker não confia
    * na gravação: a linha pode ter sido escrita por SQL, por uma versão antiga ou por quem não passou pelo `Enfileirador`.
+   *
+   * O processador roda contra o `prazoMs` da definição: passado ele, o `controle` aborta o `sinal` e a tentativa falha com
+   * `TEMPO_ESGOTADO`, sem esperar o processador. A rejeição que o processador der depois do corte é engolida.
    */
-  private async rodarProcessador(tipo: string, dados: unknown, { escolaId }: VagaDoJob, execucao: Omit<ExecucaoDoJob, 'prazoMs'>): Promise<void> {
+  private async rodarProcessador(
+    tipo: string,
+    dados: unknown,
+    { escolaId }: VagaDoJob,
+    execucao: Omit<ExecucaoDoJob, 'prazoMs'>,
+    controle: AbortController,
+  ): Promise<void> {
     const definicao = this.#definicoes[tipo]
     if (definicao === undefined) throw new FalhaDeJob(CodigoDeFalhaDeJob.TIPO_DESCONHECIDO, true)
     // A rotina do sistema não tem escola, e o job de escola sempre tem: a linha com o outro arranjo (`sistema.*` com escola, por SQL) não roda.
@@ -274,7 +326,54 @@ export class ExecutorDeJobs {
     const processador = this.#processadores[tipo]
     if (processador === undefined) throw new FalhaDeJob(CodigoDeFalhaDeJob.TIPO_DESCONHECIDO, true)
     // O esquema lido é o do mesmo tipo da chave do processador: o `never` é a ponte que o compilador não faz (`ProcessadorSemTipo`).
-    await processador(lidos.data as never, { ...execucao, prazoMs: definicao.prazoMs })
+    await this.comPrazo(() => processador(lidos.data as never, { ...execucao, prazoMs: definicao.prazoMs }, controle.signal), definicao.prazoMs, controle, execucao)
+  }
+
+  /**
+   * Resolve ou rejeita como o processador, salvo se ele passar de `prazoMs`: aí aborta o `sinal` e rejeita com `TEMPO_ESGOTADO`
+   * (não definitivo: segue a retentativa do tipo). O que o processador devolver depois do corte tem destino: a rejeição cai no
+   * segundo argumento do `then` e não vira rejeição sem tratamento do processo. O log leva só ids e o prazo.
+   */
+  private comPrazo(processar: () => Promise<void>, prazoMs: number, controle: AbortController, { jobId, tentativa }: Omit<ExecucaoDoJob, 'prazoMs'>): Promise<void> {
+    return new Promise<void>((resolver, rejeitar) => {
+      const temporizador = setTimeout(() => {
+        this.dependencias.logger.warn({ evento: 'job.tempo_esgotado', jobId, tentativa, prazoMs })
+        controle.abort()
+        rejeitar(new TempoEsgotado())
+      }, prazoMs)
+      // O executor da `Promise` captura o `throw` síncrono do processador; o `then` limpa o temporizador nos dois desfechos.
+      new Promise<void>((iniciado) => iniciado(processar())).then(
+        () => {
+          clearTimeout(temporizador)
+          resolver()
+        },
+        (erro: unknown) => {
+          clearTimeout(temporizador)
+          rejeitar(erro)
+        },
+      )
+    })
+  }
+
+  /**
+   * O worker foi desligado e a graça acabou com tentativas ainda rodando. Aborta o `sinal` de todas. Na última tentativa o job não
+   * tem outra para repetir: termina `falhou` com `EXECUCAO_INTERROMPIDA`, gravado no contexto da escola dele, e a vaga é liberada.
+   * Com tentativa sobrando, a linha segue `ativo` e outra réplica o retoma quando o lock vencer (D49): marcar todos perderia o
+   * `titular.*` em cada deploy. Falha do Redis ou do banco aqui vira aviso e não trava o resto, mas `interromper` espera a gravação e a
+   * liberação: é esse tempo que tem de caber entre a graça de 20 s e o `stop_grace_period` de 25 s.
+   */
+  async interromper(): Promise<void> {
+    const rodando = [...this.#emAndamento]
+    for (const tentativa of rodando) tentativa.interrompida = true
+    for (const { controle } of rodando) controle.abort()
+    await Promise.all(
+      rodando
+        .filter(({ ultimaTentativa }) => ultimaTentativa)
+        .map(async ({ vaga, contexto }) => {
+          await executarNoContexto(contexto, () => this.gravarFalhaDefinitiva(vaga.jobId, CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA))
+          await this.liberarVaga(vaga)
+        }),
+    )
   }
 
   /** Sem Redis, o job segue: com o Redis de fila fora, ele nem teria chegado aqui, e a vaga vence sozinha. */
@@ -326,15 +425,20 @@ export class ExecutorDeJobs {
   private async falhar(job: JobDaFila, jobId: string, erro: unknown): Promise<Error> {
     const codigo = erro instanceof FalhaDeJob ? erro.codigo : CodigoDeFalhaDeJob.ERRO_INTERNO
     const tentativa = job.attemptsMade + 1
-    const definitiva = (erro instanceof FalhaDeJob && erro.definitiva) || tentativa >= (job.opts.attempts ?? 1)
+    const definitiva = (erro instanceof FalhaDeJob && erro.definitiva) || esgotouAsTentativas(job)
     this.dependencias.logger.warn({ evento: 'job.tentativa_falhou', jobId, tentativa, codigo, erro: resumirErro(erro) })
     if (!definitiva) return new ErroParaAFila(codigo)
+    await this.gravarFalhaDefinitiva(jobId, codigo)
+    return new UnrecoverableError(codigo)
+  }
+
+  /** `falhou` na linha do job, no contexto de quem chama. Banco fora: o erro vai ao log e o job segue o caminho dele. */
+  private async gravarFalhaDefinitiva(jobId: string, codigo: CodigoDeFalhaDeJob): Promise<void> {
     try {
-      await this.dependencias.repositorio.registrarFalha(jobId, codigo)
-      this.dependencias.logger.warn({ evento: 'job.falhou', jobId, codigo })
+      // Só afirma a falha no log se a linha mudou: ela pode já ter terminado por outro caminho (a conclusão, o desligamento).
+      if (await this.dependencias.repositorio.registrarFalha(jobId, codigo)) this.dependencias.logger.warn({ evento: 'job.falhou', jobId, codigo })
     } catch (erroAoRegistrar) {
       this.dependencias.logger.error({ evento: 'job.falha_nao_registrada', jobId, codigo, erro: resumirErro(erroAoRegistrar) })
     }
-    return new UnrecoverableError(codigo)
   }
 }

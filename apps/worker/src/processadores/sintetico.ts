@@ -15,7 +15,8 @@ export const ARQUIVO_DO_SANDBOX = new URL(import.meta.url.endsWith('.ts') ? './s
 const MEMORIA_DA_THREAD_MB = 16
 
 export interface QueimaDeCpu {
-  queimar(cpuMs: number): Promise<void>
+  /** Com `sinal`, o aborto tira o pedido da fila ou termina a thread que o roda, e rejeita com `EXECUCAO_INTERROMPIDA`. */
+  queimar(cpuMs: number, sinal?: AbortSignal): Promise<void>
 }
 
 interface Pedido {
@@ -48,16 +49,20 @@ export class SandboxDeCpu implements QueimaDeCpu {
     if (!Number.isInteger(threadsMaximo) || threadsMaximo < 1) throw new Error('o sandbox de CPU precisa de pelo menos uma thread')
   }
 
-  /** Threads existentes agora, ociosas ou não. Nunca passa de `threadsMaximo`. */
+  /** Threads existentes agora, ociosas ou não. Nunca passa de `threadsMaximo`, salvo a que o aborto de um job está terminando. */
   get threads(): number {
     return this.#ociosas.length + this.#ocupadas.size
   }
 
-  queimar(cpuMs: number): Promise<void> {
+  queimar(cpuMs: number, sinal?: AbortSignal): Promise<void> {
     if (this.#encerrado) return Promise.reject(new FalhaDeJob(CodigoDeFalhaDeJob.ERRO_INTERNO))
+    if (sinal?.aborted === true) return Promise.reject(new FalhaDeJob(CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA))
     if (cpuMs === 0) return Promise.resolve()
     return new Promise((resolver, rejeitar) => {
-      this.#fila.push({ cpuMs, resolver, rejeitar })
+      const pedido: Pedido = { cpuMs, resolver, rejeitar }
+      // O sinal é o de uma tentativa e some com ela; abortar um pedido que já terminou não acha fila nem thread, e rejeitar de novo não faz nada.
+      sinal?.addEventListener('abort', () => this.#abortar(pedido), { once: true })
+      this.#fila.push(pedido)
       this.#distribuir()
     })
   }
@@ -70,6 +75,24 @@ export class SandboxDeCpu implements QueimaDeCpu {
     for (const pedido of this.#ocupadas.values()) pedido.rejeitar(new FalhaDeJob(CodigoDeFalhaDeJob.ERRO_INTERNO))
     this.#ocupadas.clear()
     await Promise.all(threads.map((thread) => thread.terminate()))
+  }
+
+  /**
+   * O sinal do job abortou: o pedido que esperava na fila sai dela, e o que queimava perde a thread, que é terminada (um laço de
+   * CPU não escuta mensagem). A thread sai de `#ocupadas` na hora: nada que ela ainda mande vale, e o `exit` dela não acha pedido
+   * (é ele que redistribui a fila).
+   */
+  #abortar(pedido: Pedido): void {
+    const naFila = this.#fila.indexOf(pedido)
+    if (naFila >= 0) this.#fila.splice(naFila, 1)
+    else {
+      for (const [thread, ocupante] of this.#ocupadas) {
+        if (ocupante !== pedido) continue
+        this.#ocupadas.delete(thread)
+        void thread.terminate()
+      }
+    }
+    pedido.rejeitar(new FalhaDeJob(CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA))
   }
 
   #distribuir(): void {
@@ -125,8 +148,8 @@ export class SandboxDeCpu implements QueimaDeCpu {
  * a retentativa precisa aguentar.
  */
 export function criarProcessadorSintetico(cpu: QueimaDeCpu, efeitos: Pick<EfeitoSinteticoRepository, 'gravar'>): Processador<typeof TIPO_JOB_SINTETICO> {
-  return async ({ cpuMs, efeito, falhar }, { tentativa, chaveIdempotencia }) => {
-    await cpu.queimar(cpuMs)
+  return async ({ cpuMs, efeito, falhar }, { tentativa, chaveIdempotencia }, sinal) => {
+    await cpu.queimar(cpuMs, sinal)
     if (efeito === true) await efeitos.gravar({ chaveIdempotencia, tentativa })
     if (falhar) throw new FalhaDeJob(CodigoDeFalhaDeJob.FALHA_SINTETICA)
   }

@@ -21,6 +21,9 @@ function montar({
   liberar = () => Promise.resolve(),
   renovar = () => Promise.resolve(),
   tentativas = 5,
+  prazoMs,
+  concluir = () => Promise.resolve(true),
+  registrarFalha = () => Promise.resolve(true),
 }: {
   /** `null`: a linha não existe na escola do contexto. */
   alvo?: JobParaExecutar | null
@@ -36,10 +39,20 @@ function montar({
   liberar?: () => Promise<void>
   renovar?: (eventos: string[]) => Promise<void>
   tentativas?: number
+  /** O prazo de uma tentativa do tipo sintético, no lugar do da definição de verdade. */
+  prazoMs?: number
+  /** A conclusão da linha: o teste a segura para ver o que o desligamento faz enquanto ela não volta. */
+  concluir?: () => Promise<boolean>
+  /** A gravação da falha, depois de o código entrar em `falhas`: devolve `false` quando a linha já tinha terminado. */
+  registrarFalha?: () => Promise<boolean>
 }) {
   const eventos: string[] = []
   /** O código de cada falha definitiva que o executor gravou na linha. */
   const falhas: string[] = []
+  /** O que o executor escreveu no log, linha a linha. */
+  const linhas: string[] = []
+  /** A escola do contexto em que cada uma delas foi gravada. */
+  const escolasDasFalhas: Array<string | undefined> = []
   const limites: Array<{ fila: Fila; escolaId: string | null; limite: number }> = []
   /** Cada marcação de uso, com a escola do contexto em que foi feita. */
   const marcacoes: string[] = []
@@ -55,16 +68,19 @@ function montar({
       },
       concluir: () => {
         eventos.push('concluir')
-        return Promise.resolve(true)
+        return concluir()
       },
       registrarFalha: (_id, codigo) => {
         falhas.push(codigo)
-        return Promise.resolve(true)
+        escolasDasFalhas.push(contextoAtual()?.escolaId)
+        return registrarFalha()
       },
     },
     processadores: processadores ?? { sintetico: processador },
-    ...(definicoes === undefined ? {} : { definicoes }),
-    logger: criarLogger({ servico: 'worker-teste', nivel: 'silent' }),
+    ...(definicoes === undefined && prazoMs === undefined
+      ? {}
+      : { definicoes: definicoes ?? { ...DEFINICOES_DE_JOB, [TIPO_JOB_SINTETICO]: { ...DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO], prazoMs: prazoMs ?? 0 } } }),
+    logger: criarLogger({ servico: 'worker-teste', destino: { write: (linha: string) => linhas.push(linha) } }),
     vagas: {
       tomar: (fila, escolaId, limite, ids) => {
         eventos.push('tomar')
@@ -87,7 +103,7 @@ function montar({
   }
   const moveToDelayed = vi.fn<JobDaFila['moveToDelayed']>(() => Promise.resolve())
   const job = { id: JOB_ID, data: { escolaId: alvo === null ? ESCOLA_A : alvo.escolaId, requisicaoId: null }, attemptsMade: 0, opts: { attempts: tentativas }, moveToDelayed } as unknown as JobDaFila
-  return { executor: new ExecutorDeJobs(dependencias), eventos, falhas, limites, marcacoes, job, moveToDelayed }
+  return { executor: new ExecutorDeJobs(dependencias), eventos, falhas, escolasDasFalhas, linhas, limites, marcacoes, job, moveToDelayed }
 }
 
 describe('ExecutorDeJobs e a vaga', () => {
@@ -113,8 +129,8 @@ describe('ExecutorDeJobs e a vaga', () => {
     await executor.processar({ ...job, attemptsMade: 3 } as JobDaFila, 'token')
     const { prazoMs } = DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO]
     expect(recebidos).toEqual([
-      [{ cpuMs: 0, falhar: false }, { jobId: JOB_ID, tentativa: 1, chaveIdempotencia: JOB_ID, prazoMs }],
-      [{ cpuMs: 0, falhar: false }, { jobId: JOB_ID, tentativa: 4, chaveIdempotencia: JOB_ID, prazoMs }],
+      [{ cpuMs: 0, falhar: false }, { jobId: JOB_ID, tentativa: 1, chaveIdempotencia: JOB_ID, prazoMs }, expect.any(AbortSignal)],
+      [{ cpuMs: 0, falhar: false }, { jobId: JOB_ID, tentativa: 4, chaveIdempotencia: JOB_ID, prazoMs }, expect.any(AbortSignal)],
     ])
   })
 
@@ -222,6 +238,258 @@ describe('ExecutorDeJobs e a vaga', () => {
     await vi.advanceTimersByTimeAsync(1_000)
     expect(eventos).not.toContain('liberar')
     expect(eventos.filter((evento) => evento === 'renovar')).toHaveLength(1)
+  })
+
+  describe('prazo do tipo (RF17)', () => {
+    /** Processador que não termina e guarda o `sinal` que recebeu. */
+    function pendente() {
+      const guardado: { sinal: AbortSignal | undefined } = { sinal: undefined }
+      const processador: Processador = (_dados, _execucao, sinal) => {
+        guardado.sinal = sinal
+        return new Promise<void>(() => undefined)
+      }
+      return { guardado, processador }
+    }
+
+    it('processador pendente: aos 5 000 ms a tentativa falha com TEMPO_ESGOTADO, o sinal aborta e a vaga sai', async () => {
+      const { guardado, processador } = pendente()
+      const { executor, eventos, falhas, job } = montar({ prazoMs: 5_000, tentativas: 1, processador })
+      const rejeitada = expect(executor.processar(job, 'token')).rejects.toThrow(CodigoDeFalhaDeJob.TEMPO_ESGOTADO)
+      await vi.advanceTimersByTimeAsync(4_999)
+      expect(guardado.sinal?.aborted).toBe(false)
+      expect(falhas).toEqual([])
+      expect(eventos).not.toContain('liberar')
+
+      await vi.advanceTimersByTimeAsync(1)
+      await rejeitada
+      expect(guardado.sinal?.aborted).toBe(true)
+      expect(falhas).toEqual([CodigoDeFalhaDeJob.TEMPO_ESGOTADO])
+      expect(eventos).toContain('liberar')
+    })
+
+    it('o corte é o prazo da definição do tipo, e não um valor fixo: 12 000 ms cortam aos 12 000 e não antes', async () => {
+      const { guardado, processador } = pendente()
+      const { executor, falhas, job } = montar({ prazoMs: 12_000, tentativas: 1, processador })
+      const rejeitada = expect(executor.processar(job, 'token')).rejects.toThrow(CodigoDeFalhaDeJob.TEMPO_ESGOTADO)
+      await vi.advanceTimersByTimeAsync(11_999)
+      expect(falhas).toEqual([])
+      await vi.advanceTimersByTimeAsync(1)
+      await rejeitada
+      expect(guardado.sinal?.aborted).toBe(true)
+    })
+
+    it('o que resolve aos 4 999 ms conclui, e o prazo não corta o que já terminou', async () => {
+      let sinalRecebido: AbortSignal | undefined
+      const { executor, eventos, falhas, job } = montar({
+        prazoMs: 5_000,
+        tentativas: 1,
+        processador: (_dados, _execucao, sinal) => {
+          sinalRecebido = sinal
+          return new Promise<void>((resolver) => setTimeout(resolver, 4_999))
+        },
+      })
+      const execucao = executor.processar(job, 'token')
+      await vi.advanceTimersByTimeAsync(4_999)
+      await execucao
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(eventos).toContain('concluir')
+      expect(falhas).toEqual([])
+      expect(sinalRecebido?.aborted).toBe(false)
+    })
+
+    it('estouro com tentativa sobrando: o erro leva o código, não é definitivo, nada é gravado e a vaga sai', async () => {
+      const { processador } = pendente()
+      const { executor, eventos, falhas, job } = montar({ prazoMs: 5_000, tentativas: 5, processador })
+      const rejeitada = executor.processar(job, 'token').catch((erro: unknown) => erro)
+      await vi.advanceTimersByTimeAsync(5_000)
+      const erro = await rejeitada
+      expect(erro).not.toBeInstanceOf(UnrecoverableError)
+      expect(erro).toMatchObject({ message: CodigoDeFalhaDeJob.TEMPO_ESGOTADO })
+      expect(falhas).toEqual([])
+      expect(eventos.slice(eventos.indexOf('liberar'))).toEqual(['liberar', 'avisou_vaga_livre'])
+    })
+
+    it('processador que falha antes do prazo: o prazo não corta depois, nem aborta o sinal, nem loga estouro', async () => {
+      let sinalRecebido: AbortSignal | undefined
+      const { executor, falhas, job } = montar({
+        prazoMs: 5_000,
+        tentativas: 1,
+        processador: (_dados, _execucao, sinal) => {
+          sinalRecebido = sinal
+          return Promise.reject(new FalhaDeJob(CodigoDeFalhaDeJob.FALHA_SINTETICA, true))
+        },
+      })
+      await expect(executor.processar(job, 'token')).rejects.toThrow(CodigoDeFalhaDeJob.FALHA_SINTETICA)
+      await vi.advanceTimersByTimeAsync(10_000)
+      expect(sinalRecebido?.aborted).toBe(false)
+      expect(falhas).toEqual([CodigoDeFalhaDeJob.FALHA_SINTETICA])
+    })
+
+    it('a rejeição que o processador dá depois do corte é engolida: nenhuma rejeição sem tratamento, e a linha fica como o corte a deixou', async () => {
+      const naoTratadas: unknown[] = []
+      const ouvir = (erro: unknown): void => void naoTratadas.push(erro)
+      process.on('unhandledRejection', ouvir)
+      try {
+        const { executor, falhas, job } = montar({
+          prazoMs: 5_000,
+          tentativas: 1,
+          processador: () => new Promise<void>((_resolver, rejeitar) => setTimeout(() => rejeitar(new Error('depois do corte')), 6_000)),
+        })
+        const rejeitada = expect(executor.processar(job, 'token')).rejects.toThrow(CodigoDeFalhaDeJob.TEMPO_ESGOTADO)
+        await vi.advanceTimersByTimeAsync(5_000)
+        await rejeitada
+        await vi.advanceTimersByTimeAsync(2_000)
+        await vi.advanceTimersByTimeAsync(10)
+        expect(naoTratadas).toEqual([])
+        expect(falhas).toEqual([CodigoDeFalhaDeJob.TEMPO_ESGOTADO])
+      } finally {
+        process.off('unhandledRejection', ouvir)
+      }
+    })
+  })
+
+  describe('desligamento além da graça (interromper)', () => {
+    /** Processador que escuta o `sinal`: ao abortar, rejeita como o código dele rejeitaria. */
+    const escutaOSinal: Processador = (_dados, _execucao, sinal) =>
+      new Promise<void>((_resolver, rejeitar) => sinal?.addEventListener('abort', () => rejeitar(new Error('abortado')), { once: true }))
+
+    it('na última tentativa: aborta o sinal, grava EXECUCAO_INTERROMPIDA no contexto da escola do job e libera a vaga', async () => {
+      let sinalRecebido: AbortSignal | undefined
+      const { executor, eventos, falhas, escolasDasFalhas, job } = montar({
+        tentativas: 1,
+        processador: (_dados, _execucao, sinal) => {
+          sinalRecebido = sinal
+          return new Promise<void>(() => undefined)
+        },
+      })
+      void executor.processar(job, 'token')
+      await vi.advanceTimersByTimeAsync(10)
+      expect(eventos).not.toContain('liberar')
+
+      await executor.interromper()
+      expect(sinalRecebido?.aborted).toBe(true)
+      expect(falhas).toEqual([CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA])
+      expect(escolasDasFalhas).toEqual([ESCOLA_A])
+      expect(eventos).toContain('liberar')
+    })
+
+    it('com tentativa sobrando: aborta o sinal e deixa a linha `ativo` e a vaga com o job, para outra réplica retomar (D49)', async () => {
+      let sinalRecebido: AbortSignal | undefined
+      const { executor, eventos, falhas, job } = montar({
+        tentativas: 5,
+        processador: (_dados, _execucao, sinal) => {
+          sinalRecebido = sinal
+          return new Promise<void>(() => undefined)
+        },
+      })
+      void executor.processar(job, 'token')
+      await vi.advanceTimersByTimeAsync(10)
+
+      await executor.interromper()
+      expect(sinalRecebido?.aborted).toBe(true)
+      expect(falhas).toEqual([])
+      expect(eventos).not.toContain('liberar')
+    })
+
+    it('o processador que escuta o sinal e rejeita ao abortar não duplica a falha nem a liberação: a do interromper é a única', async () => {
+      const { executor, eventos, falhas, job } = montar({ tentativas: 1, processador: escutaOSinal })
+      const rejeitada = executor.processar(job, 'token').catch((erro: unknown) => erro)
+      await vi.advanceTimersByTimeAsync(10)
+
+      await executor.interromper()
+      const erro = await rejeitada
+      expect(erro).not.toBeInstanceOf(UnrecoverableError)
+      expect(erro).toMatchObject({ message: CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA })
+      expect(falhas).toEqual([CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA])
+      expect(eventos.filter((evento) => evento === 'liberar')).toHaveLength(1)
+    })
+
+    it('com tentativa sobrando e processador que rejeita ao abortar: nada é gravado e a vaga fica', async () => {
+      const { executor, eventos, falhas, job } = montar({ tentativas: 5, processador: escutaOSinal })
+      const rejeitada = executor.processar(job, 'token').catch((erro: unknown) => erro)
+      await vi.advanceTimersByTimeAsync(10)
+
+      await executor.interromper()
+      expect(await rejeitada).toMatchObject({ message: CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA })
+      expect(falhas).toEqual([])
+      expect(eventos).not.toContain('liberar')
+    })
+
+    it('a última tentativa é a que esgota o `attempts` da fila: a 5ª de 5 é gravada, a 4ª de 5 não', async () => {
+      const pendente = (): Processador => () => new Promise<void>(() => undefined)
+      const quinta = montar({ tentativas: 5, processador: pendente() })
+      void quinta.executor.processar({ ...quinta.job, attemptsMade: 4 } as JobDaFila, 'token')
+      const quarta = montar({ tentativas: 5, processador: pendente() })
+      void quarta.executor.processar({ ...quarta.job, attemptsMade: 3 } as JobDaFila, 'token')
+      await vi.advanceTimersByTimeAsync(10)
+
+      await Promise.all([quinta.executor.interromper(), quarta.executor.interromper()])
+      expect(quinta.falhas).toEqual([CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA])
+      expect(quarta.falhas).toEqual([])
+    })
+
+    it('job sem `attempts` na fila tem uma tentativa só: interromper o termina', async () => {
+      const { executor, falhas, job } = montar({ processador: () => new Promise<void>(() => undefined) })
+      void executor.processar({ ...job, opts: {} } as JobDaFila, 'token')
+      await vi.advanceTimersByTimeAsync(10)
+
+      await executor.interromper()
+      expect(falhas).toEqual([CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA])
+    })
+
+    it('o desligamento com a conclusão da linha em andamento não grava falha sobre o job que terminou: a vaga sai uma vez só', async () => {
+      let terminarConclusao: (concluiu: boolean) => void = () => undefined
+      const { executor, eventos, falhas, job } = montar({ tentativas: 1, concluir: () => new Promise<boolean>((resolver) => (terminarConclusao = resolver)) })
+      const execucao = executor.processar(job, 'token')
+      await vi.advanceTimersByTimeAsync(10)
+      expect(eventos).toContain('concluir')
+
+      await executor.interromper()
+      expect(falhas).toEqual([])
+      terminarConclusao(true)
+      await execucao
+      expect(eventos.filter((evento) => evento === 'liberar')).toHaveLength(1)
+    })
+
+    it('o desligamento com a falha do estouro sendo gravada não grava outra: uma falha só, com o código do estouro, e a vaga sai uma vez', async () => {
+      let terminarGravacao: () => void = () => undefined
+      const { executor, eventos, falhas, job } = montar({
+        prazoMs: 5_000,
+        tentativas: 1,
+        processador: () => new Promise<void>(() => undefined),
+        registrarFalha: () => new Promise<boolean>((resolver) => (terminarGravacao = () => resolver(true))),
+      })
+      const rejeitada = expect(executor.processar(job, 'token')).rejects.toThrow(CodigoDeFalhaDeJob.TEMPO_ESGOTADO)
+      await vi.advanceTimersByTimeAsync(5_000)
+      expect(falhas).toEqual([CodigoDeFalhaDeJob.TEMPO_ESGOTADO])
+
+      await executor.interromper()
+      terminarGravacao()
+      await rejeitada
+      expect(falhas).toEqual([CodigoDeFalhaDeJob.TEMPO_ESGOTADO])
+      expect(eventos.filter((evento) => evento === 'liberar')).toHaveLength(1)
+    })
+
+    it('o log só afirma `job.falhou` quando a linha mudou: a falha que não alterou nada (a linha já tinha terminado) não é escrita', async () => {
+      const gravada = montar({ tentativas: 1, processador: () => Promise.reject(new FalhaDeJob(CodigoDeFalhaDeJob.FALHA_SINTETICA)) })
+      await expect(gravada.executor.processar(gravada.job, 'token')).rejects.toThrow(UnrecoverableError)
+      expect(gravada.linhas.filter((linha) => linha.includes('job.falhou'))).toHaveLength(1)
+
+      const jaTerminada = montar({ tentativas: 1, processador: () => Promise.reject(new FalhaDeJob(CodigoDeFalhaDeJob.FALHA_SINTETICA)), registrarFalha: () => Promise.resolve(false) })
+      await expect(jaTerminada.executor.processar(jaTerminada.job, 'token')).rejects.toThrow(UnrecoverableError)
+      expect(jaTerminada.falhas).toEqual([CodigoDeFalhaDeJob.FALHA_SINTETICA])
+      expect(jaTerminada.linhas.filter((linha) => linha.includes('job.falhou'))).toEqual([])
+    })
+
+    it('job que já terminou não é tocado: interromper depois do fim não grava nem libera nada', async () => {
+      const { executor, eventos, falhas, job } = montar({ tentativas: 1 })
+      await executor.processar(job, 'token')
+      const liberacoes = eventos.filter((evento) => evento === 'liberar').length
+
+      await executor.interromper()
+      expect(falhas).toEqual([])
+      expect(eventos.filter((evento) => evento === 'liberar')).toHaveLength(liberacoes)
+    })
   })
 
   it('só avisa o despachante depois de a vaga sair do Redis: liberação que falhou não acorda ninguém', async () => {
@@ -341,7 +609,7 @@ describe('ExecutorDeJobs e a definição do tipo', () => {
     const recebidos: Array<Parameters<Processador>> = []
     const { executor, job } = montar({ dados: {}, definicoes, processador: (...argumentos) => (recebidos.push(argumentos), Promise.resolve()) })
     await executor.processar(job, 'token')
-    expect(recebidos).toEqual([[{ cpuMs: 7, falhar: false }, { jobId: JOB_ID, tentativa: 1, chaveIdempotencia: JOB_ID, prazoMs: 1_234 }]])
+    expect(recebidos).toEqual([[{ cpuMs: 7, falhar: false }, { jobId: JOB_ID, tentativa: 1, chaveIdempotencia: JOB_ID, prazoMs: 1_234 }, expect.any(AbortSignal)]])
   })
 
   it('o tipo dos dados do processador é o da definição: ler campo que ela não tem, ou registrar processador de tipo que ela não tem, não compila', () => {

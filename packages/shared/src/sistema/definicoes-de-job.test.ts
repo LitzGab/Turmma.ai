@@ -16,6 +16,7 @@ import {
   type OpcoesDoJob,
   type TipoDeJob,
 } from './definicoes-de-job.js'
+import { CPU_MS_MAXIMO_SINTETICO } from './jobs-sinteticos.js'
 import { FILAS } from './jobs.js'
 
 const OS_8_TIPOS = [
@@ -97,7 +98,20 @@ describe('o registro de jobs', () => {
   })
 
   it('o prazo do sintético cobre o teto de CPU dele', () => {
-    expect(DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO].prazoMs).toBeGreaterThan(60_000)
+    expect(DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO].prazoMs).toBeGreaterThan(CPU_MS_MAXIMO_SINTETICO)
+  })
+
+  it('o prazo de cada um dos 8 tipos é o conferido na 43.0: o worker corta a tentativa nele, então mudar um valor é decisão de quem mede o tipo', () => {
+    expect(Object.fromEntries(OS_8_TIPOS.map((tipo) => [tipo, DEFINICOES_DE_JOB[tipo].prazoMs]))).toEqual({
+      [TIPO_MONTAR_ARQUIVO]: 300_000,
+      [TIPO_ELIMINAR_TITULAR]: 600_000,
+      [TIPO_EXPURGAR_ESCOLA]: 21_600_000,
+      [TIPO_CONSOLIDAR_USO]: 600_000,
+      [TIPO_EXPURGAR_ACESSO]: 600_000,
+      [TIPO_EXPURGAR_JOBS]: 600_000,
+      [TIPO_EXPURGAR_DADO_PESSOAL]: 600_000,
+      [TIPO_JOB_SINTETICO]: 90_000,
+    })
   })
 })
 

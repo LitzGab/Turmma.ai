@@ -96,6 +96,60 @@ describe('SandboxDeCpu: o job sintético queima CPU de verdade, fora do event lo
     expect(await codigoDe(cpu.queimar(10))).toBe(CodigoDeFalhaDeJob.ERRO_INTERNO)
   })
 
+  describe('sinal abortado (o prazo do job estourou, ou o worker foi desligado)', () => {
+    it('termina a thread que queimava, rejeita com EXECUCAO_INTERROMPIDA e deixa a vaga de thread para o pedido seguinte', async () => {
+      const cpu = sandbox(1)
+      const controle = new AbortController()
+      const queimando = codigoDe(cpu.queimar(60_000, controle.signal))
+      await new Promise((resolver) => setTimeout(resolver, 50))
+      expect(cpu.threads).toBe(1)
+
+      const inicio = performance.now()
+      controle.abort()
+      // A thread que o aborto está terminando já não é contada: o teto de threads não espera o `exit` dela.
+      expect(cpu.threads).toBe(0)
+      expect(await queimando).toBe(CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA)
+      // Os 60 s de CPU não chegam ao fim: o pedido seguinte usa outra thread, e a primeira não segue queimando.
+      await cpu.queimar(20)
+      expect(performance.now() - inicio).toBeLessThan(3_000)
+      const antes = process.cpuUsage()
+      await new Promise((resolver) => setTimeout(resolver, 400))
+      const gasto = process.cpuUsage(antes)
+      expect((gasto.user + gasto.system) / 1_000).toBeLessThan(200)
+    })
+
+    it('o pedido que esperava na fila sai dela: não ocupa thread depois, e o que queimava segue até o fim', async () => {
+      const cpu = sandbox(1)
+      const controle = new AbortController()
+      const primeiro = cpu.queimar(300)
+      const naFila = codigoDe(cpu.queimar(60_000, controle.signal))
+      await new Promise((resolver) => setTimeout(resolver, 20))
+      controle.abort()
+      expect(await naFila).toBe(CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA)
+
+      const inicio = performance.now()
+      await primeiro
+      // Se o pedido abortado tivesse ficado na fila, a thread passaria a queimar os seus 60 s e este teste não chegaria aqui.
+      await cpu.queimar(20)
+      expect(performance.now() - inicio).toBeLessThan(3_000)
+    })
+
+    it('sinal que já chegou abortado rejeita na hora, sem criar thread', async () => {
+      const cpu = sandbox(1)
+      expect(await codigoDe(cpu.queimar(5_000, AbortSignal.abort()))).toBe(CodigoDeFalhaDeJob.EXECUCAO_INTERROMPIDA)
+      expect(cpu.threads).toBe(0)
+    })
+
+    it('pedido que terminou antes do aborto não é tocado: abortar depois não derruba a thread nem o pedido seguinte', async () => {
+      const cpu = sandbox(1)
+      const controle = new AbortController()
+      await cpu.queimar(20, controle.signal)
+      controle.abort()
+      await expect(cpu.queimar(20)).resolves.toBeUndefined()
+      expect(cpu.threads).toBe(1)
+    })
+  })
+
   it('recusa teto de threads que não é inteiro positivo', () => {
     expect(() => new SandboxDeCpu(0)).toThrow()
     expect(() => new SandboxDeCpu(1.5)).toThrow()
@@ -112,6 +166,14 @@ describe('processador sintético', () => {
     await expect(processar({ cpuMs: 120, falhar: false }, EXECUCAO)).resolves.toBeUndefined()
     expect(await codigoDe(processar({ cpuMs: 80, falhar: true }, EXECUCAO))).toBe(CodigoDeFalhaDeJob.FALHA_SINTETICA)
     expect(pedidos).toEqual([120, 80])
+  })
+
+  it('passa o sinal da execução à queima de CPU: é por ele que o corte do prazo chega à thread', async () => {
+    const recebidos: Array<AbortSignal | undefined> = []
+    const processar = criarProcessadorSintetico({ queimar: async (_cpuMs, sinal) => void recebidos.push(sinal) }, semEfeito)
+    const sinal = new AbortController().signal
+    await processar({ cpuMs: 10, falhar: false }, EXECUCAO, sinal)
+    expect(recebidos).toEqual([sinal])
   })
 
   it('modo efeito: grava com a chave de idempotência e a tentativa da execução, depois da CPU e antes da falha pedida', async () => {
