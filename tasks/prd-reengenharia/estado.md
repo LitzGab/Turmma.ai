@@ -39,9 +39,9 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
   - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **15.0**, desde ~12:25, 1ª tentativa (14.0 encontrada em `2164719`,
     depois do conserto R61 do `Arquiteto`, `1744468`)
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **53.0** (web), desde ~12:25, 1ª tentativa. A correção
-    `arquivo-do-titular-datas` fechou **sem commit**: não havia defeito (ver "O que decidi sem perguntar"). O quadro
-    sugeria 53.0→l2 e 15.0→l3; inverti para manter a web na linha 3 (ajuste do Claude Code #2)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **18.0**, grande (payload validado no `Enfileirador`), desde
+    13:07, 1ª tentativa; prazo de 4 h 17:07. A web (36.0) está presa à 15.0 por `guardas.test.ts`, por isso a linha 3
+    pega API agora. A 53.0 deixou o despachante e o worker-interativo do `educa-teste-3` parados
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -64,7 +64,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`)
-- **Base:** `spec/reengenharia` em `e048e36`. Vigia ligada
+- **Base:** `spec/reengenharia` em `5e71bef`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -94,6 +94,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 94.0 | `0975b97` | Sonnet | 2 | linha 2, grande, 11:07–11:36; dentro do prazo de 14:55, escopo inteiro; três recomendações no TODO.md |
 | 51.0 | `50e04d0` | Sonnet | 2 | encontro adiado até o commit dos lotes retidos da 3.0 (`3b44efe`); lacuna da 3.0 em `2fe1d73` (R60); o ponto de produto do material do professor com palavra de nota vai para a X6 |
 | 6.0 | `f49c095` | Sonnet | 2 (test-engineer, revisor-geral; tenancy na 1ª) | linha 1, pequena, 11:27–12:52; duas correções na linha antes dela: `ouro-base-qualitativa` (`05aa2fe`) e `porta-unica-so-import` (`9dd7a6b`, divergência de portão) |
+| 53.0 | `c090987` | Sonnet | 2 (os cinco aprovados na 2ª) | linha 3, web, 12:25–13:05; a Mesa viu 6 fotos; acabamentos do espelho e a falta de atividade "para responder" na vitrine no TODO.md; integração não rodou (só web e shared) |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
