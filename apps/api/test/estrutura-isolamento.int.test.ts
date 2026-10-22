@@ -90,6 +90,48 @@ describe('estrutura: isolamento entre escolas', () => {
     expect(await estadoDe(b)).toEqual(antesEmB)
   })
 
+  it('a turma de B, no contexto de A, abrir, renomear e excluir dão o mesmo 404 do inexistente e do id fora do formato, também em maiúsculas, e nada muda em B', async () => {
+    const antesEmB = await estadoDe(b)
+    const ids = [b.turma, b.turma.toUpperCase(), randomUUID(), 'nao-e-um-id']
+    const chamadas = [
+      (id: string) => get(a.coordenacao, `/v1/turmas/${id}`),
+      (id: string) => chamar(api.url, 'PATCH', `/v1/turmas/${id}`, a.coordenacao.token, { nome: 'Invadida' }),
+      (id: string) => chamar(api.url, 'DELETE', `/v1/turmas/${id}`, a.coordenacao.token),
+      (id: string) => get(a.coordenacao, `/v1/turmas/${id}/alunos?finalidade=conferencia_de_cadastro`),
+    ]
+    for (const chamada of chamadas) {
+      const respostas = (await Promise.all(ids.map((id) => chamada(id)))).map(semRequisicao)
+      expect(respostas[0]).toEqual({ status: 404, codigo: CodigoDeErro.NAO_ENCONTRADO, mensagem: expect.any(String) })
+      for (const resposta of respostas) expect(resposta).toEqual(respostas[0])
+    }
+    expect(await estadoDe(b)).toEqual(antesEmB)
+    // O id da própria turma, em maiúsculas, é a mesma turma: a coordenação de A a alcança.
+    expect((await get(a.coordenacao, `/v1/turmas/${a.turma.toUpperCase()}`)).status).toBe(200)
+  })
+
+  it('a turma de um ano encerrado de B, lida pela coordenação de A com o `anoLetivoId` de B, dá o mesmo 404 do inexistente: a cláusula de escola é a única barreira', async () => {
+    // Com o ano de B na consulta, o ano em curso de A não exclui a turma de B: só o `eq(turma.escolaId, …)` do repository o faz.
+    const { rows: anos } = await bancada.pool.query<{ id: string }>(
+      `insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2025, '2025-02-01', '2025-12-15', 'encerrado') returning id`,
+      [b.coordenacao.escolaId],
+    )
+    const anoDeB = anos[0]?.id
+    if (anoDeB === undefined) throw new Error('ano encerrado de B não criado')
+    const { rows: turmas } = await bancada.pool.query<{ id: string }>(`insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, '8ºA de 2025') returning id`, [
+      b.coordenacao.escolaId,
+      anoDeB,
+      b.serie,
+    ])
+    const turmaDeB = turmas[0]?.id
+    if (turmaDeB === undefined) throw new Error('turma de 2025 de B não criada')
+    const ler = (id: string, rota: string) => get(a.coordenacao, `/v1/turmas/${id}${rota}anoLetivoId=${anoDeB}`)
+    const abrir = [await ler(turmaDeB, '?'), await ler(randomUUID(), '?'), await ler('nao-e-um-id', '?')].map(semRequisicao)
+    const alunos = [await ler(`${turmaDeB}/alunos?finalidade=conferencia_de_cadastro`, '&'), await ler(`${randomUUID()}/alunos?finalidade=conferencia_de_cadastro`, '&')].map(semRequisicao)
+    for (const resposta of [...abrir, ...alunos]) expect(resposta).toEqual({ status: 404, codigo: CodigoDeErro.NAO_ENCONTRADO, mensagem: expect.any(String) })
+    // A coordenação de B, a dona, lê a mesma turma com o mesmo ano: 200.
+    expect((await get(b.coordenacao, `/v1/turmas/${turmaDeB}?anoLetivoId=${anoDeB}`)).status).toBe(200)
+  })
+
   it('criar turma com a série de B dá o mesmo 404 da série inexistente, e nenhuma turma nasce em A nem em B', async () => {
     const antesEmA = await estadoDe(a)
     const antesEmB = await estadoDe(b)

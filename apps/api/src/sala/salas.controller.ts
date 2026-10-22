@@ -1,7 +1,13 @@
-import { RotaAnonima } from '@educa/nucleo'
-import { esquemaPedidoAbrirSala, esquemaPedidoReivindicarSala, type RespostaReivindicacao, type RespostaSalaAberta } from '@educa/shared'
+import { RotaAnonima, ZodValidationPipe } from '@educa/nucleo'
+import {
+  esquemaPedidoAbrirSala,
+  esquemaPedidoReivindicarSala,
+  type PedidoAbrirSala,
+  type PedidoReivindicarSala,
+  type RespostaReivindicacao,
+  type RespostaSalaAberta,
+} from '@educa/shared'
 import { Body, Controller, Header, HttpCode, HttpStatus, Post } from '@nestjs/common'
-import { lerEntrada } from '../estrutura/entrada.js'
 import { ReivindicacaoService } from './reivindicacao.service.js'
 import { SalasService } from './salas.service.js'
 
@@ -23,14 +29,14 @@ export class SalasController {
   @Post('abrir')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  abrir(@Body() corpo: unknown): Promise<RespostaSalaAberta> {
-    return this.salas.abrir(lerEntrada(esquemaPedidoAbrirSala, corpo))
+  abrir(@Body(new ZodValidationPipe(esquemaPedidoAbrirSala)) pedido: PedidoAbrirSala): Promise<RespostaSalaAberta> {
+    return this.salas.abrir(pedido)
   }
 
   @Post('reivindicar')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  reivindicar(@Body() corpo: unknown): Promise<RespostaReivindicacao> {
-    return this.reivindicacoes.reivindicar(lerEntrada(esquemaPedidoReivindicarSala, corpo))
+  reivindicar(@Body(new ZodValidationPipe(esquemaPedidoReivindicarSala)) pedido: PedidoReivindicarSala): Promise<RespostaReivindicacao> {
+    return this.reivindicacoes.reivindicar(pedido)
   }
 }

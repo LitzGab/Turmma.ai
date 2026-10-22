@@ -107,6 +107,10 @@ describe('estrutura: a coordenação monta o ano letivo, as séries, as discipli
       expect(resposta.status, invalida).toBe(400)
       expect(resposta.corpo.erro?.codigo, invalida).toBe(CodigoDeErro.ENTRADA_INVALIDA)
     }
+    // O teto é 100: o limite 100 passa e traz as três, e o 101 acima não.
+    const noTeto = await get(coordenacao, '/v1/disciplinas?limite=100')
+    expect(noTeto.status).toBe(200)
+    expect((noTeto.corpo['itens'] as unknown[]).length).toBe(3)
   })
 
   describe('borda: o recorte da D43', () => {

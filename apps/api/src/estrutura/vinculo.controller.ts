@@ -1,17 +1,21 @@
-import { Permite } from '@educa/nucleo'
+import { IdPipe, Permite, ZodValidationPipe } from '@educa/nucleo'
 import {
   esquemaConsultaPaginada,
   esquemaConsultaVinculos,
   esquemaPedidoContestarVinculo,
   esquemaPedidoCriarVinculo,
   esquemaPedidoEncerrarVinculo,
+  type ConsultaPaginada,
+  type ConsultaVinculos,
+  type PedidoContestarVinculo,
+  type PedidoCriarVinculo,
+  type PedidoEncerrarVinculo,
   type RespostaListaDeVinculos,
   type RespostaMeusVinculos,
   type RespostaVinculo,
   type RespostaVinculoDaCoordenacao,
 } from '@educa/shared'
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common'
-import { idDoCaminho, lerEntrada } from './entrada.js'
 import { VinculoService } from './vinculo.service.js'
 
 /**
@@ -24,37 +28,35 @@ export class VinculoController {
 
   @Post()
   @Permite('vinculo', 'criar')
-  criar(@Body() corpo: unknown): Promise<RespostaVinculoDaCoordenacao> {
-    return this.vinculos.criar(lerEntrada(esquemaPedidoCriarVinculo, corpo))
+  criar(@Body(new ZodValidationPipe(esquemaPedidoCriarVinculo)) pedido: PedidoCriarVinculo): Promise<RespostaVinculoDaCoordenacao> {
+    return this.vinculos.criar(pedido)
   }
 
   @Get()
   @Permite('vinculo', 'ler')
-  listar(@Query() consulta: unknown): Promise<RespostaListaDeVinculos> {
-    return this.vinculos.listar(lerEntrada(esquemaConsultaVinculos, consulta))
+  listar(@Query(new ZodValidationPipe(esquemaConsultaVinculos)) consulta: ConsultaVinculos): Promise<RespostaListaDeVinculos> {
+    return this.vinculos.listar(consulta)
   }
 
   @Post(':id/encerrar')
   @Permite('vinculo', 'encerrar')
   @HttpCode(HttpStatus.OK)
-  encerrar(@Param('id') id: string, @Body() corpo: unknown): Promise<RespostaVinculoDaCoordenacao> {
-    const alvo = idDoCaminho(id)
-    return this.vinculos.encerrar(alvo, lerEntrada(esquemaPedidoEncerrarVinculo, corpo))
+  encerrar(@Param('id', IdPipe) id: string, @Body(new ZodValidationPipe(esquemaPedidoEncerrarVinculo)) pedido: PedidoEncerrarVinculo): Promise<RespostaVinculoDaCoordenacao> {
+    return this.vinculos.encerrar(id, pedido)
   }
 
   @Post(':id/confirmar')
   @Permite('vinculo', 'confirmar')
   @HttpCode(HttpStatus.OK)
-  confirmar(@Param('id') id: string): Promise<RespostaVinculo> {
-    return this.vinculos.confirmar(idDoCaminho(id))
+  confirmar(@Param('id', IdPipe) id: string): Promise<RespostaVinculo> {
+    return this.vinculos.confirmar(id)
   }
 
   @Post(':id/contestar')
   @Permite('vinculo', 'contestar')
   @HttpCode(HttpStatus.OK)
-  contestar(@Param('id') id: string, @Body() corpo: unknown): Promise<RespostaVinculo> {
-    const alvo = idDoCaminho(id)
-    return this.vinculos.contestar(alvo, lerEntrada(esquemaPedidoContestarVinculo, corpo))
+  contestar(@Param('id', IdPipe) id: string, @Body(new ZodValidationPipe(esquemaPedidoContestarVinculo)) pedido: PedidoContestarVinculo): Promise<RespostaVinculo> {
+    return this.vinculos.contestar(id, pedido)
   }
 }
 
@@ -65,7 +67,7 @@ export class MeusVinculosController {
 
   @Get()
   @Permite('vinculo', 'ler_proprios')
-  listar(@Query() consulta: unknown): Promise<RespostaMeusVinculos> {
-    return this.vinculos.meus(lerEntrada(esquemaConsultaPaginada, consulta))
+  listar(@Query(new ZodValidationPipe(esquemaConsultaPaginada)) consulta: ConsultaPaginada): Promise<RespostaMeusVinculos> {
+    return this.vinculos.meus(consulta)
   }
 }

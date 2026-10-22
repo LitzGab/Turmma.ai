@@ -1,4 +1,5 @@
 import { CodigoDeErro } from '@educa/shared'
+import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { chamar, subirApi, type ApiDeTeste } from './api-com-sessao.js'
@@ -41,9 +42,13 @@ describe('PUT /v1/escola/sessao: a coordenação configura a inatividade da pró
   it('permissão: professor e aluno recebem o mesmo 404 de rota inexistente, e nada muda nem entra na auditoria', async () => {
     const escola = await bancada.escola()
     for (const papel of ['professor', 'aluno'] as const) {
-      const resposta = await alterar(await bancada.sessao(escola, papel), { inatividadeAlunoMin: 15, inatividadeEquipeMin: 60 })
-      expect(resposta.status, papel).toBe(404)
-      expect(resposta.corpo.erro?.codigo, papel).toBe(CodigoDeErro.NAO_ENCONTRADO)
+      const sessao = await bancada.sessao(escola, papel)
+      // A guarda responde antes do pipe: o corpo fora do esquema (4 min, e a escola de outra) não muda a resposta.
+      for (const corpo of [{ inatividadeAlunoMin: 15, inatividadeEquipeMin: 60 }, { inatividadeAlunoMin: 4, inatividadeEquipeMin: 60 }, { inatividadeAlunoMin: 15, inatividadeEquipeMin: 60, escolaId: randomUUID() }]) {
+        const resposta = await alterar(sessao, corpo)
+        expect(resposta.status, papel).toBe(404)
+        expect(resposta.corpo.erro?.codigo, papel).toBe(CodigoDeErro.NAO_ENCONTRADO)
+      }
     }
     expect(await inatividadeDa(escola)).toEqual({ aluno: 30, equipe: 120 })
     expect(await auditoriasDa(escola)).toEqual([])

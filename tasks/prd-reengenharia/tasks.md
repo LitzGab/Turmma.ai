@@ -132,11 +132,11 @@ da tarefa diz como rodá-lo.
   - [ ] 14.4 Migram `sistema/`, `ia/`, `entrega/`, `assistente/` e `professores/`
   - [ ] 14.5 Testes: os da tabela
 
-- [ ] **15.0 — Estrutura, sala e governança validam pelo `ZodValidationPipe`**
-  - [ ] 15.1 Caracterização, num commit antes: o inválido e o 404 de cada rota dos três módulos, incluindo a `chave` e o link da sala
-  - [ ] 15.2 Migram os 8 controllers de `estrutura/`, os 4 de `sala/` e os 2 de `governanca/`
-  - [ ] 15.3 Os três módulos entram no `files` do bloco de `no-restricted-syntax`
-  - [ ] 15.4 Testes: os da tabela
+- [x] **15.0 — Estrutura, sala e governança validam pelo `ZodValidationPipe`**
+  - [x] 15.1 Caracterização, num commit antes: o inválido e o 404 de cada rota dos três módulos, incluindo a `chave` e o link da sala
+  - [x] 15.2 Migram os 8 controllers de `estrutura/`, os 4 de `sala/` e os 2 de `governanca/`
+  - [x] 15.3 Os três módulos entram no `files` do bloco de `no-restricted-syntax`
+  - [x] 15.4 Testes: os da tabela
 
 - [ ] **16.0 — Sessão e operação validam pelo `ZodValidationPipe`, sem gastar tentativa com entrada inválida**
   - [ ] 16.1 Caracterização, num commit antes: a ordem dos erros em `mfa`, `sessao/mfa` e `redefinir-mfa`, e o 404 do `slug` e do `provedor`

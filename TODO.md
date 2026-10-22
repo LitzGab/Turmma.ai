@@ -1620,6 +1620,14 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   com o de `@educa/shared`. Exportar `PedidoSemCorpoDoConviteDeProfessor` (e o esquema com `.default({})`) de
   `packages/shared/src/professores/professores.ts`, e trocar o controller, quando alguma tarefa mexer em contrato compartilhado
   (a 15.0 e a 16.0 repetem o mesmo corpo vazio em `sala` e `operacao`): é contrato compartilhado, que a 14.0 não toca
+- **A cláusula de escola de `TurmaRepository.aberta` sem bloco de mutação** (X5, 15.0, recomendações do `tenancy-guardian`, do
+  `revisor-geral` e do `test-engineer`): o caso `estrutura-isolamento.int.test.ts › a turma de um ano encerrado de B, lida pela
+  coordenação de A com o anoLetivoId de B…` fica vermelho sem `eq(turma.escolaId, exigirEscolaDoContexto())`
+  (`turma.repository.ts:193`), conferido à mão na 15.0, mas nenhum bloco de "Mutações" o declara, porque a cláusula não é
+  nova da tarefa e mexer no repository caducaria os três revisores. Declarar o bloco na tarefa que tocar `turma.repository.ts`.
+  Na mesma tarefa: dizer no comentário de `#doAnoDaLeitura` (`:177-178`, "o ano precisa ser da escola do contexto") que isso
+  só vale por causa da linha 193, e que a subconsulta do ano não protege sozinha; e, no caso de isolamento, comparar as
+  respostas entre si (`expect(resposta).toEqual(respostas[0])`), como o caso vizinho faz, e não só com `mensagem: expect.any(String)`
 
 - [ ] **(X5, 51.0) Duas páginas na mesma atividade, no e2e:** a 51.0 provou em unidade e em tela o aviso "Sua resposta foi alterada em outra janela" e a regra de só a mais nova valer; falta um caso de e2e com duas páginas do mesmo navegador na mesma atividade, nos projetos `chromebook` e `celular`. Entra na 53.0 (o espelho em `sessionStorage`, que fecha a outra aba e o F5) (`frontend-reviewer` e `test-engineer`, 51.0, 1ª rodada).
 - [ ] **(X5, 51.0) Atividade em andamento na semente da vitrine:** `tools/vitrine/` só tem atividades já feitas, e o aviso de outra janela exige uma em andamento aberta em duas janelas; semear uma para a IA e a pessoa verem a tela (`frontend-reviewer`, 51.0, 1ª rodada).

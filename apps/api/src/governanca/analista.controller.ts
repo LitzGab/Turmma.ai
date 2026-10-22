@@ -1,7 +1,14 @@
-import { Permite } from '@educa/nucleo'
-import { esquemaConsultaAnalistaNominal, esquemaPedidoGerarResumoDoAnalista, type RespostaAnalistaNominal, type RespostaExecucaoAceita, type RespostaResumoDoAnalista } from '@educa/shared'
+import { Permite, ZodValidationPipe } from '@educa/nucleo'
+import {
+  esquemaConsultaAnalistaNominal,
+  esquemaPedidoGerarResumoDoAnalista,
+  type ConsultaAnalistaNominal,
+  type PedidoGerarResumoDoAnalista,
+  type RespostaAnalistaNominal,
+  type RespostaExecucaoAceita,
+  type RespostaResumoDoAnalista,
+} from '@educa/shared'
 import { Body, Controller, Get, Header, HttpCode, HttpStatus, Post, Query } from '@nestjs/common'
-import { lerEntrada } from '../estrutura/entrada.js'
 import { AnalistaService } from './analista.service.js'
 
 /**
@@ -23,14 +30,14 @@ export class AnalistaController {
   @Post('gerar')
   @Permite('analista', 'gerar')
   @HttpCode(HttpStatus.ACCEPTED)
-  gerar(@Body() corpo: unknown): Promise<RespostaExecucaoAceita> {
-    return this.analista.gerar(lerEntrada(esquemaPedidoGerarResumoDoAnalista, corpo))
+  gerar(@Body(new ZodValidationPipe(esquemaPedidoGerarResumoDoAnalista)) pedido: PedidoGerarResumoDoAnalista): Promise<RespostaExecucaoAceita> {
+    return this.analista.gerar(pedido)
   }
 
   @Get('nominal')
   @Permite('analista', 'ler_nominal')
   @Header('Cache-Control', 'no-store')
-  nominal(@Query() consulta: unknown): Promise<RespostaAnalistaNominal> {
-    return this.analista.nominal(lerEntrada(esquemaConsultaAnalistaNominal, consulta))
+  nominal(@Query(new ZodValidationPipe(esquemaConsultaAnalistaNominal)) consulta: ConsultaAnalistaNominal): Promise<RespostaAnalistaNominal> {
+    return this.analista.nominal(consulta)
   }
 }

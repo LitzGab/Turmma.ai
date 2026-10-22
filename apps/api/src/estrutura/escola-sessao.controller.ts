@@ -1,5 +1,5 @@
-import { ErroDeDominio, Permite } from '@educa/nucleo'
-import { CodigoDeErro, esquemaPedidoEscolaSessao, type RespostaEscolaSessao } from '@educa/shared'
+import { Permite, ZodValidationPipe } from '@educa/nucleo'
+import { esquemaPedidoEscolaSessao, type PedidoEscolaSessao, type RespostaEscolaSessao } from '@educa/shared'
 import { Body, Controller, Put } from '@nestjs/common'
 import { EscolaSessaoService } from './escola-sessao.service.js'
 
@@ -10,9 +10,7 @@ export class EscolaSessaoController {
 
   @Put('sessao')
   @Permite('escola_configuracao', 'alterar')
-  alterar(@Body() corpo: unknown): Promise<RespostaEscolaSessao> {
-    const pedido = esquemaPedidoEscolaSessao.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    return this.escolaSessao.alterar(pedido.data)
+  alterar(@Body(new ZodValidationPipe(esquemaPedidoEscolaSessao)) pedido: PedidoEscolaSessao): Promise<RespostaEscolaSessao> {
+    return this.escolaSessao.alterar(pedido)
   }
 }
