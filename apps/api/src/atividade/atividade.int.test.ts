@@ -1,5 +1,8 @@
-import { esquemaRespostaAtividadeAplicada, esquemaRespostaAtividadeEncerrada, esquemaRespostaListaDeAtividadesAplicadas, esquemaRespostaMinhasAtividades, esquemaRespostaProva } from '@educa/shared'
+import { esquemaRespostaAtividadeAplicada, esquemaRespostaAtividadeEncerrada, esquemaRespostaListaDeAtividadesAplicadas, esquemaRespostaMinhasAtividades, esquemaRespostaProva, esquemaRespostaQuestaoSalva } from '@educa/shared'
+import { PASTA_MIGRACOES } from '@educa/nucleo'
 import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../../tools/testes/metricas.ts'
 import { subirApi, type ApiDeTeste, type RespostaHttp } from '../../test/api-com-sessao.js'
@@ -170,7 +173,7 @@ describe('atividade aplicada', () => {
       const primeira = await rotas.responder(a.aluno, id, 2, 1)
       expect(primeira.status).toBe(200)
       expect(primeira.corpo).toMatchObject({ questao: 2, alternativa: 1 })
-      expect(Object.keys(primeira.corpo).sort()).toEqual(['alternativa', 'questao', 'respondidaEm'])
+      expect(Object.keys(primeira.corpo).sort()).toEqual(['alternativa', 'questao', 'respondidaEm', 'sequencia'])
       expect((await rotas.responder(a.aluno, id, 2, 1)).status).toBe(200)
       expect(await respostasDe(id, a.aluno.usuarioId)).toEqual([{ questao: 2, alternativa: 1 }])
 
@@ -178,7 +181,185 @@ describe('atividade aplicada', () => {
       expect(reenvios.map((resposta) => resposta.status)).toEqual([200, 200, 200, 200, 200])
       expect(await respostasDe(id, a.aluno.usuarioId)).toEqual([{ questao: 2, alternativa: 3 }])
       // A prova reaberta devolve o que ficou salvo, para o aluno continuar de onde parou.
-      expect(esquemaRespostaProva.parse((await rotas.prova(a.aluno, id)).corpo).respostas).toEqual([{ questao: 2, alternativa: 3 }])
+      // (cliente antigo, sem `sequencia`: cada um dos 2 + 5 envios subiu a escala em 1)
+      expect(esquemaRespostaProva.parse((await rotas.prova(a.aluno, id)).corpo).respostas).toEqual([{ questao: 2, alternativa: 3, sequencia: 7 }])
+    })
+
+    // 51.1, caracterização: o que o cliente antigo (sem `sequencia`) faz tem de continuar valendo depois da 51.0.
+    it('caracterização: cinco reenvios iguais ao mesmo tempo são uma linha só, e trocar a alternativa troca a gravada', async () => {
+      const id = await aplicada()
+      await rotas.prova(a.aluno, id)
+      const iguais = await Promise.all(Array.from({ length: 5 }, () => rotas.responder(a.aluno, id, 3, 2)))
+      expect(iguais.map((resposta) => resposta.status)).toEqual([200, 200, 200, 200, 200])
+      for (const resposta of iguais) expect(resposta.corpo).toMatchObject({ questao: 3, alternativa: 2 })
+      expect(await respostasDe(id, a.aluno.usuarioId)).toEqual([{ questao: 3, alternativa: 2 }])
+      expect((await rotas.responder(a.aluno, id, 3, 0)).corpo).toMatchObject({ questao: 3, alternativa: 0 })
+      expect(await respostasDe(id, a.aluno.usuarioId)).toEqual([{ questao: 3, alternativa: 0 }])
+    })
+
+    describe('só a escolha mais nova vale (51.0, RF21)', () => {
+      const caminho = (id: string, questao: number) => `/v1/atividades-aplicadas/${id}/respostas/${String(questao)}`
+      /** O `PUT` como o cliente novo o manda: a alternativa e a ordem dela. */
+      const responderComSequencia = (aluno: SessaoDeTeste, id: string, questao: number, alternativa: number, sequencia: number) => rotas.pedir(aluno, 'PUT', caminho(id, questao), { alternativa, sequencia })
+      const gravadasDe = (id: string, alunoId: string) =>
+        sql<{ questao: number; alternativa: number; sequencia: number; respondida_em: Date }>('select questao, alternativa, sequencia::int as sequencia, respondida_em from resposta_atividade where atividade_aplicada_id = $1 and aluno_id = $2 order by questao', [id, alunoId])
+      /** Um aluno por caso: o limite é de 120 requisições por minuto por usuário, e o das vinte repetições gasta 41. */
+      let alunos: SessaoDeTeste[]
+      beforeAll(async () => {
+        alunos = await alunosComSessao(bancada, a, a.turma, Array.from({ length: 11 }, (_, i) => `Aluno sintético da sequência ${String(i + 1)}`))
+      })
+      const dessaForma = (resposta: RespostaHttp) => esquemaRespostaQuestaoSalva.parse(resposta.corpo)
+
+      it('5 e 7 ao mesmo tempo, nas duas ordens, deixam a 7: vinte repetições, e a prova reaberta devolve a alternativa e a sequência gravadas', async () => {
+        const aluno = alunos[0] as SessaoDeTeste
+        const id = await aplicada()
+        await rotas.prova(aluno, id)
+        for (let repeticao = 0; repeticao < 20; repeticao++) {
+          const base = repeticao * 10
+          const pedidos = [responderComSequencia(aluno, id, 1, 1, base + 5), responderComSequencia(aluno, id, 1, 2, base + 7)]
+          const respostas = await Promise.all(repeticao % 2 === 0 ? pedidos : pedidos.reverse())
+          expect(respostas.map((resposta) => resposta.status), `repetição ${String(repeticao)}`).toEqual([200, 200])
+          expect(await gravadasDe(id, aluno.usuarioId), `repetição ${String(repeticao)}`).toMatchObject([{ questao: 1, alternativa: 2, sequencia: base + 7 }])
+        }
+        expect(esquemaRespostaProva.parse((await rotas.prova(aluno, id)).corpo).respostas).toEqual([{ questao: 1, alternativa: 2, sequencia: 197 }])
+      })
+
+      it('a 5 que chega depois da 7 responde 200 com a 7 gravada (alternativa e sequência), e nada muda no banco', async () => {
+        const aluno = alunos[1] as SessaoDeTeste
+        const id = await aplicada()
+        await rotas.prova(aluno, id)
+        const sete = await responderComSequencia(aluno, id, 2, 3, 7)
+        expect(dessaForma(sete)).toMatchObject({ questao: 2, alternativa: 3, sequencia: 7 })
+        const [antes] = await gravadasDe(id, aluno.usuarioId)
+        const cinco = await responderComSequencia(aluno, id, 2, 0, 5)
+        expect(cinco.status).toBe(200)
+        expect(dessaForma(cinco)).toEqual({ questao: 2, alternativa: 3, sequencia: 7, respondidaEm: antes?.respondida_em.toISOString() })
+        expect(await gravadasDe(id, aluno.usuarioId)).toEqual([antes])
+      })
+
+      it('a mesma sequência com outra alternativa não troca a gravada (duas abas que leram a mesma): a segunda recebe a da primeira; o reenvio igual devolve a mesma', async () => {
+        const aluno = alunos[2] as SessaoDeTeste
+        const id = await aplicada()
+        await rotas.prova(aluno, id)
+        await responderComSequencia(aluno, id, 1, 1, 6)
+        expect(dessaForma(await responderComSequencia(aluno, id, 1, 3, 6))).toMatchObject({ alternativa: 1, sequencia: 6 })
+        const iguais = await Promise.all(Array.from({ length: 5 }, () => responderComSequencia(aluno, id, 1, 1, 6)))
+        for (const resposta of iguais) expect(dessaForma(resposta)).toMatchObject({ alternativa: 1, sequencia: 6 })
+        expect(await gravadasDe(id, aluno.usuarioId)).toMatchObject([{ questao: 1, alternativa: 1, sequencia: 6 }])
+      })
+
+      it('a mesma sequência com outra alternativa, ao mesmo tempo: uma vence, e as duas respostas são iguais à linha gravada', async () => {
+        const aluno = alunos[10] as SessaoDeTeste
+        const id = await aplicada()
+        await rotas.prova(aluno, id)
+        const [um, outro] = await Promise.all([responderComSequencia(aluno, id, 1, 1, 6), responderComSequencia(aluno, id, 1, 3, 6)])
+        const [gravada] = await gravadasDe(id, aluno.usuarioId)
+        expect(gravada).toMatchObject({ questao: 1, sequencia: 6 })
+        expect([1, 3]).toContain(gravada?.alternativa)
+        const esperada = { questao: 1, alternativa: gravada?.alternativa, sequencia: 6, respondidaEm: gravada?.respondida_em.toISOString() }
+        expect((um as RespostaHttp).status).toBe(200)
+        expect((outro as RespostaHttp).status).toBe(200)
+        expect(dessaForma(um as RespostaHttp)).toEqual(esperada)
+        expect(dessaForma(outro as RespostaHttp)).toEqual(esperada)
+        expect(await gravadasDe(id, aluno.usuarioId)).toHaveLength(1)
+      })
+
+      it('quem perde numa questão recebe a gravada daquela questão e daquele aluno, nunca a de outra questão nem a de um colega', async () => {
+        const aluno = alunos[3] as SessaoDeTeste
+        const id = await aplicada()
+        await rotas.prova(aluno, id)
+        await responderComSequencia(bia, id, 2, 0, 90)
+        await responderComSequencia(aluno, id, 1, 3, 40)
+        await responderComSequencia(aluno, id, 2, 1, 50)
+        const perdeu = await responderComSequencia(aluno, id, 2, 2, 10)
+        const propria = (await gravadasDe(id, aluno.usuarioId)).find((linha) => linha.questao === 2)
+        expect(dessaForma(perdeu)).toEqual({ questao: 2, alternativa: 1, sequencia: 50, respondidaEm: propria?.respondida_em.toISOString() })
+      })
+
+      it('cliente antigo (sem sequência) e depois o novo com servidor + 1: o novo vence, e o antigo sobe a sequência em 1', async () => {
+        const aluno = alunos[4] as SessaoDeTeste
+        const id = await aplicada()
+        await rotas.prova(aluno, id)
+        expect(dessaForma(await rotas.responder(aluno, id, 4, 0))).toMatchObject({ alternativa: 0, sequencia: 1 })
+        expect(dessaForma(await rotas.responder(aluno, id, 4, 1))).toMatchObject({ alternativa: 1, sequencia: 2 })
+        const novo = await responderComSequencia(aluno, id, 4, 2, 3)
+        expect(dessaForma(novo)).toMatchObject({ alternativa: 2, sequencia: 3 })
+        expect(dessaForma(await rotas.responder(aluno, id, 4, 3))).toMatchObject({ alternativa: 3, sequencia: 4 })
+        // O cliente novo que ainda estava em 3 perde para o antigo, que subiu a sequência.
+        expect(dessaForma(await responderComSequencia(aluno, id, 4, 0, 3))).toMatchObject({ alternativa: 3, sequencia: 4 })
+        expect(await gravadasDe(id, aluno.usuarioId)).toMatchObject([{ questao: 4, alternativa: 3, sequencia: 4 }])
+      })
+
+      it('sequência negativa, fracionária, texto ou nula, ou uma chave a mais, é ENTRADA_INVALIDA, e nada é gravado', async () => {
+        const aluno = alunos[5] as SessaoDeTeste
+        const id = await aplicada()
+        await rotas.prova(aluno, id)
+        for (const corpo of [{ alternativa: 1, sequencia: -1 }, { alternativa: 1, sequencia: 1.5 }, { alternativa: 1, sequencia: '3' }, { alternativa: 1, sequencia: null }, { alternativa: 1, sequencia: 1, alunoId: bia.usuarioId }, { alternativa: 1, sequencia: 1, escolaId: a.escolaId }]) {
+          expect(erro(await rotas.pedir(aluno, 'PUT', caminho(id, 1), corpo)), JSON.stringify(corpo)).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
+        }
+        expect(await gravadasDe(id, aluno.usuarioId)).toEqual([])
+        expect(await gravadasDe(id, bia.usuarioId)).toEqual([])
+        // O zero é a escala da linha anterior à coluna: vale.
+        expect(dessaForma(await responderComSequencia(aluno, id, 1, 1, 0))).toMatchObject({ alternativa: 1, sequencia: 0 })
+      })
+
+      it('o aluno de A com a atividade de B recebe o mesmo 404 do inexistente, e nenhuma sequência de B muda', async () => {
+        const aluno = alunos[6] as SessaoDeTeste
+        const b = await montarEscolaComAssistente(api, bancada)
+        const deB = await aplicarAtividade(rotas, b.professora, await criarAtividade(bancada, b), b.turma)
+        await rotas.prova(b.aluno, deB)
+        await responderComSequencia(b.aluno, deB, 1, 2, 5)
+        const [antes] = await gravadasDe(deB, b.aluno.usuarioId)
+        const inexistente = erro(await responderComSequencia(aluno, randomUUID(), 1, 0, 9))
+        expect(inexistente).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+        expect(erro(await responderComSequencia(aluno, deB, 1, 0, 9))).toEqual(inexistente)
+        expect(await gravadasDe(deB, b.aluno.usuarioId)).toEqual([antes])
+        expect(await gravadasDe(deB, aluno.usuarioId)).toEqual([])
+      })
+
+      it('depois do envio, ATIVIDADE_ENCERRADA com qualquer sequência, e o que estava salvo não muda', async () => {
+        const aluno = alunos[7] as SessaoDeTeste
+        const id = await aplicada()
+        await rotas.prova(aluno, id)
+        await responderComSequencia(aluno, id, 1, 2, 5)
+        await rotas.enviar(aluno, id)
+        for (const sequencia of [0, 5, 6, 1000]) expect(erro(await responderComSequencia(aluno, id, 1, 0, sequencia)), String(sequencia)).toEqual({ status: 409, codigo: 'ATIVIDADE_ENCERRADA' })
+        expect(erro(await rotas.responder(aluno, id, 1, 0))).toEqual({ status: 409, codigo: 'ATIVIDADE_ENCERRADA' })
+        expect(await gravadasDe(id, aluno.usuarioId)).toMatchObject([{ questao: 1, alternativa: 2, sequencia: 5 }])
+      })
+
+      it('a migration 0037 aplicada sobre linhas antigas deixa todas com sequência 0 (e o cliente antigo, a partir delas, sobe para 1)', async () => {
+        const aluno = alunos[8] as SessaoDeTeste
+        // O texto do arquivo da migration, aplicado a uma tabela de rascunho que já tem linhas: é ele que o `migrar` roda no banco da escola.
+        const migration = readFileSync(join(PASTA_MIGRACOES, '0037_sequencia_da_resposta.sql'), 'utf8')
+        const cliente = await bancada.pool.connect()
+        try {
+          // Nome fixo, então limpa o que uma execução morta entre o `create` e o `drop` possa ter deixado.
+          await cliente.query('drop schema if exists rascunho_0037 cascade')
+          await cliente.query('create schema rascunho_0037')
+          await cliente.query('set search_path to rascunho_0037')
+          await cliente.query('create table resposta_atividade (id serial primary key, questao smallint not null, alternativa smallint not null)')
+          await cliente.query('insert into resposta_atividade (questao, alternativa) values (1, 0), (2, 3), (3, 1)')
+          await cliente.query(migration)
+          const { rows } = await cliente.query<{ sequencia: string }>('select sequencia::text from resposta_atividade order by id')
+          expect(rows).toEqual([{ sequencia: '0' }, { sequencia: '0' }, { sequencia: '0' }])
+          await expect(cliente.query('insert into resposta_atividade (questao, alternativa, sequencia) values (4, 0, null)')).rejects.toThrow(/null value/)
+        } finally {
+          await cliente.query('set search_path to public')
+          await cliente.query('drop schema if exists rascunho_0037 cascade')
+          cliente.release()
+        }
+        // E no banco de verdade: a linha sem `sequencia` nasce em 0, a prova a devolve assim, e o cliente antigo a leva a 1.
+        const id = await aplicada()
+        await rotas.prova(aluno, id)
+        await sql(
+          `insert into resposta_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, questao, alternativa)
+           select escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, 5, 2 from tentativa_atividade where atividade_aplicada_id = $1 and aluno_id = $2`,
+          [id, aluno.usuarioId],
+        )
+        expect(esquemaRespostaProva.parse((await rotas.prova(aluno, id)).corpo).respostas).toEqual([{ questao: 5, alternativa: 2, sequencia: 0 }])
+        expect(dessaForma(await rotas.responder(aluno, id, 5, 3))).toMatchObject({ alternativa: 3, sequencia: 1 })
+      })
     })
 
     it('a questão que a atividade não tem responde como inexistente, e a alternativa fora de 0 a 3 ou um campo a mais, ENTRADA_INVALIDA; nada é gravado', async () => {

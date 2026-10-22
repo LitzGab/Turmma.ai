@@ -77,6 +77,12 @@ export function marcaDaQuestao(questao: number, salvas: ReadonlyMap<number, numb
   return salvas.has(questao) ? 'salva' : 'sem_resposta'
 }
 
+/**
+ * O que a tela diz, no mesmo lugar do "Resposta salva", quando o servidor ficou com uma escolha mais nova feita em outra
+ * janela (RF21): a alternativa que fica marcada é a gravada, e a próxima escolha daqui vale de novo.
+ */
+export const AVISO_DE_OUTRA_JANELA = 'Sua resposta foi alterada em outra janela'
+
 /** O que a tela diz embaixo das alternativas. Sem resposta, nada: silêncio não é erro. */
 export const TEXTO_DA_MARCA: Readonly<Record<MarcaDaQuestao, string>> = {
   sem_resposta: '',

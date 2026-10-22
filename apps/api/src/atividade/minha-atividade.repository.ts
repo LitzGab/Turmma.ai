@@ -50,6 +50,8 @@ export interface TentativaLida {
 export interface RespostaLida {
   readonly questao: number
   readonly alternativa: number
+  /** A ordem da escolha gravada: 0 na linha anterior à coluna. */
+  readonly sequencia: number
   readonly respondidaEm: Date
 }
 
@@ -65,6 +67,9 @@ export interface DiagnosticoLido {
 }
 
 const artefatoDaAplicacao = and(eq(artefato.escolaId, atividadeAplicada.escolaId), eq(artefato.anoLetivoId, atividadeAplicada.anoLetivoId), eq(artefato.id, atividadeAplicada.artefatoId))
+
+/** As colunas que `respostas` lê e que `responder` devolve: a mesma forma de `RespostaLida`. */
+const COLUNAS_DA_RESPOSTA = { questao: respostaAtividade.questao, alternativa: respostaAtividade.alternativa, sequencia: respostaAtividade.sequencia, respondidaEm: respostaAtividade.respondidaEm }
 
 /**
  * O lado do aluno na atividade (`proprio`; regra 10, itens 3 e 4; regra 20, item 5). **O aluno é o da sessão**, nunca
@@ -202,27 +207,42 @@ export class MinhaAtividadeRepository {
   /** As respostas do aluno da sessão na atividade, em ordem de questão. */
   respostas(atividadeAplicadaId: string): Promise<RespostaLida[]> {
     return this.banco
-      .select({ questao: respostaAtividade.questao, alternativa: respostaAtividade.alternativa, respondidaEm: respostaAtividade.respondidaEm })
+      .select(COLUNAS_DA_RESPOSTA)
       .from(respostaAtividade)
       .where(this.#minha(respostaAtividade, atividadeAplicadaId))
       .orderBy(asc(respostaAtividade.questao))
   }
 
   /**
-   * Grava a alternativa do aluno da sessão na questão, **idempotente** (regra 80, item 6): a mesma resposta duas vezes,
-   * o reenvio depois da queda de rede e as duas abas gravam uma linha só, com a última alternativa e a hora do banco.
+   * Grava a alternativa do aluno da sessão na questão, **idempotente** e **só a mais nova** (regra 80, itens 6 e 7): a
+   * mesma resposta duas vezes, o reenvio depois da queda de rede e as duas abas gravam uma linha só, e a escolha com
+   * `sequencia` menor ou igual à gravada **não troca nada**: quem decide é o banco, na própria instrução, e não um
+   * "lê e depois grava". Quem perde recebe de volta o que ficou gravado, para a tela adotar. Sem `sequencia` (cliente
+   * antigo), a escolha vale como a mais nova, na mesma escala: a gravada mais 1, e 1 na primeira.
    */
-  async responder(atividadeAplicadaId: string, questao: number, alternativa: number): Promise<RespostaLida> {
-    const [linha] = await this.banco
+  async responder(atividadeAplicadaId: string, questao: number, alternativa: number, sequencia?: number): Promise<RespostaLida> {
+    const alvo = [respostaAtividade.escolaId, respostaAtividade.anoLetivoId, respostaAtividade.atividadeAplicadaId, respostaAtividade.alunoId, respostaAtividade.questao]
+    const gravar = this.banco
       .insert(respostaAtividade)
-      .values({ escolaId: exigirEscolaDoContexto(), anoLetivoId: exigirAnoEmCurso(), atividadeAplicadaId, alunoId: sessaoDaRequisicao().usuarioId, questao, alternativa })
-      .onConflictDoUpdate({
-        target: [respostaAtividade.escolaId, respostaAtividade.anoLetivoId, respostaAtividade.atividadeAplicadaId, respostaAtividade.alunoId, respostaAtividade.questao],
-        set: { alternativa, respondidaEm: sql`now()` },
-      })
-      .returning({ questao: respostaAtividade.questao, alternativa: respostaAtividade.alternativa, respondidaEm: respostaAtividade.respondidaEm })
-    if (linha === undefined) throw new Error('resposta não gravada')
-    return linha
+      .values({ escolaId: exigirEscolaDoContexto(), anoLetivoId: exigirAnoEmCurso(), atividadeAplicadaId, alunoId: sessaoDaRequisicao().usuarioId, questao, alternativa, sequencia: sequencia ?? 1 })
+    const [gravada] = await (sequencia === undefined
+      ? gravar.onConflictDoUpdate({ target: alvo, set: { alternativa, sequencia: sql`${respostaAtividade.sequencia} + 1`, respondidaEm: sql`now()` } })
+      : gravar.onConflictDoUpdate({
+          target: alvo,
+          set: { alternativa, sequencia: sql`excluded.sequencia`, respondidaEm: sql`now()` },
+          setWhere: sql`excluded.sequencia > ${respostaAtividade.sequencia}`,
+        })
+    ).returning(COLUNAS_DA_RESPOSTA)
+    // Perdeu para uma `sequencia` maior ou igual: o `returning` não devolve a linha que o `where` recusou, e a que ficou é lida em seguida.
+    const [lida] =
+      gravada !== undefined
+        ? [gravada]
+        : await this.banco
+            .select(COLUNAS_DA_RESPOSTA)
+            .from(respostaAtividade)
+            .where(and(this.#minha(respostaAtividade, atividadeAplicadaId), eq(respostaAtividade.questao, questao)))
+    if (lida === undefined) throw new Error('resposta não gravada')
+    return lida
   }
 
   /** Marca o envio da tentativa do aluno da sessão, com a hora do banco, uma vez só: a já enviada fica com a primeira hora. */

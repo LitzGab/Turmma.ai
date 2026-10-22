@@ -138,8 +138,12 @@ export class ApiDoAluno {
     }
     const questao = Number(ids[1])
     const alternativa = Number(campo(corpo, 'alternativa'))
-    this.provas.set(id, { ...prova, respostas: [...prova.respostas.filter((resposta) => resposta.questao !== questao), { questao, alternativa }] })
-    return { status: 200, corpo: { questao, alternativa, respondidaEm: new Date().toISOString() } }
+    const sequencia = Number(campo(corpo, 'sequencia'))
+    // Como a API: só a `sequencia` maior troca a gravada, e quem perde recebe a que ficou (RF21).
+    const gravada = prova.respostas.find((resposta) => resposta.questao === questao)
+    if (gravada !== undefined && gravada.sequencia >= sequencia) return { status: 200, corpo: { ...gravada, respondidaEm: new Date().toISOString() } }
+    this.provas.set(id, { ...prova, respostas: [...prova.respostas.filter((resposta) => resposta.questao !== questao), { questao, alternativa, sequencia }] })
+    return { status: 200, corpo: { questao, alternativa, sequencia, respondidaEm: new Date().toISOString() } }
   }
 
   /** A resposta de sempre de uma rota, para o teste que troca a rota só por um tempo (segura e depois responde). */

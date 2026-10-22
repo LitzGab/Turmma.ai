@@ -61,11 +61,12 @@ export function consultaMeuDiagnostico(atividadeAplicadaId: string) {
 }
 
 /**
- * `PUT /v1/atividades-aplicadas/:id/respostas/:questao`: a alternativa marcada. A gravação é idempotente (regra 80, item
- * 6): mandar a mesma escolha de novo, quando a rede volta, não muda nada no servidor.
+ * `PUT /v1/atividades-aplicadas/:id/respostas/:questao`: a alternativa marcada e a `sequencia` dela. A gravação é
+ * idempotente (regra 80, item 6): mandar a mesma escolha de novo, quando a rede volta, não muda nada no servidor, e a de
+ * `sequencia` menor que a gravada perde: a resposta traz o que ficou gravado, e a fila não reenvia (RF21).
  */
-export function responderQuestao(atividadeAplicadaId: string, questao: number, alternativa: number): Promise<RespostaQuestaoSalva> {
-  return chamarComSessao(`${caminhoDaAtividade(atividadeAplicadaId)}/respostas/${String(questao)}`, esquemaRespostaQuestaoSalva, { metodo: 'PUT', corpo: { alternativa } })
+export function responderQuestao(atividadeAplicadaId: string, questao: number, alternativa: number, sequencia: number): Promise<RespostaQuestaoSalva> {
+  return chamarComSessao(`${caminhoDaAtividade(atividadeAplicadaId)}/respostas/${String(questao)}`, esquemaRespostaQuestaoSalva, { metodo: 'PUT', corpo: { alternativa, sequencia } })
 }
 
 /** `POST /v1/atividades-aplicadas/:id/enviar`: corpo vazio e estrito. Enviar de novo devolve o mesmo. */
