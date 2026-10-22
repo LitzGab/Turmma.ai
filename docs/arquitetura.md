@@ -11,35 +11,54 @@
 
 ## Desenho
 
-```
-apps/web        React + Vite + TS     coordenador, professor, aluno, (família depois)
-apps/api        NestJS + TS           API REST, domínio, autorização
-apps/realtime   WebSocket             modo sala: professor vê a turma ao vivo
-apps/worker     BullMQ                agentes, ingestão, correção, notificação
-packages/shared tipos e contratos
+Quem chega ao código começa pelo `docs/guia-do-desenvolvedor.md`: onde fica cada coisa, o caminho de uma
+requisição, as receitas e a tabela "se você vem do Spring Boot".
 
-Postgres · Redis · S3-compatível · LLMProvider (Ollama | OpenAI-compatível)
 ```
+apps/web          React + Vite + TS   coordenação, professor, aluno, operação Turmma (família depois)
+apps/api          NestJS + TS         API REST, domínio, autorização; hoje também executa as tarefas de IA (D77)
+apps/despachante  Node + TS           lê o outbox (job_registro) e publica no BullMQ, por vaga de escola
+apps/worker       BullMQ              executa os jobs: expurgo, retenção, pedidos do titular, rotinas
+apps/realtime     socket.io           hoje só o canal /sistema; a sala ao vivo por turma é do F10
+packages/shared   zod                 contrato de pedido e resposta, códigos de erro, matriz de permissão
+packages/nucleo   TS                  contexto, guardas, erro, schema e migrations, fila, IA, limite, log
+
+Postgres 18 · Redis (fila e cache) · S3-compatível · LLMProvider (falso | OpenAI-compatível)
+```
+
+A direção das dependências é `shared ← nucleo ← apps`, e a web depende só de `shared`.
 
 ## Camadas do backend
 
 ```
-módulo
- ├── controller     HTTP, validação, zero regra
- ├── service        regra de negócio
- ├── repository     único acesso a dados, escopo de tenant sempre
- └── dto            contrato de saída explícito, nunca a entidade serializada
+módulo/recurso
+ ├── controller     HTTP: valida a entrada pelo esquema de shared, chama o service, zero regra
+ ├── service        regra de negócio; valida a resposta pelo esquema de shared
+ ├── repository     único acesso a dados, escopo de tenant sempre, lido do contexto
+ └── contrato       esquema zod de pedido e resposta em packages/shared, nunca a linha serializada
 ```
 
-Módulos: `escola`, `serie`, `turma`, `disciplina`, `usuario`, `convite`, `ingestao`,
-`material`, `questao`, `avaliacao`, `correcao`, `nota`, `tutor`, `sala`, `agente`,
-`governanca`, `notificacao`, `ia`, `auditoria`, `titular`.
+**A entrada.** O controller valida pelo `ZodValidationPipe` do NestJS, com o esquema de `shared`
+(`packages/nucleo/src/entrada/`). Os controllers de `artefato`, `atividade`, `material`, `operacao`, `privacidade` e
+`tutor` ainda validam à mão, com `lerEntrada(esquema, corpo)` e `idDoCaminho(id)` de
+`apps/api/src/estrutura/entrada.ts`. A resposta passa pelo esquema de resposta no service, e o mesmo esquema valida a
+leitura na web (D81).
+
+Módulos montados (`apps/api/src/app.module.ts`):
+- de domínio: `estrutura` (escola, ano letivo, série, turma, disciplina, vínculo, lista), `professores`, `material`,
+  `ia`, `assistente`, `artefato`, `entrega`, `atividade`, `tutor`, `governanca`, `privacidade`, `sala`, `operacao`,
+  `sistema` e `sessao`;
+- de infraestrutura: `BancoModule`, `LimiteModule` e `UsoModule`.
+
+Os módulos de ingestão, questão, avaliação, correção, nota e notificação nascem nas fases deles (F4, F6, F13, F17).
 
 ## Multi-tenant
 
-Escopo aplicado no repository, a partir do token. Toda tabela de domínio tem `escolaId`;
+Escopo aplicado no repository, lido do contexto da requisição. O token só identifica: a `GuardaDeSessao` lê a sessão
+no banco e grava no contexto a escola, o ano letivo e o papel, e o repository lê de lá com `exigirEscolaDoContexto()`.
+Nunca de parâmetro do cliente. Toda tabela de domínio tem `escolaId`;
 as que variam por período têm `anoLetivoId`. Id é UUID. Teste de isolamento acompanha todo
-módulo novo. Ver `rules/10`.
+módulo novo. Ver `.claude/rules/10-multitenancy.md`.
 
 **O único alcance entre escolas é o módulo `operacao`** (A0b, painel da operação Turmma), e só
 para o operador com sessão (`@RotaDeOperacao`). Ele cria rede e escola pelos casos de uso do
@@ -83,9 +102,14 @@ pelos leitores que a escola já usa (`docs/modelo-de-dados.md`, "A leitura da op
 
 ## Assíncrono
 
-Nada demorado em request. Filas: `ingestao`, `agentes`, `correcao`, `notificacao`,
-`expurgo`, `exportacao-titular`, com três prioridades (interativa, normal, lote) e limite de
-concorrência por escola. Lote não urgente roda fora do horário letivo.
+Nada demorado em request. São três filas, uma por prioridade: `interativa`, `normal` e `lote`. O trabalho se
+distingue pelo **tipo** do job (`retencao.expurgar-escola`, `titular.montar-arquivo`…), não por uma fila própria.
+Cada escola tem um limite de concorrência (`VagasPorEscola`), e o lote não urgente roda fora do horário letivo. No
+compose, o `worker-interativo` atende `interativa` e `normal`, e o `worker-lote` atende `lote`.
+
+**Exceção declarada:** as tarefas de IA (Tutor, ferramentas do professor) ainda rodam no processo da API, pelo
+`AgendadorDeExecucoes`, que responde 202 e executa em segundo plano (D77). A ida para o worker está registrada na X6
+(`reengenharia-continuacao`, 42.0 e 47.0), antes do portão do piloto.
 
 No F3, o expurgo noturno (`retencao.expurgar-escola`, um job por escola, à 1h) e a eliminação do titular (`titular.eliminar`,
 que o expurgo enfileira quando o prazo de 7 dias vence) são lote não urgente; a montagem do arquivo do titular
@@ -111,16 +135,24 @@ O professor vê a turma usando o tutor ao vivo: quem está travado, quem pediu r
 pronta, quais dúvidas se repetem. WebSocket com sala por turma, autorizada pelo vínculo do
 professor. Fora da aula, modo casa: registro e resumo, sem tempo real.
 
+**Hoje** o `apps/realtime` só tem o canal `/sistema`.
+A sala por turma é do F10 (`modo-sala-tempo-real`).
+
 Sinal é derivado de evento, não de vigilância: o professor vê **uso e dificuldade**, não
 uma janela permanente sobre o comportamento do aluno.
 
 ## Camada de IA
 
 ```
-Serviço de domínio → LLMProvider (porta)
-                       ├── OllamaAdapter        dev e teste, custo zero
-                       └── OpenAICompatAdapter  produção
+Serviço de domínio → AgendadorDeExecucoes → ProvedorDeIa (gateway: orçamento, suspensão, prazo, validação da saída)
+                                              → LLMProvider (porta)
+                                                  ├── AdaptadorFalso          testes e carga, custo zero (padrão)
+                                                  └── AdaptadorOpenAICompat   produção, e o modelo local no
+                                                                              desenvolvimento (llama-server)
 ```
+
+Não há adaptador Ollama próprio: o modelo local fala o protocolo OpenAI-compatível e usa o mesmo adaptador. As tarefas
+ficam em `packages/nucleo/src/ia/tarefas/`, com os prompts versionados em `ia/prompts/`.
 
 Roteamento por perfil: `rapido`, `padrao`, `complexo`, `visao`. O perfil é declarado pelo
 caso de uso; o modelo concreto é configuração.
@@ -140,10 +172,14 @@ Ver `docs/ingestao.md`. Pipeline único, adaptador por fonte, rastreabilidade at
 
 ## Frontend
 
-SPA, TanStack Query para estado de servidor, tipos vindos de `packages/shared`. Alvo de
-desempenho: computador de escola, que é fraco, com o Chromebook de entrada como referência,
-e celular em rede móvel. Toda tela é responsiva desde a primeira versão (D51). Lista longa
-virtualizada, bundle enxuto, nada que assuma máquina boa.
+SPA com wouter nas rotas e TanStack Query para o estado de servidor (`queryOptions` por assunto). Os tipos e
+esquemas vêm de `packages/shared`, e a resposta da API é validada na leitura. O access token fica só em memória, e
+a sessão volta pelo cookie. Alvo de desempenho: o computador de escola, que é fraco, com o Chromebook de entrada como
+referência, e o celular em rede móvel. Toda tela é responsiva desde a primeira versão (D51).
+
+Lista longa é paginada na API, por cursor. A virtualização ainda não existe (`componentes/ui/Tabela.tsx` não pagina nem
+virtualiza) e entra quando uma tela precisar mostrar centenas de linhas. O bundle tem teto no `.size-limit.json`, e
+nada assume máquina boa.
 
 ## Observabilidade sem exposição
 

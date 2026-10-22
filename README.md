@@ -5,6 +5,9 @@ governam a construção do Turmma. A ideia é simples: nada é implementado ante
 um documento que diga o que fazer, outro que diga como fazer, e uma lista de tarefas
 aprovada. É o que se chama de desenvolvimento guiado por especificação.
 
+**Quem chega ao código começa por [`docs/guia-do-desenvolvedor.md`](docs/guia-do-desenvolvedor.md)**: onde fica cada
+coisa, o caminho de uma requisição, as receitas de endpoint, tabela, job e tela, e o que a máquina não deixa passar.
+
 O motivo de fazer assim, neste projeto especificamente: estamos lidando com dado de menor
 de idade, com exigência legal de supervisão humana sobre IA, e com um comprador que cancela
 o contrato se algo vazar. Improvisar arquitetura no meio da implementação sai caro aqui de
