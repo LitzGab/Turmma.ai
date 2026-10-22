@@ -1,6 +1,6 @@
 import type { PedidoDeMeusDados, RespostaDoArquivo, RespostaMeusDados } from '@educa/shared'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { consultaEu } from '../../api/eu'
 import { baixarMeuArquivo, consultaMeusDados, relerMeusDados } from '../../api/meus-dados'
 import { formatarData, formatarDataHora, formatarQuantidade } from '../../formatar'
@@ -91,10 +91,38 @@ interface PropsDaLista {
   readonly pedidos: readonly PedidoDeMeusDados[]
   readonly agora: Date
   readonly aoBaixar: (pedido: PedidoDeMeusDados) => void
+  /** O foco, quando o botão de baixar sai da lista com ele (a releitura chegou depois de o diálogo fechar). */
+  readonly focoDeReserva: () => void
+}
+
+/**
+ * O botão de baixar de um pedido. O arquivo que passou dos 7 dias enquanto a pessoa lia tira o botão da lista quando a
+ * releitura chega, e ela pode chegar depois de o diálogo fechar: o foco já voltou ao botão, e sem este cuidado o navegador
+ * o põe no `body` quando ele sai (o `focoDeReserva` do diálogo só vale se o botão já saiu ao fechar). A limpeza roda com o
+ * botão ainda na página: só quem o tem com o foco o leva à reserva, e quem já foi para outro controle não perde o dele
+ * (regra 50, item 11).
+ */
+function BotaoDeBaixar({ aoClicar, focoDeReserva }: { readonly aoClicar: () => void; readonly focoDeReserva: () => void }) {
+  const botao = useRef<HTMLButtonElement>(null)
+  const reserva = useRef(focoDeReserva)
+  useEffect(() => {
+    reserva.current = focoDeReserva
+  }, [focoDeReserva])
+  useLayoutEffect(() => {
+    const elemento = botao.current
+    return () => {
+      if (document.activeElement === elemento) reserva.current()
+    }
+  }, [])
+  return (
+    <Botao ref={botao} variante="secundario" onClick={aoClicar}>
+      Baixar meus dados
+    </Botao>
+  )
 }
 
 /** Os pedidos, o mais recente primeiro: cada um diz o que é, em que pé está e, com o arquivo pronto, deixa baixá-lo. */
-function ListaDePedidos({ pedidos, agora, aoBaixar }: PropsDaLista) {
+function ListaDePedidos({ pedidos, agora, aoBaixar, focoDeReserva }: PropsDaLista) {
   return (
     <ul className="flex min-w-0 flex-col gap-3">
       {ordenarPedidos(pedidos).map((pedido) => {
@@ -113,9 +141,7 @@ function ListaDePedidos({ pedidos, agora, aoBaixar }: PropsDaLista) {
               <>
                 <p className="text-sm break-words text-sutil">O arquivo fica disponível até {formatarDataHora(disponivel.expiraEm)}.</p>
                 <div>
-                  <Botao variante="secundario" onClick={() => aoBaixar(pedido)}>
-                    Baixar meus dados
-                  </Botao>
+                  <BotaoDeBaixar aoClicar={() => aoBaixar(pedido)} focoDeReserva={focoDeReserva} />
                 </div>
               </>
             )}
@@ -202,7 +228,12 @@ export default function MeusDados({ titulo, secao }: Props) {
                 {dados.pedidos.length === 0 ? (
                   <EstadoVazio titulo={TITULO_DO_VAZIO} descricao={TEXTO_DO_VAZIO} />
                 ) : (
-                  <ListaDePedidos pedidos={dados.pedidos} agora={agora} aoBaixar={(pedido) => dialogo.abrir('baixar', pedido)} />
+                  <ListaDePedidos
+                    pedidos={dados.pedidos}
+                    agora={agora}
+                    aoBaixar={(pedido) => dialogo.abrir('baixar', pedido)}
+                    focoDeReserva={() => inicio.current?.focus()}
+                  />
                 )}
               </div>
             </Cartao>
