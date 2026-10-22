@@ -1568,3 +1568,18 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - **`execucaoLida`, `pausada` e `consumoDaExecucao` repetidos** em `tutor.int.test.ts` e `tutor-modelo.int.test.ts` (X5,
   4.0): levar para `apps/api/test/escola-com-tutor.ts` na próxima tarefa que mexer nesse arquivo, porque mexer nele caduca
   todos os testes de Tutor que o usam
+- **As limitações conhecidas do `riscoAVida`, para `docs/aia/tutor.md`** (X5, 2.0): ao fechar a onda 0, junto com a medida
+  do lote retido (`onda-0.md` §2.1 e §4). (a) O sinal `atencao_humana` sai com o nome do aluno que escreveu, também quando o
+  risco é de outra pessoa ("meu irmão quer se matar"); (b) a AIA do Tutor diz que o sinal nunca aparece como histórico por
+  aluno (regra 70, item 7); (c) dispara de propósito, por erra-para-mais (decisões 4 e 7 do `ouro`): "o Romeu queria morrer
+  junto da Julieta?", "não quero mais viver na cidade grande", "meu time joga melhor sem mim", "o professor quer me matar com
+  essa lista" (o mesmo jeito de "meu padrasto quer me matar"), e "dose letal" ou "queda fatal" numa aula de ciências;
+  (d) a exclusão do padrão de altura vale para a frase inteira: "ovo", "objeto", "experimento", "bola" ou "queda livre" em
+  qualquer lugar dela impedem o disparo, mesmo que "altura" e "queda" falem de uma pessoa; prender a exclusão ao sujeito da
+  queda é o ajuste, e fica para depois da medida do lote retido
+- **A ameaça de outra pessoa e a ameaça a terceiro** (X5, 2.0): "meu padrasto quer me matar", "ele disse que vai me matar" e
+  "vou matar ele" recebem hoje a mensagem do CVV e o sinal `atencao_humana`, porque a 2.0 não mudou a resposta;
+  "o professor quer me matar com essa lista" dispara pelo mesmo jeito de dizer, e "os meninos vão me matar na saída" (a ameaça
+  direta, sem verbo que a conte) não dispara, porque "vão me matar" é a forma da expressão ("a prova vai me matar"). A decisão
+  de produto é mandar a ameaça de outra pessoa ao `assuntoDelicado`, e não ao 188, e decidir o caso da ameaça direta; decidir
+  junto da linha acima sobre ameaça a terceiro, com o `conformidade-reviewer` e advogado, antes de aluno real

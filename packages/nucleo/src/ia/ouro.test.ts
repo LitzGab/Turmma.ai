@@ -29,9 +29,15 @@ import { atribuiNotaOuConceito, conversaPedeJulgamentoDeTextoDeAluno } from './t
 import { ehAssuntoDelicado, mencionaRiscoAVida, pedeRespostaPronta } from './tarefas/turno-do-tutor.js'
 
 /**
- * O `ouro` (`docs/aia/ouro/`) contra as funções de hoje. A 1.0 não muda regra: a medida de cada política tem de ser a
- * `base` que o Arquiteto gravou em 21/10/2026, categoria por categoria, e diferença é vermelho. Só depois disso as três
- * políticas desta tarefa ligam o piso. As outras três são medidas e impressas; o alvo delas liga na 2.0 e na 3.0.
+ * O `ouro` (`docs/aia/ouro/`) contra as funções de hoje. A 1.0 reproduziu a `base` que o Arquiteto gravou em 21/10/2026,
+ * categoria por categoria, e ligou o piso de `assuntoDelicado`, `pedidoDeRespostaPronta` e `saidaComNota`. A 2.0 mudou regra: o
+ * `riscoAVida` passa a valer pelo alvo (a reprodução exata deu lugar a ele, de propósito), `ameaca_a_terceiro` tem o piso, e o
+ * `assuntoDelicado`, que recebe os mesmos padrões, não pode cair. As outras duas são medidas e impressas; o alvo delas liga na 3.0.
+ *
+ * **O `ouro` v1 de `riscoAVida` foi lido na 2.0 para escrever os padrões.** Por isso, além do alvo (que não muda), o teste "o `ouro`
+ * v1 de `riscoAVida`, lido na 2.0, não perde nenhuma amostra" é **regressão exata**: toda amostra fora de `ameaca_a_terceiro`
+ * decide como o `esperado` dela. Ele prova que nada que a 2.0 mediu caiu depois, e não que o padrão reconhece frase que não
+ * conhecia: essa medida é do lote retido, em `onda-0.md` §2.1 ("Quem escreve o padrão não lê o `ouro`").
  */
 
 type Objeto = Record<string, unknown>
@@ -541,23 +547,47 @@ describe('o comparador com a base', () => {
   })
 })
 
-describe('as seis políticas contra a base, sem mudar regra', () => {
-  it('riscoAVida reproduz a base, com ameaca_a_terceiro à parte', () => {
+describe('as políticas contra a base e o alvo', () => {
+  it('riscoAVida alcança o alvo: nenhuma categoria perde além da máxima, com ameaca_a_terceiro à parte', () => {
     const { medida, amostras, barra } = medirHoje('riscoAVida')
     imprimir(linhaDaMedida('riscoAVida', medida))
-    expect(diferencasDaBase(MEDIDAS.riscoAVida.base, medida), quaisErraram(amostras, barra)).toEqual([])
-    expect(medida).toMatchObject({ barradasDasPositivas: 16, positivas: 75, recall: 0.213, precisao: 0.593 })
-    expect(medida.porCategoria['ameaca_a_terceiro']).toEqual({ certos: 1, total: 7 })
+    const { perdaMaxima } = MEDIDAS.riscoAVida.alvo
+    const acimaDaMaxima = Object.entries(perdaMaxima).flatMap(([categoria, maxima]) => {
+      const { certos, total } = medida.porCategoria[categoria] ?? { certos: 0, total: 0 }
+      return total - certos > maxima ? [`${categoria}: perdeu ${String(total - certos)} e o alvo aceita ${String(maxima)}`] : []
+    })
+    expect(acimaDaMaxima, quaisErraram(amostras, barra)).toEqual([])
+    // O recall total é a soma das perdas máximas: 71 de 75.
+    const perdaTotal = Object.values(perdaMaxima).reduce((soma, perda) => soma + perda, 0)
+    expect(medida.barradasDasPositivas, quaisErraram(amostras, barra)).toBeGreaterThanOrEqual(medida.positivas - perdaTotal)
+    expect(medida.positivas).toBe(75)
   })
 
-  it('assuntoDelicado reproduz a base por categoria', () => {
-    const { medida, amostras, barra } = medirHoje('assuntoDelicado')
-    imprimir(linhaDaMedida('assuntoDelicado', medida))
-    expect(diferencasDaBase(MEDIDAS.assuntoDelicado.base, medida), quaisErraram(amostras, barra)).toEqual([])
+  it('riscoAVida alcança o alvo: a precisão não cai, sem contar ameaca_a_terceiro', () => {
+    const { medida, amostras, barra } = medirHoje('riscoAVida')
+    expect(medida.precisao, quaisErraram(amostras, barra)).toBeGreaterThanOrEqual(MEDIDAS.riscoAVida.alvo.precisaoMinima)
   })
 
-  it('assuntoDelicado não cai da base em nenhuma categoria', () => {
+  it('o ouro v1 de riscoAVida, lido na 2.0, não perde nenhuma amostra: casa e nao_casa decidem como o esperado, fora ameaca_a_terceiro', () => {
+    const { amostras, barra } = medirHoje('riscoAVida')
+    const foraDoAlvo: readonly string[] = MEDIDAS.riscoAVida.foraDoAlvo
+    const dentroDoAlvo = amostras.filter((amostra) => !foraDoAlvo.includes(amostra.categoria))
+    expect(dentroDoAlvo.length).toBeGreaterThan(0)
+    expect(quaisErraram(dentroDoAlvo, barra)).toBe('erraram 0: ')
+  })
+
+  it('ameaca_a_terceiro está fora do alvo e não cai da base: o piso é o que o padrão de hoje já acerta', () => {
+    const { medida } = medirHoje('riscoAVida')
+    const { base, pisoForaDoAlvo } = MEDIDAS.riscoAVida
+    const piso = Object.fromEntries(Object.entries(base.porCategoria).filter(([categoria]) => categoria in pisoForaDoAlvo))
+    expect(Object.keys(piso)).toEqual(['ameaca_a_terceiro'])
+    expect(quedasDaBase({ ...base, porCategoria: piso }, medida)).toEqual([])
+  })
+
+  it('assuntoDelicado não cai da base em nenhuma categoria, inclusive em duvida_da_materia e tema_de_aula', () => {
     const { medida } = medirHoje('assuntoDelicado')
+    imprimir(linhaDaMedida('assuntoDelicado', medida))
+    expect(Object.keys(MEDIDAS.assuntoDelicado.base.porCategoria)).toEqual(expect.arrayContaining(['duvida_da_materia', 'tema_de_aula']))
     expect(quedasDaBase(MEDIDAS.assuntoDelicado.base, medida)).toEqual([])
   })
 

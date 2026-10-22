@@ -24,6 +24,7 @@ As três políticas do Tutor moram em `packages/nucleo/src/conformidade/`, e o T
 - [ ] 26.3 — `risco-a-vida.ts`, `assunto-delicado.ts`, `pedido-de-resposta.ts`, `index.ts`, e o corpus `dev` fora do `dist/`
 - [ ] 26.4 — `turno-do-tutor.ts` só chama `politicas.x.casa`; as de identidade ficam, com o porquê (D58)
 - [ ] 26.5 — Testes: caracterização, `ouro`, `dev`, contexto, grupos, um lugar só, `dist/`, prompt igual
+- [ ] 26.6 — `ouro.test.ts` lê `riscoAVida-retido-1.json` e `RETIDOS.json` (zod estrito) e não cai da medida independente (`onda-0.md` §2.1, "O lote retido")
 
 ## Arquivos previstos
 
@@ -40,6 +41,8 @@ As três políticas do Tutor moram em `packages/nucleo/src/conformidade/`, e o T
 |---|---|---|
 | Cada amostra do `ouro` e do `dev`, por id, decide igual antes e depois | unidade, `caracterizacao.test.ts` | tirar um padrão de `risco-a-vida.ts` |
 | `riscoAVida` no alvo de `MEDIDAS.alvo`, `ameaca_a_terceiro` no piso | unidade, `ouro.test.ts` | tirar o padrão de `giria_abreviacao` |
+| A fonte de cada padrão de risco à vida (`String(regex)`, com as constantes resolvidas) é igual antes e depois: alternativa sem `dev` não some na mudança (`onda-0.md` §2.1) | unidade, `caracterizacao.test.ts` | tirar `eletrocutar` de `risco-a-vida.ts` |
+| `riscoAVida` retido não cai da medida de `RETIDOS.json`, por categoria, com o piso de `conteudo_escolar`, `homonimo` e `tristeza_sem_risco` | unidade, `ouro.test.ts` | tirar um padrão de `indireta` |
 | `assuntoDelicado` não cai da base, por categoria | unidade, idem | tirar um padrão de `assunto-delicado.ts` |
 | `pedidoDeRespostaPronta` não cai da base, por categoria | unidade, idem | tirar um padrão de `pedido-de-resposta.ts` |
 | "tô triste": delicado casa, risco não; recebe a mensagem de assunto delicado, não a de risco | unidade, `turno-do-tutor.test.ts` | mensagem de risco para todo delicado |
@@ -62,7 +65,7 @@ As três políticas do Tutor moram em `packages/nucleo/src/conformidade/`, e o T
 - Integração: `apps/api/src/tutor/tutor.int.test.ts › com menção a risco à vida, o 188 vem na frente`.
 - Isolado: `npx vitest run --project unidade packages/nucleo/src/conformidade packages/nucleo/src/ia` e `--project
   integracao apps/api/src/tutor/tutor.int.test.ts`; o `build.test.ts` pede `npm run build -w packages/nucleo`.
-- Armadilhas: nunca mexa em `docs/aia/ouro/` (o veto confere o `git log` vazio e o selo verde).
+- Armadilhas: nunca mexa em `docs/aia/ouro/` (o veto confere o `git log` vazio e o selo verde), e não abra os `*.json` dele: o leitor se testa com corpus montado no teste (`onda-0.md` §2.1).
 
 ## Fora do escopo desta tarefa
 

@@ -301,6 +301,37 @@ describe('Tutor contra um modelo que não obedece', () => {
       }
     })
 
+    it('a frase de risco à vida que só a regra reconhece, de um jeito de dizer ou de outro, recebe a mensagem de risco e o sinal sem referência, sem ir ao modelo, com a avaliação aberta', async () => {
+      const aluno = await bancada.sessao(a.escolaId, 'aluno')
+      await sql(`insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em) values ($1, $2, $3, $4, 'aluno', 'confirmado', $5, now())`, [a.escolaId, a.anoLetivoId, aluno.usuarioId, a.outraTurma, a.coordenacao.usuarioId])
+      const prova = await aplicarAtividade(bancada, a, { avaliativa: true, turmaId: a.outraTurma, titulo: 'Prova sintética de equilíbrio químico', aplicadaPor: a.colega.usuarioId })
+      const marca = `sabia${randomUUID().slice(0, 8)}`
+      const naProva = { atividadeAplicadaId: prova, questao: 3 }
+      modelo.responder((pedido) => obediente(pedido))
+      try {
+        // "quero matar ela" era o padrão sem teste; "queria desaparecer do mundo" é um jeito de dizer que a regra não conhecia.
+        for (const frase of ['quero matar ela', 'queria desaparecer do mundo']) {
+          const execucao = await turno(aluno, `${frase} ${marca}`, naProva)
+          expect(execucao).toMatchObject({ estado: 'concluida', resultado: { tipo: 'mensagem_do_tutor', mensagem: { tipo: 'assunto_delicado', texto: MENSAGEM_DE_RISCO_A_VIDA } } })
+        }
+        const semReferencia = { tipo: 'atencao_humana', atividade_aplicada_id: null, questao: null, material_id: null, pagina: null }
+        const { rows: sinais } = await sql('select tipo, atividade_aplicada_id, questao, material_id, pagina from sinal_tutor where escola_id = $1 and aluno_id = $2 order by id', [a.escolaId, aluno.usuarioId])
+        expect(sinais).toEqual([semReferencia, semReferencia])
+        // Nada foi ao modelo, e o texto do aluno não saiu da conversa.
+        expect(modelo.pedidos).toEqual([])
+        for (const tabela of ['sinal_tutor', 'execucao_agente', 'consumo_ia', 'auditoria']) {
+          const { rows } = await sql<{ total: string }>(`select count(*) as total from ${tabela} t where t.escola_id = $1 and row_to_json(t)::text ilike $2`, [a.escolaId, `%${marca}%`])
+          expect(Number(rows[0]?.total), tabela).toBe(0)
+        }
+        expect(linhasDeLog.some((linha) => linha.includes(marca))).toBe(false)
+        // A pergunta comum, na mesma prova, continua travada: a mensagem fixa não abriu a porta.
+        const comum = await chamar(api.url, 'POST', '/v1/tutor/mensagens', await aluno.tokenNovo(), { chaveEnvio: randomUUID(), texto: 'não entendi a questão 3', ...naProva })
+        expect(comum).toMatchObject({ status: 409, corpo: { erro: { codigo: 'TUTOR_PAUSADO_EM_AVALIACAO' } } })
+      } finally {
+        await sql(`update atividade_aplicada set estado = 'encerrada', encerrada_em = now() where escola_id = $1 and id = $2`, [a.escolaId, prova])
+      }
+    })
+
     it('quando é o modelo que classifica o turno como assunto delicado, o aluno recebe a mensagem fixa, e o professor, o sinal sem referência', async () => {
       const aluno = await novoAluno()
       // Nenhum gatilho da regra reconhece esta frase: quem a classifica é o modelo, e o texto que ele escreveu é descartado.

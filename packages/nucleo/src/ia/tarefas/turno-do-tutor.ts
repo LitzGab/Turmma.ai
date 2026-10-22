@@ -86,15 +86,128 @@ export const MENSAGEM_DE_RISCO_A_VIDA = [
 ].join('\n\n')
 
 /**
+ * Tolerância de tecla (D36): quem escreve rápido, e com o coração disparado, erra a tecla. A palavra-chave vale também com
+ * uma letra repetida, uma a menos, duas trocadas ou a vizinha no teclado ("morrr", "qeuro", "matsr"). Só as palavras que os
+ * padrões abaixo escolhem ganham a tolerância, e sempre dentro da frase que o padrão descreve, nunca a palavra solta. A variante
+ * que é outra palavra do português fica fora onde a frase seria outra: "essa conta me mata" não é "me matar".
+ */
+const TECLAS_VIZINHAS: Readonly<Record<string, string>> = {
+  q: 'wa', w: 'qes', e: 'wrd', r: 'etf', t: 'ryg', y: 'tuh', u: 'yij', i: 'uok', o: 'ipl', p: 'ol', a: 'qsz', s: 'awdx', d: 'sefc',
+  f: 'drgv', g: 'ftbh', h: 'gyjn', j: 'hukm', k: 'jil', l: 'kop', z: 'asx', x: 'zsc', c: 'xdv', v: 'cfb', b: 'vgn', n: 'bhm', m: 'nj',
+}
+
+function comTecla(palavra: string, ...excetuando: string[]): string {
+  const variantes = new Set<string>([palavra])
+  for (let indice = 0; indice < palavra.length; indice += 1) {
+    const letra = palavra.charAt(indice)
+    const antes = palavra.slice(0, indice)
+    const depois = palavra.slice(indice + 1)
+    variantes.add(`${antes}${letra}${letra}${depois}`)
+    variantes.add(`${antes}${depois}`)
+    if (indice + 1 < palavra.length) variantes.add(`${antes}${palavra.charAt(indice + 1)}${letra}${palavra.slice(indice + 2)}`)
+    for (const vizinha of TECLAS_VIZINHAS[letra] ?? '') variantes.add(`${antes}${vizinha}${depois}`)
+  }
+  for (const outra of excetuando) variantes.delete(outra)
+  return `(?:${[...variantes].join('|')})`
+}
+
+const QUERO = `(?:${comTecla('quero')}|queria|qria|kero|qro)`
+const MORRER = comTecla('morrer')
+const MATAR = comTecla('matar', 'mata')
+const VIVER = comTecla('viver')
+const CORTAR = comTecla('cortar', 'corta')
+const DESEJO = `(?:${QUERO}|prefiro|preferia|vontade de|penso em|pensando em|pensei em|querendo)`
+/** "Morrer de" mais um estado passageiro é expressão, não desejo (decisão 4 do `ouro`). "Morrer de verdade" não está aqui, e dispara. */
+const ESTADO_PASSAGEIRO = 'vergonha|rir|tedio|calor|frio|fome|sede|sono|saudade|medo|raiva|preguica|cansaco|curiosidade|ciume|inveja|susto|dor de cabeca'
+const SUICIDIO = 's[ui]{1,2}ci?d\\w*'
+const REMEDIO = '(?:remedios?|comprimidos?|cartelas?|pilulas?|medicamentos?)'
+const LUGAR_ALTO = '(?:a |o |um |uma )?(?:janela|predio|ponte|sacada|laje|terraco|viaduto|carro|onibus|trem|metro|caminhao|telhado|penhasco|(?:\\w+ )?andar)'
+
+/**
  * Os gatilhos são o que o aluno **escreveu**, com as palavras dele, comparado sem acento e sem maiúscula. Não há
  * inferência: frase que não diz nada disso não dispara, por mais que "pareça" triste (D36, D57).
+ *
+ * **Um padrão por jeito de dizer**, e cada um tem a sua amostra `dev` em `turno-do-tutor.test.ts`: tirar qualquer um deixa
+ * uma amostra vermelha. Têm bloco de mutação: cada padrão, cada alternativa que a `dev` ou o `ouro` v1 exercita (este, pela
+ * regressão exata de `ouro.test.ts`), e cada alternativa que a tarefa 2.0 acrescentou por ordem. O resto do léxico (sinônimos
+ * e conjugações) não tem teste próprio, fica pelo lado de disparar e não sai do padrão por isso (`onda-0.md` §2.1). Erra-se
+ * para o lado de disparar (decisões 4 e 7 do `ouro`): o custo do falso negativo é uma vida, e o do falso positivo é um 188 a mais.
+ *
+ * **O que não dispara, por padrão que estreita** (cada um com a sua `dev` `nao_casa`):
+ * - a expressão ("vou me matar de estudar", "morrer de rir") e o agente que é outro ("essa prova vai me matar", "a professora
+ *   me corta");
+ * - o acidente ("quase me cortei", "me cortei com o papel") e o objeto que não é o corpo ("bati o recorde de propósito");
+ * - a matéria nomeada: "suicídio" sem a primeira pessoa, "overdose no livro", o remédio que mata a bactéria e a queda do ovo na
+ *   física. A pergunta sobre o meio **com matéria nomeada** não dispara; sem ela ("na prova", "no trabalho") dispara.
+ *
+ * **O que dispara e talvez não devesse**, e fica assim de propósito: "dose letal" e "queda fatal" numa aula de ciências; "o
+ * professor quer me matar com essa lista", porque "meu padrasto quer me matar" é o mesmo jeito de dizer; e a ameaça contada
+ * ("ele disse que vai me matar"), porque quem a conta precisa de um adulto. A ameaça a terceiro ("vou matar ele") continua como
+ * estava: a resposta a ela é decisão de produto em aberto (`TODO.md`).
  */
-const GATILHOS_DE_RISCO_A_VIDA: readonly RegExp[] = [
-  /\b(me matar|me mato|quero morrer|queria morrer|prefiro morrer|queria estar mort[oa]|nao quero mais viver|nao aguento mais viver)\b/,
-  /\b(tirar|acabar com) (a )?minha (propria )?vida\b/,
-  /\bsuicid\w*/,
-  /\b(me cortar|me cortei|me corto|me cortando|me machucar de proposito|automutil\w*)\b/,
+export const GATILHOS_DE_RISCO_A_VIDA: readonly RegExp[] = [
+  // Querer morrer: "queria morrer", "vontade de morrer"; "morrer de rir" é expressão.
+  new RegExp(String.raw`\b${DESEJO} ${MORRER}\b(?! (?:de|do|da) (?:${ESTADO_PASSAGEIRO})\b)`),
+  new RegExp(String.raw`\b(?:queria|quero|preferia|prefiro) (?:${comTecla('estar')}|ficar) mort[oa]\b`),
+  /\bnao (?:queria|quero) (?:mais )?(?:estar|ser|ficar) viv[oa]\b/,
+  // Não querer mais viver.
+  new RegExp(String.raw`\b(?:nao|n|nem) (?:${QUERO}|aguento|suporto) (?:${comTecla('mais')}|[+]) (?:${VIVER}|existir)\b`),
+  new RegExp(String.raw`\bnao (?:tenho|vejo) (?:mais )?(?:vontade|motivo|razao|sentido|forcas?) (?:de|pra|para|em) (?:${VIVER}|continuar (?:a )?(?:${VIVER}|viv[oa]|vivendo)|continuar(?=\s*(?:$|[,.!?;]))|seguir (?:viv[oa]|vivendo))\b`),
+  new RegExp(String.raw`\b(?:to|tou|estou) sem (?:forcas?|motivo) (?:pra|para) (?:${VIVER}|continuar (?:a )?(?:${VIVER}|vivendo))\b`),
+  // A vida sem sentido, de quem a perdeu: "a minha vida não faz sentido", "a vida não vale a pena".
+  /\b(?:minha|a) vida (?:nao (?:tem|faz) (?:mais )?sentido|perdeu (?:o )?sentido|nao vale a pena)\b/,
+  // Querer que acabe: "quero que tudo acabe", "queria que isso tudo termine".
+  /\b(?:quero|queria) que (?:tudo|isso tudo|isso) (?:acabe|acabasse|termine|terminasse)\b/,
+  new RegExp(String.raw`\b(?:to|tou|estou) (?:muito |tao |bem )?(?:cansad[oa]|farto|farta|saturad[oa]|enjoad[oa]) (?:de|da) (?:${VIVER}|vida|existir)\b`),
+  // Tirar a própria vida, com a palavra "suicídio" só na primeira pessoa: "suicídio na Revolução Francesa" é matéria.
+  new RegExp(String.raw`\b(?:${comTecla('tirar')}|acabar com) (?:a )?minha (?:propria )?${comTecla('vida')}\b`),
+  /\b(?:penso|pensando|pensei|quero|queria|vou|vo|decidi|vontade de) (?:em )?(?:tirar|acabar com) (?:a )?(?:propria )?vida\b/,
+  new RegExp(String.raw`\b(?:pens\w+ (?:em|no)|ideia\w* (?:de|com)|vontade de|tentei|tentar|tentando|planejo|planejei|vou|vo|quero|queria|decidi|pretendo|penso) (?:cometer |fazer |tentar )?(?:o |um )?${SUICIDIO}`),
+  new RegExp(String.raw`\bme ${SUICIDIO}`),
+  // Se matar, com a palavra de quem escreve: "essa prova vai me matar" e "vou me matar de estudar" são expressão.
+  new RegExp(String.raw`(?<!\b(?:vai|vao|ia|iam|vem) )\bme (?:${MATAR}|mato)\b(?! de (?:estudar|trabalhar|correr|rir|treinar)\b)`),
+  /\b(?:vou|vo|quero|qro|kero) me mata\b/,
+  // A ameaça contada por quem a ouviu: "vai me matar" sozinho é expressão, "ele disse que vai me matar" não.
+  /\b(?:disse que|falou que|ameacou que|jurou que) (?:vai|vao|ia|iam) me matar\b/,
+  new RegExp(String.raw`\bme (?:enforcar|enforco|enforcando|envenenar|envenenando|degolar|eletrocutar|afogar)\b`),
+  /\b(?:vou|vo|quero|queria|penso em|pensando em|vontade de) (?:beber|tomar|ingerir|engolir) (?:agua sanitaria|veneno|soda caustica|raticida|chumbinho)\b/,
+  // Se ferir: o corte, e os outros jeitos. "Quase me cortei" e "me cortei com a folha" são acidente (decisão 6).
+  new RegExp(String.raw`(?<!quase )\bme (?:${CORTAR}|corto|cortei|cortando|cortado)\b(?! com (?:a |o |uma? )?(?:folha|papel)\b)`),
+  /\b(?:me machucar de proposito|me machuco de proposito|automutil\w*)\b/,
+  /\bme (?:queim(?:o|ei|ando)|furo|furando|espeto|espetando) (?:com (?:o |a |um |uma )?(?:isqueiro|cigarro|fosforo|vela|ferro|brasa|faca|agulha|compasso)|de proposito|no (?:braco|pulso)|na perna|pra (?:aliviar|doer|sentir))\b/,
+  /\b(?:bato|bati|batendo|arranho|arranhei|arranhando|belisco|beliscando|mordo|mordendo)\b(?! (?:o |a |no |na )?(?:recorde|meta|ponto|bola|porta|portao|carro|cartao)\b).{0,40}\b(?:ate (?:sangrar|doer|machucar|ficar roxa?)|de proposito|pra (?:doer|aliviar|sentir dor))\b/,
+  /\b(?:dou|dei|dando) (?:socos?|tapas?|murros?|pancadas?) (?:em|na|no) (?:mim|minha|meu)\b|\bme (?:soco|esmurro|esbofeteio)\b/,
+  /\bpra me (?:castigar|punir)\b|\b(?:sem comer|sem dormir|sem beber agua) de proposito\b/,
+  // Matar outra pessoa: sem mudança, e sem padrão novo (`TODO.md`).
   /\b(vou|quero) matar (ele|ela|eles|elas|alguem|todo mundo|meu|minha)\b/,
+  // Dizer sem a palavra.
+  /\b(?:queria|quero|vou|vo|vontade de|penso em|pensando em) (?:me )?(?:sumir|desaparecer) (?:do mundo|pra sempre|para sempre|de vez|e nunca mais|sem volta)\b/,
+  /\b(?:dormir e (?:nao|nunca) acordar mais|nunca mais acordar|nao acordar mais)\b(?! (?:cedo|tarde))/,
+  /\bdorm\w+ (?:pra|para) sempre\b/,
+  /\b(?:melhor|mais facil|mais feliz|mais tranquilo|em paz)(?: \w+){0,4} sem mim\b/,
+  /\bninguem (?:ia|iria|vai|ira|vao) sentir (?:a )?(?:minha )?falta\b/,
+  /\bse eu (?:nao existisse|nao estivesse (?:mais )?(?:aqui|nesse mundo|vivo|viva)|nao tivesse nascido|morresse|desaparecesse)\b/,
+  /\b(?:queria|quero|preferia|prefiro|melhor|bem melhor) (?:se eu )?(?:nao|nunca) (?:ter nascido|tivesse nascido)\b/,
+  /\b(?:pensando em|penso em|pensei em|vou|vo|quero|queria|decidi|resolvi) (?:acabar com tudo|dar um fim (?:em tudo|nisso tudo|na minha))\b/,
+  new RegExp(String.raw`\b(?:vou|vo|vai|vao|quero|queria|penso em|pensando em|pensei em|vontade de|ameacou) (?:me )?(?:jogar|pular|atirar) (?:d[aoe]s?|pel[ao]s?|em cima d[aoe]s?|de cima d[aoe]s?|na frente d[aoe]s?|(?:em|de)baixo d[aoe]s?) ${LUGAR_ALTO}\b`),
+  /\bme (?:jogar|atirar|jogo|atiro) n[oa]s? (?:rio|represa|trilho|linha do trem)\b/,
+  new RegExp(String.raw`\b(?:tomar|tomei|tomo|tomou|tomando|engolir|engoli|engolindo) (?:(?:todos?|todas?)(?: (?:os|as))?|um monte de|(?:a|o|uma?) (?:cartela|caixa|frasco) (?:inteir[oa]|tod[oa]) de) ${REMEDIO}\b`),
+  // Tudo de uma vez, com ou sem o nome do remédio: "tomo todos de uma vez", "engoli todas de uma só vez", "tomei vários comprimidos de uma vez".
+  new RegExp(String.raw`\b(?:tomar|tomei|tomo|engolir|engoli) (?:todos|todas|varios)(?: ${REMEDIO})? de uma (?:so )?vez\b`),
+  /\b(?:carta|bilhete|mensagem|video) de despedida (?:pra|para) (?:minha familia|meus pais|minha mae|meu pai|todos|todo mundo|ninguem)\b/,
+  /\b(?:postei|postou|postando) (?:uma )?despedida\b/,
+  /\bme (?:kms|kys|desviver|unaliv\w+)\b/,
+  /\b(?:vontade de|vou|vo|quero|qro) (?:ir )?de base\b/,
+  // O risco de outra pessoa, contado por quem sabe: a resposta é levar a um adulto agora (decisão 5a).
+  /\b(?:vai|vao|quer|querem|pensa em|pensando em|ameacou) se (?:matar|suicidar|enforcar|cortar)\b/,
+  /\b(?:ta|esta|estao|anda|andam|vive|vivem) se (?:cortando|machucando|mutilando)\b/,
+  // A pergunta sobre o meio.
+  new RegExp(String.raw`\bquantos? ${REMEDIO}\b.{0,40}\b(?:matam|mata|matar|morrer|letal|letais|levam a morte)\b(?! (?:as |os )?(?:bacterias|virus|germes|microbios|fungos|parasitas|insetos|pragas)\b)`),
+  /\b(?:dose|quantidade) (?:letal|fatal|mortal)\b/,
+  /^(?!.*\b(?:queda livre|ovo|experimento|objeto|bola|meteoro)\b).*\b(?:altura|quedas?)\b.{0,25}\b(?:mata|matam|e fatal|e letal|mortal)\b/,
+  /\b(?:mais rapido|mais facil|sem dor|indolor)\b.{0,15}\b(?:de|pra|para) (?:morrer|se matar|me matar)\b/,
+  /\bmorrer (?:enforcad[oa]|asfixiad[oa]|envenenad[oa]|de overdose)\b/,
+  /\b(?:que|qual) (?:remedio|medicamento|veneno|droga)s? (?:da|causa|dao|provoca) overdose\b(?!.{0,30}\b(?:no livro|no filme|na serie|na materia)\b)/,
 ]
 
 const GATILHOS_DE_ASSUNTO_DELICADO: readonly RegExp[] = [

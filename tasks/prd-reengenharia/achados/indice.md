@@ -56,3 +56,16 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-21 20:06:27 | `revisor-geral` | 1ª | APROVADO | `5_task` | `hook-portao.test.ts:24-25`: `comandoDe` chama `expect` fora de um `it`. Em `const portao = comandoDe(...)`, dentro do `describe`, esse `expect` roda na… |
 | 2026-10-21 20:06:36 | `test-engineer` | 1ª | APROVADO | `5_task` | `hook-portao.test.ts:41` copia só os `.ts` de `tools/processo/`. Se o hook passar a importar arquivo de outra pasta, ou que não seja `.ts`, os casos do hook… |
 | 2026-10-21 20:12:14 | `test-engineer` | 2ª | APROVADO | `5_task` | nenhuma nova. |
+| 2026-10-21 20:58:48 | `conformidade-reviewer` | 1ª | APROVADO | `2_task` | O sinal `atencao_humana` sai com o nome do aluno que escreveu, também quando o risco é de outra pessoa ("meu irmão disse que quer se matar", "meu colega postou… |
+| 2026-10-21 21:00:53 | `revisor-geral` | 1ª | REPROVADO | `2_task` | Os padrões foram escritos a partir das frases do `ouro`, e isso invalida a medida de `riscoAVida`. |
+| 2026-10-21 21:02:16 | `test-engineer` | 1ª | REPROVADO | `2_task` | O `ouro` de `riscoAVida` foi usado para escrever os padrões, e o teste do alvo prova memorização, não a regra. |
+| 2026-10-21 21:22:57 | `conformidade-reviewer` | 2ª | REPROVADO | `2_task` | `packages/nucleo/src/ia/tarefas/turno-do-tutor.ts:163`: automutilação por bater, arranhar e morder agora escapa. |
+| 2026-10-21 21:24:28 | `revisor-geral` | 2ª | REPROVADO | `2_task` | `packages/nucleo/src/ia/tarefas/turno-do-tutor.ts:140-194`, com o comentário de `:130-131`. A correção 1 da rodada anterior foi feita só para os exemplos que… |
+| 2026-10-21 21:24:52 | `test-engineer` | 2ª | REPROVADO | `2_task` | A correção (c) não foi cumprida: os padrões novos copiam a frase da sonda e não o jeito de dizer. É o mesmo sobreajuste da rodada 1, agora à sonda. |
+| 2026-10-22 00:45:59 | `conformidade-reviewer` | 3ª | REPROVADO | `2_task` | `packages/nucleo/src/ia/tarefas/turno-do-tutor.ts:170`, a ameaça contada não cobre "vão" nem "iam". |
+| 2026-10-22 00:48:12 | `revisor-geral` | 3ª | REPROVADO | `2_task` | `packages/nucleo/src/ia/tarefas/turno-do-tutor.ts:131-132` e `tasks/prd-reengenharia/2_task.md:106-110` afirmam uma cobertura que não existe. É a mesma… |
+| 2026-10-22 00:48:49 | `test-engineer` | 3ª | REPROVADO | `2_task` | `packages/nucleo/src/ia/tarefas/turno-do-tutor.ts:170`: o C8 saiu com `(?:vai\|ia)`, e a decisão manda `(?:vai\|vao\|ia\|iam)`. |
+| 2026-10-22 07:32:47 | `revisor-geral` | 4ª | APROVADO | `2_task` | O `na ` da exclusão tira "bato na porta até sangrar" (o punho na porta) do disparo; a "cabeça na porta" continua disparando. A forma é decisão do Arquiteto e é… |
+| 2026-10-22 07:33:28 | `test-engineer` | 4ª | REPROVADO | `2_task` | `packages/nucleo/src/ia/tarefas/turno-do-tutor.ts:179` (o padrão de bater/arranhar/beliscar/morder): o `?` do artigo em `(?! (?:o \|a \|no \|na… |
+| 2026-10-22 07:33:49 | `conformidade-reviewer` | 4ª | APROVADO | `2_task` | O item 8 desviou da ordem com justificativa. Cabe ao Arquiteto ratificar o desvio no registro, para que não volte na 26.0. |
+| 2026-10-22 07:46:16 | `test-engineer` | 5ª | APROVADO | `2_task` | O `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specreengenharia--l1/.processo/portao.json` mostra um portão iniciado às 10:35Z, com 444 mutações e… |

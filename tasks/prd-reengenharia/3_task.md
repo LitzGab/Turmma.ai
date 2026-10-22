@@ -75,7 +75,9 @@ Sem isolamento nem concorrência. O teste imprime a fração barrada (premissa d
   `entradaDoAssistente` e `insistente.correcoes`
 - Amostras: `numeros.test.ts › a regra, olhando a conversa, acerta a taxa declarada, e o teste diz quais errou`
 - Rodar: `npx vitest run --project unidade packages/nucleo/src/ia/tarefas/numeros.test.ts packages/nucleo/src/ia/ouro.test.ts`
-- Armadilhas: a recusa não julga texto; as `dev` não repetem o `ouro`; nunca mexa em `docs/aia/ouro/`
+- Armadilhas: a recusa não julga texto; **não abra `docs/aia/ouro/*.json`** nem procure nele o id que o teste
+  mostra (`onda-0.md` §2.1, "Quem escreve o padrão não lê o `ouro`"): escreva o padrão pelas `dev` e pelo jeito de
+  dizer do README; a generalização se mede depois, no lote retido do Arquiteto; nunca mexa em `docs/aia/ouro/`
 
 ## Fora do escopo desta tarefa
 

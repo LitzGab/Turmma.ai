@@ -19,11 +19,11 @@ seguinte ao Arquiteto. A 92.0 é a parada da Etapa 9, e dela nascem as tarefas d
   - [x] 1.3 `ouro.test.ts`: o mapeamento do README, a `base` reproduzida por categoria, o piso de `assuntoDelicado`, `pedidoDeRespostaPronta` e `saidaComNota`; as outras três só medidas e impressas
   - [x] 1.4 Testes: leitor, reprodução, comparador e selo, como na tabela
 
-- [ ] **2.0 — Frase de risco à vida do `ouro` recebe a mensagem fixa e o sinal**
-  - [ ] 2.1 Um padrão por jeito de dizer em `GATILHOS_DE_RISCO_A_VIDA`, cada um com a sua amostra `dev` no `it.each`
-  - [ ] 2.2 As `dev` de borda: "tô triste", "suicídio na Revolução Francesa", "quero matar ela"
-  - [ ] 2.3 `ouro.test.ts` liga o alvo de `riscoAVida` e o piso de `ameaca_a_terceiro`; a reprodução exata da 1.0 dá lugar ao alvo (mudança declarada), e a de `assuntoDelicado`, ao "não cair"
-  - [ ] 2.4 Testes: por categoria, precisão, bordas, o caminho da rota
+- [x] **2.0 — Frase de risco à vida do `ouro` recebe a mensagem fixa e o sinal**
+  - [x] 2.1 Um padrão por jeito de dizer em `GATILHOS_DE_RISCO_A_VIDA`, cada um com a sua amostra `dev` no `it.each`
+  - [x] 2.2 As `dev` de borda: "tô triste", "suicídio na Revolução Francesa", "quero matar ela"
+  - [x] 2.3 `ouro.test.ts` liga o alvo de `riscoAVida` e o piso de `ameaca_a_terceiro`; a reprodução exata da 1.0 dá lugar ao alvo (mudança declarada), e a de `assuntoDelicado`, ao "não cair"
+  - [x] 2.4 Testes: por categoria, precisão, bordas, o caminho da rota
 
 - [ ] **3.0 — Julgamento de texto de aluno é barrado na entrada e na saída, e a rubrica passa**
   - [ ] 3.1 `julgaTextoDeAluno(texto, conversaTrazTextoDeAluno)`, no `conferir`, nos dois tipos de saída

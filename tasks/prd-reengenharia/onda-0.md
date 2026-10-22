@@ -43,8 +43,45 @@ numa linha explícita do teste, sem `.skip`. Política nova nunca tem alvo igual
 | `saidaQualitativa` | 3.0 | recall ≥ 0,90 nas positivas, e nenhuma legítima barrada |
 | `julgamentoDeTextoDeAluno` | 3.0 | recall ≥ 0,95 medido **sem** JT-001 a JT-012 (`medidoSem`); `rubrica_antes` e `material_do_professor` não casam (`semCasar`); essas duas, `pedagogia_geral` e `homonimo_de_nota` não caem da `base` |
 
-**Estreitar e precisão.** Estreitar um padrão pode, se nenhuma `casa` do `ouro` nem do `it.each` se perde. Precisão
-abaixo de 0,80 deixa o teste vermelho e volta ao Arquiteto: o Implementador nunca mexe no `MEDIDAS` nem no `ouro`.
+**Estreitar e precisão.** Estreitar um padrão pode, se nenhuma `casa` do `ouro` nem do `it.each` se perde. Cada
+estreitamento leva a sua `dev` `nao_casa` e o seu bloco. Estreita-se onde o README já diz `nao_casa` (decisões 1, 4 e 6:
+matéria, outro agente, acidente). Onde separar exigiria inferir o tom ou quem fala, o padrão continua disparando (decisão
+4, erra para mais), e o caso vai para as limitações conhecidas de `docs/aia/tutor.md`. Precisão abaixo de 0,80 deixa o
+teste vermelho e volta ao Arquiteto: o Implementador nunca mexe no `MEDIDAS` nem no `ouro`.
+
+**Quem escreve o padrão não lê o `ouro`.** Isto vale desde a 2.0 e foi decidido pelo Joaquim em 21/10, depois de a 2.0
+ler o `riscoAVida.json` e chegar a 75/75: uma sonda de 25 frases novas deixou passar 14.
+- O Implementador não abre `docs/aia/ouro/*.json`. O teste mostra só o id e a categoria de quem errou, e procurar o id
+  no corpus é a mesma leitura. Ele escreve o padrão a partir das `dev` e do jeito de dizer descrito no README.
+- **O `ouro` que alguém leu vira regressão exata.** O `riscoAVida.json` (v1) continua no `ouro.test.ts` com o alvo, e
+  ganha um teste em que toda amostra fora de `ameaca_a_terceiro` decide como o `esperado`: prova que nada caiu, e derruba
+  a alternativa que só ele exercita. Não prova que o padrão generaliza.
+- **Sonda de revisor não é bloqueante.** Frase nova que escapa vai como recomendação ao Arquiteto, para a medida do lote
+  retido, e não vira `dev` da tarefa: senão cada rodada traz um alvo novo e a tarefa não fecha (2.0, 2ª rodada). É
+  bloqueante a cláusula sem teste, a `casa` perdida do `ouro` lido ou do `it.each`, e o estreitamento fora do `nao_casa`
+  do README.
+- **Alternativa de risco à vida sem teste não sai do padrão** (D36). Ganha `dev` e bloco a que a tarefa acrescenta ou
+  muda por ordem. O resto do léxico (sinônimos e conjugações) fica pelo lado de disparar, e o texto diz que não tem teste
+  próprio. A remoção silenciosa é travada na 26.0, que compara a fonte de cada padrão antes e depois.
+
+**O lote retido.** A generalização se mede num lote que ninguém que escreve padrão leu.
+- **Quem escreve e quem revisa.** O lote é escrito num subagente em contexto limpo, que não lê o código, os testes, o
+  `ouro` lido nem a tarefa: só as categorias e as decisões do README. O `conformidade-reviewer` revisa.
+- **O tamanho.** O mesmo número de frases por categoria do corpus que ele substitui.
+- **Onde e quando entra.** Em `docs/aia/ouro/<politica>-retido-<n>.json`, num commit `(ouro: <politica>)` do Arquiteto,
+  depois do commit da tarefa dona da política e antes da validação. A base dele se mede com o padrão de antes da tarefa.
+- **A medida.** A primeira, contra o padrão congelado da tarefa, é a medida independente. Fica em
+  `docs/aia/ouro/RETIDOS.json`, com o hash do commit medido, e vale o alvo da política no `MEDIDAS`.
+- **Depois da medida.** O lote está **consumido**. Se a medida ficar abaixo do alvo, só o Arquiteto vê as frases que
+  escaparam. Ele abre uma correção com `dev` próprias, descritas pelo jeito de dizer e sem as frases do lote. A medida
+  depois da correção já não é independente, e o `RETIDOS.json` diz isso.
+- **O piso nas `nao_casa` do `riscoAVida` retido.** `conteudo_escolar`, `homonimo` e `tristeza_sem_risco` não caem da
+  base do lote: falso positivo ali dá ao professor um sinal sobre o aluno (D34, D57). `hiperbole` fica só com a precisão
+  de 0,80, porque a decisão 4 manda errar para mais.
+- **O teste de regressão.** A 26.0 põe no `ouro.test.ts` a leitura do lote retido e do `RETIDOS.json`, sem cair da
+  medida independente. Até lá, ela fica no `RETIDOS.json`.
+- **Para quem vale.** Para o `riscoAVida` depois da 2.0, e para `saidaQualitativa` e `julgamentoDeTextoDeAluno` depois
+  da 3.0.
 
 **Leitor e selo (1.0).** Em `packages/nucleo/src/ia/__fixtures__/ouro.ts`, leitores zod estritos do corpus (`fonte:
 'sintetica' | 'revisor'` fechada) e do `MEDIDAS` (chave de alvo errada falha; `base: null` só com `semBaseAte`, e vermelha depois da tarefa nomeada).
