@@ -61,11 +61,6 @@ export const REPOSITORIES_SEM_ESCOPO: readonly EntradaSemEscopo[] = [
     metodos: ['comVinculoConfirmadoDoProfessor', 'disciplinaDoArtefato', 'disciplinaDaEntrega'],
   },
   {
-    arquivo: 'apps/api/src/estrutura/escola-sessao.repository.ts',
-    motivo: 'a escola vem de contextoAtual()?.escolaId copiado neste arquivo, e não de exigirEscolaDoContexto; a 7.0 troca a cópia e tira a entrada',
-    metodos: ['lerParaAlterar', 'alterar'],
-  },
-  {
     arquivo: 'apps/api/src/ia/consumo.repository.ts',
     motivo: 'a escola vem por argumento, e não do contexto; a 8.0 passa a porta a exigirEscolaDoContexto e tira a entrada',
     metodos: ['registrar'],
@@ -101,31 +96,6 @@ export const REPOSITORIES_SEM_ESCOPO: readonly EntradaSemEscopo[] = [
     metodos: ['homonimo'],
   },
   {
-    arquivo: 'apps/api/src/sessao/convite.repository.ts',
-    motivo: 'a escola vem de contextoAtual()?.escolaId copiado neste arquivo, e não de exigirEscolaDoContexto; a 7.0 troca a cópia e tira a entrada',
-    metodos: ['nomeDaEscola', 'usuarioConvidado', 'criarConvite', 'travarEscola', 'dadosDaCoordenacao', 'revogado', 'ativarPorConvite', 'revogarParaRefazer', 'revogar', 'dadosDoProfessor'],
-  },
-  {
-    arquivo: 'apps/api/src/sessao/criacao-de-sessao.repository.ts',
-    motivo: 'a escola vem de contextoAtual()?.escolaId copiado neste arquivo, e não de exigirEscolaDoContexto; a 7.0 troca a cópia e tira a entrada',
-    metodos: ['criarUsuarios', 'criarSessoes'],
-  },
-  {
-    arquivo: 'apps/api/src/sessao/escrita-de-sessao.repository.ts',
-    motivo: 'a escola vem de contextoAtual()?.escolaId copiado neste arquivo, e não de exigirEscolaDoContexto; a 7.0 troca a cópia e tira a entrada',
-    metodos: ['rotacionar', 'encerrarFamilia', 'encerrar', 'registrarUso'],
-  },
-  {
-    arquivo: 'apps/api/src/sessao/redefinicao-de-mfa.repository.ts',
-    motivo: 'a escola vem de contextoAtual()?.escolaId copiado neste arquivo, e não de exigirEscolaDoContexto; a 7.0 troca a cópia e tira a entrada',
-    metodos: ['contaDoUsuarioAtivo'],
-  },
-  {
-    arquivo: 'apps/api/src/sessao/registro-de-acesso.repository.ts',
-    motivo: 'a escola vem de contextoAtual()?.escolaId copiado neste arquivo, e não de exigirEscolaDoContexto; a 7.0 troca a cópia e tira a entrada',
-    metodos: ['gravar'],
-  },
-  {
     arquivo: 'packages/nucleo/src/auditoria/auditoria.repository.ts',
     motivo: 'lê contextoAtual()?.escolaId no próprio método e recusa sem escola, com AuditoriaRecusada: é a cópia local, com erro próprio',
     metodos: ['listarDaEscola'],
@@ -134,16 +104,6 @@ export const REPOSITORIES_SEM_ESCOPO: readonly EntradaSemEscopo[] = [
     arquivo: 'packages/nucleo/src/auditoria/insercao-de-auditoria.repository.ts',
     motivo: 'grava a escola do contexto, e escola nula nas ações da operação global (check auditoria_escola_ou_operacao_global); a escola nula é legítima aqui',
     metodos: ['inserirAuditoria'],
-  },
-  {
-    arquivo: 'packages/nucleo/src/configuracao/configuracao-operacional.repository.ts',
-    motivo: 'a escola vem de contextoAtual()?.escolaId copiado neste arquivo, e não de exigirEscolaDoContexto; a 7.0 troca a cópia e tira a entrada',
-    metodos: ['daEscola'],
-  },
-  {
-    arquivo: 'packages/nucleo/src/fila/efeito-sintetico.repository.ts',
-    motivo: 'a escola vem de contextoAtual()?.escolaId copiado neste arquivo, e não de exigirEscolaDoContexto; a 7.0 troca a cópia e tira a entrada',
-    metodos: ['gravar'],
   },
   {
     arquivo: 'packages/nucleo/src/fila/job-registro.repository.ts',
@@ -159,11 +119,6 @@ export const REPOSITORIES_SEM_ESCOPO: readonly EntradaSemEscopo[] = [
     arquivo: 'packages/nucleo/src/titular/compartilhamento.repository.ts',
     motivo: 'só calcula duas datas pela aritmética do banco, sem ler tabela nenhuma: não há escola a aplicar',
     metodos: ['datasDeReferencia'],
-  },
-  {
-    arquivo: 'packages/nucleo/src/uso/uso.repository.ts',
-    motivo: 'a escola vem de contextoAtual()?.escolaId copiado neste arquivo, e não de exigirEscolaDoContexto; a 7.0 troca a cópia e tira a entrada',
-    metodos: ['gravarDia', 'doDia', 'doMes'],
   },
 ]
 

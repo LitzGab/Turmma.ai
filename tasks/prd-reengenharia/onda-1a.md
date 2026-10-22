@@ -42,6 +42,12 @@ também (hoje, `SuspensoesDaEscolaRepository`, `apps/api/src/assistente/time.ser
 - **7.0:** os 9 com cópia local de `contextoAtual()?.escolaId` (api: `escola-sessao`, `convite`, `criacao-de-sessao`,
   `escrita-de-sessao`, `redefinicao-de-mfa`, `registro-de-acesso`; nucleo: `configuracao-operacional`, `efeito-sintetico`,
   `uso`) passam a `exigirEscolaDoContexto`.
+  **Duas escolhas da 7.0, declaradas em `7_task.md`:** (i) a caracterização (7.1) entra no commit da tarefa, e não num commit à
+  parte, pelo mesmo motivo da 14.0 (o hook pede portão e rodada a todo commit com código de `apps/` ou `packages/`): os casos
+  foram escritos e rodados verdes contra a cópia local, antes de qualquer repository mudar; (ii) a mutação do `ConviteRepository`
+  é a do `revogar`, do `revogarParaRefazer`, do `revogado` e do `nomeDaEscola`, e não a do `ativarPorConvite`: lá
+  `eq(convite.escolaId, …)` (no `exists`) e `eq(usuario.escolaId, …)` (no `update`) barram o mesmo caso (o convite de A no contexto
+  de B), então tirar uma só deixa a outra de pé e o teste não fica vermelho.
 - **8.0:** `ia/consumo`, `ia/orcamento` e `ia/suspensao`, hoje com `escolaId` por argumento.
 - **Lista:** cinco, `auditoria`, `insercao-de-auditoria` e `job-registro` (escola nula em `sistema.*`), `operacao/operador`
   (a equipe não tem escola) e `nucleo/identidade/sessao` (cria o contexto): 9 + 3 + 5 = 17. Soma-se o `ia/execucao`, que já

@@ -90,9 +90,18 @@ describe('reexecução do mesmo job: a chave de idempotência é a do job, e o e
     expect(await naEscolaA(() => repositorio.gravar({ chaveIdempotencia, tentativa: 1 }))).toBe(true)
     expect(await naEscolaA(() => repositorio.gravar({ chaveIdempotencia, tentativa: 2 }))).toBe(false)
     await expect(executarNoContexto({ requisicaoId: randomUUID() }, () => repositorio.gravar({ chaveIdempotencia, tentativa: 3 }))).rejects.toThrow(
-      'sem escola no contexto',
+      'consulta com escopo sem escola no contexto',
     )
     expect(await efeitos()).toEqual([{ escolaId: ESCOLA_A, chaveIdempotencia, tentativa: 1 }])
+  })
+
+  it('a mesma chave gravada ao mesmo tempo por A e por B, na mesma instância: cada uma na sua escola, as duas entram', async () => {
+    const repositorio = new EfeitoSinteticoRepository(bancada.banco)
+    const chaveIdempotencia = randomUUID()
+    // A chave é a mesma e a restrição única começa pela escola: se a segunda chamada usasse a escola da primeira, cairia no conflito.
+    const resultados = await Promise.all([ESCOLA_A, ESCOLA_B].map((escolaId) => executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => repositorio.gravar({ chaveIdempotencia, tentativa: 1 }))))
+    expect(resultados).toEqual([true, true])
+    expect((await efeitos()).map(({ escolaId }) => escolaId).sort()).toEqual([ESCOLA_A, ESCOLA_B].sort())
   })
 
   it('oito gravações da mesma chave ao mesmo tempo: uma entra, as outras caem no conflito sem erro, e fica uma linha só', async () => {

@@ -1,4 +1,4 @@
-import { contextoAtual, exigirEscolaDoContexto, registroAcesso, type Banco, type EventoDeAcesso, type TransacaoBanco } from '@educa/nucleo'
+import { exigirEscolaDoContexto, registroAcesso, type Banco, type EventoDeAcesso, type TransacaoBanco } from '@educa/nucleo'
 
 /**
  * O registro de acesso (Marco Civil, art. 15) de quem já tem escola: login, renovação e saída, gravados na escola do
@@ -11,9 +11,7 @@ export class RegistroDeAcessoRepository {
   constructor(private readonly tx: Banco | TransacaoBanco) {}
 
   async gravar(evento: Exclude<EventoDeAcesso, 'login_falho'>, usuarioId: string, ip: string): Promise<void> {
-    const escolaId = contextoAtual()?.escolaId
-    if (escolaId === undefined) throw new Error('registro de acesso sem escola no contexto')
-    await this.tx.insert(registroAcesso).values({ escolaId, usuarioId, evento, ip })
+    await this.tx.insert(registroAcesso).values({ escolaId: exigirEscolaDoContexto(), usuarioId, evento, ip })
   }
 
   /**

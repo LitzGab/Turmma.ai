@@ -111,11 +111,11 @@ da tarefa diz como rodá-lo.
   - [x] 6.3 `SuspensoesDaEscolaRepository` sai de `time.service.ts` para um `*.repository.ts`
   - [x] 6.4 Testes: `repositories-com-escopo.test.ts`, com as fixtures em `tools/guardas/__fixtures__/repositories/`
 
-- [ ] **7.0 — Os 9 repositories com cópia local leem a escola por `exigirEscolaDoContexto`**
-  - [ ] 7.1 Caracterização, num commit antes: os 7 sem caso de "sem escola" ganham o seu, verde com a cópia local
-  - [ ] 7.2 Os nove passam a `exigirEscolaDoContexto`, lida a cada chamada, nunca guardada na instância
-  - [ ] 7.3 Os nove saem de `REPOSITORIES_SEM_ESCOPO` (`tools/guardas/escopo-dos-repositories.ts`)
-  - [ ] 7.4 Testes: isolamento e concorrência por repository, com a mutação de cada um
+- [x] **7.0 — Os 9 repositories com cópia local leem a escola por `exigirEscolaDoContexto`**
+  - [x] 7.1 Caracterização, num commit antes: os 7 sem caso de "sem escola" ganham o seu, verde com a cópia local
+  - [x] 7.2 Os nove passam a `exigirEscolaDoContexto`, lida a cada chamada, nunca guardada na instância
+  - [x] 7.3 Os nove saem de `REPOSITORIES_SEM_ESCOPO` (`tools/guardas/escopo-dos-repositories.ts`)
+  - [x] 7.4 Testes: isolamento e concorrência por repository, com a mutação de cada um
 
 - [ ] **8.0 — A IA tira a escola do contexto, com teste de isolamento**
   - [ ] 8.1 As três portas perdem `escolaId`, e os repositories usam `exigirEscolaDoContexto()`, no orçamento antes do retorno antecipado
