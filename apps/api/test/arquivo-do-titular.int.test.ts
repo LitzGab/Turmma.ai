@@ -20,6 +20,7 @@ import { montarEscolaComTurma, type EscolaComTurma } from './escola-com-turma.js
 import { esperarNaTrava } from './gatilho-de-parada.js'
 import { MONTAGEM_DE_TESTE } from './configuracao-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
+import { execucaoDoJob } from '../../worker/test/execucao-do-job.js'
 
 /**
  * O arquivo do titular (F3, tarefa 13.0; `tasks/prd-lgpd-e-titular/cenarios.md`, RF11 a RF13 e RF17): o pedido de acesso gera o
@@ -107,7 +108,7 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
   async function montar(escolaId: string, pedidoId: string): Promise<void> {
     const processador = criarMontagemDoArquivo({ banco: bancada.banco, armazem, relogio, logger: criarLogger({ servico: 'teste', nivel: 'silent' }) })
     const jobId = randomUUID()
-    await executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => processador({ pedidoId }, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
+    await executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => processador({ pedidoId }, execucaoDoJob(jobId)))
   }
 
   /** O JSON que o job gravou para o pedido e a versão, já lido. */

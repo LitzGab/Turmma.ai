@@ -1,5 +1,5 @@
 import { contextoAtual, LOTE_DO_EXPURGO, type ExpurgoDeJobsRepository, type LoggerBase } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob } from '@educa/shared'
+import { CodigoDeFalhaDeJob, type TIPO_EXPURGAR_JOBS } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 
@@ -19,7 +19,7 @@ export interface DependenciasDoExpurgo {
  * mesmo tempo pegam linhas diferentes; o lote de um worker que morreu no meio é desfeito pelo Postgres
  * e sai na execução seguinte.
  */
-export function criarExpurgoDeJobs({ repositorio, logger, lote = LOTE_DO_EXPURGO }: DependenciasDoExpurgo): Processador {
+export function criarExpurgoDeJobs({ repositorio, logger, lote = LOTE_DO_EXPURGO }: DependenciasDoExpurgo): Processador<typeof TIPO_EXPURGAR_JOBS> {
   return async () => {
     if (contextoAtual()?.rotinaDoSistema !== true) throw new FalhaDeJob(CodigoDeFalhaDeJob.DADOS_INVALIDOS, true)
     let total = 0

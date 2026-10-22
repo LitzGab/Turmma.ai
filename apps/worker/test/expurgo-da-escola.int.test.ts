@@ -39,6 +39,7 @@ import { montarWorker } from '../src/montagem.js'
 import { chaveDaNoite, criarRotinaDeExpurgo } from '../src/processadores/expurgar-dado-pessoal.js'
 import { criarExpurgoDaEscola } from '../src/processadores/expurgar-escola.js'
 import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
+import { execucaoDoJob } from './execucao-do-job.js'
 
 // O expurgo noturno da escola (F3, tarefas 3.0 a 5.0), contra o Postgres do compose de teste: a conversa do Tutor, os
 // sinais e a conversa do professor, que saem; a execução de agente, o texto do modelo, o consumo por aluno e a autoria
@@ -548,7 +549,7 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
 
   function rodar(escolaId: string, processador: Processador): Promise<void> {
     const jobId = randomUUID()
-    return executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
+    return executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => processador({}, execucaoDoJob(jobId)))
   }
 
   function rotina(relogio: Relogio, ids: readonly string[]): Processador {
@@ -564,7 +565,7 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
 
   function rodarRotina(processador: Processador): Promise<void> {
     const jobId = randomUUID()
-    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
+    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, execucaoDoJob(jobId)))
   }
 
   async function jobsDoExpurgo(escolaId: string): Promise<Array<{ id: string; chave: string; fila: string; prioridade: number; naoUrgente: boolean; estado: string }>> {
@@ -1203,7 +1204,7 @@ describe('retencao.expurgar-escola e sistema.expurgar-dado-pessoal', () => {
 
     it('permissão: a rotina só roda como rotina do sistema, e o job da escola só no contexto de uma escola', async () => {
       const a = await escolaNova()
-      await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () => rotina(relogioEm(QUARTA_1H), [a.escolaId])({}, { jobId: 'x', tentativa: 1, chaveIdempotencia: 'x' }))).rejects.toMatchObject({
+      await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId: a.escolaId }, () => rotina(relogioEm(QUARTA_1H), [a.escolaId])({}, execucaoDoJob('x')))).rejects.toMatchObject({
         name: 'FalhaDeJob',
         codigo: CodigoDeFalhaDeJob.DADOS_INVALIDOS,
       })

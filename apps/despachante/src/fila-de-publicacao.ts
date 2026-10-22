@@ -1,5 +1,5 @@
-import { OPCOES_DE_JOB_PUBLICADO, TIMEOUT_COMANDO_REDIS_FILA_MS, type DadosDoJobNaFila, type JobReservado } from '@educa/nucleo'
-import { CODIGOS_DE_FALHA_DE_JOB, CodigoDeFalhaDeJob, FILAS, type Fila } from '@educa/shared'
+import { executorDoJob, nomeDaFilaBullMQ, opcoesDeJob, TIMEOUT_COMANDO_REDIS_FILA_MS, type DadosDoJobNaFila, type JobReservado, type OpcoesDeJobPublicado } from '@educa/nucleo'
+import { CODIGOS_DE_FALHA_DE_JOB, CodigoDeFalhaDeJob, DEFINICOES_DE_JOB, FILAS, type ExecutorDeJob, type Fila, type RegistroDeJobs } from '@educa/shared'
 
 /** O que a consulta à fila diz de um job. Só `inexistente` autoriza publicar de novo. */
 export type SituacaoNaFila =
@@ -12,13 +12,13 @@ export type SituacaoNaFila =
 export interface FilaDePublicacao {
   /** Publica cada job na fila dele, com `jobId` igual ao id da linha: publicar de novo um job que a fila tem não cria outro. */
   publicar(jobs: readonly JobReservado[]): Promise<void>
-  consultar(job: Pick<JobReservado, 'id' | 'fila'>): Promise<SituacaoNaFila>
+  consultar(job: Pick<JobReservado, 'id' | 'fila' | 'tipo'>): Promise<SituacaoNaFila>
 }
 
 /** A parte da `Queue` do BullMQ que o despachante usa. */
 export interface FilaBullMQ {
   waitUntilReady(): Promise<void>
-  addBulk(jobs: Array<{ name: string; data: DadosDoJobNaFila; opts: { jobId: string } & typeof OPCOES_DE_JOB_PUBLICADO }>): Promise<unknown>
+  addBulk(jobs: Array<{ name: string; data: DadosDoJobNaFila; opts: { jobId: string } & OpcoesDeJobPublicado }>): Promise<unknown>
   getJob(jobId: string): Promise<{ failedReason: string; getState(): Promise<string> } | undefined>
   close(): Promise<void>
 }
@@ -28,8 +28,9 @@ export class PrazoDaFilaEsgotado extends Error {
 }
 
 /**
- * `FilaDePublicacao` sobre as três filas do BullMQ, uma `Queue` por fila, para o Redis de fila fora
- * ou travado não pendurar o despachante:
+ * `FilaDePublicacao` sobre as filas do BullMQ, uma `Queue` por fila e executor (`nomeDaFilaBullMQ`), para o Redis de fila
+ * fora ou travado não pendurar o despachante. O job vai à fila do executor da definição dele e leva a retentativa dela
+ * (`opcoesDeJob`); as três filas do worker nascem com o despachante, e as da API, na primeira vez que um tipo as pede:
  *
  * - o cliente Redis não tem fila offline e tem `commandTimeout` (`criarClienteRedisDaFila`);
  * - toda operação tem `prazoMs` também por fora, porque a `Queue` espera o Redis ficar pronto antes
@@ -39,28 +40,35 @@ export class PrazoDaFilaEsgotado extends Error {
  *   sempre; a `Queue` é trocada por uma nova, e a operação seguinte já usa a nova.
  */
 export class PublicacaoBullMQ implements FilaDePublicacao {
-  readonly #filas: Map<Fila, FilaBullMQ>
+  readonly #filas = new Map<string, FilaBullMQ>()
 
   constructor(
-    private readonly criarFila: (fila: Fila) => FilaBullMQ,
+    private readonly criarFila: (fila: Fila, executor: ExecutorDeJob) => FilaBullMQ,
     private readonly prazoMs: number = TIMEOUT_COMANDO_REDIS_FILA_MS,
+    private readonly definicoes: RegistroDeJobs = DEFINICOES_DE_JOB,
   ) {
-    this.#filas = new Map(FILAS.map((fila) => [fila, criarFila(fila)]))
+    for (const fila of FILAS) this.#filas.set(nomeDaFilaBullMQ(fila, 'worker'), criarFila(fila, 'worker'))
   }
 
-  /** Um `addBulk` por fila, todos dentro do mesmo prazo. */
+  /** Um `addBulk` por fila e executor, todos dentro do mesmo prazo. */
   publicar(jobs: readonly JobReservado[]): Promise<void> {
-    const porFila = new Map<Fila, JobReservado[]>()
-    for (const job of jobs) porFila.set(job.fila, [...(porFila.get(job.fila) ?? []), job])
+    const porFila = new Map<string, { fila: Fila; executor: ExecutorDeJob; jobs: JobReservado[] }>()
+    for (const job of jobs) {
+      const executor = executorDoJob(job.tipo, this.definicoes)
+      const chave = nomeDaFilaBullMQ(job.fila, executor)
+      const grupo = porFila.get(chave) ?? { fila: job.fila, executor, jobs: [] }
+      grupo.jobs.push(job)
+      porFila.set(chave, grupo)
+    }
     return comPrazo(async () => {
       await Promise.all(
-        [...porFila].map(([fila, daFila]) =>
-          this.comFila(fila, (queue) =>
+        [...porFila.values()].map(({ fila, executor, jobs: daFila }) =>
+          this.comFila(fila, executor, (queue) =>
             queue.addBulk(
               daFila.map((job) => ({
                 name: job.tipo,
                 data: { escolaId: job.escolaId, requisicaoId: job.requisicaoId },
-                opts: { ...OPCOES_DE_JOB_PUBLICADO, jobId: job.id },
+                opts: { ...opcoesDeJob(job.tipo, this.definicoes), jobId: job.id },
               })),
             ),
           ),
@@ -69,10 +77,10 @@ export class PublicacaoBullMQ implements FilaDePublicacao {
     }, this.prazoMs)
   }
 
-  consultar(job: Pick<JobReservado, 'id' | 'fila'>): Promise<SituacaoNaFila> {
+  consultar(job: Pick<JobReservado, 'id' | 'fila' | 'tipo'>): Promise<SituacaoNaFila> {
     return comPrazo(
       () =>
-        this.comFila(job.fila, async (queue) => {
+        this.comFila(job.fila, executorDoJob(job.tipo, this.definicoes), async (queue) => {
           // Sem o hash do job, a fila não o tem. Com o hash e fora de toda lista, ele existe para o
           // BullMQ, que ignoraria a republicação: não é `inexistente`.
           const naFila = await queue.getJob(job.id)
@@ -88,26 +96,31 @@ export class PublicacaoBullMQ implements FilaDePublicacao {
     await Promise.all([...this.#filas.values()].map((queue) => queue.close()))
   }
 
-  private async comFila<T>(fila: Fila, operacao: (queue: FilaBullMQ) => Promise<T>): Promise<T> {
-    const queue = this.queueDa(fila)
+  private async comFila<T>(fila: Fila, executor: ExecutorDeJob, operacao: (queue: FilaBullMQ) => Promise<T>): Promise<T> {
+    const queue = this.queueDa(fila, executor)
     try {
       await queue.waitUntilReady()
     } catch (erro) {
-      this.trocar(fila, queue)
+      this.trocar(fila, executor, queue)
       throw erro
     }
     return operacao(queue)
   }
 
-  private queueDa(fila: Fila): FilaBullMQ {
-    const queue = this.#filas.get(fila)
-    if (queue === undefined) throw new Error('fila sem Queue do BullMQ')
-    return queue
+  /** A `Queue` do nome, criada na primeira vez que alguém a pede (as do executor `api`; as do worker já nasceram no construtor). */
+  private queueDa(fila: Fila, executor: ExecutorDeJob): FilaBullMQ {
+    const nome = nomeDaFilaBullMQ(fila, executor)
+    const existente = this.#filas.get(nome)
+    if (existente !== undefined) return existente
+    const nova = this.criarFila(fila, executor)
+    this.#filas.set(nome, nova)
+    return nova
   }
 
-  private trocar(fila: Fila, falhou: FilaBullMQ): void {
-    if (this.#filas.get(fila) !== falhou) return
-    this.#filas.set(fila, this.criarFila(fila))
+  private trocar(fila: Fila, executor: ExecutorDeJob, falhou: FilaBullMQ): void {
+    const nome = nomeDaFilaBullMQ(fila, executor)
+    if (this.#filas.get(nome) !== falhou) return
+    this.#filas.set(nome, this.criarFila(fila, executor))
     falhou.close().catch(() => undefined)
   }
 }

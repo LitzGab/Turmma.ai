@@ -15,7 +15,7 @@ import {
   type Relogio,
   type RetencaoDaEscolaRepository,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, retencaoDaEscola } from '@educa/shared'
+import { CodigoDeFalhaDeJob, retencaoDaEscola, type TIPO_EXPURGAR_ESCOLA } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 
@@ -61,7 +61,7 @@ export interface DependenciasDoExpurgoDaEscola {
  *   `eliminacao_enfileirada_em` (a trava do cancelamento). O trabalho em si é do job `titular.eliminar`.
  * - Loga só a categoria (sob `tipo`) e as contagens; a escola vai pelo contexto, nunca uma linha.
  */
-export function criarExpurgoDaEscola({ repositorio, arquivos, armazem, retencao, janelaDaEscola, enfileirador, relogio, logger, lote = LOTE_DO_EXPURGO }: DependenciasDoExpurgoDaEscola): Processador {
+export function criarExpurgoDaEscola({ repositorio, arquivos, armazem, retencao, janelaDaEscola, enfileirador, relogio, logger, lote = LOTE_DO_EXPURGO }: DependenciasDoExpurgoDaEscola): Processador<typeof TIPO_EXPURGAR_ESCOLA> {
   return async () => {
     if (contextoAtual()?.escolaId === undefined) throw new FalhaDeJob(CodigoDeFalhaDeJob.DADOS_INVALIDOS, true)
     const agora = relogio.agora()

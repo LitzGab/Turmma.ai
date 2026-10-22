@@ -104,7 +104,7 @@ describe('métricas na observabilidade local, por rota, fila e escola', () => {
     await pool.end()
     const redis = new Redis(`redis://127.0.0.1:${porta('REDIS_FILA_PORTA_HOST')}`, { maxRetriesPerRequest: null })
     for (const fila of FILAS_POR_PRIORIDADE) {
-      const queue = new Queue(nomeDaFilaBullMQ(fila), { connection: redis })
+      const queue = new Queue(nomeDaFilaBullMQ(fila, 'worker'), { connection: redis })
       for (const jobId of jobs) await queue.remove(jobId)
       await queue.close()
     }

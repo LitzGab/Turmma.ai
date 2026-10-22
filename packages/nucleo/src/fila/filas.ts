@@ -1,4 +1,4 @@
-import { FILAS, type Fila } from '@educa/shared'
+import { FILAS, type ExecutorDeJob, type Fila } from '@educa/shared'
 
 /**
  * As filas do BullMQ, uma por prioridade, na ordem em que o despachante as atende. A prioridade de
@@ -7,9 +7,13 @@ import { FILAS, type Fila } from '@educa/shared'
  */
 export const FILAS_POR_PRIORIDADE: readonly Fila[] = FILAS
 
-/** Nome da fila no BullMQ. É o próprio nome da fila de `job_registro`, para quem lê o Redis. */
-export function nomeDaFilaBullMQ(fila: Fila): string {
-  return fila
+/**
+ * Nome da fila no BullMQ. A do worker é o próprio nome da fila de `job_registro`, para quem lê o Redis e para o job que já
+ * estava publicado antes da separação por executor. O tipo que a API executa (`executor: 'api'`, os de IA e de PDF) vai para a
+ * fila `api-<fila>`, que o worker não consome: sem isso, o worker receberia o job de IA e o terminaria com `TIPO_DESCONHECIDO`.
+ */
+export function nomeDaFilaBullMQ(fila: Fila, executor: ExecutorDeJob): string {
+  return executor === 'worker' ? fila : `api-${fila}`
 }
 
 export interface OpcoesDoPool {

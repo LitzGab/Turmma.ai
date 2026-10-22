@@ -23,7 +23,7 @@ import {
   type VagasConfiguradas,
   type VagasPorFila,
 } from '@educa/nucleo'
-import { FILAS, type EstadoDeJob, type Fila } from '@educa/shared'
+import { DEFINICOES_DE_JOB, FILAS, type EstadoDeJob, type Fila, type RegistroDeJobs } from '@educa/shared'
 import { Queue } from 'bullmq'
 import { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
@@ -31,7 +31,7 @@ import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { criarEscola, criarRede } from '../../api/src/ops/escola.js'
 import { montarDespachante, type DespachanteMontado, type OpcoesDaMontagem as OpcoesDoDespachante } from '../../despachante/src/montagem.js'
-import type { Processador } from '../src/executor.js'
+import type { ProcessadoresDeJob } from '../src/executor.js'
 import { montarWorker, type WorkerMontado } from '../src/montagem.js'
 
 /** O operador que a bancada grava na auditoria da rede e da escola que cria. */
@@ -141,9 +141,12 @@ export function esperarORedisNaPrimeiraVez(montado: MontadoQueEspera): void {
   }
 }
 
-/** O que o teste pede à bancada: o job como a linha de `job_registro` o guarda, com o que não vier no valor padrão do sintético. */
-export interface PedidoDaBancada {
-  tipo?: string
+/**
+ * O que o teste pede à bancada: o job como a linha de `job_registro` o guarda, com o que não vier no valor padrão do sintético. O
+ * `tipo` é um dos do registro da bancada; o tipo que o registro não tem entra por SQL, no teste que o prova.
+ */
+export interface PedidoDaBancada<Registro extends RegistroDeJobs = typeof DEFINICOES_DE_JOB> {
+  tipo?: Extract<keyof Registro, string>
   fila?: Fila
   naoUrgente?: boolean
   dados?: Record<string, unknown>
@@ -152,8 +155,13 @@ export interface PedidoDaBancada {
 /**
  * O que o teste usa para olhar o banco e as filas por fora: pool próprio, repositories reais, uma
  * `Queue` por fila e as vagas, no mesmo prefixo dos despachantes e workers do teste.
+ *
+ * O registro de jobs é o de produção, salvo o que o teste injeta (`new BancadaDeFila(definicoes)`): os despachantes e os workers
+ * da bancada o usam para publicar com a retentativa do tipo e para validar os dados da linha, e o teste que precisa de um tipo
+ * de dados próprios (o `rotulo` do teste de vagas) ou de uma retentativa curta o declara aqui, sem tocar `DEFINICOES_DE_JOB`.
  */
-export class BancadaDeFila {
+export class BancadaDeFila<Registro extends RegistroDeJobs = typeof DEFINICOES_DE_JOB> {
+  readonly definicoes: RegistroDeJobs
   readonly prefixo = `teste-${randomUUID()}`
   readonly pool: PoolBanco = criarPool(configuracaoDoBanco(), () => undefined)
   readonly banco: Banco = criarBanco(this.pool)
@@ -162,12 +170,13 @@ export class BancadaDeFila {
   readonly enfileirador = new Enfileirador(this.registro)
   readonly redis = new Redis(urlRedisDeFila(), { maxRetriesPerRequest: null })
   readonly filas: Readonly<Record<Fila, Queue<DadosDoJobNaFila>>> = Object.fromEntries(
-    FILAS.map((fila) => [fila, new Queue<DadosDoJobNaFila>(nomeDaFilaBullMQ(fila), { connection: this.redis, prefix: this.prefixo })]),
+    FILAS.map((fila) => [fila, new Queue<DadosDoJobNaFila>(nomeDaFilaBullMQ(fila, 'worker'), { connection: this.redis, prefix: this.prefixo })]),
   ) as Record<Fila, Queue<DadosDoJobNaFila>>
   readonly vagas = new VagasPorEscola(this.redis, this.prefixo)
   readonly #montados: Array<DespachanteMontado | WorkerMontado> = []
 
-  constructor() {
+  constructor(definicoes?: Registro) {
+    this.definicoes = definicoes ?? DEFINICOES_DE_JOB
     // Os testes param o Redis de fila: sem ouvinte, o ioredis escreve cada reconexão no console.
     this.redis.on('error', () => undefined)
     for (const fila of Object.values(this.filas)) fila.on('error', () => undefined)
@@ -195,11 +204,11 @@ export class BancadaDeFila {
 
   /**
    * Grava como o `Enfileirador` grava (na transação, com a escola e a requisição no contexto, pelo mesmo `inserir`), mas sem
-   * conferir a definição do tipo: os testes do despachante e do worker põem na fila dado que nenhuma definição tem (o
-   * `dados.rotulo` que o processador de teste conta) e processadores de teste no lugar dos reais. A definição é provada
-   * pelo `Enfileirador` de verdade, em `execucao.int.test.ts › enfileirar`; a definição injetável da bancada é da 19.0.
+   * conferir a definição do tipo: o worker não confia na gravação, e o teste põe na linha o dado que o executor deve recusar
+   * (chave a mais, formato errado). A definição é provada pelo `Enfileirador` de verdade, em `execucao.int.test.ts ›
+   * enfileirar`, e a do worker, em `execucao.int.test.ts › o worker valida pela definição`.
    */
-  enfileirar(escolaId: string, pedido: PedidoDaBancada = {}, requisicaoId = randomUUID()): Promise<string> {
+  enfileirar(escolaId: string, pedido: PedidoDaBancada<Registro> = {}, requisicaoId = randomUUID()): Promise<string> {
     const fila = pedido.fila ?? 'interativa'
     return executarNoContexto({ requisicaoId, escolaId }, () =>
       this.banco.transaction((tx) =>
@@ -280,7 +289,7 @@ export class BancadaDeFila {
         ...(vagasPorEscolaDesligadas === undefined ? {} : { vagasPorEscolaDesligadas }),
       },
       log.logger,
-      { prefixo: this.prefixo, ...opcoes },
+      { prefixo: this.prefixo, definicoes: this.definicoes, ...opcoes },
     )
     this.#montados.push(montado)
     esperarORedisNaPrimeiraVez(montado)
@@ -293,7 +302,7 @@ export class BancadaDeFila {
     opcoes: {
       concorrencia?: number
       pools?: Partial<Record<Fila, number>>
-      processadores?: Readonly<Record<string, Processador>>
+      processadores?: ProcessadoresDeJob
       graca?: number
       intervaloRenovacaoDaVagaMs?: number
       validadeDaVagaMs?: number
@@ -314,6 +323,7 @@ export class BancadaDeFila {
       log.logger,
       {
         prefixo: this.prefixo,
+        definicoes: this.definicoes,
         ...(opcoes.processadores === undefined ? {} : { processadores: opcoes.processadores }),
         ...(opcoes.graca === undefined ? {} : { graca: opcoes.graca }),
         ...(opcoes.intervaloRenovacaoDaVagaMs === undefined ? {} : { intervaloRenovacaoDaVagaMs: opcoes.intervaloRenovacaoDaVagaMs }),

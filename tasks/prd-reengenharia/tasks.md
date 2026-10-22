@@ -158,12 +158,12 @@ da tarefa diz como rodá-lo.
   - [x] 18.3 `enfileirar` e `enfileirarUmaVez` validam antes de gravar; os chamadores migram
   - [x] 18.4 Testes: os da tabela
 
-- [ ] **19.0 — O worker valida pela definição, e o teste liga tipo, fila e processador**
-  - [ ] 19.1 Caracterização, num commit antes: as opções de publicação como literal
-  - [ ] 19.2 `Processador<T>` tipado; o executor valida e falha com `DADOS_INVALIDOS`, definitivo
-  - [ ] 19.3 `opcoesDeJob(tipo)` e `nomeDaFilaBullMQ(fila, executor)`, com a definição injetável em `fila-de-teste.ts`
-  - [ ] 19.4 `montagem.test.ts`: tipo ↔ processador ↔ réplica da fila
-  - [ ] 19.5 Testes: os da tabela
+- [x] **19.0 — O worker valida pela definição, e o teste liga tipo, fila e processador**
+  - [x] 19.1 Caracterização, num commit antes: as opções de publicação como literal
+  - [x] 19.2 `Processador<T>` tipado; o executor valida e falha com `DADOS_INVALIDOS`, definitivo
+  - [x] 19.3 `opcoesDeJob(tipo)` e `nomeDaFilaBullMQ(fila, executor)`, com a definição injetável em `fila-de-teste.ts`
+  - [x] 19.4 `montagem.test.ts`: tipo ↔ processador ↔ réplica da fila
+  - [x] 19.5 Testes: os da tabela
 
 ### Resiliência
 

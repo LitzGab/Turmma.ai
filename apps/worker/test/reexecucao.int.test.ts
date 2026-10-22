@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 import { contextoAtual, EfeitoSinteticoRepository, executarNoContexto, IDADE_PARA_RECONCILIAR_SEGUNDOS, nomeDaFilaBullMQ, TABELA_DO_EFEITO_SINTETICO } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, type DadosJobSintetico } from '@educa/shared'
+import { CodigoDeFalhaDeJob, DEFINICOES_DE_JOB, TIPO_JOB_SINTETICO, type DadosJobSintetico } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
@@ -14,6 +14,9 @@ import { BancadaDeFila, LogEmMemoria } from './fila-de-teste.js'
 // processador sintético no modo `efeito`, gravado numa tabela que só este arquivo cria.
 
 const COM_EFEITO: DadosJobSintetico = { cpuMs: 0, falhar: false, efeito: true }
+
+/** O prazo que o executor entrega ao processador do sintético: o da definição do tipo. */
+const PRAZO_DO_SINTETICO_MS = DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO].prazoMs
 
 interface LinhaDeEfeito {
   escolaId: string
@@ -158,9 +161,9 @@ describe('reexecução do mesmo job: a chave de idempotência é a do job, e o e
     await aguardarEstado(id, 'concluido', 40_000)
 
     expect(execucoes).toEqual([
-      { jobId: id, tentativa: 1, chaveIdempotencia: id },
+      { jobId: id, tentativa: 1, chaveIdempotencia: id, prazoMs: PRAZO_DO_SINTETICO_MS },
       // O stalled devolve o job sem contar tentativa: a reexecução aparece no log como outro `job.iniciado` do mesmo job.
-      { jobId: id, tentativa: 1, chaveIdempotencia: id },
+      { jobId: id, tentativa: 1, chaveIdempotencia: id, prazoMs: PRAZO_DO_SINTETICO_MS },
     ])
     expect(await efeitos()).toEqual([{ escolaId: ESCOLA_A, chaveIdempotencia: id, tentativa: 1 }])
     expect(iniciosNoLog(logMorto, id)).toHaveLength(1)
@@ -191,7 +194,7 @@ describe('reexecução do mesmo job: a chave de idempotência é a do job, e o e
 
     try {
       // O Redis de fila perdeu o job ativo (AOF sem o último segundo): some o hash, o lock e a entrada na lista de ativos.
-      const base = `${bancada.prefixo}:${nomeDaFilaBullMQ('interativa')}`
+      const base = `${bancada.prefixo}:${nomeDaFilaBullMQ('interativa', 'worker')}`
       await bancada.redis.multi().lrem(`${base}:active`, 0, id).del(`${base}:${id}`, `${base}:${id}:lock`).exec()
       expect(await bancada.fila.getJob(id)).toBeUndefined()
       // Como se estivesse ativo há mais que a idade da reconciliação.
@@ -213,8 +216,8 @@ describe('reexecução do mesmo job: a chave de idempotência é a do job, e o e
     }
 
     expect(execucoes).toEqual([
-      { jobId: id, tentativa: 1, chaveIdempotencia: id },
-      { jobId: id, tentativa: 1, chaveIdempotencia: id },
+      { jobId: id, tentativa: 1, chaveIdempotencia: id, prazoMs: PRAZO_DO_SINTETICO_MS },
+      { jobId: id, tentativa: 1, chaveIdempotencia: id, prazoMs: PRAZO_DO_SINTETICO_MS },
     ])
     expect(await efeitos()).toEqual([{ escolaId: ESCOLA_A, chaveIdempotencia: id, tentativa: 1 }])
     // A primeira termina depois: o `concluir` dela não acha o job ativo, e o job segue concluido.
@@ -242,7 +245,7 @@ describe('reexecução do mesmo job: a chave de idempotência é a do job, e o e
 
     await aguardarEstado(id, 'concluido', 40_000)
 
-    expect(execucoes).toEqual([1, 2, 3].map((tentativa) => ({ jobId: id, tentativa, chaveIdempotencia: id })))
+    expect(execucoes).toEqual([1, 2, 3].map((tentativa) => ({ jobId: id, tentativa, chaveIdempotencia: id, prazoMs: PRAZO_DO_SINTETICO_MS })))
     expect(await efeitos()).toEqual([{ escolaId: ESCOLA_A, chaveIdempotencia: id, tentativa: 1 }])
     // A reexecução no log: o mesmo `jobId` em mais de um `job.iniciado`, com a tentativa subindo, e só ids.
     const inicios = iniciosNoLog(logWorker, id)

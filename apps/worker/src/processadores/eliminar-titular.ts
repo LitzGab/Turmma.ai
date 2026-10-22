@@ -1,5 +1,4 @@
 import {
-  contextoAtual,
   EliminacaoDoTitular,
   estaNaJanela,
   type Banco,
@@ -8,13 +7,8 @@ import {
   type LoggerBase,
   type Relogio,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob } from '@educa/shared'
-import { z } from 'zod'
+import type { TIPO_ELIMINAR_TITULAR } from '@educa/shared'
 import type { Processador } from '../executor.js'
-import { FalhaDeJob } from '../falha-de-job.js'
-
-/** O job leva **só o id do pedido**: o titular, o nome e todo o resto são lidos aqui dentro, na escola do job. */
-const esquemaDoJob = z.strictObject({ pedidoId: z.uuid() })
 
 export interface DependenciasDaEliminacaoDoTitular {
   banco: Banco
@@ -31,6 +25,8 @@ export interface DependenciasDaEliminacaoDoTitular {
  * `EliminacaoDoTitular` do pedido `agendado` e vencido: troca o nome completo nos textos livres (faixas, com a janela letiva
  * conferida entre elas), refaz a foto do compartilhamento, anonimiza, elimina a pessoa, marca os arquivos e conclui o pedido.
  *
+ * - **O job leva só o id do pedido**, e o executor o valida pela definição: o titular, o nome e todo o resto são lidos aqui
+ *   dentro, na escola do job.
  * - **Sem efeito não é erro**: o pedido que já não está `agendado` (cancelado, concluído por outro job) ou não venceu termina
  *   em silêncio, e o que a janela interrompeu termina também, com o pedido ainda `agendado`; a rotina da noite seguinte o
  *   enfileira de novo (depois de 20 h).
@@ -40,13 +36,10 @@ export interface DependenciasDaEliminacaoDoTitular {
  *   inteira, e o alerta de 48 h aparece se o pedido não concluir.
  * - Loga só o resultado (`status`); nunca o titular, o nome, o termo nem contagem por tabela.
  */
-export function criarEliminacaoDoTitular({ banco, janelaDaEscola, relogio, logger, faixa }: DependenciasDaEliminacaoDoTitular): Processador {
-  return async (dados) => {
-    const escolaId = contextoAtual()?.escolaId
-    const lido = esquemaDoJob.safeParse(dados)
-    if (escolaId === undefined || !lido.success) throw new FalhaDeJob(CodigoDeFalhaDeJob.DADOS_INVALIDOS, true)
+export function criarEliminacaoDoTitular({ banco, janelaDaEscola, relogio, logger, faixa }: DependenciasDaEliminacaoDoTitular): Processador<typeof TIPO_ELIMINAR_TITULAR> {
+  return async ({ pedidoId }) => {
     const janela = await janelaDaEscola.daEscola()
-    const status = await new EliminacaoDoTitular(banco, relogio).eliminar(lido.data.pedidoId, {
+    const status = await new EliminacaoDoTitular(banco, relogio).eliminar(pedidoId, {
       janelaAberta: () => estaNaJanela(janela, relogio.agora()),
       ...(faixa === undefined ? {} : { faixa }),
     })

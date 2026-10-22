@@ -5,7 +5,6 @@ import { DEFINICOES_DE_JOB, FILAS, type EsquemaDosDadosDoJob } from '@educa/shar
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { jobRegistro } from '../../packages/nucleo/src/db/schema/job-registro.ts'
-import { OPCOES_DE_JOB_PUBLICADO } from '../../packages/nucleo/src/fila/publicacao.ts'
 import { raizRepositorio } from '../ci/executar.ts'
 import { ehNomePessoal } from './regras-log.mjs'
 
@@ -42,13 +41,9 @@ describe('o registro de jobs contra o banco', () => {
     }
   })
 
-  it('a retentativa de todo tipo é a que o despachante publica hoje, até a 19.0 ligar uma à outra', () => {
+  it('a retentativa de todo tipo é a de hoje: cinco tentativas, recuo de 2 s e jitter de 0,5, em literal', () => {
     for (const [tipo, definicao] of Object.entries(DEFINICOES_DE_JOB)) {
-      expect(definicao.retentativa, tipo).toEqual({
-        tentativas: OPCOES_DE_JOB_PUBLICADO.attempts,
-        recuoMs: OPCOES_DE_JOB_PUBLICADO.backoff.delay,
-        jitter: OPCOES_DE_JOB_PUBLICADO.backoff.jitter,
-      })
+      expect(definicao.retentativa, tipo).toEqual({ tentativas: 5, recuoMs: 2_000, jitter: 0.5 })
     }
   })
 })

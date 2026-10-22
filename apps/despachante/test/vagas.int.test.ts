@@ -7,19 +7,22 @@ import {
   DespachoRepository,
   executarNoContexto,
   METRICAS,
-  OPCOES_DE_JOB_PUBLICADO,
+  nomeDaFilaBullMQ,
+  opcoesDeJob,
   PRIORIDADE_DA_FILA,
   VALIDADE_DA_VAGA_MS,
   type VagasPorEscola,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, TIPO_EXPURGAR_JOBS, type Fila } from '@educa/shared'
+import { CodigoDeFalhaDeJob, definirJob, DEFINICOES_DE_JOB, TIPO_EXPURGAR_JOBS, TIPO_JOB_SINTETICO, type Fila } from '@educa/shared'
+import { Queue } from 'bullmq'
 import { randomUUID } from 'node:crypto'
 import { setTimeout as esperar } from 'node:timers/promises'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { z } from 'zod'
 import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { FalhaDeJob } from '../../worker/src/falha-de-job.js'
 import type { Processador } from '../../worker/src/executor.js'
+import { FalhaDeJob } from '../../worker/src/falha-de-job.js'
 import { BancadaDeFila, configuracaoDoBanco, LogEmMemoria, urlRedisDeFila } from '../../worker/test/fila-de-teste.js'
 
 // Despachantes e workers de verdade (a mesma montagem do main.ts), no processo do teste, contra o
@@ -37,6 +40,19 @@ function nosDoPlano(no: NoDoPlano | undefined): NoDoPlano[] {
 }
 
 /**
+ * O `sintetico` deste arquivo aceita, além dos dados do sintético, o `rotulo` da escola que o `ProcessadorContado` conta: o
+ * registro de produção o recusaria (chave a mais), e é por isso que o teste injeta o seu na bancada. Os campos são opcionais
+ * porque os casos que não contam por escola enfileiram o dado padrão da bancada.
+ */
+const DEFINICOES_DO_TESTE = {
+  ...DEFINICOES_DE_JOB,
+  [TIPO_JOB_SINTETICO]: definirJob({
+    ...DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO],
+    dados: z.strictObject({ rotulo: z.string().optional(), cpuMs: z.number().optional(), falhar: z.boolean().optional() }),
+  }),
+}
+
+/**
  * Processador que conta, por rótulo de escola (`dados.rotulo`), quantos jobs começaram e quantos
  * rodaram ao mesmo tempo. Com `duracaoMs`, cada job leva esse tempo; sem, espera `soltar()`.
  */
@@ -49,7 +65,7 @@ class ProcessadorContado {
 
   constructor(private readonly duracaoMs?: number) {}
 
-  readonly processar: Processador = async (dados) => {
+  readonly processar = async (dados: Record<string, unknown>): Promise<void> => {
     const rotulo = String(dados['rotulo'])
     const emExecucao = (this.#emExecucao.get(rotulo) ?? 0) + 1
     this.#emExecucao.set(rotulo, emExecucao)
@@ -84,7 +100,7 @@ beforeAll(() => {
 })
 
 describe('vagas por escola e filas por prioridade', () => {
-  let bancada: BancadaDeFila
+  let bancada: BancadaDeFila<typeof DEFINICOES_DO_TESTE>
   // Escolas reais, criadas a cada caso: desde a tarefa 3.0 `job_registro` e
   // `configuracao_operacional_escola` têm FK para `escola`, e id inventado é recusado pelo banco.
   let ESCOLA_A: string
@@ -93,7 +109,7 @@ describe('vagas por escola e filas por prioridade', () => {
   const processadores: ProcessadorContado[] = []
 
   beforeEach(async () => {
-    bancada = new BancadaDeFila()
+    bancada = new BancadaDeFila(DEFINICOES_DO_TESTE)
     await bancada.limparRegistro()
     ;[ESCOLA_A, ESCOLA_B, ESCOLA_C] = await Promise.all([bancada.escola(), bancada.escola(), bancada.escola()])
   })
@@ -307,7 +323,7 @@ describe('vagas por escola e filas por prioridade', () => {
     let tentativas = 0
     let terminar: () => void = () => undefined
     const segundaTentativa = new Promise<void>((resolver) => (terminar = resolver))
-    const processador: Processador = async () => {
+    const processador: Processador<typeof TIPO_JOB_SINTETICO> = async () => {
       tentativas++
       if (tentativas === 1) {
         await esperar(800)
@@ -357,11 +373,51 @@ describe('vagas por escola e filas por prioridade', () => {
     expect(processador.maximo('A')).toBe(2)
   }, 60_000)
 
+  it('a retentativa é a da definição do tipo: com a definição injetada de duas tentativas, o job sai do despachante com attempts 2 e o recuo dela', async () => {
+    const definicoes = {
+      ...DEFINICOES_DO_TESTE,
+      [TIPO_JOB_SINTETICO]: definirJob({ ...DEFINICOES_DO_TESTE[TIPO_JOB_SINTETICO], retentativa: { tentativas: 2, recuoMs: 50, jitter: 0 } }),
+    }
+    const curta = new BancadaDeFila(definicoes)
+    try {
+      const escola = await curta.escola()
+      const id = await curta.enfileirar(escola, { dados: { rotulo: 'A' } })
+      expect(await curta.despachante(new LogEmMemoria('despachante')).despachante.rodada()).toBe(1)
+      const naFila = await curta.fila.getJob(id)
+      expect(naFila?.opts).toMatchObject({ attempts: 2, backoff: { type: 'exponential', delay: 50, jitter: 0 } })
+    } finally {
+      await curta.fechar()
+    }
+  })
+
+  it('o tipo da API vai à fila da API: o worker, que consome as filas do worker, não o recebe, e a linha segue publicada', async () => {
+    const daApi = new BancadaDeFila({ ...DEFINICOES_DO_TESTE, [TIPO_JOB_SINTETICO]: definirJob({ ...DEFINICOES_DO_TESTE[TIPO_JOB_SINTETICO], executor: 'api' }) })
+    const filaDaApi = new Queue(nomeDaFilaBullMQ('interativa', 'api'), { connection: daApi.redis, prefix: daApi.prefixo })
+    filaDaApi.on('error', () => undefined)
+    const processador = contado()
+    try {
+      daApi.worker(new LogEmMemoria('worker'), { processadores: { sintetico: processador.processar } })
+      const escola = await daApi.escola()
+      const id = await daApi.enfileirar(escola, { dados: { rotulo: 'A' } })
+      expect(await daApi.despachante(new LogEmMemoria('despachante')).despachante.rodada()).toBe(1)
+      await expect.poll(async () => (await daApi.estado(id))?.estado, { timeout: 5_000, interval: 50 }).toBe('publicado')
+      expect(await filaDaApi.getJob(id)).toBeDefined()
+      expect(await daApi.fila.getJob(id)).toBeUndefined()
+      expect(processador.iniciados('A')).toBe(0)
+      expect((await daApi.estado(id))?.estado).toBe('publicado')
+    } finally {
+      // Se o worker pegou o job (a fila errada), o processador espera `soltar()`: sem soltá-lo, o fechamento esperaria por ele.
+      processador.soltar()
+      await filaDaApi.close()
+      await daApi.fechar()
+    }
+  })
+
   it('publicação ambígua: jobs na fila do BullMQ sem vaga tomada não passam do teto na execução, e esperam sem gastar tentativa', async () => {
     const ids = await inserirJobs(ESCOLA_A, 'lote', 6, 'A')
     // Como um addBulk que expirou no despachante depois de gravar: os jobs estão na fila, e a vaga foi devolvida.
     await bancada.reservar(ESCOLA_A, 'lote')
-    await bancada.filas.lote.addBulk(ids.map((jobId) => ({ name: 'sintetico', data: { escolaId: ESCOLA_A, requisicaoId: null }, opts: { ...OPCOES_DE_JOB_PUBLICADO, jobId } })))
+    await bancada.filas.lote.addBulk(ids.map((jobId) => ({ name: 'sintetico', data: { escolaId: ESCOLA_A, requisicaoId: null }, opts: { ...opcoesDeJob(TIPO_JOB_SINTETICO), jobId } })))
     await executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => bancada.despacho.marcarPublicados(ids))
     const processador = contado(300)
     const log = new LogEmMemoria('worker-lote')

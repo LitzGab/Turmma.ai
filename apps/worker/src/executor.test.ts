@@ -1,8 +1,9 @@
 import { contextoAtual, criarLogger, type JobParaExecutar, type ResultadoDoInicio } from '@educa/nucleo'
-import { CodigoDeErro, CodigoDeFalhaDeJob, type Fila } from '@educa/shared'
+import { CodigoDeErro, CodigoDeFalhaDeJob, definirJob, DEFINICOES_DE_JOB, TIPO_CONSOLIDAR_USO, TIPO_ELIMINAR_TITULAR, TIPO_EXPURGAR_ACESSO, TIPO_EXPURGAR_DADO_PESSOAL, TIPO_EXPURGAR_ESCOLA, TIPO_EXPURGAR_JOBS, TIPO_JOB_SINTETICO, TIPO_MONTAR_ARQUIVO, type Fila, type RegistroDeJobs, type TipoDeJob } from '@educa/shared'
 import { DelayedError, UnrecoverableError } from 'bullmq'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AvisoDeVagaLivre, ESPERA_POR_VAGA_MS, ExecutorDeJobs, type DependenciasDoExecutor, type JobDaFila, type Processador } from './executor.js'
+import { z } from 'zod'
+import { AvisoDeVagaLivre, ESPERA_POR_VAGA_MS, ExecutorDeJobs, type DependenciasDoExecutor, type JobDaFila, type Processador, type ProcessadoresDeJob } from './executor.js'
 import { FalhaDeJob } from './falha-de-job.js'
 
 const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
@@ -13,6 +14,10 @@ function montar({
   alvo = { fila: 'lote', escolaId: ESCOLA_A, finalizado: false },
   concede = true,
   processador = () => Promise.resolve(),
+  processadores,
+  tipo = 'sintetico',
+  dados = { cpuMs: 0, falhar: false },
+  definicoes,
   liberar = () => Promise.resolve(),
   renovar = () => Promise.resolve(),
   tentativas = 5,
@@ -21,11 +26,20 @@ function montar({
   alvo?: JobParaExecutar | null
   concede?: boolean
   processador?: Processador
+  /** Os processadores da réplica, no lugar do `processador` no tipo sintético. */
+  processadores?: ProcessadoresDeJob
+  /** O tipo e os dados que a linha tem em `job_registro`: o que o executor valida. */
+  tipo?: string
+  dados?: Record<string, unknown>
+  /** O registro de jobs que o executor usa, no lugar do `DEFINICOES_DE_JOB`. */
+  definicoes?: RegistroDeJobs
   liberar?: () => Promise<void>
   renovar?: (eventos: string[]) => Promise<void>
   tentativas?: number
 }) {
   const eventos: string[] = []
+  /** O código de cada falha definitiva que o executor gravou na linha. */
+  const falhas: string[] = []
   const limites: Array<{ fila: Fila; escolaId: string | null; limite: number }> = []
   /** Cada marcação de uso, com a escola do contexto em que foi feita. */
   const marcacoes: string[] = []
@@ -37,15 +51,19 @@ function montar({
       },
       iniciarExecucao: (): Promise<ResultadoDoInicio> => {
         eventos.push('iniciar')
-        return Promise.resolve({ situacao: 'iniciado', tipo: 'sintetico', dados: { cpuMs: 0, falhar: false } })
+        return Promise.resolve({ situacao: 'iniciado', tipo, dados })
       },
       concluir: () => {
         eventos.push('concluir')
         return Promise.resolve(true)
       },
-      registrarFalha: () => Promise.resolve(true),
+      registrarFalha: (_id, codigo) => {
+        falhas.push(codigo)
+        return Promise.resolve(true)
+      },
     },
-    processadores: { sintetico: processador },
+    processadores: processadores ?? { sintetico: processador },
+    ...(definicoes === undefined ? {} : { definicoes }),
     logger: criarLogger({ servico: 'worker-teste', nivel: 'silent' }),
     vagas: {
       tomar: (fila, escolaId, limite, ids) => {
@@ -68,8 +86,8 @@ function montar({
     intervaloRenovacaoMs: 100,
   }
   const moveToDelayed = vi.fn<JobDaFila['moveToDelayed']>(() => Promise.resolve())
-  const job = { id: JOB_ID, data: { escolaId: ESCOLA_A, requisicaoId: null }, attemptsMade: 0, opts: { attempts: tentativas }, moveToDelayed } as unknown as JobDaFila
-  return { executor: new ExecutorDeJobs(dependencias), eventos, limites, marcacoes, job, moveToDelayed }
+  const job = { id: JOB_ID, data: { escolaId: alvo === null ? ESCOLA_A : alvo.escolaId, requisicaoId: null }, attemptsMade: 0, opts: { attempts: tentativas }, moveToDelayed } as unknown as JobDaFila
+  return { executor: new ExecutorDeJobs(dependencias), eventos, falhas, limites, marcacoes, job, moveToDelayed }
 }
 
 describe('ExecutorDeJobs e a vaga', () => {
@@ -93,9 +111,10 @@ describe('ExecutorDeJobs e a vaga', () => {
     const { executor, job } = montar({ processador: (...argumentos) => (recebidos.push(argumentos), Promise.resolve()) })
     await executor.processar(job, 'token')
     await executor.processar({ ...job, attemptsMade: 3 } as JobDaFila, 'token')
+    const { prazoMs } = DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO]
     expect(recebidos).toEqual([
-      [{ cpuMs: 0, falhar: false }, { jobId: JOB_ID, tentativa: 1, chaveIdempotencia: JOB_ID }],
-      [{ cpuMs: 0, falhar: false }, { jobId: JOB_ID, tentativa: 4, chaveIdempotencia: JOB_ID }],
+      [{ cpuMs: 0, falhar: false }, { jobId: JOB_ID, tentativa: 1, chaveIdempotencia: JOB_ID, prazoMs }],
+      [{ cpuMs: 0, falhar: false }, { jobId: JOB_ID, tentativa: 4, chaveIdempotencia: JOB_ID, prazoMs }],
     ])
   })
 
@@ -234,6 +253,103 @@ describe('ExecutorDeJobs e a vaga', () => {
       await finalizado.executor.processar(finalizado.job, 'token')
       expect([...semVaga.marcacoes, ...deOutraEscola.marcacoes, ...finalizado.marcacoes]).toEqual([])
     })
+  })
+})
+
+/** O payload que cada um dos 8 tipos tem hoje em `job_registro`: o que o executor precisa aceitar para nenhum job gravado antes quebrar. */
+const PAYLOAD_DE_HOJE: Readonly<Record<TipoDeJob, Record<string, unknown>>> = {
+  [TIPO_MONTAR_ARQUIVO]: { pedidoId: '0190f5a0-0000-7000-8000-0000000000c1' },
+  [TIPO_ELIMINAR_TITULAR]: { pedidoId: '0190f5a0-0000-7000-8000-0000000000c2' },
+  [TIPO_EXPURGAR_ESCOLA]: {},
+  [TIPO_CONSOLIDAR_USO]: {},
+  [TIPO_EXPURGAR_ACESSO]: {},
+  [TIPO_EXPURGAR_JOBS]: {},
+  [TIPO_EXPURGAR_DADO_PESSOAL]: {},
+  [TIPO_JOB_SINTETICO]: { cpuMs: 5, falhar: false, efeito: true },
+}
+
+describe('ExecutorDeJobs e a definição do tipo', () => {
+  /** A linha de `job_registro` que o worker lê, com a escola que o tipo pede: o job de rotina do sistema não tem escola. */
+  const alvoDo = (tipo: TipoDeJob): JobParaExecutar => ({ fila: 'lote', escolaId: DEFINICOES_DE_JOB[tipo].escopo === 'sistema' ? null : ESCOLA_A, finalizado: false })
+
+  it('o payload de hoje de cada um dos 8 tipos passa pela definição e chega ao processador do tipo, que roda uma vez', async () => {
+    expect(Object.keys(PAYLOAD_DE_HOJE).sort()).toEqual(Object.keys(DEFINICOES_DE_JOB).sort())
+    for (const [tipo, dados] of Object.entries(PAYLOAD_DE_HOJE) as Array<[TipoDeJob, Record<string, unknown>]>) {
+      const processador = vi.fn<Processador>(() => Promise.resolve())
+      const { executor, job, falhas } = montar({ tipo, dados, alvo: alvoDo(tipo), processadores: { [tipo]: processador } })
+      await executor.processar(job, 'token')
+      expect(falhas, tipo).toEqual([])
+      expect(processador, tipo).toHaveBeenCalledOnce()
+      expect(processador.mock.calls[0]?.[0], tipo).toEqual(dados)
+    }
+  })
+
+  it.each([
+    ['chave a mais (a escola no corpo)', { cpuMs: 0, falhar: false, escolaId: ESCOLA_A }],
+    ['campo obrigatório ausente', { cpuMs: 0 }],
+    ['valor fora do formato', { cpuMs: -1, falhar: false }],
+    ['tipo do valor errado', { cpuMs: 0, falhar: 'sim' }],
+  ])('dados que o esquema recusa (%s): falha definitiva DADOS_INVALIDOS na primeira tentativa, sem o processador e com a vaga devolvida', async (_caso, dados) => {
+    const processador = vi.fn<Processador>(() => Promise.resolve())
+    const { executor, job, falhas, eventos } = montar({ dados, processador })
+    // Cinco tentativas e a primeira: dado inválido não melhora numa segunda, e a retentativa gastaria o recuo à toa.
+    const erro = await executor.processar(job, 'token').catch((falha: unknown) => falha)
+    expect(erro).toBeInstanceOf(UnrecoverableError)
+    expect(erro).toMatchObject({ message: CodigoDeFalhaDeJob.DADOS_INVALIDOS })
+    expect(falhas).toEqual([CodigoDeFalhaDeJob.DADOS_INVALIDOS])
+    expect(processador).not.toHaveBeenCalled()
+    expect(eventos).toContain('liberar')
+  })
+
+  it('tipo que o registro não tem: TIPO_DESCONHECIDO, definitivo, sem processador, e o erro não é um TypeError de quem lê a definição que falta', async () => {
+    const processador = vi.fn<Processador>(() => Promise.resolve())
+    const { executor, job, falhas } = montar({ tipo: 'tipo.de-uma-versao-antiga', dados: { qualquer: 'coisa' }, processador })
+    await expect(executor.processar(job, 'token')).rejects.toThrow(CodigoDeFalhaDeJob.TIPO_DESCONHECIDO)
+    expect(falhas).toEqual([CodigoDeFalhaDeJob.TIPO_DESCONHECIDO])
+    expect(processador).not.toHaveBeenCalled()
+  })
+
+  it('tipo com definição e sem processador nesta réplica: TIPO_DESCONHECIDO, definitivo', async () => {
+    const { executor, job, falhas } = montar({ tipo: TIPO_MONTAR_ARQUIVO, dados: PAYLOAD_DE_HOJE[TIPO_MONTAR_ARQUIVO], processadores: {} })
+    await expect(executor.processar(job, 'token')).rejects.toThrow(CodigoDeFalhaDeJob.TIPO_DESCONHECIDO)
+    expect(falhas).toEqual([CodigoDeFalhaDeJob.TIPO_DESCONHECIDO])
+  })
+
+  it('o escopo da definição se confere com a escola da linha: rotina do sistema com escola (escrita por SQL) e job de escola sem escola não rodam', async () => {
+    const rotinaComEscola = vi.fn<Processador>(() => Promise.resolve())
+    const sistemaComEscola = montar({ tipo: TIPO_EXPURGAR_JOBS, dados: {}, alvo: { fila: 'lote', escolaId: ESCOLA_A, finalizado: false }, processadores: { [TIPO_EXPURGAR_JOBS]: rotinaComEscola } })
+    await expect(sistemaComEscola.executor.processar(sistemaComEscola.job, 'token')).rejects.toThrow(CodigoDeFalhaDeJob.DADOS_INVALIDOS)
+    expect(sistemaComEscola.falhas).toEqual([CodigoDeFalhaDeJob.DADOS_INVALIDOS])
+
+    const jobDeEscola = vi.fn<Processador>(() => Promise.resolve())
+    const escolaSemEscola = montar({ tipo: TIPO_MONTAR_ARQUIVO, dados: PAYLOAD_DE_HOJE[TIPO_MONTAR_ARQUIVO], alvo: { fila: 'normal', escolaId: null, finalizado: false }, processadores: { [TIPO_MONTAR_ARQUIVO]: jobDeEscola } })
+    await expect(escolaSemEscola.executor.processar(escolaSemEscola.job, 'token')).rejects.toThrow(CodigoDeFalhaDeJob.DADOS_INVALIDOS)
+    expect(escolaSemEscola.falhas).toEqual([CodigoDeFalhaDeJob.DADOS_INVALIDOS])
+    expect(rotinaComEscola).not.toHaveBeenCalled()
+    expect(jobDeEscola).not.toHaveBeenCalled()
+  })
+
+  it('o processador recebe os dados que o esquema leu, com o `default` aplicado, e o prazo que a definição do tipo dá', async () => {
+    const definicoes: RegistroDeJobs = {
+      ...DEFINICOES_DE_JOB,
+      [TIPO_JOB_SINTETICO]: definirJob({
+        ...DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO],
+        dados: z.strictObject({ cpuMs: z.number().default(7), falhar: z.boolean().default(false) }),
+        prazoMs: 1_234,
+      }),
+    }
+    const recebidos: Array<Parameters<Processador>> = []
+    const { executor, job } = montar({ dados: {}, definicoes, processador: (...argumentos) => (recebidos.push(argumentos), Promise.resolve()) })
+    await executor.processar(job, 'token')
+    expect(recebidos).toEqual([[{ cpuMs: 7, falhar: false }, { jobId: JOB_ID, tentativa: 1, chaveIdempotencia: JOB_ID, prazoMs: 1_234 }]])
+  })
+
+  it('o tipo dos dados do processador é o da definição: ler campo que ela não tem, ou registrar processador de tipo que ela não tem, não compila', () => {
+    // @ts-expect-error `titular.montar-arquivo` só tem `pedidoId`
+    const lerCampoInexistente: Processador<typeof TIPO_MONTAR_ARQUIVO> = ({ cpuMs }) => Promise.resolve(void cpuMs)
+    // @ts-expect-error `sistema.fantasma` não está em `DEFINICOES_DE_JOB`
+    const tipoSemDefinicao: ProcessadoresDeJob = { 'sistema.fantasma': () => Promise.resolve() }
+    expect([typeof lerCampoInexistente, typeof tipoSemDefinicao]).toEqual(['function', 'object'])
   })
 })
 

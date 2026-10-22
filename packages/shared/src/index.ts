@@ -42,11 +42,13 @@ export {
 } from './sistema/definicoes-de-job.js'
 export type {
   DadosDoJob,
+  DadosLidosDoJob,
   DefinicaoDeJob,
   EscopoDeJob,
   EsquemaDosDadosDoJob,
   ExecutorDeJob,
   OpcoesDoJob,
+  RegistroDeJobs,
   RetentativaDeJob,
   TipoDeJob,
 } from './sistema/definicoes-de-job.js'
