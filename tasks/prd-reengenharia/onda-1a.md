@@ -191,6 +191,18 @@ segunda passada ignora `eslint-disable`.
   id (ou da `chave`) ao 400 do corpo ou da consulta, o último parâmetro. A asserção foi escrita com o 404 e depois reescrita
   para o 400. Com a entrada inválida, qualquer id (fora do formato, inexistente ou de outra escola) e qualquer `chave` (do
   catálogo ou fora dele) dão o mesmo 400, e o `retomar` com corpo válido segue dando o 404 igual para as duas.
+  **A 16.0 repete a conduta** (caracterização no commit da tarefa, nos testes de integração que já cobriam cada rota e em
+  `apps/api/test/borda-de-entrada-sessao.int.test.ts`, rodada verde contra o código antigo) e achou uma mudança: em
+  `POST /v1/conta/mfa/ativar` e `POST /v1/sessao/mfa`, o corpo fora do esquema sem `Authorization`, ou com um desafio que
+  não vale, passa do 401 do token ao 400 do corpo, porque o token é lido no handler (`extrairTokenBearer`) e o pipe do
+  corpo roda antes dele. Não revela existência (o corpo inválido dá o mesmo 400 a qualquer token) e não gasta tentativa:
+  o desafio nem é verificado. Com o corpo válido, o 401 de antes. Outras duas decisões da 16.0: (a) o `slug` e o
+  `provedor` do login externo e o `slug` do acesso da escola passam pelo `ZodValidationPipe` com `errorCode:
+  NAO_ENCONTRADO`, e **as conferências de formato que o `LoginExterno.iniciar` e o `AcessoDaEscolaService.ler` faziam
+  saem dos services**: o pipe é o único portão, e um byte nulo no `slug` (que o Postgres recusaria com 500) prova que ele
+  existe; o `slug` da query é `z.string().trim().pipe(esquemaSlugDaEscola)`, porque o controller já o cortava; (b)
+  `refazer` e `revogar` do painel e `renovar` e `sair` do operador, que aceitam corpo ausente, usam
+  `esquemaPedidoSemCorpoDeOperador.default({})` no pipe, como o `revogar` do acesso da turma (15.0), e não mais o `corpo ?? {}`.
 
 **A trava é o ESLint core.** Um bloco de `no-restricted-syntax` em `eslint.config.mjs`, para `*.controller.ts`, reprova
 `@Body()`, `@Query()` e `@Param(nome)` sem pipe, `@Req()` e `requisicao.body`, `.query` e `.params`. O `files` do bloco

@@ -385,6 +385,22 @@ describe('POST /v1/sessao/email: a equipe entra por e-mail e senha', () => {
     expect(verificacoes).not.toHaveBeenCalled()
   })
 
+  it('o corpo fora do contrato não gasta tentativa da conta nem grava registro_acesso: seis pedidos inválidos com o e-mail dela, e a senha certa entra', async () => {
+    const professor = await pessoa(await bancada.escola())
+    const invalidos = [{ email: professor.email, senha: '' }, { email: professor.email }, { email: professor.email, senha: SENHA, escolaId: professor.escolaId }, { email: professor.email, senha: 7 }, { email: '', senha: SENHA }, {}]
+    for (const corpo of invalidos) {
+      const resposta = await entrar(corpo)
+      expect(resposta.status).toBe(400)
+      expect(resposta.corpo.erro?.codigo).toBe(CodigoDeErro.ENTRADA_INVALIDA)
+      expect(resposta.setCookie).toEqual([])
+    }
+    const { rows: antes } = await bancada.pool.query<{ total: string }>('select count(*) as total from registro_acesso where escola_id = $1', [professor.escolaId])
+    expect(Number(antes[0]?.total)).toBe(0)
+    expect(verificacoes).not.toHaveBeenCalled()
+    // Seis erros de formato valeriam seis falhas de senha, e a quinta segura a conta: a senha certa ainda entra.
+    expect((await comSenha(professor.email)).status).toBe(200)
+  })
+
   it('falha: com o Redis de fila fora, o contador em memória segura a conta, limite.seguro_ativo vai a 1, e quem tem a senha certa entra', async () => {
     // Uma instância só para este caso: a proporção do seguro é da janela de 30 s da instância, e nesta nenhuma
     // tentativa foi contada pelo Redis antes de ele cair.

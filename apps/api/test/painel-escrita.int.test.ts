@@ -294,6 +294,18 @@ describe('painel da operação: rede e escola, com o autor conferido na transaç
     })
   })
 
+  describe('16.0: a consulta da lista e do uso passa pelo ZodValidationPipe', () => {
+    it('ordem fora da lista, página zero e campo a mais são 400 ENTRADA_INVALIDA em /escolas e em /uso, e a consulta válida responde 200', async () => {
+      const sessao = await operadores.operadorComSessao()
+      for (const caminho of ['/v1/operacao/escolas', '/v1/operacao/uso']) {
+        for (const consulta of ['ordem=aluno', 'pagina=0', `escolaId=${randomUUID()}`]) {
+          esperarErro(await pedir(url, 'GET', `${caminho}?${consulta}`, sessao.token), 400, CodigoDeErro.ENTRADA_INVALIDA)
+        }
+        expect((await pedir(url, 'GET', `${caminho}?ordem=nome`, sessao.token)).status, caminho).toBe(200)
+      }
+    })
+  })
+
   describe('E11: o autor desativado no meio da escrita', () => {
     it('pelo painel, com o desativar segurando a linha: a escrita espera o for share e responde 401 SESSAO_ENCERRADA sem gravar', async () => {
       const sessao = await operadores.operadorComSessao()

@@ -1,5 +1,5 @@
-import { AceitaDesafio, bearerDeDesafio, ErroDeDominio, extrairTokenBearer, ipDaRequisicao, Permite, ProxiesConfiaveis } from '@educa/nucleo'
-import { CodigoDeErro, esquemaPedidoTrocaDeEscola, esquemaRespostaLogin, type RespostaLogin } from '@educa/shared'
+import { AceitaDesafio, bearerDeDesafio, extrairTokenBearer, ipDaRequisicao, Permite, ProxiesConfiaveis, ZodValidationPipe } from '@educa/nucleo'
+import { esquemaPedidoTrocaDeEscola, esquemaRespostaLogin, type PedidoTrocaDeEscola, type RespostaLogin } from '@educa/shared'
 import { Body, Controller, Header, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { TrocaDeEscolaService } from './troca-de-escola.service.js'
@@ -22,14 +22,16 @@ export class TrocaDeEscolaController {
   @Permite('sessao', 'trocar_escola')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async trocar(@Body() corpo: unknown, @Req() requisicao: IncomingMessage, @Res({ passthrough: true }) resposta: ServerResponse): Promise<RespostaLogin> {
-    const pedido = esquemaPedidoTrocaDeEscola.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
+  async trocar(
+    @Body(new ZodValidationPipe(esquemaPedidoTrocaDeEscola)) pedido: PedidoTrocaDeEscola,
+    @Req() requisicao: IncomingMessage,
+    @Res({ passthrough: true }) resposta: ServerResponse,
+  ): Promise<RespostaLogin> {
     const origem = { ip: await ipDaRequisicao(requisicao, this.proxies), cabecalhoCookie: requisicao.headers.cookie }
     const { authorization } = requisicao.headers
     const { resposta: corpoDaResposta, cookies } = bearerDeDesafio(authorization)
-      ? await this.troca.escolher(extrairTokenBearer(authorization), pedido.data, origem)
-      : await this.troca.trocar(pedido.data, origem)
+      ? await this.troca.escolher(extrairTokenBearer(authorization), pedido, origem)
+      : await this.troca.trocar(pedido, origem)
     resposta.setHeader('Set-Cookie', [...cookies])
     return esquemaRespostaLogin.parse(corpoDaResposta)
   }

@@ -75,12 +75,26 @@ describe('processadores do worker: nenhuma afirmação de tipo (totais do expurg
 })
 
 describe('a entrada do controller passa pelo pipe (no-restricted-syntax, D81)', () => {
-  const MODULOS_MIGRADOS = ['sistema', 'ia', 'entrega', 'assistente', 'professores', 'estrutura', 'sala', 'governanca']
+  /** Os módulos em que a requisição inteira também é barrada. */
+  const MODULOS_SEM_REQUISICAO = ['sistema', 'ia', 'entrega', 'assistente', 'professores', 'estrutura', 'sala', 'governanca']
+  /** Os módulos que leem cookie, `Authorization` e IP da requisição (16.0): o `@Req()` passa, a entrada continua barrada. */
+  const MODULOS_COM_REQUISICAO = ['sessao', 'operacao']
+  const MODULOS_MIGRADOS = [...MODULOS_SEM_REQUISICAO, ...MODULOS_COM_REQUISICAO]
   const regras = new Set(['no-restricted-syntax'])
 
-  it.each(MODULOS_MIGRADOS)('reprova @Body(), @Query(), @Param(), @Param(\'id\'), @Query(\'termo\'), @Req() e requisicao.body|query|params no controller de %s', async (modulo) => {
+  it.each(MODULOS_SEM_REQUISICAO)('reprova @Body(), @Query(), @Param(), @Param(\'id\'), @Query(\'termo\'), @Req() e requisicao.body|query|params no controller de %s', async (modulo) => {
     const fixture = 'entrada-sem-esquema.ts'
     expect(await lintar(eslint, fixture, `apps/api/src/${modulo}/x.controller.ts`, regras)).toEqual(marcasDeViolacao(fixture))
+  })
+
+  it.each(MODULOS_COM_REQUISICAO)('no controller de %s o @Req() e o @Request() passam, e o corpo, a consulta, o caminho e requisicao.body|query|params continuam reprovados', async (modulo) => {
+    const fixture = 'entrada-sem-esquema.ts'
+    const linhas = lerFixture(fixture).split('\n')
+    const comRequisicao = new Set(linhas.flatMap((linha, indice) => (/@(Req|Request)\(/.test(linha) ? [indice + 1] : []).map(String)))
+    expect(comRequisicao.size, 'a fixture perdeu o @Req() ou o @Request()').toBe(2)
+    const esperadas = marcasDeViolacao(fixture).filter((marca) => !comRequisicao.has(marca.split(' ')[0] ?? ''))
+    expect(esperadas.length).toBeLessThan(marcasDeViolacao(fixture).length)
+    expect(await lintar(eslint, fixture, `apps/api/src/${modulo}/x.controller.ts`, regras)).toEqual(esperadas)
   })
 
   it('o jeito certo passa: o pipe no parâmetro, o IdPipe com e sem invalidAsUndefined, o errorCode, @UploadedFile() e @Res()', async () => {
@@ -90,7 +104,7 @@ describe('a entrada do controller passa pelo pipe (no-restricted-syntax, D81)', 
   })
 
   it('vale só no controller dos módulos migrados: o mesmo arquivo como service, ou num módulo que ainda não migrou, passa', async () => {
-    for (const caminho of ['apps/api/src/ia/x.service.ts', 'apps/api/src/sessao/x.controller.ts', 'apps/api/src/ia/x.controller.test.ts']) {
+    for (const caminho of ['apps/api/src/ia/x.service.ts', 'apps/api/src/tutor/x.controller.ts', 'apps/api/src/ia/x.controller.test.ts']) {
       expect(await lintar(eslint, 'entrada-sem-esquema.ts', caminho, regras), caminho).toEqual([])
     }
   })

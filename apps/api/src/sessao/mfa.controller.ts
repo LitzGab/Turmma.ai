@@ -1,11 +1,12 @@
-import { ErroDeDominio, extrairTokenBearer, ipDaRequisicao, ProxiesConfiaveis, RotaAnonima } from '@educa/nucleo'
+import { extrairTokenBearer, ipDaRequisicao, ProxiesConfiaveis, RotaAnonima, ZodValidationPipe } from '@educa/nucleo'
 import {
-  CodigoDeErro,
   esquemaPedidoAtivarMfa,
   esquemaPedidoMfa,
   esquemaRespostaAtivarMfa,
   esquemaRespostaConfigurarMfa,
   esquemaRespostaLogin,
+  type PedidoAtivarMfa,
+  type PedidoMfa,
   type RespostaAtivarMfa,
   type RespostaConfigurarMfa,
   type RespostaLogin,
@@ -18,6 +19,8 @@ import { MfaService } from './mfa.service.js'
  * `POST /v1/conta/mfa/configurar` e `/ativar`: o coordenador sem MFA configura o app autenticador. Anônimas para a
  * guarda de acesso: quem autoriza é o desafio `configurar_mfa`, no `Authorization`, e o token de acesso não vale
  * aqui. As duas respostas levam o segredo ou os códigos de recuperação, e por isso saem com `no-store`.
+ * O token é lido no handler, da requisição (`extrairTokenBearer`), e não no pipe: o corpo fora do esquema dá o 400 antes
+ * do 401 do token que falta, sem gastar tentativa (16.0, `onda-1a.md` T1).
  */
 @RotaAnonima()
 @Controller('v1/conta/mfa')
@@ -34,18 +37,17 @@ export class ContaMfaController {
   @Post('ativar')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async ativar(@Body() corpo: unknown, @Req() requisicao: IncomingMessage): Promise<RespostaAtivarMfa> {
+  async ativar(@Body(new ZodValidationPipe(esquemaPedidoAtivarMfa)) pedido: PedidoAtivarMfa, @Req() requisicao: IncomingMessage): Promise<RespostaAtivarMfa> {
     const desafio = extrairTokenBearer(requisicao.headers.authorization)
-    const pedido = esquemaPedidoAtivarMfa.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    return esquemaRespostaAtivarMfa.parse(await this.mfa.ativar(desafio, pedido.data.codigo))
+    return esquemaRespostaAtivarMfa.parse(await this.mfa.ativar(desafio, pedido.codigo))
   }
 }
 
 /**
  * `POST /v1/sessao/mfa`: o coordenador informa o código do app autenticador, ou um de recuperação, com o desafio
  * `mfa` no `Authorization`. Anônima para a guarda de acesso, e por isso limitada pelo IP da rota anônima; o que segura
- * o código errado é o contador por conta, no service.
+ * o código errado é o contador por conta, no service. Como em `ContaMfaController`, o token é lido no handler e o corpo
+ * fora do esquema dá o 400 antes do 401, sem gastar tentativa (16.0, `onda-1a.md` T1).
  */
 @RotaAnonima()
 @Controller('v1/sessao')
@@ -58,11 +60,13 @@ export class SessaoMfaController {
   @Post('mfa')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async entrar(@Body() corpo: unknown, @Req() requisicao: IncomingMessage, @Res({ passthrough: true }) resposta: ServerResponse): Promise<RespostaLogin> {
+  async entrar(
+    @Body(new ZodValidationPipe(esquemaPedidoMfa)) pedido: PedidoMfa,
+    @Req() requisicao: IncomingMessage,
+    @Res({ passthrough: true }) resposta: ServerResponse,
+  ): Promise<RespostaLogin> {
     const desafio = extrairTokenBearer(requisicao.headers.authorization)
-    const pedido = esquemaPedidoMfa.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    const { resposta: corpoDaResposta, cookies } = await this.mfa.entrar(desafio, pedido.data, {
+    const { resposta: corpoDaResposta, cookies } = await this.mfa.entrar(desafio, pedido, {
       ip: await ipDaRequisicao(requisicao, this.proxies),
       cabecalhoCookie: requisicao.headers.cookie,
     })

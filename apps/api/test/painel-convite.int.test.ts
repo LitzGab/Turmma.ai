@@ -355,6 +355,7 @@ describe('painel da operação: o convite da coordenação, gerar e revogar (tar
       expect((await pool.query('select id from usuario where escola_id = $1', [escolaId])).rows).toEqual([])
       expect((await pool.query('select id from auditoria where escola_id = $1', [escolaId])).rows).toEqual([])
       esperarErro(await revogar(sessao.token, 'nao-e-uuid'), 404, CodigoDeErro.NAO_ENCONTRADO)
+      esperarErro(await refazer(sessao.token, 'nao-e-uuid'), 404, CodigoDeErro.NAO_ENCONTRADO)
     })
   })
 

@@ -2,11 +2,8 @@ import {
   contextoAtual,
   ErroDeDominio,
   executarNoContexto,
-  FORMATO_SLUG,
   METRICAS,
-  PROVEDORES_EXTERNOS,
   RegistroDeAuditoria,
-  TAMANHO_MAXIMO_SLUG,
   type Banco,
   type Meter,
   type ProvedorExterno,
@@ -99,10 +96,9 @@ export class LoginExterno {
     return this.dependencias.provedor.ligados
   }
 
-  async iniciar(provedorPedido: string, slug: unknown): Promise<Redirecionamento> {
-    const provedor = PROVEDORES_EXTERNOS.find((nome) => nome === provedorPedido)
-    if (provedor === undefined || !this.ligados.includes(provedor)) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
-    if (typeof slug !== 'string' || slug.length > TAMANHO_MAXIMO_SLUG || !FORMATO_SLUG.test(slug)) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
+  /** O contrato exige o `provedor` e o `slug` já validados pelo `ZodValidationPipe` do controller: outro chamador tem de conferir o formato antes. */
+  async iniciar(provedor: ProvedorExterno, slug: string): Promise<Redirecionamento> {
+    if (!this.ligados.includes(provedor)) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
     const escolaId = await this.dependencias.resolucao.escolaPorSlug(slug)
     if (escolaId === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
     const liberado = await naEscolaSemUsuario({ escolaId }, () => new ContaExternaRepository(this.dependencias.banco).provedorLiberado(provedor))

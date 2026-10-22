@@ -526,6 +526,31 @@ describe('login pela conta Google ou Microsoft da escola, contra o oidc-falso do
     }
   })
 
+  it('iniciar: o provedor e o slug fora do formato respondem o mesmo 404, também o byte nulo que o Postgres recusaria e o slug repetido na consulta', async () => {
+    const { slug } = await escola()
+    // O byte nulo prova o `ZodValidationPipe` do parâmetro: se ele chegasse à consulta, o Postgres o recusaria (22021, 500).
+    for (const caminho of [
+      `/v1/sessao/externa/github%00/iniciar?slug=${slug}`,
+      '/v1/sessao/externa/google/iniciar?slug=escola%00x',
+      '/v1/sessao/externa/google/iniciar?slug=Escola-Maiuscula',
+      `/v1/sessao/externa/google/iniciar?slug=${slug}&slug=${slug}`,
+      '/v1/sessao/externa/google/iniciar?slug=',
+    ]) {
+      const resposta = await fetch(`${api.url}${caminho}`, { redirect: 'manual' })
+      const corpo = (await resposta.json()) as { erro?: { codigo?: string } }
+      expect(resposta.status, caminho).toBe(404)
+      expect(corpo.erro?.codigo, caminho).toBe(CodigoDeErro.NAO_ENCONTRADO)
+      expect(resposta.headers.getSetCookie(), caminho).toEqual([])
+    }
+  })
+
+  it('iniciar: o slug com espaços em volta é cortado, como o navegador o digitou: a escola que libera o provedor inicia', async () => {
+    const { slug } = await escola()
+    const inicio = await iniciar(`  ${slug}\t`)
+    expect(inicio.status).toBe(302)
+    expect(inicio.cookie).toMatch(new RegExp(`^${COOKIE_OIDC}=`))
+  })
+
   it('falha: error=access_denied no retorno (a escola não liberou o app) vira ?falha=provedor na tela da escola, o cookie é apagado, e a matrícula segue entrando', async () => {
     const { escolaId, slug } = await escola()
     const aluna = await alunaLigada(escolaId)

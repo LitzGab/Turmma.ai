@@ -57,6 +57,15 @@ describe('GET /v1/escolas/:slug/acesso: o que a tela /e/:slug mostra antes do lo
     }
   })
 
+  it('o slug fora do formato responde o 404 do inexistente, também o que o Postgres recusaria (byte nulo) e o que tem espaço ou maiúscula', async () => {
+    // O byte nulo prova o `ZodValidationPipe` do parâmetro: se ele chegasse à consulta, o Postgres o recusaria (22021, 500).
+    for (const slug of ['escola\u0000x', ' escola', 'Escola', 'escola-', '-escola', 'a--b_c']) {
+      const resposta = await acesso(slug)
+      expect(resposta.status, JSON.stringify(slug)).toBe(404)
+      expect(resposta.corpo.erro?.codigo, JSON.stringify(slug)).toBe(CodigoDeErro.NAO_ENCONTRADO)
+    }
+  })
+
   it('isolamento: o repository lê o nome só da escola do contexto; com a escola de A lê A, e com uma escola que não existe não lê nenhuma', async () => {
     const nomeDeA = `Escola A ${randomUUID()}`
     const a = await escolaComNome(nomeDeA)

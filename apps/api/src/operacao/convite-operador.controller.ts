@@ -1,10 +1,11 @@
-import { acimaDoLimiteDoIp, ErroDeDominio, ipDaRequisicao, LimiteQueRebaixa, ProxiesConfiaveis } from '@educa/nucleo'
+import { acimaDoLimiteDoIp, ipDaRequisicao, LimiteQueRebaixa, ProxiesConfiaveis, ZodValidationPipe } from '@educa/nucleo'
 import {
-  CodigoDeErro,
   esquemaPedidoAceitarConviteDeOperador,
   esquemaPedidoConsultarConviteDeOperador,
   esquemaRespostaAceitarConviteDeOperador,
   esquemaRespostaConsultarConviteDeOperador,
+  type PedidoAceitarConviteDeOperador,
+  type PedidoConsultarConviteDeOperador,
   type RespostaAceitarConviteDeOperador,
   type RespostaConsultarConviteDeOperador,
 } from '@educa/shared'
@@ -36,10 +37,8 @@ export class ConviteDeOperadorController {
   @EntradaDeOperacao()
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async consultar(@Body() corpo: unknown): Promise<RespostaConsultarConviteDeOperador> {
-    const pedido = esquemaPedidoConsultarConviteDeOperador.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    return esquemaRespostaConsultarConviteDeOperador.parse(await this.convites.consultar(pedido.data.token))
+  async consultar(@Body(new ZodValidationPipe(esquemaPedidoConsultarConviteDeOperador)) pedido: PedidoConsultarConviteDeOperador): Promise<RespostaConsultarConviteDeOperador> {
+    return esquemaRespostaConsultarConviteDeOperador.parse(await this.convites.consultar(pedido.token))
   }
 
   @Post('aceitar')
@@ -47,10 +46,11 @@ export class ConviteDeOperadorController {
   @LimiteQueRebaixa()
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async aceitar(@Body() corpo: unknown, @Req() requisicao: IncomingMessage): Promise<RespostaAceitarConviteDeOperador> {
-    const pedido = esquemaPedidoAceitarConviteDeOperador.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
+  async aceitar(
+    @Body(new ZodValidationPipe(esquemaPedidoAceitarConviteDeOperador)) pedido: PedidoAceitarConviteDeOperador,
+    @Req() requisicao: IncomingMessage,
+  ): Promise<RespostaAceitarConviteDeOperador> {
     const origem = { ip: await ipDaRequisicao(requisicao, this.proxies), acimaDoLimiteDoIp: acimaDoLimiteDoIp(requisicao) }
-    return esquemaRespostaAceitarConviteDeOperador.parse(await this.convites.aceitar(pedido.data, origem))
+    return esquemaRespostaAceitarConviteDeOperador.parse(await this.convites.aceitar(pedido, origem))
   }
 }

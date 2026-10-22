@@ -476,6 +476,29 @@ describe('POST /v1/sessao/matricula: o aluno entra pelo endereço da escola com 
     expect(verificacoes).not.toHaveBeenCalled()
   })
 
+  it('o corpo fora do contrato não gasta tentativa da matrícula nem grava registro_acesso: seis pedidos inválidos com a matrícula dela, e a senha certa entra', async () => {
+    const { escolaId, slug } = await escola()
+    await aluno(escolaId, '5521')
+    const invalidos = [
+      { slug, matricula: '5521', senha: '' },
+      { slug, matricula: '5521' },
+      { slug, matricula: '5521', senha: SENHA_DE_A, escolaId },
+      { slug, matricula: 5521, senha: SENHA_DE_A },
+      { slug: '', matricula: '5521', senha: SENHA_DE_A },
+      { slug: 's'.repeat(64), matricula: '5521', senha: SENHA_DE_A },
+    ]
+    for (const corpo of invalidos) {
+      const resposta = await entrar(corpo)
+      expect(resposta.status).toBe(400)
+      expect(resposta.corpo.erro?.codigo).toBe(CodigoDeErro.ENTRADA_INVALIDA)
+      expect(resposta.setCookie).toEqual([])
+    }
+    const { rows } = await bancada.pool.query<{ total: string }>('select count(*) as total from registro_acesso where escola_id = $1', [escolaId])
+    expect(Number(rows[0]?.total)).toBe(0)
+    expect(verificacoes).not.toHaveBeenCalled()
+    expect((await comSenha(slug, '5521')).status).toBe(200)
+  })
+
   it('privacidade (regra 20, item 9): o log do login, depois de tudo acima, não tem matrícula nem slug digitado', () => {
     const log = linhasDeLog.join('\n')
     expect(log).toContain('http.erro')

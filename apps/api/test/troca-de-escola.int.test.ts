@@ -332,6 +332,35 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
     expect(JSON.stringify(daTurmaDeA.corpo)).not.toContain(escolaA.turma)
   })
 
+  it('borda (16.0): o corpo fora do contrato é ENTRADA_INVALIDA com o desafio e com o token, e nenhum dos dois é gasto: a escolha certa ainda conclui, e a troca certa também', async () => {
+    const a = await escola('Colégio')
+    const b = await escola('Escola da rede')
+    const professora = await pessoa(a.id)
+    const emB = await naOutraEscola(professora, b.id)
+    const comCorpo = async (credencial: string, corpo: unknown) =>
+      lerResposta(await fetch(`${url}/v1/sessao/escola`, { method: 'POST', headers: { Authorization: `Bearer ${credencial}`, 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) }))
+
+    const desafio = texto((await entrar(professora.email)).corpo['desafio'])
+    for (const corpo of [{}, { usuarioId: 'nao-e-uuid' }, { usuarioId: professora.usuarioId, escolaId: b.id }]) {
+      const invalido = await comCorpo(desafio, corpo)
+      expect(invalido.status, JSON.stringify(corpo)).toBe(400)
+      expect(invalido.corpo.erro?.codigo, JSON.stringify(corpo)).toBe(CodigoDeErro.ENTRADA_INVALIDA)
+      expect(invalido.setCookie, JSON.stringify(corpo)).toEqual([])
+    }
+    const certa = await escolherEscola(desafio, professora.usuarioId)
+    expect(certa.corpo['etapa']).toBe('pronta')
+    const token = texto(certa.corpo['token'])
+
+    for (const corpo of [{}, { usuarioId: 'nao-e-uuid' }, { usuarioId: emB, escolaId: b.id }]) {
+      const invalido = await comCorpo(token, corpo)
+      expect(invalido.status, JSON.stringify(corpo)).toBe(400)
+      expect(invalido.corpo.erro?.codigo, JSON.stringify(corpo)).toBe(CodigoDeErro.ENTRADA_INVALIDA)
+    }
+    expect(await sessoesDe(b.id, emB)).toEqual([])
+    expect((await obter('/v1/eu', token)).status).toBe(200)
+    expect((await escolherEscola(token, emB)).corpo['etapa']).toBe('pronta')
+  })
+
   it('isolamento: escolher e trocar com o usuarioId de outra conta, real e ativo em B, dão 404 igual a inexistente, e o desafio recusado continua valendo', async () => {
     const a = await escola('Colégio')
     const b = await escola('Escola da rede')

@@ -678,6 +678,83 @@ describe('MFA do coordenador: configurar, ativar, entrar com o código e redefin
     })
   })
 
+  describe('a borda de entrada (16.0, onda-1a T1): o corpo passa pelo ZodValidationPipe, o token continua lido no handler', () => {
+    /** Um POST sem `Authorization`, ou com o valor que o teste quiser (que não seja um desafio). */
+    async function comCabecalho(caminho: string, authorization: string | undefined, corpo: unknown): Promise<Resposta> {
+      return lerResposta(
+        await fetch(`${url}${caminho}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(authorization === undefined ? {} : { Authorization: authorization }) }, body: JSON.stringify(corpo) }),
+      )
+    }
+
+    const CORPO_VALIDO = { codigo: '123456' }
+    const CORPO_INVALIDO = {}
+
+    it('a ordem dos erros: com o corpo válido, o token que falta ou não vale dá 401; com o corpo inválido, o 400 vem antes do token, em /conta/mfa/ativar e em /sessao/mfa, e o desafio certo com o corpo inválido dá 400', async () => {
+      const escolaId = await bancada.escola()
+      const semMfa = await pessoa(escolaId)
+      const comMfa = await pessoa(escolaId)
+      await comMfaAtivo(comMfa)
+      const paraAtivar = await emissorDeDesafio.emitir({ contaId: semMfa.contaId, etapa: 'configurar_mfa', mfaCumprido: false })
+      const paraEntrar = await emissorDeDesafio.emitir({ contaId: comMfa.contaId, etapa: 'mfa', mfaCumprido: false })
+      for (const [caminho, desafio] of [
+        ['/v1/conta/mfa/ativar', paraAtivar],
+        ['/v1/sessao/mfa', paraEntrar],
+      ] as const) {
+        esperarNaoAutenticado(await comCabecalho(caminho, undefined, CORPO_VALIDO))
+        esperarNaoAutenticado(await comCabecalho(caminho, 'Bearer desafio-que-nao-vale', CORPO_VALIDO))
+        // O corpo inválido é lido pelo pipe, que o Nest roda antes do handler: o 401 do token, lido no handler, não é alcançado.
+        for (const authorization of [undefined, 'Bearer desafio-que-nao-vale']) {
+          const resposta = await comCabecalho(caminho, authorization, CORPO_INVALIDO)
+          expect(resposta.status, `${caminho} ${String(authorization)}`).toBe(400)
+          expect(resposta.corpo.erro?.codigo, `${caminho} ${String(authorization)}`).toBe(CodigoDeErro.ENTRADA_INVALIDA)
+          expect(resposta.setCookie, `${caminho} ${String(authorization)}`).toEqual([])
+        }
+        const certoEInvalido = await comDesafio(caminho, desafio, CORPO_INVALIDO)
+        expect(certoEInvalido.status, caminho).toBe(400)
+        expect(certoEInvalido.corpo.erro?.codigo, caminho).toBe(CodigoDeErro.ENTRADA_INVALIDA)
+        expect(certoEInvalido.setCookie, caminho).toEqual([])
+      }
+      expect(await sessoesDaConta(comMfa.contaId)).toBe(0)
+      expect(await mfaNoBanco(semMfa.contaId)).toMatchObject({ ativo: false, codigos: 0 })
+    })
+
+    it('o corpo inválido não gasta tentativa: seis pedidos com o desafio certo e o corpo fora do esquema dão 400, e os quatro erros de código que vêm depois ainda dão 401, só o quinto segura a conta', async () => {
+      const coordenador = await pessoa(await bancada.escola())
+      const { base32 } = await comMfaAtivo(coordenador)
+      const desafio = await emissorDeDesafio.emitir({ contaId: coordenador.contaId, etapa: 'mfa', mfaCumprido: false })
+      for (const corpo of [{}, { codigo: '12345' }, { codigo: 123456 }, { codigo: '123456', escolaId: coordenador.escolaId }, { recuperacao: 'curto' }, []]) {
+        const resposta = await comDesafio('/v1/sessao/mfa', desafio, corpo)
+        expect(resposta.status).toBe(400)
+        expect(resposta.corpo.erro?.codigo).toBe(CodigoDeErro.ENTRADA_INVALIDA)
+      }
+      const errado = { codigo: codigoDoPasso(base32, passoAtual() + 5) }
+      for (let tentativa = 1; tentativa <= 4; tentativa++) esperarNaoAutenticado(await comDesafio('/v1/sessao/mfa', desafio, errado))
+      esperarSegurada(await comDesafio('/v1/sessao/mfa', desafio, errado))
+    })
+
+    it('redefinir: o id em maiúsculas age sobre o usuário da escola; o id fora do formato com o corpo inválido é 400, e com o corpo válido é 202 sem efeito', async () => {
+      const escolaA = await bancada.escola()
+      const coordenacao = await bancada.sessao(escolaA, 'coordenador')
+      const alvo = await pessoa(escolaA)
+      await comMfaAtivo(alvo)
+      const redefinir = (id: string, corpo: unknown) => comDesafio(`/v1/usuarios/${id}/mfa/redefinir`, coordenacao.token, corpo)
+
+      for (const id of ['nao-e-uuid', '1837', `${alvo.usuarioId}x`]) {
+        const invalido = await redefinir(id, { finalidade: 'pedido_formal_da_escola' })
+        expect(invalido.status, id).toBe(400)
+        expect(invalido.corpo.erro?.codigo, id).toBe(CodigoDeErro.ENTRADA_INVALIDA)
+        expect((await redefinir(id, { finalidade: 'autenticador_perdido' })).status, id).toBe(202)
+      }
+      expect(await mfaNoBanco(alvo.contaId)).toMatchObject({ ativo: true, codigos: 10 })
+      // O id fora do formato não chega ao caso de uso: nem a recusa dele fica na auditoria.
+      expect(await auditoriaDeMfa(escolaA)).toEqual([])
+
+      const emMaiusculas = await redefinir(alvo.usuarioId.toUpperCase(), { finalidade: 'autenticador_perdido' })
+      expect(emMaiusculas.status).toBe(202)
+      expect(await mfaNoBanco(alvo.contaId)).toEqual({ ativo: false, segredo: null, passo: null, codigos: 0 })
+    })
+  })
+
   it('falha: com o Redis de fila fora, o desafio de mfa é recusado com NAO_AUTENTICADO antes de o código ser conferido, e depois a pessoa entra de novo', async () => {
     const coordenador = await pessoa(await bancada.escola())
     const { base32 } = await comMfaAtivo(coordenador)

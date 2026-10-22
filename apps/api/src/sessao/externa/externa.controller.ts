@@ -1,7 +1,15 @@
-import { ipDaRequisicao, ProxiesConfiaveis, RotaAnonima } from '@educa/nucleo'
+import { ipDaRequisicao, PROVEDORES_EXTERNOS, ProxiesConfiaveis, RotaAnonima, ZodValidationPipe, type ProvedorExterno } from '@educa/nucleo'
+import { CodigoDeErro, esquemaSlugDaEscola } from '@educa/shared'
 import { Controller, Get, Param, Query, Req, Res } from '@nestjs/common'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { z } from 'zod'
 import { LoginExterno, type Redirecionamento } from './externa.service.js'
+
+/** O provedor e o slug que não têm o formato de nenhum existente respondem como o inexistente (regra 10, item 6). */
+const COMO_INEXISTENTE = { errorCode: CodigoDeErro.NAO_ENCONTRADO }
+const esquemaProvedor = z.enum(PROVEDORES_EXTERNOS)
+/** O slug da query vem digitado na barra de endereço da escola: espaço em volta é cortado antes do formato. */
+const esquemaSlugDigitado = z.string().trim().pipe(esquemaSlugDaEscola)
 
 /** Responde o redirecionamento: 302, sem cache, sem `Referer` com o código do provedor. */
 function redirecionar(resposta: ServerResponse, { endereco, cookies }: Redirecionamento): void {
@@ -26,10 +34,14 @@ export class LoginExternoController {
     private readonly proxies: ProxiesConfiaveis,
   ) {}
 
-  /** `GET /v1/sessao/externa/:provedor/iniciar?slug=`: vai ao provedor, ou 404 se a escola não o oferece. */
+  /** `GET /v1/sessao/externa/:provedor/iniciar?slug=`: vai ao provedor, ou 404 se o provedor ou o slug não têm o formato, ou se a escola não o oferece. */
   @Get(':provedor/iniciar')
-  async iniciar(@Param('provedor') provedor: string, @Query('slug') slug: unknown, @Res() resposta: ServerResponse): Promise<void> {
-    redirecionar(resposta, await this.login.iniciar(provedor, typeof slug === 'string' ? slug.trim() : slug))
+  async iniciar(
+    @Param('provedor', new ZodValidationPipe(esquemaProvedor, COMO_INEXISTENTE)) provedor: ProvedorExterno,
+    @Query('slug', new ZodValidationPipe(esquemaSlugDigitado, COMO_INEXISTENTE)) slug: string,
+    @Res() resposta: ServerResponse,
+  ): Promise<void> {
+    redirecionar(resposta, await this.login.iniciar(provedor, slug))
   }
 
   /** `GET /v1/sessao/externa/retorno`: a volta do provedor. A escola vem do cookie `educa_oidc`, nunca da query. */

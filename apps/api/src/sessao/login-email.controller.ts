@@ -1,5 +1,5 @@
-import { acimaDoLimiteDoIp, ErroDeDominio, ipDaRequisicao, LimiteQueRebaixa, ProxiesConfiaveis, RotaAnonima } from '@educa/nucleo'
-import { CodigoDeErro, esquemaPedidoLoginEmail, esquemaRespostaLogin, type RespostaLogin } from '@educa/shared'
+import { acimaDoLimiteDoIp, ipDaRequisicao, LimiteQueRebaixa, ProxiesConfiaveis, RotaAnonima, ZodValidationPipe } from '@educa/nucleo'
+import { esquemaPedidoLoginEmail, esquemaRespostaLogin, type PedidoLoginEmail, type RespostaLogin } from '@educa/shared'
 import { Body, Controller, Header, HttpCode, HttpStatus, Post, Req, Res } from '@nestjs/common'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { LoginService } from './login.service.js'
@@ -20,10 +20,12 @@ export class LoginEmailController {
   @Post('email')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async entrar(@Body() corpo: unknown, @Req() requisicao: IncomingMessage, @Res({ passthrough: true }) resposta: ServerResponse): Promise<RespostaLogin> {
-    const pedido = esquemaPedidoLoginEmail.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    const { resposta: corpoDaResposta, cookies } = await this.login.entrarPorEmail(pedido.data, {
+  async entrar(
+    @Body(new ZodValidationPipe(esquemaPedidoLoginEmail)) pedido: PedidoLoginEmail,
+    @Req() requisicao: IncomingMessage,
+    @Res({ passthrough: true }) resposta: ServerResponse,
+  ): Promise<RespostaLogin> {
+    const { resposta: corpoDaResposta, cookies } = await this.login.entrarPorEmail(pedido, {
       ip: await ipDaRequisicao(requisicao, this.proxies),
       cabecalhoCookie: requisicao.headers.cookie,
       acimaDoLimiteDoIp: acimaDoLimiteDoIp(requisicao),

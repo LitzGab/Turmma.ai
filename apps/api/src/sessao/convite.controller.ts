@@ -1,10 +1,11 @@
-import { ErroDeDominio, RotaAnonima } from '@educa/nucleo'
+import { RotaAnonima, ZodValidationPipe } from '@educa/nucleo'
 import {
-  CodigoDeErro,
   esquemaPedidoAceitarConvite,
   esquemaPedidoConsultarConvite,
   esquemaRespostaAceitarConvite,
   esquemaRespostaConsultarConvite,
+  type PedidoAceitarConvite,
+  type PedidoConsultarConvite,
   type RespostaAceitarConvite,
   type RespostaConsultarConvite,
 } from '@educa/shared'
@@ -25,18 +26,14 @@ export class ConviteController {
   @Post('consultar')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async consultar(@Body() corpo: unknown): Promise<RespostaConsultarConvite> {
-    const pedido = esquemaPedidoConsultarConvite.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    return esquemaRespostaConsultarConvite.parse(await this.convites.consultar(pedido.data.token))
+  async consultar(@Body(new ZodValidationPipe(esquemaPedidoConsultarConvite)) pedido: PedidoConsultarConvite): Promise<RespostaConsultarConvite> {
+    return esquemaRespostaConsultarConvite.parse(await this.convites.consultar(pedido.token))
   }
 
   @Post('aceitar')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async aceitar(@Body() corpo: unknown): Promise<RespostaAceitarConvite> {
-    const pedido = esquemaPedidoAceitarConvite.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    return esquemaRespostaAceitarConvite.parse(await this.convites.aceitar(pedido.data))
+  async aceitar(@Body(new ZodValidationPipe(esquemaPedidoAceitarConvite)) pedido: PedidoAceitarConvite): Promise<RespostaAceitarConvite> {
+    return esquemaRespostaAceitarConvite.parse(await this.convites.aceitar(pedido))
   }
 }

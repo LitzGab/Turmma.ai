@@ -140,7 +140,7 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
   - [x] 15.3 Os três módulos entram no `files` do bloco de `no-restricted-syntax`
   - [x] 15.4 Testes: os da tabela
 
-- [ ] **16.0 — Sessão e operação validam pelo `ZodValidationPipe`, sem gastar tentativa com entrada inválida**
+- [x] **16.0 — Sessão e operação validam pelo `ZodValidationPipe`, sem gastar tentativa com entrada inválida**
   - [ ] 16.1 Caracterização, num commit antes: a ordem dos erros em `mfa`, `sessao/mfa` e `redefinir-mfa`, e o 404 do `slug` e do `provedor`
   - [ ] 16.2 Migram os 12 controllers de `sessao/` e os 6 de `operacao/`; o `@Req()` fica só onde se lê cookie e IP, com o motivo no bloco do ESLint
   - [ ] 16.3 Os dois módulos entram no `files` do bloco de `no-restricted-syntax`

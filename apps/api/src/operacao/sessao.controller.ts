@@ -1,14 +1,12 @@
-import { ErroDeDominio, ipDaRequisicao, ProxiesConfiaveis } from '@educa/nucleo'
-import { CodigoDeErro, esquemaPedidoSemCorpoDeOperador, esquemaRespostaRenovacaoDeOperador, type RespostaRenovacaoDeOperador } from '@educa/shared'
+import { ipDaRequisicao, ProxiesConfiaveis, ZodValidationPipe } from '@educa/nucleo'
+import { esquemaPedidoSemCorpoDeOperador, esquemaRespostaRenovacaoDeOperador, type PedidoSemCorpoDeOperador, type RespostaRenovacaoDeOperador } from '@educa/shared'
 import { Body, Controller, Header, HttpCode, HttpStatus, Inject, Post, Req, Res } from '@nestjs/common'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { EntradaDeOperacao } from './marcadores.js'
 import { RenovacaoDeOperadorRecusada, SessaoDoOperadorService } from './sessao.service.js'
 
-/** O corpo das duas rotas é vazio: sem corpo, ou `{}`. Qualquer campo é `ENTRADA_INVALIDA`. */
-function exigirCorpoVazio(corpo: unknown): void {
-  if (!esquemaPedidoSemCorpoDeOperador.safeParse(corpo ?? {}).success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-}
+/** O corpo das duas rotas é vazio: sem corpo (o Express 5 deixa `req.body` indefinido), ou `{}`. Qualquer campo é `ENTRADA_INVALIDA`. */
+const esquemaSemCorpo = esquemaPedidoSemCorpoDeOperador.default({})
 
 /**
  * `POST /v1/operacao/sessao/renovar` e `POST /v1/operacao/sessao/sair` (Tech Spec da A0, seção 4): as duas últimas das
@@ -30,8 +28,11 @@ export class SessaoDoOperadorController {
   @EntradaDeOperacao()
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async renovar(@Body() corpo: unknown, @Req() requisicao: IncomingMessage, @Res({ passthrough: true }) resposta: ServerResponse): Promise<RespostaRenovacaoDeOperador> {
-    exigirCorpoVazio(corpo)
+  async renovar(
+    @Body(new ZodValidationPipe(esquemaSemCorpo)) _corpo: PedidoSemCorpoDeOperador,
+    @Req() requisicao: IncomingMessage,
+    @Res({ passthrough: true }) resposta: ServerResponse,
+  ): Promise<RespostaRenovacaoDeOperador> {
     try {
       const renovada = await this.sessoes.renovar({ cabecalhoCookie: requisicao.headers.cookie })
       const corpoDaResposta = esquemaRespostaRenovacaoDeOperador.parse(renovada.resposta)
@@ -48,8 +49,7 @@ export class SessaoDoOperadorController {
   @EntradaDeOperacao()
   @HttpCode(HttpStatus.NO_CONTENT)
   @Header('Cache-Control', 'no-store')
-  async sair(@Body() corpo: unknown, @Req() requisicao: IncomingMessage, @Res({ passthrough: true }) resposta: ServerResponse): Promise<void> {
-    exigirCorpoVazio(corpo)
+  async sair(@Body(new ZodValidationPipe(esquemaSemCorpo)) _corpo: PedidoSemCorpoDeOperador, @Req() requisicao: IncomingMessage, @Res({ passthrough: true }) resposta: ServerResponse): Promise<void> {
     const cookies = await this.sessoes.sair({ cabecalhoCookie: requisicao.headers.cookie, ip: await ipDaRequisicao(requisicao, this.proxies) })
     resposta.setHeader('Set-Cookie', [...cookies])
   }

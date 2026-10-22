@@ -528,6 +528,19 @@ describe('convite do primeiro coordenador: o operador gera, a pessoa consulta e 
     expect((await aceitar(convite.token, SENHA_NOVA)).corpo['etapa']).toBe('configurar_mfa')
   })
 
+  it('borda (16.0): o corpo fora do contrato é ENTRADA_INVALIDA em consultar e em aceitar, antes de ler o convite, e o convite continua valendo', async () => {
+    const convite = await convidarEm(await bancada.escola(), new Date())
+    for (const caminho of ['/v1/convites/consultar', '/v1/convites/aceitar']) {
+      for (const corpo of [{}, { token: 7 }, { token: '' }]) {
+        const resposta = await post(caminho, corpo)
+        expect(resposta.status, `${caminho} ${JSON.stringify(corpo)}`).toBe(400)
+        expect(resposta.corpo.erro?.codigo, `${caminho} ${JSON.stringify(corpo)}`).toBe(CodigoDeErro.ENTRADA_INVALIDA)
+      }
+    }
+    expect(await usuarioAtivo(convite.usuarioId)).toBe(false)
+    expect((await consultar(convite.token)).status).toBe(200)
+  })
+
   it('privacidade (regra 20, item 4): consultar devolve só escolaNome, sem e-mail nem nome do convidado; aceitar só a etapa e o desafio', async () => {
     const convite = await convidarEm(await bancada.escola(), new Date())
     const consulta = await consultar(convite.token)

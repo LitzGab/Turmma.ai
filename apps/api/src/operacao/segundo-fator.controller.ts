@@ -1,10 +1,11 @@
-import { ErroDeDominio, ipDaRequisicao, LimiteQueRebaixa, ProxiesConfiaveis } from '@educa/nucleo'
+import { ipDaRequisicao, LimiteQueRebaixa, ProxiesConfiaveis, ZodValidationPipe } from '@educa/nucleo'
 import {
-  CodigoDeErro,
   esquemaPedidoConfigurarSegundoFatorDeOperador,
   esquemaPedidoSegundoFatorDeOperador,
   esquemaRespostaConfigurarSegundoFatorDeOperador,
   esquemaRespostaSegundoFatorDeOperador,
+  type PedidoConfigurarSegundoFatorDeOperador,
+  type PedidoSegundoFatorDeOperador,
   type RespostaConfigurarSegundoFatorDeOperador,
   type RespostaSegundoFatorDeOperador,
 } from '@educa/shared'
@@ -37,10 +38,8 @@ export class SegundoFatorDoOperadorController {
   @EntradaDeOperacao()
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async configurar(@Body() corpo: unknown): Promise<RespostaConfigurarSegundoFatorDeOperador> {
-    const pedido = esquemaPedidoConfigurarSegundoFatorDeOperador.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    return esquemaRespostaConfigurarSegundoFatorDeOperador.parse(await this.segundoFator.configurar(pedido.data))
+  async configurar(@Body(new ZodValidationPipe(esquemaPedidoConfigurarSegundoFatorDeOperador)) pedido: PedidoConfigurarSegundoFatorDeOperador): Promise<RespostaConfigurarSegundoFatorDeOperador> {
+    return esquemaRespostaConfigurarSegundoFatorDeOperador.parse(await this.segundoFator.configurar(pedido))
   }
 
   @Post('mfa')
@@ -48,10 +47,12 @@ export class SegundoFatorDoOperadorController {
   @LimiteQueRebaixa()
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  async entrar(@Body() corpo: unknown, @Req() requisicao: IncomingMessage, @Res({ passthrough: true }) resposta: ServerResponse): Promise<RespostaSegundoFatorDeOperador> {
-    const pedido = esquemaPedidoSegundoFatorDeOperador.safeParse(corpo)
-    if (!pedido.success) throw new ErroDeDominio(CodigoDeErro.ENTRADA_INVALIDA)
-    const aberta = await this.segundoFator.entrar(pedido.data, { cabecalhoCookie: requisicao.headers.cookie, ip: await ipDaRequisicao(requisicao, this.proxies) })
+  async entrar(
+    @Body(new ZodValidationPipe(esquemaPedidoSegundoFatorDeOperador)) pedido: PedidoSegundoFatorDeOperador,
+    @Req() requisicao: IncomingMessage,
+    @Res({ passthrough: true }) resposta: ServerResponse,
+  ): Promise<RespostaSegundoFatorDeOperador> {
+    const aberta = await this.segundoFator.entrar(pedido, { cabecalhoCookie: requisicao.headers.cookie, ip: await ipDaRequisicao(requisicao, this.proxies) })
     const corpoDaResposta = esquemaRespostaSegundoFatorDeOperador.parse(aberta.resposta)
     resposta.setHeader('Set-Cookie', [...aberta.cookies])
     return corpoDaResposta

@@ -4,6 +4,28 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 import { configuracaoDasGuardas } from './tools/guardas/index.mjs'
 
+// A entrada do controller (D81): o que cada seletor reprova. `@Req()` fica fora desta lista, num objeto à parte, porque
+// `sessao/` e `operacao/` o recuperam (o cookie e o IP só se leem da requisição).
+const SELETORES_DA_ENTRADA = [
+  {
+    selector: "Decorator > CallExpression[callee.name=/^(Body|Query|Param)$/][arguments.length=0]",
+    message: 'Entrada sem pipe: use @Body(new ZodValidationPipe(esquema)), @Query(new ZodValidationPipe(esquema)) ou @Param(\'id\', IdPipe).',
+  },
+  {
+    selector: "Decorator > CallExpression[callee.name=/^(Body|Query|Param)$/][arguments.length=1] > Literal.arguments",
+    message: 'Parâmetro de caminho ou de consulta sem pipe: use @Param(\'id\', IdPipe) ou @Query(\'nome\', new ZodValidationPipe(esquema)).',
+  },
+  {
+    selector: "MemberExpression[object.name='requisicao'][property.name=/^(body|query|params)$/]",
+    message: 'A entrada não se lê da requisição: use @Body, @Query e @Param com o pipe.',
+  },
+]
+
+const SELETOR_DA_REQUISICAO = {
+  selector: "Decorator > CallExpression[callee.name=/^(Req|Request)$/]",
+  message: 'A entrada não se lê da requisição: use @Body, @Query e @Param com o pipe.',
+}
+
 export default tseslint.config(
   {
     ignores: [
@@ -57,31 +79,23 @@ export default tseslint.config(
     // A entrada HTTP passa pelo pipe no parâmetro (D81; NestJS, "Pipes" › Object schema validation): `@Body(new
     // ZodValidationPipe(esquema))`, `@Query(new ZodValidationPipe(esquema))` e `@Param('id', IdPipe)`. Parâmetro sem pipe
     // entrega ao service o que o cliente mandou, e `@Req()` e `requisicao.body|query|params` leem a entrada por fora dele.
-    // O `files` cresce por tarefa (14.0: os cinco primeiros módulos; 15.0: estrutura, sala e governança; 16.0 o resto; a
+    // O `files` cresce por tarefa (14.0: os cinco primeiros módulos; 15.0: estrutura, sala e governança; 16.0: sessão e operação; a
     // 17.0 o faz valer em todo `apps/api/src/**/*.controller.ts`). `no-restricted-syntax` está em `REGRAS_DAS_GUARDAS`:
     // o `eslint-disable` dele não fura a segunda passada do `npm run lint`. O `@UploadedFile()` não é barrado: os campos
     // ao lado dele passam pelo pipe.
-    files: ['apps/api/src/{sistema,ia,entrega,assistente,professores,estrutura,sala,governanca}/**/*.controller.ts'],
+    files: ['apps/api/src/{sistema,ia,entrega,assistente,professores,estrutura,sala,governanca,sessao,operacao}/**/*.controller.ts'],
     rules: {
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "Decorator > CallExpression[callee.name=/^(Body|Query|Param)$/][arguments.length=0]",
-          message: 'Entrada sem pipe: use @Body(new ZodValidationPipe(esquema)), @Query(new ZodValidationPipe(esquema)) ou @Param(\'id\', IdPipe).',
-        },
-        {
-          selector: "Decorator > CallExpression[callee.name=/^(Body|Query|Param)$/][arguments.length=1] > Literal.arguments",
-          message: 'Parâmetro de caminho ou de consulta sem pipe: use @Param(\'id\', IdPipe) ou @Query(\'nome\', new ZodValidationPipe(esquema)).',
-        },
-        {
-          selector: "Decorator > CallExpression[callee.name=/^(Req|Request)$/]",
-          message: 'A entrada não se lê da requisição: use @Body, @Query e @Param com o pipe.',
-        },
-        {
-          selector: "MemberExpression[object.name='requisicao'][property.name=/^(body|query|params)$/]",
-          message: 'A entrada não se lê da requisição: use @Body, @Query e @Param com o pipe.',
-        },
-      ],
+      'no-restricted-syntax': ['error', ...SELETORES_DA_ENTRADA, SELETOR_DA_REQUISICAO],
+    },
+  },
+  {
+    // O `@Req()` volta a `sessao/` e `operacao/` (16.0), logo depois do bloco acima, que ele vence por vir depois: o cookie
+    // (`educa_sessao`, `educa_dispositivo`, `turmma_operacao`), o `Authorization` do desafio e o IP (`ipDaRequisicao`)
+    // só existem na requisição (e a `retorno` do login externo lê a URL de volta do OIDC em `requisicao.url`, que os seletores
+    // não barram, para entregá-la ao `openid-client`), e o corpo, a consulta e o caminho continuam barrados pelos três seletores que sobram.
+    files: ['apps/api/src/{sessao,operacao}/**/*.controller.ts'],
+    rules: {
+      'no-restricted-syntax': ['error', ...SELETORES_DA_ENTRADA],
     },
   },
   {
