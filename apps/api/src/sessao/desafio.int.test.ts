@@ -84,8 +84,20 @@ describe('ConsumoDeDesafio: o jti vale uma vez só, no Redis de fila', () => {
       expect(avisos.mock.calls).toEqual([['login.desafio_sem_redis']])
 
       await travado.fim
-      // Com o Redis de volta, um desafio novo é aceito uma vez, e o sinal passa a contar as que o Redis respondeu.
-      await expect(consumo.consumir(await emitir())).resolves.toBeUndefined()
+      // Com a pausa acabada, o Redis ainda esvazia o que reteve e a máquina da esteira pode demorar: a primeira resposta pode passar dos
+      // 100 ms e o desafio ser recusado no corte, que é o que a API deve fazer. Um desafio novo na primeira tentativa não prova que o
+      // Redis voltou: foi o que oscilou na esteira 39803274227 (correção 2026-10-22-intermitentes-desafio-e-meus-dados). Por isso espera-se,
+      // com um desafio novo a cada tentativa, que um seja aceito; e a recusa, enquanto não vem, tem de ser a do Redis, e não outra.
+      await expect
+        .poll(
+          async () =>
+            consumo.consumir(await emitir()).then(
+              () => 'aceito',
+              (erro: unknown) => (erro instanceof ErroDeDominio && erro.codigo === CodigoDeErro.NAO_AUTENTICADO ? 'recusado' : `outra recusa: ${String(erro)}`),
+            ),
+          { timeout: 5_000, interval: 100 },
+        )
+        .toBe('aceito')
       expect(consumo.proporcaoDoSeguro).toBeLessThan(1)
     } finally {
       avisos.mockRestore()

@@ -156,6 +156,12 @@ describe('regras de alerta provisionadas', () => {
     expect(eliminacao.for).toBe('1m')
     expect(expressao(eliminacao)).toBe('max by (escola_id) (eliminacao_horas_vencida{job="educa/worker"})')
     expect(limiar(eliminacao)).toEqual({ type: 'gt', params: [HORAS_AGENDADO_PARA_ALERTAR] })
+
+    // X5, tarefa 44.0: por tipo, em qualquer despachante, com qualquer job falho na tabela (acima de zero), por 1 min.
+    const falhouDeVez = regraPorUid(REGRAS_PROVISIONADAS.jobFalhouDeVez).regra
+    expect(falhouDeVez.for).toBe('1m')
+    expect(expressao(falhouDeVez)).toBe('max by (tipo) (job_falhos)')
+    expect(limiar(falhouDeVez)).toEqual({ type: 'gt', params: [0] })
   })
 
   it('L11: a linha `sala.limite_atingido` que o limite da escola escreve traz o `escolaId` que o comando da entrada do runbook recebe', async () => {

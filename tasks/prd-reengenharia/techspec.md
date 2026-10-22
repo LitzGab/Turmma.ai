@@ -36,12 +36,13 @@ teste ganha caracterização num commit anterior, e cada mecanismo nasce com a t
 
 | Migration | Tabela | O quê |
 |---|---|---|
+| 44.0 | `job_registro` | índice parcial `job_registro_falhos_idx (tipo) where estado = 'falhou'`, só para a medição `job.falhos{tipo}` (0038) |
 | 45.0 | `material` | `processado_em` e `objeto_apagado_em`, nulas, com índice parcial `where objeto_apagado_em is null` |
 | 47.0 | `job_registro`, `configuracao_operacional` | os checks de fila aceitam `ferramenta` |
 | 51.0 | `resposta_atividade` | `sequencia bigint not null default 0` |
 
 Todas aditivas e compatíveis com o código anterior (regra 80.9). Nenhuma tabela nova. "Interrompida" é `falhou` com `EXECUCAO_INTERROMPIDA` (R39), e a retenção de `falhou` muda no
-expurgo, sem schema.
+expurgo, sem coluna nova (44.0: só o índice acima, que a medição pede).
 
 ## 4. API
 
@@ -125,9 +126,9 @@ Cada um quebra sem a cláusula (regra 10.5).
 | Limite por escola | a vaga do despachante, uma por fila e escola, compartilhada entre réplicas: 10 da `interativa` (era 5) e 4 da `ferramenta`; o professor nunca ocupa a do Tutor (R42) |
 | Rate limit | tokens por minuto a 80 % do contratado (49.0) |
 | Corridas | a prova fora de ordem (`sequencia`, 51.0), a troca de material (update condicionado, 41.0), o job duplicado (`execucaoId`, 47.0) |
-| Índices novos | o parcial de `material` (45.0); o `EXPLAIN` do "esperando" se confere (37.0, 38.0) |
+| Índices novos | o parcial de `job_registro` dos `falhou` (44.0, `EXPLAIN` da medição e do expurgo conferidos); o parcial de `material` (45.0); o `EXPLAIN` do "esperando" se confere (37.0, 38.0) |
 | Quando algo cai | IA fora: aviso, sem gastar a troca. Redis de fila: 503 no segundo fator, sem gastar tentativa. Rede: "Tentar de novo"; a prova volta depois do F5 |
-| Métrica e alerta | `job.falhos{tipo}`, "Provedor de IA fora", "Tokens acima de 80 %", cada um no runbook |
+| Métrica e alerta | `job.falhos{tipo}` (44.0: só o tipo, teto de 10.000 por tipo; o painel "Jobs que falharam de vez, por tipo" e o alerta "Job que falhou de vez", aceso enquanto houver linha do tipo), "Provedor de IA fora", "Tokens acima de 80 %", cada um no runbook |
 | Cenário de carga | a `FASE=sala` do `justica-entre-escolas.js`, com latência por perfil, antes e depois (47.0); `carga:login`, a N2 (88.0) |
 
 ## 8. Uso de IA

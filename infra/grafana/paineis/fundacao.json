@@ -1727,6 +1727,56 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 38,
+      "type": "timeseries",
+      "title": "Jobs que falharam de vez, por tipo",
+      "description": "Quantos jobs de cada tipo terminaram falhos e seguem em job_registro (X5, tarefa 44.0), medido pelo despachante a cada 5 s, com teto por tipo. O alerta \"Job que falhou de vez\" dispara com qualquer valor acima de zero. A linha fica 30 dias e some pelo expurgo; a de titular.* fica até a ação do operador. Só o tipo: nunca a escola nem o dados. O que fazer está no runbook.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 131
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "max by (tipo) (job_falhos)",
+          "legendFormat": "{{tipo}}",
+          "range": true
+        }
+      ]
     }
   ]
 }

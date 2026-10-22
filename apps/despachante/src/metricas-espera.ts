@@ -11,6 +11,7 @@ import {
   type DespachoRepository,
   type JanelaLetiva,
   type LoggerBase,
+  type MedicaoDeFalhos,
   type MedicaoDePendentes,
   type Meter,
   type Relogio,
@@ -28,7 +29,7 @@ export const INTERVALO_MEDICAO_DA_FILA_MS = 5_000
 export const RETENCAO_DA_SERIE_ZERADA_MS = 10 * 60_000
 
 export interface DependenciasDaMedicao {
-  repositorio: Pick<DespachoRepository, 'medirPendentes'>
+  repositorio: Pick<DespachoRepository, 'medirPendentes' | 'medirFalhos'>
   vagas: Pick<VagasPorEscola, 'emUso'>
   /** Horário letivo da escola do contexto: o não urgente segurado nele não conta como espera (10.0). */
   janelaDaEscola: Pick<ConfiguracaoOperacional<JanelaLetiva>, 'daEscola'>
@@ -82,6 +83,10 @@ export function esperaDoMaisAntigo(medicao: MedicaoDePendentes, janela: { janela
  * vêm só de `job_registro.criado_em`, então seguem subindo com o Redis de fila fora; as vagas vêm do
  * Redis, e somem da exportação enquanto ele não responde.
  *
+ * Mede também `job.falhos{tipo}` (44.0): quantos jobs de cada tipo terminaram `falhou` e seguem em `job_registro`.
+ * Só o tipo, nunca a escola nem o `dados`. É contado a cada medição do que está na tabela, e não guardado: o tipo cuja
+ * última linha o expurgo levou deixa de ser exportado na medição seguinte, sem retenção de série zerada.
+ *
  * A medição roda num laço próprio, fora da rodada de publicação: consulta lenta aqui não atrasa despacho,
  * e a rodada que para por Redis fora não para a medição. A exportação só lê o resultado guardado.
  *
@@ -92,6 +97,7 @@ export class MedicaoDaFila {
   readonly #intervaloMs: number
   readonly #agoraMs: () => number
   readonly #series = new Map<string, SerieDaFila & { vistaEmMs: number }>()
+  #falhos: MedicaoDeFalhos[] = []
   readonly #avisarFalha: (erro: unknown) => void
   readonly #observar: Parameters<Meter['addBatchObservableCallback']>[0]
   readonly #instrumentos: Parameters<Meter['addBatchObservableCallback']>[1]
@@ -115,7 +121,8 @@ export class MedicaoDaFila {
     const espera = medidor.createObservableGauge(METRICAS.esperaMaisAntiga, { description: 'Segundos de espera do job mais antigo que ainda não começou' })
     const pendentes = medidor.createObservableGauge(METRICAS.pendentes, { description: 'Jobs que ainda não começaram' })
     const vagas = medidor.createObservableGauge(METRICAS.vagasEmUso, { description: 'Vagas tomadas agora' })
-    this.#instrumentos = [espera, pendentes, vagas]
+    const falhos = medidor.createObservableGauge(METRICAS.falhos, { description: 'Jobs que terminaram falhos e seguem em job_registro, por tipo' })
+    this.#instrumentos = [espera, pendentes, vagas, falhos]
     this.#observar = (observador) => {
       for (const serie of this.#series.values()) {
         const rotulos = { fila: serie.fila, [ROTULO_ESCOLA]: serie.escolaId ?? DONO_DAS_VAGAS_DO_SISTEMA }
@@ -123,6 +130,7 @@ export class MedicaoDaFila {
         if (serie.esperaS !== undefined) observador.observe(espera, serie.esperaS, rotulos)
         if (serie.vagasEmUso !== undefined) observador.observe(vagas, serie.vagasEmUso, rotulos)
       }
+      for (const { tipo, falhos: total } of this.#falhos) observador.observe(falhos, total, { tipo })
     }
     medidor.addBatchObservableCallback(this.#observar, this.#instrumentos)
   }
@@ -147,6 +155,7 @@ export class MedicaoDaFila {
 
   /** Uma medição. Falha do Postgres esvazia a exportação; falha do Redis só tira as vagas. */
   async medir(): Promise<void> {
+    await this.medirFalhos()
     let medicoes: MedicaoDePendentes[]
     try {
       medicoes = await this.dependencias.repositorio.medirPendentes()
@@ -189,6 +198,16 @@ export class MedicaoDaFila {
       }
       // A fila da escola esvaziou: zero, e não a última espera, até a retenção vencer.
       this.#series.set(chave, { ...serie, esperaS: 0, pendentes: 0, vagasEmUso: redisResponde ? 0 : undefined })
+    }
+  }
+
+  /** Os falhos por tipo. Falha da consulta tira só `job.falhos` da exportação: a espera da fila não depende dela. */
+  private async medirFalhos(): Promise<void> {
+    try {
+      this.#falhos = await this.dependencias.repositorio.medirFalhos()
+    } catch (erro) {
+      this.#avisarFalha(erro)
+      this.#falhos = []
     }
   }
 
