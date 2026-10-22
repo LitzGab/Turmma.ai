@@ -15,6 +15,8 @@ O `npm run lint` reprova import contra a direção dos pacotes, contra a camada 
 - `onda-1a.md` §2, "T7"; `techspec.md` §6 e §11; `prd.md` RF10; `.reengenharia/DECISOES.md` R7, R39, N9
 - Regras 00 (camadas) e 10 (cercas)
 - `apps/api/test/arquitetura.test.ts` (:31, :58, :108, :122, :141, :172-183, :878)
+- A regra de só importar `credencial/` e `sessao/` pelo `index.ts` (`onda-2.md`, "As travas") vale para `apps/`, e deixa
+  `e2e/`, `infra/` e `tools/` de fora: o e2e importa `credencial/hash-do-token.ts` direto, de propósito (33.0)
 
 ## Subtarefas
 
