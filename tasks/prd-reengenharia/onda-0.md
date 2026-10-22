@@ -51,7 +51,7 @@ teste vermelho e volta ao Arquiteto: o Implementador nunca mexe no `MEDIDAS` nem
 
 **Quem escreve o padrão não lê o `ouro`.** Isto vale desde a 2.0 e foi decidido pelo Joaquim em 21/10, depois de a 2.0
 ler o `riscoAVida.json` e chegar a 75/75: uma sonda de 25 frases novas deixou passar 14.
-- O Implementador não abre `docs/aia/ouro/*.json`. O teste mostra só o id e a categoria de quem errou, e procurar o id
+- O Implementador não abre `docs/aia/ouro/*.json` nem `docs/aia/ouro-retido/`. O teste mostra só o id e a categoria de quem errou, e procurar o id
   no corpus é a mesma leitura. Ele escreve o padrão a partir das `dev` e do jeito de dizer descrito no README.
 - **O `ouro` que alguém leu vira regressão exata.** O `riscoAVida.json` (v1) continua no `ouro.test.ts` com o alvo, e
   ganha um teste em que toda amostra fora de `ameaca_a_terceiro` decide como o `esperado`: prova que nada caiu, e derruba
@@ -63,15 +63,23 @@ ler o `riscoAVida.json` e chegar a 75/75: uma sonda de 25 frases novas deixou pa
 - **Alternativa de risco à vida sem teste não sai do padrão** (D36). Ganha `dev` e bloco a que a tarefa acrescenta ou
   muda por ordem. O resto do léxico (sinônimos e conjugações) fica pelo lado de disparar, e o texto diz que não tem teste
   próprio. A remoção silenciosa é travada na 26.0, que compara a fonte de cada padrão antes e depois.
+- **A `dev` nunca é frase do `ouro`, nem quando a ordem pede** (ratificado pelo Arquiteto em 22/10, item 8 da 3ª rodada da
+  2.0). Se uma ordem de correção pede uma `dev` que está inteira dentro de uma amostra do `ouro`, o teste de contenção a
+  recusa, e o Implementador escreve outra `dev` do mesmo jeito de dizer; a frase exata fica coberta pela regressão exata
+  do `ouro` lido. É o que a 2.0 fez com "não vejo mais motivo pra continuar" (RV-021), e a 26.0 não a traz de volta.
+- **Frase de sonda de quem revisou ou implementou não entra no lote retido**: quem escreve o padrão já a leu.
 
 **O lote retido.** A generalização se mede num lote que ninguém que escreve padrão leu.
 - **Quem escreve e quem revisa.** O lote é escrito num subagente em contexto limpo, que não lê o código, os testes, o
   `ouro` lido nem a tarefa: só as categorias e as decisões do README. O `conformidade-reviewer` revisa.
 - **O tamanho.** O mesmo número de frases por categoria do corpus que ele substitui.
-- **Onde e quando entra.** Em `docs/aia/ouro/<politica>-retido-<n>.json`, num commit `(ouro: <politica>)` do Arquiteto,
-  depois do commit da tarefa dona da política e antes da validação. A base dele se mede com o padrão de antes da tarefa.
+- **Onde e quando entra.** Em `docs/aia/ouro-retido/<politica>-retido-<n>.json`, num commit `(ouro: <politica>)` do
+  Arquiteto, depois do commit da tarefa dona da política e antes da validação. A base dele se mede com o padrão de antes da
+  tarefa. Fica fora da pasta do `ouro`: o `selo-do-ouro` fixa o conjunto de nomes dela, e a trava da 3.0 (`git log` vazio
+  em `docs/aia/ouro`) não pode pegar o lote de outra política. A 26.0 confere o sha256 do lote contra o `RETIDOS.json`.
 - **A medida.** A primeira, contra o padrão congelado da tarefa, é a medida independente. Fica em
-  `docs/aia/ouro/RETIDOS.json`, com o hash do commit medido, e vale o alvo da política no `MEDIDAS`.
+  `docs/aia/ouro-retido/RETIDOS.json`, com o hash do commit medido, o sha256 do lote e a base dele, e vale o alvo da
+  política no `MEDIDAS`. O `MEDIDAS.json` não muda: o leitor dele é estrito.
 - **Depois da medida.** O lote está **consumido**. Se a medida ficar abaixo do alvo, só o Arquiteto vê as frases que
   escaparam. Ele abre uma correção com `dev` próprias, descritas pelo jeito de dizer e sem as frases do lote. A medida
   depois da correção já não é independente, e o `RETIDOS.json` diz isso.

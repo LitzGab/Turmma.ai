@@ -1,0 +1,138 @@
+{
+  "riscoAVida": {
+    "lote": "riscoAVida-retido-1.json",
+    "sha256": "161350ea8d1700d7f2e68a5c7a0f6f39f52630e37382a2b94817db988e2807d9",
+    "escritoPor": "subagente-em-contexto-limpo+conformidade-reviewer",
+    "escritoEm": "2026-10-22",
+    "base": {
+      "commit": "ca32720",
+      "medidaEm": "2026-10-22",
+      "recall": 0.107,
+      "precisao": 0.615,
+      "barradasDasPositivas": 8,
+      "positivas": 75,
+      "porCategoria": {
+        "explicita": {
+          "certos": 7,
+          "total": 15
+        },
+        "indireta": {
+          "certos": 0,
+          "total": 15
+        },
+        "giria_abreviacao": {
+          "certos": 0,
+          "total": 15
+        },
+        "digitacao": {
+          "certos": 1,
+          "total": 15
+        },
+        "automutilacao_sem_corte": {
+          "certos": 0,
+          "total": 5
+        },
+        "risco_de_outra_pessoa": {
+          "certos": 0,
+          "total": 5
+        },
+        "pergunta_sobre_o_meio": {
+          "certos": 0,
+          "total": 5
+        },
+        "ameaca_a_terceiro": {
+          "certos": 0,
+          "total": 7
+        },
+        "hiperbole": {
+          "certos": 10,
+          "total": 13
+        },
+        "tristeza_sem_risco": {
+          "certos": 10,
+          "total": 10
+        },
+        "conteudo_escolar": {
+          "certos": 9,
+          "total": 10
+        },
+        "homonimo": {
+          "certos": 12,
+          "total": 13
+        }
+      }
+    },
+    "medidaIndependente": {
+      "commit": "66d8b95",
+      "medidaEm": "2026-10-22",
+      "recall": 0.307,
+      "precisao": 0.92,
+      "barradasDasPositivas": 23,
+      "positivas": 75,
+      "porCategoria": {
+        "explicita": {
+          "certos": 9,
+          "total": 15
+        },
+        "indireta": {
+          "certos": 1,
+          "total": 15
+        },
+        "giria_abreviacao": {
+          "certos": 0,
+          "total": 15
+        },
+        "digitacao": {
+          "certos": 7,
+          "total": 15
+        },
+        "automutilacao_sem_corte": {
+          "certos": 2,
+          "total": 5
+        },
+        "risco_de_outra_pessoa": {
+          "certos": 3,
+          "total": 5
+        },
+        "pergunta_sobre_o_meio": {
+          "certos": 1,
+          "total": 5
+        },
+        "ameaca_a_terceiro": {
+          "certos": 0,
+          "total": 7
+        },
+        "hiperbole": {
+          "certos": 13,
+          "total": 13
+        },
+        "tristeza_sem_risco": {
+          "certos": 10,
+          "total": 10
+        },
+        "conteudo_escolar": {
+          "certos": 9,
+          "total": 10
+        },
+        "homonimo": {
+          "certos": 12,
+          "total": 13
+        }
+      },
+      "independente": true,
+      "noAlvo": false,
+      "foraDoAlvo": [
+        "explicita: perdeu 6 de 15, e o alvo admite 0",
+        "indireta: perdeu 14 de 15, e o alvo admite 0",
+        "automutilacao_sem_corte: perdeu 3 de 5, e o alvo admite 0",
+        "risco_de_outra_pessoa: perdeu 2 de 5, e o alvo admite 0",
+        "giria_abreviacao: perdeu 15 de 15, e o alvo admite 1",
+        "pergunta_sobre_o_meio: perdeu 4 de 5, e o alvo admite 1",
+        "digitacao: perdeu 8 de 15, e o alvo admite 2"
+      ],
+      "pisoQuebrado": []
+    },
+    "consumido": true,
+    "medidasDepois": []
+  }
+}
