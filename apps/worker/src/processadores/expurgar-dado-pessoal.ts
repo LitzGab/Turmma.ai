@@ -10,7 +10,7 @@ import {
   type LoggerBase,
   type Relogio,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, TIPO_EXPURGAR_ESCOLA } from '@educa/shared'
+import { CodigoDeFalhaDeJob, TIPO_EXPURGAR_ESCOLA, type TIPO_EXPURGAR_DADO_PESSOAL } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 
@@ -39,7 +39,7 @@ export interface DependenciasDaRotinaDeExpurgo {
  * Uma escola que falha não segura as outras: a rotina segue e, no fim, falha o job, para a fila tentar de novo (as que
  * já foram enfileiradas colidem na chave). Loga só contagens, e a escola que falhou pelo id.
  */
-export function criarRotinaDeExpurgo({ escolas, banco, enfileirador, janelaDaEscola, relogio, logger }: DependenciasDaRotinaDeExpurgo): Processador {
+export function criarRotinaDeExpurgo({ escolas, banco, enfileirador, janelaDaEscola, relogio, logger }: DependenciasDaRotinaDeExpurgo): Processador<typeof TIPO_EXPURGAR_DADO_PESSOAL> {
   return async () => {
     const contexto = contextoAtual()
     if (contexto?.rotinaDoSistema !== true) throw new FalhaDeJob(CodigoDeFalhaDeJob.DADOS_INVALIDOS, true)

@@ -1,9 +1,9 @@
 import { CodigoDeErro } from '@educa/shared'
 import { useMutation, type UseMutationOptions } from '@tanstack/react-query'
 import { useEffect, useRef, type FormEvent, type ReactNode, type Ref, type RefObject } from 'react'
-import { Botao } from './Botao'
-import { CLASSES_DO_BOTAO_PERIGO_CHEIO, CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
-import { Dialogo } from './Dialogo'
+import { Botao } from './ui/Botao'
+import { CLASSES_DO_BOTAO_PERIGO_CHEIO, CLASSES_DO_BOTAO_SECUNDARIO } from './ui/botao-secundario'
+import { Dialogo } from './ui/sobrepostos/Dialogo'
 import { listaMudou, textoDaFalha } from './texto-da-falha'
 
 /**

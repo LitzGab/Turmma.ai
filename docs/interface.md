@@ -181,8 +181,8 @@ onde vêm as imagens da apresentação está em aberto.
 No código, **a ferramenta é dado**: um contrato por ferramenta em `packages/shared`, e o
 formulário derivado dele, em vez de uma tela escrita à mão por ferramenta (P23). Entregue no MVP:
 a descrição de campos de cada ferramenta sai de `descricaoDaFerramenta`
-(`apps/web/src/areas/professor/ferramentas.ts`), e um motor só a desenha
-(`apps/web/src/componentes/ia/motor-formulario.ts` e `MotorFormulario.tsx`).
+(`apps/web/src/areas/professor/ferramentas/ferramentas.ts`), e um motor só a desenha
+(`apps/web/src/componentes/ui/ia/motor-formulario.ts` e `MotorFormulario.tsx`).
 
 **A página de Ferramentas** (X3, tarefa 7.0) tem uma seção por categoria que tem ferramenta (hoje Planejar, Preparar a aula e
 Avaliar; "Corrigir" não aparece, porque nenhuma ferramenta dela existe) e um cartão por ferramenta: uma `Linha` de 108 px no
@@ -1527,7 +1527,7 @@ prova isso (RF6 da X1).
 | `Faixa` (R) | O aviso permanente, que não fecha (D8), na família `info` | `role="note"`. Não tem botão |
 | `BarraRotulada` (R) | Trilho em `ia-cx` (produto), de 12 px e ponta redonda, com o enchimento em `sutil`: a mesma cor nos dois, vazia ou cheia. O texto ("2 de 8") vai fora. Só mede o que tem fim | Só desenho, `aria-hidden` (produto): o valor está escrito ao lado, e `role="progressbar"` o diria duas vezes. Barra de acerto é neutra |
 | `NumeroPainel` (R) | O valor em `t-numero`, o rótulo em `t-selo`, `sutil` | Sem variação "boa" ou "ruim" em cor |
-| As de `componentes/ia/` (R) | O avatar da 9.7; o nome da função em 15 px e 700; o selo "IA" neutro; o chip de página, pílula de 28 px com borda de 2 px e sem degrau (corre dentro da linha de texto); o chip "da web", com a borda tracejada, que **nasce com a busca na web (F9, D68)**: hoje nenhuma citação vem da web, e a peça não desenha o que não tem dado; a linha de quem aprovou, em `ok`. As duas opções da `Escolha` são uma constante só: borda de 2 px e degrau `borda`, nenhuma na face do primário nem na do oficial. A `CaixaPedido` mede o texto de exemplo, quando vazia, num espelho fora do campo (o campo em uso nunca é escrito, e o desfazer do navegador fica inteiro), para ele aparecer inteiro a 360 px. O "Tentar de novo" do `AvisoFila` é `secundario`: é uma tentativa dentro da conversa, que não decide nada e convive com o primário da caixa de pedido; o `EstadoErro` de página, que é a única ação da tela, usa o primário laranja | O chip abre por clique e por teclado |
+| As de `componentes/ui/ia/` (R) | O avatar da 9.7; o nome da função em 15 px e 700; o selo "IA" neutro; o chip de página, pílula de 28 px com borda de 2 px e sem degrau (corre dentro da linha de texto); o chip "da web", com a borda tracejada, que **nasce com a busca na web (F9, D68)**: hoje nenhuma citação vem da web, e a peça não desenha o que não tem dado; a linha de quem aprovou, em `ok`. As duas opções da `Escolha` são uma constante só: borda de 2 px e degrau `borda`, nenhuma na face do primário nem na do oficial. A `CaixaPedido` mede o texto de exemplo, quando vazia, num espelho fora do campo (o campo em uso nunca é escrito, e o desfazer do navegador fica inteiro), para ele aparecer inteiro a 360 px. O "Tentar de novo" do `AvisoFila` é `secundario`: é uma tentativa dentro da conversa, que não decide nada e convive com o primário da caixa de pedido; o `EstadoErro` de página, que é a única ação da tela, usa o primário laranja | O chip abre por clique e por teclado |
 
 **Formulário**
 
@@ -1578,11 +1578,11 @@ perto de 127 kB, e o teto **não sobe** com a pele (RF22 da X1).
 |---|---|---|
 | Entrada | React, TanStack Query, roteador, as páginas públicas, a casca, o tema e os ícones de lugar (até 4 kB em brotli, somados) | Sempre |
 | Área do papel | As rotas da área e as telas dela, cada tela num pedaço de até 30 kB | Depois da guarda de papel |
-| Peças | As peças novas, as de `componentes/ia/` e a onça (o teto do pedaço sobe de 26 para até 40 kB) | Na primeira tela que usa |
+| Peças | As peças novas, as de `componentes/ui/ia/` e a onça (o teto do pedaço sobe de 26 para até 40 kB) | Na primeira tela que usa |
 | Galeria | Todas as peças, nos dois temas | Só com a variável do build ligada |
 
 - **A casca mora na entrada**, e por isso não importa peça de fora dela: nem a onça, nem peça de
-  `componentes/ia/`
+  `componentes/ui/ia/`
 - **A área de um papel não baixa ícone nem peça de outro**
 - **Nenhuma fonte.** Nenhuma imagem decorativa acima de 30 KB; ilustração é SVG
 

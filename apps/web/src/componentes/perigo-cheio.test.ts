@@ -18,9 +18,9 @@ const RAIZ_DA_WEB = join(import.meta.dirname, '..')
 
 /** Quem pode escrever o `perigo` cheio, e por quê. Só encolhe: um sétimo arquivo é decisão de produto, e não de quem edita. */
 const USOS_DO_PERIGO_CHEIO: Readonly<Record<string, string>> = {
-  'componentes/botao-secundario.ts': 'a definição: a constante e a variante `perigo` com `cheio`',
-  'componentes/Botao.tsx': 'o tipo da prop `cheio`, que só existe em `variante="perigo"`',
-  'componentes/DialogoDeConfirmacao.tsx': 'o botão que confirma a ação de perigo',
+  'componentes/ui/botao-secundario.ts': 'a definição: a constante e a variante `perigo` com `cheio`',
+  'componentes/ui/Botao.tsx': 'o tipo da prop `cheio`, que só existe em `variante="perigo"`',
+  'componentes/ui/sobrepostos/DialogoDeConfirmacao.tsx': 'o botão que confirma a ação de perigo',
   'componentes/dialogos.tsx': 'o botão da `ConfirmacaoDePerigo`, que exclui',
   'componentes/pedidos/DialogoDeDecisao.tsx': 'o botão que recusa os pedidos de nome',
   'galeria/secoes/botoes.tsx': 'a galeria mostra o desenho do botão, ligado e desligado: não é tela do produto',
@@ -37,11 +37,11 @@ describe('o perigo cheio só aparece em confirmação', () => {
 
   it('a lista fechada tem os seis arquivos de hoje, cada um com o motivo, e não cresce', () => {
     expect(Object.keys(USOS_DO_PERIGO_CHEIO).sort()).toEqual([
-      'componentes/Botao.tsx',
-      'componentes/DialogoDeConfirmacao.tsx',
-      'componentes/botao-secundario.ts',
       'componentes/dialogos.tsx',
       'componentes/pedidos/DialogoDeDecisao.tsx',
+      'componentes/ui/Botao.tsx',
+      'componentes/ui/botao-secundario.ts',
+      'componentes/ui/sobrepostos/DialogoDeConfirmacao.tsx',
       'galeria/secoes/botoes.tsx',
     ])
     for (const [arquivo, motivo] of Object.entries(USOS_DO_PERIGO_CHEIO)) expect(motivo.length, arquivo).toBeGreaterThan(10)

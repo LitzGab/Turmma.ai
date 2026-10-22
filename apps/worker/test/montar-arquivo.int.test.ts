@@ -1,16 +1,16 @@
 import 'reflect-metadata'
 import { ArmazemEmMemoria, executarNoContexto, type Relogio } from '@educa/nucleo'
 import { ArmazemS3 } from '@educa/nucleo/armazem-s3'
-import { CodigoDeFalhaDeJob, TIPO_MONTAR_ARQUIVO } from '@educa/shared'
+import { TIPO_MONTAR_ARQUIVO } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import type { ConfiguracaoStorage } from '../src/config.js'
-import { FalhaDeJob } from '../src/falha-de-job.js'
 import { montarWorker } from '../src/montagem.js'
 import { criarMontagemDoArquivo } from '../src/processadores/montar-arquivo.js'
 import { BancadaDeFila, configuracaoDoBanco, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
+import { execucaoDoJob } from './execucao-do-job.js'
 
 const ambiente = lerAmbienteDeTeste()
 const STORAGE: ConfiguracaoStorage = {
@@ -64,10 +64,10 @@ describe('titular.montar-arquivo', () => {
     return criarMontagemDoArquivo({ banco: bancada.banco, armazem, relogio, logger: log.logger })
   }
 
-  function rodar(escolaId: string | undefined, armazem: ArmazemEmMemoria, dados: Record<string, unknown>): Promise<void> {
+  function rodar(escolaId: string | undefined, armazem: ArmazemEmMemoria, dados: { pedidoId: string }): Promise<void> {
     const jobId = randomUUID()
     const processador = job(armazem)
-    const executar = () => processador(dados, { jobId, tentativa: 1, chaveIdempotencia: jobId })
+    const executar = () => processador(dados, execucaoDoJob(jobId))
     return escolaId === undefined ? executar() : executarNoContexto({ requisicaoId: randomUUID(), escolaId }, executar)
   }
 
@@ -200,15 +200,12 @@ describe('titular.montar-arquivo', () => {
     expect(armazem.objetos.size).toBe(0)
   })
 
-  it('o job só aceita o id do pedido: dado a mais ou fora do formato, e a falta de escola no contexto, são falha definitiva', async () => {
-    const { escolaId, pedidoId } = await pedidoNovo()
+  it('sem escola no contexto o processador não monta nada: a escola vem do contexto, nunca dos dados', async () => {
+    const { pedidoId } = await pedidoNovo()
     const armazem = new ArmazemEmMemoria()
-    const definitiva = { codigo: CodigoDeFalhaDeJob.DADOS_INVALIDOS, definitiva: true }
-    for (const dados of [{ pedidoId, nome: 'Aluno' }, { pedidoId: 'nao-e-uuid' }, {}]) {
-      await expect(rodar(escolaId, armazem, dados)).rejects.toMatchObject(definitiva)
-    }
-    await expect(rodar(undefined, armazem, { pedidoId })).rejects.toBeInstanceOf(FalhaDeJob)
+    await expect(rodar(undefined, armazem, { pedidoId })).rejects.toThrow('sem escola no contexto')
     expect(await estadoDo(pedidoId)).toBe('em_preparacao')
+    expect(armazem.objetos.size).toBe(0)
   })
 
   it('o log do job leva só contagens e o nome do evento', async () => {

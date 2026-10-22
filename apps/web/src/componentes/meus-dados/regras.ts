@@ -9,7 +9,7 @@ import {
   type RespostaMeusDados,
   type TipoDePedidoDoTitular,
 } from '@educa/shared'
-import type { FamiliaDeEstado } from '../SeloDeEstado'
+import type { FamiliaDeEstado } from '../ui/SeloDeEstado'
 import { agendarRelitura, type AbaDoNavegador } from '../pedidos/atualizacao-dos-pedidos'
 
 /**

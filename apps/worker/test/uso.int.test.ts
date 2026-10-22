@@ -15,6 +15,7 @@ import { montarWorker, type WorkerMontado } from '../src/montagem.js'
 import { criarConsolidacaoDeUso, FALHAS_DE_STORAGE_SEGUIDAS_ATE_DESISTIR } from '../src/processadores/consolidar-uso.js'
 import { criarClienteS3, MedidorDeStorage } from '../src/storage/medidor-de-storage.js'
 import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
+import { execucaoDoJob } from './execucao-do-job.js'
 
 // Contadores no Redis de fila, `uso_infra_diario` no Postgres e bytes no storage, todos do compose de
 // teste. Só o relógio é falso: é ele que marca às 23h59 de 31/12 e consolida às 2h do dia seguinte.
@@ -75,7 +76,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
   /** Roda como o worker roda um job `sistema.*`: no contexto da rotina do sistema, sem escola. */
   const consolidar = (processador = consolidacao()) => {
     const jobId = randomUUID()
-    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
+    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, execucaoDoJob(jobId)))
   }
 
   const usoDoDia = (escolaId: string, dia: string) => executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => repositorio.doDia(dia))
@@ -300,7 +301,7 @@ describe('uso por escola: contagem, consolidação e bytes', () => {
     await aguardarContador(escolaA, '2026-09-15', 'req', 2)
     agora = QUARTA_2H
     const jobId = randomUUID()
-    await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId: escolaA }, () => consolidacao()({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))).rejects.toThrow()
+    await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId: escolaA }, () => consolidacao()({}, execucaoDoJob(jobId)))).rejects.toThrow()
     expect(await usoDoDia(escolaA, '2026-09-15')).toEqual(SEM_USO)
   })
 

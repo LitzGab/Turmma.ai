@@ -75,7 +75,7 @@ export class AgendadorDeExecucoes {
     // Defeito de quem chama, não do usuário: a entrada gravada precisa ser a da tarefa que vai rodar.
     if (entradaDaExecucao.tarefa !== tarefa.nome) throw new ErroDeIa('IA_ENTRADA_INVALIDA')
 
-    await exigirFuncaoAtiva(this.suspensao, escolaId, tarefa.funcao)
+    await exigirFuncaoAtiva(this.suspensao, tarefa.funcao)
 
     const execucaoId = await this.banco.transaction(async (tx) => {
       const execucoes = new ExecucaoDaSessaoRepository(tx)

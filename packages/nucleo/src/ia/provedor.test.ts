@@ -2,10 +2,11 @@ import { CodigoDeErro } from '@educa/shared'
 import { describe, expect, it, vi } from 'vitest'
 import { executarNoContexto } from '../contexto/contexto.js'
 import { AdaptadorRoteirizado, PROVEDOR_ROTEIRIZADO } from './__fixtures__/adaptador-roteirizado.js'
+import { comContextoDaEscolaDoPedido } from './__fixtures__/contexto-da-escola.js'
 import { ALUNO_1, ALUNO_2, atividadeDeEstequiometria, entradaDeAtividade, entradaDoAssistente, entradaDoRelatorio, entradaDoTutor, ESCOLA_A, ESCOLA_B } from './__fixtures__/entradas.js'
 import type { AdaptadorDeModelo } from './adaptador.js'
 import { AdaptadorFalso, MODELO_FALSO } from './adaptador-falso.js'
-import { ConsumoEmMemoria, OrcamentoEmMemoria, type ConsumoDeIa, type OrcamentoDeIa, type RegistroDeConsumo } from './consumo.js'
+import { ConsumoEmMemoria, OrcamentoEmMemoria, type ConsultaDeOrcamento, type ConsumoDeIa, type OrcamentoDeIa, type RegistroDeConsumo } from './consumo.js'
 import { CODIGOS_DE_ERRO_DE_IA, ErroDeIa } from './erros.js'
 import type { EnvioDaChamada, MedicaoDaGeracao } from './porta.js'
 import { criarProvedorDeIa, MODELO_DA_REGRA_FIXA, ProvedorDeIa, type RegistradorDeIa } from './provedor.js'
@@ -25,10 +26,11 @@ function registrador(): RegistradorDeIa & { linhas: () => unknown[] } {
   return { info, warn, linhas: () => [...info.mock.calls, ...warn.mock.calls].flat() }
 }
 
-function montar(opcoes: { adaptador?: AdaptadorDeModelo; orcamento?: OrcamentoDeIa; registro?: RegistroDeConsumo; suspensao?: SuspensaoDeFuncao; logger?: RegistradorDeIa; agora?: () => Date } = {}) {
+/** `semContexto`: o provedor puro, sem o contexto da escola do pedido, para o teste do que acontece sem escola no contexto. */
+function montar(opcoes: { adaptador?: AdaptadorDeModelo; orcamento?: OrcamentoDeIa; registro?: RegistroDeConsumo; suspensao?: SuspensaoDeFuncao; logger?: RegistradorDeIa; agora?: () => Date; semContexto?: true } = {}) {
   const consumo = new ConsumoEmMemoria()
   const relogio = { agora: opcoes.agora ?? (() => new Date('2026-10-05T13:00:00Z')) }
-  const ia = new ProvedorDeIa({
+  const puro = new ProvedorDeIa({
     adaptador: opcoes.adaptador ?? new AdaptadorFalso(),
     registro: opcoes.registro ?? consumo,
     orcamento: opcoes.orcamento ?? SEMPRE,
@@ -37,6 +39,7 @@ function montar(opcoes: { adaptador?: AdaptadorDeModelo; orcamento?: OrcamentoDe
     relogio,
     ...(opcoes.logger === undefined ? {} : { logger: opcoes.logger }),
   })
+  const ia = opcoes.semContexto === true ? puro : comContextoDaEscolaDoPedido(puro)
   return { ia, consumo, relogio }
 }
 
@@ -48,6 +51,24 @@ async function erroDe(promessa: Promise<unknown>): Promise<ErroDeIa> {
   if (!(erro instanceof ErroDeIa)) throw new Error('a chamada deveria ter falhado com ErroDeIa')
   return erro
 }
+
+const consumidaDeMedida = () =>
+  ({
+    origem: 'openai_compat',
+    perfil: 'padrao',
+    modelo: 'm',
+    promptVersao: 'v',
+    tokensDeEntrada: 1,
+    tokensDeSaida: 1,
+    duracaoMs: 1,
+    tentativas: 1,
+    tarefa: 'gerar_atividade_objetiva',
+    funcao: 'conversa_e_ferramentas',
+    estado: 'concluida',
+    em: new Date(),
+    envioExterno: false,
+    provedorId: null,
+  }) as const
 
 describe('ProvedorDeIa: saída validada e medição', () => {
   it('devolve a saída da tarefa já validada, e a medição diz o perfil, o modelo, os tokens, a duração e que não houve envio externo', async () => {
@@ -96,7 +117,7 @@ describe('ProvedorDeIa: saída validada e medição', () => {
 
   it('o tipo da porta só aceita os dois pares possíveis: com envio externo, o provedor; sem envio, nulo', () => {
     const medida = { origem: 'openai_compat', perfil: 'padrao', modelo: 'm', promptVersao: 'v', tokensDeEntrada: 1, tokensDeSaida: 1, duracaoMs: 1, tentativas: 1 } as const
-    const consumida = { ...medida, escolaId: ESCOLA_A, tarefa: 'gerar_atividade_objetiva', funcao: 'conversa_e_ferramentas', estado: 'concluida', em: new Date() } as const
+    const consumida = { ...medida, tarefa: 'gerar_atividade_objetiva', funcao: 'conversa_e_ferramentas', estado: 'concluida', em: new Date() } as const
     const externo: EnvioDaChamada = { envioExterno: true, provedorId: 'maritaca' }
     const local: EnvioDaChamada = { envioExterno: false, provedorId: null }
     const medicoes: MedicaoDaGeracao[] = [
@@ -120,9 +141,22 @@ describe('ProvedorDeIa: saída validada e medição', () => {
     expect([semProvedor, provedorSemEnvio, medicaoSemProvedor, consumoSemEnvio]).toHaveLength(4)
   })
 
+  it('o tipo das três portas não leva a escola: ela é a do contexto (regra 10, item 3)', async () => {
+    // @ts-expect-error o registro de consumo não traz escola: a porta grava na do contexto
+    const consumoComEscola: ConsumoDeIa = { ...consumidaDeMedida(), escolaId: ESCOLA_A }
+    // @ts-expect-error a consulta de orçamento não traz escola
+    const consultaComEscola: ConsultaDeOrcamento = { escolaId: ESCOLA_A, funcao: 'tutor_com_o_aluno' }
+    const suspensao: SuspensaoDeFuncao = new SuspensoesEmMemoria()
+    // @ts-expect-error a interface da suspensão é perguntada só pela função, com a escola do contexto
+    const perguntaComEscola = suspensao.estaSuspensa(ESCOLA_A, 'adaptacao')
+    expect(consumoComEscola).toBeDefined()
+    expect(consultaComEscola).toBeDefined()
+    await expect(perguntaComEscola).rejects.toThrow('sem escola no contexto')
+  })
+
   it('criarProvedorDeIa: sem nada configurado, a porta é a do adaptador falso', async () => {
     const consumo = new ConsumoEmMemoria()
-    const ia = criarProvedorDeIa({ adaptador: 'falso', timeoutMs: 5_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 } }, { registro: consumo, orcamento: SEMPRE, suspensao: new SuspensoesEmMemoria() })
+    const ia = comContextoDaEscolaDoPedido(criarProvedorDeIa({ adaptador: 'falso', timeoutMs: 5_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 } }, { registro: consumo, orcamento: SEMPRE, suspensao: new SuspensoesEmMemoria() }))
     const { medicao } = await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
     expect(medicao.origem).toBe('falso')
   })
@@ -131,7 +165,7 @@ describe('ProvedorDeIa: saída validada e medição', () => {
     const config = { adaptador: 'falso' as const, timeoutMs: 5_000, executor: { vagasPorEscola: 2, vagasNoTotal: 8, timeoutMs: 10_000 } }
     const portas = { registro: new ConsumoEmMemoria(), orcamento: SEMPRE, suspensao: new SuspensoesEmMemoria() }
     const chamar = async (latenciaFalsaMs?: number): Promise<number> => {
-      const ia = criarProvedorDeIa(latenciaFalsaMs === undefined ? config : { ...config, latenciaFalsaMs }, portas)
+      const ia = comContextoDaEscolaDoPedido(criarProvedorDeIa(latenciaFalsaMs === undefined ? config : { ...config, latenciaFalsaMs }, portas))
       const inicio = performance.now()
       await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
       return performance.now() - inicio
@@ -309,11 +343,20 @@ describe('ProvedorDeIa: a escola do pedido é a de quem pede (regra 10, item 3)'
     expect(logger.linhas()).toEqual([{ evento: 'ia.geracao.escola_fora_do_contexto', tipo: 'gerar_atividade_objetiva' }])
   })
 
-  it('com a escola do contexto, o pedido passa; sem contexto de escola (rotina nossa), não há com o que comparar', async () => {
+  it('com a escola do contexto, o pedido passa', async () => {
     const { ia } = montar()
     await expect(executarNoContexto({ requisicaoId: 'r', escolaId: ESCOLA_A }, () => pedir(ia, ESCOLA_A))).resolves.toBeDefined()
-    await expect(executarNoContexto({ requisicaoId: 'r' }, () => pedir(ia, ESCOLA_B))).resolves.toBeDefined()
-    await expect(pedir(ia, ESCOLA_B)).resolves.toBeDefined()
+  })
+
+  it('sem escola no contexto, a chamada não executa: IA_INDISPONIVEL, sem chamar o adaptador e sem registrar consumo', async () => {
+    const adaptador = new AdaptadorRoteirizado([JSON.stringify(atividadeDeEstequiometria())])
+    const { ia, consumo } = montar({ adaptador, semContexto: true })
+    expect(await erroDe(pedir(ia, ESCOLA_A))).toMatchObject({ codigoDeIa: 'IA_INDISPONIVEL', status: 503 })
+    // O contexto da rotina nossa, e o da requisição sem escola, também não valem: a porta não os trata como uma escola.
+    expect(await erroDe(executarNoContexto({ requisicaoId: 'r' }, () => pedir(ia, ESCOLA_B)))).toMatchObject({ codigoDeIa: 'IA_INDISPONIVEL' })
+    expect(await erroDe(executarNoContexto({ requisicaoId: 'r', rotinaDoSistema: true }, () => pedir(ia, ESCOLA_B)))).toMatchObject({ codigoDeIa: 'IA_INDISPONIVEL' })
+    expect(adaptador.chamadas).toBe(0)
+    expect(consumo.registros).toEqual([])
   })
 })
 
@@ -331,12 +374,12 @@ describe('ProvedorDeIa: entrada inválida para antes de qualquer gasto', () => {
 })
 
 describe('ProvedorDeIa: orçamento consultado antes de gastar (D14, D38)', () => {
-  it('toda chamada consulta o orçamento com a escola e a função; no Tutor, também com o aluno', async () => {
+  it('toda chamada consulta o orçamento com a função, sem a escola (a porta a lê do contexto); no Tutor, também com o aluno', async () => {
     const consultar = vi.fn(async () => ({ permitido: true as const }))
     const { ia } = montar({ orcamento: { consultar } })
     await ia.gerar({ tarefa: gerarAtividadeObjetiva, entrada: entradaDeAtividade(), escolaId: ESCOLA_A })
     await ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi'), escolaId: ESCOLA_A, alunoId: ALUNO_1 })
-    expect(consultar.mock.calls).toEqual([[{ escolaId: ESCOLA_A, funcao: 'conversa_e_ferramentas' }], [{ escolaId: ESCOLA_A, funcao: 'tutor_com_o_aluno', alunoId: ALUNO_1 }]])
+    expect(consultar.mock.calls).toEqual([[{ funcao: 'conversa_e_ferramentas' }], [{ funcao: 'tutor_com_o_aluno', alunoId: ALUNO_1 }]])
   })
 
   it('orçamento esgotado: erro tipado com a espera sugerida, e o modelo não é chamado', async () => {
@@ -358,7 +401,7 @@ describe('ProvedorDeIa: orçamento consultado antes de gastar (D14, D38)', () =>
     const consultar = vi.fn(async () => ({ permitido: true as const }))
     const { ia } = montar({ orcamento: { consultar } })
     await ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi'), escolaId: ESCOLA_A, alunoId: ALUNO_1, turmaId: ESCOLA_B, execucaoId: EXECUCAO })
-    expect(consultar.mock.calls).toEqual([[{ escolaId: ESCOLA_A, funcao: 'tutor_com_o_aluno', alunoId: ALUNO_1, turmaId: ESCOLA_B, execucaoId: EXECUCAO }]])
+    expect(consultar.mock.calls).toEqual([[{ funcao: 'tutor_com_o_aluno', alunoId: ALUNO_1, turmaId: ESCOLA_B, execucaoId: EXECUCAO }]])
   })
 
   it('o código da recusa é o que o orçamento deu: freio do dia e pacote do mês chegam com o código próprio', async () => {
@@ -447,7 +490,7 @@ describe('ProvedorDeIa: função suspensa pela escola não executa (D60)', () =>
     suspensao.suspender(ESCOLA_A, 'correcao_de_objetiva')
     const corrigir = vi.fn(() => 'lote corrigido')
     const encerrar = async (escolaId: string): Promise<string> => {
-      await exigirFuncaoAtiva(suspensao, escolaId, 'correcao_de_objetiva')
+      await executarNoContexto({ requisicaoId: 'r', escolaId }, () => exigirFuncaoAtiva(suspensao, 'correcao_de_objetiva'))
       return corrigir()
     }
     const erro: unknown = await encerrar(ESCOLA_A).catch((motivo: unknown) => motivo)
@@ -466,7 +509,7 @@ describe('OrcamentoEmMemoria', () => {
     let agora = new Date('2026-10-05T13:00:00Z')
     const consumo = new ConsumoEmMemoria()
     const relogio = { agora: () => agora }
-    const ia = new ProvedorDeIa({ adaptador: new AdaptadorFalso(), registro: consumo, orcamento: new OrcamentoEmMemoria(consumo, limites, relogio), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000, relogio })
+    const ia = comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador: new AdaptadorFalso(), registro: consumo, orcamento: new OrcamentoEmMemoria(consumo, limites, relogio), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000, relogio }))
     const tutor = (escolaId: string, alunoId: string) => ia.gerar({ tarefa: turnoDoTutor, entrada: entradaDoTutor('não entendi essa'), escolaId, alunoId })
     return { ia, tutor, avancarPara: (iso: string) => void (agora = new Date(iso)) }
   }
@@ -495,5 +538,34 @@ describe('OrcamentoEmMemoria', () => {
   it('sem limite configurado, não há teto: os valores são de quem configura, não constantes daqui', async () => {
     const { tutor } = comLimites({})
     for (let troca = 0; troca < 5; troca += 1) await expect(tutor(ESCOLA_A, ALUNO_1)).resolves.toBeDefined()
+  })
+})
+
+describe('as portas em memória leem a escola do contexto (8.0)', () => {
+  const noContexto = <T>(escolaId: string, funcao: () => T): T => executarNoContexto({ requisicaoId: 'r', escolaId }, funcao)
+
+  it('sem escola no contexto, cada uma lança antes de ler ou de gravar', async () => {
+    const consumo = new ConsumoEmMemoria()
+    await expect(new SuspensoesEmMemoria().estaSuspensa('adaptacao')).rejects.toThrow('sem escola no contexto')
+    await expect(consumo.registrar(consumidaDeMedida())).rejects.toThrow('sem escola no contexto')
+    await expect(new OrcamentoEmMemoria(consumo).consultar({ funcao: 'conversa_e_ferramentas' })).rejects.toThrow('sem escola no contexto')
+    expect(consumo.registros).toEqual([])
+  })
+
+  it('o consumo fica na escola do contexto, e o orçamento conta só a escola em que é perguntado', async () => {
+    const consumo = new ConsumoEmMemoria()
+    const orcamento = new OrcamentoEmMemoria(consumo, { trocasPorAlunoNoDia: 1 })
+    const troca = { ...consumidaDeMedida(), funcao: 'tutor_com_o_aluno', alunoId: ALUNO_1 } as const
+    await noContexto(ESCOLA_A, () => consumo.registrar(troca))
+    expect(consumo.registros.map((registro) => registro.escolaId)).toEqual([ESCOLA_A])
+    expect(await noContexto(ESCOLA_A, () => orcamento.consultar({ funcao: 'tutor_com_o_aluno', alunoId: ALUNO_1 }))).toEqual({ permitido: false, codigo: 'LIMITE_DIARIO_DO_TUTOR' })
+    expect(await noContexto(ESCOLA_B, () => orcamento.consultar({ funcao: 'tutor_com_o_aluno', alunoId: ALUNO_1 }))).toEqual({ permitido: true })
+  })
+
+  it('a suspensão da escola A não vale no contexto da B', async () => {
+    const suspensao = new SuspensoesEmMemoria()
+    suspensao.suspender(ESCOLA_A, 'adaptacao')
+    expect(await noContexto(ESCOLA_A, () => suspensao.estaSuspensa('adaptacao'))).toBe(true)
+    expect(await noContexto(ESCOLA_B, () => suspensao.estaSuspensa('adaptacao'))).toBe(false)
   })
 })

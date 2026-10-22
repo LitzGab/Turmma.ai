@@ -91,6 +91,36 @@ export default tseslint.config(
     rules: reactHooks.configs.recommended.rules,
   },
   {
+    // O kit visual (`componentes/ui/`) não conhece a API, as telas nem a sessão (D81, R56; `onda-2.md`, "Onde moram"): o
+    // que ele recebe vem por prop, e quem fala com o servidor é a tela. O `no-restricted-imports` do ESLint core vale para
+    // `import`, `import type` e `export … from`; o `import()` é o seletor, porque o core não o vê. As duas regras estão em
+    // `REGRAS_DO_KIT` e `REGRAS_DE_ENTRADA` (`tools/guardas/index.mjs`, uma para cada): o `eslint-disable` delas não fura a
+    // segunda passada do `npm run lint`.
+    // É o `no-restricted-imports` do core, e não o `@typescript-eslint/no-restricted-imports` do bloco das guardas, que é
+    // o último e seria sobrescrito por este.
+    files: ['apps/web/src/componentes/ui/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { regex: '(^|/)api(/|$)', message: 'O kit visual não importa a API: o dado chega por prop, e quem busca é a tela.' },
+            { regex: '(^|/)areas(/|$)', message: 'O kit visual não importa tela: a dependência vai das áreas para o kit, nunca o contrário.' },
+            { regex: '(^|/)sessao(/|$)', message: 'O kit visual não importa a sessão: o que ele precisa dela chega por prop.' },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          // O `/` do caminho entra como `\x2f`: o esquery não aceita `/` dentro do literal de expressão regular.
+          selector: 'ImportExpression[source.value=/(^|\\x2f)(api|areas|sessao)(\\x2f|$)/]',
+          message: 'O kit visual não importa a API, as telas nem a sessão, também por `import()`.',
+        },
+      ],
+    },
+  },
+  {
     // O cenário de carga roda no runtime do k6, que dá `__ENV` e `open` ao script (infra/k6).
     files: ['infra/k6/**/*.js'],
     languageOptions: { globals: { __ENV: 'readonly', open: 'readonly' } },

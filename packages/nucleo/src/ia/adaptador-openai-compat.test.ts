@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { MOTIVO_SEM_PROVEDOR_ID, type ConfiguracaoDoModelo } from '../config/config-ia.js'
+import { comContextoDaEscolaDoPedido } from './__fixtures__/contexto-da-escola.js'
 import { ALUNO_1, atividadeDeEstequiometria, entradaDeAtividade, entradaDoTutor, ESCOLA_A } from './__fixtures__/entradas.js'
 import { MATERIAL_DE_ESTEQUIOMETRIA } from './__fixtures__/estequiometria.js'
 import { respostaDoChat, subirServidorLlamaFalso, type PedidoRecebido, type RespostaRoteirizada, type ServidorLlamaFalso } from './__fixtures__/servidor-llama-falso.js'
@@ -34,7 +35,7 @@ async function montar(
   servidor = await subirServidorLlamaFalso(roteiro)
   const consumo = new ConsumoEmMemoria()
   const adaptador = new AdaptadorOpenAICompat({ baseUrl: servidor.url, modelos: MODELOS, processamentoLocal: true, recuoMs: RECUO_MS, ...opcoes.config })
-  const ia = new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: opcoes.timeoutMs ?? 5_000 })
+  const ia = comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: opcoes.timeoutMs ?? 5_000 }))
   return { ia, consumo, pedidos: servidor.pedidos }
 }
 

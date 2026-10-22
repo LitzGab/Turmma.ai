@@ -48,13 +48,14 @@ import {
   TIPO_JOB_SINTETICO,
   TIPO_MONTAR_ARQUIVO,
   type Fila,
+  type RegistroDeJobs,
 } from '@educa/shared'
 import { ArmazemS3 } from '@educa/nucleo/armazem-s3'
 import { Queue, Worker } from 'bullmq'
 import { Redis } from 'ioredis'
 import { AGENDAMENTOS, criarDisparoDeAgendamento, FILA_DOS_AGENDAMENTOS, registrarAgendamentos, type Agendamento } from './agendamentos.js'
 import type { ConfiguracaoStorage, ConfiguracaoWorker } from './config.js'
-import { AvisoDeVagaLivre, ExecutorDeJobs, type Processador } from './executor.js'
+import { AvisoDeVagaLivre, ExecutorDeJobs, type ProcessadoresDeJob } from './executor.js'
 import { criarConsolidacaoDeUso } from './processadores/consolidar-uso.js'
 import { criarExpurgoDeAcesso } from './processadores/expurgar-acesso.js'
 import { criarExpurgoDeJobs } from './processadores/expurgar-jobs.js'
@@ -66,7 +67,7 @@ import { MedicaoDoArquivo } from './medicao-do-arquivo.js'
 import { MedicaoDoExpurgo } from './medicao-do-expurgo.js'
 import { MedicaoDoIncidente } from './medicao-do-incidente.js'
 import { criarMontagemDoArquivo } from './processadores/montar-arquivo.js'
-import { criarProcessadorSintetico, SandboxDeCpu } from './processadores/sintetico.js'
+import { criarProcessadorSintetico, SandboxDeCpu, type QueimaDeCpu } from './processadores/sintetico.js'
 import { criarClienteS3, MedidorDeStorage } from './storage/medidor-de-storage.js'
 
 /** Quanto o SIGTERM espera os jobs em andamento terminarem antes de fechar à força (Tech Spec, seção 5). */
@@ -75,7 +76,9 @@ const INTERVALO_BATIMENTO_MS = 2_000
 
 export interface OpcoesDaMontagem {
   /** Troca os processadores da réplica. Sem isto, o sintético (no sandbox de CPU) e, no lote, as rotinas do sistema. */
-  processadores?: Readonly<Record<string, Processador>>
+  processadores?: ProcessadoresDeJob
+  /** O registro de jobs que valida os dados e dá o prazo de cada tipo. Só o teste troca, para ter um tipo de dados próprios. */
+  definicoes?: RegistroDeJobs
   /** Prefixo das chaves do BullMQ e das vagas. Só o teste troca, para não disputar a fila com outro teste. */
   prefixo?: string
   /** Intervalo de renovação da vaga. Só o teste troca, para ver a renovação sem esperar 15 s. */
@@ -143,22 +146,25 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
   const stalled = medidor?.createCounter(METRICAS.jobsStalled, { description: 'Jobs devolvidos à espera por lock vencido' })
   // O armazém do arquivo do titular (F3, tarefa 13.0): a réplica da fila normal grava o JSON, e a do lote apaga o vencido.
   const armazemS3 = config.storage === undefined ? undefined : ArmazemS3.criar(config.storage)
-  const rotinas =
-    config.pools.lote === undefined || config.storage === undefined || config.janelaPadrao === undefined || armazemS3 === undefined
-      ? undefined
-      : montarRotinas(config.storage, config.janelaPadrao, banco, uso, relogio, logger, medidor, armazemS3.armazem)
-  const montagemDoArquivo =
-    config.pools.normal === undefined || armazemS3 === undefined
-      ? undefined
-      : { [TIPO_MONTAR_ARQUIVO]: criarMontagemDoArquivo({ banco, armazem: armazemS3.armazem, relogio, logger }) }
   const sandbox = new SandboxDeCpu(config.threadsMaximo)
   const repositorio = new JobRegistroRepository(banco)
   // Banco fora: o despachante acorda pela sondagem, e só.
+  const { processadores, rotinas } = montarProcessadores(config, {
+    banco,
+    uso,
+    relogio,
+    logger,
+    medidor,
+    cpu: sandbox,
+    efeitos: new EfeitoSinteticoRepository(banco),
+    armazem: armazemS3?.armazem,
+  })
   const avisoDeVagaLivre = new AvisoDeVagaLivre(() => repositorio.avisarVagaLivre(), avisoEspacado(() => logger.warn({ evento: 'worker.aviso_de_vaga_indisponivel' })))
   const executor = new ExecutorDeJobs({
     repositorio,
     aoLiberarVaga: avisoDeVagaLivre.avisar,
-    processadores: opcoes.processadores ?? { [TIPO_JOB_SINTETICO]: criarProcessadorSintetico(sandbox, new EfeitoSinteticoRepository(banco)), ...rotinas?.processadores, ...montagemDoArquivo },
+    processadores: opcoes.processadores ?? processadores,
+    ...(opcoes.definicoes === undefined ? {} : { definicoes: opcoes.definicoes }),
     logger,
     uso,
     ...(aguardandoVaga === undefined ? {} : { aoAguardarVaga: (fila: Fila, escolaId: string | null) => aguardandoVaga.add(1, { fila, escola_id: escolaId ?? DONO_DAS_VAGAS_DO_SISTEMA }) }),
@@ -175,7 +181,7 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
   const avisarErroDaFila = avisoEspacado(() => logger.warn({ evento: 'worker.fila_com_erro' }))
   const workers = new Map<Fila, Worker<DadosDoJobNaFila>>()
   for (const [fila, concorrencia] of Object.entries(config.pools) as Array<[Fila, number]>) {
-    const worker = new Worker<DadosDoJobNaFila>(nomeDaFilaBullMQ(fila), (job, token) => executor.processar(job, token), {
+    const worker = new Worker<DadosDoJobNaFila>(nomeDaFilaBullMQ(fila, 'worker'), (job, token) => executor.processar(job, token), {
       connection: redis,
       concurrency: concorrencia,
       lockDuration: OPCOES_DO_POOL_POR_FILA[fila].lockDurationMs,
@@ -232,6 +238,46 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
   }
 }
 
+/** As peças que os processadores usam, já criadas: quem monta decide quais processadores a réplica leva, e não como se constroem as peças. */
+export interface PecasDosProcessadores {
+  banco: Banco
+  uso: ContadorDeUso
+  relogio: Relogio
+  logger: LoggerBase
+  medidor: Meter | undefined
+  /** O sandbox de CPU do job sintético. */
+  cpu: QueimaDeCpu
+  efeitos: Pick<EfeitoSinteticoRepository, 'gravar'>
+  /** O armazém do storage; sem credencial de storage (`config.storage`), não há. */
+  armazem: ArmazemDeArquivos | undefined
+}
+
+export interface ProcessadoresMontados {
+  processadores: ProcessadoresDeJob
+  /** Só na réplica que atende o lote: o que as rotinas do sistema abriram (medições) e precisam fechar. */
+  rotinas?: { encerrar(): Promise<void> }
+}
+
+/**
+ * Os processadores que esta réplica leva, pelas filas que ela atende (`config.pools`): o sintético em toda réplica, o
+ * arquivo do titular na que atende a `normal` e as rotinas do sistema e da escola na que atende o `lote`. É a fonte do que a
+ * réplica sabe executar, e `montagem.test.ts` a liga a `DEFINICOES_DE_JOB`: todo tipo do worker tem processador nas filas
+ * dele, e nenhum processador está numa fila que a definição do tipo não lista.
+ */
+export function montarProcessadores(config: Pick<ConfiguracaoWorker, 'pools' | 'storage' | 'janelaPadrao'>, pecas: PecasDosProcessadores): ProcessadoresMontados {
+  const { banco, uso, relogio, logger, medidor, armazem } = pecas
+  const rotinas =
+    config.pools.lote === undefined || config.storage === undefined || config.janelaPadrao === undefined || armazem === undefined
+      ? undefined
+      : montarRotinas(config.storage, config.janelaPadrao, banco, uso, relogio, logger, medidor, armazem)
+  const montagemDoArquivo =
+    config.pools.normal === undefined || armazem === undefined ? undefined : { [TIPO_MONTAR_ARQUIVO]: criarMontagemDoArquivo({ banco, armazem, relogio, logger }) }
+  return {
+    processadores: { [TIPO_JOB_SINTETICO]: criarProcessadorSintetico(pecas.cpu, pecas.efeitos), ...rotinas?.processadores, ...montagemDoArquivo },
+    ...(rotinas === undefined ? {} : { rotinas }),
+  }
+}
+
 /**
  * As rotinas do sistema, que só a réplica de lote executa: consolidação de uso (com o storage),
  * expurgo de `job_registro`, expurgo do acesso (registro de acesso, sessão e convite, 17.0) e o expurgo do dado pessoal
@@ -247,7 +293,7 @@ function montarRotinas(
   logger: LoggerBase,
   medidor: Meter | undefined,
   armazem: ArmazemDeArquivos,
-): { processadores: Record<string, Processador>; encerrar(): Promise<void> } {
+): { processadores: ProcessadoresDeJob; encerrar(): Promise<void> } {
   const s3 = criarClienteS3(storage)
   const avisarJanelaDescartada = avisoEspacado(() => logger.warn({ evento: 'worker.janela_da_escola_invalida' }))
   // O horário letivo da escola, lido como o despachante lê: o lote não urgente que ele soltou fora da janela para quando ela abre.

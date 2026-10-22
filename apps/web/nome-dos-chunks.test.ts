@@ -114,7 +114,7 @@ describe('nome dos chunks', () => {
 
   it('o pedaço sem fachada com módulo de uma área só é daquela área; com módulo de duas, não ganha nome de área nenhuma', () => {
     const doProfessor = '/repo/apps/web/src/areas/professor/destaques.ts'
-    const peca = '/repo/apps/web/src/componentes/ia/CaixaPedido.tsx'
+    const peca = '/repo/apps/web/src/componentes/ui/ia/CaixaPedido.tsx'
     expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [doProfessor] })).toBe('assets/tela-professor-[name]-[hash].js')
     // Com uma peça junto, continua da área: é a área que o baixa, e o teto de tela o mede.
     expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [doProfessor, peca] })).toBe('assets/tela-professor-[name]-[hash].js')
@@ -130,60 +130,60 @@ describe('nome dos chunks', () => {
   })
 
   it('o pedaço sem fachada que só tem peças é pecas-*; com um módulo que não é peça, ou sem nenhum da web, continua parte-*', () => {
-    const peca = '/repo/apps/web/src/componentes/ia/CaixaPedido.tsx'
-    const geral = '/repo/apps/web/src/componentes/Menu.tsx'
+    const peca = '/repo/apps/web/src/componentes/ui/ia/CaixaPedido.tsx'
+    const geral = '/repo/apps/web/src/componentes/ui/sobrepostos/Menu.tsx'
     const deFora = '/repo/node_modules/lucide-react/dist/esm/icons/check.js'
     expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [peca, geral, deFora] })).toBe('assets/pecas-[name]-[hash].js')
-    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: ['C:\\repo\\apps\\web\\src\\componentes\\ia\\textos-das-fontes.ts'] })).toBe('assets/pecas-[name]-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: ['C:\\repo\\apps\\web\\src\\componentes\\ui\\ia\\textos-das-fontes.ts'] })).toBe('assets/pecas-[name]-[hash].js')
     // O `Dialogo` é da entrada: o pedaço que o leva conta no primeiro carregamento, mesmo com uma peça ao lado.
-    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [peca, '/repo/apps/web/src/componentes/Dialogo.tsx'] })).toBe('assets/parte-[name]-[hash].js')
+    expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [peca, '/repo/apps/web/src/componentes/ui/sobrepostos/Dialogo.tsx'] })).toBe('assets/parte-[name]-[hash].js')
     // Só React, ou só o contrato compartilhado: é o que a entrada baixa, e continua `parte-*`.
     expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [deFora] })).toBe('assets/parte-[name]-[hash].js')
     expect(nomeDoChunk({ facadeModuleId: null, moduleIds: [] })).toBe('assets/parte-[name]-[hash].js')
   })
 
-  it('peça fora da entrada é a pasta componentes/ia/ e a lista das gerais, e nada mais de componentes/', () => {
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ia/motor-formulario.ts')).toBe(true)
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/Abas.tsx')).toBe(true)
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/teclado-das-abas.ts')).toBe(true)
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/SeloDeEstado.tsx?v=1')).toBe(true)
+  it('peça fora da entrada é a pasta componentes/ui/ia/ e a lista das gerais, e nada mais de componentes/', () => {
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/ia/motor-formulario.ts')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Abas.tsx')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/teclado-das-abas.ts')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/SeloDeEstado.tsx?v=1')).toBe(true)
     // As que a entrada usa, e as que só têm o nome parecido.
-    for (const daEntrada of ['Botao.tsx', 'botao-secundario.ts', 'Dialogo.tsx', 'Campo.tsx', 'estado/EstadoVazio.tsx', 'MenuDaPessoa.tsx', 'seletor.ts', 'pedidos/Menu.tsx'])
+    for (const daEntrada of ['ui/Botao.tsx', 'ui/botao-secundario.ts', 'ui/sobrepostos/Dialogo.tsx', 'ui/campos/Campo.tsx', 'estado/EstadoVazio.tsx', 'MenuDaPessoa.tsx', 'ui/campos/seletor.ts', 'pedidos/Menu.tsx'])
       expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/professor/Menu.tsx')).toBe(false)
   })
 
   it('as peças novas de campo (X1, 4.0) estão fora da entrada, e as que ela já usava continuam dentro', () => {
-    for (const nova of ['Busca.tsx', 'Interruptor.tsx', 'Opcao.tsx']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${nova}`), nova).toBe(true)
-    for (const daEntrada of ['Campo.tsx', 'CampoDeSenha.tsx', 'seletor.ts']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
+    for (const nova of ['ui/campos/Busca.tsx', 'ui/campos/Interruptor.tsx', 'ui/campos/Opcao.tsx']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${nova}`), nova).toBe(true)
+    for (const daEntrada of ['ui/campos/Campo.tsx', 'ui/campos/CampoDeSenha.tsx', 'ui/campos/seletor.ts']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
   })
 
   it('o painel ao lado (X1, 7.0) está fora da entrada, e o que ele divide com o `Dialogo` (`dialogo-modal`) fica dentro', () => {
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/PainelLado.tsx')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/sobrepostos/PainelLado.tsx')).toBe(true)
     // O `Dialogo` é da entrada, e o que o painel divide com ele não pode morar numa peça que a entrada não baixa.
-    for (const daEntrada of ['Dialogo.tsx', 'dialogo-modal.ts', 'LoginPorCima.tsx', 'DialogoDoConvite.tsx']) {
+    for (const daEntrada of ['ui/sobrepostos/Dialogo.tsx', 'ui/sobrepostos/dialogo-modal.ts', 'LoginPorCima.tsx', 'DialogoDoConvite.tsx']) {
       expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
     }
   })
 
   it('as peças novas de estado (X1, 6.0) estão fora da entrada, e os três de `estado/` e o `Botao` que eles usam, dentro', () => {
-    for (const nova of ['Aviso.tsx', 'Contador.tsx', 'Toque.tsx']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${nova}`), nova).toBe(true)
-    for (const daEntrada of ['estado/EstadoCarregando.tsx', 'estado/EstadoErro.tsx', 'estado/EstadoVazio.tsx', 'Botao.tsx']) {
+    for (const nova of ['ui/Aviso.tsx', 'ui/Contador.tsx', 'ui/Toque.tsx']) expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${nova}`), nova).toBe(true)
+    for (const daEntrada of ['estado/EstadoCarregando.tsx', 'estado/EstadoErro.tsx', 'estado/EstadoVazio.tsx', 'ui/Botao.tsx']) {
       expect(ehPecaForaDaEntrada(`/repo/apps/web/src/componentes/${daEntrada}`), daEntrada).toBe(false)
     }
   })
 
   it('a cabeça da onça (X1, 8.0) está fora da entrada, com a pasta dela, e o avatar que a desenha já era peça de ia', () => {
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/onca/CabecaOnca.tsx')).toBe(true)
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ia/AvatarAgente.tsx')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/onca/CabecaOnca.tsx')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/ia/AvatarAgente.tsx')).toBe(true)
     // Só o arquivo da lista: outra pasta com o mesmo nome de arquivo, ou outro arquivo da pasta da onça, não é peça sem entrar nela.
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/professor/onca/CabecaOnca.tsx')).toBe(false)
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/onca/OncaInteira.tsx')).toBe(false)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/onca/OncaInteira.tsx')).toBe(false)
   })
 
   it('a peça nova de lista (X1, 5.0) está fora da entrada, e o `Linha` do `Tabela` não é um arquivo', () => {
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/Linha.tsx')).toBe(true)
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/Linha.test.tsx')).toBe(false)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Linha.tsx')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Linha.test.tsx')).toBe(false)
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/professor/Linha.tsx')).toBe(false)
   })
 })
@@ -373,7 +373,7 @@ describe('o build de verdade da web', () => {
     const noBuild = chunks.flatMap((chunk) => chunk.moduleIds.map((id) => id.replaceAll('\\', '/')))
     for (const peca of PECAS_FORA_DA_ENTRADA) expect(noBuild.some((id) => new RegExp(`/apps/web/src/componentes/${peca}\\.tsx?$`).test(id)), peca).toBe(true)
     for (const deIa of ['AssinaturaIA.tsx', 'CaixaPedido.tsx', 'ChipFonte.tsx', 'Escolha.tsx', 'MotorFormulario.tsx', 'TextoDaIA.tsx'])
-      expect(noBuild.some((id) => id.endsWith(`/apps/web/src/componentes/ia/${deIa}`)), deIa).toBe(true)
+      expect(noBuild.some((id) => id.endsWith(`/apps/web/src/componentes/ui/ia/${deIa}`)), deIa).toBe(true)
     // Peça nenhuma cai num `parte-*`, que o teto de 150 kB mediria como primeiro carregamento sem ela estar nele.
     const emParte = chunks.filter((chunk) => /^assets\/parte-/.test(chunk.fileName)).flatMap((chunk) => chunk.moduleIds.filter(ehPecaForaDaEntrada))
     expect(emParte).toEqual([])
@@ -402,13 +402,13 @@ describe('o build de verdade da web', () => {
     const SELO_DE_MENTIRA = 'export function selo(): string {\n  return `IA em ${document.title}`\n}\n'
     const raiz = projetoDeMentira({
       'src/main.ts': "void import('./areas/professor/rotas').then((m) => console.log(m.tela))\nvoid import('./galeria/Galeria').then((m) => console.log(m.tela))\n",
-      'src/areas/professor/rotas.ts': "import { selo } from '../../componentes/ia/selo'\nimport { comum } from '../../componentes/comum'\nexport const tela = `professor ${selo()} ${comum()}`\n",
-      'src/galeria/Galeria.ts': "import { selo } from '../componentes/ia/selo'\nimport { comum } from '../componentes/comum'\nexport const tela = `galeria ${selo()} ${comum()}`\n",
-      'src/componentes/ia/selo.ts': SELO_DE_MENTIRA,
+      'src/areas/professor/rotas.ts': "import { selo } from '../../componentes/ui/ia/selo'\nimport { comum } from '../../componentes/comum'\nexport const tela = `professor ${selo()} ${comum()}`\n",
+      'src/galeria/Galeria.ts': "import { selo } from '../componentes/ui/ia/selo'\nimport { comum } from '../componentes/comum'\nexport const tela = `galeria ${selo()} ${comum()}`\n",
+      'src/componentes/ui/ia/selo.ts': SELO_DE_MENTIRA,
       'src/componentes/comum.ts': "export function comum(): string {\n  return `não é peça em ${document.title}`\n}\n",
     })
     const chunks = await chunksDoBuild({ raiz, configFile: false })
-    const comOSelo = chunks.find((chunk) => chunk.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/componentes/ia/selo.ts')))
+    const comOSelo = chunks.find((chunk) => chunk.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/componentes/ui/ia/selo.ts')))
     const semFachada = chunks.filter((chunk) => chunk.facadeModuleId === null)
     // O Rolldown junta num pedaço só o que as mesmas telas dividem: a peça e o módulo comum caem juntos, e o pedaço
     // misto conta no primeiro carregamento, que é o lado seguro.
@@ -419,14 +419,14 @@ describe('o build de verdade da web', () => {
     // Sem o módulo que não é peça, o pedaço dividido só tem peças, e sai do glob do primeiro carregamento.
     const soPecas = projetoDeMentira({
       'src/main.ts': "void import('./areas/professor/rotas').then((m) => console.log(m.tela))\nvoid import('./galeria/Galeria').then((m) => console.log(m.tela))\n",
-      'src/areas/professor/rotas.ts': "import { selo } from '../../componentes/ia/selo'\nexport const tela = `professor ${selo()}`\n",
-      'src/galeria/Galeria.ts': "import { selo } from '../componentes/ia/selo'\nexport const tela = `galeria ${selo()}`\n",
-      'src/componentes/ia/selo.ts': SELO_DE_MENTIRA,
+      'src/areas/professor/rotas.ts': "import { selo } from '../../componentes/ui/ia/selo'\nexport const tela = `professor ${selo()}`\n",
+      'src/galeria/Galeria.ts': "import { selo } from '../componentes/ui/ia/selo'\nexport const tela = `galeria ${selo()}`\n",
+      'src/componentes/ui/ia/selo.ts': SELO_DE_MENTIRA,
     })
     const chunksSoPecas = await chunksDoBuild({ raiz: soPecas, configFile: false })
     const dividido = chunksSoPecas.filter((chunk) => chunk.facadeModuleId === null)
     expect(dividido.map((chunk) => chunk.fileName)).toEqual([expect.stringMatching(/^assets\/pecas-[^/]+\.js$/)])
-    expect(dividido[0]?.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/componentes/ia/selo.ts'))).toBe(true)
+    expect(dividido[0]?.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/componentes/ui/ia/selo.ts'))).toBe(true)
   })
 
   /** Um módulo de mentira que o bundler não copia para dentro de quem o usa: lê o documento, e por isso não é constante. */
@@ -495,17 +495,17 @@ describe('o build de verdade da web', () => {
     // num pedaço `tela-professor-*`, e a peça, num `pecas-*` que o importa. Tudo só para o professor: não é vazamento.
     const comum = {
       'src/areas/professor/rotas.ts': fachada(['./Home', './Conversa', './Time']),
-      'src/areas/professor/Home.ts': modulo('Home', "import { faixa } from '../../componentes/ia/faixa'\nimport { avisos } from './avisos'\nconsole.log(faixa(), avisos())\n"),
+      'src/areas/professor/Home.ts': modulo('Home', "import { faixa } from '../../componentes/ui/ia/faixa'\nimport { avisos } from './avisos'\nconsole.log(faixa(), avisos())\n"),
       'src/areas/professor/Conversa.ts': modulo('Conversa', "import { avisos } from './avisos'\nconsole.log(avisos())\n"),
-      'src/areas/professor/Time.ts': modulo('Time', "import { faixa } from '../../componentes/ia/faixa'\nimport { avisos } from './avisos'\nconsole.log(faixa(), avisos())\n"),
+      'src/areas/professor/Time.ts': modulo('Time', "import { faixa } from '../../componentes/ui/ia/faixa'\nimport { avisos } from './avisos'\nconsole.log(faixa(), avisos())\n"),
       'src/areas/professor/avisos.ts': modulo('avisos', "import { icone } from '../../icone'\nconsole.log(icone())\n"),
-      'src/componentes/ia/faixa.ts': modulo('faixa', "import { icone } from '../../icone'\nconsole.log(icone())\n"),
+      'src/componentes/ui/ia/faixa.ts': modulo('faixa', "import { icone } from '../../../icone'\nconsole.log(icone())\n"),
       'src/icone.ts': modulo('icone'),
       'src/areas/aluno/rotas.ts': fachada(['./Tutor']),
       'src/areas/aluno/Tutor.ts': modulo('Tutor'),
     }
     const chunks = await chunksDoBuild({ raiz: projetoDeMentira({ ...comum, 'src/main.ts': ENTRADA_DE_MENTIRA }), configFile: false })
-    const daPeca = chunks.find((chunk) => chunk.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/componentes/ia/faixa.ts')))
+    const daPeca = chunks.find((chunk) => chunk.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/componentes/ui/ia/faixa.ts')))
     const doIcone = chunks.find((chunk) => chunk.moduleIds.some((id) => id.replaceAll('\\', '/').endsWith('/src/icone.ts')))
     // A colisão está de pé: a peça num `pecas-*`, o ícone num pedaço de tela do professor, e um importando o outro.
     expect(daPeca?.fileName).toMatch(/^assets\/pecas-/)
@@ -521,8 +521,8 @@ describe('o build de verdade da web', () => {
       raiz: projetoDeMentira({
         ...comum,
         'src/main.ts': ENTRADA_DE_MENTIRA,
-        'src/componentes/ia/faixa.ts': modulo('faixa', "import { avisos } from '../../areas/professor/avisos'\nconsole.log(avisos())\n"),
-        'src/areas/aluno/Tutor.ts': modulo('Tutor', "import { faixa } from '../../componentes/ia/faixa'\nconsole.log(faixa())\n"),
+        'src/componentes/ui/ia/faixa.ts': modulo('faixa', "import { avisos } from '../../../areas/professor/avisos'\nconsole.log(avisos())\n"),
+        'src/areas/aluno/Tutor.ts': modulo('Tutor', "import { faixa } from '../../componentes/ui/ia/faixa'\nconsole.log(faixa())\n"),
       }),
       configFile: false,
     })

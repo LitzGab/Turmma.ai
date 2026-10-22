@@ -13,7 +13,7 @@ import {
   type UsoDoPeriodo,
   type UsoRepository,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob } from '@educa/shared'
+import { CodigoDeFalhaDeJob, type TIPO_CONSOLIDAR_USO } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 import type { MedidorDeStorage } from '../storage/medidor-de-storage.js'
@@ -90,7 +90,7 @@ export interface DependenciasDaConsolidacao {
  * banco; também dispara numa noite em que todas as encontradas são resto de escola eliminada, até a eliminação apagar o
  * resto de uso (`TODO.md`). Uma inexistente entre escolas que existem continua só pulada.
  */
-export function criarConsolidacaoDeUso(dependencias: DependenciasDaConsolidacao): Processador {
+export function criarConsolidacaoDeUso(dependencias: DependenciasDaConsolidacao): Processador<typeof TIPO_CONSOLIDAR_USO> {
   const { contador, repositorio, storage, relogio, logger, medidor } = dependencias
   const escolaIgnorada = medidor?.createCounter(METRICAS.escolaIgnoradaNoUso, {
     description: 'Gravações de uso de uma escola que a consolidação noturna pulou, por origem e causa',

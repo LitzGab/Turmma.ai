@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Marca } from './Marca'
+import { Marca } from './ui/Marca'
 
 /**
  * A casca das telas de fora da sessão: entrada da equipe, endereço da escola, segundo fator, convite e página da turma

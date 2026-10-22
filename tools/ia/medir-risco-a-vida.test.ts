@@ -11,6 +11,7 @@ const caminhos = {
   consumo: `${pasta}consumo.ts`,
   suspensao: `${pasta}suspensao.ts`,
   tarefa: `${pasta}tarefas/turno-do-tutor.ts`,
+  contexto: '../../packages/nucleo/src/contexto/contexto.ts',
 }
 
 interface Modulos {
@@ -19,14 +20,15 @@ interface Modulos {
   ConsumoEmMemoria: new () => unknown
   OrcamentoEmMemoria: new (consumo: unknown) => unknown
   SuspensoesEmMemoria: new () => unknown
+  executarNoContexto: PecasDoNucleo['executarNoContexto']
   turnoDoTutor: unknown
   mencionaRiscoAVida: (duvida: string) => boolean
   MENSAGEM_DE_RISCO_A_VIDA: string
 }
 
 async function carregar(): Promise<Modulos> {
-  const [provedor, roteirizado, consumo, suspensao, tarefa] = (await Promise.all(Object.values(caminhos).map((caminho) => import(/* @vite-ignore */ caminho)))) as Record<string, unknown>[]
-  return { ...provedor, ...roteirizado, ...consumo, ...suspensao, ...tarefa } as unknown as Modulos
+  const [provedor, roteirizado, consumo, suspensao, tarefa, contexto] = (await Promise.all(Object.values(caminhos).map((caminho) => import(/* @vite-ignore */ caminho)))) as Record<string, unknown>[]
+  return { ...provedor, ...roteirizado, ...consumo, ...suspensao, ...tarefa, ...contexto } as unknown as Modulos
 }
 
 const amostra = (id: string, texto: string, categoria: string, esperado: Amostra['esperado']): Amostra => ({ id, texto, categoria, esperado, fonte: 'sintetica' })
@@ -51,7 +53,7 @@ async function medirComRoteiro(roteiro: readonly string[], execucoes?: number) {
   const adaptador = new nucleo.AdaptadorRoteirizado(roteiro)
   const consumo = new nucleo.ConsumoEmMemoria()
   const provedor = new nucleo.ProvedorDeIa({ adaptador, registro: consumo, orcamento: new nucleo.OrcamentoEmMemoria(consumo), suspensao: new nucleo.SuspensoesEmMemoria(), timeoutMs: 5_000 })
-  const pecas: PecasDoNucleo = { provedor, turnoDoTutor: nucleo.turnoDoTutor, mencionaRiscoAVida: nucleo.mencionaRiscoAVida, MENSAGEM_DE_RISCO_A_VIDA: nucleo.MENSAGEM_DE_RISCO_A_VIDA }
+  const pecas: PecasDoNucleo = { provedor, executarNoContexto: nucleo.executarNoContexto, turnoDoTutor: nucleo.turnoDoTutor, mencionaRiscoAVida: nucleo.mencionaRiscoAVida, MENSAGEM_DE_RISCO_A_VIDA: nucleo.MENSAGEM_DE_RISCO_A_VIDA }
   const resultado = await medirComProvedor(AMOSTRAS, pecas, execucoes === undefined ? {} : { execucoes })
   return { resultado, adaptador }
 }

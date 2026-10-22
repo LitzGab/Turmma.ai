@@ -1,5 +1,6 @@
 import type { ConteudoDeAtividade, ConteudoDePlanoDeAula, TipoDeAdaptacao } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
+import { comContextoDaEscolaDoPedido } from '../__fixtures__/contexto-da-escola.js'
 import { AdaptadorRoteirizado } from '../__fixtures__/adaptador-roteirizado.js'
 import { atividadeDeEstequiometria, entradaDeAdaptacao, entradaDeAtividade, entradaDePlano, ESCOLA_A } from '../__fixtures__/entradas.js'
 import { CONTEXTO_DE_QUIMICA, HABILIDADES_DE_ESTEQUIOMETRIA, MATERIAL_DE_ESTEQUIOMETRIA, PAGINAS_DE_ESTEQUIOMETRIA, trechosDeEstequiometria } from '../__fixtures__/estequiometria.js'
@@ -20,7 +21,7 @@ const doMaterial = (texto: string): boolean => MATERIAL_INTEIRO.includes(normali
 
 function provedorCom(adaptador: AdaptadorFalso | AdaptadorRoteirizado): { ia: ProvedorDeIa; consumo: ConsumoEmMemoria } {
   const consumo = new ConsumoEmMemoria()
-  return { ia: new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 }), consumo }
+  return { ia: comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 })), consumo }
 }
 
 async function erroDe(promessa: Promise<unknown>): Promise<ErroDeIa> {

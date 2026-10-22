@@ -67,14 +67,12 @@ export type { EfeitoDaExecucao } from './fila/efeito-sintetico.repository.js'
 export { OuvinteDeJobs } from './fila/ouvinte-de-jobs.js'
 export {
   esquemaDadosDoJobNaFila,
-  JITTER_DO_RECUO,
-  OPCOES_DE_JOB_PUBLICADO,
-  RECUO_INICIAL_JOB_MS,
+  executorDoJob,
+  opcoesDeJob,
   RETENCAO_JOB_CONCLUIDO_SEGUNDOS,
   RETENCAO_JOB_FALHO_SEGUNDOS,
-  TENTATIVAS_DE_JOB,
 } from './fila/publicacao.js'
-export type { DadosDoJobNaFila } from './fila/publicacao.js'
+export type { DadosDoJobNaFila, OpcoesDeJobPublicado } from './fila/publicacao.js'
 export { ErroDeDominio, STATUS_HTTP_DO_CODIGO, TENTE_DE_NOVO_PADRAO_SEGUNDOS } from './erro/erro-de-dominio.js'
 export { FiltroGlobalDeErro } from './erro/filtro-global.js'
 export { mapearErroPostgres } from './erro/mapear-erro-postgres.js'

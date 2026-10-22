@@ -1,6 +1,6 @@
 import { Component, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { useTituloDaAba } from '../titulo'
-import { Botao } from './Botao'
+import { Botao } from './ui/Botao'
 import { ContextoDaGaveta } from './gaveta'
 
 interface PropsDaFalha {

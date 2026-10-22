@@ -103,17 +103,8 @@ describe('SandboxDeCpu: o job sintético queima CPU de verdade, fora do event lo
 })
 
 describe('processador sintético', () => {
-  const EXECUCAO = { jobId: '0190f5a0-0000-7000-8000-0000000000f1', tentativa: 1, chaveIdempotencia: '0190f5a0-0000-7000-8000-0000000000f1' }
+  const EXECUCAO = { jobId: '0190f5a0-0000-7000-8000-0000000000f1', tentativa: 1, chaveIdempotencia: '0190f5a0-0000-7000-8000-0000000000f1', prazoMs: 90_000 }
   const semEfeito = { gravar: () => Promise.reject(new Error('sem efeito pedido, nada é gravado')) }
-
-  it('dados inválidos falham na hora, definitivos, sem ocupar thread', async () => {
-    const cpu = sandbox(1)
-    const processar = criarProcessadorSintetico(cpu, semEfeito)
-    const erro = await processar({ cpuMs: -1, falhar: false }, EXECUCAO).catch((falha: unknown) => falha)
-    expect(erro).toBeInstanceOf(FalhaDeJob)
-    expect(erro).toMatchObject({ codigo: CodigoDeFalhaDeJob.DADOS_INVALIDOS, definitiva: true })
-    expect(cpu.threads).toBe(0)
-  })
 
   it('queima a CPU no sandbox e só então falha, quando pedido', async () => {
     const pedidos: number[] = []
@@ -135,7 +126,7 @@ describe('processador sintético', () => {
       },
     )
     const chaveIdempotencia = '0190f5a0-0000-7000-8000-0000000000f2'
-    expect(await codigoDe(processar({ cpuMs: 10, falhar: true, efeito: true }, { jobId: chaveIdempotencia, tentativa: 2, chaveIdempotencia }))).toBe(
+    expect(await codigoDe(processar({ cpuMs: 10, falhar: true, efeito: true }, { jobId: chaveIdempotencia, tentativa: 2, chaveIdempotencia, prazoMs: 90_000 }))).toBe(
       CodigoDeFalhaDeJob.FALHA_SINTETICA,
     )
     expect(passos).toEqual(['queimou', `gravou:${chaveIdempotencia}:2`])

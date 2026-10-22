@@ -114,6 +114,55 @@ describe('a entrada do controller passa pelo pipe (no-restricted-syntax, D81)', 
   })
 })
 
+describe('o kit visual não importa api, áreas nem sessão (no-restricted-imports, D81, R56)', () => {
+  const regras = new Set(['no-restricted-imports', 'no-restricted-syntax'])
+  const NO_KIT = 'apps/web/src/componentes/ui/x.tsx'
+
+  it('reprova import, import type, export … from e export *, e o import() também; o irmão, o formatar e o pacote passam', async () => {
+    const fixture = 'kit-importa-api.ts'
+    expect(await lintar(eslint, fixture, NO_KIT, regras)).toEqual(marcasDeViolacao(fixture))
+  })
+
+  it('vale em toda pasta do kit, e só nele: a mesma fixture em estado/, na tela e nos pacotes passa', async () => {
+    const fixture = 'kit-importa-api.ts'
+    for (const caminho of ['apps/web/src/componentes/ui/campos/x.tsx', 'apps/web/src/componentes/ui/ia/x.ts'])
+      expect(await lintar(eslint, fixture, caminho, regras), caminho).toEqual(marcasDeViolacao(fixture))
+    for (const caminho of ['apps/web/src/componentes/estado/x.tsx', 'apps/web/src/componentes/x.tsx', 'apps/web/src/areas/professor/x.tsx', 'apps/web/src/api/x.ts'])
+      expect(await lintar(eslint, fixture, caminho, regras), caminho).toEqual([])
+  })
+
+  it('o eslint-disable-next-line de um import só o esconde do ESLint comum, e a passada sem comentários o reprova', async () => {
+    const caminho = join(raizRepositorio, NO_KIT)
+    const linhas = lerFixture('kit-importa-api.ts').split('\n')
+    const escondida = linhas.findIndex((linha) => linha.includes('{ clienteDaApi }'))
+    expect(escondida, 'a fixture perdeu a linha do clienteDaApi').toBeGreaterThan(0)
+    const texto = [...linhas.slice(0, escondida), '// eslint-disable-next-line no-restricted-imports', ...linhas.slice(escondida)].join('\n')
+    const doKit = (resultado: ESLint.LintResult | undefined) =>
+      (resultado?.messages ?? []).filter((mensagem) => mensagem.ruleId === 'no-restricted-imports').map((mensagem) => `${mensagem.line} no-restricted-imports`).sort()
+    const todas = marcas(texto).filter((marca) => marca.endsWith('no-restricted-imports'))
+    const [comum] = await eslint.lintText(texto, { filePath: caminho })
+    expect(doKit(comum)).toEqual(todas.filter((marca) => marca !== `${escondida + 2} no-restricted-imports`))
+    const [dasGuardas] = await eslintDasGuardas.lintText(texto, { filePath: caminho })
+    expect(doKit(dasGuardas)).toEqual(todas)
+  })
+
+  it('o eslint-disable-next-line de uma importação dinâmica só a esconde do ESLint comum, e a passada sem comentários a reprova', async () => {
+    const caminho = join(raizRepositorio, NO_KIT)
+    const linhas = lerFixture('kit-importa-api.ts').split('\n')
+    const escondida = linhas.findIndex((linha) => linha.includes("import('../../../api/cliente')"))
+    expect(escondida, 'a fixture perdeu a linha do import() de api/').toBeGreaterThan(0)
+    const texto = [...linhas.slice(0, escondida), '// eslint-disable-next-line no-restricted-syntax', ...linhas.slice(escondida)].join('\n')
+    const doImport = (resultado: ESLint.LintResult | undefined) =>
+      (resultado?.messages ?? []).filter((mensagem) => mensagem.ruleId === 'no-restricted-syntax').map((mensagem) => `${mensagem.line} no-restricted-syntax`).sort()
+    const todas = marcas(texto).filter((marca) => marca.endsWith('no-restricted-syntax'))
+    expect(todas, 'a fixture tem um import() de api/, de areas/ e de sessao/').toHaveLength(3)
+    const [comum] = await eslint.lintText(texto, { filePath: caminho })
+    expect(doImport(comum)).toEqual(todas.filter((marca) => marca !== `${escondida + 2} no-restricted-syntax`))
+    const [dasGuardas] = await eslintDasGuardas.lintText(texto, { filePath: caminho })
+    expect(doImport(dasGuardas)).toEqual(todas)
+  })
+})
+
 describe('guarda de espera do serviço do compose', () => {
   it('reprova subir serviço e medir sem esperar, e deixa passar quem espera ou usa --wait', async () => {
     expect(await lintar(eslint, 'esperar-servico.ts', 'apps/despachante/test/fila.int.test.ts')).toEqual(marcasDeViolacao('esperar-servico.ts'))

@@ -1,5 +1,5 @@
 import { useAparencia, type Aparencia as TipoDaAparencia } from '../tema'
-import { Segmentado, type OpcoesDoSegmentado } from './Segmentado'
+import { Segmentado, type OpcoesDoSegmentado } from './ui/campos/Segmentado'
 
 const OPCOES: OpcoesDoSegmentado<TipoDaAparencia> = [
   { valor: 'sistema', rotulo: 'Sistema' },

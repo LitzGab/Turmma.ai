@@ -1,9 +1,9 @@
 import type { DecisaoDePedido, DecisorDaReivindicacao, PedidoDaTurma, RespostaDecisao } from '@educa/shared'
 import { useRef, type ReactNode } from 'react'
 import { decidirPedidos } from '../../api/pedidos'
-import { CLASSES_DO_BOTAO_OFICIAL, CLASSES_DO_BOTAO_PERIGO_CHEIO, CLASSES_DO_BOTAO_SECUNDARIO } from '../botao-secundario'
+import { CLASSES_DO_BOTAO_OFICIAL, CLASSES_DO_BOTAO_PERIGO_CHEIO, CLASSES_DO_BOTAO_SECUNDARIO } from '../ui/botao-secundario'
 import { Falha, useFocoDaEtapa } from '../copia-unica'
-import { Dialogo } from '../Dialogo'
+import { Dialogo } from '../ui/sobrepostos/Dialogo'
 import { useEnvioUnico } from '../dialogos'
 import { pedidosQueContinuam } from './atualizacao-dos-pedidos'
 import {

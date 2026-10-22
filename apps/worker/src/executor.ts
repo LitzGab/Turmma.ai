@@ -11,7 +11,7 @@ import {
   type VagasPorEscola,
   type VagasPorFila,
 } from '@educa/nucleo'
-import { CodigoDeErro, CodigoDeFalhaDeJob, type Fila } from '@educa/shared'
+import { CodigoDeErro, CodigoDeFalhaDeJob, DEFINICOES_DE_JOB, type DadosLidosDoJob, type Fila, type RegistroDeJobs, type TipoDeJob } from '@educa/shared'
 import { DelayedError, UnrecoverableError, type Job } from 'bullmq'
 import { randomUUID } from 'node:crypto'
 import { FalhaDeJob } from './falha-de-job.js'
@@ -33,13 +33,26 @@ export interface ExecucaoDoJob {
   readonly tentativa: number
   /** Igual ao id do job em toda tentativa, em toda reentrega pelo stalled e em toda republicação pela reconciliação. */
   readonly chaveIdempotencia: string
+  /** O prazo de uma tentativa, da definição do tipo (`DEFINICOES_DE_JOB`). O worker só o entrega: aplicá-lo é da onda 3 (43.0). */
+  readonly prazoMs: number
 }
 
 /**
- * Processa os dados de um tipo de job, lidos do Postgres, no contexto da escola do job. Precisa tolerar
+ * Processa os dados de um tipo de job, lidos do Postgres e validados pelo esquema estrito do tipo (`DEFINICOES_DE_JOB`), no
+ * contexto da escola do job. O tipo de `dados` é o da definição: ler campo que ela não tem não compila. Precisa tolerar
  * reexecução: pode rodar de novo depois de ter gravado o efeito, e até ao mesmo tempo que outra execução.
  */
-export type Processador = (dados: Record<string, unknown>, execucao: ExecucaoDoJob) => Promise<void>
+export type Processador<Tipo extends TipoDeJob = TipoDeJob> = (dados: DadosLidosDoJob<Tipo>, execucao: ExecucaoDoJob) => Promise<void>
+
+/** Os processadores de uma réplica, um por tipo: o de cada chave recebe os dados do tipo dela. */
+export type ProcessadoresDeJob = { readonly [Tipo in TipoDeJob]?: Processador<Tipo> }
+
+/**
+ * O processador sem o tipo dos dados. O tipo do job é lido da linha, em execução, e o compilador não liga o texto à chave do
+ * `ProcessadoresDeJob`: este é o único ponto sem prova de tipo, e o que o protege é o executor passar a ele só o que o esquema
+ * do mesmo tipo leu.
+ */
+type ProcessadorSemTipo = (dados: never, execucao: ExecucaoDoJob) => Promise<void>
 
 export type JobDaFila = Pick<Job, 'id' | 'data' | 'attemptsMade' | 'opts' | 'moveToDelayed'>
 
@@ -79,7 +92,9 @@ export const ESPERA_POR_VAGA_MS = 1_000
 
 export interface DependenciasDoExecutor {
   repositorio: Pick<JobRegistroRepository, 'localizarParaExecucao' | 'iniciarExecucao' | 'concluir' | 'registrarFalha'>
-  processadores: Readonly<Record<string, Processador>>
+  processadores: ProcessadoresDeJob
+  /** O registro de jobs que valida os dados, confere o escopo e dá o prazo de cada tipo. Só o teste troca o de produção. */
+  definicoes?: RegistroDeJobs
   logger: LoggerBase
   vagas: Pick<VagasPorEscola, 'tomar' | 'renovar' | 'liberar'>
   /** Vagas por fila da escola do contexto: as da configuração dela, ou o padrão do ambiente. */
@@ -140,8 +155,9 @@ class RenovacaoDaVaga {
  *    já a tomou ao publicar, e aqui ela só se confirma; sem vaga (publicação ambígua, vaga vencida
  *    numa queda longa), o job volta a esperar sem gastar tentativa nem executar: o teto vale na
  *    execução, e não só na publicação;
- * 4. marca `ativo`, conta a execução no uso da escola, roda o processador do tipo com os dados lidos
- *    do Postgres e a execução (`jobId`, `tentativa`, `chaveIdempotencia`), e renova a vaga enquanto ele roda;
+ * 4. marca `ativo`, conta a execução no uso da escola, confere a definição do tipo (`DEFINICOES_DE_JOB`: o escopo e o
+ *    esquema estrito dos dados lidos do Postgres, sem confiar em quem gravou a linha), roda o processador do tipo com esses
+ *    dados e a execução (`jobId`, `tentativa`, `chaveIdempotencia`, `prazoMs`), e renova a vaga enquanto ele roda;
  * 5. marca `concluido`, ou, na última tentativa, `falhou` com código tipado, e libera a vaga.
  *
  * Na retentativa, a vaga fica com o job. Job que já terminou não roda de novo, mesmo que a fila o
@@ -157,9 +173,13 @@ class RenovacaoDaVaga {
  */
 export class ExecutorDeJobs {
   readonly #intervaloRenovacaoMs: number
+  readonly #definicoes: RegistroDeJobs
+  readonly #processadores: Readonly<Record<string, ProcessadorSemTipo | undefined>>
 
   constructor(private readonly dependencias: DependenciasDoExecutor) {
     this.#intervaloRenovacaoMs = dependencias.intervaloRenovacaoMs ?? INTERVALO_RENOVACAO_DA_VAGA_MS
+    this.#definicoes = dependencias.definicoes ?? DEFINICOES_DE_JOB
+    this.#processadores = dependencias.processadores
   }
 
   processar(job: JobDaFila, token?: string): Promise<void> {
@@ -186,7 +206,7 @@ export class ExecutorDeJobs {
   }
 
   private async executar(job: JobDaFila, jobId: string, token: string | undefined): Promise<void> {
-    const { repositorio, processadores, logger } = this.dependencias
+    const { repositorio, logger } = this.dependencias
     const alvo = await repositorio.localizarParaExecucao(jobId)
     if (alvo === undefined) {
       logger.warn({ evento: 'job.nao_encontrado', jobId })
@@ -219,9 +239,7 @@ export class ExecutorDeJobs {
     const renovacao = new RenovacaoDaVaga(() => this.renovarVaga(vaga), this.#intervaloRenovacaoMs)
     try {
       try {
-        const processador = processadores[inicio.tipo]
-        if (processador === undefined) throw new FalhaDeJob(CodigoDeFalhaDeJob.TIPO_DESCONHECIDO, true)
-        await processador(inicio.dados, { jobId, tentativa, chaveIdempotencia: jobId })
+        await this.rodarProcessador(inicio.tipo, inicio.dados, vaga, { jobId, tentativa, chaveIdempotencia: jobId })
       } catch (erro) {
         const falha = await this.falhar(job, jobId, erro)
         if (falha instanceof UnrecoverableError) {
@@ -238,6 +256,25 @@ export class ExecutorDeJobs {
       await renovacao.parar()
     }
     logger.info({ evento: 'job.concluido', jobId, tentativa })
+  }
+
+  /**
+   * O que o worker confere antes do processador, nesta ordem: a definição do tipo (sem ela, `TIPO_DESCONHECIDO`), o escopo da
+   * definição contra a escola da linha, os dados contra o esquema estrito do tipo e o processador da réplica. Toda recusa é
+   * definitiva e leva só o código: o `issues` do zod repete chave e valor, e iria ao log e ao Redis. O worker não confia
+   * na gravação: a linha pode ter sido escrita por SQL, por uma versão antiga ou por quem não passou pelo `Enfileirador`.
+   */
+  private async rodarProcessador(tipo: string, dados: unknown, { escolaId }: VagaDoJob, execucao: Omit<ExecucaoDoJob, 'prazoMs'>): Promise<void> {
+    const definicao = this.#definicoes[tipo]
+    if (definicao === undefined) throw new FalhaDeJob(CodigoDeFalhaDeJob.TIPO_DESCONHECIDO, true)
+    // A rotina do sistema não tem escola, e o job de escola sempre tem: a linha com o outro arranjo (`sistema.*` com escola, por SQL) não roda.
+    if ((definicao.escopo === 'sistema') !== (escolaId === null)) throw new FalhaDeJob(CodigoDeFalhaDeJob.DADOS_INVALIDOS, true)
+    const lidos = definicao.dados.safeParse(dados)
+    if (!lidos.success) throw new FalhaDeJob(CodigoDeFalhaDeJob.DADOS_INVALIDOS, true)
+    const processador = this.#processadores[tipo]
+    if (processador === undefined) throw new FalhaDeJob(CodigoDeFalhaDeJob.TIPO_DESCONHECIDO, true)
+    // O esquema lido é o do mesmo tipo da chave do processador: o `never` é a ponte que o compilador não faz (`ProcessadorSemTipo`).
+    await processador(lidos.data as never, { ...execucao, prazoMs: definicao.prazoMs })
   }
 
   /** Sem Redis, o job segue: com o Redis de fila fora, ele nem teria chegado aqui, e a vaga vence sozinha. */

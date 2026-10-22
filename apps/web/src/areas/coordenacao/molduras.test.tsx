@@ -8,7 +8,7 @@ import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
 import Escola, { ABAS_DE_ESCOLA, type AbaDeEscola } from './Escola'
-import { useFocarOTituloDaMoldura } from './moldura'
+import { useFocarOTituloDaMoldura } from './comum/moldura'
 import Privacidade from './privacidade/Privacidade'
 import Registros, { ABAS_DE_REGISTROS, type AbaDeRegistros } from './Registros'
 

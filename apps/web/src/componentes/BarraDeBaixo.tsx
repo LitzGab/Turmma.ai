@@ -1,8 +1,8 @@
 import { useLayoutEffect } from 'react'
 import { Link, useLocation } from 'wouter'
 import { estaNoItem, type ItemDaNavegacao } from '../areas/navegacao'
-import { Icone } from './Icone'
-import { Ladrilho } from './Ladrilho'
+import { Icone } from './ui/Icone'
+import { Ladrilho } from './ui/Ladrilho'
 
 /**
  * Quantos lugares cabem na barra de baixo do celular (`docs/interface.md` 11.1, R1): quatro, a 90 px cada um nos 360 px da

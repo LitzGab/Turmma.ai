@@ -1,5 +1,5 @@
-import { AssinaturaIA, type TamanhoDoAvatar } from '../../componentes/ia/AssinaturaIA'
-import { MensagemIA, Pensando } from '../../componentes/ia/Mensagem'
+import { AssinaturaIA, type TamanhoDoAvatar } from '../../componentes/ui/ia/AssinaturaIA'
+import { MensagemIA, Pensando } from '../../componentes/ui/ia/Mensagem'
 import { Secao } from '../Secao'
 
 /** Os quatro tamanhos do avatar (`docs/interface.md` 9.7): a linha da mensagem, a assinatura e o cabeçalho. */

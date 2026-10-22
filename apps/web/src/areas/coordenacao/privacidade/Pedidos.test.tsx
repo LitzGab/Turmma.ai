@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { prepararTela, redeFalsa, renderizarTela, type RespostaFalsa } from '../../../__fixtures__/tela'
-import { classesDoBotao } from '../../../componentes/botao-secundario'
+import { classesDoBotao } from '../../../componentes/ui/botao-secundario'
 import { ROTAS_DA_COORDENACAO } from '../../../caminhos'
 import Pedidos from './Pedidos'
 

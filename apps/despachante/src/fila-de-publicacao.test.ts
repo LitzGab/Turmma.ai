@@ -1,5 +1,5 @@
-import { OPCOES_DE_JOB_PUBLICADO, type JobReservado } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, type Fila } from '@educa/shared'
+import { nomeDaFilaBullMQ, type JobReservado } from '@educa/nucleo'
+import { CodigoDeFalhaDeJob, definirJob, DEFINICOES_DE_JOB, TIPO_JOB_SINTETICO, type ExecutorDeJob, type Fila, type RegistroDeJobs } from '@educa/shared'
 import { describe, expect, it, vi } from 'vitest'
 import { PrazoDaFilaEsgotado, PublicacaoBullMQ, type FilaBullMQ } from './fila-de-publicacao.js'
 
@@ -33,8 +33,54 @@ describe('PublicacaoBullMQ', () => {
     const addBulk = vi.fn<FilaBullMQ['addBulk']>(() => Promise.resolve([]))
     await new PublicacaoBullMQ(() => filaFalsa({ addBulk })).publicar([JOB])
     expect(addBulk).toHaveBeenCalledExactlyOnceWith([
-      { name: 'sintetico', data: { escolaId: JOB.escolaId, requisicaoId: JOB.requisicaoId }, opts: { ...OPCOES_DE_JOB_PUBLICADO, jobId: JOB.id } },
+      { name: 'sintetico', data: { escolaId: JOB.escolaId, requisicaoId: JOB.requisicaoId }, opts: { attempts: 5, backoff: { type: 'exponential', delay: 2_000, jitter: 0.5 }, jobId: JOB.id } },
     ])
+  })
+
+  it('cada job leva a retentativa da definição do tipo dele: com a definição injetada, as tentativas e o recuo dela, e o outro tipo segue com os seus', async () => {
+    const addBulk = vi.fn<FilaBullMQ['addBulk']>(() => Promise.resolve([]))
+    const definicoes: RegistroDeJobs = {
+      ...DEFINICOES_DE_JOB,
+      [TIPO_JOB_SINTETICO]: definirJob({ ...DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO], retentativa: { tentativas: 2, recuoMs: 10, jitter: 0 } }),
+    }
+    const montar = { ...JOB, id: '0190f5a0-0000-7000-8000-0000000000f2', tipo: 'titular.montar-arquivo', fila: 'interativa' as const }
+    await new PublicacaoBullMQ(() => filaFalsa({ addBulk }), undefined, definicoes).publicar([JOB, montar])
+    const opcoes = Object.fromEntries((addBulk.mock.calls[0]?.[0] ?? []).map(({ name, opts }) => [name, opts]))
+    expect(opcoes).toEqual({
+      sintetico: { attempts: 2, backoff: { type: 'exponential', delay: 10, jitter: 0 }, jobId: JOB.id },
+      'titular.montar-arquivo': { attempts: 5, backoff: { type: 'exponential', delay: 2_000, jitter: 0.5 }, jobId: montar.id },
+    })
+  })
+
+  it('o tipo da API vai à Queue da API da fila dele, o do worker e o tipo desconhecido, à do worker; e a consulta segue o mesmo caminho', async () => {
+    const adicionados = new Map<string, string[]>()
+    const consultadas: string[] = []
+    const criadas: string[] = []
+    const criar = (fila: Fila, executor: ExecutorDeJob) => {
+      const nome = nomeDaFilaBullMQ(fila, executor)
+      criadas.push(nome)
+      return filaFalsa({
+        addBulk: (jobs) => {
+          adicionados.set(nome, [...(adicionados.get(nome) ?? []), ...jobs.map((job) => job.opts.jobId)])
+          return Promise.resolve([])
+        },
+        getJob: () => {
+          consultadas.push(nome)
+          return Promise.resolve(undefined)
+        },
+      })
+    }
+    const definicoes: RegistroDeJobs = { ...DEFINICOES_DE_JOB, 'teste.da-api': definirJob({ ...DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO], executor: 'api' }) }
+    const daApi = { ...JOB, id: '0190f5a0-0000-7000-8000-0000000000f2', tipo: 'teste.da-api' }
+    const antigo = { ...JOB, id: '0190f5a0-0000-7000-8000-0000000000f3', tipo: 'tipo.de-uma-versao-antiga', fila: 'normal' as const }
+    const publicacao = new PublicacaoBullMQ(criar, undefined, definicoes)
+    await publicacao.publicar([JOB, daApi, antigo])
+    expect(Object.fromEntries(adicionados)).toEqual({ interativa: [JOB.id], 'api-interativa': [daApi.id], normal: [antigo.id] })
+    await publicacao.consultar(daApi)
+    await publicacao.consultar(JOB)
+    expect(consultadas).toEqual(['api-interativa', 'interativa'])
+    // As três do worker nascem com o despachante; a da API, na primeira vez que um tipo a pede, e uma só, que a consulta reaproveita.
+    expect(criadas).toEqual(['interativa', 'normal', 'lote', 'api-interativa'])
   })
 
   it('cada job vai à fila dele: uma Queue por fila, e a prioridade é a fila', async () => {
@@ -61,7 +107,7 @@ describe('PublicacaoBullMQ', () => {
           return Promise.resolve(undefined)
         },
       })
-    await new PublicacaoBullMQ(criar).consultar({ id: JOB.id, fila: 'lote' })
+    await new PublicacaoBullMQ(criar).consultar({ id: JOB.id, fila: 'lote', tipo: JOB.tipo })
     expect(consultadas).toEqual(['lote'])
   })
 
@@ -92,6 +138,30 @@ describe('PublicacaoBullMQ', () => {
     expect(addBulkDaNova).toHaveBeenCalledOnce()
     // As três da construção e a nova, só da fila que quebrou.
     expect(criar.mock.calls.map(([fila]) => fila)).toEqual(['interativa', 'normal', 'lote', 'interativa'])
+  })
+
+  it('a Queue da API que falhou também é trocada, pelo executor: a seguinte nasce como (fila, api) e recebe o addBulk, e a do worker não é tocada', async () => {
+    const quebrada = filaFalsa({ waitUntilReady: () => Promise.reject(new Error('Connection is closed.')), close: vi.fn(() => Promise.resolve()) })
+    const addBulkDaNova = vi.fn<FilaBullMQ['addBulk']>(() => Promise.resolve([]))
+    const addBulkDoWorker = vi.fn<FilaBullMQ['addBulk']>(() => Promise.resolve([]))
+    const daApi = [quebrada, filaFalsa({ addBulk: addBulkDaNova })]
+    const criar = vi.fn((_fila: Fila, executor: ExecutorDeJob) => (executor === 'api' ? (daApi.shift() ?? filaFalsa()) : filaFalsa({ addBulk: addBulkDoWorker })))
+    const definicoes: RegistroDeJobs = { ...DEFINICOES_DE_JOB, 'teste.da-api': definirJob({ ...DEFINICOES_DE_JOB[TIPO_JOB_SINTETICO], executor: 'api' }) }
+    const job = { ...JOB, tipo: 'teste.da-api' }
+    const publicacao = new PublicacaoBullMQ(criar, undefined, definicoes)
+
+    await expect(publicacao.publicar([job])).rejects.toThrow('Connection is closed.')
+    expect(quebrada.close).toHaveBeenCalledOnce()
+    await publicacao.publicar([job])
+    expect(addBulkDaNova).toHaveBeenCalledOnce()
+    expect(addBulkDoWorker).not.toHaveBeenCalled()
+    expect(criar.mock.calls).toEqual([
+      ['interativa', 'worker'],
+      ['normal', 'worker'],
+      ['lote', 'worker'],
+      ['interativa', 'api'],
+      ['interativa', 'api'],
+    ])
   })
 
   it('esperar o Redis ficar pronto não é falha da preparação: no prazo, a Queue não é trocada', async () => {

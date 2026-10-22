@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { comContextoDaEscolaDoPedido } from '../__fixtures__/contexto-da-escola.js'
 import { AdaptadorRoteirizado } from '../__fixtures__/adaptador-roteirizado.js'
 import { ALTERNATIVAS_DAS_AMOSTRAS_DE_SAIDA, AMOSTRAS_DE_PEDIDO, AMOSTRAS_DE_SAIDA, type AmostraDePedido } from '../__fixtures__/amostras-do-tutor.js'
 import { ALUNO_1, entradaDoTutor, ESCOLA_A, questaoDoReagenteLimitante } from '../__fixtures__/entradas.js'
@@ -30,7 +31,7 @@ import {
 
 function montar(adaptador: AdaptadorDeModelo = new AdaptadorFalso()): { ia: ProvedorDeIa; consumo: ConsumoEmMemoria } {
   const consumo = new ConsumoEmMemoria()
-  return { ia: new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 }), consumo }
+  return { ia: comContextoDaEscolaDoPedido(new ProvedorDeIa({ adaptador, registro: consumo, orcamento: new OrcamentoEmMemoria(consumo), suspensao: new SuspensoesEmMemoria(), timeoutMs: 5_000 })), consumo }
 }
 
 async function turno(entrada: EntradaDoTutor, adaptador?: AdaptadorDeModelo): Promise<SaidaDoTutor> {

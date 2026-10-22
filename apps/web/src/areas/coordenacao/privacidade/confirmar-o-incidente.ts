@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef } from 'react'
-import { confirmarIncidente, relerIncidentes } from '../../../api/privacidade'
+import { confirmarIncidente, relerIncidentes } from './api/privacidade'
 import { textoDaFalha } from '../../../componentes/texto-da-falha'
 
 /**
