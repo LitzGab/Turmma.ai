@@ -1,4 +1,4 @@
-# Tarefa 17.0 — Atividade, artefato, material, tutor e privacidade migram, e os pendentes somem
+# Tarefa 17.0 — Atividade, artefato, material, tutor e privacidade migram, e o lint vale em todo controller
 
 **Funcionalidade:** reengenharia · **Depende de:** 15.0, 16.0
 **Subagentes obrigatórios:** `tenancy-guardian`, `privacy-guardian`, `test-engineer`, `revisor-geral`
@@ -8,11 +8,13 @@
 
 ## Objetivo
 
-Os últimos cinco módulos migram, os pendentes e as três funções antigas somem: toda rota valida por esquema, conferida no boot.
+Os últimos cinco módulos migram para o `ZodValidationPipe` e o `IdPipe` (D81), o bloco do ESLint passa a valer em todo
+controller, e as três funções antigas somem: toda rota valida por esquema, e o lint reprova a que não valida.
 
 ## Contexto necessário
 
-- `onda-1a.md` §2 "T1" (`@DoCaminho` da `ferramenta` e da `questao`, `@SemEntrada` do arquivo, "Sai", "A migração");
+- `onda-1a.md` §2 "T1" (revista pela D81: o `errorCode: NAO_ENCONTRADO` da `ferramenta` e da `questao`, o
+  `@UploadedFile()`, "Sai", "A trava");
   `techspec.md` §6 e §7; `prd.md` RF5; regras 20.9, 20.11, 80.6 e 10.6
 - `apps/api/src/atividade/minha-atividade.controller.ts:54` (`questaoDoCaminho`) e `:65` (`corpo ?? {}`),
   `apps/api/src/artefato/ferramentas.controller.ts:19`, `apps/api/src/material/material.controller.ts:26` (`@UploadedFile`)
@@ -21,9 +23,8 @@ Os últimos cinco módulos migram, os pendentes e as três funções antigas som
 
 - [ ] 17.1 — Caracterização, num commit antes: o inválido e o 404 da `questao`, da `ferramenta`, do upload e do pedido do titular
 - [ ] 17.2 — Migram os 4 controllers de `atividade/`, os 2 de `artefato/`, `material/`, os 2 de `tutor/` e os 2 de `privacidade/`
-- [ ] 17.3 — O `@UploadedFile` entra em `SEM_ENTRADA`, com motivo
-- [ ] 17.4 — A lista de pendentes e as três funções de `estrutura/entrada.ts` saem, com a trava escolhida contra a volta
-- [ ] 17.5 — Testes: os da tabela
+- [ ] 17.3 — O `files` do bloco passa a `apps/api/src/**/*.controller.ts`; saem `lerEntrada`, `idDoCaminho` e `lerConsultaPaginada`
+- [ ] 17.4 — Testes: os da tabela
 
 ## Arquivos previstos
 
@@ -31,8 +32,7 @@ Os últimos cinco módulos migram, os pendentes e as três funções antigas som
 |---|---|
 | `apps/api/src/{atividade,artefato,material,tutor,privacidade}/*.controller.ts` (11) | alterado |
 | `apps/api/src/estrutura/entrada.ts` | alterado (saem as três funções; `paginar` fica) |
-| `packages/nucleo/src/entrada/` (pendentes apagados, `sem-entrada.ts`) | alterado |
-| `apps/api/test/entrada-no-boot.test.ts` | alterado |
+| `eslint.config.mjs`, `tools/guardas/guardas.test.ts`, `apps/api/test/arquitetura.test.ts` | alterado |
 | `apps/api/src/{atividade,artefato,tutor}/*.int.test.ts` | alterado |
 | `apps/api/test/{material,material-isolamento,pedido-titular,ops-privacidade}.int.test.ts` | alterado |
 
@@ -51,17 +51,17 @@ Definidos com o `test-engineer`.
 | Tutor: mensagem vazia, longa ou com chave a mais → `ENTRADA_INVALIDA`, sem `mensagem_tutor`, freio do dia parado | integração | gastar a troca |
 | Tutor: mensagem longa com sentinela → nem log nem resposta a têm | integração | logar o corpo no pipe |
 | Material: campos inválidos no upload → nada no storage nem em `material` | integração | validação antes do arquivo |
-| Material: `@UploadedFile` em `SEM_ENTRADA`, e o boot sobe | integração | tirar a chave (o boot cai) |
+| Material: os campos ao lado do `@UploadedFile()` passam pelo `ZodValidationPipe`, e o arquivo sem campo válido não sobe | integração | validar depois do arquivo |
 | Material: id de B em `GET` e `DELETE`, no contexto de A → 404, e o de B fica | integração | tirar o `eq(material.escolaId, …)` |
 | Artefato: `ferramenta` fora da lista → o 404 do inexistente | integração | `ENTRADA_INVALIDA` |
-| Artefato: `ferramenta` e corpo inválidos juntos → 404 | integração | validar o corpo antes |
+| Artefato: `ferramenta` de fora e inexistente, com o mesmo corpo, respondem igual | integração | regra 10.6 |
 | Artefato: corpo inválido → sem execução nem consumo | integração | gastar IA |
 | Privacidade: `corrigir-nome` inválido com sentinela → o nome não muda, sem eco em log | integração | logar o corpo |
 | Privacidade: `titulares/busca` inválida → sem auditoria de leitura nem eco do termo | integração | caracterização |
 | Privacidade: pedido do titular de B, no contexto de A → 404 | integração | tirar o `eq(…escolaId…)` |
-| A lista de pendentes está vazia e o arquivo dela não existe | unidade | devolver um |
+| Lint: a fixture da 14.0 reprova em qualquer `apps/api/src/**/x.controller.ts`; fora de controller, passa | unidade | o `files` ficar com a lista de módulos |
 | Nenhum controller chama `safeParse`, `lerEntrada`, `idDoCaminho` nem `lerConsultaPaginada`, e as três não existem | unidade | devolver um `safeParse` em `tutor.controller.ts` |
-| O boot conta os handlers e parâmetros conferidos, contra o §2 da onda (137 e 153) | integração | nenhum handler fora |
+| `npm run lint` limpo no repositório inteiro, sem `eslint-disable` de `no-restricted-syntax` em `apps/api/src` | unidade | um controller fora |
 
 ## Como testar
 
@@ -72,12 +72,12 @@ Definidos com o `test-engineer`.
   …` (`:95`).
 - O log: `CapturaDeDadoPessoal` (`apps/api/test/captura-de-dado-pessoal.ts`).
 - Isolado: `npx vitest run --project integracao <arquivo>`.
-- Armadilha: a trava contra a volta é escolha desta tarefa (estender `sem-req-cru` ou um `it` do `arquitetura.test.ts`);
-  escreva a escolhida na 17.4.
+- Armadilha: o "nenhum controller chama `safeParse`" é um `it` do `apps/api/test/arquitetura.test.ts`, no molde dos que
+  já leem os arquivos de `src`; a trava do resto é o bloco do ESLint, que não precisa de outra.
 
 ## Fora do escopo desta tarefa
 
-O registro de rotas (21.0) e a validação de job (18.0).
+O registro de rotas e o OpenAPI (X6, D81) e a validação de job (18.0).
 
 ## Divergências resolvidas nesta tarefa
 

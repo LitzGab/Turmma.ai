@@ -1,6 +1,6 @@
 # Tarefa 13.0 — Função nova acima de 10/80/4 e supressão nova reprovam o lint
 
-**Funcionalidade:** reengenharia · **Depende de:** 12.0
+**Funcionalidade:** reengenharia · **Depende de:** 12.0, 97.0 (as pastas antes, pelo recorte: os caminhos deste documento são conferidos de novo antes de partir)
 **Subagentes obrigatórios:** `test-engineer`, `revisor-geral`
 **Porte:** pequeno
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não.

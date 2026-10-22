@@ -1,6 +1,6 @@
 # Tarefa 12.0 — Import contra a direção ou a camada, ou ciclo novo, reprova o lint
 
-**Funcionalidade:** reengenharia · **Depende de:** 9.0, 10.0, 11.0
+**Funcionalidade:** reengenharia · **Depende de:** 9.0, 10.0, 11.0, 34.0, 35.0, 96.0 (as pastas antes, pelo recorte: os caminhos deste documento são conferidos de novo antes de partir)
 **Subagentes obrigatórios:** `tenancy-guardian`, `infra-guardian`, `test-engineer`, `revisor-geral`
 **Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não.

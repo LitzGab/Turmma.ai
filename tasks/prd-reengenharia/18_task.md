@@ -1,6 +1,6 @@
 # Tarefa 18.0 — Payload inválido é recusado ao enfileirar, e tipo sem definição não compila
 
-**Funcionalidade:** reengenharia · **Depende de:** 14.0
+**Funcionalidade:** reengenharia · **Depende de:** nenhuma
 **Subagentes obrigatórios:** `tenancy-guardian`, `privacy-guardian`, `test-engineer`, `revisor-geral`
 **Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não.

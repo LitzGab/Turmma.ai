@@ -5,7 +5,7 @@
 ## 1. O que muda
 
 Três travas, fora de `tools/processo/` e `.github/`: tenant (AST nos 71 repositories), camadas (depcruise) e tamanho
-(ESLint com catraca). A entrada HTTP ganha esquema no parâmetro, e o boot recusa o handler sem ele.
+(ESLint com catraca). A entrada HTTP ganha esquema no parâmetro, pelo `ZodValidationPipe`, e o lint recusa o controller sem ele (D81).
 
 ## 2. Desenho
 
@@ -103,35 +103,46 @@ arquivo: trocar uma função longa por outra no mesmo commit não se esconde na 
 **O comentário não fura:** `criarEslintDasGuardas` ganha `applySuppressions: true` e as três regras no `ruleFilter`, e a
 segunda passada ignora `eslint-disable`.
 
-### T1 — Borda de entrada (RF5)
+### T1 — Borda de entrada (RF5, revista pela D81 em 22/10/2026)
 
-**Onde mora:** `packages/nucleo/src/entrada/`, no molde de `permissao/`; o Nest 12 guarda o esquema por parâmetro em
-`ROUTE_ARGS_METADATA`.
-- **`PipeDeEntrada`**: corpo ou consulta inválidos viram `ENTRADA_INVALIDA`, sem `issues`; caminho inválido,
-  `NAO_ENCONTRADO` (regra 10.6).
-- **Os decorators**, com o pipe **no parâmetro** (global não valeria em módulo sem `APP_PIPE`): `@Corpo(esquema)`,
-  `@Consulta(esquema)`, `@IdDoCaminhoOuNada()` (o `redefinir-mfa` engole id inválido com 202), e os três abaixo.
-- **`@IdDoCaminho(nome = 'id')`** faz o que `idDoCaminho` (`estrutura/entrada.ts:8`) faz hoje: aceita uuid em maiúsculas e
-  normaliza. A 14.0 caracteriza isso antes.
-- **`@DoCaminho`** cobre o parâmetro que não é uuid (inválido dá `NAO_ENCONTRADO`): `ferramenta`
-  (`ferramentas.controller.ts:19`), `chave` (`governanca.controller.ts:52`), `questao` (`minha-atividade.controller.ts:54`),
-  `slug` e `provedor`. Cada rota é caracterizada antes de migrar.
-- **`@SemEntrada(chave)`** só aceita uma chave de `SEM_ENTRADA` (`entrada/sem-entrada.ts`), lista fechada com motivo de 30
-  caracteres ou mais.
-- **`ConferenciaDasEntradas`** roda no `onModuleInit`, ao lado de `ConferenciaDasPermissoes`: o boot cai se um parâmetro
-  não tiver `schema` e pipe, sem `@SemEntrada`.
+**O padrão do NestJS, sem mecanismo nosso.** A versão anterior (`@Corpo`, `@Consulta`, `@IdDoCaminho`, `@SemEntrada` e a
+`ConferenciaDasEntradas` no boot, com lista de pendentes) saiu: é o que a documentação do NestJS mostra em "Pipes" ›
+*Object schema validation*, com a trava no ESLint. O `nestjs-zod` 5.5 declara `@nestjs/common` e `@nestjs/swagger` só até
+`^11`, e usamos o 12.
 
-**Sai** (137 handlers, 153 parâmetros): `lerEntrada`, `idDoCaminho`, `lerConsultaPaginada` e os `safeParse` inline.
+**Onde mora:** `packages/nucleo/src/entrada/`, ao lado de `permissao/`.
+- **`ZodValidationPipe`** (`zod-validation.pipe.ts`, `PipeTransform`): `new ZodValidationPipe(esquema)` em `@Body(…)` e
+  `@Query(…)`. Inválido lança `ErroDeDominio(ENTRADA_INVALIDA)`, sem `issues` na resposta nem no log (regras 20.9 e 20.11);
+  devolve `lido.data`, com os `default` do esquema. A opção `{ errorCode: CodigoDeErro.NAO_ENCONTRADO }` serve ao
+  parâmetro de caminho que não é uuid: `ferramenta` (`ferramentas.controller.ts:19`), `chave` (`governanca.controller.ts:52`),
+  `questao` (`minha-atividade.controller.ts:54`), `slug` e `provedor`. Cada rota é caracterizada antes de migrar.
+- **`IdPipe`** (`id.pipe.ts`), no molde do `ParseUUIDPipe`: `@Param('id', IdPipe)` aceita uuid em qualquer caixa e
+  devolve em minúsculas, como `idDoCaminho` (`estrutura/entrada.ts:8`) faz hoje; fora do formato, `NAO_ENCONTRADO`
+  (regra 10.6). `new IdPipe({ invalidAsUndefined: true })` devolve `undefined`: o `redefinir-mfa` responde 202 sem efeito
+  ao id inválido.
+- **O pipe vai no parâmetro**, nunca global: global não valeria em módulo sem `APP_PIPE`, e esconde o contrato do handler.
+  O tipo do parâmetro é o do esquema em `@educa/shared`, nunca `unknown`.
+- **A ordem dos erros é a do Nest:** guarda antes de pipe (sem sessão → 401; rota de outro papel → o 404 da guarda), e
+  os pipes dos parâmetros na ordem que ele der. A regra 10.6 só exige que o id de B e o inexistente respondam igual, com o
+  mesmo corpo; a ordem entre corpo e caminho não revela existência e é caracterizada, não forçada. Onde a credencial é
+  lida no handler (`mfa.controller.ts:37`, `:62`), o corpo inválido sem token passa a dar 400 antes do 401, sem gastar
+  tentativa: mudança declarada na 16.0.
 
-**A migração.** A conferência liga na 14.0 com uma lista de pendentes que só encolhe (cada pendente ainda viola), e a
-17.0 a apaga. `guardas/sem-req-cru` barra `requisicao.body`, `query` e `params` em `*.controller.ts`.
+**A trava é o ESLint core.** Um bloco de `no-restricted-syntax` em `eslint.config.mjs`, para `*.controller.ts`, reprova
+`@Body()`, `@Query()` e `@Param(nome)` sem pipe, `@Req()` e `requisicao.body`, `.query` e `.params`. O `files` do bloco
+cresce por tarefa (14.0: `sistema`, `ia`, `entrega`, `assistente`, `professores`; 15.0: `estrutura`, `sala`, `governanca`;
+16.0: `sessao`, `operacao`) e na 17.0 vira `apps/api/src/**/*.controller.ts`. Um segundo bloco, logo depois, devolve o
+`@Req()` a `sessao/` e `operacao/`, que leem cookie e IP pela requisição (`ipDaRequisicao`), com o motivo no comentário.
+`no-restricted-syntax` entra em `REGRAS_DAS_GUARDAS`, e o `eslint-disable` dele não fura a segunda passada. O
+`@UploadedFile()` não é barrado: os campos ao lado dele passam pelo `ZodValidationPipe`.
 
-**Antes da 16.0**, a ordem dos erros (401 antes de 400 em `mfa.controller`) é caracterizada: fica igual, ou é declarada.
+**Sai** (137 handlers, 153 parâmetros): `lerEntrada`, `idDoCaminho`, `lerConsultaPaginada` e os `safeParse` inline, na
+17.0; `paginar` fica.
 
 ## 3. Falha
 
 As travas falham fechadas: sem escola, o repository lança; depcruise sem `typescript` é pego pela aresta exigida;
-controller sem esquema derruba o boot (como `permissao-no-boot.test.ts`).
+controller que recebe entrada sem pipe reprova o lint, e o comentário não fura a segunda passada.
 
 ## 4. Isolamento, dado pessoal, conformidade, carga
 
@@ -149,9 +160,9 @@ controller sem esquema derruba o boot (como `permissao-no-boot.test.ts`).
 | 11.0 | Os 2 ciclos de `login.service` somem | 10 | — | — | grande |
 | 12.0 | Import contra a direção ou a camada, ou ciclo novo, reprova o lint | 10 | 9.0, 10.0, 11.0 | tenancy, infra | grande |
 | 13.0 | Função nova acima de 10/80/4 e supressão nova reprovam o lint | 11 | 12.0 | — | pequeno |
-| 14.0 | Handler sem esquema derruba o boot; sistema, IA, entrega, assistente e professores migram | 5 | — | tenancy | grande |
-| 15.0 | Estrutura, sala e governança validam pelo esquema | 5 | 14.0 | tenancy | grande |
-| 16.0 | Sessão e operação validam pelo esquema, com a ordem dos erros caracterizada | 5 | 14.0, 11.0 | tenancy, infra | grande |
-| 17.0 | Atividade, artefato, material, tutor e privacidade migram, e os pendentes somem | 5 | 15.0, 16.0 | tenancy, privacy | grande |
+| 14.0 | Corpo, consulta ou id fora do esquema não chegam ao service; sistema, IA, entrega, assistente e professores migram | 5 | — | tenancy | grande |
+| 15.0 | Estrutura, sala e governança validam pelo `ZodValidationPipe` | 5 | 14.0 | tenancy | grande |
+| 16.0 | Sessão e operação validam pelo `ZodValidationPipe`, sem gastar tentativa com entrada inválida | 5 | 14.0, 11.0 | tenancy, infra | grande |
+| 17.0 | Atividade, artefato, material, tutor e privacidade migram, e o lint vale em todo controller | 5 | 15.0, 16.0 | tenancy, privacy | grande |
 
 9.0 e 13.0 editam `tools/guardas/index.mjs` em série; só a 12.0 mexe no `package-lock.json`.

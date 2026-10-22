@@ -1,4 +1,4 @@
-# Tarefa 14.0 — Handler sem esquema derruba o boot; sistema, IA, entrega, assistente e professores migram
+# Tarefa 14.0 — Corpo, consulta ou id fora do esquema não chegam ao service; sistema, IA, entrega, assistente e professores migram
 
 **Funcionalidade:** reengenharia · **Depende de:** nenhuma
 **Subagentes obrigatórios:** `tenancy-guardian`, `test-engineer`, `revisor-geral`
@@ -8,80 +8,79 @@
 
 ## Objetivo
 
-Nasce `packages/nucleo/src/entrada/` (pipe, decorators, conferência no boot); cinco módulos migram.
+Nasce a validação de entrada do padrão NestJS (D81): `ZodValidationPipe` e `IdPipe` no parâmetro, e o
+`no-restricted-syntax` do ESLint reprova o controller que recebe entrada sem pipe. Cinco módulos migram.
 
 ## Contexto necessário
 
-- `onda-1a.md` §2 "T1" e §3; `techspec.md` §6 e §12 (a premissa, provada primeiro); `prd.md` RF5; regras 10.3, 10.6, 20.9, 20.11, 00.9
-- Molde: `packages/nucleo/src/permissao/conferencia-das-permissoes.ts`, registrada em `apps/api/src/app.module.ts:131`
-- Sai depois: `apps/api/src/estrutura/entrada.ts:8` (`idDoCaminho`)
+- `onda-1a.md` §2 "T1" (reescrita pela D81); `docs/decisoes.md` D81; `prd.md` §11 (RF5 revisto); regras 10.3, 10.6,
+  20.9, 20.11, 00.9
+- NestJS, "Pipes" › *Object schema validation* e o `ParseUUIDPipe`. **Sem conferência no boot, sem lista de pendentes,
+  sem `nestjs-zod`**
+- O que sai depois (17.0): `apps/api/src/estrutura/entrada.ts` (`lerEntrada`, `idDoCaminho`, `lerConsultaPaginada`)
 
 ## Subtarefas
 
 - [ ] 14.1 — Caracterização, num commit antes: o inválido e o 404 de cada rota dos cinco módulos, e o uuid em maiúsculas
-- [ ] 14.2 — `PipeDeEntrada`, `@Corpo`, `@Consulta`, `@IdDoCaminho`, `@IdDoCaminhoOuNada`, `@DoCaminho`, `@SemEntrada` e `SEM_ENTRADA`
-- [ ] 14.3 — `ConferenciaDasEntradas` no `onModuleInit`, com a lista de pendentes que só encolhe
-- [ ] 14.4 — `guardas/sem-req-cru` em `tools/guardas/`, na segunda passada
-- [ ] 14.5 — Migram `sistema/`, `ia/`, `entrega/`, `assistente/` e `professores/`
-- [ ] 14.6 — Testes: os da tabela
+- [ ] 14.2 — `ZodValidationPipe` e `IdPipe` em `packages/nucleo/src/entrada/` (D81), sem `issues` na resposta nem no log
+- [ ] 14.3 — O bloco de `no-restricted-syntax` em `eslint.config.mjs`: `@Body()`, `@Query()` e `@Param()` sem pipe, `@Req()` e `requisicao.body`, `.query` e `.params`, valendo nos cinco módulos migrados
+- [ ] 14.4 — Migram `sistema/`, `ia/`, `entrega/`, `assistente/` e `professores/`
+- [ ] 14.5 — Testes: os da tabela
+
+O desenho (os dois pipes, o bloco do ESLint que cresce por tarefa e a ordem dos erros) está em `onda-1a.md` T1.
 
 ## Arquivos previstos
 
 | Arquivo | Novo ou alterado |
 |---|---|
-| `packages/nucleo/src/entrada/*.ts` (pipe, decorators, `sem-entrada.ts`, conferência, pendentes) | novo |
-| `packages/nucleo/src/entrada/entrada.test.ts`; `packages/nucleo/src/index.ts` | novo; alterado |
-| `apps/api/src/app.module.ts`; `apps/api/test/entrada-no-boot.test.ts` | alterado; novo |
+| `packages/nucleo/src/entrada/zod-validation.pipe.ts`, `id.pipe.ts`, `index.ts`, `entrada.test.ts` | novo |
+| `packages/nucleo/src/index.ts` | alterado |
+| `eslint.config.mjs`, `tools/guardas/index.mjs`, `tools/guardas/guardas.test.ts` | alterado |
+| `tools/guardas/__fixtures__/entrada-sem-esquema.ts`, `entrada-com-esquema.ts` | novo |
 | `apps/api/src/{sistema,ia,entrega,assistente,professores}/*.controller.ts` | alterado |
-| `tools/guardas/index.mjs`, `tools/guardas/guardas.test.ts`, `tools/guardas/__fixtures__/req-cru.ts` | alterado e novo |
-| os `*.int.test.ts` dos cinco módulos | alterado |
+| `apps/api/src/ia/ia.int.test.ts`, `apps/api/src/entrega/entrega.int.test.ts`, `apps/api/src/assistente/assistente.int.test.ts` | alterado |
+| `apps/api/test/{professores,jobs-sinteticos,contexto,estado-avisos}.int.test.ts` | alterado |
 
 ## Testes que provam a regra
 
-Definidos com o `test-engineer`.
-
 | Cenário | Tipo | Fica vermelho se (a mutação), ou o que prova |
 |---|---|---|
-| Controller sintético com `@Corpo`: o esquema sai de `ROUTE_ARGS_METADATA` pelo índice | unidade | o decorator não gravar |
-| Módulo sem `APP_PIPE`: corpo ou `@Consulta` inválidos → 400 `ENTRADA_INVALIDA` | integração | pipe só global; `@Consulta` sem pipe |
+| `ZodValidationPipe`: inválido → `ENTRADA_INVALIDA`; válido → o valor do esquema (com `default` aplicado) | unidade | devolver o valor cru |
+| `ZodValidationPipe` com `errorCode: NAO_ENCONTRADO` → 404 | unidade | ignorar a opção |
+| `IdPipe` normaliza maiúsculas; fora do formato → `NAO_ENCONTRADO`; com `invalidAsUndefined` → `undefined` | unidade | tirar o `.toLowerCase()`; responder 400 |
 | A resposta do inválido é exatamente `{ codigo: 'ENTRADA_INVALIDA' }` | integração | repassar `issues` |
 | Sentinela do corpo inválido fora do log (`CapturaDeDadoPessoal`) | integração | logar `issues` |
 | Corpo com `escolaId` de B → `ENTRADA_INVALIDA`, nada gravado | integração | sem `.strict()` |
-| `@IdDoCaminho` fora do formato → o 404 do inexistente | integração | responder 400 |
-| `@IdDoCaminho` normaliza maiúsculas | unidade | tirar o `.toLowerCase()` |
-| Uuid de B em maiúsculas, no contexto de A → 404 | integração | tirar o `eq(…escolaId…)` |
-| `@IdDoCaminhoOuNada` fora do formato → `undefined` | unidade | lançar `NAO_ENCONTRADO` |
-| `@DoCaminho` fora do esquema → 404 | unidade | `ENTRADA_INVALIDA` |
-| Caminho e corpo inválidos juntos → sempre 404, em 20 repetições | integração | validar o corpo antes |
-| Sem sessão e corpo inválido → 401 | integração | pipe antes das guardas |
-| Professor em rota da coordenação com corpo inválido → 404, sem auditoria | integração | pipe antes das guardas |
-| Boot com `@Body()`, `@Query()` ou `@Param()` cru, sozinho ou ao lado de `@Corpo` → cai, com controller e método | unidade | tirar a conferência; conferir só o primeiro |
-| `@SemEntrada('chave-da-lista')` sobe; chave fora não compila | unidade | aceitar `string` |
-| Motivo de `SEM_ENTRADA` com 30 caracteres ou mais | unidade | `> 0` |
-| Pendente que já tem esquema, ou inexistente, reprova; handler novo fora da lista cai | unidade | aceitar o pendente conforme |
-| `sem-req-cru`: `requisicao.body`, `.query` e `.params` reprovam; `headers.authorization` passa | unidade | tirar a regra |
-| `sem-req-cru` com `eslint-disable` → a segunda passada reprova | unidade | não acrescentar |
-| `ia`: execução de outra pessoa, de outra escola, inexistente e fora do formato → o mesmo 404 | integração | tirar o `eq(…escolaId…)` |
-| `assistente`: corpo inválido → nenhuma execução nem consumo | integração | o pipe passar `undefined` |
+| Uuid de B em maiúsculas, no contexto de A → o mesmo 404 do inexistente | integração | tirar o `eq(…escolaId…)` |
+| `ia`: execução de outra pessoa, de outra escola, inexistente e fora do formato → o mesmo 404, o mesmo corpo | integração | tirar o `eq(…escolaId…)` |
+| `assistente`: corpo inválido → nenhuma execução nem consumo | integração | o pipe passar o valor cru |
 | `professores`: limite 101 reprova, 100 passa | integração | `.max(101)` |
 | `sistema` e `entrega`: o inválido igual ao da caracterização | integração | caracterização |
-| `permissao-no-boot.test.ts` verde | unidade | conferências somadas |
+| Sem sessão e corpo inválido → 401; professor em rota da coordenação com corpo inválido → 404, sem auditoria | integração | validar antes da guarda |
+| Lint: `@Body()`, `@Query()`, `@Param('id')` sem pipe, `@Req()` e `requisicao.body` reprovam no controller migrado | unidade | tirar um seletor |
+| Lint: o jeito certo passa; o mesmo arquivo como `x.service.ts`, ou num módulo ainda não migrado, passa | unidade | o bloco subir para todo arquivo |
+| Lint: `eslint-disable-next-line no-restricted-syntax` → a segunda passada reprova | unidade | não entrar em `REGRAS_DAS_GUARDAS` |
+| `permissao-no-boot.test.ts` verde | unidade | o pipe quebrar a guarda |
 
 ## Como testar
 
-- Boot: copie `apps/api/test/permissao-no-boot.test.ts › … › rota sem @Permite, sem @RotaAnonima e sem marcador da
-  operação derruba o boot…`, com `subir` e `moduloCom`.
+- Lint: copie `tools/guardas/guardas.test.ts › processadores do worker: nenhuma afirmação de tipo …` (os dois `it`: a
+  fixture com `reprova: no-restricted-syntax` no caminho simulado `apps/api/src/ia/x.controller.ts`, e o "vale só em…"
+  com `apps/api/src/estrutura/x.controller.ts` e `apps/api/src/ia/x.service.ts`). O comentário: `guarda desligada por
+  comentário › a passada sem comentários do npm run lint ainda pega a violação`, com `eslintDasGuardas`.
+- Seletores sugeridos (a fixture é a prova): `Decorator > CallExpression[callee.name=/^(Body|Query|Param)$/][arguments.length=0]`,
+  `…[callee.name=/^(Body|Query|Param)$/][arguments.length=1] > Literal.arguments`, `Decorator > CallExpression[callee.name='Req']`,
+  `MemberExpression[object.name='requisicao'][property.name=/^(body|query|params)$/]`.
 - Isolamento: `apps/api/src/ia/ia.int.test.ts › de outra pessoa, de outra escola, inexistente e com id fora do formato
-  respondem igual: 404, o mesmo corpo` (`:677`).
+  respondem igual: 404, o mesmo corpo`.
 - Log: `CapturaDeDadoPessoal` (`apps/api/test/captura-de-dado-pessoal.ts`), com `subirApi` (`api-com-sessao.ts`).
-- Guarda: fixture com `reprova:`, como em `tools/guardas/guardas.test.ts`.
-- Isolado: `npx vitest run --project unidade packages/nucleo/src/entrada apps/api/test/entrada-no-boot.test.ts` e
+- Isolado: `npx vitest run --project unidade packages/nucleo/src/entrada tools/guardas/guardas.test.ts` e
   `npx vitest run --project integracao apps/api/src/ia/ia.int.test.ts`.
-- Armadilha: os pipes de parâmetro rodam em paralelo; as 20 repetições seguram a ordem.
+- Armadilha: o tipo do parâmetro não sai do pipe; declare-o com o tipo de `@educa/shared` (`PedidoX`), nunca `unknown`.
 
 ## Fora do escopo desta tarefa
 
-Os outros módulos e apagar `lerEntrada`, `idDoCaminho` e `lerConsultaPaginada` (15.0 a 17.0).
+Os outros módulos (15.0 a 17.0), apagar as funções de `estrutura/entrada.ts` (17.0), o OpenAPI e o registro de rotas (X6).
 
 ## Divergências resolvidas nesta tarefa
 

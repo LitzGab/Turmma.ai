@@ -6,6 +6,12 @@
 `onda-4b` (a 3 e a 4 partidas na revisão, R42), `onda-5` e `onda-6`. A tarefa lê este arquivo e a sua onda. As decisões: `.reengenharia/DECISOES.md`
 (R32 a R42).
 
+> **Recorte de 22/10/2026 (D81).** Vale por cima deste documento e dos `onda-<n>.md`: a X5 fica com as 32 tarefas do
+> `tasks.md`, e o resto vai para a X6 (`prd.md` §11). O desenho muda em três pontos: a entrada HTTP pelo
+> `ZodValidationPipe` e pelo `IdPipe`, com a trava no ESLint (`onda-1a.md` T1, reescrita); o registro de rotas e o
+> OpenAPI derivado (T2, `onda-1b.md`) e a documentação gerada (T18, `onda-6.md`) saem; e a pasta segue uma por recurso,
+> com o kit da web em `componentes/ui/` (no lugar de `kit/`). Peça técnica tem o nome do framework, em inglês.
+
 ## 1. Resumo da abordagem
 
 A X5 refatora em ondas por dependência: o que os outros usam (contratos, travas, fronteiras), a execução e a
