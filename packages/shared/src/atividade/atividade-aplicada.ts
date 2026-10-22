@@ -63,6 +63,12 @@ export const esquemaPedidoSemCorpo = z.strictObject({})
 export type PedidoSemCorpo = z.infer<typeof esquemaPedidoSemCorpo>
 
 /**
+ * O mesmo corpo vazio e estrito, para a rota que aceita não receber corpo nenhum: o Express 5 deixa `req.body` indefinido
+ * quando o cliente não manda corpo, e esse valia como `{}`. Qualquer campo continua sendo `ENTRADA_INVALIDA`.
+ */
+export const esquemaPedidoSemCorpoOuAusente = esquemaPedidoSemCorpo.default({})
+
+/**
  * Resposta de `POST /v1/atividades-aplicadas/:id/encerrar`: a atividade, já `encerrada`, e a execução da correção, que
  * monta o lote e a entrega pendente. Encerrar de novo devolve o mesmo, sem segundo lote (o banco aceita um lote não
  * rejeitado por atividade aplicada). Com a função `correcao_de_objetiva` suspensa, a atividade encerra e `execucaoId`

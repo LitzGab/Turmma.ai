@@ -1727,3 +1727,7 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X5, 17.0) O segundo bloco do ESLint lista só quem usa o `@Req()`:** hoje vale em `sessao` e `operacao` inteiros (divergência 6 da 16.0) e deixa a porta aberta em quatro controllers que não o usam; a 17.0 generaliza o primeiro bloco e decide a lista (`infra-guardian`, 16.0, 1ª rodada)
 - [ ] **(X5) O `describe('ops:redefinir-mfa')` de `mfa.int.test.ts` cria o próprio operador:** hoje depende de o `operador-teste` existir, defeito anterior à 16.0 (`infra-guardian`, 16.0, 1ª rodada)
 - [ ] **(X5, 17.0) Contagem exata das marcas de `requisicao.body|query|params` em `guardas.test.ts`:** o `toEqual(esperadas)` vem da própria fixture, e apagar as três marcas de `daRequisicao` o deixa verde; a 17.0 generaliza o primeiro bloco e mexe nesse teste (`revisor-geral`, 16.0, 2ª rodada)
+- [ ] **(X5, 17.0) Dois jeitos de montar o corpo vazio que pode faltar** (`revisor-geral`, junto do "Um `esquemaSemCorpo` só" acima): a constante local `esquemaSemCorpo = X.default({})`
+  em `professores.controller.ts`, `operacao/sessao.controller.ts`, `operacao/painel.controller.ts` e `sala/acesso-da-turma.controller.ts`,
+  e o `esquemaPedidoSemCorpoOuAusente` de `packages/shared` (atividade). Unificar na próxima tarefa que mexa nesses controllers;
+  quatro arquivos de outros módulos não cabiam na 17.0

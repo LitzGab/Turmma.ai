@@ -15,6 +15,7 @@ import { ESTADOS_DE_ATIVIDADE_APLICADA } from '../atividade/atividade-aplicada.j
 
 /** `:ferramenta` de `POST /v1/ferramentas/:ferramenta/gerar`. */
 export const esquemaParametroFerramenta = z.enum(FERRAMENTAS_GERADORAS)
+export type ParametroFerramenta = z.infer<typeof esquemaParametroFerramenta>
 
 /**
  * Corpo de `POST /v1/ferramentas/:ferramenta/gerar`: os parâmetros da ferramenta e a chave do envio. É o mesmo caso de

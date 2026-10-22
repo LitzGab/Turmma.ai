@@ -402,6 +402,26 @@ describe('pedido do titular (F3, tarefa 11.0): busca, prévia, registro, lista, 
   })
 
   describe('validação e imutabilidade: erro tipado, e a escola e o titular do pedido não mudam', () => {
+    it('o nome da correção e o termo da busca fora do contrato, com uma sentinela dentro, dão ENTRADA_INVALIDA: o nome não muda, nenhuma busca é auditada, e a sentinela não vai ao log nem à resposta (17.0)', async () => {
+      const a = await escolaComPessoas()
+      const aluno = a.alunos[0]
+      if (aluno === undefined) throw new Error('aluno de teste não criado')
+      const criado = await registrar(a.coordenacao, aluno.id, { tipo: 'correcao' })
+      expect(criado.status).toBe(201)
+      const id = criado.corpo['id'] as string
+      const sentinela = `sentinela-${randomUUID()}`
+      const captura = new CapturaDeDadoPessoal(linhasDeLog)
+      const longo = `${sentinela} ${'x'.repeat(201)}`
+      expect(resposta(await captura.capturar(corrigir(a.coordenacao, id, longo)))).toEqual(resposta(ENTRADA_INVALIDA))
+      expect(resposta(await captura.capturar(pedir(a.coordenacao, 'POST', `/v1/privacidade/pedidos/${id}/corrigir-nome`, { nome: sentinela, titularId: aluno.id })))).toEqual(resposta(ENTRADA_INVALIDA))
+      expect(resposta(await captura.capturar(buscar(a.coordenacao, longo)))).toEqual(resposta(ENTRADA_INVALIDA))
+      expect(resposta(await captura.capturar(pedir(a.coordenacao, 'POST', '/v1/privacidade/titulares/busca', { termo: sentinela, escolaId: a.escolaId })))).toEqual(resposta(ENTRADA_INVALIDA))
+      const { rows } = await bancada.pool.query<{ nome: string }>('select nome from usuario where id = $1', [aluno.id])
+      expect(rows[0]?.nome).toBe(aluno.nome)
+      expect(await auditoriasDa(a.escolaId, 'titular.buscado')).toEqual([])
+      captura.varrerTudo([sentinela])
+    })
+
     it('chegouEm no futuro, nome vazio, só de espaço ou acima de 200 e termo de duas letras, de espaços ou acima de 200 dão ENTRADA_INVALIDA', async () => {
       const a = await escolaComPessoas()
       const aluno = a.alunos[0]

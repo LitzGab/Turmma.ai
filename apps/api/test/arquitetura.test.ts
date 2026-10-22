@@ -1459,3 +1459,49 @@ describe('arquitetura: só o controller e o módulo importam o login.service (X5
     expect(quemImportaOLoginService([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho).sort())
   })
 })
+
+describe('arquitetura: o controller valida pelo pipe no parâmetro, e as funções antigas de entrada não existem mais (X5, 17.0, D81)', () => {
+  /** A trava do resto é o bloco `no-restricted-syntax` do ESLint; estes `it` pegam o `safeParse` e as três funções, que o bloco não vê. */
+  const CHAMA_O_LEITOR_ANTIGO = /\b(safeParse|lerEntrada|idDoCaminho|lerConsultaPaginada)\b/
+  const DECLARA_UMA_DAS_TRES = /\b(function|const)\s+(lerEntrada|idDoCaminho|lerConsultaPaginada)\b/
+  const ARQUIVO_DA_ENTRADA = 'apps/api/src/estrutura/entrada.ts'
+  const ehControllerDaApi = (caminho: string): boolean => /^apps\/api\/src\/.+\.controller\.ts$/.test(caminho)
+
+  /** Os controllers cujo código (sem comentário) chama uma das quatro. */
+  const quemLeAEntradaPorFora = (arquivos: readonly Arquivo[]): string[] =>
+    arquivos
+      .filter((arquivo) => ehControllerDaApi(arquivo.caminho))
+      .filter((arquivo) => CHAMA_O_LEITOR_ANTIGO.test(semComentarios(arquivo.texto)))
+      .map((arquivo) => arquivo.caminho)
+      .sort()
+
+  it('nenhum controller chama safeParse, lerEntrada, idDoCaminho nem lerConsultaPaginada', () => {
+    const arquivos = arquivosDoRepositorio()
+    expect(arquivos.filter((arquivo) => ehControllerDaApi(arquivo.caminho)).length).toBeGreaterThan(50)
+    expect(quemLeAEntradaPorFora(arquivos)).toEqual([])
+  })
+
+  it('lerEntrada, idDoCaminho e lerConsultaPaginada não são declaradas em apps nem em packages, e o entrada.ts só guarda a paginação', () => {
+    const arquivos = arquivosDoRepositorio().filter((arquivo) => /^(apps|packages)\//.test(arquivo.caminho) && arquivo.caminho !== ESTE_ARQUIVO)
+    expect(arquivos.filter((arquivo) => DECLARA_UMA_DAS_TRES.test(semComentarios(arquivo.texto))).map((arquivo) => arquivo.caminho)).toEqual([])
+    const entrada = arquivos.find((arquivo) => arquivo.caminho === ARQUIVO_DA_ENTRADA)
+    expect(entrada?.texto).toContain('export function paginar')
+    expect(semComentarios(entrada?.texto ?? '')).not.toMatch(/\b(lerEntrada|idDoCaminho|lerConsultaPaginada)\b/)
+  })
+
+  it('a varredura reprova o controller que devolve um safeParse ou uma das três funções, em qualquer módulo, e deixa o comentário, o service e o teste passarem', () => {
+    const fora = [
+      { caminho: 'apps/api/src/tutor/tutor.controller.ts', texto: 'const lida = esquema.safeParse(corpo)' },
+      { caminho: 'apps/api/src/material/material.controller.ts', texto: 'return lerEntrada(esquema, corpo)' },
+      { caminho: 'apps/api/src/privacidade/privacidade.controller.ts', texto: 'idDoCaminho(id)' },
+      { caminho: 'apps/api/src/estrutura/turma.controller.ts', texto: 'lerConsultaPaginada(consulta)' },
+      { caminho: 'apps/api/src/modulo-novo/modulo-novo.controller.ts', texto: 'esquema.safeParse(corpo)' },
+    ]
+    const inocentes = [
+      { caminho: 'apps/api/src/sistema/saude.controller.ts', texto: '/** Antes: lerEntrada(esquema, corpo). */\n// idDoCaminho(id)\n@Body(new ZodValidationPipe(esquema)) corpo: Pedido' },
+      { caminho: 'apps/api/src/tutor/tutor.service.ts', texto: 'esquema.safeParse(resposta)' },
+      { caminho: 'apps/api/src/tutor/tutor.controller.test.ts', texto: 'esquema.safeParse(corpo)' },
+    ]
+    expect(quemLeAEntradaPorFora([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho).sort())
+  })
+})

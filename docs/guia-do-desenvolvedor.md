@@ -140,7 +140,7 @@ apps/api/src/
     turma.repository.ts
     *.test.ts                  unidade, ao lado do código
   sessao/senha/                senha, hash, ContadorEmJanela, SemaforoDeHash: primitivas que outros módulos usam
-  estrutura/entrada.ts         paginar, e o lerEntrada dos controllers que ainda não usam o pipe (§5.1)
+  estrutura/entrada.ts         paginar e paginarPor, o corte da página de uma listagem
   ops/                         só comandos de terminal (npm run ops:*), finos, sobre os casos de uso de operacao/
 apps/api/test/                 testes de integração: entre outros, os que cruzam módulos, os de arquitetura e os
                                HTTP de vários módulos; muitos módulos também têm *.int.test.ts ao lado do código
@@ -199,10 +199,11 @@ Exemplo: a disciplina (`apps/api/src/estrutura/`, `packages/shared/src/estrutura
    }
    ```
    O `ZodValidationPipe` é o da documentação do NestJS (*Pipes → Object schema validation*). Entrada inválida
-   responde `ENTRADA_INVALIDA`. Nos módulos que já usam o pipe, o lint não deixa passar `@Body()`, `@Query()` nem
-   `@Param()` sem pipe, nem `@Req()` cru. Os controllers de `artefato`, `atividade`, `material`, `operacao`,
-   `privacidade` e `tutor` ainda validam à mão, com `lerEntrada(esquema, corpo)` e `idDoCaminho(id)` de
-   `apps/api/src/estrutura/entrada.ts`: não os copie.
+   responde `ENTRADA_INVALIDA`. Em todo `*.controller.ts` de `apps/api/src` o lint não deixa passar `@Body()`, `@Query()`
+   nem `@Param()` sem pipe, nem `@Req()` cru (só `sessao/` e `operacao/` leem cookie e IP da requisição). O parâmetro
+   de caminho que não é um id e que, fora do formato, deve responder como o inexistente (`ferramenta`, `questao`, `slug`)
+   leva `new ZodValidationPipe(esquema, { errorCode: CodigoDeErro.NAO_ENCONTRADO })`. A rota que aceita não receber corpo
+   usa o esquema vazio com `.default({})` (`esquemaPedidoSemCorpoOuAusente`).
 4. **Service.** A regra de negócio fica aqui, e a resposta passa pelo esquema:
    `return esquemaRespostaDisciplina.parse(linha)`. Quando não achar, lance `new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)`.
 5. **Repository.** É o único lugar que toca o banco. A escola vem do contexto, nunca do argumento:

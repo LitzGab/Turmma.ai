@@ -143,6 +143,23 @@ describe('material da escola', () => {
       expect(await materiaisDa(bancada, escola.coordenacao.escolaId)).toHaveLength(1)
     })
 
+    it('os campos ao lado do arquivo passam pelo ZodValidationPipe: o PDF válido com campo fora do contrato é `ENTRADA_INVALIDA`, e o arquivo nem chega à leitura nem vira material (17.0)', async () => {
+      const escola = await montarEscolaComTurma(api, bancada)
+      const extrair = vi.spyOn(api.app.get(ExtratorDePdf), 'extrair')
+      const foraDoContrato = [
+        { disciplinaId: escola.quimica, extra: { escolaId: escola.coordenacao.escolaId } },
+        { disciplinaId: escola.quimica, extra: { titularidade: 'ninguem' } },
+        { disciplinaId: 'nao-e-uuid' },
+      ]
+      for (const campos of foraDoContrato) {
+        const resposta = await enviarMaterial(api, escola.coordenacao, campos, { arquivo: variacaoDoPdf() })
+        expect(erroDe(resposta), JSON.stringify(campos)).toEqual({ status: 400, codigo: CodigoDeErro.ENTRADA_INVALIDA })
+      }
+      await esperarExtracao(api)
+      expect(extrair).not.toHaveBeenCalled()
+      expect(await materiaisDa(bancada, escola.coordenacao.escolaId)).toEqual([])
+    })
+
     it('o licenciante é da coordenação: o professor da disciplina lê o material sem ele, na lista e por id', async () => {
       const escola = await montarEscolaComTurma(api, bancada)
       const deTerceiro = await enviarMaterial(api, escola.coordenacao, { disciplinaId: escola.quimica, titularidade: 'terceiro_com_licenca', licenca: 'licenca_comercial_autorizada', licenciante: 'Editora sintética' })

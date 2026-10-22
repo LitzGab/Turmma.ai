@@ -79,11 +79,12 @@ export default tseslint.config(
     // A entrada HTTP passa pelo pipe no parâmetro (D81; NestJS, "Pipes" › Object schema validation): `@Body(new
     // ZodValidationPipe(esquema))`, `@Query(new ZodValidationPipe(esquema))` e `@Param('id', IdPipe)`. Parâmetro sem pipe
     // entrega ao service o que o cliente mandou, e `@Req()` e `requisicao.body|query|params` leem a entrada por fora dele.
-    // O `files` cresce por tarefa (14.0: os cinco primeiros módulos; 15.0: estrutura, sala e governança; 16.0: sessão e operação; a
-    // 17.0 o faz valer em todo `apps/api/src/**/*.controller.ts`). `no-restricted-syntax` está em `REGRAS_DAS_GUARDAS`:
+    // Vale em todo `apps/api/src/**/*.controller.ts` (17.0): o `files` cresceu por tarefa até aqui (14.0: os cinco primeiros
+    // módulos; 15.0: estrutura, sala e governança; 16.0: sessão e operação), e controller de módulo novo já nasce barrado.
+    // `no-restricted-syntax` está em `REGRAS_DAS_GUARDAS`:
     // o `eslint-disable` dele não fura a segunda passada do `npm run lint`. O `@UploadedFile()` não é barrado: os campos
     // ao lado dele passam pelo pipe.
-    files: ['apps/api/src/{sistema,ia,entrega,assistente,professores,estrutura,sala,governanca,sessao,operacao}/**/*.controller.ts'],
+    files: ['apps/api/src/**/*.controller.ts'],
     rules: {
       'no-restricted-syntax': ['error', ...SELETORES_DA_ENTRADA, SELETOR_DA_REQUISICAO],
     },

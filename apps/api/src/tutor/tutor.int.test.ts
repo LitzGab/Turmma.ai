@@ -1,5 +1,13 @@
 import { MENSAGEM_DE_ASSUNTO_DELICADO, MENSAGEM_DE_RISCO_A_VIDA, type ExecutorNoProcesso } from '@educa/nucleo'
-import { esquemaRespostaConversaDoTutor, esquemaRespostaMemoriaDoTutor, esquemaRespostaSinais, esquemaRespostaUsoDoTutor, TROCAS_POR_DIA_PADRAO_DO_TUTOR, type ChaveDeFuncao } from '@educa/shared'
+import {
+  esquemaRespostaConversaDoTutor,
+  esquemaRespostaMemoriaDoTutor,
+  esquemaRespostaSinais,
+  esquemaRespostaUsoDoTutor,
+  TAMANHO_MAXIMO_DA_PERGUNTA_AO_TUTOR,
+  TROCAS_POR_DIA_PADRAO_DO_TUTOR,
+  type ChaveDeFuncao,
+} from '@educa/shared'
 import type { Redis } from 'ioredis'
 import { randomUUID } from 'node:crypto'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -230,6 +238,22 @@ describe('Tutor e sinais', () => {
         expect(await enviar(aluno, corpo), JSON.stringify(corpo)).toMatchObject({ status: 400, corpo: { erro: { codigo: 'ENTRADA_INVALIDA' } } })
       }
       expect(await mensagensDe(aluno)).toEqual([])
+    })
+
+    it('a mensagem vazia, acima do tamanho, ou com um campo a mais, é ENTRADA_INVALIDA: a troca do dia não é gasta, nada é gravado, e o texto não vai ao log nem à resposta (17.0)', async () => {
+      const aluno = await novoAluno(a)
+      const sentinela = `sentinela-${randomUUID()}`
+      const antes = (await conversaDe(aluno)).uso.hoje
+      for (const corpo of [{ texto: '' }, { texto: `${sentinela} ${'a'.repeat(TAMANHO_MAXIMO_DA_PERGUNTA_AO_TUTOR)}` }, { texto: sentinela, alunoId: a.aluno.usuarioId }]) {
+        const recusada = await enviar(aluno, corpo)
+        expect(recusada).toMatchObject({ status: 400, corpo: { erro: { codigo: 'ENTRADA_INVALIDA' } } })
+        expect(JSON.stringify(recusada.corpo)).not.toContain(sentinela)
+      }
+      expect((await conversaDe(aluno)).uso.hoje).toBe(antes)
+      expect(await mensagensDe(aluno)).toEqual([])
+      // A varredura só vale se o log registrou os erros: sem isso, a ausência da sentinela não prova nada.
+      expect(linhasDeLog.filter((linha) => linha.includes('http.erro')).length).toBeGreaterThan(0)
+      expect(linhasDeLog.some((linha) => linha.includes(sentinela))).toBe(false)
     })
 
     it('o envio tem limite por aluno, não por IP: quem passa do teto do minuto espera, e o colega no mesmo endereço continua', async () => {

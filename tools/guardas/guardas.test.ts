@@ -75,8 +75,8 @@ describe('processadores do worker: nenhuma afirmação de tipo (totais do expurg
 })
 
 describe('a entrada do controller passa pelo pipe (no-restricted-syntax, D81)', () => {
-  /** Os módulos em que a requisição inteira também é barrada. */
-  const MODULOS_SEM_REQUISICAO = ['sistema', 'ia', 'entrega', 'assistente', 'professores', 'estrutura', 'sala', 'governanca']
+  /** Os módulos em que a requisição inteira também é barrada: todos os que têm controller e não leem cookie nem IP. */
+  const MODULOS_SEM_REQUISICAO = ['sistema', 'ia', 'entrega', 'assistente', 'professores', 'estrutura', 'sala', 'governanca', 'atividade', 'artefato', 'material', 'tutor', 'privacidade']
   /** Os módulos que leem cookie, `Authorization` e IP da requisição (16.0): o `@Req()` passa, a entrada continua barrada. */
   const MODULOS_COM_REQUISICAO = ['sessao', 'operacao']
   const MODULOS_MIGRADOS = [...MODULOS_SEM_REQUISICAO, ...MODULOS_COM_REQUISICAO]
@@ -97,14 +97,19 @@ describe('a entrada do controller passa pelo pipe (no-restricted-syntax, D81)', 
     expect(await lintar(eslint, fixture, `apps/api/src/${modulo}/x.controller.ts`, regras)).toEqual(esperadas)
   })
 
+  it('o controller de um módulo que ainda não existe já nasce barrado: o files do bloco é o glob de todo controller, e não a lista de módulos', async () => {
+    const fixture = 'entrada-sem-esquema.ts'
+    expect(await lintar(eslint, fixture, 'apps/api/src/modulo-que-ainda-nao-existe/x.controller.ts', regras)).toEqual(marcasDeViolacao(fixture))
+  })
+
   it('o jeito certo passa: o pipe no parâmetro, o IdPipe com e sem invalidAsUndefined, o errorCode, @UploadedFile() e @Res()', async () => {
     for (const modulo of MODULOS_MIGRADOS) {
       expect(await lintar(eslint, 'entrada-com-esquema.ts', `apps/api/src/${modulo}/x.controller.ts`, regras), modulo).toEqual([])
     }
   })
 
-  it('vale só no controller dos módulos migrados: o mesmo arquivo como service, ou num módulo que ainda não migrou, passa', async () => {
-    for (const caminho of ['apps/api/src/ia/x.service.ts', 'apps/api/src/tutor/x.controller.ts', 'apps/api/src/ia/x.controller.test.ts']) {
+  it('vale só no controller: o mesmo arquivo como service, como teste do controller ou fora de apps/api/src, passa', async () => {
+    for (const caminho of ['apps/api/src/ia/x.service.ts', 'apps/api/src/tutor/x.service.ts', 'apps/api/src/ia/x.controller.test.ts', 'apps/api/test/x.controller.ts']) {
       expect(await lintar(eslint, 'entrada-sem-esquema.ts', caminho, regras), caminho).toEqual([])
     }
   })

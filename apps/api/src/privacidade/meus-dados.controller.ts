@@ -1,7 +1,6 @@
-import { Permite } from '@educa/nucleo'
-import { esquemaPedidoSemCorpo, type RespostaDoArquivo, type RespostaMeusDados } from '@educa/shared'
+import { IdPipe, Permite, ZodValidationPipe } from '@educa/nucleo'
+import { esquemaPedidoSemCorpo, type PedidoSemCorpo, type RespostaDoArquivo, type RespostaMeusDados } from '@educa/shared'
 import { Body, Controller, Get, Header, HttpCode, HttpStatus, Param, Post } from '@nestjs/common'
-import { idDoCaminho, lerEntrada } from '../estrutura/entrada.js'
 import { PrivacidadeService } from './privacidade.service.js'
 
 /**
@@ -29,8 +28,7 @@ export class MeusDadosController {
   @Permite('meus_dados', 'baixar')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  baixar(@Param('id') id: string, @Body() corpo: unknown): Promise<RespostaDoArquivo> {
-    lerEntrada(esquemaPedidoSemCorpo, corpo)
-    return this.privacidade.baixarMeuArquivo(idDoCaminho(id))
+  baixar(@Param('id', IdPipe) pedidoId: string, @Body(new ZodValidationPipe(esquemaPedidoSemCorpo)) _corpo: PedidoSemCorpo): Promise<RespostaDoArquivo> {
+    return this.privacidade.baixarMeuArquivo(pedidoId)
   }
 }

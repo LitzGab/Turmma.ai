@@ -596,6 +596,7 @@ export type {
   ArtefatoResumido,
   ConsultaArtefatos,
   PedidoAdaptarArtefato,
+  ParametroFerramenta,
   PedidoGerarComFerramenta,
   PedidoRenomearArtefato,
   RespostaArtefato,
@@ -606,6 +607,7 @@ export {
   esquemaConsultaAtividadesAplicadas,
   esquemaPedidoAplicarAtividade,
   esquemaPedidoSemCorpo,
+  esquemaPedidoSemCorpoOuAusente,
   esquemaRespostaAtividadeAplicada,
   esquemaRespostaAtividadeEncerrada,
   esquemaRespostaListaDeAtividadesAplicadas,
@@ -627,6 +629,7 @@ export {
   esquemaConsultaMinhasAtividades,
   esquemaMinhaAtividade,
   esquemaNumeroDaQuestao,
+  esquemaQuestaoDoCaminho,
   esquemaPedidoResponderQuestao,
   esquemaQuestaoDaProva,
   esquemaQuestaoDoDiagnostico,
@@ -643,6 +646,7 @@ export {
 } from './atividade/prova.js'
 export type {
   AcertoPorHabilidade,
+  ConsultaMinhasAtividades,
   EspelhoDaFila,
   MinhaAtividade,
   PedidoResponderQuestao,
@@ -917,6 +921,7 @@ export {
   TIPOS_DE_PEDIDO_DO_TITULAR,
 } from './privacidade/titular.js'
 export type {
+  BuscaDeTitulares,
   Compartilhamento,
   EstadoDoPedido,
   EstadoDoTitular,

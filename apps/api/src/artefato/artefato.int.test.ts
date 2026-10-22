@@ -203,14 +203,24 @@ describe('ferramentas e artefato', () => {
     })
 
     it('o corpo é o contrato estrito, e ferramenta fora da lista não existe', async () => {
-      const antes = await contarNaEscola(bancada, 'execucao_agente', a.escolaId)
+      const gastos = async () => [await contarNaEscola(bancada, 'execucao_agente', a.escolaId), await contarNaEscola(bancada, 'consumo_ia', a.escolaId)]
+      const antes = await gastos()
       for (const extra of [{ escolaId: b.escolaId }, { professorId: a.colega.usuarioId }, { quantidade: 21 }, { aluno: 'descrição' }]) {
         expect(semId(await pedir(a.professora, 'POST', '/v1/ferramentas/atividade_objetiva/gerar', { ...parametros(a, 'mol', extra), chaveEnvio: randomUUID() }))).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
       }
       for (const ferramenta of ['adaptacao', 'redacao', 'x']) {
         expect(semId(await pedir(a.professora, 'POST', `/v1/ferramentas/${ferramenta}/gerar`, { ...parametros(a, 'mol'), chaveEnvio: randomUUID() }))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
       }
-      expect(await contarNaEscola(bancada, 'execucao_agente', a.escolaId)).toBe(antes)
+      // A ferramenta que existe mas não gera (`adaptacao`) e a que nem existe (`x`) respondem ao pé da letra o mesmo (regra 10, item 6).
+      const resposta = async (ferramenta: string) => {
+        const lida = await pedir(a.professora, 'POST', `/v1/ferramentas/${ferramenta}/gerar`, { ...parametros(a, 'mol'), chaveEnvio: randomUUID() })
+        return { status: lida.status, corpo: { erro: { ...lida.corpo.erro, requisicaoId: undefined } } }
+      }
+      expect(await resposta('adaptacao')).toEqual(await resposta('x'))
+      // O corpo fora do contrato, com uma ferramenta que não existe, dá o erro do corpo, o último parâmetro (onda-1a.md T1, 17.0).
+      expect(semId(await pedir(a.professora, 'POST', '/v1/ferramentas/x/gerar', { ...parametros(a, 'mol', { escolaId: b.escolaId }), chaveEnvio: randomUUID() }))).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
+      // Nenhuma execução nasce e nada do orçamento de IA é consumido (a linha da tabela da 17.0: "sem execução nem consumo").
+      expect(await gastos()).toEqual(antes)
     })
   })
 

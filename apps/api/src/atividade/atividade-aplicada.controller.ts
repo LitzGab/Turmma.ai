@@ -1,8 +1,11 @@
-import { Permite } from '@educa/nucleo'
+import { IdPipe, Permite, ZodValidationPipe } from '@educa/nucleo'
 import {
   esquemaConsultaAtividadesAplicadas,
   esquemaPedidoAplicarAtividade,
-  esquemaPedidoSemCorpo,
+  esquemaPedidoSemCorpoOuAusente,
+  type ConsultaAtividadesAplicadas,
+  type PedidoAplicarAtividade,
+  type PedidoSemCorpo,
   type RespostaAtividadeAplicada,
   type RespostaAtividadeEncerrada,
   type RespostaCorrecaoDoLote,
@@ -10,7 +13,6 @@ import {
   type RespostaListaDeAtividadesAplicadas,
 } from '@educa/shared'
 import { Body, Controller, Get, Header, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common'
-import { idDoCaminho, lerEntrada } from '../estrutura/entrada.js'
 import { AtividadeAplicadaService } from './atividade-aplicada.service.js'
 import { CorrecaoService } from './correcao.service.js'
 
@@ -18,7 +20,8 @@ import { CorrecaoService } from './correcao.service.js'
  * `/v1/atividades-aplicadas`, o lado da professora (MVP, A3): aplicar, listar, encerrar, ler a correção do lote e abrir
  * destaque. Todas as células são `turma_vinculada`, só do professor: coordenação e aluno são recusados pela guarda. O
  * corpo e a consulta passam pelo contrato estrito (escola, ano ou pessoa no corpo é `ENTRADA_INVALIDA`), e o id fora do
- * formato responde como o inexistente. A correção nomeia alunos e tem o gabarito: toda leitura sai com `no-store`.
+ * formato responde como o inexistente. A correção nomeia alunos e tem o gabarito: toda leitura sai com `no-store`. A
+ * entrada passa pelo `ZodValidationPipe` e pelo `IdPipe` no parâmetro (17.0).
  */
 @Controller('v1/atividades-aplicadas')
 export class AtividadeAplicadaController {
@@ -29,41 +32,40 @@ export class AtividadeAplicadaController {
 
   @Post()
   @Permite('atividade_aplicada', 'aplicar')
-  aplicar(@Body() corpo: unknown): Promise<RespostaAtividadeAplicada> {
-    return this.atividades.aplicar(lerEntrada(esquemaPedidoAplicarAtividade, corpo))
+  aplicar(@Body(new ZodValidationPipe(esquemaPedidoAplicarAtividade)) pedido: PedidoAplicarAtividade): Promise<RespostaAtividadeAplicada> {
+    return this.atividades.aplicar(pedido)
   }
 
   @Get()
   @Permite('atividade_aplicada', 'listar')
   @Header('Cache-Control', 'no-store')
-  listar(@Query() consulta: unknown): Promise<RespostaListaDeAtividadesAplicadas> {
-    return this.atividades.listar(lerEntrada(esquemaConsultaAtividadesAplicadas, consulta))
+  listar(@Query(new ZodValidationPipe(esquemaConsultaAtividadesAplicadas)) consulta: ConsultaAtividadesAplicadas): Promise<RespostaListaDeAtividadesAplicadas> {
+    return this.atividades.listar(consulta)
   }
 
   @Post(':id/encerrar')
   @Permite('atividade_aplicada', 'encerrar')
   @HttpCode(HttpStatus.OK)
-  encerrar(@Param('id') id: string, @Body() corpo: unknown): Promise<RespostaAtividadeEncerrada> {
-    const atividadeAplicadaId = idDoCaminho(id)
-    lerEntrada(esquemaPedidoSemCorpo, corpo ?? {})
+  encerrar(@Param('id', IdPipe) atividadeAplicadaId: string, @Body(new ZodValidationPipe(esquemaPedidoSemCorpoOuAusente)) _corpo: PedidoSemCorpo): Promise<RespostaAtividadeEncerrada> {
     return this.atividades.encerrar(atividadeAplicadaId)
   }
 
   @Get(':id/correcao')
   @Permite('correcao', 'ler')
   @Header('Cache-Control', 'no-store')
-  correcao(@Param('id') id: string): Promise<RespostaCorrecaoDoLote> {
-    return this.correcoes.ler(idDoCaminho(id))
+  correcao(@Param('id', IdPipe) atividadeAplicadaId: string): Promise<RespostaCorrecaoDoLote> {
+    return this.correcoes.ler(atividadeAplicadaId)
   }
 
   @Post(':id/correcao/destaques/:alunoId/abrir')
   @Permite('correcao', 'abrir_destaque')
   @HttpCode(HttpStatus.OK)
   @Header('Cache-Control', 'no-store')
-  abrirDestaque(@Param('id') id: string, @Param('alunoId') alunoId: string, @Body() corpo: unknown): Promise<RespostaDestaqueAberto> {
-    const atividadeAplicadaId = idDoCaminho(id)
-    const aluno = idDoCaminho(alunoId)
-    lerEntrada(esquemaPedidoSemCorpo, corpo ?? {})
+  abrirDestaque(
+    @Param('id', IdPipe) atividadeAplicadaId: string,
+    @Param('alunoId', IdPipe) aluno: string,
+    @Body(new ZodValidationPipe(esquemaPedidoSemCorpoOuAusente)) _corpo: PedidoSemCorpo,
+  ): Promise<RespostaDestaqueAberto> {
     return this.correcoes.abrirDestaque(atividadeAplicadaId, aluno)
   }
 }

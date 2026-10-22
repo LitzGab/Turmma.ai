@@ -1,15 +1,17 @@
-import { Permite } from '@educa/nucleo'
+import { Permite, ZodValidationPipe } from '@educa/nucleo'
 import {
   esquemaConsultaConversaDoTutor,
   esquemaConsultaUsoDoTutor,
   esquemaPedidoMensagemAoTutor,
+  type ConsultaConversaDoTutor,
+  type ConsultaUsoDoTutor,
+  type PedidoMensagemAoTutor,
   type RespostaConversaDoTutor,
   type RespostaExecucaoAceita,
   type RespostaMemoriaDoTutor,
   type RespostaUsoDoTutor,
 } from '@educa/shared'
 import { Body, Controller, Get, Header, HttpCode, HttpStatus, Post, Query } from '@nestjs/common'
-import { lerEntrada } from '../estrutura/entrada.js'
 import { SupervisaoDoTutorService } from './supervisao.service.js'
 import { TutorService } from './tutor.service.js'
 
@@ -17,7 +19,8 @@ import { TutorService } from './tutor.service.js'
  * `/v1/tutor` (MVP, A4; D8, D47). As três células do aluno são `próprio`: professor e coordenação recebem da guarda a
  * resposta do inexistente, e não existe rota que entregue a conversa ou a memória de um aluno a outra pessoa. `uso` é
  * só do professor (`turma_vinculada`): o aluno e a coordenação não leem. O corpo e a consulta passam pelo contrato
- * estrito: `escolaId`, `alunoId`, `turmaId` no envio ou qualquer campo a mais é `ENTRADA_INVALIDA`. Tudo com `no-store`.
+ * estrito: `escolaId`, `alunoId`, `turmaId` no envio ou qualquer campo a mais é `ENTRADA_INVALIDA`, antes de a troca ser gasta. Tudo com
+ * `no-store`. A entrada passa pelo `ZodValidationPipe` no parâmetro (17.0), que nunca leva o texto da mensagem ao log nem à resposta.
  */
 @Controller('v1/tutor')
 export class TutorController {
@@ -29,15 +32,15 @@ export class TutorController {
   @Post('mensagens')
   @Permite('tutor', 'enviar_mensagem')
   @HttpCode(HttpStatus.ACCEPTED)
-  enviar(@Body() corpo: unknown): Promise<RespostaExecucaoAceita> {
-    return this.tutor.enviar(lerEntrada(esquemaPedidoMensagemAoTutor, corpo))
+  enviar(@Body(new ZodValidationPipe(esquemaPedidoMensagemAoTutor)) pedido: PedidoMensagemAoTutor): Promise<RespostaExecucaoAceita> {
+    return this.tutor.enviar(pedido)
   }
 
   @Get('conversa')
   @Permite('tutor', 'ler_conversa')
   @Header('Cache-Control', 'no-store')
-  conversa(@Query() consulta: unknown): Promise<RespostaConversaDoTutor> {
-    return this.tutor.conversa(lerEntrada(esquemaConsultaConversaDoTutor, consulta))
+  conversa(@Query(new ZodValidationPipe(esquemaConsultaConversaDoTutor)) consulta: ConsultaConversaDoTutor): Promise<RespostaConversaDoTutor> {
+    return this.tutor.conversa(consulta)
   }
 
   @Get('memoria')
@@ -50,7 +53,7 @@ export class TutorController {
   @Get('uso')
   @Permite('uso_do_tutor', 'ler')
   @Header('Cache-Control', 'no-store')
-  uso(@Query() consulta: unknown): Promise<RespostaUsoDoTutor> {
-    return this.supervisao.uso(lerEntrada(esquemaConsultaUsoDoTutor, consulta))
+  uso(@Query(new ZodValidationPipe(esquemaConsultaUsoDoTutor)) consulta: ConsultaUsoDoTutor): Promise<RespostaUsoDoTutor> {
+    return this.supervisao.uso(consulta)
   }
 }

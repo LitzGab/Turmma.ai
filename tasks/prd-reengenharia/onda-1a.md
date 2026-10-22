@@ -203,6 +203,23 @@ segunda passada ignora `eslint-disable`.
   existe; o `slug` da query é `z.string().trim().pipe(esquemaSlugDaEscola)`, porque o controller já o cortava; (b)
   `refazer` e `revogar` do painel e `renovar` e `sair` do operador, que aceitam corpo ausente, usam
   `esquemaPedidoSemCorpoDeOperador.default({})` no pipe, como o `revogar` do acesso da turma (15.0), e não mais o `corpo ?? {}`.
+  **A 17.0 repete a conduta** (caracterização no commit da tarefa, em `apps/api/test/borda-de-entrada-ultimos-modulos.int.test.ts`
+  e nos testes que já cobriam cada rota, rodada verde contra o código antigo antes de qualquer controller mudar) e achou a mesma
+  mudança em 10 rotas de `atividade/`, `artefato/` e `privacidade/` que leem id no caminho e corpo, o último parâmetro: com os
+  dois inválidos ao mesmo tempo, passam do 404 do id ao 400 do corpo (`encerrar`, `abrirDestaque`, `aprovarLote`, `responder`
+  e `enviar` da atividade, `renomear` e `adaptar` do artefato, `corrigir-nome` e `arquivo` do pedido do titular, e o `ler` do
+  desempenho, que tem consulta), a `ferramenta` fora da lista com corpo inválido passa do 404 ao 400, e a `questao` do caminho fora
+  do formato ou do intervalo, com corpo inválido, também. Não revela existência:
+  com a entrada inválida, qualquer id dá o mesmo 400. As rotas que já liam o corpo antes do id (`meus-dados/:id/baixar` e
+  `incidentes/:id/confirmar`, `concluir` e `cancelar` do pedido) não mudam. Outras três decisões da 17.0: (a) a `questao` do
+  caminho passa pelo `ZodValidationPipe` com `errorCode: NAO_ENCONTRADO` e o esquema `esquemaQuestaoDoCaminho` (`packages/shared`),
+  que só aceita um ou dois dígitos de 1 a 20: o `coerce` sozinho aceitaria `0x3`, `+3` e `001`, e o `questaoDoCaminho` antigo
+  os barrava pela expressão regular; (b) o `POST` sem campo (`encerrar`, `abrirDestaque`, `aprovar-lote`, `enviar` da atividade)
+  usa `esquemaPedidoSemCorpoOuAusente`, o `esquemaPedidoSemCorpo.default({})` de `packages/shared`, e o `meus-dados/:id/baixar`
+  e os `POST` sem campo da privacidade continuam recusando a falta de corpo, com o `esquemaPedidoSemCorpo` sem o `default`, como
+  o `lerEntrada(esquemaPedidoSemCorpo, corpo)` de antes; (c) o upload do material valida os campos pelo `ZodValidationPipe` ao
+  lado do `@UploadedFile()`: o interceptor recebe o arquivo para a memória antes do pipe, e o pipe recusa os campos antes de o
+  service ser chamado, então o arquivo de um pedido recusado nem chega à leitura e não é guardado em lugar nenhum.
 
 **A trava é o ESLint core.** Um bloco de `no-restricted-syntax` em `eslint.config.mjs`, para `*.controller.ts`, reprova
 `@Body()`, `@Query()` e `@Param(nome)` sem pipe, `@Req()` e `requisicao.body`, `.query` e `.params`. O `files` do bloco

@@ -16,6 +16,17 @@ import { ESTADOS_DE_ATIVIDADE_APLICADA } from './atividade-aplicada.js'
 /** O número da questão, de 1 a 20, no caminho (`/respostas/:questao`) e nos corpos. */
 export const esquemaNumeroDaQuestao = z.coerce.number().int().min(1).max(MAXIMO_DE_QUESTOES_POR_ATIVIDADE)
 
+/**
+ * A questão no caminho (`/respostas/:questao`): um ou dois dígitos, e então o intervalo acima. Só dígitos, porque o
+ * `coerce` aceitaria `'0x3'`, `'+3'`, `'1e1'` e `'001'`, e nenhum desses é o número de uma questão. Só dígitos também garante
+ * o inteiro, e por isso o intervalo não repete o `.int()`. Fora daí nenhuma questão existe assim.
+ */
+export const esquemaQuestaoDoCaminho = z
+  .string()
+  .regex(/^\d{1,2}$/)
+  .transform(Number)
+  .pipe(z.number().min(1).max(MAXIMO_DE_QUESTOES_POR_ATIVIDADE))
+
 /** O índice da alternativa, de 0 a 3. */
 export const esquemaAlternativa = z.number().int().min(0).max(ALTERNATIVAS_POR_QUESTAO - 1)
 
@@ -42,6 +53,7 @@ export const esquemaMinhaAtividade = z.strictObject({
 export type MinhaAtividade = z.infer<typeof esquemaMinhaAtividade>
 
 export const esquemaConsultaMinhasAtividades = esquemaConsultaPaginada
+export type ConsultaMinhasAtividades = z.infer<typeof esquemaConsultaMinhasAtividades>
 export const esquemaRespostaMinhasAtividades = esquemaDePagina(esquemaMinhaAtividade)
 export type RespostaMinhasAtividades = z.infer<typeof esquemaRespostaMinhasAtividades>
 

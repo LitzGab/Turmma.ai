@@ -1,13 +1,12 @@
-import { Permite } from '@educa/nucleo'
-import { esquemaConsultaSinais, type RespostaSinais } from '@educa/shared'
+import { Permite, ZodValidationPipe } from '@educa/nucleo'
+import { esquemaConsultaSinais, type ConsultaSinais, type RespostaSinais } from '@educa/shared'
 import { Controller, Get, Header, Query } from '@nestjs/common'
-import { lerEntrada } from '../estrutura/entrada.js'
 import { SupervisaoDoTutorService } from './supervisao.service.js'
 
 /**
  * `GET /v1/sinais?turmaId=` (MVP, A4; D34, D36, D57): os sinais do Tutor para o professor da turma. A célula é
  * `turma_vinculada`, só do professor: o aluno e a coordenação recebem da guarda a resposta do inexistente. A consulta é
- * estrita: não aceita aluno, tipo nem ordenação.
+ * estrita: não aceita aluno, tipo nem ordenação, e passa pelo `ZodValidationPipe` no parâmetro (17.0).
  */
 @Controller('v1/sinais')
 export class SinaisController {
@@ -16,7 +15,7 @@ export class SinaisController {
   @Get()
   @Permite('sinal', 'ler')
   @Header('Cache-Control', 'no-store')
-  listar(@Query() consulta: unknown): Promise<RespostaSinais> {
-    return this.supervisao.sinais(lerEntrada(esquemaConsultaSinais, consulta))
+  listar(@Query(new ZodValidationPipe(esquemaConsultaSinais)) consulta: ConsultaSinais): Promise<RespostaSinais> {
+    return this.supervisao.sinais(consulta)
   }
 }

@@ -108,6 +108,7 @@ export type Compartilhamento = z.infer<typeof esquemaCompartilhamento>
  * pessoa. O termo nunca vai a log nem à auditoria.
  */
 export const esquemaBuscaDeTitulares = z.strictObject({ termo: z.string().trim().min(MINIMO_DE_LETRAS_DO_TERMO).max(MAXIMO_DO_NOME_DO_TITULAR) })
+export type BuscaDeTitulares = z.infer<typeof esquemaBuscaDeTitulares>
 
 /**
  * O titular como a busca o devolve: id, nome, papel, matrícula e turma do ano (aluno) ou disciplinas e turmas desta

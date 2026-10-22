@@ -365,13 +365,36 @@ describe('atividade aplicada', () => {
     it('a questão que a atividade não tem responde como inexistente, e a alternativa fora de 0 a 3 ou um campo a mais, ENTRADA_INVALIDA; nada é gravado', async () => {
       const id = await aplicada()
       await rotas.prova(a.aluno, id)
-      for (const questao of [6, 0, 21, 'abc', '1.5', '-1']) expect(erro(await rotas.responder(a.aluno, id, questao, 0))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
+      // O `coerce` sozinho aceitaria `0x3`, `+3` e `001` como a questão 3, 3 e 1: o caminho só tem um ou dois dígitos.
+      for (const questao of [6, 0, 21, 'abc', '1.5', '-1', '0x3', '+3', '001']) expect(erro(await rotas.responder(a.aluno, id, questao, 0))).toEqual({ status: 404, codigo: 'NAO_ENCONTRADO' })
       expect(erro(await rotas.responder(a.aluno, id, 1, 4))).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
       for (const corpo of [{ alternativa: 0, correta: true }, { alternativa: 0, alunoId: bia.usuarioId }, {}]) {
         expect(erro(await rotas.pedir(a.aluno, 'PUT', `/v1/atividades-aplicadas/${id}/respostas/1`, corpo))).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
       }
       expect(await respostasDe(id, a.aluno.usuarioId)).toEqual([])
       expect(await respostasDe(id, bia.usuarioId)).toEqual([])
+    })
+
+    it('o corpo fora do contrato não apaga nem troca a resposta que já estava salva: ENTRADA_INVALIDA, e a gravada continua (17.0)', async () => {
+      const id = await aplicada()
+      await rotas.prova(a.aluno, id)
+      expect((await rotas.responder(a.aluno, id, 2, 1)).status).toBe(200)
+      for (const corpo of [{ alternativa: 4 }, { alternativa: 3, correta: true }, { alternativa: 'a' }, {}]) {
+        expect(erro(await rotas.pedir(a.aluno, 'PUT', `/v1/atividades-aplicadas/${id}/respostas/2`, corpo)), JSON.stringify(corpo)).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
+      }
+      expect(await respostasDe(id, a.aluno.usuarioId)).toEqual([{ questao: 2, alternativa: 1 }])
+    })
+
+    it('enviar sem corpo nenhum vale como corpo vazio e envia; com um campo a mais é ENTRADA_INVALIDA e não envia (17.0)', async () => {
+      const id = await aplicada()
+      await responderProva(rotas, a.aluno, id, [0, 1], false)
+      expect(erro(await rotas.pedir(a.aluno, 'POST', `/v1/atividades-aplicadas/${id}/enviar`, { forcar: true }))).toEqual({ status: 400, codigo: 'ENTRADA_INVALIDA' })
+      // Não enviou: a atividade segue aberta para ele.
+      expect((await rotas.responder(a.aluno, id, 3, 2)).status).toBe(200)
+      const enviada = await rotas.pedir(a.aluno, 'POST', `/v1/atividades-aplicadas/${id}/enviar`)
+      expect(enviada.status).toBe(200)
+      expect(enviada.corpo).toMatchObject({ respondidas: 3, questoes: 5 })
+      expect(erro(await rotas.responder(a.aluno, id, 4, 0))).toEqual({ status: 409, codigo: 'ATIVIDADE_ENCERRADA' })
     })
 
     it('depois de enviar, a resposta é recusada (ATIVIDADE_ENCERRADA) e o que estava salvo não muda; enviar de novo devolve o mesmo', async () => {

@@ -39,10 +39,9 @@ módulo/recurso
 ```
 
 **A entrada.** O controller valida pelo `ZodValidationPipe` do NestJS, com o esquema de `shared`
-(`packages/nucleo/src/entrada/`). Os controllers de `artefato`, `atividade`, `material`, `operacao`, `privacidade` e
-`tutor` ainda validam à mão, com `lerEntrada(esquema, corpo)` e `idDoCaminho(id)` de
-`apps/api/src/estrutura/entrada.ts`. A resposta passa pelo esquema de resposta no service, e o mesmo esquema valida a
-leitura na web (D81).
+(`packages/nucleo/src/entrada/`), e o `IdPipe` lê o id do caminho. Todo controller de `apps/api/src` valida assim: o ESLint
+reprova `@Body()`, `@Query()` e `@Param()` sem pipe, e `@Req()` cru fora de `sessao/` e `operacao/`. A resposta passa pelo
+esquema de resposta no service, e o mesmo esquema valida a leitura na web (D81).
 
 Módulos montados (`apps/api/src/app.module.ts`):
 - de domínio: `estrutura` (escola, ano letivo, série, turma, disciplina, vínculo, lista), `professores`, `material`,

@@ -146,11 +146,11 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
   - [ ] 16.3 Os dois módulos entram no `files` do bloco de `no-restricted-syntax`
   - [ ] 16.4 Testes: os da tabela
 
-- [ ] **17.0 — Atividade, artefato, material, tutor e privacidade migram, e o lint vale em todo controller**
-  - [ ] 17.1 Caracterização, num commit antes: o inválido e o 404 da `questao`, da `ferramenta`, do upload e do pedido do titular
-  - [ ] 17.2 Migram os 4 controllers de `atividade/`, os 2 de `artefato/`, `material/`, os 2 de `tutor/` e os 2 de `privacidade/`
-  - [ ] 17.3 O `files` do bloco passa a `apps/api/src/**/*.controller.ts`; saem `lerEntrada`, `idDoCaminho` e `lerConsultaPaginada`
-  - [ ] 17.4 Testes: os da tabela
+- [x] **17.0 — Atividade, artefato, material, tutor e privacidade migram, e o lint vale em todo controller**
+  - [x] 17.1 Caracterização, num commit antes: o inválido e o 404 da `questao`, da `ferramenta`, do upload e do pedido do titular
+  - [x] 17.2 Migram os 4 controllers de `atividade/`, os 2 de `artefato/`, `material/`, os 2 de `tutor/` e os 2 de `privacidade/`
+  - [x] 17.3 O `files` do bloco passa a `apps/api/src/**/*.controller.ts`; saem `lerEntrada`, `idDoCaminho` e `lerConsultaPaginada`
+  - [x] 17.4 Testes: os da tabela
 
 ### Jobs tipados
 

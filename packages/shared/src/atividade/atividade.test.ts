@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ConteudoDeAtividade } from '../assistente/conteudo.js'
-import { esquemaAtividadeAplicada, esquemaPedidoAplicarAtividade, esquemaPedidoSemCorpo, esquemaRespostaAtividadeEncerrada } from './atividade-aplicada.js'
+import { esquemaAtividadeAplicada, esquemaPedidoAplicarAtividade, esquemaPedidoSemCorpo, esquemaPedidoSemCorpoOuAusente, esquemaRespostaAtividadeEncerrada } from './atividade-aplicada.js'
 import { esquemaDiagnosticoGravado, esquemaLoteApresentado, esquemaRespostaCorrecaoDoLote, esquemaRespostaLoteAprovado, esquemaResumoDoLote, esquemaValidacaoDoLote, MOTIVOS_DE_DESTAQUE } from './correcao.js'
 import { esquemaConsultaDesempenhoDaTurma, esquemaRespostaDesempenhoDaTurma } from './desempenho.js'
 import {
@@ -8,6 +8,7 @@ import {
   esquemaNumeroDaQuestao,
   esquemaPedidoResponderQuestao,
   esquemaQuestaoDaProva,
+  esquemaQuestaoDoCaminho,
   esquemaRespostaMeuDiagnostico,
   esquemaRespostaProva,
   esquemaRespostaQuestaoSalva,
@@ -83,6 +84,12 @@ describe('a prova que o aluno recebe: sem gabarito e sem explicação', () => {
     // O número da questão chega como texto no caminho.
     expect(esquemaNumeroDaQuestao.parse('3')).toBe(3)
     for (const numero of ['0', '21', 'tres', '1.5']) expect(esquemaNumeroDaQuestao.safeParse(numero).success, numero).toBe(false)
+    // No caminho, a questão só tem um ou dois dígitos, de 1 a 20: o `coerce` sozinho aceitaria `0x3`, `+3`, `1e1` e `001`.
+    expect(esquemaQuestaoDoCaminho.parse('3')).toBe(3)
+    expect(esquemaQuestaoDoCaminho.parse('01')).toBe(1)
+    expect(esquemaQuestaoDoCaminho.parse('1')).toBe(1)
+    expect(esquemaQuestaoDoCaminho.parse('20')).toBe(20)
+    for (const numero of ['0', '00', '21', '99', '001', '0x3', '+3', '1e1', '-1', '1.5', ' 3', '3 ', 'tres', '']) expect(esquemaQuestaoDoCaminho.safeParse(numero).success, numero).toBe(false)
     const salva = { questao: 1, alternativa: 2, sequencia: 4, respondidaEm: AGORA }
     expect(esquemaRespostaQuestaoSalva.safeParse(salva).success).toBe(true)
     // O que ficou gravado sempre diz a sua `sequencia`: é com ela que a tela sabe se perdeu.
@@ -132,6 +139,14 @@ describe('aplicar e encerrar', () => {
     expect(esquemaPedidoAplicarAtividade.safeParse({ artefatoId: UM_ID, turmaId: OUTRO_ID }).success).toBe(false)
     expect(esquemaPedidoSemCorpo.safeParse({}).success).toBe(true)
     expect(esquemaPedidoSemCorpo.safeParse({ forcar: true }).success).toBe(false)
+  })
+
+  it('o corpo que pode faltar vale como vazio, e qualquer campo continua sendo recusado', () => {
+    expect(esquemaPedidoSemCorpoOuAusente.parse(undefined)).toEqual({})
+    expect(esquemaPedidoSemCorpoOuAusente.parse({})).toEqual({})
+    expect(esquemaPedidoSemCorpoOuAusente.safeParse({ forcar: true }).success).toBe(false)
+    // O corpo vazio e estrito, sem o `default`, não aceita faltar: é o que `meus-dados` e a privacidade pedem.
+    expect(esquemaPedidoSemCorpo.safeParse(undefined).success).toBe(false)
   })
 
   it('a atividade aplicada mostra só contagem de participação, e o encerrar devolve a execução da correção, ou nulo com a função suspensa', () => {
