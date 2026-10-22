@@ -152,6 +152,49 @@ async function baixarPelaTela(page: Page): Promise<{ readonly nome: string; read
   return { nome: download.suggestedFilename(), conteudo, chamadas }
 }
 
+/**
+ * O aluno com o arquivo pronto abre o diálogo de baixar, o arquivo sai da escola enquanto ele lia, e a releitura que a falha
+ * dispara fica **retida**: a lista só muda quando o teste chama `soltar`, e não quando a máquina responde. Devolve com o
+ * diálogo já fechado e o foco no botão, que continua na lista velha.
+ */
+async function fecharODialogoComALeituraRetida(page: Page, hasTouch: boolean): Promise<{ readonly soltar: () => void }> {
+  const { coordenadora, aluno } = await montarEscola()
+  const pedidoId = await criarPedidoDoTitularNoBanco({
+    escolaId: coordenadora.escolaId,
+    titularId: aluno.usuarioId,
+    registradoPor: coordenadora.usuarioId,
+    tipo: 'acesso',
+    estado: 'pronto',
+    chegouHaDias: 1,
+  })
+  await criarArquivoDoTitularNoBanco(coordenadora.escolaId, pedidoId)
+  await entrarComoAluno(page, aluno, hasTouch)
+  await abrirPrivacidadeDoAluno(page, hasTouch)
+  await expect(pedidosDaTela(page, 'Cópia dos seus dados')).toContainText('Pronto para baixar', { timeout: PRAZO_DA_ENTRADA_MS })
+
+  await acionar(botaoDeBaixar(page), hasTouch)
+  const dialogo = confirmacao(page)
+  await expect(dialogo).toBeVisible()
+  await apagarArquivoDoTitularNoBanco(coordenadora.escolaId, pedidoId)
+  let soltar: () => void = () => undefined
+  const retida = new Promise<void>((resolver) => (soltar = resolver))
+  let releituras = 0
+  await page.route(LEITURA_DE_MEUS_DADOS, async (rota: Route) => {
+    if (rota.request().method() !== 'GET') return rota.continue()
+    releituras += 1
+    await retida
+    return rota.continue()
+  })
+  await acionar(dialogo.getByRole('button', { name: 'Baixar o arquivo', exact: true }), hasTouch)
+  await expect(dialogo.getByRole('alert')).toContainText('Este arquivo não está mais disponível', { timeout: PRAZO_DA_ENTRADA_MS })
+  await expect.poll(() => releituras, { timeout: PRAZO_DA_ENTRADA_MS }).toBe(1)
+  await acionar(dialogo.getByRole('button', { name: 'Fechar', exact: true }), hasTouch)
+  await expect(dialogo).toHaveCount(0)
+  // A lista ainda é a velha: o botão continua nela, e o foco voltou a ele.
+  await expect(botaoDeBaixar(page)).toBeFocused()
+  return { soltar }
+}
+
 test.describe('Meus dados: o aluno e o professor baixam o que a coordenação registrou', () => {
   test('a coordenação registra o acesso, o worker monta o arquivo e o aluno e o professor baixam `meus-dados-AAAA-MM-DD.json`, cada um o seu, com o download na auditoria', async ({
     page,
@@ -540,6 +583,46 @@ test.describe('Meus dados: os estados', () => {
     expect(baixadas).toBe(1)
     expect((await auditoriaDoPedidoNoBanco(coordenadora.escolaId, pedidoId)).filter((linha) => linha.acao === 'titular.arquivo_baixado')).toHaveLength(0)
     await telaSemProblema(page)
+  })
+
+  test('o arquivo que saiu enquanto a pessoa lia e a lista que só é relida depois de o diálogo fechar: o botão sai com o foco nele, e o foco vai para a tela, e não para o corpo da página', async ({ page, hasTouch }) => {
+    test.setTimeout(90_000)
+    const { soltar } = await fecharODialogoComALeituraRetida(page, hasTouch)
+    soltar()
+    await expect(pedidosDaTela(page, 'Cópia dos seus dados')).toContainText('Arquivo apagado', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(botaoDeBaixar(page)).toHaveCount(0)
+    // O botão que tinha o foco saiu da lista: o foco vai para o contêiner da tela (`div` com `tabIndex={-1}` que guarda a lista),
+    // e não se perde no corpo da página nem fica em outro elemento qualquer (regra 50, item 11).
+    await expect
+      .poll(() =>
+        page.evaluate(() => {
+          const ativo = document.activeElement
+          return ativo?.tagName === 'DIV' && ativo.getAttribute('tabindex') === '-1' && (ativo.textContent ?? '').includes('Arquivo apagado')
+        }),
+      )
+      .toBe(true)
+  })
+
+  test('com a lista relida depois de o diálogo fechar, o foco que a pessoa já levou a outro controle fica onde ela o pôs', async ({ page, hasTouch }) => {
+    test.setTimeout(90_000)
+    const { soltar } = await fecharODialogoComALeituraRetida(page, hasTouch)
+    // A pessoa já foi para outro controle antes de a releitura chegar: a tela não lhe toma o foco.
+    await page.evaluate(() => {
+      const janela = window as unknown as { __focos: string[] }
+      janela.__focos = []
+      const outro = document.createElement('button')
+      outro.id = 'outro-controle-da-pessoa'
+      outro.textContent = 'Outro controle'
+      document.body.append(outro)
+      // Cada elemento que recebe o foco: o foco que passa por outro e volta também é foco tomado, mesmo que o fim pareça o mesmo.
+      document.addEventListener('focusin', (evento) => janela.__focos.push((evento.target as HTMLElement).id || (evento.target as HTMLElement).tagName))
+      outro.focus()
+    })
+    soltar()
+    await expect(pedidosDaTela(page, 'Cópia dos seus dados')).toContainText('Arquivo apagado', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(botaoDeBaixar(page)).toHaveCount(0)
+    await expect(page.locator('#outro-controle-da-pessoa')).toBeFocused()
+    expect(await page.evaluate(() => (window as unknown as { __focos: string[] }).__focos)).toEqual(['outro-controle-da-pessoa'])
   })
 
   test('o anúncio de "pronto" é só de quem estava em preparação e ficou pronto: o que já chegou pronto e o que foi cancelado não anunciam', async ({ page, hasTouch }) => {

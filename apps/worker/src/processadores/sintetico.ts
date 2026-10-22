@@ -1,5 +1,5 @@
 import type { EfeitoSinteticoRepository } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, esquemaDadosJobSintetico } from '@educa/shared'
+import { CodigoDeFalhaDeJob, type TIPO_JOB_SINTETICO } from '@educa/shared'
 import { Worker } from 'node:worker_threads'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
@@ -124,12 +124,10 @@ export class SandboxDeCpu implements QueimaDeCpu {
  * mesma em toda reexecução, e a gravação com a mesma chave não duplica. Falhar depois de gravar é o caso que
  * a retentativa precisa aguentar.
  */
-export function criarProcessadorSintetico(cpu: QueimaDeCpu, efeitos: Pick<EfeitoSinteticoRepository, 'gravar'>): Processador {
-  return async (dados, { tentativa, chaveIdempotencia }) => {
-    const leitura = esquemaDadosJobSintetico.safeParse(dados)
-    if (!leitura.success) throw new FalhaDeJob(CodigoDeFalhaDeJob.DADOS_INVALIDOS, true)
-    await cpu.queimar(leitura.data.cpuMs)
-    if (leitura.data.efeito === true) await efeitos.gravar({ chaveIdempotencia, tentativa })
-    if (leitura.data.falhar) throw new FalhaDeJob(CodigoDeFalhaDeJob.FALHA_SINTETICA)
+export function criarProcessadorSintetico(cpu: QueimaDeCpu, efeitos: Pick<EfeitoSinteticoRepository, 'gravar'>): Processador<typeof TIPO_JOB_SINTETICO> {
+  return async ({ cpuMs, efeito, falhar }, { tentativa, chaveIdempotencia }) => {
+    await cpu.queimar(cpuMs)
+    if (efeito === true) await efeitos.gravar({ chaveIdempotencia, tentativa })
+    if (falhar) throw new FalhaDeJob(CodigoDeFalhaDeJob.FALHA_SINTETICA)
   }
 }

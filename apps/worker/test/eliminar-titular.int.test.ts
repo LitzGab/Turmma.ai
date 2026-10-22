@@ -17,17 +17,17 @@ import {
   type Relogio,
   type TransacaoBanco,
 } from '@educa/nucleo'
-import { AUTOR_DA_ROTINA, CodigoDeFalhaDeJob, TIPO_ELIMINAR_TITULAR } from '@educa/shared'
+import { AUTOR_DA_ROTINA, TIPO_ELIMINAR_TITULAR } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest'
 import { lerAmbienteDeTeste, valorObrigatorio } from '../../../tools/ci/compose.ts'
 import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import type { ConfiguracaoStorage } from '../src/config.js'
 import { montarWorker } from '../src/montagem.js'
-import { FalhaDeJob } from '../src/falha-de-job.js'
 import { criarEliminacaoDoTitular } from '../src/processadores/eliminar-titular.js'
 import { criarExpurgoDaEscola } from '../src/processadores/expurgar-escola.js'
 import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
+import { execucaoDoJob } from './execucao-do-job.js'
 
 // O job `titular.eliminar` (F3, tarefa 15.0; Tech Spec do F3, seção 5, "Eliminação") contra o Postgres do compose de teste:
 // o prazo, a troca do nome completo em faixas (cada coluna, a caixa, a fronteira de palavra, o JSON válido), o homônimo, o
@@ -140,7 +140,7 @@ describe('titular.eliminar', () => {
   }
 
   /** Roda o processador `titular.eliminar` na escola dada, com o relógio, a faixa e os dados. */
-  async function rodar(escolaId: string | undefined, dados: Record<string, unknown>, opcoes: { relogio?: Relogio; faixa?: number } = {}): Promise<void> {
+  async function rodar(escolaId: string | undefined, dados: { pedidoId: string }, opcoes: { relogio?: Relogio; faixa?: number } = {}): Promise<void> {
     const processador = criarEliminacaoDoTitular({
       banco: bancada.banco,
       janelaDaEscola: await janelaDaEscola(),
@@ -149,7 +149,7 @@ describe('titular.eliminar', () => {
       ...(opcoes.faixa === undefined ? {} : { faixa: opcoes.faixa }),
     })
     const jobId = randomUUID()
-    const executar = () => processador(dados, { jobId, tentativa: 1, chaveIdempotencia: jobId })
+    const executar = () => processador(dados, execucaoDoJob(jobId))
     return escolaId === undefined ? executar() : executarNoContexto({ requisicaoId: randomUUID(), escolaId }, executar)
   }
 
@@ -319,11 +319,12 @@ describe('titular.eliminar', () => {
       }
     })
 
-    it('dados sem o id do pedido, ou fora do contexto de uma escola, são recusados sem nova tentativa', async () => {
+    it('sem escola no contexto o processador não elimina ninguém: a escola vem do contexto, nunca dos dados', async () => {
       const c = await cenario()
-      await expect(rodar(c.escolaId, {})).rejects.toMatchObject({ codigo: CodigoDeFalhaDeJob.DADOS_INVALIDOS, definitiva: true })
-      await expect(rodar(c.escolaId, { pedidoId: randomUUID(), titular: 'x' })).rejects.toBeInstanceOf(FalhaDeJob)
-      await expect(rodar(undefined, { pedidoId: randomUUID() })).rejects.toBeInstanceOf(FalhaDeJob)
+      const pedidoId = await agendar(c, c.alunoId)
+      await expect(rodar(undefined, { pedidoId })).rejects.toThrow('sem escola no contexto')
+      expect(await existeUsuario(c.alunoId)).toBe(true)
+      expect((await pedido(pedidoId)).estado).toBe('agendado')
     })
   })
 
@@ -827,7 +828,7 @@ describe('titular.eliminar', () => {
         logger: log.logger,
       })
       const jobId = randomUUID()
-      const expurgar = executarNoContexto({ requisicaoId: randomUUID(), escolaId: c.escolaId }, () => expurgo({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
+      const expurgar = executarNoContexto({ requisicaoId: randomUUID(), escolaId: c.escolaId }, () => expurgo({}, execucaoDoJob(jobId)))
       await Promise.all([rodar(c.escolaId, { pedidoId }, { relogio }), expurgar])
       expect(await existeUsuario(c.alunoId)).toBe(false)
       expect((await pedido(pedidoId)).estado).toBe('concluido')

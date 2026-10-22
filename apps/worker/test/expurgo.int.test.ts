@@ -8,6 +8,7 @@ import { compose, PROCESSOS_DA_FILA } from '../../../tools/testes/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { criarExpurgoDeJobs } from '../src/processadores/expurgar-jobs.js'
 import { BancadaDeFila, LogEmMemoria } from './fila-de-teste.js'
+import { execucaoDoJob } from './execucao-do-job.js'
 
 // `job_registro` do Postgres do compose de teste, com 12.000 jobs vencidos de verdade.
 
@@ -51,7 +52,7 @@ describe('sistema.expurgar-jobs', () => {
       logger: log.logger,
     })
     const jobId = randomUUID()
-    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
+    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, execucaoDoJob(jobId)))
   }
 
   const contar = async (condicao: string): Promise<number> =>
@@ -249,7 +250,7 @@ describe('sistema.expurgar-jobs', () => {
   it('só a rotina do sistema expurga: um job de escola com esse tipo falha sem apagar nada', async () => {
     const processador = criarExpurgoDeJobs({ repositorio: new ExpurgoDeJobsRepository(bancada.banco), logger: log.logger })
     const jobId = randomUUID()
-    await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))).rejects.toThrow()
+    await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => processador({}, execucaoDoJob(jobId)))).rejects.toThrow()
     expect(await vencidosRestantes()).toBe(VENCIDOS)
   })
 })

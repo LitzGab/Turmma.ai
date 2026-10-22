@@ -12,6 +12,7 @@ import type { ConfiguracaoStorage } from '../src/config.js'
 import { montarWorker, type WorkerMontado } from '../src/montagem.js'
 import { criarExpurgoDeAcesso, type TotaisDoExpurgoDeAcesso } from '../src/processadores/expurgar-acesso.js'
 import { BancadaDeFila, configuracaoDoBanco, janelaPadraoDoAmbiente, LogEmMemoria, urlRedisDeFila, vagasPadraoDoAmbiente } from './fila-de-teste.js'
+import { execucaoDoJob } from './execucao-do-job.js'
 
 // `registro_acesso`, `sessao` e `convite` do Postgres do compose de teste, com linhas de duas escolas (e a falha de
 // login sem escola) dos dois lados de cada prazo, e `acesso_operacao`, `sessao_operador` e `convite_operador` da
@@ -426,7 +427,7 @@ describe('sistema.expurgar-acesso', () => {
       ...(lote === undefined ? {} : { lote }),
     })
     const jobId = randomUUID()
-    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
+    return executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, execucaoDoJob(jobId)))
   }
 
   beforeEach(async () => {
@@ -471,7 +472,7 @@ describe('sistema.expurgar-acesso', () => {
       logger: log.logger,
     })
     const jobId = randomUUID()
-    await executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))
+    await executarNoContexto({ requisicaoId: randomUUID(), rotinaDoSistema: true }, () => processador({}, execucaoDoJob(jobId)))
     expect(log.doEvento('acesso.expurgado')[0]).toMatchObject({
       registrosDeAcessoTotal: porAlvo.registro_acesso,
       sessoesTotal: porAlvo.sessao,
@@ -809,7 +810,7 @@ describe('sistema.expurgar-acesso', () => {
     const escolaId = await bancada.escola()
     const processador = criarExpurgoDeAcesso({ repositorio: new ExpurgoDeAcessoRepository(bancada.banco), relogio, logger: log.logger })
     const jobId = randomUUID()
-    await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => processador({}, { jobId, tentativa: 1, chaveIdempotencia: jobId }))).rejects.toMatchObject({
+    await expect(executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => processador({}, execucaoDoJob(jobId)))).rejects.toMatchObject({
       name: 'FalhaDeJob',
       codigo: CodigoDeFalhaDeJob.DADOS_INVALIDOS,
       definitiva: true,

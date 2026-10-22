@@ -27,9 +27,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **19.0**, grande (o worker valida pela definição; tenancy, infra,
-    test-engineer, revisor-geral), desde 14:17, 1ª tentativa; prazo de 4 h 18:17. A 8.0 encontrou-se em `a8398c3` (spec em
-    `5e3e01a`)
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **48.0**, grande (cockatiel no adaptador de IA: prazo, uma repetição, disjuntor; infra, llm-integrator, test-engineer, revisor-geral), desde 16:38, 1ª tentativa; prazo de 4 h 20:38. A 19.0 encontrou-se em `22bec36` (spec em `84ef3df`), depois de eu matar às 16:12 um vitest travado numa mutação (ver "O que falhou"); o portão foi refeito às 16:21
   - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
     **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
     os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
@@ -38,9 +36,9 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
   - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **97.0**, grande (web: `areas/professor/` e `areas/coordenacao/`
-    por assunto; frontend-reviewer, test-engineer, revisor-geral), desde 14:19, 1ª tentativa; prazo de 4 h 18:19. A 36.0
-    encontrou-se em `88fc287` (spec em `f7a835c`)
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **44.0**, pequena (falha final alerta e fica 30 dias; pedido do
+    titular até a ação; infra, privacy, llm-integrator, test-engineer, revisor-geral), desde 15:22, 1ª tentativa; prazo de
+    2 h 17:22. A 97.0 encontrou-se em `b760b65` (spec em `32edb79`)
   - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **correção `intermitentes-desafio-e-meus-dados`**, desde ~13:55,
     1ª tentativa. Os dois testes caíram em `2fe1d73` (só documento sobre `f6913ee`, onde passaram): `desafio.int.test.ts`
     "falha (15.5): Redis de fila travado… corte dos 100 ms" (NAO_AUTENTICADO em vez de resolver) e o e2e
@@ -64,13 +62,14 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     olhar dele antes do piloto
   - esteira: veredito mais novo VERMELHO em `2fe1d73` (`39803274227`): `ouro.test.ts` (resolvido por `05aa2fe`) e os
     dois intermitentes da correção da linha 3. Às ~13:50 cancelei 10 execuções superadas na fila (9 da spec, 1 da l1).
-    Às 14:17–14:19 cancelei as de `8b11df1`, `5e3e01a` e `f89c847`, superadas; fica a de `f7a835c` (`39821539919`). Ler de novo no
-    próximo encontro. O `esteira.ts` lê execução **cancelada** como VERMELHA (`aca066e`): conferir com `gh run list`
+    Às 14:17–14:19 cancelei as de `8b11df1`, `5e3e01a` e `f89c847`, superadas; fica a de `f7a835c` (`39821539919`). No encontro da 97.0 (15:20) o
+    `esteira.ts` disse VERMELHA em `6fca958`, mas a execução `39821617559` foi só **cancelada** (superada); a de `32edb79`
+    (`39830662684`) está na fila. Ler de novo no próximo encontro. O `esteira.ts` lê execução **cancelada** como VERMELHA (`aca066e`): conferir com `gh run list`
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `f7a835c`. Vigia ligada
+- **Base:** `spec/reengenharia` em `84ef3df`. Esteira: `39830913150` (spec em `32edb79`) VERDE; a de `84ef3df` (`39841560415`) na fila. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -107,6 +106,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 18.0 | `3ecaa07` | Sonnet | 2 (tenancy, privacy, test-engineer, revisor-geral aprovados na 2ª) | linha 3, grande, 13:07–13:50; sem tela |
 | 8.0 | `a8398c3` | Sonnet | 2 (tenancy, infra, llm-integrator aprovados na 1ª; test-engineer, revisor-geral na 2ª) | linha 1, grande, 13:27–14:16; sem tela |
 | 36.0 | `88fc287` | Sonnet | 2 (frontend-reviewer, test-engineer, revisor-geral aprovados na 2ª) | linha 2, grande, 13:20–14:18; sem tela |
+| 97.0 | `b760b65` | Sonnet | 2 (frontend-reviewer e test-engineer na 1ª; revisor-geral na 2ª) | linha 2, grande, 14:19–15:20; 49 fotos vistas; um commit só (divergência no 97_task.md) |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
@@ -155,6 +155,7 @@ recomendado: a ordem da §6, a P4 como não unificar (só extrair o literal) e a
 critério de aceite.
 
 ## O que falhou
+- 22/10 16:12, linha 1, 19.0: mutação que trava o teste (laço síncrono) segurou `/tmp/educa-carga.lock` por 41 min; o `mutacoes.ts` usa `spawnSync` sem timeout e conta a morte do processo como vermelho. Para a retro: timeout por mutação, com o estouro contado como `recusada`
 
 ## O que decidi sem perguntar
 - 22/10, ~12:28 — DIVERGÊNCIA (portão) da 6.0 (l1): a regra do guarda da 1.0 (`porta-unica.test.ts:56`) casa a menção ao

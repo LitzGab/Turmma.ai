@@ -22,6 +22,7 @@ import {
   type Relogio,
   type VagasPorFila,
 } from '@educa/nucleo'
+import type { RegistroDeJobs } from '@educa/shared'
 import { Queue } from 'bullmq'
 import type { ConfiguracaoDespachante } from './config.js'
 import { Despachante } from './despachante.js'
@@ -50,6 +51,8 @@ export interface OpcoesDaMontagem {
   medidor?: Meter
   /** Intervalo da medição das filas. Só o teste troca. */
   intervaloMedicaoMs?: number
+  /** O registro de jobs que decide a fila e a retentativa de cada tipo. Só o teste troca, para ter uma retentativa curta ou um tipo seu. */
+  definicoes?: RegistroDeJobs
 }
 
 export interface DespachanteMontado {
@@ -91,14 +94,18 @@ export function montarDespachante(config: Omit<ConfiguracaoDespachante, 'telemet
     avisoEspacado(() => logger.warn({ evento: 'despachante.redis_indisponivel' })),
   )
   const avisarErroDaFila = avisoEspacado(() => logger.warn({ evento: 'despachante.fila_com_erro' }))
-  const fila = new PublicacaoBullMQ((nome) => {
-    const queue = new Queue<DadosDoJobNaFila>(nomeDaFilaBullMQ(nome), {
-      connection: redis,
-      ...(opcoes.prefixo === undefined ? {} : { prefix: opcoes.prefixo }),
-    })
-    queue.on('error', avisarErroDaFila)
-    return queue
-  })
+  const fila = new PublicacaoBullMQ(
+    (nome, executor) => {
+      const queue = new Queue<DadosDoJobNaFila>(nomeDaFilaBullMQ(nome, executor), {
+        connection: redis,
+        ...(opcoes.prefixo === undefined ? {} : { prefix: opcoes.prefixo }),
+      })
+      queue.on('error', avisarErroDaFila)
+      return queue
+    },
+    undefined,
+    opcoes.definicoes,
+  )
   const banco = criarBanco(pool)
   const repositorio = new DespachoRepository(banco)
   const vagasReais = new VagasPorEscola(redis, opcoes.prefixo, opcoes.validadeDaVagaMs)

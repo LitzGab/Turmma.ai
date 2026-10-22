@@ -54,6 +54,36 @@ só quando o tipo começa com `sistema.` (check `job_registro_escola_ou_sistema`
 - O `prazoMs` de cada tipo é provisório até a 43.0 conferir; a retentativa é a de hoje (5 tentativas, 2 s, 0,5), igual à
   `OPCOES_DE_JOB_PUBLICADO`, e a 19.0 liga uma à outra.
 
+**Como a 19.0 ficou (o que a implementação fixou):**
+- `Processador<Tipo>` recebe `z.output` do esquema do tipo (`DadosLidosDoJob<Tipo>`, em shared), e `ProcessadoresDeJob` é o mapa
+  `{ [Tipo in TipoDeJob]?: Processador<Tipo> }`: ler campo que a definição não tem, ou registrar processador de tipo que ela
+  não tem, não compila. O executor lê o tipo da linha em execução e chama o processador por um `never` (`ProcessadorSemTipo`): é
+  o único ponto sem prova do compilador, e só recebe o que o esquema do mesmo tipo leu.
+- O executor confere, nesta ordem, dentro do `try` da tentativa: a definição do tipo (sem ela, `TIPO_DESCONHECIDO`), o escopo
+  (`(escopo === 'sistema') !== (escola da linha === null)`, e a linha que não casa, `DADOS_INVALIDOS`), o esquema estrito dos
+  dados e o processador da réplica (sem ele, `TIPO_DESCONHECIDO`). Toda recusa é `FalhaDeJob` definitiva, só com o código. O
+  `ExecucaoDoJob` ganha o `prazoMs` da definição; aplicá-lo segue na onda 3 (43.0).
+- Sobem para o executor a validação à mão de `montar-arquivo.ts`, `eliminar-titular.ts` e `sintetico.ts`; os processadores de
+  rotina do sistema mantêm a conferência de contexto que já tinham (`rotinaDoSistema`), porque os testes os chamam direto. Dos da
+  escola, `montar-arquivo.ts` lê a escola do contexto com `exigirEscolaDoContexto()` (sem escola, `Error` comum, que o executor
+  nunca deixa chegar: o escopo é conferido antes), e `eliminar-titular.ts` já não confere nada.
+- `opcoesDeJob(tipo, definicoes?)` (nucleo, `publicacao.ts`) lê a retentativa da definição e substitui `OPCOES_DE_JOB_PUBLICADO`,
+  `TENTATIVAS_DE_JOB`, `RECUO_INICIAL_JOB_MS` e `JITTER_DO_RECUO`, que saíram; o tipo que o registro não conhece segue com as
+  cinco tentativas e os 2 s de antes, e o worker o termina na primeira com `TIPO_DESCONHECIDO`.
+- `nomeDaFilaBullMQ(fila, executor)` tem o `executor` obrigatório: `worker` é o nome de hoje (`interativa`, `normal`, `lote`), e `api`
+  é `api-<fila>`. O despachante cria a `Queue` do worker de cada fila no construtor, como antes, e a da API na primeira vez que um tipo
+  a pede (`executorDoJob(tipo)`, do tipo desconhecido para o worker); a consulta da reconciliação segue o mesmo caminho.
+- `montarProcessadores` sai de `montarWorker` e é exportado: é a fonte do que a réplica de cada fila executa (o sintético em
+  toda, `titular.montar-arquivo` na `normal`, as rotinas na `lote`), e `montagem.test.ts` a liga ao registro nos dois sentidos.
+- A definição é injetável (`definicoes`) em `montarDespachante` e em `montarWorker`, e `BancadaDeFila` a leva aos dois
+  (`new BancadaDeFila(definicoes)`); o `tipo` do pedido da bancada é um dos do registro dela. A gravação da bancada segue sem
+  passar pela definição, de propósito: o worker não confia na gravação, e o teste põe na linha o que ele deve recusar.
+- "A mesma linha entregue duas vezes em paralelo roda uma vez" fica no teste da entrega repetida depois do `concluido`
+  (`execucao.int.test.ts`): `iniciarExecucao` aceita `ativo` de propósito (D49, o stalled), e duas entregas ao mesmo tempo da
+  mesma linha rodam as duas; o que se prova é que o terminado não roda de novo.
+- A caracterização dos 8 tipos entra no commit da tarefa, como na 18.0: a 19.1 é o teste em literal das opções de publicação
+  (`opcoesDeJob`, `fila-de-publicacao.test.ts`), escrito e verde contra o código antigo antes de trocar `OPCOES_DE_JOB_PUBLICADO`.
+
 ### T3 — Leitor tolerante (RF7)
 
 `lerResposta(esquema, corpo)` sai de `apps/web/src/api/cliente.ts`, exportada e usada também por `api/material.ts`.

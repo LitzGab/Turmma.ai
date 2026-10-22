@@ -182,6 +182,15 @@ type DefinicaoDe<Tipo extends TipoDeJob> = (typeof DEFINICOES_DE_JOB)[Tipo]
 /** O que quem enfileira passa em `dados`: a entrada do esquema do tipo, antes dos `default`. */
 export type DadosDoJob<Tipo extends TipoDeJob> = z.input<DefinicaoDe<Tipo>['dados']>
 
+/** O que o processador do tipo recebe: a saída do esquema, que o executor leu da linha (com os `default` aplicados). */
+export type DadosLidosDoJob<Tipo extends TipoDeJob> = z.output<DefinicaoDe<Tipo>['dados']>
+
+/**
+ * Um registro de definições por nome de tipo. `DEFINICOES_DE_JOB` é o de produção; o teste injeta o seu no despachante e no
+ * worker (`fila-de-teste.ts`) para ter um tipo de dados próprios ou uma retentativa curta, sem tocar o registro real.
+ */
+export type RegistroDeJobs = Readonly<Record<string, DefinicaoDeJob>>
+
 /**
  * As escolhas de quem enfileira, e só as que a definição deixa: a fila, dentro das `filas` do tipo, e o `naoUrgente`, só no
  * tipo que o declara `'do-pedido'` (e então obrigatório).

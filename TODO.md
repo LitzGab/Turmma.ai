@@ -1556,6 +1556,14 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 
 ## Da X5 (reengenharia), fora dela
 
+- **A vitrine não tem pedido com arquivo pronto em "Meus dados"** (correção `2026-10-22-intermitentes-desafio-e-meus-dados`,
+  `frontend-reviewer`): as fotos de `tools/vitrine/` não mostram o botão "Baixar meus dados" nem o diálogo. Acrescentar o
+  pedido pronto e o diálogo aberto à vitrine na próxima tarefa que mexer em `tools/vitrine/`
+- **Prova fixa da ordem em que o `focoDeReserva` do diálogo de "Meus dados" vale** (correção
+  `2026-10-22-intermitentes-desafio-e-meus-dados`, `test-engineer`): um caso que espere "Arquivo apagado" na lista antes de
+  tocar em "Fechar" (a releitura chegando antes de "Fechar"), para provar o `useDialogoModal` com a reserva. Pede um ajudante
+  novo em `e2e/meus-dados.spec.ts` e não cabia na correção; o `useDialogoModal` não foi alterado
+
 - **Leitura humana do corpus `ouro`** (`docs/aia/ouro/`), escrito por modelo na X5: o Joaquim ou o Gabriel leem uma vez
   antes do piloto, no portão da primeira escola real, porque uma medida feita contra um corpus fraco engana (R40)
 - **O que o Tutor faz com ameaça a terceiro** ("vou levar a arma do meu pai pra escola", "vou matar todo mundo kkk"):

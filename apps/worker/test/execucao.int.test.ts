@@ -3,10 +3,9 @@ import {
   executarNoContexto,
   METRICAS,
   nomeDaFilaBullMQ,
-  OPCOES_DE_JOB_PUBLICADO,
+  opcoesDeJob,
   RETENCAO_JOB_CONCLUIDO_SEGUNDOS,
   RETENCAO_JOB_FALHO_SEGUNDOS,
-  TENTATIVAS_DE_JOB,
   MotivoDaRecusaDoJob,
   PedidoDeJobRecusado,
   resumirErro,
@@ -140,10 +139,10 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     // Recuo exponencial de 2 s com jitter de 50 %: as quatro esperas somam pelo menos 15 s.
     expect(performance.now() - inicio).toBeGreaterThan(15_000)
     expect(await bancada.estado(id)).toEqual({ estado: 'falhou', escolaId: ESCOLA_A, codigoFalha: CodigoDeFalhaDeJob.FALHA_SINTETICA })
-    expect(logWorker.doEvento('job.iniciado').filter((registro) => registro['jobId'] === id)).toHaveLength(TENTATIVAS_DE_JOB)
+    expect(logWorker.doEvento('job.iniciado').filter((registro) => registro['jobId'] === id)).toHaveLength(5)
 
     const naFila = await bancada.fila.getJob(id)
-    expect(naFila?.attemptsMade).toBe(TENTATIVAS_DE_JOB)
+    expect(naFila?.attemptsMade).toBe(5)
     expect(naFila?.failedReason).toBe(CodigoDeFalhaDeJob.FALHA_SINTETICA)
     expect(await naFila?.getState()).toBe('failed')
   }, 90_000)
@@ -237,7 +236,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
 
       // Com as opções de publicação de verdade (5 tentativas): nenhuma tentativa a mais é gasta.
       const publicar = (jobId: string, escolaId: string | null) =>
-        bancada.fila.add('sintetico', { escolaId, requisicaoId: null }, { ...OPCOES_DE_JOB_PUBLICADO, jobId })
+        bancada.fila.add('sintetico', { escolaId, requisicaoId: null }, { ...opcoesDeJob(TIPO_JOB_SINTETICO), jobId })
       const jobs = [
         await publicar(daEscolaB, ESCOLA_A),
         // Sem escola, o contexto é de rotina do sistema, que só alcança job sem escola.
@@ -461,6 +460,64 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     })
   })
 
+  describe('o worker valida pela definição (a linha de `job_registro` não é confiável)', () => {
+    /** Grava a linha por SQL, como quem não passou pelo `Enfileirador`: sem esquema, sem escopo, sem conferir o tipo. */
+    const gravarPorSql = async (tipo: string, escolaId: string | null, dados: object): Promise<string> => {
+      const { rows } = await bancada.pool.query<{ id: string }>(
+        `insert into job_registro (escola_id, fila, prioridade, tipo, dados) values ($1, 'interativa', 1, $2, $3) returning id`,
+        [escolaId, tipo, JSON.stringify(dados)],
+      )
+      await bancada.pool.query(`select pg_notify('job', '')`)
+      return rows[0]?.id ?? ''
+    }
+
+    it('dados que o esquema recusa terminam falhou com DADOS_INVALIDOS na primeira tentativa, sem o processador, e nem o log nem o Redis levam o valor', async () => {
+      const sentinela = `sentinela-${randomUUID()}`
+      const chaveAMais = await gravarPorSql(TIPO_JOB_SINTETICO, ESCOLA_A, { cpuMs: 0, falhar: false, [sentinela]: sentinela })
+      const foraDoFormato = await gravarPorSql(TIPO_JOB_SINTETICO, ESCOLA_A, { cpuMs: -1, falhar: false })
+      const chamados: string[] = []
+      const logWorker = new LogEmMemoria('worker')
+      bancada.worker(logWorker, { processadores: { [TIPO_JOB_SINTETICO]: () => Promise.resolve(void chamados.push('chamado')) } })
+      bancada.despachante(new LogEmMemoria('despachante')).despachante.iniciar()
+
+      for (const id of [chaveAMais, foraDoFormato]) {
+        await aguardarEstado(bancada, id, 'falhou')
+        expect(await bancada.estado(id)).toEqual({ estado: 'falhou', escolaId: ESCOLA_A, codigoFalha: CodigoDeFalhaDeJob.DADOS_INVALIDOS })
+        const naFila = await bancada.fila.getJob(id)
+        // Definitivo: as cinco tentativas não são gastas, e o que o Redis guarda é o código, e só ele.
+        expect(naFila?.attemptsMade).toBe(1)
+        expect(naFila?.failedReason).toBe(CodigoDeFalhaDeJob.DADOS_INVALIDOS)
+        expect(JSON.stringify(naFila?.stacktrace)).not.toContain(sentinela)
+        const eventos = logWorker.registros().filter((registro) => registro['jobId'] === id)
+        expect(eventos.map((registro) => registro['evento'])).toEqual(['job.iniciado', 'job.tentativa_falhou', 'job.falhou'])
+        expect(eventos[1]).toMatchObject({ tentativa: 1, codigo: CodigoDeFalhaDeJob.DADOS_INVALIDOS })
+      }
+      expect(chamados).toEqual([])
+      expect(logWorker.linhas.join('')).not.toContain(sentinela)
+    })
+
+    it('tipo que o registro não tem (uma linha de outra versão) termina falhou com TIPO_DESCONHECIDO, definitivo', async () => {
+      const id = await gravarPorSql('tipo.de-uma-versao-antiga', ESCOLA_A, { qualquer: 'coisa' })
+      bancada.worker(new LogEmMemoria('worker'))
+      bancada.despachante(new LogEmMemoria('despachante')).despachante.iniciar()
+
+      await aguardarEstado(bancada, id, 'falhou')
+      expect(await bancada.estado(id)).toEqual({ estado: 'falhou', escolaId: ESCOLA_A, codigoFalha: CodigoDeFalhaDeJob.TIPO_DESCONHECIDO })
+      expect((await bancada.fila.getJob(id))?.attemptsMade).toBe(1)
+    })
+
+    it('rotina do sistema com escola (a linha foi escrita por SQL; o check do banco a aceita) não roda, e o dado da escola fica como está', async () => {
+      const id = await gravarPorSql(TIPO_EXPURGAR_JOBS, ESCOLA_A, {})
+      const chamados: string[] = []
+      bancada.worker(new LogEmMemoria('worker'), { processadores: { [TIPO_EXPURGAR_JOBS]: () => Promise.resolve(void chamados.push('chamado')) } })
+      bancada.despachante(new LogEmMemoria('despachante')).despachante.iniciar()
+
+      await aguardarEstado(bancada, id, 'falhou')
+      expect(await bancada.estado(id)).toEqual({ estado: 'falhou', escolaId: ESCOLA_A, codigoFalha: CodigoDeFalhaDeJob.DADOS_INVALIDOS })
+      expect(chamados).toEqual([])
+    })
+  })
+
   it('o aviso do NOTIFY acorda o despachante sem esperar a sondagem', async () => {
     const logDespachante = new LogEmMemoria('despachante')
     // Sondagem de um minuto: só o aviso explica a publicação em segundos.
@@ -476,7 +533,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
     const id = await bancada.enfileirar(ESCOLA_A)
     // Primeiro despachante: reserva e publica, e cai antes de marcar `publicado`.
     await bancada.reservar(ESCOLA_A)
-    await bancada.fila.add('sintetico', { escolaId: ESCOLA_A, requisicaoId: null }, { ...OPCOES_DE_JOB_PUBLICADO, jobId: id })
+    await bancada.fila.add('sintetico', { escolaId: ESCOLA_A, requisicaoId: null }, { ...opcoesDeJob(TIPO_JOB_SINTETICO), jobId: id })
     await bancada.pool.query(`update job_registro set reservado_ate = now() - interval '1 second' where id = $1`, [id])
 
     const logDespachante = new LogEmMemoria('despachante')
@@ -493,10 +550,10 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
   })
   describe('dependência fora e desligamento', () => {
     /** Publica como o despachante, com as opções de retentativa de verdade, ou com mais tentativas. */
-    async function publicado(tentativas: number = TENTATIVAS_DE_JOB): Promise<string> {
+    async function publicado(tentativas = 5): Promise<string> {
       const id = await bancada.enfileirar(ESCOLA_A)
       await bancada.reservar(ESCOLA_A)
-      await bancada.fila.add('sintetico', { escolaId: ESCOLA_A, requisicaoId: null }, { ...OPCOES_DE_JOB_PUBLICADO, attempts: tentativas, jobId: id })
+      await bancada.fila.add('sintetico', { escolaId: ESCOLA_A, requisicaoId: null }, { ...opcoesDeJob(TIPO_JOB_SINTETICO), attempts: tentativas, jobId: id })
       await executarNoContexto({ requisicaoId: randomUUID(), escolaId: ESCOLA_A }, () => bancada.despacho.marcarPublicados([id]))
       return id
     }
@@ -527,7 +584,7 @@ describe('dois despachantes e dois workers sobre a mesma fila', () => {
       const id = await publicado()
       // A réplica que "morre": pega o job com lock de 1 s e nunca o renova nem processa.
       const conexao = new Redis(urlRedisDeFila(), { maxRetriesPerRequest: null })
-      const morta = new Worker(nomeDaFilaBullMQ('interativa'), undefined, { connection: conexao, prefix: bancada.prefixo, lockDuration: 1_000, autorun: false })
+      const morta = new Worker(nomeDaFilaBullMQ('interativa', 'worker'), undefined, { connection: conexao, prefix: bancada.prefixo, lockDuration: 1_000, autorun: false })
       const tomado = await morta.getNextJob(randomUUID())
       expect(tomado?.id).toBe(id)
       await morta.close(true)

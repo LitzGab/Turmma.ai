@@ -1,24 +1,39 @@
+import { DEFINICOES_DE_JOB, type ExecutorDeJob, type RegistroDeJobs } from '@educa/shared'
 import { z } from 'zod'
-
-/** Tentativas antes de o job falhar de vez (Tech Spec, seção 5, "Retentativa"). */
-export const TENTATIVAS_DE_JOB = 5
-/** Recuo exponencial a partir de 2 s: 2, 4, 8 e 16 s entre as cinco tentativas. */
-export const RECUO_INICIAL_JOB_MS = 2_000
-/**
- * Fração do recuo sorteada para baixo: com 0,5, a espera cai entre metade e o valor cheio. Sem
- * isso, mil jobs que falharam juntos por causa de uma dependência voltam todos no mesmo instante.
- */
-export const JITTER_DO_RECUO = 0.5
 
 /** Quanto tempo o BullMQ guarda o job terminado. É o que ainda deduplica um reenvio com o mesmo `jobId`. */
 export const RETENCAO_JOB_CONCLUIDO_SEGUNDOS = 24 * 60 * 60
 export const RETENCAO_JOB_FALHO_SEGUNDOS = 7 * 24 * 60 * 60
 
-/** Opções de todo job publicado. O `jobId` é o id de `job_registro`, e é ele que torna o reenvio inofensivo. */
-export const OPCOES_DE_JOB_PUBLICADO = {
-  attempts: TENTATIVAS_DE_JOB,
-  backoff: { type: 'exponential', delay: RECUO_INICIAL_JOB_MS, jitter: JITTER_DO_RECUO },
-} as const
+/** O que o despachante entrega ao BullMQ de cada job, além do `jobId`: a retentativa do tipo. */
+export interface OpcoesDeJobPublicado {
+  readonly attempts: number
+  readonly backoff?: { readonly type: 'exponential'; readonly delay: number; readonly jitter: number }
+}
+
+// Os mesmos valores do registro de hoje, mas sem acompanhá-lo: o worker termina esse job na primeira tentativa, então não há
+// o que sincronizar.
+const OPCOES_DO_TIPO_DESCONHECIDO: OpcoesDeJobPublicado = { attempts: 5, backoff: { type: 'exponential', delay: 2_000, jitter: 0.5 } }
+
+/**
+ * As opções de retentativa de um tipo, lidas da definição dele (`DEFINICOES_DE_JOB`): as tentativas e o recuo exponencial. O
+ * `jobId` é o id de `job_registro`, e é ele que torna o reenvio inofensivo (o despachante o acrescenta).
+ *
+ * Tipo que o registro não conhece (uma linha de uma versão antiga) segue com a retentativa de antes do registro, cinco
+ * tentativas e recuo de 2 s: o worker o termina na primeira com `TIPO_DESCONHECIDO`, definitivo, e a publicação não pode
+ * falhar por causa dele.
+ */
+export function opcoesDeJob(tipo: string, definicoes: RegistroDeJobs = DEFINICOES_DE_JOB): OpcoesDeJobPublicado {
+  const definicao = definicoes[tipo]
+  if (definicao === undefined) return OPCOES_DO_TIPO_DESCONHECIDO
+  const { tentativas, recuoMs, jitter } = definicao.retentativa
+  return { attempts: tentativas, backoff: { type: 'exponential', delay: recuoMs, jitter } }
+}
+
+/** Quem executa o tipo, e portanto de que fila do BullMQ ele sai. O tipo desconhecido vai ao worker, que o recusa. */
+export function executorDoJob(tipo: string, definicoes: RegistroDeJobs = DEFINICOES_DE_JOB): ExecutorDeJob {
+  return definicoes[tipo]?.executor ?? 'worker'
+}
 
 /**
  * O que vai no `data` do job no Redis: só a escola e a requisição, copiadas da linha persistida

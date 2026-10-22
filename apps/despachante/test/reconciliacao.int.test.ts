@@ -82,7 +82,7 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
   /** Uma reconciliação à parte, com cliente e `Queue` próprios, e a consulta à fila embrulhada pelo teste. */
   function reconciliacaoAParte(nome: string, embrulhar: (consultar: FilaDePublicacao['consultar']) => FilaDePublicacao['consultar'], lote?: number) {
     const redis = criarClienteRedisDaFila(urlRedisDeFila(), nome, () => undefined)
-    const publicacao = new PublicacaoBullMQ((filaDoJob) => new Queue<DadosDoJobNaFila>(nomeDaFilaBullMQ(filaDoJob), { connection: redis, prefix: bancada.prefixo }))
+    const publicacao = new PublicacaoBullMQ((filaDoJob, executor) => new Queue<DadosDoJobNaFila>(nomeDaFilaBullMQ(filaDoJob, executor), { connection: redis, prefix: bancada.prefixo }))
     const fila: FilaDePublicacao = { publicar: (jobs) => publicacao.publicar(jobs), consultar: embrulhar((job) => publicacao.consultar(job)) }
     const log = new LogEmMemoria(nome)
     return {
@@ -347,7 +347,7 @@ describe('reconciliação entre job_registro e o BullMQ', () => {
       // O BullMQ falha o job com esta mensagem quando ele trava mais vezes que o limite. Aqui ela vem
       // de um worker à parte, para não esperar dois ciclos de stalled de 30 s.
       const redisStalled = new Redis(urlRedisDeFila(), { maxRetriesPerRequest: null })
-      const workerStalled = new Worker(nomeDaFilaBullMQ('interativa'), () => Promise.reject(new UnrecoverableError('job stalled more than allowable limit')), {
+      const workerStalled = new Worker(nomeDaFilaBullMQ('interativa', 'worker'), () => Promise.reject(new UnrecoverableError('job stalled more than allowable limit')), {
         connection: redisStalled,
         prefix: bancada.prefixo,
       })
