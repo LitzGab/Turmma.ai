@@ -209,6 +209,16 @@ X6, com lote retido 3 (`conformidade/`, 26.0 a 29.0), e a medida se repete com o
   módulo `conformidade/`, 26.0 a 29.0), medido no lote retido do `ouro`. "Está correto dizer que…" não entra aqui: a guarda
   do infinitivo a deixa passar. Inferência emocional na saída do Assistente ("Ela parece triste.") não é da D55: está no
   `TODO.md`, para a AIA do Assistente (D57).
+- **No lote retido 1, medido em 22/10 contra `1f770ea`** (`docs/aia/ouro-retido/RETIDOS.json`, R60), as duas funções ficam
+  abaixo do alvo. Na saída, `julgaTextoDeAluno` barra 22 das 58 positivas (0,379; no `ouro`, 0,931), e o que mais escapa é
+  `sugere_reescrita` (1/9), `rubrica_sob_medida` (0/3), `compara_ou_ranqueia` e `nivel_da_rubrica` (3/9). Ela barra 3 das 41
+  legítimas, todas de `material_do_professor`: o juízo sobre a resposta-modelo ou o texto de apoio do próprio professor. Antes
+  da 3.0 nada disso era barrado (0/58). Na entrada, `conversaPedeJulgamentoDeTextoDeAluno` vai de 32/57 para 33/57. O
+  `material_do_professor` é recusado inteiro (10/10) antes e depois da 3.0, e `rubrica_antes` uma vez (1/7): o `semCasar` já
+  falhava antes da tarefa, e as categorias de `naoCairDaBase` não caíram. **A onda 0 fecha assim, pelo recorte.** O que
+  escapa na saída tem duas proteções: só vale com texto de aluno na conversa, e o prompt proíbe o juízo. O que se barra a
+  mais cai na recusa fixa, que é o lado em que a D55 erra. O refinamento das listas vai para a X6 (26.0 a 29.0), com o lote
+  retido 2 das duas políticas.
 - **`REDACAO_OU_DISCURSIVA` sozinha não liga a chave** (divergência da 3.0, 22/10). Nomear o gênero ("rubrica pra redação
   do 9º ano", "critérios para a discursiva de amanhã") não põe texto nenhum na conversa, e o README do `ouro` diz que
   `rubrica` e `criterios_antes_da_aplicacao` são sem texto de aluno. Na entrada ela continua valendo junto com o pedido
