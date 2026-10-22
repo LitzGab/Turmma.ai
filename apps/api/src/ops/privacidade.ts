@@ -4,10 +4,10 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
 import { AcessoDaEscolaRepository } from '../sessao/acesso-publico.repository.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import { ContagensDePrivacidadeRepository, type ContagensDoAtendimento } from './contagens-de-privacidade.repository.js'
+import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
 
 /**
  * A privacidade de uma escola vista pela operação (F3, RF17; Tech Spec do F3, seções 6 e 7; regra 20, item 10):

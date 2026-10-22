@@ -13,10 +13,10 @@ import { readFile, stat } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
 import { AcessoDaEscolaRepository } from '../sessao/acesso-publico.repository.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import { OperacaoPrivacidadeRepository, type SecaoDoIncidente } from './operacao-privacidade.repository.js'
+import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
 
 const registro = new RegistroDeAuditoria()
 

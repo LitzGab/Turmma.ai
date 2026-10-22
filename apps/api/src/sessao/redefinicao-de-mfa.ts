@@ -2,9 +2,9 @@ import { contextoAtual, ErroDeDominio, executarNoContexto, RegistroDeAuditoria, 
 import { ContaGlobalRepository } from '@educa/nucleo/conta-global'
 import { CodigoDeErro, FINALIDADE_DA_REDEFINICAO_PELO_OPERADOR, type FinalidadeDaRedefinicaoDeMfa } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
-import type { ConferenciaDoAutor } from '../operacao/operador.repository.js'
 import { RedefinicaoDeMfaRepository } from './redefinicao-de-mfa.repository.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
+import type { ConferenciaDoAutor } from './conferencia-do-autor.js'
 
 const registro = new RegistroDeAuditoria()
 

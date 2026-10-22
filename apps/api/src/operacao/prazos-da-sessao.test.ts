@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { SessaoDeOperadorParaGuarda } from './operador.repository.js'
-import { INATIVIDADE_DO_OPERADOR_MIN, sessaoDeOperadorVale } from './prazos-da-sessao.js'
+import { INATIVIDADE_DO_OPERADOR_MIN, sessaoDeOperadorVale, type SessaoDeOperadorParaGuarda } from './prazos-da-sessao.js'
 
 const AGORA = new Date('2026-09-23T13:00:00Z')
 const minutosAntes = (minutos: number) => new Date(AGORA.getTime() - minutos * 60_000)

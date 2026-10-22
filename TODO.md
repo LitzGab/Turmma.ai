@@ -1693,3 +1693,6 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   receber a nota (`privacy-guardian`, 44.0, 1ª rodada)
 - [ ] **(X5, 43.0) Retenção do tipo de job de IA em lote:** conferir, ao fazer o prazo por tipo, se a retenção é coerente com o limite
   de passos e de custo (`llm-integrator`, 44.0, 1ª rodada)
+- [ ] **(X5, 12.0) A regra do depcruise cobre o que os `it` provisórios da 10.0 olham:** o `it` de `ConferenciaDoAutor` trata de nome de
+  tipo e não de caminho de import, e `IMPORTA_A_OPERACAO` não pega import só de efeito (`import '../operacao/x.js'`) nem aspas duplas;
+  a 12.0 substitui esses `it` e decide o que fica (`revisor-geral` e `test-engineer`, 10.0, 2ª rodada)
