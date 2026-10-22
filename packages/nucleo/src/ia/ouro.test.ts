@@ -250,6 +250,7 @@ describe('o leitor do ouro', () => {
       ['base de pedidoDeRespostaPronta', (bruto) => (dentro(bruto, 'pedidoDeRespostaPronta', 'base', 'porCategoria')['inventada'] = falsa)],
       ['base de julgamentoDeTextoDeAluno', (bruto) => (dentro(bruto, 'julgamentoDeTextoDeAluno', 'base', 'porCategoria')['inventada'] = falsa)],
       ['base de saidaComNota', (bruto) => (dentro(bruto, 'saidaComNota', 'base', 'porCategoria')['inventada'] = falsa)],
+      ['base de saidaQualitativa', (bruto) => (dentro(bruto, 'saidaQualitativa', 'base', 'porCategoria')['inventada'] = falsa)],
       ['perdaMaxima', (bruto) => (dentro(bruto, 'riscoAVida', 'alvo', 'perdaMaxima')['inventada'] = 1)],
       ['foraDoAlvo', (bruto) => (bruto['riscoAVida'] as { foraDoAlvo: string[] }).foraDoAlvo.push('inventada')],
       ['pisoForaDoAlvo', (bruto) => (dentro(bruto, 'riscoAVida', 'pisoForaDoAlvo')['inventada'] = 'nao_cair_da_base')],
@@ -266,12 +267,14 @@ describe('o leitor do ouro', () => {
 
   it('base nula sem semBaseAte é recusada', () => {
     const bruto = medidasBrutas()
+    dentro(bruto, 'saidaQualitativa')['base'] = null
     delete dentro(bruto, 'saidaQualitativa')['semBaseAte']
     expect(recusa(() => interpretar(bruto))).toBe(true)
   })
 
   it('base nula depois da tarefa de semBaseAte fica vermelha, e antes dela não', () => {
     const bruto = medidasBrutas()
+    dentro(bruto, 'saidaQualitativa')['base'] = null
     expect(dentro(bruto, 'saidaQualitativa')['semBaseAte']).toBe('3.0')
     expect(recusa(() => interpretar(bruto, (tarefa) => tarefa === '3.0'))).toBe(true)
     expect(recusa(() => interpretar(bruto, (tarefa) => tarefa === '2.0'))).toBe(false)
@@ -376,12 +379,19 @@ describe('o leitor do ouro', () => {
       expect(listaCom(['- [x] **3x0 — C**'])('3.0')).toBe(false)
     })
 
-    /** O `ouro` copiado para `<raiz>/docs/aia/ouro`, com a lista de tarefas em `<raiz>/tasks/prd-reengenharia/`. */
+    /**
+     * O `ouro` copiado para `<raiz>/docs/aia/ouro`, com a lista de tarefas em `<raiz>/tasks/prd-reengenharia/`. A base de
+     * `saidaQualitativa` da cópia é nula, como a do `MEDIDAS` real antes de a 3.0 gravá-la: é a base nula que o caso prova
+     * recusada quando a lista marca a 3.0.
+     */
     function repositorioFabricado(linhaDaTarefa: string): string {
       const raiz = mkdtempSync(join(tmpdir(), 'ouro-repo-'))
       pastas.push(raiz)
       mkdirSync(join(raiz, 'docs/aia'), { recursive: true })
       cpSync(raizDoOuro(), join(raiz, 'docs/aia/ouro'), { recursive: true })
+      const medidas = lerJson('MEDIDAS.json', join(raiz, 'docs/aia/ouro')) as Objeto
+      dentro(medidas, 'saidaQualitativa')['base'] = null
+      writeFileSync(join(raiz, 'docs/aia/ouro/MEDIDAS.json'), JSON.stringify(medidas, null, 2))
       mkdirSync(join(raiz, 'tasks/prd-reengenharia'), { recursive: true })
       writeFileSync(join(raiz, 'tasks/prd-reengenharia/tasks.md'), `# Tarefas\n\n${linhaDaTarefa}\n`)
       return join(raiz, 'docs/aia/ouro')
