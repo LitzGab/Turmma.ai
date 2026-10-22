@@ -314,12 +314,15 @@ const MARCA_DE_TAREFA = /\(tarefa \d+\.0\)/
 const soDocumento = (arquivos: string[]) => arquivos.every((arquivo) => arquivo.startsWith('tasks/') || arquivo.endsWith('.md'))
 
 /**
- * Os arquivos que um commit traz. Fora da spec, o diff contra o primeiro pai, como sempre. Na spec, o que o commit mesmo
- * fez: num commit comum dá o mesmo; num merge, `--remerge-diff` compara o que ele gravou com o que o git juntaria sozinho,
- * e sobra só a resolução de conflito, inclusive a que ficou com um lado só. O merge limpo não traz nada.
+ * Os arquivos que um commit traz. Na correção avulsa, o diff contra o primeiro pai, como sempre. Na spec e na linha, o
+ * que o commit mesmo fez: num commit comum dá o mesmo; num merge, `--remerge-diff` compara o que ele gravou com o que o
+ * git juntaria sozinho, e sobra só a resolução de conflito, inclusive a que ficou com um lado só. O merge limpo não traz
+ * nada: o código que ele trouxe está nos commits do outro lado, e cada um deles está no intervalo e se confere sozinho.
+ * Na linha, é o merge de outra linha que o Orquestrador manda fazer quando uma tarefa precisa do que a outra entregou
+ * (R61).
  */
-function arquivosDoCommit(checkout: string, sha: string, naSpec: boolean): string[] {
-  const saida = naSpec
+function arquivosDoCommit(checkout: string, sha: string, peloQueResolveu: boolean): string[] {
+  const saida = peloQueResolveu
     ? git(checkout, 'show', '--remerge-diff', '--format=', '--name-only', sha)
     : git(checkout, 'diff', '--name-only', `${sha}^1`, sha)
   return saida.split('\n').filter((arquivo) => arquivo !== '')
@@ -335,9 +338,13 @@ function arquivosDoCommit(checkout: string, sha: string, naSpec: boolean): strin
  * tarefas já feitas, que o encontro de cada linha conferiu: a marca `(tarefa N.0)` de qualquer uma vale (e a linha
  * `Revisões:` continua cobrada), o merge do encontro só é cobrado pelo que ele mesmo resolveu, e o último commit com código
  * tem de ser o da correção, que é o que se confere.
+ *
+ * `naLinha`: a conferência do encontro. O merge que traz outra linha só é cobrado pelo que ele mesmo resolveu, como o da
+ * spec; a marca continua a da tarefa ou a de correção, e só elas.
  */
-export function conferirEntrega(checkout: string, base: string, tarefa: number | null, opcoes: { naSpec?: boolean } = {}): string | null {
+export function conferirEntrega(checkout: string, base: string, tarefa: number | null, opcoes: { naSpec?: boolean; naLinha?: boolean } = {}): string | null {
   const naSpec = opcoes.naSpec ?? false
+  const peloQueResolveu = naSpec || (opcoes.naLinha ?? false)
   const novos = git(checkout, 'rev-list', '--reverse', `${base}..HEAD`).split('\n').filter((sha) => sha !== '')
   if (novos.length === 0) return 'nenhum commit novo'
   const marcaDaTarefa = tarefa === null ? null : `(tarefa ${String(tarefa)}.0)`
@@ -352,7 +359,7 @@ export function conferirEntrega(checkout: string, base: string, tarefa: number |
     const marcado = daTarefa || corrige || (naSpec && MARCA_DE_TAREFA.test(titulo))
     temADaTarefa ||= daTarefa
     temMarca ||= marcado
-    if (soDocumento(arquivosDoCommit(checkout, sha, naSpec))) continue
+    if (soDocumento(arquivosDoCommit(checkout, sha, peloQueResolveu))) continue
     if (!marcado) return `o commit ${curto} leva código sem ${marcaDaTarefa ?? (naSpec ? '(tarefa N.0) nem (correção <slug>)' : '(correção <slug>)')} no título: "${titulo}"`
     if (!corpo.some((linha) => linha.startsWith('Revisões: '))) return `o commit ${curto} não tem a linha "Revisões:"`
     ultimoCorrige = corrige
@@ -388,7 +395,7 @@ export function encontro(raiz: string, numero: number, opcoes: Opcoes = {}): Res
   const branch = branchDaLinha(spec, numero)
   if (branchDe(checkout) !== branch) return recusa(`${checkout} está na branch "${branchDe(checkout)}", e não na ${branch}`)
   if (sujeira(checkout).length > 0) return recusa(`a árvore da linha ${String(numero)} não está limpa: o commit não levou tudo.\n${sujeira(checkout).join('\n')}`)
-  const entrega = conferirEntrega(checkout, spec, linha.tarefa)
+  const entrega = conferirEntrega(checkout, spec, linha.tarefa, { naLinha: true })
   if (entrega !== null) return recusa(`linha ${String(numero)}, ${oQueFaz(linha)}: ${entrega}`)
   const diario = `tasks/prd-${funcionalidade}/estado.md`
   // Documento a meio no andar da spec (o Arquiteto aplicando uma decisão) não impede o encontro; código, sim.
