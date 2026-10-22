@@ -1699,6 +1699,23 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   receber a nota (`privacy-guardian`, 44.0, 1ª rodada)
 - [ ] **(X5, 43.0) Retenção do tipo de job de IA em lote:** conferir, ao fazer o prazo por tipo, se a retenção é coerente com o limite
   de passos e de custo (`llm-integrator`, 44.0, 1ª rodada)
+- [ ] **(X5, 43.0) Prazo próprio para o `interromper()` no desligamento:** `montagem.ts` espera `await executor.interromper()` sem corrida de uns
+  3 s como a do `close()`; com banco ou Redis de vagas lentos, a gravação e a liberação consomem a folga entre os 20 s da graça e os
+  25 s do `stop_grace_period`. Muda o comportamento do desligamento (`infra-guardian`, 43.0, 1ª rodada)
+- [ ] **(X5, 43.0) Processador real que escuta o `sinal`:** `montar-arquivo`, `expurgar-*` e `eliminar-titular` não conferem
+  `sinal.aborted` entre um lote e outro, então o corte do prazo e o aborto do desligamento não os param (R55, decisão 2, aceita isso e o
+  runbook avisa). Entra na tarefa que mexer em cada um (`infra-guardian`, 43.0, 1ª rodada)
+- [ ] **(X5, 43.0) `threadsMaximo` ultrapassado por milissegundos no aborto:** dizer no comentário de `infra/compose.carga.yml`, junto do
+  `cpus:` fixo, que a thread terminada pelo aborto deixa de ser contada antes de morrer (`infra-guardian`, 43.0, 1ª rodada)
+- [ ] **(X5, 43.0) Caso de concorrência D49 com processador real:** a retentativa depois de `TEMPO_ESGOTADO` roda ao mesmo tempo que o
+  processador antigo que ignorou o `sinal`; precisa de um processador que grave efeito com a chave de idempotência, e hoje só o sintético
+  existe (`test-engineer`, 43.0, 1ª rodada)
+- [ ] **(X5, 43.0) Conferir o retorno de `concluir` no log:** no caminho de sucesso do `executor.ts`, `job.concluido` sai mesmo quando `concluir`
+  devolve `false` (a linha já terminou, por exemplo `falhou/EXECUCAO_INTERROMPIDA` de um processador que ignora o `sinal`); escrever só
+  quando devolver `true` (`infra-guardian` e `revisor-geral`, 43.0, 2ª rodada)
+- [ ] **(X5, 43.0) Limite de 4 s do caso com `attempts: 3`:** `prazo-do-job.int.test.ts › o estouro com tentativa sobrando também libera a
+  vaga da escola` tem uns 0,8 s de folga no pior caminho; a asserção que prova a regra é a da ordem. Se ficar instável na esteira, a
+  correção abre com a medição (`test-engineer`, 43.0, 2ª rodada)
 - [ ] **(X5, 12.0) A regra do depcruise cobre o que os `it` provisórios da 10.0 olham:** o `it` de `ConferenciaDoAutor` trata de nome de
   tipo e não de caminho de import, e `IMPORTA_A_OPERACAO` não pega import só de efeito (`import '../operacao/x.js'`) nem aspas duplas;
   a 12.0 substitui esses `it` e decide o que fica (`revisor-geral` e `test-engineer`, 10.0, 2ª rodada)

@@ -14,6 +14,23 @@ Resumo, dado pessoal, conformidade e carga em `techspec.md` §1, §7, §7b e §7
 na 47.0). O estouro dá `TEMPO_ESGOTADO` e libera a vaga. No SIGTERM, 20 s de graça; o que sobrou na última
 tentativa termina `EXECUCAO_INTERROMPIDA`, e o que ainda tem tentativa fica `ativo` para outra réplica retomar (D49, R55).
 
+Como ficou (43.0): o terceiro parâmetro do tipo `Processador` é `sinal?: AbortSignal`, **opcional só no tipo**: o executor sempre o
+entrega, e as 13 chamadas diretas dos testes (`execucaoDoJob(…)`, em sete arquivos) seguem com dois argumentos, sem arrastar sete
+suítes de integração para o portão. `ExecutorDeJobs.comPrazo` corta a tentativa no `prazoMs` da definição: loga `job.tempo_esgotado`
+(`jobId`, `tentativa`, `prazoMs`), aborta o `sinal` e rejeita com `TempoEsgotado` (um `FalhaDeJob(TEMPO_ESGOTADO)`) **não definitivo**, então a
+retentativa é a do tipo; a rejeição que o processador dá depois do corte cai no tratamento do `then` e some. A vaga sai em toda
+tentativa estourada, e não só na última (`executar`). `ExecutorDeJobs.interromper()` marca cada tentativa em andamento como
+interrompida, aborta o `sinal` e, **só na última tentativa** (`attempts` esgotadas), grava `EXECUCAO_INTERROMPIDA` no contexto da
+escola do job e libera a vaga; a tentativa interrompida que o processador rejeita depois sai como `ErroParaAFila` sem gravar nada
+(o `interromper` já tratou). A tentativa deixa de ser interrompível quando o processador termina, antes de `concluir` e de `falhar`, para o desligamento não gravar uma segunda falha sobre o desfecho dela; e `job.falhou` só vai ao log quando `registrarFalha` mudou a linha. O `encerrar` da montagem o chama ao estourar a graça, **antes** de derrubar a conexão da fila. O
+`SandboxDeCpu.queimar(cpuMs, sinal)` rejeita com `EXECUCAO_INTERROMPIDA` ao abortar: tira o pedido da fila ou termina a thread, que
+sai de `#ocupadas` na hora (a contagem `threads` não inclui a que está terminando, por milissegundos; o `exit` dela redistribui a fila). A graça é `GRACA_DO_DESLIGAMENTO_MS = 20_000` e o
+`stop_grace_period` do worker, 25 s, ligados por `apps/worker/src/desligamento.test.ts`. Os 8 prazos de `DEFINICOES_DE_JOB` foram
+conferidos e nenhum mudou (um teste os fixa). A 43.1 não teve commit próprio: o hook recusa commit de código sem os revisores da
+tarefa, e o caso de caracterização (`execucao.int.test.ts › SIGTERM com job que passa da graça e tentativas sobrando`, `attempts: 5`)
+já existia verde no HEAD e ganhou a asserção da vaga no Redis. `apps/worker/test/fila-de-teste.ts` não mudou: a bancada já aceita o
+registro de definições injetado.
+
 ### T5 — a falha final visível (44.0)
 
 `job.falhos{tipo}` no despachante, o alerta `job-falhou-de-vez.yaml` e o seu parágrafo no runbook. O expurgo

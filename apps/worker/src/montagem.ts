@@ -70,8 +70,11 @@ import { criarMontagemDoArquivo } from './processadores/montar-arquivo.js'
 import { criarProcessadorSintetico, SandboxDeCpu, type QueimaDeCpu } from './processadores/sintetico.js'
 import { criarClienteS3, MedidorDeStorage } from './storage/medidor-de-storage.js'
 
-/** Quanto o SIGTERM espera os jobs em andamento terminarem antes de fechar à força (Tech Spec, seção 5). */
-export const GRACA_DO_DESLIGAMENTO_MS = 30_000
+/**
+ * Quanto o SIGTERM espera os jobs em andamento terminarem antes de fechar à força (Tech Spec, seção 5; R55). O
+ * `stop_grace_period` do worker, em `infra/compose.yml`, é maior que ela: o Docker só manda SIGKILL depois dos dois.
+ */
+export const GRACA_DO_DESLIGAMENTO_MS = 20_000
 const INTERVALO_BATIMENTO_MS = 2_000
 
 export interface OpcoesDaMontagem {
@@ -215,8 +218,10 @@ export function montarWorker(config: Omit<ConfiguracaoWorker, 'telemetria'>, log
     clearTimeout(prazo)
     if (resultado === 'estourou') {
       // O `close()` em andamento não aceita ser forçado: a conexão cai, o processo sai, e o job
-      // interrompido volta pelo stalled em outra réplica. Nada se perde.
+      // interrompido volta pelo stalled em outra réplica. Nada se perde. Antes da conexão cair, o que roda aborta o `sinal`, e a
+      // última tentativa termina `EXECUCAO_INTERROMPIDA`: a que ainda tem outra fica `ativo` para a réplica que a retoma (D49).
       logger.warn({ evento: 'worker.desligamento_forcado' })
+      await executor.interromper()
       redis.disconnect()
     } else {
       await redis.quit().catch(() => redis.disconnect())

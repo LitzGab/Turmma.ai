@@ -26,6 +26,10 @@ export const CodigoDeFalhaDeJob = {
   DADOS_INVALIDOS: 'DADOS_INVALIDOS',
   /** Exceção não prevista, esgotadas as tentativas. */
   ERRO_INTERNO: 'ERRO_INTERNO',
+  /** A tentativa passou do `prazoMs` do tipo (`DEFINICOES_DE_JOB`) e o worker a cortou. Segue a retentativa do tipo. */
+  TEMPO_ESGOTADO: 'TEMPO_ESGOTADO',
+  /** O worker foi desligado, a graça acabou e a última tentativa ainda rodava: o job não tem outra para repetir. */
+  EXECUCAO_INTERROMPIDA: 'EXECUCAO_INTERROMPIDA',
 } as const
 
 export type CodigoDeFalhaDeJob = (typeof CodigoDeFalhaDeJob)[keyof typeof CodigoDeFalhaDeJob]

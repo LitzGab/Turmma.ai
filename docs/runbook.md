@@ -69,7 +69,8 @@ e `docker compose logs --since 10m worker-interativo-1 worker-interativo-2 despa
    que a espera zerou, e não só sumiu.
 
 **Se nada disso resolver:** reinicie um worker por vez (`docker compose restart worker-interativo-1`,
-depois o 2), que espera os jobs em andamento por até 30 s e não perde nenhum. Continuando, avise a
+depois o 2), que espera os jobs em andamento por até 20 s (a graça) e não perde nenhum: o que passa dela e ainda tem tentativa fica
+`ativo` e outra réplica o retoma; só a última tentativa termina `EXECUCAO_INTERROMPIDA` (veja "Job que falhou de vez"). Continuando, avise a
 coordenação da escola afetada (seção "Como avisar as escolas") de que as ferramentas estão lentas.
 
 **Depois:** registre no `TODO.md` a escola (id), o horário, a causa e quanto o job esperou, pelo
@@ -107,6 +108,16 @@ No painel "Fundação — rota, fila e escola": "Jobs que falharam de vez, por t
    `statement_timeout`): a medição tira só `job.falhos` da exportação, e a regra de 5xx não vê isso. Procure o aviso
    `despachante.medicao_indisponivel` no log (`docker compose logs --since 10m despachante-1 despachante-2`) e confira a lista do
    "Primeiro olhar" direto no banco, que é a verdade; abra correção com o erro resumido do aviso.
+6. `codigo_falha = TEMPO_ESGOTADO` → a tentativa passou do `prazoMs` do tipo (`packages/shared/src/sistema/definicoes-de-job.ts`) e o
+   worker a cortou: aborta o `sinal`, libera a vaga da escola na hora (também quando o job vai tentar de novo) e só marca `falhou` na
+   última tentativa. O log tem `job.tempo_esgotado` (`jobId`, `tentativa`, `prazoMs`, nunca o `dados`). **O corte não mata o
+   processador que ignora o `sinal`:** ele pode seguir rodando depois, e só a idempotência (D49) impede o efeito de repetir. Muitos
+   jobs do mesmo tipo e a mesma hora → dependência lenta (storage, banco, provedor); um tipo só, depois de um deploy → o trabalho
+   passou a durar mais que o prazo: abra correção com a medição, nunca suba o `prazoMs` sem ela.
+7. `codigo_falha = EXECUCAO_INTERROMPIDA` → o worker recebeu SIGTERM (deploy, `restart`) e a **última** tentativa do job
+   ainda rodava quando a graça de 20 s acabou. A linha foi gravada na escola dela e a vaga liberada; outra réplica, ao retomar o job
+   pelo stalled, vê a linha final e não o executa. Job com tentativa sobrando não chega aqui: fica `ativo` e é retomado. Queda sem SIGTERM (`kill -9`, host que caiu) também não grava este código: a linha fica `ativo` e o job volta pelo stalled. Foi no
+   deploy, em horário letivo → o deploy fora do horário é regra (regra 80, item 9); registre o tipo e a escola (veja "Depois").
 
 **Se nada disso resolver:** não apague a linha à mão nem mude o `estado` por `update`: a linha é o rastro de que o job não terminou, e o
 caso de uso que grava a auditoria vem na 46.0. Escale ao dono do produto e, se o tipo é `titular.*` ou `ia.*`, avise a coordenação da
