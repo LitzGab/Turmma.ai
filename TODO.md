@@ -1615,6 +1615,13 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   direta, sem verbo que a conte) não dispara, porque "vão me matar" é a forma da expressão ("a prova vai me matar"). A decisão
   de produto é mandar a ameaça de outra pessoa ao `assuntoDelicado`, e não ao 188, e decidir o caso da ameaça direta; decidir
   junto da linha acima sobre ameaça a terceiro, com o `conformidade-reviewer` e advogado, antes de aluno real
+- **A trava de tenant, `tools/guardas/escopo-dos-repositories.ts`, e o teste dela** (X5, 6.0): na próxima tarefa que mexer num dos
+  dois arquivos, (a) tratar no analisador `export { f }`, `export default f`, o parâmetro desestruturado e o alias de tipo local,
+  que o cabeçalho hoje declara como limites, com uma fixture e uma mutação para cada; (b) acertar a frase do cabeçalho "nenhum
+  existe hoje no código", que o primeiro limite contradiz (a função de `homonimo.ts` existe, e só passa sem acusação porque
+  `titulares.homonimo` está na lista); (c) renomear, em `repositories-com-escopo.test.ts`, o caso "cada entrada diz o motivo com
+  pelo menos 30 caracteres", que diz 30 por extenso enquanto o corpo usa `TAMANHO_MINIMO_JUSTIFICATIVA_SEM_ESCOPO`, e os blocos
+  de mutação que o citam
 - **Os pedidos sem corpo, tipados pelo `shared`** (X5, 14.0, recomendação do `revisor-geral`): o `professores.controller.ts` declara
   `_corpo: Record<string, never>` e monta o esquema com `.default({})` localmente, e a "armadilha" da tarefa manda declarar o tipo
   com o de `@educa/shared`. Exportar `PedidoSemCorpoDoConviteDeProfessor` (e o esquema com `.default({})`) de

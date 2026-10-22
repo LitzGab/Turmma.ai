@@ -4,7 +4,7 @@
 
 ## 1. O que muda
 
-Três travas, fora de `tools/processo/` e `.github/`: tenant (AST nos 71 repositories), camadas (depcruise) e tamanho
+Três travas, fora de `tools/processo/` e `.github/`: tenant (AST nos 72 repositories: os 71 do desenho e o `suspensoes-da-escola`, que a 6.3 tirou de `time.service.ts`), camadas (depcruise) e tamanho
 (ESLint com catraca). A entrada HTTP ganha esquema no parâmetro, pelo `ZodValidationPipe`, e o lint recusa o controller sem ele (D81).
 
 ## 2. Desenho
@@ -14,10 +14,18 @@ Três travas, fora de `tools/processo/` e `.github/`: tenant (AST nos 71 reposit
 **O teste.** `tools/guardas/repositories-com-escopo.test.ts` usa `tools/guardas/escopo-dos-repositories.ts`, por AST com o
 `typescript` da raiz, sobre todo `*.repository.ts` de `apps/*/src` e `packages/*/src`.
 
+**O método público e o banco.** Método público é o método, o acessor e a propriedade-função sem `private`, `protected` nem `#`,
+**e a função exportada do módulo** (`insercao-de-auditoria` e as de `turma-do-professor` são funções, não métodos). Toca o
+banco quem usa `this.<campo>`, com campo ou acessor de tipo `Banco`, `TransacaoBanco` ou `ExecutorDeAuditoria`, ou um
+parâmetro desses tipos, direto ou por ajudante do mesmo arquivo; repassar o banco a função de outro arquivo também é tocar.
+
 **A prova.** Todo método público que toca o banco tem uma de três:
 - **(a)** chama uma função de `PROVAS_DE_ESCOPO`, direto ou por ajudante do mesmo arquivo: `exigirEscolaDoContexto`,
   `identidadeDaRequisicao` ou `escopoDoJobNoContexto`;
-- **(b)** tem `@SemEscopo('…')` com motivo literal de pelo menos 30 caracteres;
+- **(b)** tem `@SemEscopo(<motivo>)` com motivo **estático** de pelo menos 30 caracteres: texto, template sem substituição,
+  soma de textos ou `const` do mesmo arquivo com um desses (`material.repository` e `despacho.repository` já escrevem o motivo
+  numa `const`, e `expurgo-de-jobs` e `expurgo-de-acesso`, numa soma). Import, `let`, chamada de função e template com
+  substituição reprovam;
 - **(c)** está em `REPOSITORIES_SEM_ESCOPO` (`{ arquivo, motivo, metodos }`), com `motivo` de pelo menos 30 caracteres.
 
 A prova (a) mostra a chamada, não o uso no `where` nem o `ano_letivo_id`: complementa o teste de isolamento, não o
@@ -30,15 +38,25 @@ também (hoje, `SuspensoesDaEscolaRepository`, `apps/api/src/assistente/time.ser
 "chama e não usa", limite declarado do analisador; por isso a 7.0 declara, por repository, a mutação "tirar o
 `eq(…escolaId…)`" contra o teste de isolamento.
 
-**Os 25 de hoje:** 8 já têm `@SemEscopo`. Dos 17 outros:
+**Os 25 do desenho:** 8 já tinham `@SemEscopo`, entre eles o `ia/execucao` (pelo `falharInterrompidas`). Dos 17 outros:
 - **7.0:** os 9 com cópia local de `contextoAtual()?.escolaId` (api: `escola-sessao`, `convite`, `criacao-de-sessao`,
   `escrita-de-sessao`, `redefinicao-de-mfa`, `registro-de-acesso`; nucleo: `configuracao-operacional`, `efeito-sintetico`,
   `uso`) passam a `exigirEscolaDoContexto`.
 - **8.0:** `ia/consumo`, `ia/orcamento` e `ia/suspensao`, hoje com `escolaId` por argumento.
-- **Lista:** `auditoria`, `insercao-de-auditoria` e `job-registro` (escola nula em `sistema.*`), `operacao/operador` (a
-  equipe não tem escola), `nucleo/identidade/sessao` (cria o contexto) e `ia/execucao`, até a 47.0 tirar (R39).
+- **Lista:** cinco, `auditoria`, `insercao-de-auditoria` e `job-registro` (escola nula em `sistema.*`), `operacao/operador`
+  (a equipe não tem escola) e `nucleo/identidade/sessao` (cria o contexto): 9 + 3 + 5 = 17. Soma-se o `ia/execucao`, que já
+  estava entre os 8 com `@SemEscopo` e fica na lista até a 47.0 tirar (R39): são 18 na lista do desenho.
 
-⚠️ A lista exata, por método, se fecha na 6.0, com evidência.
+**A lista exata, por método, ficou fechada na 6.0, com a evidência no `motivo` de cada entrada** (`REPOSITORIES_SEM_ESCOPO`,
+`tools/guardas/escopo-dos-repositories.ts`): 22 arquivos. Além dos 18 acima (17 e o `ia/execucao`), entram quatro que a leitura por método achou e
+o desenho não citava: `ops/operacao-privacidade` (`cadastrar`, `travarVigente`, `encerrar` e `registrarIncidente`: `suboperador`
+e `incidente` não têm `escola_id`), `privacidade/titulares.homonimo` (repassa o banco a `haHomonimoDoTitular`, que lê o
+contexto, e a prova mora em outro arquivo), `titular/compartilhamento.datasDeReferencia` (só calcula duas datas, sem tabela) e as
+três funções de `assistente/turma-do-professor` (montam subconsulta SQL ligada à coluna de escola de quem chama, e não executam).
+O `ia/execucao` leva os quatro métodos que recebem `execucao.escolaId`; o `falharInterrompidas` já tem `@SemEscopo`.
+Medido na árvore da 6.0, com o próprio analisador: 72 `*.repository.ts`; 22 com método que toca o banco sem nenhuma das três
+provas (é a lista, arquivo por arquivo); 11 com `@SemEscopo` em algum método; e dois nos dois grupos, `ia/execucao` e
+`ops/operacao-privacidade`.
 
 **A IA pelo contexto (8.0).** `SuspensaoDeFuncao.estaSuspensa`, `ConsultaDeOrcamento` e `ConsumoDeIa` perdem `escolaId`
 e usam `exigirEscolaDoContexto()`; o `ProvedorDeIa` mantém a conferência de `pedido.escolaId` (`provedor.ts:101`).

@@ -1,0 +1,14 @@
+import { SemEscopo, type Banco } from '@educa/nucleo'
+import { aluno } from './tabelas.js'
+
+export const COLUNAS = { id: 1, nome: 2 } satisfies Record<string, number>
+
+// O parser é o do `typescript` da raiz: decorator, `satisfies` e `as const` compilam.
+export class DecoratorESatisfiesRepository {
+  constructor(private readonly banco: Banco) {}
+
+  @SemEscopo('varredura da operação, em todas as escolas, sem devolver linha nem pessoa')
+  async todas() {
+    return this.banco.select().from(aluno) satisfies unknown as readonly unknown[] as const
+  }
+}
