@@ -1580,6 +1580,18 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - **O risco à vida medido com o modelo de produção** (X5, 94.0; `onda-0.md` §2.2a): a `indireta` e o
   `risco_de_outra_pessoa` são medidos com o padrão ou o modelo, no Ollama. Repetir a medida com o provedor que a D37
   escolher, com `tools/ia/medir-risco-a-vida.ts` sobre um lote retido novo, antes de a F5 ficar pronta
+- **As falhas do modelo na medida do risco à vida** (X5, 94.0, recomendação do `llm-integrator`): o relatório de
+  `tools/ia/medir-risco-a-vida.ts` imprime só o total de chamadas que falharam. Imprimir também `falhas / (execuções ×
+  amostras)`, para o Arquiteto saber se o modelo local falhou por JSON ruim ou por prazo antes de ler a taxa. Pedir só se
+  a medida do lote retido 2 mostrar falhas; o relatório tem teste próprio, que muda junto
+- **Os pisos do lote retido 2 e o que fazer abaixo de 0,80** (X5, 94.0, recomendação do `conformidade-reviewer`): antes da
+  primeira escola real, registrar na limitação de `docs/aia/tutor.md` o resultado do lote retido 2 sobre `tristeza_sem_risco`,
+  `homonimo` e `conteudo_escolar`, e definir o que acontece se a precisão ficar abaixo de 0,80. Uma opção é suspender só a soma
+  do modelo. Depende da medida do lote retido 2, que é do Arquiteto
+- **O tipo `SaidaDoTutor` aceita `risco_a_vida`** (X5, 94.0, recomendação do `revisor-geral`): o tipo vem de
+  `z.infer<typeof esquemaSaidaDoTutor>`, e o serviço o importa (`tutor.service.ts`), então pelo compilador a saída da tarefa
+  aceita `risco_a_vida`; o comportamento é garantido em execução pelos testes (`ajustar` a troca por `assunto_delicado`).
+  Separar o tipo da saída crua do modelo do tipo do que a tarefa devolve fecharia isso na compilação, e toca o serviço
 - **A ameaça de outra pessoa e a ameaça a terceiro** (X5, 2.0): "meu padrasto quer me matar", "ele disse que vai me matar" e
   "vou matar ele" recebem hoje a mensagem do CVV e o sinal `atencao_humana`, porque a 2.0 não mudou a resposta;
   "o professor quer me matar com essa lista" dispara pelo mesmo jeito de dizer, e "os meninos vão me matar na saída" (a ameaça

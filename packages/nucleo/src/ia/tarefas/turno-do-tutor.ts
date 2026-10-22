@@ -24,6 +24,14 @@ export const CLASSIFICACOES_DO_TURNO = ['normal', 'pediu_resposta_pronta', 'assu
 export type ClassificacaoDoTurno = (typeof CLASSIFICACOES_DO_TURNO)[number]
 
 /**
+ * O que o **modelo** pode dizer: as quatro de cima mais `risco_a_vida`, o que o aluno escreveu sobre tirar a própria vida, se
+ * machucar de propósito, outra pessoa que vai fazer isso, ou o meio (D36). `risco_a_vida` só existe na saída crua do modelo: o
+ * `ajustar` a troca por `assunto_delicado` com `MENSAGEM_DE_RISCO_A_VIDA`, e nada que sai da tarefa a leva. O serviço, o
+ * check `mensagem_tutor_tipo_valido`, o contrato e a web só conhecem `CLASSIFICACOES_DO_TURNO`.
+ */
+export const CLASSIFICACOES_DO_MODELO = [...CLASSIFICACOES_DO_TURNO, 'risco_a_vida'] as const
+
+/**
  * A questão em que o aluno está, **sem gabarito e sem explicação**: o objeto é estrito, então mandar qualquer um
  * dos dois é entrada inválida. O Tutor não tem como entregar o que não recebeu, em nenhum estado da atividade.
  */
@@ -58,7 +66,7 @@ export const esquemaEntradaDoTutor = z.strictObject({
 export type EntradaDoTutor = z.infer<typeof esquemaEntradaDoTutor>
 
 export const esquemaSaidaDoTutor = z.strictObject({
-  classificacao: z.enum(CLASSIFICACOES_DO_TURNO),
+  classificacao: z.enum(CLASSIFICACOES_DO_MODELO),
   resposta: z.string().min(1).max(1500),
   citacoes: z.array(esquemaCitacao).max(3),
 })
@@ -584,9 +592,11 @@ export function turnosParaOModelo(entrada: EntradaDoTutor): EntradaDoTutor['turn
 function problemasDoTurno(entrada: EntradaDoTutor, saida: SaidaDoTutor): string[] {
   const problemas = problemasDasCitacoes(saida.citacoes, entrada.trechos, 'Citações')
   // Assunto delicado só tem uma resposta, a fixa. Texto do modelo no lugar dela é recusado, classifique ele como classificar.
+  // A de risco à vida também vale onde o padrão não reconheceu a frase: foi o modelo que a classificou, e o `ajustar` a pôs.
   if (saida.classificacao === 'assunto_delicado' || ehAssuntoDelicado(entrada.duvida)) {
     const fixa = mensagemFixaDoAssuntoDelicado(entrada.duvida)
-    if (saida.classificacao !== 'assunto_delicado' || saida.resposta !== fixa.resposta) problemas.push('Assunto pessoal delicado recebe só a mensagem fixa: não escreva resposta própria.')
+    const aceitas = [fixa.resposta, MENSAGEM_DE_RISCO_A_VIDA]
+    if (saida.classificacao !== 'assunto_delicado' || !aceitas.includes(saida.resposta)) problemas.push('Assunto pessoal delicado recebe só a mensagem fixa: não escreva resposta própria.')
     return problemas
   }
   const texto = normalizar(saida.resposta)
@@ -642,8 +652,13 @@ export const turnoDoTutor = definirTarefa({
    * A regra decide, e o modelo não desfaz. Assunto delicado, pelos gatilhos ou pela classificação do modelo, recebe a
    * mensagem fixa: o texto, o modelo não escreve. E o pedido de resposta pronta que a regra reconhece sai classificado
    * como tal, diga o modelo o que disser: é dessa classificação que nasce o sinal ao professor.
+   *
+   * O modelo só soma no risco à vida: `risco_a_vida` vira `assunto_delicado` com a mensagem de risco, o 188 na frente, ainda que
+   * o padrão não reconheça a frase. A classificação que sai é sempre uma de `CLASSIFICACOES_DO_TURNO`, e é por ela que o serviço
+   * grava o sinal `atencao_humana`, sem referência e sem o que o aluno escreveu.
    */
   ajustar(entrada, saida): SaidaDoTutor {
+    if (saida.classificacao === 'risco_a_vida') return { classificacao: 'assunto_delicado', resposta: MENSAGEM_DE_RISCO_A_VIDA, citacoes: [] }
     if (saida.classificacao === 'assunto_delicado' || ehAssuntoDelicado(entrada.duvida)) return mensagemFixaDoAssuntoDelicado(entrada.duvida)
     return pedeRespostaPronta(entrada) ? { ...saida, classificacao: 'pediu_resposta_pronta' } : saida
   },

@@ -79,12 +79,12 @@ reescrita de import com ts-morph por `npx` (sem salvar no `package.json`), uma p
   - [ ] 93.2 As três pioras da 2.0 desfeitas, cada uma com a sua `dev`
   - [ ] 93.3 Testes: as `dev`, a regressão exata do `ouro` v1, o alvo e o piso de `assuntoDelicado`
 
-- [ ] **94.0 — Frase de risco à vida que só o modelo reconhece recebe o 188 e o sinal**
-  - [ ] 94.1 `risco_a_vida` na saída do modelo; o `ajustar` a troca por `assunto_delicado` com a mensagem de risco, e nada sai da tarefa com ela
-  - [ ] 94.2 O prompt classifica pelo que o aluno escreveu, com a `versao` nova
-  - [ ] 94.3 `tools/ia/medir-risco-a-vida.ts`: o padrão ou o modelo, por categoria, em três execuções, valendo a pior
-  - [ ] 94.4 `docs/aia/tutor.md`: o modelo que classifica o risco, a medida e as limitações
-  - [ ] 94.5 Testes: o caminho na tarefa e na rota, com a avaliação aberta, e a ferramenta de medida
+- [x] **94.0 — Frase de risco à vida que só o modelo reconhece recebe o 188 e o sinal**
+  - [x] 94.1 `risco_a_vida` na saída do modelo; o `ajustar` a troca por `assunto_delicado` com a mensagem de risco, e nada sai da tarefa com ela
+  - [x] 94.2 O prompt classifica pelo que o aluno escreveu, com a `versao` nova
+  - [x] 94.3 `tools/ia/medir-risco-a-vida.ts`: o padrão ou o modelo, por categoria, em três execuções, valendo a pior
+  - [x] 94.4 `docs/aia/tutor.md`: o modelo que classifica o risco, a medida e as limitações
+  - [x] 94.5 Testes: o caminho na tarefa e na rota, com a avaliação aberta, e a ferramenta de medida
 
 ### A linha da web — a prova que não perde resposta (regra 80.6) e as pastas da web
 

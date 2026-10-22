@@ -12,7 +12,9 @@ import { ErroDeIa } from '../erros.js'
 import { ProvedorDeIa } from '../provedor.js'
 import { SuspensoesEmMemoria } from '../suspensao.js'
 import { normalizar, semPontoFinal } from '../texto.js'
+import { PROMPT_TURNO_DO_TUTOR } from '../prompts/turno-do-tutor.js'
 import {
+  CLASSIFICACOES_DO_MODELO,
   CLASSIFICACOES_DO_TURNO,
   ehAssuntoDelicado,
   GATILHOS_DE_RISCO_A_VIDA,
@@ -408,6 +410,24 @@ describe('assunto pessoal delicado: mensagem fixa, sem modelo (D36)', () => {
     expect(JSON.stringify(turnoDoTutor.montarPedido(entrada))).not.toContain('lá em casa')
   })
 
+  it('o turno que só o modelo classificou como risco à vida, sem gatilho, também sai: é o que veio logo antes da mensagem de risco', () => {
+    const frase = 'ontem de noite eu fiquei olhando o frasco de remédio da minha mãe e pensando no que aconteceria'
+    expect(ehAssuntoDelicado(frase)).toBe(false)
+    const entrada: EntradaDoTutor = {
+      ...entradaDoTutor('voltando: como eu acho o limitante?'),
+      turnosAnteriores: [
+        { autor: 'aluno', texto: frase },
+        { autor: 'tutor', texto: MENSAGEM_DE_RISCO_A_VIDA },
+        { autor: 'aluno', texto: 'deu 2 mol' },
+      ],
+    }
+    expect(turnosParaOModelo(entrada)).toEqual([{ autor: 'aluno', texto: 'deu 2 mol' }])
+    const enviado = JSON.stringify(turnoDoTutor.montarPedido(entrada))
+    expect(enviado).not.toContain('frasco')
+    expect(enviado).not.toContain('Obrigado por me contar')
+    expect(enviado).toContain('deu 2 mol')
+  })
+
   it('resposta do Tutor a um turno delicado sai junto com ele, mesmo que não seja a mensagem fixa (conversa antiga, texto revisado)', () => {
     const entrada: EntradaDoTutor = {
       ...entradaDoTutor('e a questão 4?'),
@@ -428,6 +448,62 @@ describe('assunto pessoal delicado: mensagem fixa, sem modelo (D36)', () => {
     const conselho = JSON.stringify({ classificacao: 'assunto_delicado', resposta: 'Sinto muito. Tente conversar com seus pais e respire fundo, vai passar.', citacoes: [] })
     const saida = await turno(entradaDoTutor('as coisas lá em casa andam complicadas'), new AdaptadorRoteirizado([conselho]))
     expect(saida).toEqual({ classificacao: 'assunto_delicado', resposta: MENSAGEM_DE_ASSUNTO_DELICADO, citacoes: [] })
+    // O delicado que o modelo achou sozinho não vira o de risco: o 188 na frente é de quem escreveu sobre a própria vida.
+    expect(saida.resposta).not.toBe(MENSAGEM_DE_RISCO_A_VIDA)
+  })
+
+  it('se o modelo classificar como risco à vida o que o padrão não reconheceu, o texto dele é trocado pela mensagem de risco, com o 188', async () => {
+    const duvida = 'ontem de noite eu fiquei olhando o frasco de remédio da minha mãe e pensando no que aconteceria'
+    expect(mencionaRiscoAVida(duvida)).toBe(false)
+    expect(ehAssuntoDelicado(duvida)).toBe(false)
+    // O modelo ainda cita uma página, como a recusa dele faria: o que sai é a mensagem fixa, sem citação nenhuma.
+    const citacao = { materialId: MATERIAL_DE_ESTEQUIOMETRIA, pagina: 5, trecho: 'O reagente limitante é…' }
+    const conselho = JSON.stringify({ classificacao: 'risco_a_vida', resposta: 'Sinto muito. Respire fundo e converse com alguém de confiança, vai ficar tudo bem.', citacoes: [citacao] })
+    const adaptador = new AdaptadorRoteirizado([conselho])
+    const saida = await turno(entradaDoTutor(duvida), adaptador)
+    expect(saida).toEqual({ classificacao: 'assunto_delicado', resposta: MENSAGEM_DE_RISCO_A_VIDA, citacoes: [] })
+    expect(saida.resposta.startsWith('Obrigado por me contar. O que você escreveu é sério.')).toBe(true)
+    // Uma chamada só, sem repetição: a mensagem de risco passa pela conferência, e o modelo não é chamado de novo.
+    expect(adaptador.chamadas).toBe(1)
+  })
+
+  it('a mensagem de risco do modelo vale também onde o padrão só achou um assunto delicado, e a conferência a aceita', () => {
+    const entrada = entradaDoTutor('tô triste faz uma semana')
+    expect(mencionaRiscoAVida(entrada.duvida)).toBe(false)
+    expect(ehAssuntoDelicado(entrada.duvida)).toBe(true)
+    const doModelo: SaidaDoTutor = { classificacao: 'risco_a_vida', resposta: 'qualquer texto', citacoes: [] }
+    const ajustada = turnoDoTutor.ajustar?.(entrada, doModelo)
+    expect(ajustada).toEqual({ classificacao: 'assunto_delicado', resposta: MENSAGEM_DE_RISCO_A_VIDA, citacoes: [] })
+    expect(turnoDoTutor.conferir?.(entrada, ajustada ?? doModelo)).toEqual([])
+  })
+
+  it('onde o padrão reconheceu o risco, a conferência não aceita a mensagem de assunto delicado no lugar da de risco', () => {
+    const entrada = entradaDoTutor('quero matar ela')
+    expect(mencionaRiscoAVida(entrada.duvida)).toBe(true)
+    const delicado: SaidaDoTutor = { classificacao: 'assunto_delicado', resposta: MENSAGEM_DE_ASSUNTO_DELICADO, citacoes: [] }
+    expect(turnoDoTutor.conferir?.(entrada, delicado).length).toBeGreaterThan(0)
+    expect(turnoDoTutor.conferir?.(entrada, { ...delicado, resposta: MENSAGEM_DE_RISCO_A_VIDA })).toEqual([])
+  })
+
+  it('o texto do modelo no lugar da fixa continua recusado, também quando ele classificou como assunto delicado onde o padrão nada achou', () => {
+    const entrada = entradaDoTutor('lá em casa as coisas andam complicadas')
+    const proprio: SaidaDoTutor = { classificacao: 'assunto_delicado', resposta: 'Sinto muito. Quer me contar mais?', citacoes: [] }
+    expect(turnoDoTutor.conferir?.(entrada, proprio).length).toBeGreaterThan(0)
+    expect(turnoDoTutor.conferir?.(entrada, { ...proprio, resposta: MENSAGEM_DE_ASSUNTO_DELICADO })).toEqual([])
+    expect(turnoDoTutor.conferir?.(entrada, { ...proprio, resposta: MENSAGEM_DE_RISCO_A_VIDA })).toEqual([])
+  })
+
+  it.each(CLASSIFICACOES_DO_MODELO.map((classificacao) => [classificacao]))('o modelo diz "%s": nenhuma saída da tarefa leva `risco_a_vida`', (classificacao) => {
+    // Uma frase que o padrão não reconhece e sem questão em andamento: o que sai é a decisão da tarefa sobre o que o modelo disse.
+    const { duvida, contexto, trechos, memoria, turnosAnteriores } = entradaDoTutor('como eu acho o reagente limitante?')
+    const entrada: EntradaDoTutor = { duvida, contexto, trechos, memoria, turnosAnteriores }
+    const citacao = { materialId: MATERIAL_DE_ESTEQUIOMETRIA, pagina: 5, trecho: 'O reagente limitante é…' }
+    const doModelo = { classificacao, resposta: 'Vamos por partes. Qual é o próximo passo?', citacoes: [citacao] }
+    const lida = turnoDoTutor.esquemaDeSaida.parse(doModelo)
+    const saida = turnoDoTutor.ajustar?.(entrada, lida) ?? lida
+    expect(CLASSIFICACOES_DO_TURNO).toContain(saida.classificacao)
+    expect(saida.classificacao).not.toBe('risco_a_vida')
+    expect(saida.classificacao).toBe(classificacao === 'risco_a_vida' ? 'assunto_delicado' : classificacao)
   })
 })
 
@@ -927,6 +1003,24 @@ describe('a classificação é do pedido, e a memória é do trabalho', () => {
     }
     // A saída não tem onde levar leitura da pessoa: objeto estrito, só classificação, resposta e citações.
     expect(turnoDoTutor.esquemaDeSaida.safeParse({ classificacao: 'normal', resposta: 'x?', citacoes: [], humor: 'triste' }).success).toBe(false)
+  })
+
+  it('o modelo tem uma classificação a mais, `risco_a_vida`, que é do pedido e nunca está na lista do que sai da tarefa', () => {
+    expect(CLASSIFICACOES_DO_MODELO).toEqual([...CLASSIFICACOES_DO_TURNO, 'risco_a_vida'])
+    expect(CLASSIFICACOES_DO_TURNO).not.toContain('risco_a_vida')
+    expect(turnoDoTutor.esquemaDeSaida.safeParse({ classificacao: 'risco_a_vida', resposta: 'x?', citacoes: [] }).success).toBe(true)
+  })
+
+  it('o prompt nomeia `risco_a_vida` pelo que o aluno escreveu, e não pelo que ele sente, e a versão mudou', () => {
+    expect(PROMPT_TURNO_DO_TUTOR.versao).toBe('2026-10-22.1')
+    const risco = PROMPT_TURNO_DO_TUTOR.sistema.split('\n').find((trecho) => trecho.startsWith('- "risco_a_vida"')) ?? ''
+    for (const palavra of ['ESCREVEU', 'tirar a própria vida', 'se machucar de propósito', 'outra pessoa que vai fazer isso', 'o meio', 'nunca o que você acha que ele sente']) expect(risco).toContain(palavra)
+    // A exclusão que protege `conteudo_escolar` e `homonimo`: o falso positivo do modelo também manda o 188 e dá o sinal ao professor.
+    for (const palavra of ['Matéria escolar', 'a dose de um remédio na aula de ciências', 'exagero de expressão', 'não são risco à vida']) expect(risco).toContain(palavra)
+    // A ameaça a outra pessoa continua `assunto_delicado`, sem o 188 (`TODO.md`): o prompt diz isso ao modelo.
+    expect(PROMPT_TURNO_DO_TUTOR.sistema).toContain('A ameaça de ferir outra pessoa é "assunto_delicado", e não "risco_a_vida"')
+    // O que o modelo é pedido a classificar continua sendo o pedido: nenhuma classe de humor, atenção ou comportamento.
+    for (const rotulo of ['desmotivado', 'ansioso', 'desatento', 'preguicoso']) expect(PROMPT_TURNO_DO_TUTOR.sistema).not.toContain(`"${rotulo}"`)
   })
 
   it('o Tutor lembra o que o aluno errou naquela habilidade, em números, no primeiro turno', async () => {
