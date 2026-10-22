@@ -11,16 +11,16 @@ import { ConteudoNaoEncontrado } from '../../componentes/NaoEncontrada'
 const Escola = lazy(() => import('./Escola'))
 const Registros = lazy(() => import('./Registros'))
 /** As telas de Escola (A1, 13.0 e 14.0; MVP, A2): a Estrutura é a aba Turmas, e a lista da turma abre abaixo dela. */
-const Estrutura = lazy(() => import('./Estrutura'))
-const ListaDaTurma = lazy(() => import('./ListaDaTurma'))
-const Professores = lazy(() => import('./Professores'))
-const Material = lazy(() => import('./Material'))
+const Estrutura = lazy(() => import('./estrutura/Estrutura'))
+const ListaDaTurma = lazy(() => import('./estrutura/ListaDaTurma'))
+const Professores = lazy(() => import('./professores/Professores'))
+const Material = lazy(() => import('./material/Material'))
 /** Governança (a aba IA de Registros), Agentes e Analista (MVP, A5). */
-const Governanca = lazy(() => import('./Governanca'))
-const Agentes = lazy(() => import('./Agentes'))
-const Analista = lazy(() => import('./Analista'))
+const Governanca = lazy(() => import('./governanca/Governanca'))
+const Agentes = lazy(() => import('./governanca/Agentes'))
+const Analista = lazy(() => import('./governanca/Analista'))
 /** O Painel (telas da coordenação, 2.0): onde a coordenação abre. */
-const Painel = lazy(() => import('./Painel'))
+const Painel = lazy(() => import('./painel/Painel'))
 /** A aba Pedidos de Registros (F3, 16.0) e as três telas do seletor da aba Privacidade (F3, 6.0, 8.0 e 10.0). */
 const Pedidos = lazy(() => import('./privacidade/Pedidos'))
 const Privacidade = lazy(() => import('./privacidade/Privacidade'))
@@ -29,7 +29,7 @@ const DetalheDoPedido = lazy(() => import('./privacidade/DetalheDoPedido'))
 /** O aviso de incidente (F3, 10.0): o diálogo e a faixa, num pedaço próprio, para a fachada da área não crescer (`.size-limit.json`). */
 const AvisoDeIncidente = lazy(() => import('./privacidade/AvisoDeIncidente'))
 /** O sino "Esperando você" (telas da coordenação, 1.0): a fila e a lista num pedaço próprio, desenhado na âncora da casca. */
-const SinoDaCoordenacao = lazy(() => import('./SinoDaCoordenacao'))
+const SinoDaCoordenacao = lazy(() => import('./painel/SinoDaCoordenacao'))
 
 /**
  * A área da coordenação, relativa a `/coordenacao`, num chunk próprio, `coordenacao-*.js` (`apps/web/nome-dos-chunks.ts`),

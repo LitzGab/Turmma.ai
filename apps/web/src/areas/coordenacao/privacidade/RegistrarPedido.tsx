@@ -1,7 +1,7 @@
 import { MAXIMO_DO_NOME_DO_TITULAR, SOLICITANTES_DO_PEDIDO, TIPOS_DE_PEDIDO_DO_TITULAR, type RegistroDePedido, type RespostaPreviaDoTitular, type TitularAchado } from '@educa/shared'
 import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { useRef, useState, type FormEvent } from 'react'
-import { buscarTitulares, consultaPreviaDoTitular, registrarPedidoDoTitular, relerPedidosDoTitular } from '../../../api/privacidade'
+import { buscarTitulares, consultaPreviaDoTitular, registrarPedidoDoTitular, relerPedidosDoTitular } from './api/privacidade'
 import { Botao } from '../../../componentes/ui/Botao'
 import { Campo } from '../../../componentes/ui/campos/Campo'
 import { Dialogo } from '../../../componentes/ui/sobrepostos/Dialogo'

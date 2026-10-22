@@ -902,13 +902,13 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       (`revisor-geral` da 14.0).
       Não é troca de nome: o `Falha` leva o foco de novo a cada erro, e o `AlertaDaFalha`, só quando o texto muda, e a
       trava do diálogo está sob o e2e da A0b e as mutações da 14.0. Na mesma correção: o mapa
-      `TEXTOS_DO_CONVITE_QUE_MUDOU` de `areas/coordenacao/convite-de-professor.ts` difere por uma letra do texto
+      `TEXTOS_DO_CONVITE_QUE_MUDOU` de `areas/coordenacao/professores/convite-de-professor.ts` difere por uma letra do texto
       `TEXTO_DO_CONVITE_QUE_MUDOU` que o arquivo importa; dar ao mapa um nome que diga o que ele é (`revisor-geral` da
       14.0, 2ª rodada). E `linkDoConvite` e `copiarLink` (`componentes/link-do-convite.ts`) já montam também o link da
       sala e copiam o convite inteiro do WhatsApp: `linkComToken` e `copiarTexto`, ou equivalente (`revisor-geral` da
-      15.0); e `codigoEmDoisGrupos` (`areas/professor/acesso-da-turma.ts`) é só outro nome de `exibirCodigoDaTurma`. Destino: correção própria
+      15.0); e `codigoEmDoisGrupos` (`areas/professor/turmas/acesso/acesso-da-turma.ts`) é só outro nome de `exibirCodigoDaTurma`. Destino: correção própria
 - [ ] Acesso da turma (A1, 15.0): o gerar espera a releitura da seção antes de mostrar o link e o código
-      (`apps/web/src/api/acesso.ts`, `onSettled`). Numa rede que engasga, o diálogo fica em "Gerando…" com o acesso já
+      (`apps/web/src/areas/professor/turmas/api/acesso.ts`, `onSettled`). Numa rede que engasga, o diálogo fica em "Gerando…" com o acesso já
       gerado no servidor. O `frontend-reviewer` sugere mostrar o acesso assim que o `POST` responde e recarregar a seção
       por trás; pede resolver junto o foco de quem fecha antes da releitura (o "Gerar acesso" do vazio some) e a seção
       que afirma "Sem acesso ativo" nesse intervalo. Decidido no `/validar` da A1 (04/10/2026): não segura a A1, porque o
@@ -1129,7 +1129,7 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] **A descrição de cada ferramenta e o "Como vai sair" repetem quase o mesmo** (atividade objetiva, plano de aula e
       Adaptação): a frase de apoio abaixo do título do formulário e a primeira linha do texto fixo ao lado dizem a mesma
       coisa. Diferenciar quando o F7 acrescentar ferramentas e o catálogo voltar à mesa
-      (`frontend-reviewer` na 8.0 da telas-do-professor; `COMO_VAI_SAIR`, em `apps/web/src/areas/professor/ferramentas.ts`)
+      (`frontend-reviewer` na 8.0 da telas-do-professor; `COMO_VAI_SAIR`, em `apps/web/src/areas/professor/ferramentas/ferramentas.ts`)
       (dono: Joaquim e Gabriel)
 - [ ] **A atividade objetiva vai ao aluno por "Aplicar à turma", sem entrega com rejeição e justificativa** (regra 70, item 3).
       Decidir antes do piloto se "não aplicar" conta como a rejeição que a regra pede, ou se a atividade ganha uma entrega
@@ -1452,7 +1452,7 @@ qualquer dado real:
   prova é o vermelho da mutação, no portão.
 - [ ] **Alocação nova demora até 30 s para aparecer em "Turmas"** (`test-engineer` da correção
   `2026-10-05-segunda-pessoa-cache-dos-vinculos`). Não é requisito hoje, mas o vazio da Nova conversa manda a professora
-  a "Turmas" ("Ir para Turmas", `apps/web/src/areas/professor/Home.tsx`), que monta com a lista que a Nova conversa já
+  a "Turmas" ("Ir para Turmas", `apps/web/src/areas/professor/inicio/Home.tsx`), que monta com a lista que a Nova conversa já
   leu (`staleTime` de 30 s em `apps/web/src/api/cliente-de-consultas.ts`) e mostra "A coordenação ainda não alocou você";
   e esse vazio não tem como reler (`Turmas.tsx`), só trocando de aba ou abrindo a tela de novo. Se mudar (por exemplo,
   `refetchOnMount: 'always'` só na consulta de "Turmas"), o e2e que prova é "alocação feita com a Nova conversa aberta
@@ -1512,7 +1512,7 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X2, recomendações sem destino) Três que as correções deixaram para depois:** (a) uma linha de texto "O painel abre depois do aviso" quando o aviso de incidente segura o painel aberto pelo endereço (`frontend-reviewer`, correção `2026-10-17-painel-pelo-endereco-cobre-o-aviso`; muda texto de tela, decisão de produto); (b) o texto do incidente da vitrine e da fixture ("Segunda linha do texto.") pouco realista para demonstração (`frontend-reviewer`, correção `2026-10-17-troca-de-escola-sem-ir-para-a-entrada`); (c) o sino da coordenação faz seis leituras a cada recarga de página (1.0; `techspec.md:96` tem a conta da manhã de segunda): medir com a escola do piloto e, se pesar, juntar numa leitura só. (dono: Joaquim)
 - [ ] **A vitrine não entra como operador (validação da X2, rodada 2).** As fotos de `/operacao` e `/operacao/uso` vieram de um Playwright fora do repositório, com as fixtures `criarOperadorComSegundoFator` e `semearPainel`. Levar à ferramenta da vitrine (`tools/vitrine/`) um modo operador, junto do que a 14.0 já registrou. (dono: Joaquim)
 - [ ] **`PRAZO_DA_ENTRADA_MS = 20_000` está escrito em quatro arquivos de e2e (correção 2026-10-19-mfa-codigo-de-recuperacao-estoura-o-prazo; revisor-geral, 1ª rodada).** Em `e2e/mfa.spec.ts`, `e2e/__fixtures__/segundo-fator.ts`, `e2e/__fixtures__/casca.ts` e `e2e/__fixtures__/tela-da-operacao.ts`. Exportar de uma fixture só e importar nos outros evita que os valores se separem. É limpeza que toca arquivos fora da correção; fazer numa tarefa que já altere esses e2e. (dono: Joaquim)
-- [ ] **Em "Turmas", o painel de contestação fecha sozinho e o texto some quando o vínculo sai da lista por fora** (`revisor-geral`, 9.0 da X3, 1ª rodada). Se o vínculo é decidido em outra aba ou pela coordenação enquanto a professora escreve, `doPainel` fica `undefined` e o painel desmonta sem avisar. Vale limpar o estado e dizer que o vínculo mudou, e garantir que o rascunho do complemento não fique no estado do cliente nem seja reenviado ao reabrir o painel de outro vínculo (`privacy-guardian`, 2ª rodada); muda comportamento da tela (`apps/web/src/areas/professor/Turmas.tsx` e `PainelDaContestacao.tsx`): correção própria
+- [ ] **Em "Turmas", o painel de contestação fecha sozinho e o texto some quando o vínculo sai da lista por fora** (`revisor-geral`, 9.0 da X3, 1ª rodada). Se o vínculo é decidido em outra aba ou pela coordenação enquanto a professora escreve, `doPainel` fica `undefined` e o painel desmonta sem avisar. Vale limpar o estado e dizer que o vínculo mudou, e garantir que o rascunho do complemento não fique no estado do cliente nem seja reenviado ao reabrir o painel de outro vínculo (`privacy-guardian`, 2ª rodada); muda comportamento da tela (`apps/web/src/areas/professor/turmas/Turmas.tsx` e `PainelDaContestacao.tsx`): correção própria
 - [ ] **O ajudante que entra pela API e abre o endereço está copiado em cinco specs** (`revisor-geral`, 9.0 da X3, 1ª rodada): `abrirJaEntrando` em `escola-e-vinculos`, `inatividade`, `professor-turmas` e `acesso-da-turma`, e `entrarPelaApi` em `areas`. Mover para `e2e/__fixtures__/` é refatoração de cinco specs, com risco para os casos que ela não altera
 - [ ] **Turmas 9.0: recomendações de forma** (`test-engineer` 2ª, `revisor-geral` 2ª, `frontend-reviewer` 2ª): bloco de mutação de `contestar.reset()`; axe da variante com e-mail do login por cima (ver se `acesso-suspenso.spec.ts` ou `professores.spec.ts` a cobrem); ids UUID v7 no teste da cor (`familia-da-disciplina.test.ts`); `?? 0` no teste de quebra da faixa (`professor-turmas.spec.ts`); comentário duplicado antes de `decidindo` (`Turmas.tsx`); respiro no fim do miolo do painel a 360 px
 - [ ] **A vitrine fotografa a aba da turma antes de ela carregar** (`frontend-reviewer`, correção encontro-10, 1ª rodada). A foto de Atividades e Alunos no computador pode sair em "Carregando a aba…": esperar o fim do carregamento em `tools/vitrine/` antes de fotografar. (dono: Joaquim)
@@ -1660,3 +1660,10 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **O `Enfileirador` grava `lidos.data`, e nenhum esquema tem `default` nem `transform`** (X5, 18.0): quando o primeiro esquema
   de `DEFINICOES_DE_JOB` ganhar um, acrescentar o caso que distingue gravar o dado lido do payload original, com a mutação
   `dados: dados` no lugar de `dados: lidos.data` em `enfileirador.ts` (`test-engineer`, 18.0, 1ª rodada)
+- [ ] **(X5, 97.0) Dois comentários de e2e citam `api/` velha:** `e2e/acesso-da-turma.spec.ts:415` (`api/acesso.ts`, hoje
+  `areas/professor/turmas/api/acesso.ts`) e `e2e/professores.spec.ts:309` (`api/professores.ts`, hoje
+  `areas/coordenacao/professores/api/professores.ts`). Tocar os dois faria o portão rodar os e2e deles por uma citação de
+  comentário: fica para a tarefa que mexer neles (`revisor-geral`, 97.0, 1ª rodada)
+- [ ] **(X5, 97.0) Os dois testes do build de `apps/web/nome-dos-chunks.test.ts` (`describe` "o build de verdade da web", dos
+  casos B2 e "as áreas da escola") usam o prazo padrão de 5000 ms** e estouraram com a máquina cheia, antes e depois da
+  tarefa: prazo explícito no `it` na próxima tarefa que tocar o arquivo (`test-engineer`, 97.0, 1ª rodada)

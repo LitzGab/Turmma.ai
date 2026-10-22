@@ -1,7 +1,7 @@
 import type { IncidenteDaEscola } from '@educa/shared'
 import { useQuery } from '@tanstack/react-query'
 import { useRef } from 'react'
-import { consultaIncidentes } from '../../../api/privacidade'
+import { consultaIncidentes } from './api/privacidade'
 import { Botao } from '../../../componentes/ui/Botao'
 import { Cartao } from '../../../componentes/ui/Cartao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../../componentes/estado'

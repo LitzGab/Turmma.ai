@@ -181,7 +181,7 @@ onde vêm as imagens da apresentação está em aberto.
 No código, **a ferramenta é dado**: um contrato por ferramenta em `packages/shared`, e o
 formulário derivado dele, em vez de uma tela escrita à mão por ferramenta (P23). Entregue no MVP:
 a descrição de campos de cada ferramenta sai de `descricaoDaFerramenta`
-(`apps/web/src/areas/professor/ferramentas.ts`), e um motor só a desenha
+(`apps/web/src/areas/professor/ferramentas/ferramentas.ts`), e um motor só a desenha
 (`apps/web/src/componentes/ui/ia/motor-formulario.ts` e `MotorFormulario.tsx`).
 
 **A página de Ferramentas** (X3, tarefa 7.0) tem uma seção por categoria que tem ferramenta (hoje Planejar, Preparar a aula e

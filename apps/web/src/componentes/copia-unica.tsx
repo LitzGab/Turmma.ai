@@ -9,7 +9,7 @@ import { CAIXA_DO_CAMPO } from './ui/campos/seletor'
  * campo de leitura do link, a falha com o foco nela, e o foco que acompanha a etapa. Nasceram no diálogo do convite (A0b,
  * 7.0; A1, 14.0) e saíram dele na 15.0, com o acesso da turma do professor usando as mesmas: o link da sala e o código
  * também aparecem uma vez (regra 20, item 8). Cada diálogo monta as etapas dele com estas peças
- * (`DialogoDoConvite.tsx`, `areas/professor/AcessoDaTurma.tsx`).
+ * (`DialogoDoConvite.tsx`, `areas/professor/turmas/acesso/AcessoDaTurma.tsx`).
  */
 
 /** O que a área de transferência fez, dito no `role="status"` de dentro do diálogo. */

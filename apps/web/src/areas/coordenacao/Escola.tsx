@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { ROTAS_DA_COORDENACAO } from '../../caminhos'
-import { Moldura, type AbaDaMoldura } from './moldura'
+import { Moldura, type AbaDaMoldura } from './comum/moldura'
 
 /**
  * As abas de Escola, na ordem em que a coordenação monta a escola (D80; Tech Spec da X2, seção 5): Turmas, Professores e

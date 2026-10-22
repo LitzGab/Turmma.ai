@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { caminhoDaAbaDaPrivacidade, ROTAS_DA_COORDENACAO } from '../../caminhos'
-import { Moldura, type AbaDaMoldura } from './moldura'
+import { Moldura, type AbaDaMoldura } from './comum/moldura'
 
 /**
  * As abas de Registros (D80; Tech Spec da X2, seção 5): IA, Pedidos e Privacidade. IA é a Governança, em `/governanca`; Pedidos

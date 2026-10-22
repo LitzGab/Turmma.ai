@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { TriangleAlert } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type RefObject } from 'react'
-import { consultaIncidentes } from '../../../api/privacidade'
+import { consultaIncidentes } from './api/privacidade'
 import { Botao } from '../../../componentes/ui/Botao'
 import { Dialogo } from '../../../componentes/ui/sobrepostos/Dialogo'
 import { useDialogoPrioritario } from '../../../componentes/ui/sobrepostos/dialogo-prioritario'

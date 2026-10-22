@@ -45,7 +45,7 @@ describe('a onça só chega à tela pela assinatura', () => {
   it('as telas e a galeria que mostram a onça usam a `AssinaturaIA`, e nenhuma importa o avatar nem a pasta da onça', () => {
     const arquivos = arquivosDaWeb()
     const daAssinatura = importadoresDe(arquivos, ASSINATURA)
-    for (const tela of ['areas/coordenacao/Agentes.tsx', 'areas/coordenacao/Analista.tsx', 'galeria/secoes/marca-onca.tsx']) expect(daAssinatura, tela).toContain(tela)
+    for (const tela of ['areas/coordenacao/governanca/Agentes.tsx', 'areas/coordenacao/governanca/Analista.tsx', 'galeria/secoes/marca-onca.tsx']) expect(daAssinatura, tela).toContain(tela)
     const doAvatarOuDaOnca = [...importadoresDe(arquivos, AVATAR), ...importadoresDe(arquivos, PASTA_DA_ONCA)]
     expect(doAvatarOuDaOnca.filter((nome) => nome.startsWith('areas/') || nome.startsWith('galeria/') || nome.startsWith('operacao/'))).toEqual([])
   })
@@ -56,7 +56,7 @@ describe('o atributo do avatar', () => {
     const arquivos = arquivosDaWeb()
     const queEscrevem = arquivos.filter(({ conteudo }) => /\bdata-agente\b/.test(semComentarios(conteudo))).map(({ nome }) => nome)
     expect(queEscrevem, 'o teste confere cada `data-agente` pelo bloco dele: o cartão da tela não pode levá-lo').toEqual(['componentes/ui/ia/AvatarAgente.tsx'])
-    expect(arquivos.find(({ nome }) => nome === 'areas/coordenacao/Agentes.tsx')?.conteudo).toMatch(/data-cartao-do-agente=/)
+    expect(arquivos.find(({ nome }) => nome === 'areas/coordenacao/governanca/Agentes.tsx')?.conteudo).toMatch(/data-cartao-do-agente=/)
   })
 })
 

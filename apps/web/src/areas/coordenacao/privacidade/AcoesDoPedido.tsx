@@ -1,7 +1,7 @@
 import { FINALIDADES_DO_ARQUIVO_DA_ESCOLA, MAXIMO_DO_NOME_DO_TITULAR, type PedidoDoTitular } from '@educa/shared'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { cancelarPedidoDoTitular, concluirPedidoDoTitular, corrigirNomeDoTitular, pedirArquivoDaEscola, relerPedidoDoTitular } from '../../../api/privacidade'
+import { cancelarPedidoDoTitular, concluirPedidoDoTitular, corrigirNomeDoTitular, pedirArquivoDaEscola, relerPedidoDoTitular } from './api/privacidade'
 import { baixarPorUrl } from '../../../componentes/baixar-por-url'
 import { Botao } from '../../../componentes/ui/Botao'
 import { Campo } from '../../../componentes/ui/campos/Campo'

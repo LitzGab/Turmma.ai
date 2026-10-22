@@ -38,8 +38,10 @@ A 10.0, 11.0, 24.0, 33.0 a 36.0, 90.0, 96.0 e 97.0 só movem pasta, quebram cicl
 Dockerfile. Nelas, **os revisores são o `test-engineer`, o `revisor-geral` e no máximo um guardião**, o da área que o
 movimento toca (tabela "Subagentes por tarefa"). **O movimento é feito por script**, nunca à mão: `git mv` mais a
 reescrita de import com ts-morph, instalado numa pasta de rascunho (`npm i --prefix .processo/ts-morph ts-morph@<exata>`,
-sem tocar o `package.json`), uma pasta por commit. O script fica no `.processo/` da linha, fora do commit, e o documento
-da tarefa diz como rodá-lo.
+sem tocar o `package.json`). O script roda uma pasta por vez, com tipos e unidade entre elas, mas **a tarefa fecha em um
+commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo do portão e revisão aprovada em todo commit
+`(tarefa N.0)`, e a Mesa revisa a tarefa uma vez, não uma por pasta (a divergência da 36.0 e da 97.0). O script fica no
+`.processo/` da linha, fora do commit, e o documento da tarefa diz como rodá-lo.
 
 ## Lista
 
@@ -98,9 +100,9 @@ da tarefa diz como rodá-lo.
 - [x] **36.0 — O kit visual mora em `componentes/ui/` e não importa API, área nem sessão**
   - [ ] 36.1 O `36_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-2.md`, com o nome `componentes/ui/` da D81 no lugar de `kit/`
 
-- [ ] **97.0 — Na web, `areas/professor/` e `areas/coordenacao/` se partem por assunto, com a mesma trava**
+- [x] **97.0 — Na web, `areas/professor/` e `areas/coordenacao/` se partem por assunto, com a mesma trava**
   - [ ] 97.1 O `97_task.md` é escrito pelo Arquiteto antes de a tarefa partir: o *feature folder* (bulletproof-react), cada assunto (`turmas/`, `atividades/`, `assistente/`, `material/`…) com as telas, os hooks e o cliente de API dele
-  - [ ] 97.2 Só `git mv` e import, uma pasta por commit
+  - [ ] 97.2 Só `git mv` e import, uma pasta por vez e um commit por tarefa, com cada arquivo guardado como renomeação ("Tarefa mecânica", acima)
   - [ ] 97.3 Cria a trava: `tools/guardas/tamanho-das-pastas.test.ts`, pasta de produção com mais de 25 arquivos reprova, com as raízes numa lista (hoje `apps/web/src`) e lista fechada de exceções (R56)
 
 ### Tenant — a regra 10 travada por máquina
