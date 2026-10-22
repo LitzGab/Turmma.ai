@@ -45,14 +45,11 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
   - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **14.0 pronta** (`ca057e8`, 2 rodadas; tenancy, test-engineer,
-    revisor-geral). **Encontro recusado** por falso positivo: o merge `7f6ed10` (l1 → l2, que eu mandei) não traz
-    resolução (`--remerge-diff` vazio), mas `linhas.ts` julga merge de linha pelo diff contra o 1º pai. Pedi ao `Arquiteto`
-    a decisão e o conserto (merge julgado pelo `--remerge-diff`). Com o relatório dele: `encontro 2`, depois a partida da
-    linha 2 (o quadro diz qual; 15.0 espera a 14.0)
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **correção `arquivo-do-titular-datas`** desde ~12:20 (casos de data
-    fixa vencidos em `apps/api/test/arquivo-do-titular.int.test.ts`, esteira vermelha; guardião privacy-guardian). É correção
-    de esteira: tem encontro próprio. Depois dela, a linha 3 pega a **53.0** (o quadro já a mostra)
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **15.0**, desde ~12:25, 1ª tentativa (14.0 encontrada em `2164719`,
+    depois do conserto R61 do `Arquiteto`, `1744468`)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **53.0** (web), desde ~12:25, 1ª tentativa. A correção
+    `arquivo-do-titular-datas` fechou **sem commit**: não havia defeito (ver "O que decidi sem perguntar"). O quadro
+    sugeria 53.0→l2 e 15.0→l3; inverti para manter a web na linha 3 (ajuste do Claude Code #2)
 - **Devo ainda:**
   - **95.0 (guia), entregue pelo Claude Code #2** em `/home/joaquimdp/Documentos/git/Educa.ia/.processo/reengenharia/guia/`
     (`guia-do-desenvolvedor.md`, `arquitetura.md` corrigido, `LEIA.md` com o que conferir). Quando o `Arquiteto` tiver
@@ -152,6 +149,13 @@ critério de aceite.
 ## O que falhou
 
 ## O que decidi sem perguntar
+- 22/10, ~12:25 — correção `arquivo-do-titular-datas` (l3): DIVERGÊNCIA (ordem) do Implementador 3. Não havia defeito:
+  as datas não vencem (relógio injetado); o vermelho local vinha do despachante e do worker-interativo do compose
+  `educa-teste-3`, de pé, consumindo o job do teste. Com eles parados, 38/38; a integração da esteira (39797493843,
+  `3f100df`) está verde. O vermelho da esteira é o `ouro.test.ts`, que já é a correção `ouro-base-qualitativa` da l1.
+  Não abri nenhuma das duas correções propostas: fechei a l3 sem commit (quadro editado à mão, cópia em
+  `.processo/linhas.json.antes-de-soltar-l3`; o encontro recusa correção sem commit). Para a retro: o portão não derruba
+  os despachantes do compose de teste antes da integração, e falta `linhas.ts abandonar <n>`
 - 22/10 12:00 — a linha 2 trouxe a correção `05aa2fe` da `spec/reengenharia--l1` (merge, mesmo commit) para o portão da
   14.0 passar, em vez de esperar o encontro da 6.0.
 - 22/10 11:40 — cancelei 7 execuções da esteira na fila da `spec/reengenharia` que o `3f100df` já cobria (pushes de
