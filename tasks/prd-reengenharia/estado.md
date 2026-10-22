@@ -27,10 +27,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1: **16:12, matei o vitest travado** na mutação `despachante/src/montagem.ts` (`vagas.int.test.ts`, 41 min a 181% de CPU, segurando a trava de carga das linhas 2 e 3). O `mutacoes.ts` lê a morte como vermelho: mandei `PEDIDO de retomada` para o teste cair em tempo limitado e para o portão rodar de novo
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **19.0**, grande (o worker valida pela definição; tenancy, infra,
-    test-engineer, revisor-geral), desde 14:17, 1ª tentativa; prazo de 4 h 18:17. A 8.0 encontrou-se em `a8398c3` (spec em
-    `5e3e01a`)
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **48.0**, grande (cockatiel no adaptador de IA: prazo, uma repetição, disjuntor; infra, llm-integrator, test-engineer, revisor-geral), desde 16:38, 1ª tentativa; prazo de 4 h 20:38. A 19.0 encontrou-se em `22bec36` (spec em `84ef3df`), depois de eu matar às 16:12 um vitest travado numa mutação (ver "O que falhou"); o portão foi refeito às 16:21
   - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
     **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
     os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
@@ -72,7 +69,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `32edb79`. Vigia ligada
+- **Base:** `spec/reengenharia` em `84ef3df`. Esteira: `39830913150` (spec em `32edb79`) VERDE; a de `84ef3df` (`39841560415`) na fila. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
