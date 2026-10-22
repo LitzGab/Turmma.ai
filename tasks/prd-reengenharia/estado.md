@@ -27,7 +27,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **48.0**, grande (cockatiel no adaptador de IA: prazo, uma repetição, disjuntor; infra, llm-integrator, test-engineer, revisor-geral), desde 16:38, 1ª tentativa; prazo de 4 h 20:38. A 19.0 encontrou-se em `22bec36` (spec em `84ef3df`), depois de eu matar às 16:12 um vitest travado numa mutação (ver "O que falhou"); o portão foi refeito às 16:21
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **43.0**, grande (job estourado dá `TEMPO_ESGOTADO`; infra, llm-integrator, test-engineer, revisor-geral), desde 17:45, 1ª tentativa; prazo de 4 h 21:45. A 48.0 encontrou-se em `41d65df` (spec em `8240170`)
   - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
     **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
     os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
@@ -42,8 +42,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
   - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **9.0**, pequena (importar tabela fora de repository reprova o lint;
     tenancy, test-engineer, revisor-geral), desde 16:52, 1ª tentativa; prazo de 2 h 18:52. **17:25: ESCALADA da Mesa 3**
     (tenancy-guardian reprovou 2× seguidas, test-engineer na 2ª; ordem `.processo/ordens/9_task-r2.md`). `Arquiteto`
-    reiniciado no checkout da l3, diagnóstico pedido (`diagnostico-9.md`). Com a resposta: `PEDIDO de retomada` ao
-    `Implementador 3` apontando a ordem r2 e o diagnóstico. O lote retido da 3.0 e a publicação do guia voltam ao Arquiteto depois A correção
+    reiniciado no checkout da l3, diagnóstico pedido (`diagnostico-9.md`). **17:44:** diagnóstico em `diagnostico-9.md` (l3; substitui a r2; decisão em `onda-1a.md` T6, vai no commit da tarefa); par da l3 reiniciado e `PEDIDO de retomada` enviado; espero a rodada 3. O lote retido da 3.0 e a publicação do guia voltam ao Arquiteto depois A correção
     `intermitentes-desafio-e-meus-dados` encontrou-se em `6cc6c91` (spec em `554b2c6`)
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
@@ -70,7 +69,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `88c266b`. Esteira: `39830913150` (spec em `32edb79`) VERDE; a de `84ef3df` (`39841560415`) rodando; a de `88c266b` (`39845850533`) na fila; às 17:00 cancelei as superadas de `554b2c6`, `6cc6c91` (l3) e `ccdba9a` (l2). O `ouro.test.ts` que o Implementador 3 citou já foi resolvido por `05aa2fe`. Vigia ligada
+- **Base:** `spec/reengenharia` em `8240170`. Esteira: a de `84ef3df` (`39841560415`) VERDE; a de `88c266b` (`39845850533`) rodando; a de `8240170` (`39849855954`) na fila; o VERMELHO de `554b2c6` é só cancelamento; às 17:00 cancelei as superadas de `554b2c6`, `6cc6c91` (l3) e `ccdba9a` (l2). O `ouro.test.ts` que o Implementador 3 citou já foi resolvido por `05aa2fe`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -110,6 +109,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 97.0 | `b760b65` | Sonnet | 2 (frontend-reviewer e test-engineer na 1ª; revisor-geral na 2ª) | linha 2, grande, 14:19–15:20; 49 fotos vistas; um commit só (divergência no 97_task.md) |
 | correção intermitentes-desafio-e-meus-dados | `6cc6c91` | Sonnet | 2 (privacy, frontend, infra na 1ª; test-engineer na 2ª) | linha 3, 14:10–16:50; desafio: defeito do teste; meus dados: foco caía no body (produto) |
 | 44.0 | `ccdba9a` | Sonnet | 2 (infra, privacy, llm-integrator, test-engineer, revisor-geral aprovados na 2ª) | linha 2, pequena, 15:22–16:59; sem tela; migration 0038 e painel/uid do alerta como divergências registradas; 8 linhas no TODO.md |
+| 48.0 | `41d65df` | Sonnet | 2 (test-engineer, revisor-geral; infra e llm-integrator na 1ª) | linha 1, grande, 16:38–17:40; 48.1 sem commit à parte (onda-3c.md T10); 2 linhas no TODO.md, 49.0 dona do disjuntor |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
