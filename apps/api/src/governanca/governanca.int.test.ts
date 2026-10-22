@@ -337,6 +337,34 @@ describe('governança de IA da coordenação', () => {
       expect(await suspensoes(a, 'adaptacao')).toEqual([])
     })
 
+    it('a chave fora do catálogo e a de uma função sem suspensão respondem igual ao mesmo corpo, no retomar e no suspender: o 404 do válido e o 400 do inválido, e nada é suspenso, retomado nem auditado', async () => {
+      const marcas = async () => ({
+        suspensoes: await suspensoes(a, 'sinais_para_o_professor'),
+        suspensas: (await auditorias(a, 'funcao.suspensa')).length,
+        retomadas: (await auditorias(a, 'funcao.retomada')).length,
+      })
+      const antes = await marcas()
+      const semRequisicao = (resposta: RespostaHttp) => ({ status: resposta.status, corpo: { ...resposta.corpo, erro: { ...resposta.corpo.erro, requisicaoId: undefined } } })
+      for (const [corpo, esperado] of [
+        [{}, NAO_ENCONTRADO],
+        [{ escolaId: b.escolaId }, ENTRADA_INVALIDA],
+      ] as const) {
+        const foraDoCatalogo = await retomar(a, 'corretor_de_redacao', corpo)
+        const semSuspensao = await retomar(a, 'sinais_para_o_professor', corpo)
+        expect(erro(foraDoCatalogo), JSON.stringify(corpo)).toEqual(esperado)
+        expect(semRequisicao(semSuspensao), JSON.stringify(corpo)).toEqual(semRequisicao(foraDoCatalogo))
+      }
+      // O corpo inválido, no suspender, é o mesmo 400 para a chave do catálogo e para a de fora: a função continua ativa.
+      for (const corpo of [{ motivo: 'a professora Helena errou' }, { motivo: 'incidente', escolaId: b.escolaId }]) {
+        const foraDoCatalogo = await suspender(a, 'corretor_de_redacao', corpo)
+        const doCatalogo = await suspender(a, 'sinais_para_o_professor', corpo)
+        expect(erro(foraDoCatalogo), JSON.stringify(corpo)).toEqual(ENTRADA_INVALIDA)
+        expect(semRequisicao(doCatalogo), JSON.stringify(corpo)).toEqual(semRequisicao(foraDoCatalogo))
+      }
+      expect(await marcas()).toEqual(antes)
+      expect(await funcaoDe(a, 'sinais_para_o_professor')).toMatchObject({ suspensa: false, suspensao: null })
+    })
+
     it('a correção suspensa não corrige ao encerrar; o Assistente da escola e a correção da outra escola seguem; retomar reabre', async () => {
       // Um lote que já esperava a professora antes da suspensão.
       const jaCorrigida = await listaRespondida(a)

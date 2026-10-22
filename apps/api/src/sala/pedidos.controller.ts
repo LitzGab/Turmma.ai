@@ -1,7 +1,13 @@
-import { Permite } from '@educa/nucleo'
-import { esquemaConsultaPedidosDaTurma, esquemaPedidoDecidirReivindicacoes, type RespostaDecisao, type RespostaPedidosDaTurma } from '@educa/shared'
+import { IdPipe, Permite, ZodValidationPipe } from '@educa/nucleo'
+import {
+  esquemaConsultaPedidosDaTurma,
+  esquemaPedidoDecidirReivindicacoes,
+  type ConsultaPedidosDaTurma,
+  type PedidoDecidirReivindicacoes,
+  type RespostaDecisao,
+  type RespostaPedidosDaTurma,
+} from '@educa/shared'
 import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common'
-import { idDoCaminho, lerEntrada } from '../estrutura/entrada.js'
 import { DecisaoService } from './decisao.service.js'
 
 /**
@@ -16,15 +22,14 @@ export class PedidosController {
 
   @Get('turmas/:id/reivindicacoes')
   @Permite('reivindicacao', 'ler')
-  pedidos(@Param('id') id: string, @Query() consulta: unknown): Promise<RespostaPedidosDaTurma> {
-    const turmaId = idDoCaminho(id)
-    return this.decisoes.pedidos(turmaId, lerEntrada(esquemaConsultaPedidosDaTurma, consulta))
+  pedidos(@Param('id', IdPipe) turmaId: string, @Query(new ZodValidationPipe(esquemaConsultaPedidosDaTurma)) consulta: ConsultaPedidosDaTurma): Promise<RespostaPedidosDaTurma> {
+    return this.decisoes.pedidos(turmaId, consulta)
   }
 
   @Post('reivindicacoes/decidir')
   @Permite('reivindicacao', 'decidir')
   @HttpCode(HttpStatus.OK)
-  decidir(@Body() corpo: unknown): Promise<RespostaDecisao> {
-    return this.decisoes.decidir(lerEntrada(esquemaPedidoDecidirReivindicacoes, corpo))
+  decidir(@Body(new ZodValidationPipe(esquemaPedidoDecidirReivindicacoes)) pedido: PedidoDecidirReivindicacoes): Promise<RespostaDecisao> {
+    return this.decisoes.decidir(pedido)
   }
 }

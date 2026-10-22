@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
-import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { prepararTela, redeFalsa, renderizarTela, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
+import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
+import { consultaEu } from '../../api/eu'
 import { AVISO_DE_OUTRA_JANELA } from './atividade'
 import Atividade from './Atividade'
 
@@ -135,6 +138,78 @@ describe('a atividade na tela: a escolha mais nova vale (51.0, RF21)', () => {
     await screen.findByRole('radio', { name: /^C\./ })
     await waitFor(() => expect(marcada()).toBe(2))
     expect(screen.queryByText(AVISO_DE_OUTRA_JANELA)).toBeNull()
+    expect(envios(rede)).toEqual([])
+  })
+})
+
+describe('a atividade na tela: a escolha pendente sobrevive ao F5 (53.0, RF21)', () => {
+  const ALUNA = '0197a1c0-0000-7000-8000-00000000a001'
+  const OUTRO_ALUNO = '0197a1c0-0000-7000-8000-00000000a002'
+  const eu = (usuarioId: string) => ({ usuarioId, papel: 'aluno' as const, nome: 'Aluna Sintética', escola: { id: '0197a1c0-0000-7000-8000-00000000c001', nome: 'Escola Sintética', slug: 'escola-sintetica' }, inatividadeMin: 30, acessos: [] })
+  const guardar = (atividade: string, dono: string) =>
+    window.sessionStorage.setItem(`educa.escolhas-pendentes.${atividade}`, JSON.stringify({ dono, atividade, pendentes: [{ questao: 1, alternativa: 2, sequencia: 3 }] }))
+  /** A tela dentro do cache da aba, com o `/v1/eu` de quem está na sessão (ou sem ele, ainda). */
+  function montarComSessao(atividadeAplicadaId: string, usuarioId: string | undefined) {
+    const cliente = criarClienteDeConsultas()
+    if (usuarioId !== undefined) cliente.setQueryData(consultaEu.queryKey, eu(usuarioId))
+    const localizacao = memoryLocation({ path: `/aluno/atividades/${atividadeAplicadaId}` })
+    render(
+      <QueryClientProvider client={cliente}>
+        <Router hook={localizacao.hook}>
+          <Atividade atividadeAplicadaId={atividadeAplicadaId} />
+        </Router>
+      </QueryClientProvider>,
+    )
+    return cliente
+  }
+
+  it('o F5 com a escolha ainda não salva: ela volta marcada, sai com a mesma sequência, e some do espelho quando o servidor confirma', async () => {
+    const id = idDaAtividade(5)
+    guardar(id, ALUNA)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id))
+    // O servidor só confirma quando o teste diz: até lá a escolha está na tela, marcada, e no espelho.
+    let confirmar: (resposta: RespostaFalsa) => void = () => undefined
+    const segurada = new Promise<RespostaFalsa>((resolver) => (confirmar = resolver))
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/respostas/1`, () => segurada)
+    montarComSessao(id, ALUNA)
+
+    await screen.findByRole('radio', { name: /^C\./ })
+    await waitFor(() => expect(envios(rede)).toEqual([{ alternativa: 2, sequencia: 3 }]))
+    expect(marcada()).toBe(2)
+    expect(window.sessionStorage.getItem(`educa.escolhas-pendentes.${id}`)).not.toBeNull()
+
+    confirmar(gravada(2, 3))
+    await waitFor(() => expect(window.sessionStorage.getItem(`educa.escolhas-pendentes.${id}`)).toBeNull())
+    await waitFor(() => expect(regiaoDeStatus().textContent).toContain('Resposta salva'))
+  })
+
+  it('o aluno da sessão só se sabe depois de a tela abrir: a escolha guardada volta e sai assim que ele chega', async () => {
+    const id = idDaAtividade(6)
+    guardar(id, ALUNA)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id))
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/respostas/1`, gravada(2, 3))
+    const cliente = montarComSessao(id, undefined)
+
+    await screen.findByRole('radio', { name: /^C\./ })
+    expect(envios(rede)).toEqual([])
+    // A tela só assina o `/v1/eu` que a casca busca: não o busca de novo.
+    expect(rede.chamadas.some(({ caminho }) => caminho.startsWith('/v1/eu'))).toBe(false)
+    act(() => cliente.setQueryData(consultaEu.queryKey, eu(ALUNA)))
+    await waitFor(() => expect(envios(rede)).toEqual([{ alternativa: 2, sequencia: 3 }]))
+  })
+
+  it('o espelho de outra pessoa no mesmo Chromebook não volta: nada é mandado, nada aparece marcado, e ele sai do armazenamento', async () => {
+    const id = idDaAtividade(7)
+    guardar(id, OUTRO_ALUNO)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id))
+    montarComSessao(id, ALUNA)
+
+    await screen.findByRole('radio', { name: /^C\./ })
+    await waitFor(() => expect(window.sessionStorage.getItem(`educa.escolhas-pendentes.${id}`)).toBeNull())
+    expect(marcada()).toBe(-1)
     expect(envios(rede)).toEqual([])
   })
 })

@@ -72,6 +72,10 @@ export type EstadoDaSessao = 'desconhecida' | 'abrindo' | 'aberta' | 'anonima' |
  * o Chromebook do carrinho passa por quatro turmas por dia, e nada do aluno anterior pode ficar em `localStorage`,
  * `sessionStorage`, cookie legível ou URL. Quem guarda a sessão entre recargas é o cookie `HttpOnly` da renovação,
  * que o JavaScript da página não lê.
+ *
+ * O espelho da prova (`areas/aluno/espelho-da-fila.ts`, 53.0) **não é sessão**: guarda em `sessionStorage` só ids da escolha
+ * que o servidor ainda não confirmou, com o `usuarioId` do dono, e acompanha o fim da sessão pelos ganchos `aoTrocarDeSessao`
+ * (sai no "Sair", fica na sessão vencida). Token, desafio e identidade da pessoa continuam só em memória.
  */
 let token: string | undefined
 let expiraEm: number | undefined

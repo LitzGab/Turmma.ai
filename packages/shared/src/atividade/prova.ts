@@ -68,6 +68,27 @@ export const esquemaRespostaSalva = z.strictObject({ questao: esquemaNumeroDaQue
 export type RespostaSalva = z.infer<typeof esquemaRespostaSalva>
 
 /**
+ * O que o navegador guarda em `sessionStorage` da escolha que o servidor ainda não confirmou (53.0, RF21): só ids e
+ * números, uma chave por atividade. `dono` é o identificador opaco do aluno da sessão, e é ele que separa "o mesmo aluno
+ * voltou" de "sentou outra pessoa no Chromebook". **Estrito e sem coerção**: campo a mais (nome, texto), tipo errado ou
+ * número em texto descarta o conjunto inteiro, e o que não passa aqui nunca é mandado nem mostrado (regra 20, item 1).
+ */
+export const esquemaEspelhoDaFila = z.strictObject({
+  dono: z.uuid(),
+  atividade: z.uuid(),
+  pendentes: z
+    .array(
+      z.strictObject({
+        questao: z.number().int().min(1).max(MAXIMO_DE_QUESTOES_POR_ATIVIDADE),
+        alternativa: esquemaAlternativa,
+        sequencia: esquemaSequencia,
+      }),
+    )
+    .max(MAXIMO_DE_QUESTOES_POR_ATIVIDADE),
+})
+export type EspelhoDaFila = z.infer<typeof esquemaEspelhoDaFila>
+
+/**
  * Resposta de `GET /v1/atividades-aplicadas/:id/prova`: a atividade como o aluno a faz. `adaptacao` traz só os **tipos**
  * da versão (para a tela ampliar a fonte ou mostrar o tempo extra), e vale para a turma inteira que recebeu a versão.
  * Abrir a prova cria a tentativa do aluno, uma só.

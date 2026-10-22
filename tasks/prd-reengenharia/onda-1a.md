@@ -160,6 +160,12 @@ segunda passada ignora `eslint-disable`.
   As asserções dessas rotas foram escritas com o 404 e passaram no código antigo, e foram reescritas para o 400 depois da
   migração. É a ordem entre corpo e caminho que esta seção já aceita ("caracterizada, não forçada"), e não revela existência:
   com o corpo inválido, qualquer id, de outra escola ou inexistente, dá o mesmo 400.
+  **A 15.0 repete a conduta** (caracterização no commit da tarefa, em `apps/api/test/borda-de-entrada.int.test.ts`, rodada verde
+  contra o código antigo antes de qualquer controller mudar) e achou a mesma mudança em 15 rotas, as de `estrutura/`, `sala/` e
+  `governanca/` que leem id ou `chave` do caminho e corpo ou consulta: com os dois inválidos ao mesmo tempo, passam do 404 do
+  id (ou da `chave`) ao 400 do corpo ou da consulta, o último parâmetro. A asserção foi escrita com o 404 e depois reescrita
+  para o 400. Com a entrada inválida, qualquer id (fora do formato, inexistente ou de outra escola) e qualquer `chave` (do
+  catálogo ou fora dele) dão o mesmo 400, e o `retomar` com corpo válido segue dando o 404 igual para as duas.
 
 **A trava é o ESLint core.** Um bloco de `no-restricted-syntax` em `eslint.config.mjs`, para `*.controller.ts`, reprova
 `@Body()`, `@Query()` e `@Param(nome)` sem pipe, `@Req()` e `requisicao.body`, `.query` e `.params`. O `files` do bloco

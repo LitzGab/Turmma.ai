@@ -3,8 +3,10 @@ import type { QueryClient } from '@tanstack/react-query'
 import { responderQuestao, consultaProva } from '../../api/atividades-do-aluno'
 import { CHAVE_DAS_MINHAS_ATIVIDADES } from '../../api/chaves-do-aluno'
 import { codigoDoErro } from '../../api/ciclo-de-execucao'
+import { consultaEu } from '../../api/eu'
+import { esquecerEspelhosDeOutroDono, gravarEspelho, lerEspelho } from '../../api/espelho-da-fila'
 import { aoAbrirSessao, aoTrocarDeSessao } from '../../api/sessao'
-import { adotarLeitura, comecarEnvio, confirmarEnvio, escolher, esperaAntesDeTentar, falharEnvio, FILA_VAZIA, proximoEnvio, type EstadoDaFila } from './respostas'
+import { adotarLeitura, comecarEnvio, confirmarEnvio, escolher, esperaAntesDeTentar, falharEnvio, FILA_VAZIA, hidratarDoEspelho, proximoEnvio, type EstadoDaFila } from './respostas'
 
 /**
  * A fila de respostas de uma atividade, ligada à rede e ao relógio (regra 80, item 6). A regra é de `respostas.ts`; aqui
@@ -23,7 +25,12 @@ export interface FilaDeRespostas {
   readonly adotar: (lidas: readonly RespostaSalva[]) => void
   /** Tenta agora, sem esperar o relógio: a rede voltou, a sessão voltou, ou a pessoa pediu. */
   readonly tentarAgora: () => void
-  /** A sessão acabou ou mudou de dono: nada mais sai, e o que estava guardado é esquecido. */
+  /**
+   * Traz de volta o que o espelho guardou (o F5, a sessão vencida e o mesmo aluno voltando), **só se o dono é quem está
+   * na sessão agora**, e manda. Sem saber quem é, não faz nada: chame de novo quando souber.
+   */
+  readonly hidratar: () => void
+  /** A sessão acabou ou mudou de dono: nada mais sai, e o que estava na memória é esquecido. O espelho não é tocado aqui: quem o apaga é o "Sair". */
   readonly parar: () => void
 }
 
@@ -33,6 +40,11 @@ interface PartesDaFila {
   readonly aoSalvar: (salva: RespostaQuestaoSalva) => void
   /** Chama a função depois da espera; devolve o cancelamento. No teste, um relógio que o teste adianta. */
   readonly agendar?: (funcao: () => void, esperaMs: number) => () => void
+  /**
+   * O espelho em `sessionStorage` (53.0): de qual atividade é a fila, e quem é o aluno da sessão agora (`undefined`
+   * enquanto não se sabe: nada é lido nem gravado). Sem isto, a fila vive só na memória.
+   */
+  readonly espelho?: { readonly atividade: string; readonly dono: () => string | undefined }
 }
 
 function agendarNoRelogio(funcao: () => void, esperaMs: number): () => void {
@@ -40,15 +52,24 @@ function agendarNoRelogio(funcao: () => void, esperaMs: number): () => void {
   return () => clearTimeout(relogio)
 }
 
-export function criarFilaDeRespostas({ salvar, aoSalvar, agendar = agendarNoRelogio }: PartesDaFila): FilaDeRespostas {
+export function criarFilaDeRespostas({ salvar, aoSalvar, agendar = agendarNoRelogio, espelho }: PartesDaFila): FilaDeRespostas {
   let estado = FILA_VAZIA
   let parada = false
   let cancelarEspera: (() => void) | undefined
   const ouvintes = new Set<() => void>()
 
+  /** O espelho acompanha as pendentes, só com o aluno da sessão conhecido. A fila parada não o toca. */
+  function refletir(): void {
+    if (parada || espelho === undefined) return
+    const dono = espelho.dono()
+    if (dono !== undefined) gravarEspelho(dono, espelho.atividade, estado.pendentes)
+  }
+
   function publicar(novo: EstadoDaFila): void {
     if (novo === estado) return
+    const mudouAFila = novo.pendentes !== estado.pendentes
     estado = novo
+    if (mudouAFila) refletir()
     for (const ouvinte of ouvintes) ouvinte()
   }
 
@@ -94,6 +115,18 @@ export function criarFilaDeRespostas({ salvar, aoSalvar, agendar = agendarNoRelo
       publicar(adotarLeitura(estado, lidas))
     },
     tentarAgora: bombear,
+    hidratar: () => {
+      if (parada || espelho === undefined) return
+      const dono = espelho.dono()
+      if (dono === undefined) return
+      // Quem sentou depois não herda, nem deixa ao alcance, a escolha da pessoa anterior.
+      esquecerEspelhosDeOutroDono(dono)
+      publicar(hidratarDoEspelho(estado, lerEspelho(dono, espelho.atividade)))
+      // O `publicar` acima já espelha o que a hidratação trouxe. Esta chamada é para o caso em que ela não trouxe nada: o que o
+      // aluno marcou antes de se saber quem ele é só entra no espelho agora.
+      refletir()
+      bombear()
+    },
     parar: () => {
       parada = true
       cancelarEspera?.()
@@ -122,6 +155,7 @@ function tentarTodas(): void {
 }
 
 // A pessoa seguinte no Chromebook do carrinho não herda a escolha da anterior, e nada da anterior é mandado com a sessão dela.
+// Só a memória sai aqui: o espelho acompanha o fim da sessão no gancho de `api/espelho-da-fila.ts`, que não depende desta tela.
 aoTrocarDeSessao(() => {
   for (const fila of filas.values()) fila.parar()
   filas.clear()
@@ -137,6 +171,8 @@ export function filaDaAtividade(cliente: QueryClient, atividadeAplicadaId: strin
   if (existente !== undefined) return existente
   const fila = criarFilaDeRespostas({
     salvar: (questao, alternativa, sequencia) => responderQuestao(atividadeAplicadaId, questao, alternativa, sequencia),
+    // Quem é o aluno vem do `/v1/eu` desta sessão, no cache: ele sai com a troca de sessão, ao contrário do que a aba lembra.
+    espelho: { atividade: atividadeAplicadaId, dono: () => cliente.getQueryData(consultaEu.queryKey)?.usuarioId },
     aoSalvar: (salva) => {
       cliente.setQueryData(consultaProva(atividadeAplicadaId).queryKey, (prova) => (prova === undefined ? prova : provaComRespostaSalva(prova, salva)))
       // A lista de atividades conta as respondidas: ela é lida de novo quando o aluno voltar a ela.

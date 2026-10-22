@@ -606,6 +606,7 @@ export {
   esquemaPedidoResponderQuestao,
   esquemaQuestaoDaProva,
   esquemaQuestaoDoDiagnostico,
+  esquemaEspelhoDaFila,
   esquemaRespostaAtividadeEnviada,
   esquemaRespostaMeuDiagnostico,
   esquemaRespostaMinhasAtividades,
@@ -618,6 +619,7 @@ export {
 } from './atividade/prova.js'
 export type {
   AcertoPorHabilidade,
+  EspelhoDaFila,
   MinhaAtividade,
   PedidoResponderQuestao,
   QuestaoDaProva,
