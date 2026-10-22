@@ -432,6 +432,58 @@ describe('professores (A1, tarefa 3.0): a coordenação cadastra, o professor ac
     expect((await pedir('POST', `/v1/professores/${convite.usuarioId}/convite/revogar`, coordenacao.token)).status).toBe(204)
   })
 
+  const ENTRADA_INVALIDA = { status: 400, corpo: { erro: { codigo: CodigoDeErro.ENTRADA_INVALIDA, mensagem: MENSAGENS_DE_ERRO.ENTRADA_INVALIDA } } }
+
+  it('entrada fora do esquema: escola de B no corpo, campo a mais, limite 101 e id fora do formato respondem o erro tipado do catálogo, e nada é gravado em A nem em B', async () => {
+    const a = await escolaComCoordenacao()
+    const b = await escolaComCoordenacao()
+    const deB = await cadastrado(b.coordenacao)
+    const propria = await cadastrado(a.coordenacao)
+    const [antesDeA, antesDeB] = [await retrato(a.escolaId), await retrato(b.escolaId)]
+
+    for (const corpo of [{ ...pessoa(), escolaId: b.escolaId }, { ...pessoa(), papel: 'coordenador' }, { nome: 'Só o nome' }, { ...pessoa(), email: 'sem-arroba' }]) {
+      expect(semRequisicao(await cadastrar(a.coordenacao, corpo)), JSON.stringify(corpo)).toEqual(ENTRADA_INVALIDA)
+    }
+    for (const consulta of ['?limite=101', '?limite=0', `?escolaId=${b.escolaId}`]) {
+      expect(semRequisicao(await listar(a.coordenacao, consulta)), consulta).toEqual(ENTRADA_INVALIDA)
+    }
+    expect((await listar(a.coordenacao, '?limite=100')).status).toBe(200)
+    for (const rota of ['refazer', 'revogar']) {
+      const corpoComCampo = await pedir('POST', `/v1/professores/${propria.usuarioId}/convite/${rota}`, a.coordenacao.token, { usuarioId: deB.usuarioId })
+      expect(semRequisicao(corpoComCampo), rota).toEqual(ENTRADA_INVALIDA)
+      // Com o id e o corpo inválidos ao mesmo tempo, o Nest dá o erro do corpo, que é o último parâmetro (antes era o do id,
+      // 404). Não revela existência: com o corpo inválido, qualquer id, de B ou inexistente, dá o mesmo 400.
+      for (const id of ['nao-e-uuid', randomUUID(), deB.usuarioId]) {
+        expect(semRequisicao(await pedir('POST', `/v1/professores/${id}/convite/${rota}`, a.coordenacao.token, { usuarioId: deB.usuarioId })), `${rota} ${id}`).toEqual(ENTRADA_INVALIDA)
+      }
+    }
+    for (const id of ['nao-e-uuid', randomUUID(), deB.usuarioId, deB.usuarioId.toUpperCase()]) {
+      expect(semRequisicao(await refazer(a.coordenacao, id)), id).toEqual(NAO_ENCONTRADO)
+      expect(semRequisicao(await revogar(a.coordenacao, id)), id).toEqual(NAO_ENCONTRADO)
+    }
+    expect(await retrato(a.escolaId)).toEqual(antesDeA)
+    expect(await retrato(b.escolaId)).toEqual(antesDeB)
+
+    // Em maiúsculas é o mesmo id: o professor da própria escola é alcançado.
+    expect((await refazer(a.coordenacao, propria.usuarioId.toUpperCase())).status).toBe(201)
+    expect((await revogar(a.coordenacao, propria.usuarioId.toUpperCase())).status).toBe(204)
+  })
+
+  it('a guarda responde antes do pipe: sem sessão, 401; o professor, em rota da coordenação, 404; o corpo inválido não é lido e nada é gravado nem auditado', async () => {
+    const { escolaId, coordenacao } = await escolaComCoordenacao()
+    const professor = await bancada.sessao(escolaId, 'professor')
+    const convite = await cadastrado(coordenacao)
+    const antes = await retrato(escolaId)
+    const invalido = { ...pessoa(), escolaId }
+    expect((await pedir('POST', '/v1/professores', undefined, invalido)).status).toBe(401)
+    expect((await pedir('GET', '/v1/professores?limite=101')).status).toBe(401)
+    expect((await pedir('POST', `/v1/professores/${convite.usuarioId}/convite/refazer`, undefined, { x: 1 })).status).toBe(401)
+    expect(semRequisicao(await cadastrar(professor, invalido))).toEqual(NAO_ENCONTRADO)
+    expect(semRequisicao(await listar(professor, '?limite=101'))).toEqual(NAO_ENCONTRADO)
+    expect(semRequisicao(await pedir('POST', `/v1/professores/${convite.usuarioId}/convite/revogar`, professor.token, { x: 1 }))).toEqual(NAO_ENCONTRADO)
+    expect(await retrato(escolaId)).toEqual(antes)
+  })
+
   describe('E12 (13.0): a alocação aceita o professor com convite em aberto, e o vínculo só alcança a turma depois do aceite e da confirmação', () => {
     /** O ano em curso, a série, a disciplina e a turma da escola, pela API, como a tela da Estrutura os cria. */
     async function estruturaDa(coordenacao: SessaoDeTeste): Promise<{ turmaId: string; disciplinaId: string }> {

@@ -54,6 +54,36 @@ export default tseslint.config(
     },
   },
   {
+    // A entrada HTTP passa pelo pipe no parâmetro (D81; NestJS, "Pipes" › Object schema validation): `@Body(new
+    // ZodValidationPipe(esquema))`, `@Query(new ZodValidationPipe(esquema))` e `@Param('id', IdPipe)`. Parâmetro sem pipe
+    // entrega ao service o que o cliente mandou, e `@Req()` e `requisicao.body|query|params` leem a entrada por fora dele.
+    // O `files` cresce por tarefa (14.0: os cinco primeiros módulos; 15.0 e 16.0 os outros; a 17.0 o faz valer em todo
+    // `apps/api/src/**/*.controller.ts`). `no-restricted-syntax` está em `REGRAS_DAS_GUARDAS`: o `eslint-disable` dele não fura a
+    // segunda passada do `npm run lint`. O `@UploadedFile()` não é barrado: os campos ao lado dele passam pelo pipe.
+    files: ['apps/api/src/{sistema,ia,entrega,assistente,professores}/**/*.controller.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "Decorator > CallExpression[callee.name=/^(Body|Query|Param)$/][arguments.length=0]",
+          message: 'Entrada sem pipe: use @Body(new ZodValidationPipe(esquema)), @Query(new ZodValidationPipe(esquema)) ou @Param(\'id\', IdPipe).',
+        },
+        {
+          selector: "Decorator > CallExpression[callee.name=/^(Body|Query|Param)$/][arguments.length=1] > Literal.arguments",
+          message: 'Parâmetro de caminho ou de consulta sem pipe: use @Param(\'id\', IdPipe) ou @Query(\'nome\', new ZodValidationPipe(esquema)).',
+        },
+        {
+          selector: "Decorator > CallExpression[callee.name=/^(Req|Request)$/]",
+          message: 'A entrada não se lê da requisição: use @Body, @Query e @Param com o pipe.',
+        },
+        {
+          selector: "MemberExpression[object.name='requisicao'][property.name=/^(body|query|params)$/]",
+          message: 'A entrada não se lê da requisição: use @Body, @Query e @Param com o pipe.',
+        },
+      ],
+    },
+  },
+  {
     files: ['apps/web/**/*.{ts,tsx}'],
     languageOptions: { globals: { ...globals.browser } },
     plugins: { 'react-hooks': reactHooks },

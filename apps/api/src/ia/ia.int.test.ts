@@ -683,7 +683,9 @@ describe('camada de IA na API', () => {
       expect(propria.status).toBe(200)
       expect(propria.corpo).toEqual({ id: minha.id, tarefa: 'gerar_atividade_objetiva', estado: 'pendente', resultado: null, erro: null })
 
-      const recusas = await Promise.all([doColega.id, deB.id, randomUUID(), 'nao-e-uuid'].map((id) => get(a.professor, `/v1/execucoes/${id}`)))
+      // Em maiúsculas é o mesmo id: a dona o lê, e quem não é dona recebe o mesmo 404 do inexistente.
+      expect((await get(a.professor, `/v1/execucoes/${minha.id.toUpperCase()}`)).corpo).toEqual(propria.corpo)
+      const recusas = await Promise.all([doColega.id, deB.id, deB.id.toUpperCase(), randomUUID(), 'nao-e-uuid'].map((id) => get(a.professor, `/v1/execucoes/${id}`)))
       for (const recusa of recusas) {
         expect(recusa.status).toBe(404)
         expect(recusa.corpo.erro?.codigo).toBe(CodigoDeErro.NAO_ENCONTRADO)

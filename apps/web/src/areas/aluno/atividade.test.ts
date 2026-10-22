@@ -90,23 +90,23 @@ describe('o resultado só aparece depois de a professora aprovar a correção (r
 })
 
 describe('o que a tela diz de cada questão', () => {
-  const comDuasSalvas = prova({ respostas: [{ questao: 1, alternativa: 2 }, { questao: 2, alternativa: 0 }] })
+  const comDuasSalvas = prova({ respostas: [{ questao: 1, alternativa: 2, sequencia: 1 }, { questao: 2, alternativa: 0, sequencia: 1 }] })
   const salvas = respostasSalvas(comDuasSalvas)
 
   it('"Resposta salva" só com a confirmação do servidor; a escolha ainda na fila é "salvando", e a que falhou, "não salva"', () => {
     expect(marcaDaQuestao(1, salvas, FILA_VAZIA)).toBe('salva')
     expect(marcaDaQuestao(3, salvas, FILA_VAZIA)).toBe('sem_resposta')
-    expect(marcaDaQuestao(3, salvas, fila({ pendentes: [{ questao: 3, alternativa: 1 }] }))).toBe('salvando')
-    expect(marcaDaQuestao(3, salvas, fila({ pendentes: [{ questao: 3, alternativa: 1 }], falha: 'passageira', tentativas: 1 }))).toBe('nao_salva')
+    expect(marcaDaQuestao(3, salvas, fila({ pendentes: [{ questao: 3, alternativa: 1, sequencia: 1 }] }))).toBe('salvando')
+    expect(marcaDaQuestao(3, salvas, fila({ pendentes: [{ questao: 3, alternativa: 1, sequencia: 1 }], falha: 'passageira', tentativas: 1 }))).toBe('nao_salva')
     // A questão já salva cuja troca ainda não foi confirmada não diz "Resposta salva": o servidor tem a anterior.
-    expect(marcaDaQuestao(1, salvas, fila({ pendentes: [{ questao: 1, alternativa: 3 }] }))).toBe('salvando')
+    expect(marcaDaQuestao(1, salvas, fila({ pendentes: [{ questao: 1, alternativa: 3, sequencia: 1 }] }))).toBe('salvando')
     expect(TEXTO_DA_MARCA.salva).toBe('Resposta salva')
     expect(TEXTO_DA_MARCA.sem_resposta).toBe('')
   })
 
   it('a alternativa marcada é a escolha mais nova: a que ainda não foi salva vem antes da que o servidor tem', () => {
     expect(alternativaMarcada(1, salvas, FILA_VAZIA)).toBe(2)
-    expect(alternativaMarcada(1, salvas, fila({ pendentes: [{ questao: 1, alternativa: 3 }], falha: 'passageira', tentativas: 2 }))).toBe(3)
+    expect(alternativaMarcada(1, salvas, fila({ pendentes: [{ questao: 1, alternativa: 3, sequencia: 1 }], falha: 'passageira', tentativas: 2 }))).toBe(3)
     expect(alternativaMarcada(3, salvas, FILA_VAZIA)).toBeUndefined()
   })
 
@@ -129,7 +129,7 @@ describe('o que a tela diz de cada questão', () => {
 
   it('com escolha ainda não salva, o envio é segurado, e a tela diz por quê', () => {
     expect(impedimentoDoEnvio(contarRespostas(comDuasSalvas, FILA_VAZIA))).toBeUndefined()
-    const comUmaNaFila = contarRespostas(comDuasSalvas, fila({ pendentes: [{ questao: 3, alternativa: 1 }], falha: 'passageira', tentativas: 1 }))
+    const comUmaNaFila = contarRespostas(comDuasSalvas, fila({ pendentes: [{ questao: 3, alternativa: 1, sequencia: 1 }], falha: 'passageira', tentativas: 1 }))
     // A escolha não salva conta como respondida na tela, mas segura o envio.
     expect(comUmaNaFila).toEqual({ questoes: 3, respondidas: 3, emBranco: 0, naoSalvas: 1 })
     expect(impedimentoDoEnvio(comUmaNaFila)).toMatch(/^Uma resposta ainda não foi salva\./)
@@ -137,14 +137,14 @@ describe('o que a tela diz de cada questão', () => {
   })
 
   it('se a professora encerra com escolhas na fila, a tela diz quais não chegaram a ser salvas', () => {
-    expect(avisoDeEscolhasPerdidas(fila({ pendentes: [{ questao: 3, alternativa: 1 }], falha: 'encerrada', tentativas: 1 }))).toBe(
+    expect(avisoDeEscolhasPerdidas(fila({ pendentes: [{ questao: 3, alternativa: 1, sequencia: 1 }], falha: 'encerrada', tentativas: 1 }))).toBe(
       'A atividade foi encerrada antes de a resposta da questão 3 ser salva. Se isso fizer diferença, avise quem dá a aula.',
     )
-    expect(avisoDeEscolhasPerdidas(fila({ pendentes: [{ questao: 5, alternativa: 1 }, { questao: 2, alternativa: 0 }], falha: 'encerrada', tentativas: 1 }))).toBe(
+    expect(avisoDeEscolhasPerdidas(fila({ pendentes: [{ questao: 5, alternativa: 1, sequencia: 1 }, { questao: 2, alternativa: 0, sequencia: 1 }], falha: 'encerrada', tentativas: 1 }))).toBe(
       'A atividade foi encerrada antes de as respostas das questões 2 e 5 serem salvas. Se isso fizer diferença, avise quem dá a aula.',
     )
     // Falha de rede não é encerramento: a escolha ainda vai ser salva, e nada foi perdido.
-    expect(avisoDeEscolhasPerdidas(fila({ pendentes: [{ questao: 3, alternativa: 1 }], falha: 'passageira', tentativas: 1 }))).toBeUndefined()
+    expect(avisoDeEscolhasPerdidas(fila({ pendentes: [{ questao: 3, alternativa: 1, sequencia: 1 }], falha: 'passageira', tentativas: 1 }))).toBeUndefined()
     expect(avisoDeEscolhasPerdidas(fila({ falha: 'encerrada' }))).toBeUndefined()
   })
 

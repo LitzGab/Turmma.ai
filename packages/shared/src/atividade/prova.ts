@@ -56,8 +56,16 @@ export const esquemaQuestaoDaProva = z.strictObject({
 })
 export type QuestaoDaProva = z.infer<typeof esquemaQuestaoDaProva>
 
-/** A resposta que o aluno já salvou, para ele continuar de onde parou. */
-export const esquemaRespostaSalva = z.strictObject({ questao: esquemaNumeroDaQuestao, alternativa: esquemaAlternativa })
+/**
+ * A ordem das escolhas do aluno numa questão (regra 80, item 6; RF21): cada escolha leva a sua, e o banco só grava a mais
+ * nova. O reenvio atrasado, o F5 e a outra aba não trocam a escolha mais recente. É do aluno da sessão, por questão, e
+ * começa em 0 (a linha que existia antes dela).
+ */
+export const esquemaSequencia = z.number().int().nonnegative()
+
+/** A resposta que o aluno já salvou, para ele continuar de onde parou, com a `sequencia` com que ficou gravada. */
+export const esquemaRespostaSalva = z.strictObject({ questao: esquemaNumeroDaQuestao, alternativa: esquemaAlternativa, sequencia: esquemaSequencia })
+export type RespostaSalva = z.infer<typeof esquemaRespostaSalva>
 
 /**
  * Resposta de `GET /v1/atividades-aplicadas/:id/prova`: a atividade como o aluno a faz. `adaptacao` traz só os **tipos**
@@ -85,17 +93,22 @@ export function questoesDaProva(conteudo: ConteudoDeAtividade): QuestaoDaProva[]
 }
 
 /**
- * Corpo de `PUT /v1/atividades-aplicadas/:id/respostas/:questao`: a alternativa marcada. Gravação idempotente (regra 80,
- * item 6): a mesma resposta duas vezes é uma linha só, e marcar outra alternativa troca a anterior. Depois do envio ou do
- * encerramento responde `ATIVIDADE_ENCERRADA`.
+ * Corpo de `PUT /v1/atividades-aplicadas/:id/respostas/:questao`: a alternativa marcada e a `sequencia` dela. Gravação
+ * idempotente (regra 80, item 6): a mesma resposta duas vezes é uma linha só, e só a `sequencia` maior troca a anterior:
+ * o envio atrasado perde e recebe de volta o que ficou gravado. Sem `sequencia` (cliente antigo), a escolha vale como a
+ * mais nova, uma acima da gravada. Depois do envio ou do encerramento responde `ATIVIDADE_ENCERRADA`.
  */
-export const esquemaPedidoResponderQuestao = z.strictObject({ alternativa: esquemaAlternativa })
+export const esquemaPedidoResponderQuestao = z.strictObject({ alternativa: esquemaAlternativa, sequencia: esquemaSequencia.optional() })
 export type PedidoResponderQuestao = z.infer<typeof esquemaPedidoResponderQuestao>
 
-/** Resposta de `PUT …/respostas/:questao`: o que ficou gravado, para a tela dizer "Resposta salva". Nunca se está certa. */
+/**
+ * Resposta de `PUT …/respostas/:questao`: o que ficou gravado, para a tela dizer "Resposta salva". Nunca se está certa.
+ * Quando o pedido perde para uma `sequencia` maior, a resposta é **a gravada** (alternativa e `sequencia`), não a pedida.
+ */
 export const esquemaRespostaQuestaoSalva = z.strictObject({
   questao: esquemaNumeroDaQuestao,
   alternativa: esquemaAlternativa,
+  sequencia: esquemaSequencia,
   respondidaEm: z.iso.datetime(),
 })
 export type RespostaQuestaoSalva = z.infer<typeof esquemaRespostaQuestaoSalva>

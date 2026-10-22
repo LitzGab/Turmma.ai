@@ -172,6 +172,14 @@ describe('POST e GET /v1/sistema/jobs-sinteticos', () => {
       expect(await contarJobs(ESCOLA_A)).toBe(antes)
     })
 
+    it('sem token, o corpo inválido responde 401, e não 400: a guarda vem antes do pipe', async () => {
+      const antes = await contarJobs(ESCOLA_A)
+      const resposta = await request(app.getHttpServer()).post(ROTA).send({ ...pedidoValido, escolaId: ESCOLA_NO_CORPO })
+      expect(resposta.status).toBe(401)
+      expect(resposta.body.erro.codigo).toBe(CodigoDeErro.NAO_AUTENTICADO)
+      expect(await contarJobs(ESCOLA_A)).toBe(antes)
+    })
+
     it.each([
       ['tipo de rotina do sistema', { ...pedidoValido, tipo: 'sistema.expurgar-jobs' }],
       ['tipo qualquer', { ...pedidoValido, tipo: TIPO_JOB_SINTETICO }],
@@ -212,14 +220,17 @@ describe('POST e GET /v1/sistema/jobs-sinteticos', () => {
       const jobDaB = (criado.body as { jobId: string }).jobId
       // O job existe: a própria B o enxerga.
       expect((await request(app.getHttpServer()).get(`${ROTA}/${jobDaB}`).set('Authorization', `Bearer ${tokenB}`)).status).toBe(200)
+      // Em maiúsculas é o mesmo id: a dona o enxerga, e a outra escola não.
+      expect((await request(app.getHttpServer()).get(`${ROTA}/${jobDaB.toUpperCase()}`).set('Authorization', `Bearer ${tokenB}`)).status).toBe(200)
 
       const servidor = app.getHttpServer()
       const deOutraEscola = await request(servidor).get(`${ROTA}/${jobDaB}`).set('Authorization', `Bearer ${tokenA}`)
       const inexistente = await request(servidor).get(`${ROTA}/${randomUUID()}`).set('Authorization', `Bearer ${tokenA}`)
       const foraDoFormato = await request(servidor).get(`${ROTA}/1837`).set('Authorization', `Bearer ${tokenA}`)
+      const emMaiusculas = await request(servidor).get(`${ROTA}/${jobDaB.toUpperCase()}`).set('Authorization', `Bearer ${tokenA}`)
       const escolaNaQuery = await request(servidor).get(`${ROTA}/${jobDaB}?escolaId=${ESCOLA_B}`).set('Authorization', `Bearer ${tokenA}`).set('X-Escola-Id', ESCOLA_B)
 
-      for (const resposta of [deOutraEscola, inexistente, foraDoFormato, escolaNaQuery]) {
+      for (const resposta of [deOutraEscola, inexistente, foraDoFormato, emMaiusculas, escolaNaQuery]) {
         expect(resposta.status).toBe(404)
         expect(semRequisicaoId(resposta.body)).toEqual({ codigo: CodigoDeErro.NAO_ENCONTRADO, mensagem: MENSAGENS_DE_ERRO.NAO_ENCONTRADO })
         expect(Object.keys(resposta.headers).sort()).toEqual(Object.keys(inexistente.headers).sort())

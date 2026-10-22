@@ -27,22 +27,29 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **3.0**, grande, desde 07:47, parada na DIVERGÊNCIA (desenho) de
-    08:05. **Triagem do `Arquiteto` (09:45): detalhe que a spec não previu**, sem mudar desenho nem alvo, em
-    `onda-0.md` §2.3 (sem commit, vai no da 3.0) e `.processo/divergencia-3.0-resposta.md` (l1). `PEDIDO de retomada`
-    enviado ao Implementador. **~10:50, ESCALADA de Mesa** (revisor-geral e test-engineer 2 seguidas, conformidade a
-    2ª; itens 1 e 3 da r2 em sentidos opostos; `saidaQualitativa` 53/58, piso 0,90). Ordem `.processo/ordens/3_task-r2.md`
-    (l1), não enviada; o item 5 é do Arquiteto. `Arquiteto` reiniciado no l1 com o pedido de diagnóstico
-    (`.processo/ordens/diagnostico-3.md`). **Diagnóstico pronto**, substitui a r2 (a saída barrava por exclusão, não por
-    juízo; conferido numa cópia: 53/58, 0 legítimas barradas); item 5 feito no §2.3. `PEDIDO de retomada` enviado.
-    **11:09, BLOQUEIO de Mesa** (revisor-geral e test-engineer 3 seguidas, conformidade 2; llm-integrator aprovou). Pelo
-    recorte, o limite é do `Arquiteto` e a 3.0 (onda 0) não vai para a X6. Destravado registrado no `rodadas.md` (l1).
-    Diagnóstico pedido ao `Arquiteto` (na fila dele, no andar da spec, como prioridade): `…--l1/.processo/ordens/diagnostico-3b.md`.
-    **Diagnóstico 3b pronto** (cinco pontos estreitos + a lacuna medida no §2.3; a 4ª rodada avalia só isso).
-    `PEDIDO de retomada` enviado. **Espero o `RELATÓRIO` do Implementador**
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **94.0**, grande, onda 0 (prazo 14:55, sem ir para a X6), desde 11:07
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **51.0**, grande, **linha da web** (depois 53.0, 36.0, 97.0), desde
-    11:07; prazo de 4 h: 15:07
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **6.0**, pequena (tenant), desde 11:27; prazo de 4 h 15:27. Avisado de
+    que o `ouro.test.ts` está vermelho na spec até a base da 3.0 (traz com `git merge spec/reengenharia` antes do portão)
+    **A base virou correção** (R57: o hook trata o `MEDIDAS.json` como código, e `ouro.test.ts:267`/`:273` precisam mudar):
+    pedi ao Implementador da l1 a **correção `ouro-base-qualitativa`** antes de seguir a 6.0 (ordem
+    `.processo/ordens/correcao-ouro-base-qualitativa.md`, copiada para l1; guardiões test-engineer e llm-integrator). O
+    commit `05aa2fe` na l1, segue com o da 6.0; **a esteira da spec fica vermelha nos 3 casos do `ouro.test.ts` até o
+    primeiro encontro que o leve (l1 ou l2)**
+    **DIVERGÊNCIA (ordem) da correção:** gravar a base muda o hash que o `SELO.json` guarda (6 testes do `selo-do-ouro`
+    vermelhos). **O `Arquiteto` gravou a base e o selo na spec** (`256fb62`, R58 em `cef19e6`); retomada enviada: restaurar
+    o `MEDIDAS.json`, trazer a spec, a correção leva só o `ouro.test.ts` e o documento, portão, Mesa, commit; depois a 6.0
+  - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
+    **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
+    os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
+    `REVISAO.md`; **4ª rodada APROVADA** (sem bloqueante). Na publicação, o `Arquiteto` aplica as duas recomendações de
+    redação, a lista "Conferir depois das pastas" e a linha no `README.md`. A lista
+    "Conferir depois das pastas" fica com o Arquiteto, antes da publicação
+  - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
+    aplicar" entraram na lacuna do §2.3 (`0366ce1`)
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **15.0**, desde ~12:25, 1ª tentativa (14.0 encontrada em `2164719`,
+    depois do conserto R61 do `Arquiteto`, `1744468`)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **53.0** (web), desde ~12:25, 1ª tentativa. A correção
+    `arquivo-do-titular-datas` fechou **sem commit**: não havia defeito (ver "O que decidi sem perguntar"). O quadro
+    sugeria 53.0→l2 e 15.0→l3; inverti para manter a web na linha 3 (ajuste do Claude Code #2)
 - **Devo ainda:**
   - **95.0 (guia), entregue pelo Claude Code #2** em `/home/joaquimdp/Documentos/git/Educa.ia/.processo/reengenharia/guia/`
     (`guia-do-desenvolvedor.md`, `arquitetura.md` corrigido, `LEIA.md` com o que conferir). Quando o `Arquiteto` tiver
@@ -52,14 +59,18 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     das pastas
   - todos os 36 documentos existem (`504a041`, `43a6ae2`, `bc9241f`); R55 e R56 em `DECISOES.md`. A 96.0 depende da
     97.0; a 90.0 espera a 24.0; a 43.0 e a 90.0 não correm juntas (`infra/compose.yml`)
-  - **depois do commit da 94.0** (que depende da 93.0): pedir ao `Arquiteto` o **lote retido 2**, que mede as duas, antes
-    da validação. A 26.0 agora depende da 94.0
-  - ler o veredito da esteira de `975bad2` no próximo encontro (`b5b7d11` e `63aac92` verdes; `f794080` cancelada pelo push seguinte)
-  - ao fechar a 3.0: se ela não trouxer a base da `saidaQualitativa`, pedi-la ao `Arquiteto`; e pedir o lote retido
-    dos alvos da 3.0, como o da 2.0
+  - **onda 0 fechada pelo recorte**: lote retido 2 do riscoAVida (R59) e lotes retidos 1 da 3.0 (`3b44efe`, medida abaixo
+    do alvo: saidaQualitativa 22/58 e 3/41 legítimas barradas; julgamento 33/57), lacuna em `2fe1d73` (R60, `onda-0.md`
+    §2.3, `TODO.md`). Ponto de produto para a X6: a entrada recusa pedido do professor sobre o próprio material com palavra
+    de nota ou correção (10/10, já antes da 3.0). **Dizer ao Joaquim no fim** que a AIA do Tutor e esta lacuna merecem o
+    olhar dele antes do piloto
+  - esteira: `f6913ee` na fila e `3f100df` rodando (ler no próximo encontro); `3b44efe` e `1f770ea` canceladas pelo push
+    seguinte. A vermelha conhecida é a do `arquivo-do-titular` (correção na linha 3)
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
-- **Base:** `spec/reengenharia` em `d2dea6b`. Vigia ligada
+  - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
+    (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`)
+- **Base:** `spec/reengenharia` em `2fe1d73`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -85,6 +96,9 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 5.0 | `259ca64` | Sonnet | 2 (test-engineer, revisor-geral) | linha 3, pequena, 20:01–20:12 |
 | 2.0 | `66d8b95` | Sonnet | 4 (test-engineer 5) | ouro lido para escrever o padrão: divergência, opção A (lote retido), escalada com diagnóstico, bloqueio destravado pelo Joaquim; npm audit fora do ar ~8 h |
 | 93.0 | `c361eb8` | Sonnet | 3 (test-engineer 4) | linha 3, grande, 09:40–11:00; escalada (dose letal) com diagnóstico: volta ao HEAD, a 3ª piora fica declarada; absorveu a correção das pioras da l2 |
+| 3.0 | `1566521` | Sonnet | 4 | linha 1, grande, 07:47–11:25; divergência (triagem: detalhe), escalada, bloqueio destravado pelo recorte; saidaQualitativa 54/58, 0 legítimas barradas; lacuna declarada no §2.3 |
+| 94.0 | `0975b97` | Sonnet | 2 | linha 2, grande, 11:07–11:36; dentro do prazo de 14:55, escopo inteiro; três recomendações no TODO.md |
+| 51.0 | `50e04d0` | Sonnet | 2 | encontro adiado até o commit dos lotes retidos da 3.0 (`3b44efe`); lacuna da 3.0 em `2fe1d73` (R60); o ponto de produto do material do professor com palavra de nota vai para a X6 |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
@@ -135,6 +149,19 @@ critério de aceite.
 ## O que falhou
 
 ## O que decidi sem perguntar
+- 22/10, ~12:25 — correção `arquivo-do-titular-datas` (l3): DIVERGÊNCIA (ordem) do Implementador 3. Não havia defeito:
+  as datas não vencem (relógio injetado); o vermelho local vinha do despachante e do worker-interativo do compose
+  `educa-teste-3`, de pé, consumindo o job do teste. Com eles parados, 38/38; a integração da esteira (39797493843,
+  `3f100df`) está verde. O vermelho da esteira é o `ouro.test.ts`, que já é a correção `ouro-base-qualitativa` da l1.
+  Não abri nenhuma das duas correções propostas: fechei a l3 sem commit (quadro editado à mão, cópia em
+  `.processo/linhas.json.antes-de-soltar-l3`; o encontro recusa correção sem commit). Para a retro: o portão não derruba
+  os despachantes do compose de teste antes da integração, e falta `linhas.ts abandonar <n>`
+- 22/10 12:00 — a linha 2 trouxe a correção `05aa2fe` da `spec/reengenharia--l1` (merge, mesmo commit) para o portão da
+  14.0 passar, em vez de esperar o encontro da 6.0.
+- 22/10 11:40 — cancelei 7 execuções da esteira na fila da `spec/reengenharia` que o `3f100df` já cobria (pushes de
+  documento acumulavam execuções inteiras).
+- 22/10 ~11:35 — a base da `saidaQualitativa` (correção) foi para a linha 1, antes da 6.0, com a árvore limpa: não havia
+  linha ociosa, e é a 6.0 que precisa dela primeiro. A spec fica vermelha até o encontro da 6.0.
 - 22/10 ~11:00 — soltei a linha 2 da correção absorvida editando o `.processo/linhas.json` (não há comando para
   abandonar uma linha; o Joaquim quer as três ocupadas). Retrospectiva: `linhas.ts abandonar <n>`.
 - 22/10 — a correção das três pioras, pedida na linha 2 porque o Arquiteto disse "sem decisão, já vale", ficou

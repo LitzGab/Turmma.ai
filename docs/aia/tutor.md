@@ -98,7 +98,15 @@ memória feita do registro do trabalho, não de texto sobre a pessoa.
 10. **Encaminha assunto pessoal delicado a um humano** (D36): responde com mensagem fixa,
     revisada pela escola, que acolhe e orienta a procurar o professor ou a orientação
     educacional e, havendo menção a risco à vida, o CVV (188); e gera o sinal "precisa de
-    atenção humana".
+    atenção humana". **O risco à vida é reconhecido por duas leituras que somam** (X5, tarefa
+    94.0): a regra, por palavras, que decide e dispensa o modelo; e o modelo, que no mesmo turno
+    também classifica como `risco_a_vida` o que o aluno **escreveu** sobre tirar a própria vida,
+    se machucar de propósito, outra pessoa que vai fazer isso (e o aluno que a conta) ou o meio.
+    O modelo só soma: não desfaz a regra, não escreve a mensagem e não muda quem a recebe. O
+    aluno recebe a mensagem de risco, com o 188 na frente, e o professor recebe o sinal "precisa
+    de atenção humana", sem referência e sem o que o aluno escreveu, como na frase que a regra
+    pega. A classificação `risco_a_vida` existe só na saída crua do modelo: a tarefa a troca por
+    `assunto_delicado`, e nada que o serviço grava ou a tela mostra a leva.
 11. **Respeita o pacote da turma e o freio de 60 trocas por dia por aluno** (D38), mostrados ao
     aluno como salvaguarda.
 12. **Deixa rastro para o professor:** em sala, acompanhamento ao vivo; fora da sala, quando a
@@ -188,10 +196,16 @@ Como se confere: leitura do esquema das tabelas do Tutor; o resumo de sessão s�
 campos do formato fixo; teste que recusa resumo com campo a mais.
 
 **N12. Não infere emoção, humor, atenção nem estado psicológico.** O gatilho do encaminhamento é
-o que o aluno escreveu de forma explícita.
+o que o aluno escreveu de forma explícita. Isso vale para o modelo que classifica o risco à vida
+(tarefa 94.0): ele classifica o que o aluno escreveu, nunca o que ele sente. O prompt o diz com
+essas palavras ("tristeza, cansaço ou estresse sem nada disso" não é `risco_a_vida`), a lista de
+classificações não tem valor para humor, atenção ou comportamento, e a matéria escolar ("suicídio
+na aula de história", a dose de um remédio na aula de ciências) e o exagero de expressão ficam
+de fora.
 Fundamento: D36; D57; ECA Digital, art. 26; Decreto 12.880, art. 10.
 Como se confere: a lista de gatilhos é fechada e revisada; nenhum campo guarda estado emocional;
-teste em que mensagem sem menção explícita não gera o sinal.
+teste em que mensagem sem menção explícita não gera o sinal; teste do prompt, que nomeia
+`risco_a_vida` pelo que o aluno escreveu e não tem classe de humor (`turno-do-tutor.test.ts`).
 
 **N13. Não aconselha em assunto pessoal delicado.** A resposta é a mensagem fixa.
 Fundamento: D36.
@@ -206,6 +220,26 @@ ao professor (decisões 4 e 7 do `ouro`: na dúvida, dispara). Ela **deixa passa
 carta de suicídio do Pedro na mochila" (quem conta o risco de outra pessoa é da 94.0, `risco_de_outra_pessoa`, que lê
 esta linha); e a carta "do/da/dos/das" mais qualquer palavra que não seja "meu/minha", que também leva a carta do próprio
 aluno quando a palavra seguinte não é nome ("a carta de suicídio da semana passada", "dos últimos dias").
+Limitação conhecida (22/10/2026, X5, tarefa 94.0): o modelo soma à regra no risco à vida, e **erra nos dois sentidos**. Pode
+deixar passar o que a regra também não pegou (a regra continua sendo o piso: o modelo nunca a desfaz), e pode barrar a mais, e o
+falso positivo dele manda o 188 e dá o sinal ao professor do mesmo jeito que o da regra (D34, D57). O portão prova o caminho, e
+não a taxa: o modelo diz `risco_a_vida`, o aluno recebe o 188 e o professor recebe o sinal. A taxa se mede com
+`tools/ia/medir-risco-a-vida.ts <lote>` e o modelo local, três execuções valendo a pior, sobre o lote retido 2: **a medida é do
+Arquiteto** (`onda-0.md` §2.2a), e a ferramenta não roda no portão. A medida vale para o modelo local do ensaio; **até a D37
+escolher o provedor, ela não vale para o de produção**, e se repete com ele antes de a F5 ficar pronta (`TODO.md`). A ferramenta
+recusa o modelo que não é local (regra 30, item 3; regra 20, item 13): só mede com o provedor contratado quem passa
+`--provedor-contratado`, e o lote é sintético. Com o adaptador falso ela também recusa, porque ele nunca classifica
+`risco_a_vida`. A ameaça a
+terceiro ("vou matar ele") continua `assunto_delicado` pelo modelo, sem o 188: a resposta a ela é decisão de produto em aberto.
+A medida, feita em 22/10/2026 no lote retido 2 (`docs/aia/ouro-retido/RETIDOS.json`), ficou **abaixo do alvo** do `MEDIDAS`:
+de 75 frases de risco à vida, a regra sozinha reconhece 37, e a regra ou o modelo, 51 (pior de três). Antes da 93.0, a regra
+reconhecia 31. O que mais escapa é o risco **indireto** (despedida, "não existir", plano sem a palavra), em que o aluno recebe o
+188 em 5 de 15 frases, e a **gíria**, em 9 de 15. A precisão fica em 0,96, mas o modelo deu um falso positivo num homônimo, que
+a regra sozinha não dava. Nessa medida o modelo local falhou em 64 de 384 chamadas, e a falha conta como "não reconheceu". O
+que isso quer dizer para a escola: **o Tutor não é um detector de risco**. A frase de risco que ele não reconhece recebe a resposta
+comum, sem o 188 e sem o sinal, e por isso a supervisão do professor (D8) e o canal humano da escola continuam sendo a proteção.
+O refinamento vai para a X6 (`conformidade/`, 26.0 a 29.0), medido num lote retido novo, e a medida se repete com o provedor
+da D37 antes de a F5 ficar pronta.
 
 **N14. Não tem memória que o aluno não possa ver.**
 Fundamento: D66 ("o aluno vê e contesta").

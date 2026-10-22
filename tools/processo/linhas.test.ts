@@ -377,6 +377,37 @@ describe('partida, encontro e fechamento, em repositórios de verdade', () => {
     expect(partida(spec, 1, 'qualquer').texto).toMatch(/não é tarefa \(5 ou 5\.0\) nem correção/)
   })
 
+  it('a linha que traz outra linha por merge só é cobrada pelo que o merge resolveu à mão', () => {
+    const limpo = andares()
+    const l2 = limpo.checkouts.get(2) ?? ''
+    partida(limpo.spec, 1, 'correcao:base')
+    partida(limpo.spec, 2, '3')
+    limpo.entregar(1, 0, { 'apps/web/base.ts': 'base\n' }, '(correção 2026-10-22-base)')
+    limpo.escrever(l2, 'tasks/prd-exemplo/nota.md', 'nota\n')
+    limpo.git(l2, 'add', '-A')
+    limpo.git(l2, 'commit', '-q', '-m', 'Anota')
+    // A tarefa da linha 2 precisa da correção da linha 1: o Orquestrador manda trazê-la, e o merge é limpo.
+    limpo.git(l2, 'merge', '--no-edit', branchDaLinha('spec/exemplo', 1))
+    expect(limpo.git(l2, 'rev-list', '--merges', 'spec/exemplo..HEAD')).not.toBe('')
+    limpo.entregar(2, 3, { 'apps/web/b.ts': 'b\n' })
+    const resultado = encontro(limpo.spec, 2, { push: false })
+    expect(resultado.codigo, resultado.texto).toBe(0)
+    expect(existsSync(join(limpo.spec, 'apps/web/base.ts'))).toBe(true)
+
+    // O merge que resolve conflito de código à mão, sem marca, continua recusado.
+    const resolvido = andares()
+    const r2 = resolvido.checkouts.get(2) ?? ''
+    partida(resolvido.spec, 1, 'correcao:base')
+    partida(resolvido.spec, 2, '3')
+    resolvido.entregar(1, 0, { 'apps/web/registro.ts': 'export const telas = [\n  a,\n]\n' }, '(correção 2026-10-22-base)')
+    resolvido.entregar(2, 3, { 'apps/web/registro.ts': 'export const telas = [\n  b,\n]\n' })
+    expect(() => resolvido.git(r2, 'merge', '--no-edit', branchDaLinha('spec/exemplo', 1))).toThrow()
+    resolvido.escrever(r2, 'apps/web/registro.ts', 'export const telas = [\n  a,\n  b,\n]\n')
+    resolvido.git(r2, 'add', '-A')
+    resolvido.git(r2, 'commit', '-q', '--no-edit')
+    expect(encontro(resolvido.spec, 2, { push: false }).texto).toMatch(/leva código sem \(tarefa 3\.0\) no título: "Merge branch/)
+  })
+
   it('a correção avulsa se confere no andar dela: marca, revisões, árvore limpa e push', () => {
     const base = mkdtempSync(join(tmpdir(), 'conferir-'))
     pastas.push(base)

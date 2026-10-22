@@ -1,7 +1,6 @@
-import { Permite } from '@educa/nucleo'
+import { IdPipe, Permite } from '@educa/nucleo'
 import type { RespostaExecucao } from '@educa/shared'
 import { Controller, Get, Header, Param } from '@nestjs/common'
-import { idDoCaminho } from '../estrutura/entrada.js'
 import { ExecucoesService } from './execucoes.service.js'
 
 /**
@@ -16,7 +15,7 @@ export class ExecucoesController {
   @Get(':id')
   @Permite('execucao', 'ler')
   @Header('Cache-Control', 'no-store')
-  ler(@Param('id') id: string): Promise<RespostaExecucao> {
-    return this.execucoes.ler(idDoCaminho(id))
+  ler(@Param('id', IdPipe) id: string): Promise<RespostaExecucao> {
+    return this.execucoes.ler(id)
   }
 }

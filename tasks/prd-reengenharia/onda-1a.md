@@ -145,6 +145,15 @@ segunda passada ignora `eslint-disable`.
   mesmo corpo; a ordem entre corpo e caminho não revela existência e é caracterizada, não forçada. Onde a credencial é
   lida no handler (`mfa.controller.ts:37`, `:62`), o corpo inválido sem token passa a dar 400 antes do 401, sem gastar
   tentativa: mudança declarada na 16.0.
+- **A caracterização da 14.0 entra no commit da tarefa, e não num commit à parte** (exceção ao `techspec.md` §1, que a pede
+  "num commit anterior"): o hook (`tools/processo/revisoes.ts`) só aceita commit com código de `apps/`, `packages/` ou `tools/`
+  marcado `(tarefa N.0)`, com portão carimbado e a rodada dos revisores, e um commit só de teste pediria tudo isso duas vezes.
+  Os casos foram escritos e rodados, verdes, contra o código antigo, antes de qualquer controller mudar. **Uma mudança de
+  comportamento que eles acharam:** com o id e o corpo inválidos ao mesmo tempo, `decidir` (`entrega`), `refazer` e `revogar`
+  (`professores`) respondiam o 404 do id e passam a responder o 400 do corpo, o último parâmetro, que o Nest resolve primeiro.
+  As asserções dessas rotas foram escritas com o 404 e passaram no código antigo, e foram reescritas para o 400 depois da
+  migração. É a ordem entre corpo e caminho que esta seção já aceita ("caracterizada, não forçada"), e não revela existência:
+  com o corpo inválido, qualquer id, de outra escola ou inexistente, dá o mesmo 400.
 
 **A trava é o ESLint core.** Um bloco de `no-restricted-syntax` em `eslint.config.mjs`, para `*.controller.ts`, reprova
 `@Body()`, `@Query()` e `@Param(nome)` sem pipe, `@Req()` e `requisicao.body`, `.query` e `.params`. O `files` do bloco

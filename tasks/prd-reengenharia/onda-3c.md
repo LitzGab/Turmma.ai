@@ -60,6 +60,7 @@ local passam. **Com o banco fora**, falha fechada: não fica pronto nem consome 
   `servidor + 1` e vence. A alternativa segue com alvo de 44 px.
 - **A aba que venceu** mostra a sua até o próximo `PUT` ou leitura, e então adota a do servidor com o mesmo aviso.
 - Sem `sequencia` (cliente antigo), grava com `sequencia = resposta_atividade.sequencia + 1`, na mesma escala.
+- **A coluna entra no arquivo do titular** (`LEITURAS_DO_ARQUIVO`, `titular/leitura-do-titular.ts`) e na linha de `resposta_atividade` de `docs/lgpd.md`: a ordem das escolhas diz quantas vezes o aluno trocou a alternativa, e a regra 20 (item 1) pede o campo na tabela de dados na mesma tarefa. A guarda `arquitetura.test.ts` ("toda coluna delas tem destino") fica vermelha sem isso.
 
 **52.0, o prazo do cliente (RF25).**
 `comPrazo(sinal, limiteMs)` em `apps/web/src/api/cliente.ts`, com `AbortController` próprio, sem `AbortSignal.timeout`

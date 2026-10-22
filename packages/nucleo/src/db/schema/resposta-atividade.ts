@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { check, foreignKey, index, pgTable, smallint, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { bigint, check, foreignKey, index, pgTable, smallint, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { escola } from './escola.js'
 import { tentativaAtividade } from './tentativa-atividade.js'
 
@@ -11,6 +11,10 @@ import { tentativaAtividade } from './tentativa-atividade.js'
  *   atividade_aplicada_id, aluno_id, questao)` é o alvo do `on conflict do update`. O `PUT` repetido, o reenvio da tela
  *   quando a rede volta e as duas abas gravam uma linha só, com a última alternativa. É o índice que começa pelo escopo
  *   (regra 80, item 8): a correção lê por ele todas as respostas de uma aplicação.
+ * - **Só a escolha mais nova vale** (regra 80, itens 6 e 7; RF21): `sequencia` é a ordem das escolhas do aluno naquela
+ *   questão, e o `on conflict do update` só grava com `excluded.sequencia > resposta_atividade.sequencia`. O reenvio
+ *   atrasado, o F5 e a outra aba não trocam a escolha mais recente. As linhas anteriores à coluna ficam em 0. Sem índice
+ *   próprio: a escrita já vai pelo índice único acima.
  * - `questao` é o **número** da questão, a partir de 1 (a posição em `conteudo.questoes` mais um); `alternativa` é o
  *   **índice**, de 0 a 3, como o `gabarito`. Os checks seguram os dois intervalos.
  * - A tentativa por FK composta `(escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id)`, `on delete cascade`: não
@@ -31,6 +35,7 @@ export const respostaAtividade = pgTable(
     alunoId: uuid().notNull(),
     questao: smallint().notNull(),
     alternativa: smallint().notNull(),
+    sequencia: bigint({ mode: 'number' }).notNull().default(0),
     respondidaEm: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (tabela) => [

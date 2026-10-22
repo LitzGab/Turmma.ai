@@ -612,6 +612,7 @@ export {
   esquemaRespostaProva,
   esquemaRespostaQuestaoSalva,
   esquemaRespostaSalva,
+  esquemaSequencia,
   questoesDaProva,
   SITUACOES_DA_MINHA_ATIVIDADE,
 } from './atividade/prova.js'
@@ -625,6 +626,7 @@ export type {
   RespostaMinhasAtividades,
   RespostaProva,
   RespostaQuestaoSalva,
+  RespostaSalva,
   SituacaoDaMinhaAtividade,
 } from './atividade/prova.js'
 export {

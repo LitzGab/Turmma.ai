@@ -16,6 +16,15 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       ("O Caio aprendeu a regra."); partes opcionais de `ELOGIO` sem bloco ("Um bom começo!"); a docstring de `SAIDA_AO_PROFESSOR`
       ainda cita "espera a sua aprovação"; os exemplos da 4ª rodada já estão na linha "O que a conferência não pega" do `onda-0.md`
       §2.3, e o `aponta_erros` do `ouro` (4 de 12 escapam) entra na mesma medida
+- [ ] D55 abaixo do alvo no lote retido 1 da 3.0 (X6, `conformidade/`, 26.0 a 29.0, com lote retido 2 das duas políticas). A
+      saída barra 22/58 (no `ouro`, 54/58) e 3/41 legítimas, por julgar o texto do próprio professor. A entrada barra 33/57 e
+      recusa todo pedido sobre o material do professor que traz palavra de nota ou de correção (10/10, já antes da 3.0): é o
+      professor que mais vai esbarrar nisso ("dá uma nota de 0 a 10 pro meu enunciado"). Detalhe em
+      `docs/aia/ouro-retido/RETIDOS.json` e `onda-0.md` §2.3
+- [ ] Risco à vida do Tutor abaixo do alvo no lote retido 2 (X6, `conformidade/`, 26.0 a 29.0, com lote retido 3): 51/75 com a
+      regra ou o modelo. O que mais escapa é o indireto (5/15) e a gíria pela regra (6/15). O modelo local falhou em 64 de 384
+      chamadas: ver o que o aluno recebe quando o modelo falha num turno de risco que a regra não pegou. E um falso positivo de
+      homônimo pelo modelo. Detalhe em `docs/aia/ouro-retido/RETIDOS.json` e `onda-0.md` §2.2a
 - [ ] AIA do Assistente (D57): a saída que infere emoção ou estado do aluno ("Ela parece triste.") não é da D55 e a conferência da
       tarefa 3.0 não a pega; entra na avaliação de impacto do Assistente, antes do PRD que o expõe ao aluno
 - [ ] O pedido do titular (acesso e portabilidade, F3, `ciclo-de-vida.service.ts`) cobre também a `lista_nome` e a
@@ -1588,6 +1597,18 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - **O risco à vida medido com o modelo de produção** (X5, 94.0; `onda-0.md` §2.2a): a `indireta` e o
   `risco_de_outra_pessoa` são medidos com o padrão ou o modelo, no Ollama. Repetir a medida com o provedor que a D37
   escolher, com `tools/ia/medir-risco-a-vida.ts` sobre um lote retido novo, antes de a F5 ficar pronta
+- **As falhas do modelo na medida do risco à vida** (X5, 94.0, recomendação do `llm-integrator`): o relatório de
+  `tools/ia/medir-risco-a-vida.ts` imprime só o total de chamadas que falharam. Imprimir também `falhas / (execuções ×
+  amostras)`, para o Arquiteto saber se o modelo local falhou por JSON ruim ou por prazo antes de ler a taxa. Pedir só se
+  a medida do lote retido 2 mostrar falhas; o relatório tem teste próprio, que muda junto
+- **Os pisos do lote retido 2 e o que fazer abaixo de 0,80** (X5, 94.0, recomendação do `conformidade-reviewer`): antes da
+  primeira escola real, registrar na limitação de `docs/aia/tutor.md` o resultado do lote retido 2 sobre `tristeza_sem_risco`,
+  `homonimo` e `conteudo_escolar`, e definir o que acontece se a precisão ficar abaixo de 0,80. Uma opção é suspender só a soma
+  do modelo. Depende da medida do lote retido 2, que é do Arquiteto
+- **O tipo `SaidaDoTutor` aceita `risco_a_vida`** (X5, 94.0, recomendação do `revisor-geral`): o tipo vem de
+  `z.infer<typeof esquemaSaidaDoTutor>`, e o serviço o importa (`tutor.service.ts`), então pelo compilador a saída da tarefa
+  aceita `risco_a_vida`; o comportamento é garantido em execução pelos testes (`ajustar` a troca por `assunto_delicado`).
+  Separar o tipo da saída crua do modelo do tipo do que a tarefa devolve fecharia isso na compilação, e toca o serviço
 - **A ameaça de outra pessoa e a ameaça a terceiro** (X5, 2.0): "meu padrasto quer me matar", "ele disse que vai me matar" e
   "vou matar ele" recebem hoje a mensagem do CVV e o sinal `atencao_humana`, porque a 2.0 não mudou a resposta;
   "o professor quer me matar com essa lista" dispara pelo mesmo jeito de dizer, e "os meninos vão me matar na saída" (a ameaça
@@ -1601,3 +1622,16 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   `titulares.homonimo` está na lista); (c) renomear, em `repositories-com-escopo.test.ts`, o caso "cada entrada diz o motivo com
   pelo menos 30 caracteres", que diz 30 por extenso enquanto o corpo usa `TAMANHO_MINIMO_JUSTIFICATIVA_SEM_ESCOPO`, e os blocos
   de mutação que o citam
+- **Os pedidos sem corpo, tipados pelo `shared`** (X5, 14.0, recomendação do `revisor-geral`): o `professores.controller.ts` declara
+  `_corpo: Record<string, never>` e monta o esquema com `.default({})` localmente, e a "armadilha" da tarefa manda declarar o tipo
+  com o de `@educa/shared`. Exportar `PedidoSemCorpoDoConviteDeProfessor` (e o esquema com `.default({})`) de
+  `packages/shared/src/professores/professores.ts`, e trocar o controller, quando alguma tarefa mexer em contrato compartilhado
+  (a 15.0 e a 16.0 repetem o mesmo corpo vazio em `sala` e `operacao`): é contrato compartilhado, que a 14.0 não toca
+
+- [ ] **(X5, 51.0) Duas páginas na mesma atividade, no e2e:** a 51.0 provou em unidade e em tela o aviso "Sua resposta foi alterada em outra janela" e a regra de só a mais nova valer; falta um caso de e2e com duas páginas do mesmo navegador na mesma atividade, nos projetos `chromebook` e `celular`. Entra na 53.0 (o espelho em `sessionStorage`, que fecha a outra aba e o F5) (`frontend-reviewer` e `test-engineer`, 51.0, 1ª rodada).
+- [ ] **(X5, 51.0) Atividade em andamento na semente da vitrine:** `tools/vitrine/` só tem atividades já feitas, e o aviso de outra janela exige uma em andamento aberta em duas janelas; semear uma para a IA e a pessoa verem a tela (`frontend-reviewer`, 51.0, 1ª rodada).
+- [ ] **(X5, 51.0) Contrato na janela do deploy:** web nova com API antiga (o `strictObject` da API antiga recusa a chave `sequencia` com `ENTRADA_INVALIDA`) e aba antiga com API nova (o `PUT` sem `sequencia` é o cliente antigo e continua valendo). Escrever em `docs/runbook.md` a ordem de deploy (API primeiro, depois a web) na primeira tarefa que mexer nele (`infra-guardian`, 51.0, 1ª rodada).
+- [ ] **(X5, 51.0) `.max()` em `esquemaSequencia`:** a `sequencia` aceita qualquer inteiro não negativo até o limite do `bigint`; declarar um teto muda o contrato do `shared` e o corpo recusado. Decisão do Arquiteto (`infra-guardian`, 51.0, 1ª rodada).
+- [ ] **(X5, 51.0) Cenário de carga da prova em `infra/k6/`:** o `PUT` de resposta com `sequencia` (escola inteira respondendo ao mesmo tempo, com reenvio) cabe junto da 52.0 e da 53.0, com o adaptador falso e sem provedor pago (`infra-guardian`, 51.0, 1ª rodada).
+- [ ] **(X5, 51.0) Dizer nos fixtures que o `PUT` sem `sequencia` é o cliente antigo:** `apps/api/test/atividade-de-teste.ts` e `e2e/__fixtures__/aluno-pela-api.ts` mandam a resposta sem `sequencia`, e quem lê não sabe que isso é o caminho do cliente antigo (`infra-guardian`, 51.0, 1ª rodada).
+- [ ] **(X5, 51.0) `arquivo-do-titular.int.test.ts` com data fixa:** três a quatro casos de data e de validade vencem desde 19/10/2026 e deixam a esteira vermelha, com e sem a 51.0 (verificado revertendo `leitura-do-titular.ts`). Corrigir (data relativa ao relógio do teste) **antes do pouso**, fora da 51.0 (`revisor-geral`, 51.0, 1ª rodada).

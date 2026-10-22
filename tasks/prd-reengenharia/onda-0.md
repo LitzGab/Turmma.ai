@@ -150,6 +150,19 @@ desfaz"):
 - **No portão**, o modelo é o `AdaptadorRoteirizado`: o teste prova o caminho (o modelo diz `risco_a_vida`, o aluno
   recebe o 188, o professor recebe o sinal), não a taxa.
 
+**O que o lote retido 2 mediu (22/10, `3f100df`), e como a onda fecha.** Base, com a regra de antes da 93.0: 31/75. A regra
+da 93.0 sozinha: 37/75, precisão 0,974. A regra ou o modelo da 94.0, pior de três no modelo local: 51/75, precisão 0,962.
+**Fora do alvo** em sete categorias:
+- pela regra sozinha: `explicita` (perde 5 e o alvo admite 0), `digitacao` (4 e 2), `giria_abreviacao` (9 e 1),
+  `pergunta_sobre_o_meio` (3 e 1) e `automutilacao_sem_corte` (1 e 0);
+- pela regra ou o modelo: `indireta` (10 e 0) e `risco_de_outra_pessoa` (1 e 0).
+
+O modelo também quebra o piso de `homonimo` (12/13, contra 13/13). Ele falhou em 64 das 384 chamadas, que contam como "não
+barrou". Pelo recorte (R51), a onda 0 **fecha com a 93.0 e a 94.0 como entraram**, e esta é a lacuna medida e declarada, na AIA
+do Tutor e no `RETIDOS.json`. Não volta ao Joaquim: não é de desenho, porque a regra e o modelo somando é a decisão dele, e o que
+falta é taxa. O refinamento (léxico da gíria e do indireto, as falhas do modelo local e o falso positivo do homônimo) vai para a
+X6, com lote retido 3 (`conformidade/`, 26.0 a 29.0), e a medida se repete com o provedor da D37.
+
 **A AIA.** A 94.0 escreve em `docs/aia/tutor.md` que o modelo também classifica o risco à vida, a medida e as limitações
 (D60).
 
@@ -196,6 +209,16 @@ desfaz"):
   módulo `conformidade/`, 26.0 a 29.0), medido no lote retido do `ouro`. "Está correto dizer que…" não entra aqui: a guarda
   do infinitivo a deixa passar. Inferência emocional na saída do Assistente ("Ela parece triste.") não é da D55: está no
   `TODO.md`, para a AIA do Assistente (D57).
+- **No lote retido 1, medido em 22/10 contra `1f770ea`** (`docs/aia/ouro-retido/RETIDOS.json`, R60), as duas funções ficam
+  abaixo do alvo. Na saída, `julgaTextoDeAluno` barra 22 das 58 positivas (0,379; no `ouro`, 0,931), e o que mais escapa é
+  `sugere_reescrita` (1/9), `rubrica_sob_medida` (0/3), `compara_ou_ranqueia` e `nivel_da_rubrica` (3/9). Ela barra 3 das 41
+  legítimas, todas de `material_do_professor`: o juízo sobre a resposta-modelo ou o texto de apoio do próprio professor. Antes
+  da 3.0 nada disso era barrado (0/58). Na entrada, `conversaPedeJulgamentoDeTextoDeAluno` vai de 32/57 para 33/57. O
+  `material_do_professor` é recusado inteiro (10/10) antes e depois da 3.0, e `rubrica_antes` uma vez (1/7): o `semCasar` já
+  falhava antes da tarefa, e as categorias de `naoCairDaBase` não caíram. **A onda 0 fecha assim, pelo recorte.** O que
+  escapa na saída tem duas proteções: só vale com texto de aluno na conversa, e o prompt proíbe o juízo. O que se barra a
+  mais cai na recusa fixa, que é o lado em que a D55 erra. O refinamento das listas vai para a X6 (26.0 a 29.0), com o lote
+  retido 2 das duas políticas.
 - **`REDACAO_OU_DISCURSIVA` sozinha não liga a chave** (divergência da 3.0, 22/10). Nomear o gênero ("rubrica pra redação
   do 9º ano", "critérios para a discursiva de amanhã") não põe texto nenhum na conversa, e o README do `ouro` diz que
   `rubrica` e `criterios_antes_da_aplicacao` são sem texto de aluno. Na entrada ela continua valendo junto com o pedido

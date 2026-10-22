@@ -81,4 +81,14 @@ describe('LEITURAS_DO_ARQUIVO: a forma das leituras', () => {
       }
     }
   })
+
+  it('as respostas do aluno saem com a `sequencia` da escolha: a coluna está na lista que o arquivo descreve e no `select` que o lê (51.0, regra 20, item 19)', () => {
+    const leitura = LEITURAS_DO_ARQUIVO.resposta_atividade
+    expect(leitura?.colunas).toContain('sequencia')
+    const instrucoes = (leitura?.consultas({ ...alvo, versao: 'completa' }) ?? []).map((consulta) => new PgDialect().sqlToQuery(consulta).sql)
+    expect(instrucoes).toHaveLength(1)
+    // O `select` lê exatamente as colunas que a lista declara, na mesma ordem: nenhuma a mais, nenhuma a menos.
+    expect(instrucoes[0]).toMatch(/^select (.+) from resposta_atividade t /)
+    expect((instrucoes[0]?.match(/^select (.+) from resposta_atividade t /)?.[1] ?? '').split(', ')).toEqual((leitura?.colunas ?? []).map((coluna) => `t.${coluna}`))
+  })
 })

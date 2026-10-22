@@ -51,7 +51,8 @@ function paraATela(lida: MinhaAtividadeLida): unknown {
  *
  * - **A prova sai de `questoesDaProva`**: número, enunciado e alternativas. Gabarito, explicação, habilidade e citação
  *   não têm por onde ir.
- * - **Nenhuma resposta se perde nem se duplica**: a gravação é idempotente, e o relógio é o do banco.
+ * - **Nenhuma resposta se perde nem se duplica**: a gravação é idempotente, e o relógio é o do banco. **E só a escolha mais
+ *   nova vale**: o envio atrasado, o F5 e a outra aba não trocam a de `sequencia` maior, e quem perde recebe a gravada.
  * - **Depois do envio e do encerramento, a resposta é recusada** (`ATIVIDADE_ENCERRADA`), e a recusa é decidida com a
  *   aplicação travada: a resposta que chega junto com o encerramento ou é gravada antes da correção, ou é recusada.
  * - **O diagnóstico só existe com o lote aprovado.** Antes disso (lote pendente, rejeitado ou ainda não corrigido) a
@@ -92,12 +93,12 @@ export class MinhaAtividadeService {
       // Só os tipos da adaptação, que valem para a turma inteira: nada sobre aluno (D35).
       adaptacao: conteudo.adaptacao ?? null,
       questoes: questoesDaProva(conteudo),
-      respostas: aberta.respostas.map(({ questao, alternativa }) => ({ questao, alternativa })),
+      respostas: aberta.respostas.map(({ questao, alternativa, sequencia }) => ({ questao, alternativa, sequencia })),
       enviadaEm: aberta.tentativa?.enviadaEm?.toISOString() ?? null,
     })
   }
 
-  async responder(id: string, questao: number, { alternativa }: PedidoResponderQuestao): Promise<RespostaQuestaoSalva> {
+  async responder(id: string, questao: number, { alternativa, sequencia }: PedidoResponderQuestao): Promise<RespostaQuestaoSalva> {
     const salva = await this.banco.transaction(async (tx) => {
       const atividades = new MinhaAtividadeRepository(tx)
       const atividade = await atividades.travarParaGravar(id)
@@ -107,9 +108,9 @@ export class MinhaAtividadeService {
       if (questao > atividade.questoes) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       const tentativa = await atividades.abrirTentativa(id)
       if (tentativa.enviadaEm !== null) throw new ErroDeDominio(CodigoDeErro.ATIVIDADE_ENCERRADA)
-      return atividades.responder(id, questao, alternativa)
+      return atividades.responder(id, questao, alternativa, sequencia)
     })
-    return esquemaRespostaQuestaoSalva.parse({ questao: salva.questao, alternativa: salva.alternativa, respondidaEm: salva.respondidaEm.toISOString() })
+    return esquemaRespostaQuestaoSalva.parse({ questao: salva.questao, alternativa: salva.alternativa, sequencia: salva.sequencia, respondidaEm: salva.respondidaEm.toISOString() })
   }
 
   /** Enviar é uma vez só: enviar de novo devolve o mesmo, com a primeira hora, mesmo depois do encerramento. */

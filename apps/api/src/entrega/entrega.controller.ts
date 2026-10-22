@@ -1,7 +1,13 @@
-import { Permite } from '@educa/nucleo'
-import { esquemaConsultaEntregas, esquemaPedidoDecidirEntrega, type RespostaEntrega, type RespostaListaDeEntregas } from '@educa/shared'
+import { IdPipe, Permite, ZodValidationPipe } from '@educa/nucleo'
+import {
+  esquemaConsultaEntregas,
+  esquemaPedidoDecidirEntrega,
+  type ConsultaEntregas,
+  type PedidoDecidirEntrega,
+  type RespostaEntrega,
+  type RespostaListaDeEntregas,
+} from '@educa/shared'
 import { Body, Controller, Get, Header, HttpCode, HttpStatus, Param, Post, Query } from '@nestjs/common'
-import { idDoCaminho, lerEntrada } from '../estrutura/entrada.js'
 import { EntregaService } from './entrega.service.js'
 
 /**
@@ -17,15 +23,14 @@ export class EntregaController {
   @Get()
   @Permite('entrega', 'listar')
   @Header('Cache-Control', 'no-store')
-  listar(@Query() consulta: unknown): Promise<RespostaListaDeEntregas> {
-    return this.entregas.listar(lerEntrada(esquemaConsultaEntregas, consulta))
+  listar(@Query(new ZodValidationPipe(esquemaConsultaEntregas)) consulta: ConsultaEntregas): Promise<RespostaListaDeEntregas> {
+    return this.entregas.listar(consulta)
   }
 
   @Post(':id/decidir')
   @Permite('entrega', 'decidir')
   @HttpCode(HttpStatus.OK)
-  decidir(@Param('id') id: string, @Body() corpo: unknown): Promise<RespostaEntrega> {
-    const entregaId = idDoCaminho(id)
-    return this.entregas.decidir(entregaId, lerEntrada(esquemaPedidoDecidirEntrega, corpo))
+  decidir(@Param('id', IdPipe) id: string, @Body(new ZodValidationPipe(esquemaPedidoDecidirEntrega)) pedido: PedidoDecidirEntrega): Promise<RespostaEntrega> {
+    return this.entregas.decidir(id, pedido)
   }
 }
