@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, posix } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { PECAS_FORA_DA_ENTRADA } from '../../nome-dos-chunks'
@@ -8,10 +8,10 @@ import { PECAS_FORA_DA_ENTRADA } from '../../nome-dos-chunks'
  * A casca é da entrada (Tech Spec da X1, seções 7c e 9; `docs/interface.md` 10.4): ela desenha o primeiro quadro, e por
  * isso **não busca nada por `import()`** nem importa peça que a entrada não baixa. O build prova o peso
  * (`apps/web/nome-dos-chunks.test.ts`); aqui está o que se vê no fonte, que reprova antes de o build rodar: o `import()`
- * dinâmico, a peça de `PECAS_FORA_DA_ENTRADA` e a pasta `componentes/ia/` ou `componentes/onca/`.
+ * dinâmico, a peça de `PECAS_FORA_DA_ENTRADA` e a pasta `componentes/ui/ia/` ou `componentes/ui/onca/`.
  */
 const pasta = dirname(fileURLToPath(import.meta.url))
-const ARQUIVOS_DA_CASCA = ['CascaDaEscola.tsx', 'BarraDeBaixo.tsx', 'itens-da-lateral.tsx', 'MenuDaPessoa.tsx', 'SeletorDeEscola.tsx', 'lateral-recolhida.ts', 'Aparencia.tsx', 'Segmentado.tsx', 'Ladrilho.tsx', 'Icone.tsx', 'Marca.tsx', 'gaveta.ts', 'ancora-do-sino.ts'] as const
+const ARQUIVOS_DA_CASCA = ['CascaDaEscola.tsx', 'BarraDeBaixo.tsx', 'itens-da-lateral.tsx', 'MenuDaPessoa.tsx', 'SeletorDeEscola.tsx', 'lateral-recolhida.ts', 'Aparencia.tsx', 'ui/campos/Segmentado.tsx', 'ui/Ladrilho.tsx', 'ui/Icone.tsx', 'ui/Marca.tsx', 'gaveta.ts', 'ancora-do-sino.ts'] as const
 
 function fonteDe(arquivo: string): string {
   return readFileSync(join(pasta, arquivo), 'utf8')
@@ -33,13 +33,15 @@ function importados(fonte: string): string[] {
 
 /**
  * Por que um caminho importado não pode estar na casca, ou `null`. Só olha o relativo (o pacote de fora é do build). O
- * caminho passa pela normalização que tira os `../` e o `componentes/` do começo, para `'../componentes/Contador'` e
- * `'./Contador'` serem a mesma peça.
+ * caminho é resolvido a partir da pasta do arquivo que o importa (`doArquivo`, relativo a `componentes/`) e perde os
+ * `../` e o `componentes/` do começo, para `'./ui/Contador'` e `'../componentes/ui/Contador'` serem a mesma peça, e
+ * `'./Contador'`, escrito dentro de `ui/`, também.
  */
-function motivoDeFora(caminho: string): string | null {
+function motivoDeFora(caminho: string, doArquivo = ''): string | null {
   if (!caminho.startsWith('.')) return null
-  if (/(?:^|\/)(?:ia|onca)\//.test(caminho)) return 'pasta fora da entrada'
-  const nome = caminho.replace(/^(?:\.\.?\/)+(?:componentes\/)?/, '')
+  const resolvido = posix.normalize(posix.join(posix.dirname(doArquivo), caminho))
+  if (/(?:^|\/)(?:ia|onca)\//.test(resolvido)) return 'pasta fora da entrada'
+  const nome = resolvido.replace(/^(?:\.\.\/)+(?:componentes\/)?/, '')
   return new Set<string>(PECAS_FORA_DA_ENTRADA).has(nome) ? 'peça fora da entrada' : null
 }
 
@@ -54,9 +56,9 @@ describe('a casca da escola, da entrada', () => {
     expect(fonte).not.toMatch(/\blazy\s*\(/)
   })
 
-  it.each(ARQUIVOS_DA_CASCA)('%s não importa peça fora da entrada, `componentes/ia/` nem a onça', (arquivo) => {
+  it.each(ARQUIVOS_DA_CASCA)('%s não importa peça fora da entrada, `componentes/ui/ia/` nem a onça', (arquivo) => {
     for (const caminho of importados(fonteDe(arquivo))) {
-      expect(motivoDeFora(caminho), `${arquivo} importa ${caminho}`).toBeNull()
+      expect(motivoDeFora(caminho, arquivo), `${arquivo} importa ${caminho}`).toBeNull()
     }
   })
 
@@ -71,14 +73,19 @@ describe('a casca da escola, da entrada', () => {
   })
 
   it('o detector reprova a peça e a pasta por caminho relativo, também o que sobe e desce, e deixa passar a da entrada', () => {
-    expect(motivoDeFora('./Contador')).toBe('peça fora da entrada')
-    expect(motivoDeFora('../componentes/Contador')).toBe('peça fora da entrada')
-    expect(motivoDeFora('../../componentes/Contador')).toBe('peça fora da entrada')
-    expect(motivoDeFora('./ia/AssinaturaIA')).toBe('pasta fora da entrada')
-    expect(motivoDeFora('../componentes/onca/Onca')).toBe('pasta fora da entrada')
+    expect(motivoDeFora('./ui/Contador')).toBe('peça fora da entrada')
+    expect(motivoDeFora('../componentes/ui/Contador')).toBe('peça fora da entrada')
+    expect(motivoDeFora('../../componentes/ui/Contador')).toBe('peça fora da entrada')
+    expect(motivoDeFora('./ui/ia/AssinaturaIA')).toBe('pasta fora da entrada')
+    expect(motivoDeFora('../componentes/ui/onca/Onca')).toBe('pasta fora da entrada')
+    // De dentro de `ui/`, o irmão e o primo, escritos relativos ao arquivo que importa.
+    expect(motivoDeFora('./Contador', 'ui/Ladrilho.tsx')).toBe('peça fora da entrada')
+    expect(motivoDeFora('../Contador', 'ui/campos/Segmentado.tsx')).toBe('peça fora da entrada')
+    expect(motivoDeFora('../ia/AssinaturaIA', 'ui/campos/Segmentado.tsx')).toBe('pasta fora da entrada')
     // O que a entrada baixa e o que não é relativo passam.
-    expect(motivoDeFora('./Icone')).toBeNull()
-    expect(motivoDeFora('../componentes/Ladrilho')).toBeNull()
+    expect(motivoDeFora('./ui/Icone')).toBeNull()
+    expect(motivoDeFora('../componentes/ui/Ladrilho')).toBeNull()
+    expect(motivoDeFora('./Icone', 'ui/Ladrilho.tsx')).toBeNull()
     expect(motivoDeFora('react')).toBeNull()
   })
 })

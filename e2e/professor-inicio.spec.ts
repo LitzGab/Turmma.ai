@@ -10,7 +10,7 @@ import { expect, test } from './__fixtures__/perfis.ts'
 /**
  * A Home do professor, "Início" (A2 e telas do professor, 3.0; `docs/interface.md` 11.5): o fluxo. Os estados (carregando,
  * erro, com dado), a saudação pela hora, a assinatura do Assistente e os atalhos, um a um, são do teste de componente
- * (`apps/web/src/areas/professor/Home.test.tsx`); aqui está o que só o navegador mostra: a entrada pela API de verdade, o
+ * (`apps/web/src/areas/professor/inicio/Home.test.tsx`); aqui está o que só o navegador mostra: a entrada pela API de verdade, o
  * atalho que leva ao cartão na conversa, a medida nas duas larguras. O recomeço pela pessoa seguinte (o texto que a primeira deixa
  * na caixa) é do caso de recomeço de `professor-sino.spec.ts`, que já sobe a segunda professora na mesma aba. Separado de
  * `professor-assistente.spec.ts` pela 2.5.

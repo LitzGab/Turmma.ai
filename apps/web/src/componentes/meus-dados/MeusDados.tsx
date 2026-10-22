@@ -6,15 +6,15 @@ import { baixarMeuArquivo, consultaMeusDados, relerMeusDados } from '../../api/m
 import { formatarData, formatarDataHora, formatarQuantidade } from '../../formatar'
 import { useTituloDaTela } from '../../titulo'
 import { baixarPorUrl } from '../baixar-por-url'
-import { Botao } from '../Botao'
-import { Cartao } from '../Cartao'
-import { useDialogoDaTela } from '../dialogo-aberto'
-import { DialogoDeConfirmacao } from '../DialogoDeConfirmacao'
+import { Botao } from '../ui/Botao'
+import { Cartao } from '../ui/Cartao'
+import { useDialogoDaTela } from '../ui/sobrepostos/dialogo-aberto'
+import { DialogoDeConfirmacao } from '../ui/sobrepostos/DialogoDeConfirmacao'
 import { Anuncio, useEnvioUnico } from '../dialogos'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../estado'
-import { Estado } from '../SeloDeEstado'
+import { Estado } from '../ui/SeloDeEstado'
 import { listaMudou, textoDaFalha } from '../texto-da-falha'
-import { Tela, type NivelDoTitulo } from '../Tela'
+import { Tela, type NivelDoTitulo } from '../ui/Tela'
 import {
   agendarPreparacao,
   anuncioDoArquivoBaixado,

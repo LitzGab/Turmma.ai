@@ -320,7 +320,7 @@ quebra. Depois API e web correm lado a lado em cima do contrato.
 | A — atividade e correção | agente A | `apps/api/src/atividade/*`, `apps/web/src/areas/aluno/*` (atividades) |
 | T — Tutor e sinais | agente T | `apps/api/src/tutor/*`, web do aluno (Tutor) |
 | G — governança e Analista | agente G | `apps/api/src/governanca/*`, `apps/web/src/areas/coordenacao/Governanca*` |
-| C — peças da web | agente C | `apps/web/src/componentes/*` e `componentes/ia/*` (as peças da seção 9.3), a galeria e o spec dela |
+| C — peças da web | agente C | `apps/web/src/componentes/ui/*`, com `ui/ia/*` (as peças da seção 9.3; moravam em `componentes/*` e `componentes/ia/*` até a X5, 36.0), a galeria e o spec dela |
 | D — material de demonstração | agente D | `tools/demonstracao/*` (o conteúdo, o script e o PDF da seção 9.5) |
 
 Cada agente mexe só no que é dele. Arquivo compartilhado (`app.module.ts`, `navegacao.ts`, `caminhos.ts`, `index.ts` do
@@ -405,8 +405,8 @@ como portão é o do merge (seção "Estado", decisão 4).
    o contrato não atende, para e avisa o orquestrador, em vez de contornar.
 3. Mexe só nos arquivos do pacote. Arquivo compartilhado (`app.module.ts`, `rotas.tsx`, `navegacao.ts`, `caminhos.ts`)
    leva o mínimo, uma linha por módulo ou por tela.
-4. Tela nova entra por import de rota (um pedaço por tela), monta-se com as peças de `apps/web/src/componentes/` e
-   `componentes/ia/`, tem os quatro estados e funciona a 360 px. Estado de servidor é do TanStack Query.
+4. Tela nova entra por import de rota (um pedaço por tela), monta-se com as peças de `apps/web/src/componentes/ui/` (com
+   `ui/ia/`), tem os quatro estados e funciona a 360 px. Estado de servidor é do TanStack Query.
 5. Todo módulo novo da API entrega o **teste de isolamento** (escola A não alcança objeto da escola B, e a resposta é
    igual à do inexistente) e os testes das regras do módulo. Se apagar a regra, o teste falha.
 6. Verifica com `npm run typecheck`, `npm run lint`, a unidade do que tocou e, atrás da trava, a integração e o e2e
@@ -540,7 +540,7 @@ Família, as 14 ferramentas que não existem, PPTX e XLSX.
 `CaixaPedido`, `MensagemIA` e `MensagemPessoa`, `Escolha` (a pergunta da D18), `ChipFonte`, `Fontes`, `AvisoFila`,
 `AssinaturaIA` e `SeloIA`, `Estado` (selo pendente, ok, erro), `LinhaAprovacao`, `MotorFormulario`, `PaginaMini`,
 `NumeroPainel`, `BarraRotulada`, `Cartao` e `Tela` com o padrão de espaço (16 px no celular, 24 a partir de 768; larguras
-1480, 1040 e 760). Em `apps/web` entram em `componentes/` e `componentes/ia/`, com teste de regra e os quatro estados.
+1480, 1040 e 760). Em `apps/web` entram em `componentes/ui/` (com `ui/ia/`), com teste de regra e os quatro estados.
 
 ### 9.4 Textos e estados que o mockup já escreveu (orientam o tom, não se copiam)
 

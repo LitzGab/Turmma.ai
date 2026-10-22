@@ -1,7 +1,7 @@
 import { Plus } from 'lucide-react'
-import { Botao } from '../../componentes/Botao'
-import { VARIANTES_DE_BOTAO, type TamanhoDeBotao, type VarianteDeBotao } from '../../componentes/botao-secundario'
-import { Menu } from '../../componentes/Menu'
+import { Botao } from '../../componentes/ui/Botao'
+import { VARIANTES_DE_BOTAO, type TamanhoDeBotao, type VarianteDeBotao } from '../../componentes/ui/botao-secundario'
+import { Menu } from '../../componentes/ui/sobrepostos/Menu'
 import { Secao } from '../Secao'
 
 /** Os tamanhos com texto: o `data-tamanho` que o e2e usa para achar a fileira (`e2e/pecas-botoes.spec.ts`). */

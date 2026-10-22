@@ -8,27 +8,27 @@ import { ConteudoNaoEncontrado } from '../../componentes/NaoEncontrada'
  * abrir a rota: quem abre Turmas não baixa a conversa, e o teto de cada tela é o de `apps/web/nome-dos-chunks.ts`. O
  * `Suspense` e a fronteira de erro da área (`src/rotas.tsx`) já as cobrem.
  */
-const Home = lazy(() => import('./Home'))
-const Conversa = lazy(() => import('./Conversa'))
-const Ferramentas = lazy(() => import('./Ferramentas'))
-const Ferramenta = lazy(() => import('./Ferramenta'))
+const Home = lazy(() => import('./inicio/Home'))
+const Conversa = lazy(() => import('./assistente/Conversa'))
+const Ferramentas = lazy(() => import('./ferramentas/Ferramentas'))
+const Ferramenta = lazy(() => import('./ferramentas/Ferramenta'))
 /** Criados (telas do professor, 5.0): o que a professora já gerou, por turma, com filtros; sai em `tela-professor-Criados-*.js`. */
-const Criados = lazy(() => import('./Criados'))
-const Artefato = lazy(() => import('./Artefato'))
-const Time = lazy(() => import('./Time'))
-const Tutor = lazy(() => import('./Tutor'))
-const Aprovar = lazy(() => import('./Aprovar'))
+const Criados = lazy(() => import('./artefatos/Criados'))
+const Artefato = lazy(() => import('./artefatos/Artefato'))
+const Time = lazy(() => import('./assistente/Time'))
+const Tutor = lazy(() => import('./turmas/Tutor'))
+const Aprovar = lazy(() => import('./atividades/Aprovar'))
 /** Turmas (telas do professor, 9.0): os cartões, a faixa e o painel de contestação tiraram a fachada do teto de 8 kB; sai em `tela-professor-Turmas-*.js`. */
-const Turmas = lazy(() => import('./Turmas'))
+const Turmas = lazy(() => import('./turmas/Turmas'))
 /** A turma aberta (telas do professor, 10.0): a tela e as três abas dela, cada uma num pedaço próprio. */
-const Turma = lazy(() => import('./Turma'))
+const Turma = lazy(() => import('./turmas/Turma'))
 /**
  * "Meus dados" é a mesma tela do professor e do aluno, e por isso mora em `componentes/` (a tela de uma área não importa
  * módulo de outra, `areas/navegacao.ts`, linha 5): sai num pedaço `parte-*` só por `import()`, que nenhuma entrada baixa.
  */
 const MeusDados = lazy(() => import('../../componentes/meus-dados/MeusDados'))
 /** O sino "Esperando você" (telas do professor, 1.0): a fila e a lista num pedaço próprio, desenhado na âncora da casca. */
-const SinoDoProfessor = lazy(() => import('./SinoDoProfessor'))
+const SinoDoProfessor = lazy(() => import('./inicio/SinoDoProfessor'))
 
 /**
  * A área do professor, relativa a `/professor` (o `Route` aninhado de `apps/web/src/rotas.tsx`), num chunk próprio,

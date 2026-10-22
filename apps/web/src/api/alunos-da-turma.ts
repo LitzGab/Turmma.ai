@@ -9,7 +9,7 @@ import { buscarComSessao } from './sessao'
  * confirmado lê a própria turma sem as duas coisas, e a leitura dele não grava auditoria (`turma.alunos_lidos` é da coordenação).
  *
  * Cada leitura traz até uma página, a maior que a API entrega (100). A API devolve em ordem de id, que não é a ordem de nome: quem
- * desenha a lista reordena tudo o que já foi lido (`areas/professor/alunos-da-turma.ts`).
+ * desenha a lista reordena tudo o que já foi lido (`areas/professor/turmas/alunos-da-turma.ts`).
  *
  * O nome do aluno só passa pela resposta e pela memória da página: nunca no endereço, em `localStorage` nem em `sessionStorage`
  * (regra 20; regra 50, item 7). Fora da tela a lista não fica guardada (`gcTime: 0`): os nomes não ficam na memória da aba do

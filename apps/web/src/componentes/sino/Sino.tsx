@@ -1,14 +1,14 @@
 import { Bell } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation, useSearch } from 'wouter'
-import { Aviso } from '../Aviso'
-import { Botao } from '../Botao'
-import { CLASSES_DO_LINK_SECUNDARIO } from '../botao-secundario'
-import { Contador } from '../Contador'
+import { Aviso } from '../ui/Aviso'
+import { Botao } from '../ui/Botao'
+import { CLASSES_DO_LINK_SECUNDARIO } from '../ui/botao-secundario'
+import { Contador } from '../ui/Contador'
 import { EstadoCarregando, EstadoErro } from '../estado'
-import { Icone } from '../Icone'
-import { Linha } from '../Linha'
-import { PainelLado } from '../PainelLado'
+import { Icone } from '../ui/Icone'
+import { Linha } from '../ui/Linha'
+import { PainelLado } from '../ui/sobrepostos/PainelLado'
 
 /** Um item da lista "Esperando você": o que é, por que importa e a tela que o resolve. */
 export interface ItemDoSino {

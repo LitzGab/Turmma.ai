@@ -3,7 +3,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { consultaAvisos, consultaEstado } from '../api/sistema'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../componentes/estado'
-import { Marca } from '../componentes/Marca'
+import { Marca } from '../componentes/ui/Marca'
 import { formatarData, formatarDataHora, formatarQuantidade } from '../formatar'
 
 const NOME_DO_COMPONENTE: Record<ComponenteDoSistema['nome'], string> = { api: 'API', banco: 'Banco de dados' }

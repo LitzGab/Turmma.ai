@@ -31,7 +31,7 @@ const AreaDaOperacao = lazy(() => import('./operacao/rotas'))
 
 /**
  * A galeria das peças do MVP de apresentação, também só por `import()`: vira o chunk `galeria-*.js`, e as peças de
- * `componentes/ia/` não entram no primeiro carregamento por causa dela (`apps/web/nome-dos-chunks.ts`).
+ * `componentes/ui/ia/` não entram no primeiro carregamento por causa dela (`apps/web/nome-dos-chunks.ts`).
  *
  * **Só existe no build feito com `VITE_COM_GALERIA=1`**: o `.env.example`, que é o ambiente da máquina e da esteira, liga a
  * variável, porque o e2e roda sobre aquele build (como o `ROTAS_SINTETICAS` da API). Com qualquer outro valor — o de

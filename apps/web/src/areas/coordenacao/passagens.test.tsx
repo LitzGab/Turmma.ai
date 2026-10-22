@@ -6,9 +6,9 @@ import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { prepararTela, redeFalsa, renderizarTela, type RespostaFalsa } from '../../__fixtures__/tela'
 import { Inicio } from '../../paginas/Inicio'
-import Agentes from './Agentes'
-import Governanca from './Governanca'
-import ListaDaTurma from './ListaDaTurma'
+import Agentes from './governanca/Agentes'
+import Governanca from './governanca/Governanca'
+import ListaDaTurma from './estrutura/ListaDaTurma'
 
 /**
  * As passagens entre os lugares da coordenação (telas da coordenação, 3.0; RF2 e RF3): quem entra na raiz chega ao Painel, a aba IA de

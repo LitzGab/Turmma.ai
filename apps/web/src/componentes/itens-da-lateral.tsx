@@ -2,8 +2,8 @@ import { useContext, type ReactNode } from 'react'
 import { Link, useLocation } from 'wouter'
 import { estaNoItem, type IconeDoItem, type ItemDaNavegacao } from '../areas/navegacao'
 import { ContextoDaGaveta } from './gaveta'
-import { Icone } from './Icone'
-import { Ladrilho } from './Ladrilho'
+import { Icone } from './ui/Icone'
+import { Ladrilho } from './ui/Ladrilho'
 
 /**
  * O lugar da lateral (`docs/interface.md` 11.1; D80): uma linha de 52 px de canto 12 e borda de 2, com o ícone numa caixa de

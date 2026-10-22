@@ -1,15 +1,15 @@
 import { useEffect, useId, useRef, useState, type Ref, type RefObject } from 'react'
-import { Botao } from './Botao'
-import { CLASSES_DO_BOTAO_SECUNDARIO } from './botao-secundario'
+import { Botao } from './ui/Botao'
+import { CLASSES_DO_BOTAO_SECUNDARIO } from './ui/botao-secundario'
 import { copiarLink } from './link-do-convite'
-import { CAIXA_DO_CAMPO } from './seletor'
+import { CAIXA_DO_CAMPO } from './ui/campos/seletor'
 
 /**
  * As peças do diálogo cujo link aparece uma vez só: a pergunta antes de fechar sem copiar, a cópia e o que é dito dela, o
  * campo de leitura do link, a falha com o foco nela, e o foco que acompanha a etapa. Nasceram no diálogo do convite (A0b,
  * 7.0; A1, 14.0) e saíram dele na 15.0, com o acesso da turma do professor usando as mesmas: o link da sala e o código
  * também aparecem uma vez (regra 20, item 8). Cada diálogo monta as etapas dele com estas peças
- * (`DialogoDoConvite.tsx`, `areas/professor/AcessoDaTurma.tsx`).
+ * (`DialogoDoConvite.tsx`, `areas/professor/turmas/acesso/AcessoDaTurma.tsx`).
  */
 
 /** O que a área de transferência fez, dito no `role="status"` de dentro do diálogo. */
