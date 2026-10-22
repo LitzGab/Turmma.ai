@@ -1,9 +1,9 @@
-import { consumoIa, type Banco, type ConsumoDeIa, type RegistroDeConsumo, type TransacaoBanco } from '@educa/nucleo'
+import { consumoIa, exigirEscolaDoContexto, type Banco, type ConsumoDeIa, type RegistroDeConsumo, type TransacaoBanco } from '@educa/nucleo'
 
 /**
- * A porta `RegistroDeConsumo` sobre `consumo_ia` (regra 30, item 4). A escola é a do próprio registro, que o provedor
- * preenche com a do pedido (`PedidoDeGeracao.escolaId`, do contexto de quem pediu): não há leitura aqui, só a inserção
- * de uma linha na escola dela.
+ * A porta `RegistroDeConsumo` sobre `consumo_ia` (regra 30, item 4). A escola é a do contexto de quem gastou
+ * (`exigirEscolaDoContexto()`, lida a cada chamada): o registro não a traz, e sem escola no contexto lança antes de
+ * gravar. Não há leitura aqui, só a inserção de uma linha na escola dele.
  *
  * `entrada` e `saida` chegam ausentes nas tarefas que levam texto livre de pessoa e são gravadas nulas; nas funções do
  * Tutor o banco recusa qualquer outra coisa (`consumo_ia_sem_conversa_de_pessoa`). Nada daqui vai a log.
@@ -13,7 +13,7 @@ export class ConsumoRepository implements RegistroDeConsumo {
 
   async registrar(consumo: ConsumoDeIa): Promise<void> {
     await this.banco.insert(consumoIa).values({
-      escolaId: consumo.escolaId,
+      escolaId: exigirEscolaDoContexto(),
       alunoId: consumo.alunoId ?? null,
       execucaoId: consumo.execucaoId ?? null,
       tarefa: consumo.tarefa,

@@ -129,8 +129,11 @@ export interface TurnoDoTutorLido {
 export interface ProvedorDeTurnos {
   gerar(pedido: { tarefa: unknown; entrada: unknown; escolaId: string; alunoId: string }): Promise<{ saida: TurnoDoTutorLido }>
 }
+/** O contexto que a requisição dá em produção: a escola de quem pede, que as portas de suspensão, orçamento e consumo leem (8.0). */
+export type ExecutarNoContexto = <T>(contexto: { readonly requisicaoId: string; readonly escolaId: string }, funcao: () => T) => T
 export interface PecasDoNucleo {
   readonly provedor: ProvedorDeTurnos
+  readonly executarNoContexto: ExecutarNoContexto
   readonly turnoDoTutor: unknown
   readonly mencionaRiscoAVida: (duvida: string) => boolean
   readonly MENSAGEM_DE_RISCO_A_VIDA: string
@@ -139,6 +142,7 @@ export interface PecasDoNucleo {
 /** Escola e aluno de mentira, e a turma do ensaio: o modelo só vê a dúvida, sem trecho, sem questão e sem memória. */
 const ESCOLA_DA_MEDIDA = '6f1d2c3b-4a59-4e68-8b7a-1c2d3e4f5a60'
 const ALUNO_DA_MEDIDA = '8b3f4e5d-6c7b-4a8a-8d9c-3e4f5a6b7c82'
+const REQUISICAO_DA_MEDIDA = '1b2c3d4e-5f60-4a71-8b82-9c0d1e2f3a45'
 export const entradaDaMedida = (duvida: string) => ({ duvida, contexto: { serie: '8º ano do Ensino Fundamental', disciplina: 'Ciências' }, trechos: [], memoria: [], turnosAnteriores: [] })
 
 /**
@@ -149,7 +153,9 @@ export function medirComProvedor(amostras: readonly Amostra[], pecas: PecasDoNuc
   return medirRiscoAVida(amostras, {
     padrao: pecas.mencionaRiscoAVida,
     turno: async (texto) => {
-      const { saida } = await pecas.provedor.gerar({ tarefa: pecas.turnoDoTutor, entrada: entradaDaMedida(texto), escolaId: ESCOLA_DA_MEDIDA, alunoId: ALUNO_DA_MEDIDA })
+      const { saida } = await pecas.executarNoContexto({ requisicaoId: REQUISICAO_DA_MEDIDA, escolaId: ESCOLA_DA_MEDIDA }, () =>
+        pecas.provedor.gerar({ tarefa: pecas.turnoDoTutor, entrada: entradaDaMedida(texto), escolaId: ESCOLA_DA_MEDIDA, alunoId: ALUNO_DA_MEDIDA }),
+      )
       return saida.resposta === pecas.MENSAGEM_DE_RISCO_A_VIDA
     },
     ...opcoes,
@@ -166,6 +172,7 @@ export interface ConfiguracaoLida {
 interface NucleoEmDist {
   lerConfiguracaoDeIa(ambiente: Record<string, string | undefined>): ConfiguracaoLida
   criarProvedorDeIa(config: ConfiguracaoLida, portas: { registro: unknown; orcamento: unknown; suspensao: unknown }): ProvedorDeTurnos
+  executarNoContexto: ExecutarNoContexto
   ConsumoEmMemoria: new () => unknown
   OrcamentoEmMemoria: new (consumo: unknown) => unknown
   SuspensoesEmMemoria: new () => unknown
@@ -208,7 +215,7 @@ async function principal(argumentos: readonly string[]): Promise<void> {
   exigirModeloDaMedida(config, argumentos)
   const consumo = new nucleo.ConsumoEmMemoria()
   const provedor = nucleo.criarProvedorDeIa(config, { registro: consumo, orcamento: new nucleo.OrcamentoEmMemoria(consumo), suspensao: new nucleo.SuspensoesEmMemoria() })
-  const resultado = await medirComProvedor(amostras, { provedor, ...tarefa }, {
+  const resultado = await medirComProvedor(amostras, { provedor, executarNoContexto: nucleo.executarNoContexto, ...tarefa }, {
     aoTerminarExecucao: (execucao, execucoes) => process.stderr.write(`execução ${String(execucao)} de ${String(execucoes)} terminada\n`),
   })
   process.stdout.write(`${descreverMedida(amostras, resultado)}\n`)

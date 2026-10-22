@@ -117,11 +117,11 @@ da tarefa diz como rodá-lo.
   - [x] 7.3 Os nove saem de `REPOSITORIES_SEM_ESCOPO` (`tools/guardas/escopo-dos-repositories.ts`)
   - [x] 7.4 Testes: isolamento e concorrência por repository, com a mutação de cada um
 
-- [ ] **8.0 — A IA tira a escola do contexto, com teste de isolamento**
-  - [ ] 8.1 As três portas perdem `escolaId`, e os repositories usam `exigirEscolaDoContexto()`, no orçamento antes do retorno antecipado
-  - [ ] 8.2 Os chamadores não passam a escola; `SuspensoesEmMemoria` lê o contexto
-  - [ ] 8.3 `ia/consumo`, `ia/orcamento` e `ia/suspensao` saem de `REPOSITORIES_SEM_ESCOPO`
-  - [ ] 8.4 Testes: isolamento por porta, sem contexto, concorrência e o tipo
+- [x] **8.0 — A IA tira a escola do contexto, com teste de isolamento**
+  - [x] 8.1 As três portas perdem `escolaId`, e os repositories usam `exigirEscolaDoContexto()`, no orçamento antes do retorno antecipado
+  - [x] 8.2 Os chamadores não passam a escola; `SuspensoesEmMemoria` lê o contexto
+  - [x] 8.3 `ia/consumo`, `ia/orcamento` e `ia/suspensao` saem de `REPOSITORIES_SEM_ESCOPO`
+  - [x] 8.4 Testes: isolamento por porta, sem contexto, concorrência e o tipo
 
 ### Entrada no padrão NestJS (D81)
 

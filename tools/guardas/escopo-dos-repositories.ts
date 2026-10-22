@@ -61,24 +61,9 @@ export const REPOSITORIES_SEM_ESCOPO: readonly EntradaSemEscopo[] = [
     metodos: ['comVinculoConfirmadoDoProfessor', 'disciplinaDoArtefato', 'disciplinaDaEntrega'],
   },
   {
-    arquivo: 'apps/api/src/ia/consumo.repository.ts',
-    motivo: 'a escola vem por argumento, e não do contexto; a 8.0 passa a porta a exigirEscolaDoContexto e tira a entrada',
-    metodos: ['registrar'],
-  },
-  {
     arquivo: 'apps/api/src/ia/execucao.repository.ts',
     motivo: 'a escola vem de execucao.escolaId, do pedido que o agendador montou, e não do contexto; sai quando a 47.0 trocar a origem (R39)',
     metodos: ['marcarRodando', 'marcarConcluida', 'concluirRodando', 'marcarFalhou'],
-  },
-  {
-    arquivo: 'apps/api/src/ia/orcamento.repository.ts',
-    motivo: 'a escola vem por argumento, e não do contexto; a 8.0 passa a porta a exigirEscolaDoContexto e tira a entrada',
-    metodos: ['consultar'],
-  },
-  {
-    arquivo: 'apps/api/src/ia/suspensao.repository.ts',
-    motivo: 'a escola vem por argumento, e não do contexto; a 8.0 passa a porta a exigirEscolaDoContexto e tira a entrada',
-    metodos: ['estaSuspensa'],
   },
   {
     arquivo: 'apps/api/src/operacao/operador.repository.ts',
