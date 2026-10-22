@@ -37,8 +37,9 @@ escreve o guia, e o Arquiteto o revisa com o `revisor-geral` e o põe no commit,
 A 10.0, 11.0, 24.0, 33.0 a 36.0, 90.0, 96.0 e 97.0 só movem pasta, quebram ciclo, declaram dependência ou mexem no
 Dockerfile. Nelas, **os revisores são o `test-engineer`, o `revisor-geral` e no máximo um guardião**, o da área que o
 movimento toca (tabela "Subagentes por tarefa"). **O movimento é feito por script**, nunca à mão: `git mv` mais a
-reescrita de import com ts-morph por `npx` (sem salvar no `package.json`), uma pasta por commit. O script fica no
-`.processo/` da linha, fora do commit, e o documento da tarefa diz como rodá-lo.
+reescrita de import com ts-morph, instalado numa pasta de rascunho (`npm i --prefix .processo/ts-morph ts-morph@<exata>`,
+sem tocar o `package.json`), uma pasta por commit. O script fica no `.processo/` da linha, fora do commit, e o documento
+da tarefa diz como rodá-lo.
 
 ## Lista
 
