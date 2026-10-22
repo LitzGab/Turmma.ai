@@ -28,19 +28,15 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
   - linha 1 (`Implementador` e `Mesa`, `…--l1`): **43.0**, grande (job estourado dá `TEMPO_ESGOTADO`; infra, llm-integrator, test-engineer, revisor-geral), desde 17:45, 1ª tentativa; prazo de 4 h 21:45. A 48.0 encontrou-se em `41d65df` (spec em `8240170`)
-  - **guia (95.0)**: aprovado pelo revisor-geral na 4ª rodada (`Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
-    **~18:15: `Arquiteto` reiniciado no andar da spec e `PEDIDO` da publicação (95.2)** enviado: recomendações de redação,
-    caminhos conferidos, `README.md`, `[x]` no `tasks.md`, commit de documento com push. A lista "Conferir depois das
-    pastas" fica para o commit do fim da spec (passo 4 da 95.0). A 95.0 não parte em linha (o quadro a oferece à
-    linha 3 por engano: ignorar)
-  - `Arquiteto` (andar da spec): o lote retido dos alvos da 3.0 antes da validação. Os exemplos "Sem
-    aplicar" entraram na lacuna do §2.3 (`0366ce1`)
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **11.0**, grande (os 2 ciclos de `login.service` somem;
-    test-engineer, revisor-geral), desde 17:40, 1ª tentativa; prazo de 4 h 21:40. A 10.0 encontrou-se em
-    `303cbac` (spec em `7c1b086`)
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **ociosa**. A 9.0 passou na 4ª rodada (destravada pelo
-    `Arquiteto`, R62) e encontrou-se em `02d3412` (spec em `925852f`) às 18:13. Nada parte para ela: o resto está preso
-    em 11.0 (l2) e 16.0. Na próxima vez, o lote retido da 3.0 volta ao `Arquiteto` depois da 95.0
+  - **guia (95.0) publicado** pelo `Arquiteto` em `202cb47` (RELATÓRIO às 18:18). Fica para o commit do fim da spec: a
+    lista "Conferir depois das pastas" e repor as linhas que ele tirou do guia (dependency-cruiser e complexidade da
+    12.0/13.0, API por pastas da 33–35/96, `lerEntrada` da 16.0) quando 12.0, 13.0, 16.0/17.0 e as pastas entrarem
+  - `Arquiteto`: **ocioso** desde 18:18. O lote retido da 3.0 já foi medido (`3b44efe`) e a lacuna declarada (R60,
+    `2fe1d73`): não há pedido pendente para ele até os caminhos da 12.0/13.0/24.0/25.0
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **16.0**, grande (`ZodValidationPipe` na sessão e na operação;
+    tenancy, infra, test-engineer, revisor-geral), desde 18:19, 1ª tentativa; prazo de 4 h 22:19. A 11.0 encontrou-se
+    em `d58b563` (spec em `59ce6a8`)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **ociosa**. Nada parte para ela: 17.0 e 33.0 esperam a 16.0 (l2)
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -66,7 +62,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `7c1b086`. Esteira: a de `84ef3df` (`39841560415`) VERDE; a de `88c266b` (`39845850533`) rodando; a de `7c1b086` (`39850761696`) na fila; às 17:40 cancelei a superada de `8240170` (`39849855954`); o VERMELHO de `554b2c6` é só cancelamento; às 17:00 cancelei as superadas de `554b2c6`, `6cc6c91` (l3) e `ccdba9a` (l2). O `ouro.test.ts` que o Implementador 3 citou já foi resolvido por `05aa2fe`. Vigia ligada
+- **Base:** `spec/reengenharia` em `59ce6a8`. Esteira às 18:18: em `7c1b086` (`39850761696`) rodando, `59ce6a8` (`39856108405`) na fila; cancelei as superadas de `925852f` e `202cb47`; o VERMELHO de `8240170` é só cancelamento; a última concluída, `88c266b` (`39845850533`), VERDE. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -109,6 +105,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 48.0 | `41d65df` | Sonnet | 2 (test-engineer, revisor-geral; infra e llm-integrator na 1ª) | linha 1, grande, 16:38–17:40; 48.1 sem commit à parte (onda-3c.md T10); 2 linhas no TODO.md, 49.0 dona do disjuntor |
 | 10.0 | `303cbac` | Sonnet | 2 (test-engineer, revisor-geral aprovados na 2ª) | linha 2, pequena, 17:00–17:39; sem tela; uma falha do portão na unidade sem causa achada, passou em 3 repetições; 1 linha no TODO.md da 12.0 |
 | 9.0 | `02d3412` | Sonnet | 4 (tenancy-guardian 1ª–3ª, test-engineer 2ª–3ª; destravada pelo Arquiteto, R62) | linha 3, pequena, 16:52–18:13; ESCALADA na r2 (diagnóstico), BLOQUEIO na r3 (guarda só olhava `arguments[0]`) |
+| 11.0 | `d58b563` | Sonnet | 2 (test-engineer, revisor-geral aprovados na 2ª) | linha 2, grande, 17:40–18:18; sem tela; esperou o commit da 95.0 no andar da spec para o encontro |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
