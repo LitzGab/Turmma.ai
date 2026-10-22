@@ -27,8 +27,8 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **7.0**, grande (9 repositories para `exigirEscolaDoContexto`), desde
-    12:55, 1ª tentativa; prazo de 4 h 16:55. A 6.0 encontrou-se em `f49c095` (com as correções `05aa2fe` e `9dd7a6b`)
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **8.0**, grande (a IA tira a escola do contexto, com teste de
+    isolamento), desde 13:27, 1ª tentativa; prazo de 4 h 17:27. A 7.0 encontrou-se em `b59fe0a` (spec em `ea57577`)
   - **guia (95.0): o revisor-geral REPROVOU na 1ª** (5 bloqueantes de texto, `Educa.ia/.processo/reengenharia/guia/REVISAO.md`).
     **2ª rodada: REPROVADA com 2 bloqueantes novos** (`proprio` pelo dono da linha; teste HTTP também em `apps/api/src`);
     os 5 da 1ª resolvidos. 3ª rodada **REPROVADA** (uma frase falsa em cada ponto); diagnóstico do `Arquiteto` com o texto exato no fim do
@@ -60,12 +60,13 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     olhar dele antes do piloto
   - esteira: às 13:18 VERMELHA em `f6913ee` e `0975b97`, só `ouro.test.ts` (3 testes), que a correção
     `ouro-base-qualitativa` (`05aa2fe`, já na spec) resolve; sete execuções na fila desde 12:16 (`39803274227` em diante),
-    sem veredito. Ler de novo no próximo encontro; se o `ouro.test.ts` cair depois de `05aa2fe`, é correção
+    sem veredito. Às 13:26 todas as execuções da spec seguem `queued` (a mais velha há 1 h, `39804325419`): fila
+    do GitHub, sem veredito. Ler de novo no próximo encontro; se o `ouro.test.ts` cair depois de `05aa2fe`, é correção
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`)
-- **Base:** `spec/reengenharia` em `aa3b7e6`. Vigia ligada
+- **Base:** `spec/reengenharia` em `ea57577`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -98,6 +99,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 53.0 | `c090987` | Sonnet | 2 (os cinco aprovados na 2ª) | linha 3, web, 12:25–13:05; a Mesa viu 6 fotos; acabamentos do espelho e a falta de atividade "para responder" na vitrine no TODO.md; integração não rodou (só web e shared) |
 | 14.0 | `2164719` | Sonnet | — | linha 2; encontro depois do conserto R61 do `Arquiteto` (`1744468`) |
 | 15.0 | `0c75678` | Sonnet | 2 (tenancy, test-engineer, revisor-geral aprovados na 2ª) | linha 2, ~12:25–13:15; divergências (ordem id e corpo, 15 rotas 404→400; suspender sem finalidade vira corpo fora do esquema) no documento e em `onda-1a.md` T1 |
+| 7.0 | `b59fe0a` | Sonnet | 1 (tenancy, test-engineer, revisor-geral aprovados na 1ª) | linha 1, grande, 12:55–13:26; sem tela |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
