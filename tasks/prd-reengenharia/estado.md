@@ -39,9 +39,11 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     aplicar" entraram na lacuna do §2.3 (`0366ce1`)
   - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **36.0**, grande (kit visual em `componentes/ui/`), desde
     13:20, 1ª tentativa; prazo de 4 h 17:20. A 15.0 encontrou-se em `0c75678` (spec em `aa3b7e6`)
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **18.0**, grande (payload validado no `Enfileirador`), desde
-    13:07, 1ª tentativa; prazo de 4 h 17:07. A web (36.0) está presa à 15.0 por `guardas.test.ts`, por isso a linha 3
-    pega API agora. A 53.0 deixou o despachante e o worker-interativo do `educa-teste-3` parados
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **correção `intermitentes-desafio-e-meus-dados`**, desde ~13:55,
+    1ª tentativa. Os dois testes caíram em `2fe1d73` (só documento sobre `f6913ee`, onde passaram): `desafio.int.test.ts`
+    "falha (15.5): Redis de fila travado… corte dos 100 ms" (NAO_AUTENTICADO em vez de resolver) e o e2e
+    `meus-dados.spec.ts:156` [celular]. Depois dela, a linha 3 pega a **19.0** (o quadro já a mostrava). A 18.0
+    encontrou-se em `3ecaa07` (spec em `8b11df1`)
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -58,15 +60,14 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     §2.3, `TODO.md`). Ponto de produto para a X6: a entrada recusa pedido do professor sobre o próprio material com palavra
     de nota ou correção (10/10, já antes da 3.0). **Dizer ao Joaquim no fim** que a AIA do Tutor e esta lacuna merecem o
     olhar dele antes do piloto
-  - esteira: às 13:18 VERMELHA em `f6913ee` e `0975b97`, só `ouro.test.ts` (3 testes), que a correção
-    `ouro-base-qualitativa` (`05aa2fe`, já na spec) resolve; sete execuções na fila desde 12:16 (`39803274227` em diante),
-    sem veredito. Às 13:26 todas as execuções da spec seguem `queued` (a mais velha há 1 h, `39804325419`): fila
-    do GitHub, sem veredito. Ler de novo no próximo encontro; se o `ouro.test.ts` cair depois de `05aa2fe`, é correção
+  - esteira: veredito mais novo VERMELHO em `2fe1d73` (`39803274227`): `ouro.test.ts` (resolvido por `05aa2fe`) e os
+    dois intermitentes da correção da linha 3. Às ~13:50 cancelei 10 execuções superadas na fila (9 da spec, 1 da l1);
+    fica a de `8b11df1` (`39820055294`). Ler de novo no próximo encontro
   - documentos de 1.0 a 29.0, 93.0 e 94.0; aviso de `N_task.md` ausente é o sinal para pedir a onda seguinte ao
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`)
-- **Base:** `spec/reengenharia` em `ea57577`. Vigia ligada
+- **Base:** `spec/reengenharia` em `8b11df1`. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -100,6 +101,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 14.0 | `2164719` | Sonnet | — | linha 2; encontro depois do conserto R61 do `Arquiteto` (`1744468`) |
 | 15.0 | `0c75678` | Sonnet | 2 (tenancy, test-engineer, revisor-geral aprovados na 2ª) | linha 2, ~12:25–13:15; divergências (ordem id e corpo, 15 rotas 404→400; suspender sem finalidade vira corpo fora do esquema) no documento e em `onda-1a.md` T1 |
 | 7.0 | `b59fe0a` | Sonnet | 1 (tenancy, test-engineer, revisor-geral aprovados na 1ª) | linha 1, grande, 12:55–13:26; sem tela |
+| 18.0 | `3ecaa07` | Sonnet | 2 (tenancy, privacy, test-engineer, revisor-geral aprovados na 2ª) | linha 3, grande, 13:07–13:50; sem tela |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
