@@ -101,7 +101,7 @@ da tarefa diz como rodá-lo.
 - [ ] **97.0 — Na web, `areas/professor/` e `areas/coordenacao/` se partem por assunto, com a mesma trava**
   - [ ] 97.1 O `97_task.md` é escrito pelo Arquiteto antes de a tarefa partir: o *feature folder* (bulletproof-react), cada assunto (`turmas/`, `atividades/`, `assistente/`, `material/`…) com as telas, os hooks e o cliente de API dele
   - [ ] 97.2 Só `git mv` e import, uma pasta por commit
-  - [ ] 97.3 A trava da 96.0 vale para `apps/web/src`
+  - [ ] 97.3 Cria a trava: `tools/guardas/tamanho-das-pastas.test.ts`, pasta de produção com mais de 25 arquivos reprova, com as raízes numa lista (hoje `apps/web/src`) e lista fechada de exceções (R56)
 
 ### Tenant — a regra 10 travada por máquina
 
@@ -190,7 +190,7 @@ da tarefa diz como rodá-lo.
 - [ ] **96.0 — Na API, `estrutura/`, `operacao/`, `sala/` e `atividade/` têm uma subpasta por recurso, e pasta de produção com mais de 25 arquivos reprova**
   - [ ] 96.1 O `96_task.md` é escrito pelo Arquiteto antes de a tarefa partir: uma subpasta por recurso, como o `nest g resource` (`estrutura/turma/` com o controller, o service, o repository e os testes dele)
   - [ ] 96.2 Só `git mv` e import, uma pasta por commit
-  - [ ] 96.3 O teste da trava: pasta de produção com mais de 25 arquivos reprova, com lista fechada de exceções e motivo
+  - [ ] 96.3 A trava que a 97.0 criou ganha a raiz `apps/api/src`, com lista fechada de exceções e motivo (R56)
 
 ### Camadas e lint
 
@@ -355,7 +355,7 @@ com as perguntas da §5 do `DIAGNOSTICO.md` marcadas "Para a Etapa 9"):
 | 33.0 | 7.0, 10.0, 11.0, 16.0 | 3.0 a 97.0 |
 | 34.0 | 33.0 | 3.0 a 97.0 |
 | 35.0 | 34.0, 17.0 | 3.0 a 97.0 |
-| 96.0 | 15.0, 16.0, 17.0, 35.0, 51.0 | 3.0 a 97.0 |
+| 96.0 | 15.0, 16.0, 17.0, 35.0, 51.0, 97.0 | 3.0 a 97.0 |
 | 9.0 | 6.0 | 3.0 a 97.0 |
 | 10.0 | — | 3.0 a 97.0 |
 | 11.0 | — | 3.0 a 97.0 |
