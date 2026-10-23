@@ -38,8 +38,17 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     6 recomendações → TODO/X6 (`5283042`); (b) RF31, `.reengenharia/` apagada, inventário em `saida-do-temporario.md`, R64,
     tag `reengenharia/temporario` (`d928b2f`); (c) RF33, `relatorio-final.md` (`8802ea5`, `f76c553`): suíte, cobertura e
     bundle não medidos; vite alto e o `.dockerignore` que ainda cita a pasta no `TODO.md`
-  - **Revalidação (rodada 2)** pedida ao `Validador` reiniciado no andar (~00:52), sobre `f76c553`: crítico 1, maior 1, RF31,
-    RF33. Ambiente 0 só dele. `/seguir RELATÓRIO de Validador` → conferir `validacao.md` e, aprovada, `esteira.ts --fechamento`
+  - **Revalidação (rodada 2): APROVADA** (23/10, sobre `d6eb2f0`; `validacao.md` alterado na árvore, sem commit: entra no
+    commit de fechamento). RF 20 atendidos; falta só a esteira verde em `83cc03a`
+  - **Esteira de `83cc03a` (`39896272821`): VERMELHA**, com dois defeitos anteriores à validação (o último verde foi `4d0219d`):
+    (1) knip no `ci:verificar`, "Unused exports (166)", desde a 24.0 (`62b5fc2`); (2) integração e infra:
+    "Failed to resolve entry for package @educa/shared", desde `2b68e74` (25.0 ou 90.0). A de `d6eb2f0` (`39896375281`) deve dar o mesmo
+  - **Duas correções em curso (~01:50 de 23/10), 1ª tentativa:** linha 1, `knip-exportacoes-na-esteira` (Implementador/Mesa;
+    test-engineer e revisor-geral); linha 2, `shared-sem-entrada-na-integracao` (Implementador 2/Mesa 2; + infra-guardian).
+    Cada `RELATÓRIO` → `linhas.ts encontro <n>`. Com as duas encontradas: esteira do último push verde (`esteira.ts --fechamento`) e
+    **revalidação** (rodada 3, `Validador` reiniciado; correção depois da validação). Depois `linhas.ts fechar`, `TODO.md`,
+    commit de fechamento (o `validacao.md` da rodada 2 entra nele), pouso e push (recorte), `floor delete` das L1–L3, retro.
+    Sugestão para a retro: o Validador não lê a esteira; a de `83cc03a` já estava vermelha antes da rodada 2
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
