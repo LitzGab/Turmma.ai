@@ -11,14 +11,29 @@
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador`/`Mesa`): **2.0** (grande), 1ª tentativa, desde ~14:35; o BLOQUEIO do RF13 foi respondido com (A) pelo
-    Joaquim às ~15:30. O Arquiteto aplicou o ajuste em `67dad69`. Desde ~15:40 corre a **retomada da 2.0** (o Implementador foi
-    mandado fazer `merge --ff-only spec/harness` antes de tudo), 1ª tentativa
-  - linha 2 (`Implementador 2`/`Mesa 2`): ociosa desde 14:52 (5.0 encontrada). A 6.0 só parte quando a 2.0 se encontrar
-    (o tasks.md não a autoriza em paralelo com a 2.0)
-  - linha 3 (`Implementador 3`/`Mesa 3`): a 8.0 terminou (`eccbfaa`, as três revisões aprovadas na 2ª rodada), mas o encontro deu
-    **CONFLITO** em `tasks/prd-harness/cenarios.md`. Desde ~15:25 corre a correção `encontro-8` na linha 3: `git merge spec/harness`,
-    resolver, portão, Mesa e commit da correção. Depois, `linhas.ts encontro 3` de novo. 1ª tentativa
+  - linha 1 (`Implementador`/`Mesa`): **2.0** (grande). O BLOQUEIO do RF13 foi resolvido com (A) em `67dad69`. Na retomada, às ~16:00,
+    chegou a **2ª DIVERGÊNCIA (desenho)**, já com triagem pedida ao `Arquiteto`. Nas palavras do Implementador:
+    - Onde: o portão da tarefa, na unidade: `tools/guardas/catraca.test.ts` › "nenhum arquivo ganhou supressão desde o HEAD";
+      `eslint-suppressions.json`
+    - O que acontece: dividir sem alterar o corpo leva quatro funções com complexity>10 (`arquivosDoCommit`, `pastaDoCommit`,
+      `lerSecao`, `portao`) para arquivos novos. A catraca barra arquivo novo com supressão, porque para o git a divisão não é
+      renome. Sem a supressão, o lint reprova. A divisão, os imports, o `particao.test.ts` e as mutações estão prontos na
+      árvore, e só esse teste falta (5809 passam)
+    - Opções dele: (A) antes da 2.0, uma correção reduz a complexidade das quatro no `revisoes.ts` atual e baixa o TETO de 248
+      para 244; a 2.0 vira só mover. Ele recomenda esta | (B) a 2.0 refatora as quatro, e o corpo muda | (C) afrouxar a catraca
+      para aceitar supressão movida, o que enfraquece a guarda. A árvore está intacta, sem commit
+    - **Triagem do `Arquiteto` (~16:10):** é detalhe, opção (A); a catraca e o RF13 ficam intactos. O registro está no §2 da Tech
+      Spec, em `0ed2f7d`. A 2.0 **espera a correção `complexidade-revisoes`** (linha 2). Depois, `PEDIDO de retomada` da 2.0: trazer
+      a `spec/harness` (`git merge spec/harness`), levar os corpos novos aos módulos, cada auxiliar junto de quem a chama, sem
+      supressão nova (aí o `catraca.test.ts` fica verde), e escrever a linha em "Divergências resolvidas". A árvore da linha 1
+      fica guardada, sem commit
+  - linha 2 (`Implementador 2`/`Mesa 2`): **correção `complexidade-revisoes`** desde ~16:15, a partir da `spec/harness` em `0ed2f7d`,
+    1ª tentativa. Escopo do Arquiteto: baixar `lerSecao`, `arquivosDoCommit`, `pastaDoCommit` e `portao` a complexidade ≤10 no
+    próprio `revisoes.ts`, só extraindo auxiliares; podar o `eslint-suppressions.json`; levar o `TETO.complexity` de 248 para 244
+    no `catraca.test.ts`, que é o teste que reproduz. Prova: o `revisoes.test.ts` e o `hook-portao.test.ts` verdes sem
+    alteração, e uma mutação por função. Guardiões: test-engineer e revisor-geral. A 6.0 só parte depois do encontro da 2.0
+  - linha 3: ociosa desde ~15:50. A 8.0 entrou com a `encontro-8` (`473c2ce`), sem conflito com o `67dad69`. Quase tudo agora
+    espera a 2.0
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Triagem pedida ao `Arquiteto` (23/10 ~14:50)**, no andar da spec, junto com a premissa do §12. Quando ele responder,
   a resposta vai ao `Implementador` (linha 1) como observação de um `PEDIDO de retomada` da 2.0. A DIVERGÊNCIA da 2.0
@@ -37,8 +52,7 @@
     Isso precisa estar na Tech Spec antes de a 11.0 partir
   - O terminal do Arquiteto tinha, desde as 14:03, este texto na caixa, sem enviar: "pode seguir com a correção da tabela".
     Ele não tinha pergunta aberta. O reinício apagou o texto, que fica guardado aqui e foi dito ao Joaquim
-- **Devo ainda:** o `67dad69` (RF13 no `cenarios.md`) pode bater com o `encontro-8` da linha 3, que resolve o `cenarios.md` sobre a
-  spec anterior: ver no encontro 3. A fila da esteira foi perguntada ao Joaquim (cancelar as das branches de linha?), sem resposta;
+- **Devo ainda:** A fila da esteira foi perguntada ao Joaquim (cancelar as das branches de linha?), sem resposta;
   não é parada. O §12 já está em `a691e02`.   Da correção do `casca`, nada: esteira da `develop` VERDE em `47887fc` (`39966758971`). Notar ao Arquiteto, se servir: o lote 5/7 do e2e passou dos 45 min do job na correção do
   `casca` (19 min de compose e 26 de teste, 187 casos), o que pesa no M1 (censo de prazo e a oitava fatia)
 - **Base:** `spec/harness` em `6076f23` (encontro da 5.0). Às 14:52 (17:52Z) as quatro esteiras da spec (`39996137914`,
@@ -53,6 +67,7 @@
 |---|---|---|---|---|
 | 1.0 | `ae688d8` | Sonnet 5.5 | test-engineer 2, revisor-geral 2 (aprovado nas duas) | premissa do §12 medida: no subagente `CLAUDE_CODE_AGENT` é o papel do terminal; levar ao Arquiteto antes da 11.0 |
 | 7.0 | `f775960` | Sonnet 5.5 | infra-guardian 2, revisor-geral 2, test-engineer 2 (os três reprovaram na 1ª) | push do encontro falhou (TLS) e foi refeito |
+| 8.0 | `eccbfaa` + `473c2ce` (encontro-8) | Sonnet 5.5 | infra-guardian 2, test-engineer 2, revisor-geral 2; a correção: revisor-geral 1, test-engineer 1 | 5 divergências de detalhe (RF7/RF8) na Tech Spec; CONFLITO no `cenarios.md` no encontro |
 | 5.0 | `9b676fc` | Sonnet 5.5 | infra-guardian 2, test-engineer 2, revisor-geral 2 (os três reprovaram na 1ª) | |
 
 ## Esperando o Joaquim
