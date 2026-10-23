@@ -2,7 +2,11 @@
 # spec roda na branch dela e entra na `develop` por pouso (D78), e a esteira roda sozinha em todo push
 # da branch (D79): cada commit de tarefa passa pelas suítes inteiras aqui, sem ninguém esperar, e
 # `tools/processo/esteira.ts` lê o veredito ao fechar a tarefa seguinte. Roda também no push da
-# `develop`; `release` e `main` recebem por merge, e o Joaquim gerencia esse caminho.
+# `develop`; `release` e `main` recebem por merge, e o Joaquim gerencia esse caminho. E roda no pull request para a
+# `develop` (D23, revista em 23/10/2026), com a mesma permissão de leitura e sem segredo: é a esteira de quem revisa o PR.
+# Push novo em `spec/**` e `correcao/**` cancela a execução anterior da mesma branch, e o push novo no PR cancela a do PR;
+# na `develop`, `release`, `main` e na execução manual o grupo é o `run_id`, que nunca cancela nem enfileira ninguém.
+# `tools/processo/esteira.ts` lê a cancelada por esse motivo como superada, e a cancelada sem push novo (o prazo) como vermelha.
 # Toda lógica mora em `npm run ci:*` (tools/ci): o YAML só prepara o Node e chama o script.
 # Sem segredo do repositório: nada aqui depende de credencial além do token do próprio GitHub.
 name: esteira
@@ -10,8 +14,16 @@ name: esteira
 on:
   push:
     branches: [develop, release, main, 'spec/**', 'correcao/**']
+  pull_request:
+    branches: [develop]
   # Execução manual: para reexecutar um commit sem precisar de outro push.
   workflow_dispatch:
+
+# Só o contexto `github` que o GitHub preenche sozinho (evento, ref, número do PR, run_id): nunca `head_ref`, título nem
+# corpo de PR, que quem abre o PR escolhe. `tools/ci/esteira.test.ts` avalia as duas expressões ref a ref.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/spec/') || startsWith(github.ref, 'refs/heads/correcao/')) && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/spec/') || startsWith(github.ref, 'refs/heads/correcao/')) }}
 
 permissions:
   contents: read
@@ -104,6 +116,8 @@ jobs:
       # (regra 20, item 17).
       # `cancelled()` também: com o `timeout-minutes` do job, um e2e travado é cancelado, não "failure", e
       # é justamente na lentidão que o traço mais serve.
+      # O traço também sobe na execução de pull request, num repositório público, e por isso este passo depende de todo
+      # dado do e2e ser sintético (regra 20, item 17): um seed com dado real passaria a vazar também por PR de fork.
       # Um artefato por fatia, com o número dela no nome: dois com o mesmo nome na mesma execução são recusados.
       - if: failure() || cancelled()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

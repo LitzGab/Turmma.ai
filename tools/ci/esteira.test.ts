@@ -78,7 +78,8 @@ function fatiasDoE2e(): number[] {
 }
 
 interface Workflow {
-  on: { push?: { branches?: string[] } } & Record<string, unknown>
+  on: { push?: { branches?: string[] }; pull_request?: { branches?: string[] } } & Record<string, unknown>
+  concurrency?: { group?: string; 'cancel-in-progress'?: string | boolean }
   permissions?: unknown
   env?: unknown
   jobs: Record<string, Job>
@@ -89,13 +90,175 @@ const workflow = parse(textoWorkflow) as Workflow
 const scripts = (JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 'utf8')) as { scripts: Record<string, string> })
   .scripts
 
+/** O que o GitHub preenche em cada evento, só o que o `concurrency` pode ler. */
+interface ContextoDoGithub {
+  event_name: string
+  ref: string
+  run_id: number
+  event: { pull_request?: { number: number } }
+}
+type Valor = string | number | boolean | null | undefined | object
+
+/** Os nomes que uma expressão do `ci.yml` pode usar: o que o GitHub preenche sozinho, e as duas funções que o grupo usa. */
+const NOMES_PERMITIDOS = ['github.event_name', 'github.ref', 'github.run_id', 'github.event.pull_request.number']
+const FICHAS = /'(?:[^']|'')*'|&&|\|\||==|[A-Za-z_][\w-]*(?:\.[A-Za-z_][\w-]*)*|\d+|[(),]/g
+
+function verdadeiro(valor: Valor): boolean {
+  return !(valor === false || valor === 0 || valor === '' || valor === null || valor === undefined)
+}
+
+function igual(a: Valor, b: Valor): boolean {
+  return typeof a === 'string' && typeof b === 'string' ? a.toLowerCase() === b.toLowerCase() : a === b
+}
+
+function funcao(nome: string, argumentos: Valor[]): Valor {
+  const [primeiro, segundo] = argumentos
+  if (nome === 'startsWith') return String(primeiro).toLowerCase().startsWith(String(segundo).toLowerCase())
+  if (nome === 'format') return String(primeiro).replace(/\{(\d+)\}/g, (_, indice: string) => String(argumentos[Number(indice) + 1]))
+  throw new Error(`função fora da lista: ${nome}`)
+}
+
+/**
+ * Avalia uma expressão `${{ }}` do `ci.yml` com a semântica do GitHub (`&&` e `||` devolvem o operando, `==` ignora
+ * maiúscula), só para a gramática que o `concurrency` usa. Ficha que não reconhece, ou nome fora de `NOMES_PERMITIDOS`,
+ * lança: expressão nova no YAML reprova aqui até alguém decidir, pelo teste, que ela é segura.
+ * Limite: a conferência de que nada ficou sem ficha compara com o texto sem espaços, então string com espaço dentro das
+ * aspas (`'a b'`) reprova com "fora da gramática", e não por ser insegura. Quem precisar dela troca a conferência.
+ */
+function avaliarExpressao(expressao: string, contexto: ContextoDoGithub): Valor {
+  const texto = /^\$\{\{([\s\S]*)\}\}$/.exec(expressao.trim())?.[1] ?? ''
+  const fichas = texto.match(FICHAS) ?? []
+  if (fichas.join('') !== texto.replace(/\s+/g, '')) throw new Error(`expressão fora da gramática: ${texto}`)
+  let posicao = 0
+  const olhar = (): string => fichas[posicao] ?? ''
+  const proxima = (): string => fichas[posicao++] ?? ''
+
+  function encadeada(operador: string, operando: () => Valor, combinar: (a: Valor, b: Valor) => Valor): Valor {
+    let atual = operando()
+    while (olhar() === operador) {
+      proxima()
+      atual = combinar(atual, operando())
+    }
+    return atual
+  }
+  function ou(): Valor {
+    return encadeada('||', e, (a, b) => (verdadeiro(a) ? a : b))
+  }
+  function e(): Valor {
+    return encadeada('&&', comparacao, (a, b) => (verdadeiro(a) ? b : a))
+  }
+  function comparacao(): Valor {
+    return encadeada('==', primario, igual)
+  }
+  function primario(): Valor {
+    const ficha = proxima()
+    if (ficha === '(') {
+      const dentro = ou()
+      proxima()
+      return dentro
+    }
+    if (ficha.startsWith("'")) return ficha.slice(1, -1).replaceAll("''", "'")
+    if (/^\d+$/.test(ficha)) return Number(ficha)
+    if (olhar() !== '(') return nome(ficha, contexto)
+    proxima()
+    const argumentos: Valor[] = []
+    while (olhar() !== ')') {
+      argumentos.push(ou())
+      if (olhar() === ',') proxima()
+    }
+    proxima()
+    return funcao(ficha, argumentos)
+  }
+
+  const resultado = ou()
+  if (posicao !== fichas.length) throw new Error(`sobrou expressão: ${texto}`)
+  return resultado
+}
+
+function nome(caminho: string, contexto: ContextoDoGithub): Valor {
+  if (!NOMES_PERMITIDOS.includes(caminho)) throw new Error(`nome fora da lista: ${caminho}`)
+  const [raiz, ...campos] = caminho.split('.')
+  let atual: unknown = raiz === 'github' ? contexto : undefined
+  for (const campo of campos) atual = (atual as Record<string, unknown> | undefined)?.[campo]
+  return atual as Valor
+}
+
+/** O grupo e o `cancel-in-progress` que o GitHub calcularia para esse evento. */
+function concorrenciaPara(contexto: ContextoDoGithub): { grupo: string; cancela: boolean } {
+  const { group, 'cancel-in-progress': cancela } = workflow.concurrency ?? {}
+  expect(group, 'concurrency.group').toBeTypeOf('string')
+  expect(['boolean', 'string'], 'concurrency.cancel-in-progress').toContain(typeof cancela)
+  return {
+    grupo: String(avaliarExpressao(String(group), contexto)),
+    cancela: typeof cancela === 'boolean' ? cancela : verdadeiro(avaliarExpressao(cancela ?? '', contexto)),
+  }
+}
+
+function push(ref: string, execucao = 100): ContextoDoGithub {
+  return { event_name: 'push', ref, run_id: execucao, event: {} }
+}
+
 describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
-  it('roda em todo push nas branches integradoras e nas de spec e de correção, e só em push ou execução manual', () => {
+  it('roda em todo push nas branches integradoras e nas de spec e de correção, no pull request para a develop e na execução manual, e em nenhum outro evento', () => {
     // O trabalho acontece na branch da spec, que entra na `develop` por pouso (D78). A esteira de cada push dela é o
     // portão completo de cada tarefa, sem espera (D79): sem `spec/**` e `correcao/**` aqui, o que uma tarefa quebra
     // fora dos testes que alterou só apareceria no fim da spec, e a D52 e a regra 40 contam com isso.
     expect(workflow.on.push?.branches).toEqual(['develop', 'release', 'main', 'spec/**', 'correcao/**'])
-    expect(Object.keys(workflow.on).sort()).toEqual(['push', 'workflow_dispatch'])
+    // O PR para a `develop` (D23 revista em 23/10/2026, RF19): só ele, com os tipos padrão. `pull_request_target` roda com
+    // permissão de escrita e segredo sobre o código de quem abriu o PR, e por isso nunca entra.
+    expect(workflow.on.pull_request).toEqual({ branches: ['develop'] })
+    expect(Object.keys(workflow.on).sort()).toEqual(['pull_request', 'push', 'workflow_dispatch'])
+    expect(textoWorkflow).not.toMatch(/pull_request_target/)
+  })
+
+  it('o grupo de concorrência cancela a execução superada só em spec/** e correcao/**, uma por branch', () => {
+    for (const ref of ['refs/heads/spec/harness--l1', 'refs/heads/spec/x', 'refs/heads/correcao/2026-10-23-casca']) {
+      expect(concorrenciaPara(push(ref)), ref).toEqual({ grupo: ref, cancela: true })
+      // Dois pushes seguidos na mesma branch caem no mesmo grupo: é isso que cancela o primeiro.
+      expect(concorrenciaPara(push(ref, 1)).grupo).toBe(concorrenciaPara(push(ref, 2)).grupo)
+    }
+    // E branches diferentes não se cancelam entre si.
+    expect(concorrenciaPara(push('refs/heads/spec/x')).grupo).not.toBe(concorrenciaPara(push('refs/heads/spec/y')).grupo)
+    expect(concorrenciaPara(push('refs/heads/spec/x')).grupo).not.toBe(concorrenciaPara(push('refs/heads/correcao/x')).grupo)
+  })
+
+  it('develop, release, main e a execução manual têm o run_id como grupo: nunca cancelam nem enfileiram ninguém', () => {
+    const esperado = (execucao: number): { grupo: string; cancela: boolean } => ({ grupo: String(execucao), cancela: false })
+    for (const ref of ['refs/heads/develop', 'refs/heads/release', 'refs/heads/main']) {
+      expect(concorrenciaPara(push(ref, 7)), ref).toEqual(esperado(7))
+      // Dois pushes seguidos têm grupos diferentes: o segundo não espera nem cancela o primeiro.
+      expect(concorrenciaPara(push(ref, 8)).grupo).not.toBe(concorrenciaPara(push(ref, 7)).grupo)
+    }
+    // A execução manual numa branch de spec não cancela a do push, nem é cancelada por ele.
+    expect(concorrenciaPara({ ...push('refs/heads/spec/x', 9), event_name: 'workflow_dispatch' })).toEqual(esperado(9))
+    // O prefixo vale com a barra, e no começo da ref: `spec-x` e `feature/spec/x` não são branch de spec.
+    expect(concorrenciaPara(push('refs/heads/spec-x', 10))).toEqual(esperado(10))
+    expect(concorrenciaPara(push('refs/heads/feature/spec/x', 11))).toEqual(esperado(11))
+    expect(concorrenciaPara(push('refs/heads/correcoes/x', 12))).toEqual(esperado(12))
+  })
+
+  it('o pull request tem o grupo pr-<número>, e o push novo nele cancela a execução anterior do mesmo PR', () => {
+    const pr = (numero: number, execucao: number): ContextoDoGithub => ({
+      event_name: 'pull_request',
+      ref: `refs/pull/${String(numero)}/merge`,
+      run_id: execucao,
+      event: { pull_request: { number: numero } },
+    })
+    expect(concorrenciaPara(pr(7, 1))).toEqual({ grupo: 'pr-7', cancela: true })
+    expect(concorrenciaPara(pr(7, 2)).grupo).toBe('pr-7')
+    expect(concorrenciaPara(pr(8, 3)).grupo).toBe('pr-8')
+  })
+
+  it('só lê do contexto o que o GitHub preenche sozinho: nada que quem abre o PR escolhe, e nenhuma outra expressão fora a da fatia', () => {
+    for (const nome of ['github.head_ref', 'github.event.pull_request.title', 'github.event.pull_request.head.ref']) {
+      expect(() => avaliarExpressao(`\${{ ${nome} }}`, push('refs/heads/spec/x')), nome).toThrow('nome fora da lista')
+    }
+    expect(() => avaliarExpressao("${{ secrets.TOKEN }}", push('refs/heads/spec/x'))).toThrow('nome fora da lista')
+    // Toda `${{ }}` do arquivo é a da fatia ou uma das duas do `concurrency`, que acima são avaliadas com a lista fechada.
+    const doConcurrency = [workflow.concurrency?.group, workflow.concurrency?.['cancel-in-progress']].filter((valor) => typeof valor === 'string')
+    expect(doConcurrency).toHaveLength(2)
+    const expressoes = textoWorkflow.match(/\$\{\{[\s\S]*?\}\}/g) ?? []
+    for (const expressao of expressoes) expect([EXPRESSAO_DA_FATIA, ...doConcurrency]).toContain(expressao)
   })
 
   it('só pede leitura do conteúdo, e nenhum job amplia a permissão', () => {
@@ -107,11 +270,13 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
 
   it('não usa segredo, variável do repositório nem ambiente declarado no YAML', () => {
     expect(textoWorkflow).not.toMatch(/secrets\s*[.[]/)
-    // Nenhuma expressão além do número da fatia do e2e: segredo, `vars.*` e contexto externo só entram por `${{ }}`, e o
-    // `matrix.fatia` vem da lista fixa do próprio YAML, sem nada de fora.
-    const expressoes = textoWorkflow.match(/\$\{\{[^}]*\}\}/g) ?? []
+    // Só duas famílias de expressão: o número da fatia do e2e, que vem da lista fixa do próprio YAML, e as do
+    // `concurrency`, que o teste do grupo avalia com a lista fechada de nomes. Segredo, `vars.*` e contexto externo só
+    // entram por `${{ }}`, e nenhuma das duas famílias os lê.
+    const doConcurrency = [workflow.concurrency?.group, workflow.concurrency?.['cancel-in-progress']]
+    const expressoes = textoWorkflow.match(/\$\{\{[\s\S]*?\}\}/g) ?? []
     expect(expressoes.length).toBeGreaterThan(0)
-    for (const expressao of expressoes) expect(expressao).toBe(EXPRESSAO_DA_FATIA)
+    for (const expressao of expressoes) expect([EXPRESSAO_DA_FATIA, ...doConcurrency]).toContain(expressao)
     expect(textoWorkflow.split('${{').length - 1).toBe(expressoes.length)
     expect(workflow.env).toBeUndefined()
     for (const job of Object.values(workflow.jobs)) {
