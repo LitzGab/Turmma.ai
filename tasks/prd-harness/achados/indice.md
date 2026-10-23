@@ -71,3 +71,10 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-23 16:19:41 | `revisor-geral` | 7ª | REPROVADO | `revisao-spec` | `tasks/prd-harness/techspec.md`, §9, parágrafo "O que conta como caminho" (diff +183 a +190): o critério quebra a 16.0 do jeito que está escrito. |
 | 2026-10-23 16:20:03 | `test-engineer` | 12ª | APROVADO | `revisao-spec` | `techspec.md` §9, "a linha 'Exemplo:'". Na 5.6 o "Exemplo:" fica no meio da linha ("Todo módulo novo entrega um (regra 10.5). Exemplo: ..."). Um leitor com… |
 | 2026-10-23 16:22:23 | `revisor-geral` | 8ª | APROVADO | `revisao-spec` | 16_task.md, 16.2, e techspec §9: a 21.0 agora depende do que a extração da 16.0 devolve. Ela precisa receber o token cru, com `<...>`, `*` e a `/` final (o… |
+| 2026-10-23 16:42:28 | `privacy-guardian` | 1ª | APROVADO | `3_task` | Agora o trace do Playwright (`upload-artifact`, `ci.yml`, último passo) também é publicado para PRs, com 7 dias de retenção, num repositório público. Hoje isso… |
+| 2026-10-23 16:42:52 | `infra-guardian` | 1ª | APROVADO | `3_task` | `tools/processo/esteira.ts:57`: `foiSuperada` não separa a cancelada pelo `concurrency` da cancelada por prazo que só teve um push depois. Basta existir um… |
+| 2026-10-23 16:43:29 | `revisor-geral` | 1ª | APROVADO | `3_task` | `tasks/prd-harness/tasks.md:26` ainda diz "Veredito com superada e `--event push`". A divergência está na `techspec.md`, então não bloqueia, mas a lista ficou… |
+| 2026-10-23 16:44:08 | `test-engineer` | 1ª | APROVADO | `3_task` | Título do teste (f) promete mais do que prova (`tools/processo/esteira.test.ts:190`). O título diz que "a cancelada do documento superado não tira o verde do… |
+| 2026-10-23 17:00:02 | `privacy-guardian` | 2ª | APROVADO | `3_task` | nenhuma nova. |
+| 2026-10-23 17:00:05 | `infra-guardian` | 2ª | APROVADO | `3_task` | as quatro recomendações da 1ª rodada foram aplicadas. |
+| 2026-10-23 17:00:25 | `test-engineer` | 2ª | APROVADO | `3_task` | O bloco novo aplica a mesma mutação do bloco das linhas 220 a 226, e só o teste citado muda. Está certo, porque cada um prova um teste diferente. Uma linha de… |
