@@ -101,8 +101,12 @@ export const etapaAuditoriaDeDependencias: Etapa = {
  */
 export const ARGUMENTOS_DO_KNIP = ['--include', 'dependencies,unlisted,binaries,unresolved'] as const
 
+/**
+ * O `--` é de propósito: sem ele o `npx` toma `--include` por opção do próprio npm ("invalid config include") e o knip roda sem
+ * ela, com todas as categorias. Foi assim que 166 exports sem uso reprovaram o `ci:verificar` na esteira 39896272821.
+ */
 export const etapaDependenciasDeclaradas: Etapa = {
   nome: 'dependência declarada onde é usada, sem sobra (knip)',
   comando: 'npx',
-  argumentos: ['--no', 'knip', ...ARGUMENTOS_DO_KNIP],
+  argumentos: ['--no', '--', 'knip', ...ARGUMENTOS_DO_KNIP],
 }

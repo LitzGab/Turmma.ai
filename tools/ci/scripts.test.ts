@@ -105,12 +105,12 @@ describe('scripts ci:* reais', () => {
       'npm run lint',
       `docker ${argumentosGitleaks(raizRepositorio).join(' ')}`,
       'npm audit --audit-level=high --omit=dev',
-      `npx --no knip ${ARGUMENTOS_DO_KNIP.join(' ')}`,
+      `npx --no -- knip ${ARGUMENTOS_DO_KNIP.join(' ')}`,
       'npm run test:unidade',
     ])
   })
 
-  it.each(['npm run lint', IMAGEM_GITLEAKS, 'npm audit --audit-level=high --omit=dev', 'npx --no knip', 'npm run test:unidade'])(
+  it.each(['npm run lint', IMAGEM_GITLEAKS, 'npm audit --audit-level=high --omit=dev', 'npx --no -- knip', 'npm run test:unidade'])(
     'ci:verificar sai vermelho quando "%s" falha: guarda é portão, não aviso',
     (etapa) => {
       expect(rodarScript('verificar.ts', etapa).codigo).not.toBe(0)

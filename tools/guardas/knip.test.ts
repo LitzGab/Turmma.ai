@@ -3,7 +3,7 @@ import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { ARGUMENTOS_DO_KNIP } from '../ci/etapas-de-guarda.ts'
+import { ARGUMENTOS_DO_KNIP, etapaDependenciasDeclaradas } from '../ci/etapas-de-guarda.ts'
 import { raizRepositorio } from '../ci/executar.ts'
 
 // A trava de dependência (X5, 24.0; RF13): o knip com `--include dependencies,unlisted,binaries,unresolved`, que a etapa
@@ -36,11 +36,16 @@ function rodarKnip(pasta: string): Execucao {
   return { codigo: resultado.status, achados: achados.sort() }
 }
 
-function rodarNaFixture(nome: string): Execucao {
+/** Copia a fixture para uma pasta temporária: o knip lê o `package.json` mais próximo, e ali não há nenhum do repositório. */
+function copiarFixture(nome: string): string {
   const pasta = mkdtempSync(join(tmpdir(), 'knip-'))
   PASTAS.push(pasta)
   cpSync(join(raizRepositorio, 'tools/guardas/__fixtures__/knip', nome), pasta, { recursive: true })
-  return rodarKnip(pasta)
+  return pasta
+}
+
+function rodarNaFixture(nome: string): Execucao {
+  return rodarKnip(copiarFixture(nome))
 }
 
 afterAll(() => {
@@ -52,6 +57,30 @@ describe('knip: a trava de dependência declarada onde é usada, sem sobra', () 
     // O comando é o do `guarda:dependencias` e da etapa, sem o relatório em JSON; o código de saída é o que a esteira vê.
     const resultado = spawnSync(KNIP, [...ARGUMENTOS_DO_KNIP], { cwd: raizRepositorio, encoding: 'utf8' })
     expect(resultado.stdout + resultado.stderr).toBe('')
+    expect(resultado.status).toBe(0)
+  }, 60_000)
+
+  it('o controle: com todas as categorias, o knip acha o export sem uso da fixture `export-sem-uso`', () => {
+    // Sem este caso, o teste da etapa abaixo passaria também se a fixture deixasse de ter o que reprovar.
+    const resultado = spawnSync(KNIP, ['--reporter', 'json'], { cwd: copiarFixture('export-sem-uso'), encoding: 'utf8' })
+    const { issues } = JSON.parse(resultado.stdout) as Achados
+    const exportsSemUso = issues.flatMap((arquivo) => ((arquivo['exports'] as { name: string }[] | undefined) ?? []).map((achado) => achado.name))
+    expect(exportsSemUso).toEqual(['sobra'])
+    expect(resultado.status).toBe(1)
+  }, 30_000)
+
+  it('a etapa do ci:verificar, rodada pelo `npx` como a esteira a roda, só olha as quatro categorias: export sem uso não reprova', () => {
+    // Os outros testes deste arquivo chamam o binário do knip direto. A esteira o chama pelo `npx`, que toma `--include` por
+    // opção dele ("invalid config include") e deixa o knip rodar com todas as categorias: 166 exports sem uso reprovaram o
+    // `ci:verificar` na 83cc03a. A fixture tem um export sem uso e nenhuma violação das quatro categorias.
+    const resultado = spawnSync(etapaDependenciasDeclaradas.comando, [...etapaDependenciasDeclaradas.argumentos, '--directory', copiarFixture('export-sem-uso')], {
+      cwd: raizRepositorio,
+      encoding: 'utf8',
+    })
+    // O que o knip acha sai em stdout. O stderr é do npm e pode ter um aviso de versão nova ou do `.npmrc` de quem roda: só o
+    // aviso de opção que o npm não repassa ao knip (o defeito) reprova.
+    expect(resultado.stdout).toBe('')
+    expect(resultado.stderr).not.toContain('invalid config')
     expect(resultado.status).toBe(0)
   }, 60_000)
 
