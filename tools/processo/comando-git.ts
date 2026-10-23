@@ -1,7 +1,7 @@
 // Ler do comando do Bash o `git commit` e o `git push`: o commit, os arquivos que ele leva, a árvore em que roda (`-C`, `cd`),
 // e o push do time.
 import { execFileSync } from 'node:child_process'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 
@@ -43,14 +43,17 @@ function levarTodosSeCommitA(argumentos: string, alterados: string[], levados: S
   }
 }
 
-export function documentoDoCommit(comando: string, raiz: string, arquivos: string[]): { caminho: string } | { erro: string } | null {
-  if (!ehCommit(comando)) return null
-  const correcao = /\(correção ([a-z0-9-]+)\)/.exec(comando)?.[1]
+/**
+ * O documento que a marca da mensagem cita: `(correção <slug>)` ou `(tarefa N.0)`. A mensagem é o texto inteiro do commit,
+ * o do comando mais o do arquivo de `-F`, e no git hook nativo é só a mensagem. `null` quando não há marca.
+ */
+export function documentoDaMensagem(mensagem: string, raiz: string, arquivos: string[]): { caminho: string } | { erro: string } | null {
+  const correcao = /\(correção ([a-z0-9-]+)\)/.exec(mensagem)?.[1]
   if (correcao) {
     const caminho = join('tasks', 'correcoes', `${correcao}.md`)
     return existsSync(join(raiz, caminho)) ? { caminho } : { erro: `A correção ${correcao} não tem ${caminho}. Crie o documento com /corrigir.` }
   }
-  const numero = /\(tarefa (\d+)\.0\)/.exec(comando)?.[1]
+  const numero = /\(tarefa (\d+)\.0\)/.exec(mensagem)?.[1]
   if (!numero) return null
   const pastaTasks = join(raiz, 'tasks')
   const candidatas = existsSync(pastaTasks)
@@ -58,7 +61,7 @@ export function documentoDoCommit(comando: string, raiz: string, arquivos: strin
     : []
   const escolher = (filtro: (pasta: string) => boolean) => candidatas.filter(filtro)
   const escolhidas = [
-    escolher((pasta) => comando.includes(`tasks/${pasta}/`)),
+    escolher((pasta) => mensagem.includes(`tasks/${pasta}/`)),
     candidatas,
     escolher((pasta) => arquivos.some((arquivo) => arquivo.startsWith(`tasks/${pasta}/`))),
   ].find((lista) => lista.length === 1)
@@ -240,7 +243,7 @@ export function destinoProtegidoDoPush(comando: string, branchDaArvore: string |
  * andar não entram aqui: o próprio Maestri recusa esses comandos a quem não é o terminal Maestro.
  */
 export function pushDoTime(comando: string, raiz: string, cwd: string | undefined, papel: string | undefined): string | null {
-  if (!papel || !PAPEIS_DO_TIME.includes(papel) || !GIT_PUSH.test(comando)) return null
+  if (!ehPapelDoTime(papel) || !GIT_PUSH.test(comando)) return null
   const onde = pastaDoCommit(comando, raiz, cwd, GIT_PUSH)
   const pasta = onde && 'pasta' in onde && existsSync(onde.pasta) ? onde.pasta : null
   const destino = destinoProtegidoDoPush(comando, pasta ? branchAtual(pasta) || null : null)
@@ -250,4 +253,217 @@ export function pushDoTime(comando: string, raiz: string, cwd: string | undefine
     `(D78). Quem faz isso é o Orquestrador, não o papel \`${papel}\`. O seu push é o da branch do andar: \`git push -u origin HEAD\`, dentro do ` +
     'checkout do andar. Commit feito no térreo, na `develop`, fica sem push: o Orquestrador o leva.'
   )
+}
+
+/** O papel é de terminal do time (`.claude/agents/`): o Orquestrador e a sessão de uma pessoa não têm papel. */
+export function ehPapelDoTime(papel: string | undefined): boolean {
+  return papel !== undefined && PAPEIS_DO_TIME.includes(papel)
+}
+
+// Ler do comando do Bash o que ele faz com o git e com o ambiente do papel (RF14). A leitura é por palavras do shell, não
+// por expressão regular sobre o texto: `--no-verify` dentro de uma mensagem para outro agente, ou `CLAUDE_CODE_AGENT` num
+// `grep`, não é desvio. O que a leitura não alcança (script, `sh -c`, substituição de comando) é o limite declarado em
+// `techspec.md` §5(a), e a terceira camada é a esteira.
+
+/**
+ * Um pedaço do comando: texto entre aspas duplas (`$"…"` vale o mesmo, no bash), entre aspas simples, entre `$'…'` (o texto
+ * cru, sem decodificar o que há dentro), um caractere escapado por barra invertida, um separador, ou uma palavra solta. O `$`
+ * só é da palavra solta quando não abre aspas: `--no-verif$'y'` são dois pedaços colados, e não `--no-verif$y`.
+ */
+const PEDACO_DO_SHELL = /\$?"((?:[^"\\]|\\.)*)"|'([^']*)'|\$'((?:[^'\\]|\\.)*)'|\\(.)|([;&|()\n]+)|((?:[^\s;&|()"'\\$]|\$(?!['"]))+)/g
+
+/** O texto do pedaço: o do único grupo que casou (aspas duplas, simples, `$'…'`, o escapado ou a palavra solta). */
+const textoDoPedaco = (pedaco: RegExpMatchArray): string => pedaco.slice(1).find((grupo) => grupo !== undefined) ?? ''
+
+/**
+ * Os comandos do shell de um comando do Bash, cada um em palavras. As aspas agrupam e saem do texto, e os pedaços colados
+ * (`-m"x"`, `core."hooksPath"`) viram uma palavra só. `;`, `&`, `|`, parênteses e quebra de linha, fora das aspas,
+ * separam um comando do outro. Fora das aspas, `\x` é `x` (como no shell) e a barra invertida antes da quebra de linha
+ * some, juntando as duas linhas. O `$` só é da palavra quando não abre aspas (`$'…'`, `$"…"`).
+ */
+export function comandosDoShell(comando: string): string[][] {
+  const comandos: string[][] = [[]]
+  let fimDoPedaco = -1
+  for (const pedaco of comando.replaceAll('\\\n', '').matchAll(PEDACO_DO_SHELL)) {
+    if (pedaco[5] !== undefined) {
+      comandos.push([])
+      continue
+    }
+    const texto = textoDoPedaco(pedaco)
+    const atual = comandos.at(-1) ?? []
+    if (pedaco.index === fimDoPedaco) atual.push((atual.pop() ?? '') + texto)
+    else atual.push(texto)
+    fimDoPedaco = pedaco.index + pedaco[0].length
+  }
+  return comandos.filter((palavras) => palavras.length > 0)
+}
+
+const ATRIBUICAO = /^([A-Za-z_][A-Za-z0-9_]*)=/
+const nomeAtribuido = (palavra: string): string | null => ATRIBUICAO.exec(palavra)?.[1] ?? null
+const programaDe = (palavra: string): string => palavra.split('/').pop() ?? palavra
+/** A variável que diz ao git hook e ao portão quem commita, e as que mudam o `core.hooksPath` sem tocar em arquivo. */
+const ehVariavelDoHook = (nome: string): boolean => nome === 'CLAUDE_CODE_AGENT' || nome.startsWith('GIT_CONFIG_')
+/** Os programas que só passam o comando adiante. O `env` tem leitura própria (`lerOEnv`). */
+const ENVOLTORIOS = new Set(['command', 'exec', 'nohup', 'time', 'builtin'])
+
+interface ComandoLido {
+  /** As variáveis que o comando atribui, à frente dele ou pelo `env`. */
+  definidos: string[]
+  /** As que o `env -u` tira. */
+  retirados: string[]
+  programa: string
+  args: string[]
+}
+
+/** As opções do `env` até o programa dele: o que atribui e o que tira. Devolve a posição do programa. */
+function lerOEnv(palavras: string[], inicio: number, definidos: string[], retirados: string[]): number {
+  let i = inicio
+  for (; i < palavras.length; i++) {
+    const palavra = palavras[i] ?? ''
+    const nome = nomeAtribuido(palavra)
+    if (nome !== null) definidos.push(nome)
+    else if (palavra === '-u' || palavra === '--unset') retirados.push(palavras[++i] ?? '')
+    else if (/^(?:-u|--unset=)./.test(palavra)) retirados.push(palavra.replace(/^(?:-u|--unset=)/, ''))
+    else if (!palavra.startsWith('-')) break
+  }
+  return i
+}
+
+/** O comando sem o que vem antes do programa: atribuições, `env` e os envoltórios. */
+function lerComando(palavras: string[]): ComandoLido {
+  const definidos: string[] = []
+  const retirados: string[] = []
+  let i = 0
+  while (i < palavras.length) {
+    const palavra = palavras[i] ?? ''
+    const nome = nomeAtribuido(palavra)
+    const programa = programaDe(palavra)
+    if (nome !== null) {
+      definidos.push(nome)
+      i++
+    } else if (programa === 'env') i = lerOEnv(palavras, i + 1, definidos, retirados)
+    else if (ENVOLTORIOS.has(programa)) i++
+    else return { definidos, retirados, programa, args: palavras.slice(i + 1) }
+  }
+  return { definidos, retirados, programa: '', args: [] }
+}
+
+/** `VAR=`, `export VAR=`, `unset VAR` e `env -u VAR` com a variável do papel ou a do `core.hooksPath`. */
+function desvioDoAmbiente(comando: ComandoLido): string | null {
+  const nomes = [...comando.definidos, ...comando.retirados]
+  if (comando.programa === 'unset') nomes.push(...comando.args)
+  if (comando.programa === 'export') nomes.push(...comando.args.map((argumento) => nomeAtribuido(argumento) ?? argumento))
+  const nome = nomes.find(ehVariavelDoHook)
+  return nome === undefined ? null : `mexe em ${nome}, a variável pela qual o hook sabe quem commita e onde estão os hooks do git`
+}
+
+/**
+ * As opções do git, antes do subcomando, que levam o argumento na palavra seguinte: as de `handle_options`, no `git.c`
+ * (conferidas com `git --help` e uma a uma contra o git 2.56). `--super-prefix` é de git mais antigo; `--exec-path`,
+ * `--list-cmds` e as que só imprimem não consomem a palavra seguinte, e a forma com `=` é uma palavra só.
+ */
+const OPCOES_DO_GIT_COM_ARGUMENTO = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--config-env', '--attr-source', '--shallow-file', '--super-prefix'])
+
+interface ChamadaDoGit {
+  /** As opções antes do subcomando, com os argumentos delas. */
+  globais: string[]
+  subcomando: string
+  resto: string[]
+}
+
+function chamadaDoGit(comando: ComandoLido): ChamadaDoGit | null {
+  if (comando.programa !== 'git') return null
+  const globais: string[] = []
+  let i = 0
+  while ((comando.args[i] ?? '').startsWith('-')) {
+    const opcao = comando.args[i] ?? ''
+    const argumento = OPCOES_DO_GIT_COM_ARGUMENTO.has(opcao) ? comando.args[i + 1] : undefined
+    globais.push(opcao, ...(argumento === undefined ? [] : [argumento]))
+    i += argumento === undefined ? 1 : 2
+  }
+  return { globais, subcomando: comando.args[i] ?? '', resto: comando.args.slice(i + 1) }
+}
+
+const CAMINHO_DOS_HOOKS = /core\.hookspath/i
+/** A definição de um alias do git (`-c alias.c=…`, `config alias.ci …`): é um jeito de chamar o `commit -n` sem que o comando o diga. */
+const DEFINICAO_DE_ALIAS = /^(?:--config-env=)?alias\./i
+/** `--no-verify` ou a abreviação que o git aceita: qualquer começo dele a partir de `--no-v`. */
+const ehNoVerify = (palavra: string): boolean => palavra.length >= '--no-v'.length && '--no-verify'.startsWith(palavra)
+/** As letras de `git commit` que levam argumento: o resto do bloco `-xyz` é o argumento delas, não opções. */
+const LETRAS_DO_COMMIT_COM_ARGUMENTO = /[mFCctSu]/
+
+/** `-n` de `git commit`, sozinho ou num bloco de opções (`-nm`, `-anm`); `-mn` é a mensagem "n". */
+function ehNDoCommit(palavra: string): boolean {
+  const letras = /^-([A-Za-z]+)$/.exec(palavra)?.[1] ?? ''
+  return (letras.split(LETRAS_DO_COMMIT_COM_ARGUMENTO)[0] ?? '').includes('n')
+}
+
+function defineAlias(chamada: ChamadaDoGit): boolean {
+  const palavras = [...chamada.globais, ...(chamada.subcomando === 'config' ? chamada.resto : [])]
+  return palavras.some((palavra) => DEFINICAO_DE_ALIAS.test(palavra))
+}
+
+function desvioDoGit(chamada: ChamadaDoGit): string | null {
+  if (chamada.globais.some((opcao) => CAMINHO_DOS_HOOKS.test(opcao))) return 'troca o core.hooksPath do git, que é onde estão os hooks do processo'
+  if (chamada.subcomando === 'config' && chamada.resto.some((argumento) => CAMINHO_DOS_HOOKS.test(argumento))) {
+    return 'mexe no core.hooksPath do git, que é onde estão os hooks do processo'
+  }
+  if (defineAlias(chamada)) return 'define um alias do git, que chama o commit sem que o comando diga se pula os hooks'
+  if (chamada.resto.some(ehNoVerify)) return 'usa --no-verify, que pula os hooks do git'
+  if (chamada.subcomando === 'commit' && chamada.resto.some(ehNDoCommit)) return 'usa -n, que é --no-verify no commit e pula os hooks do git'
+  return null
+}
+
+/**
+ * O que, no comando, desvia do hook do git em sessão de papel: `--no-verify` e abreviações, `-n` no commit, o
+ * `core.hooksPath`, e tirar ou trocar `CLAUDE_CODE_AGENT` e `GIT_CONFIG_*`. `null` quando o comando não faz nada disso.
+ * Quem chama decide se o papel é do time (`ehPapelDoTime`): fora dele, nada disso é desvio.
+ */
+export function desvioDoHook(comando: string): string | null {
+  for (const palavras of comandosDoShell(comando)) {
+    const lido = lerComando(palavras)
+    const chamada = chamadaDoGit(lido)
+    const desvio = desvioDoAmbiente(lido) ?? (chamada === null ? null : desvioDoGit(chamada))
+    if (desvio !== null) return desvio
+  }
+  return null
+}
+
+/** `-F x` e `--file x`, com a letra sozinha ou depois de opções sem argumento (`-aF x`). */
+const ARQUIVO_NA_PALAVRA_SEGUINTE = /^(?:-[aeinopqsvzN]*F|--file)$/
+/** `-Fx`, `-aFx` e `--file=x`. */
+const ARQUIVO_NA_MESMA_PALAVRA = /^(?:-[aeinopqsvzN]*F|--file=)(.+)$/
+
+function arquivosDaMensagemEm(resto: string[]): string[] {
+  return resto.flatMap((palavra, i) => {
+    const colado = ARQUIVO_NA_MESMA_PALAVRA.exec(palavra)?.[1]
+    if (colado !== undefined) return [colado]
+    const proximo = resto[i + 1]
+    return ARQUIVO_NA_PALAVRA_SEGUINTE.test(palavra) && proximo !== undefined ? [proximo] : []
+  })
+}
+
+/** Os arquivos de mensagem dos `git commit` do comando, como estão escritos: `-F x`, `-Fx`, `--file=x`. */
+export function arquivosDaMensagem(comando: string): string[] {
+  return comandosDoShell(comando).flatMap((palavras) => {
+    const chamada = chamadaDoGit(lerComando(palavras))
+    return chamada?.subcomando === 'commit' ? arquivosDaMensagemEm(chamada.resto) : []
+  })
+}
+
+/** O texto de um arquivo regular; vazio para o que não existe e para o que não é arquivo (pasta, `/dev/stdin`, fifo), que prenderia o hook. */
+function lerOuVazio(caminho: string): string {
+  try {
+    if (!statSync(caminho).isFile()) return ''
+    return readFileSync(caminho, 'utf8')
+  } catch {
+    return ''
+  }
+}
+
+/** O texto dos arquivos de mensagem do comando, lidos a partir da pasta em que o commit roda. Arquivo que não existe é texto vazio. */
+export function textoDosArquivosDeMensagem(comando: string, pasta: string): string {
+  return arquivosDaMensagem(comando)
+    .map((arquivo) => lerOuVazio(resolve(pasta, arquivo)))
+    .join('\n')
 }

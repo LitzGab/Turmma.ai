@@ -16,7 +16,15 @@ import {
   avaliarCarimbo,
   avaliarCommitDoMvp,
   avaliarPortao,
+  arquivosDaMensagem,
   arquivosQueMudaram,
+  bloqueioDoForaDoProcesso,
+  comandosDoShell,
+  conteudoDoDisco,
+  decidirCommit,
+  desvioDoHook,
+  ehPapelDoTime,
+  textoDosArquivosDeMensagem,
   caminhoDaTarefa,
   carimbarSeNadaMudou,
   chaveDaRodada,
@@ -1582,5 +1590,395 @@ describe('a árvore em que o commit acontece', () => {
     } finally {
       vi.unstubAllEnvs()
     }
+  })
+})
+
+describe('as palavras do comando do shell', () => {
+  it('as aspas agrupam e saem, e o separador fora delas troca de comando', () => {
+    expect(comandosDoShell('git commit -m "a b; c" && echo \'x | y\'')).toEqual([
+      ['git', 'commit', '-m', 'a b; c'],
+      ['echo', 'x | y'],
+    ])
+    expect(comandosDoShell('a;b\nc | d (e)')).toEqual([['a'], ['b'], ['c'], ['d'], ['e']])
+    expect(comandosDoShell('')).toEqual([])
+  })
+
+  it('os pedaços colados viram uma palavra só', () => {
+    expect(comandosDoShell('git -c core."hooksPath"=x commit -m"msg"')).toEqual([['git', '-c', 'core.hooksPath=x', 'commit', '-mmsg']])
+    // Separados por espaço, são duas palavras.
+    expect(comandosDoShell('a "b" c')).toEqual([['a', 'b', 'c']])
+  })
+
+  it('fora das aspas, a barra invertida tira o caractere seguinte e junta as linhas; $\'…\' vale o texto cru', () => {
+    expect(comandosDoShell('git commi\\t --no-verif\\y')).toEqual([['git', 'commit', '--no-verify']])
+    expect(comandosDoShell("git commit $'--no-verify' -m x")).toEqual([['git', 'commit', '--no-verify', '-m', 'x']])
+    expect(comandosDoShell('git commit \\\n--no-verify')).toEqual([['git', 'commit', '--no-verify']])
+    expect(comandosDoShell('git commit --no-\\\nverify')).toEqual([['git', 'commit', '--no-verify']])
+    // O `$` só é da palavra quando não abre aspas: `$'y'` e `$"y"` coladas numa palavra viram o texto delas.
+    expect(comandosDoShell("git commit --no-verif$'y' -m x")).toEqual([['git', 'commit', '--no-verify', '-m', 'x']])
+    expect(comandosDoShell('git commit --no-verif$"y" -m x')).toEqual([['git', 'commit', '--no-verify', '-m', 'x']])
+    expect(comandosDoShell('echo $HOME x$')).toEqual([['echo', '$HOME', 'x$']])
+    // Dentro de aspas duplas, `\"` não fecha a palavra: a mensagem inteira é uma palavra só.
+    expect(comandosDoShell('git commit -m "a \\" --no-verify"')).toEqual([['git', 'commit', '-m', 'a \\" --no-verify']])
+  })
+})
+
+describe('o desvio do hook do git em sessão de papel (RF14)', () => {
+  const negados = [
+    { etiqueta: 'no-verify inteiro', comando: 'git commit --no-verify -m "x"', motivo: /--no-verify/ },
+    { etiqueta: 'no-verify abreviado em verif', comando: 'git commit --no-verif -m "x"', motivo: /--no-verify/ },
+    { etiqueta: 'no-verify abreviado em ver', comando: 'git commit --no-ver -m "x"', motivo: /--no-verify/ },
+    { etiqueta: 'no-verify abreviado em v', comando: 'git commit --no-v -m "x"', motivo: /--no-verify/ },
+    { etiqueta: 'no-verify no push', comando: 'git push --no-verify origin spec/x', motivo: /--no-verify/ },
+    { etiqueta: 'no-verify depois de um add', comando: 'git add -A && git commit --no-verify -m "x"', motivo: /--no-verify/ },
+    { etiqueta: 'n sozinho no commit', comando: 'git commit -n -m "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'n junto do m', comando: 'git commit -nm "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'n no meio do bloco', comando: 'git commit -anm "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'hookspath por c', comando: 'git -c core.hooksPath=/dev/null commit -m "x"', motivo: /core\.hooksPath/ },
+    { etiqueta: 'hookspath em maiúsculas', comando: 'git -c core.HOOKSPATH=x commit -m "x"', motivo: /core\.hooksPath/ },
+    { etiqueta: 'hookspath colado no c', comando: 'git -ccore.hooksPath=x commit -m "x"', motivo: /core\.hooksPath/ },
+    { etiqueta: 'hookspath por config', comando: 'git config core.hookspath /tmp/x', motivo: /mexe no core\.hooksPath/ },
+    { etiqueta: 'variável do papel vazia', comando: 'CLAUDE_CODE_AGENT= git commit -m "x"', motivo: /mexe em CLAUDE_CODE_AGENT/ },
+    { etiqueta: 'unset do papel', comando: 'unset CLAUDE_CODE_AGENT', motivo: /mexe em CLAUDE_CODE_AGENT/ },
+    { etiqueta: 'unset de GIT_CONFIG', comando: 'unset -v GIT_CONFIG_COUNT', motivo: /mexe em GIT_CONFIG_COUNT/ },
+    { etiqueta: 'env com u', comando: 'env -u CLAUDE_CODE_AGENT git commit -m "x"', motivo: /mexe em CLAUDE_CODE_AGENT/ },
+    { etiqueta: 'env com u colado', comando: 'env -uCLAUDE_CODE_AGENT git commit -m "x"', motivo: /mexe em CLAUDE_CODE_AGENT/ },
+    { etiqueta: 'env com unset e igual', comando: 'env --unset=CLAUDE_CODE_AGENT git commit -m "x"', motivo: /mexe em CLAUDE_CODE_AGENT/ },
+    { etiqueta: 'env com unset e espaço', comando: 'env --unset CLAUDE_CODE_AGENT git commit -m "x"', motivo: /mexe em CLAUDE_CODE_AGENT/ },
+    { etiqueta: 'env que troca o papel', comando: 'env CLAUDE_CODE_AGENT=outro git commit -m "x"', motivo: /mexe em CLAUDE_CODE_AGENT/ },
+    { etiqueta: 'GIT_CONFIG_COUNT', comando: 'GIT_CONFIG_COUNT=1 git commit -m "x"', motivo: /mexe em GIT_CONFIG_COUNT/ },
+    { etiqueta: 'export de GIT_CONFIG', comando: 'export GIT_CONFIG_COUNT=1', motivo: /mexe em GIT_CONFIG_COUNT/ },
+    { etiqueta: 'export só do nome', comando: 'export -n CLAUDE_CODE_AGENT', motivo: /mexe em CLAUDE_CODE_AGENT/ },
+    { etiqueta: 'git pelo caminho absoluto', comando: '/usr/bin/git commit --no-verify -m "x"', motivo: /--no-verify/ },
+    { etiqueta: 'git atrás do env', comando: 'env git commit -n -m "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git atrás do command', comando: 'command git commit -n -m "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git atrás de uma atribuição', comando: 'GIT_AUTHOR_DATE=x git commit -n -m "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git com C antes do subcomando', comando: 'git -C ../outro commit -n -m "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git com git-dir antes do subcomando', comando: 'git --git-dir .git commit -n -m "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git com work-tree antes do subcomando', comando: 'git --work-tree /x commit -n -m "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git com attr-source antes do subcomando', comando: 'git --attr-source HEAD commit -n -m x', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git com shallow-file antes do subcomando', comando: 'git --shallow-file x commit -n -m x', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git com super-prefix antes do subcomando', comando: 'git --super-prefix x/ commit -n -m x', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git com namespace antes do subcomando', comando: 'git --namespace n commit -n -m "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git com config-env antes do subcomando', comando: 'git --config-env core.hooksPath=VAR commit -m "x"', motivo: /core\.hooksPath/ },
+    { etiqueta: 'git depois do env que tira outra variável', comando: 'env -u FOO git commit -n -m "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'git depois do env com opção', comando: 'env -i git commit -n -m "x"', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'atribuição solta do papel', comando: 'CLAUDE_CODE_AGENT=outro', motivo: /mexe em CLAUDE_CODE_AGENT/ },
+    { etiqueta: 'barra invertida dentro da opção', comando: 'git commit --no-verif\\y -m x', motivo: /--no-verify/ },
+    { etiqueta: 'barra invertida dentro do subcomando', comando: 'git commi\\t -n -m x', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'aspas ANSI-C na opção', comando: "git commit $'--no-verify' -m x", motivo: /--no-verify/ },
+    { etiqueta: 'ANSI-C colada no fim da opção', comando: "git commit --no-verif$'y' -m x", motivo: /--no-verify/ },
+    { etiqueta: 'ANSI-C colada no n', comando: "git commit -$'n' -m x", motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'aspas duplas com cifrão na opção', comando: 'git commit --no-verif$"y" -m x', motivo: /--no-verify/ },
+    { etiqueta: 'aspas duplas com cifrão no n', comando: 'git commit -$"n" -m x', motivo: /-n, que é --no-verify/ },
+    { etiqueta: 'barra invertida antes da quebra de linha', comando: 'git commit \\\n--no-verify -m x', motivo: /--no-verify/ },
+    { etiqueta: 'alias por c com no-verify dentro', comando: 'git -c alias.c="commit --no-verify" c -m x', motivo: /define um alias do git/ },
+    { etiqueta: 'alias por c em maiúsculas', comando: 'git -c ALIAS.c=commit c -m x', motivo: /define um alias do git/ },
+    { etiqueta: 'alias por config-env', comando: 'git --config-env alias.c=VAR c -m x', motivo: /define um alias do git/ },
+    { etiqueta: 'alias por config-env com igual', comando: 'V="commit -n" git --config-env=alias.c=V c -m x', motivo: /define um alias do git/ },
+    { etiqueta: 'hookspath por config-env com igual', comando: 'git --config-env=core.hooksPath=V commit -m x', motivo: /core\.hooksPath/ },
+    { etiqueta: 'alias por c junto do config', comando: 'git -c alias.x=y config --list', motivo: /define um alias do git/ },
+    { etiqueta: 'alias por config', comando: 'git config alias.ci "commit -n"', motivo: /define um alias do git/ },
+    { etiqueta: 'alias por config global', comando: 'git config --global alias.ci "commit -n"', motivo: /define um alias do git/ },
+  ]
+
+  it.each(negados)('negado: $etiqueta', ({ comando, motivo }) => {
+    expect(desvioDoHook(comando)).toMatch(motivo)
+  })
+
+  const passam = [
+    { etiqueta: 'git log com n', comando: 'git log -n 3' },
+    { etiqueta: 'git diff com no-ext-diff', comando: 'git diff --no-ext-diff' },
+    { etiqueta: 'git push com n, que é dry-run', comando: 'git push -n origin spec/x' },
+    { etiqueta: 'o separador de caminhos', comando: 'git add -- docs.md' },
+    { etiqueta: 'git com c de outra chave', comando: 'git -c user.name=x commit -m "x"' },
+    { etiqueta: 'git com atribuição de outra variável', comando: 'GIT_AUTHOR_DATE=x git commit -m "x"' },
+    { etiqueta: 'git com env de outra variável', comando: 'env FOO=1 git status' },
+    { etiqueta: 'git config de outra chave', comando: 'git config user.name x' },
+    { etiqueta: 'grep na variável do papel', comando: 'grep CLAUDE_CODE_AGENT .claude/settings.json' },
+    { etiqueta: 'printenv da variável do papel', comando: 'printenv CLAUDE_CODE_AGENT' },
+    { etiqueta: 'unset de outra variável', comando: 'unset FOO' },
+    { etiqueta: 'export de outra variável', comando: 'export PATH=/usr/bin' },
+    { etiqueta: 'mensagem do commit que fala dos desvios', comando: 'git commit -m "não use --no-verify nem CLAUDE_CODE_AGENT= nem -n"' },
+    { etiqueta: 'mensagem para outro agente', comando: 'maestri ask "Mesa" "o hook barra --no-verify e unset CLAUDE_CODE_AGENT"' },
+    { etiqueta: 'a mensagem que é a letra n', comando: 'git commit -mn' },
+    { etiqueta: 'untracked-files no', comando: 'git commit -uno -m "x"' },
+    { etiqueta: 'a mensagem de arquivo', comando: 'git commit -F msg.txt' },
+    { etiqueta: 'comando vazio', comando: '' },
+    { etiqueta: 'outro programa com no-verify', comando: 'npx lint-staged --no-verify' },
+    { etiqueta: 'palavra que só termina na atribuição', comando: 'x-GIT_CONFIG_COUNT=1 git commit -m "x"' },
+    { etiqueta: 'mensagem que cita o hooksPath', comando: 'git commit -m "Instala o core.hooksPath no prepare"' },
+    { etiqueta: 'mensagem que termina em n', comando: 'git commit -m "corrige x -n"' },
+    // Dentro de aspas duplas, `\"` é um caractere da mensagem e não fecha a palavra: o `--no-verify` depois dele é texto.
+    { etiqueta: 'aspas escapadas dentro da mensagem', comando: 'git commit -m "a \\" --no-verify"' },
+    { etiqueta: 'mensagem que cita um alias', comando: 'git commit -m "remove o alias.ci do config"' },
+    { etiqueta: 'mensagem que começa por alias', comando: 'git commit -m "alias.ci: remove do config"' },
+    { etiqueta: 'busca de um alias no log', comando: 'git log --grep alias.ci' },
+    { etiqueta: 'config de outra chave com alias no meio', comando: 'git config user.name "x alias.y"' },
+    { etiqueta: 'aspas ANSI-C na mensagem', comando: "git commit -m $'corrige x'" },
+    // Limite declarado: o que está dentro de `$'…'` não é decodificado (`\055` é o `-`), e o hook não alcança.
+    { etiqueta: 'limite: octal dentro de ANSI-C', comando: "git commit $'\\055\\055no-verify' -m x" },
+    { etiqueta: 'attr-source com igual é uma palavra só', comando: 'git --attr-source=HEAD commit -m x' },
+    { etiqueta: 'git de um alias que já estava no config', comando: 'git ci -m x' },
+    { etiqueta: 'mensagem com cifrão e número', comando: 'git commit -m "custa $5"' },
+    // `\'` dentro de `$'…'` não fecha as aspas: o `--no-verify` depois dele ainda é a mensagem.
+    { etiqueta: 'aspa escapada dentro de ANSI-C', comando: "git commit -m $'a\\' --no-verify'" },
+    // Limite declarado (techspec §5(a), a gramática do leitor): expansão não é decodificada.
+    { etiqueta: 'limite: expansão de parâmetro na opção', comando: 'git commit --no-verif${X}y -m x' },
+    { etiqueta: 'limite: chaves na opção', comando: 'git commit --no-verif{y,} -m x' },
+    // Limite declarado (techspec §5(a)): o `include.path` traz alias e `core.hooksPath` de um arquivo, e o hook não o lê.
+    { etiqueta: 'limite: include.path por c', comando: 'git -c include.path=/tmp/cfg c -m x' },
+  ]
+
+  it.each(passam)('passa: $etiqueta', ({ comando }) => {
+    expect(desvioDoHook(comando)).toBeNull()
+  })
+
+  it.each(['m', 'F', 'C', 'c', 't', 'S', 'u'])('passa: a letra %s leva o resto do bloco como argumento', (letra) => {
+    // `-mn` é a mensagem "n", `-Fn` o arquivo "n": o `n` depois delas não é a opção.
+    expect(desvioDoHook(`git commit -${letra}n`)).toBeNull()
+  })
+
+  it('limite declarado: aspas duplas em número ímpar dentro de $(cat <<EOF) desalinham a leitura, e a saída é a mensagem em arquivo', () => {
+    // O shell lê o `$(…)` como um contexto à parte; o leitor não, e a aspa solta fecha a palavra antes do tempo.
+    const heredoc = 'git commit -m "$(cat <<\'EOF\'\nCorrige o x\n\nUsa 5" de largura e fala do --no-verify\nEOF\n)"'
+    expect(desvioDoHook(heredoc)).toMatch(/--no-verify/)
+    // Com a mesma mensagem num arquivo, o desvio é o do comando, e o comando não tem nenhum.
+    expect(desvioDoHook('git commit -F msg.txt')).toBeNull()
+  })
+
+  it('o papel do time é o que decide: portao nega com papel e deixa passar sem papel, ou com papel de fora do time', () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'desvio-'))
+    execFileSync('git', ['init', '-q'], { cwd: raiz })
+    const comando = { tool_input: { command: 'git commit --no-verify -m "x"' } }
+    expect(portao(comando, raiz, 'implementador')).toMatch(/Comando bloqueado: ele usa --no-verify.*papel `implementador`/)
+    expect(portao(comando, raiz, 'arquiteto')).toMatch(/Comando bloqueado/)
+    expect(portao(comando, raiz, '')).toBeNull()
+    // Sem papel é '' e não undefined: undefined cai no padrão de `portao`, que lê CLAUDE_CODE_AGENT da sessão que roda o teste.
+    expect(portao(comando, raiz, 'general-purpose')).toBeNull()
+    expect(ehPapelDoTime('mesa-de-revisao')).toBe(true)
+    expect(ehPapelDoTime('intruso')).toBe(false)
+    expect(ehPapelDoTime(undefined)).toBe(false)
+  })
+})
+
+describe('a mensagem do commit vem do comando ou do arquivo (RF14)', () => {
+  it.each([
+    { etiqueta: 'F separado', comando: 'git commit -F msg.txt', arquivos: ['msg.txt'] },
+    { etiqueta: 'F colado', comando: 'git commit -Fmsg.txt', arquivos: ['msg.txt'] },
+    { etiqueta: 'file com igual', comando: 'git commit --file=msg.txt', arquivos: ['msg.txt'] },
+    { etiqueta: 'file separado', comando: 'git commit --file msg.txt', arquivos: ['msg.txt'] },
+    { etiqueta: 'F depois do a', comando: 'git commit -aF msg.txt', arquivos: ['msg.txt'] },
+    { etiqueta: 'F colado depois do a', comando: 'git commit -aFmsg.txt', arquivos: ['msg.txt'] },
+    { etiqueta: 'F com C antes do subcomando', comando: 'git -C ../andar commit -F msg.txt', arquivos: ['msg.txt'] },
+    { etiqueta: 'F de dois commits', comando: 'git commit -F um.txt && git commit -F dois.txt', arquivos: ['um.txt', 'dois.txt'] },
+    { etiqueta: 'F entre aspas', comando: 'git commit -F "minha mensagem.txt"', arquivos: ['minha mensagem.txt'] },
+    { etiqueta: 'F sem arquivo', comando: 'git commit -F', arquivos: [] },
+    { etiqueta: 'mensagem que fala de F', comando: 'git commit -m "usa -F nao.txt"', arquivos: [] },
+    { etiqueta: 'mensagem que começa por F', comando: 'git commit -mFoo', arquivos: [] },
+    { etiqueta: 'mensagem sem arquivo', comando: 'git commit -m "x"', arquivos: [] },
+    { etiqueta: 'F de outro subcomando', comando: 'git log -F x', arquivos: [] },
+    { etiqueta: 'F de outro programa', comando: 'grep -F x y && git status', arquivos: [] },
+  ])('acha o arquivo: $etiqueta', ({ comando, arquivos }) => {
+    expect(arquivosDaMensagem(comando)).toEqual(arquivos)
+  })
+
+  it('lê os arquivos a partir da pasta do commit, junta os textos e trata o que não existe como vazio', () => {
+    const pasta = mkdtempSync(join(tmpdir(), 'mensagem-'))
+    writeFileSync(join(pasta, 'um.txt'), 'primeira\n')
+    writeFileSync(join(pasta, 'dois.txt'), 'segunda\n')
+    expect(textoDosArquivosDeMensagem('git commit -F um.txt', pasta)).toBe('primeira\n')
+    expect(textoDosArquivosDeMensagem('git commit -F um.txt && git commit -F dois.txt', pasta)).toBe('primeira\n\nsegunda\n')
+    expect(textoDosArquivosDeMensagem(`git commit -F ${join(pasta, 'um.txt')}`, '/outra/pasta')).toBe('primeira\n')
+    expect(textoDosArquivosDeMensagem('git commit -F nao-existe.txt', pasta)).toBe('')
+    expect(textoDosArquivosDeMensagem('git commit -F -', pasta)).toBe('')
+    // O que não é arquivo regular (uma pasta, um fifo como `/dev/stdin`) não é lido: ler prenderia o hook.
+    mkdirSync(join(pasta, 'uma-pasta'))
+    expect(textoDosArquivosDeMensagem('git commit -F uma-pasta', pasta)).toBe('')
+    const fifo = join(pasta, 'fila')
+    execFileSync('mkfifo', [fifo])
+    const escritor = spawn('sh', ['-c', 'echo texto > "$0"', fifo], { stdio: 'ignore' })
+    try {
+      expect(textoDosArquivosDeMensagem('git commit -F fila', pasta)).toBe('')
+    } finally {
+      escritor.kill() // o escritor espera um leitor para abrir o fifo, e ninguém vai lê-lo
+    }
+    expect(textoDosArquivosDeMensagem('git commit -m "x"', pasta)).toBe('')
+  })
+
+  it('a linha Fora do processo: é negada no comando e no arquivo, e a menção no meio de uma linha do arquivo passa', () => {
+    expect(bloqueioDoForaDoProcesso('git commit -m "x"', '')).toBeNull()
+    expect(bloqueioDoForaDoProcesso('git commit -m "x\n\nFora do processo: ajuste"', '')).toMatch(/essa linha é só do Joaquim.*git commit -F <arquivo>/)
+    expect(bloqueioDoForaDoProcesso('git commit -m "x\n\nFORA DO PROCESSO: ajuste"', '')).toMatch(/essa linha é só do Joaquim/)
+    // No comando vale o termo em qualquer lugar, não só no começo de uma linha: dentro de `-m "…"` não se separa linha de menção.
+    expect(bloqueioDoForaDoProcesso('git commit -m "Recusa a linha Fora do processo: em papel"', '')).toMatch(/essa linha é só do Joaquim.*git commit -F <arquivo>/)
+    const doArquivo = bloqueioDoForaDoProcesso('git commit -F msg.txt', 'x\n\nFora do processo: ajuste\n')
+    expect(doArquivo).toMatch(/essa linha é só do Joaquim/)
+    expect(doArquivo).not.toMatch(/git commit -F <arquivo>/)
+    expect(bloqueioDoForaDoProcesso('git commit -F msg.txt', 'x\n\nfora do processo: ajuste\n')).toMatch(/essa linha é só do Joaquim/)
+    expect(bloqueioDoForaDoProcesso('git commit -F msg.txt', 'Recusa a linha Fora do processo: nos commits de papel\n')).toBeNull()
+  })
+
+  /** Uma árvore com a mensagem em arquivo, e outra árvore (de outro repositório) com a mensagem do commit que ela recebe por `-C`. */
+  function arvoreComMensagens() {
+    const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe' })
+    const raiz = mkdtempSync(join(tmpdir(), 'mensagem-raiz-'))
+    const outra = mkdtempSync(join(tmpdir(), 'mensagem-outra-'))
+    git(raiz, 'init', '-q')
+    git(outra, 'init', '-q')
+    writeFileSync(join(raiz, 'com-a-linha.txt'), 'Corrige x\n\nFora do processo: ajuste do Joaquim\n')
+    writeFileSync(join(raiz, 'com-a-mencao.txt'), 'Recusa a linha Fora do processo: nos commits de papel\n')
+    writeFileSync(join(raiz, 'com-o-desvio.txt'), 'Explica que --no-verify e CLAUDE_CODE_AGENT= são barrados\n')
+    // Só na outra árvore: ler da pasta errada (a da sessão) não acha o arquivo e deixa o commit passar.
+    writeFileSync(join(outra, 'so-na-outra.txt'), 'Corrige x\n\nFora do processo: ajuste do Joaquim\n')
+    return { raiz, outra }
+  }
+
+  it.each(['', 'implementador'])('portao, com o papel "%s": nega a linha no -m e nos arquivos de -F, e deixa passar o resto', (papel) => {
+    const { raiz, outra } = arvoreComMensagens()
+    const decidir = (command: string, cwd?: string) => portao({ tool_input: { command }, ...(cwd ? { cwd } : {}) }, raiz, papel)
+    expect(decidir('git commit -m "x\n\nFora do processo: ajuste"')).toMatch(/Commit bloqueado: a mensagem traz "Fora do processo:".*git commit -F <arquivo>/)
+    for (const forma of ['git commit -F com-a-linha.txt', 'git commit -Fcom-a-linha.txt', 'git commit --file=com-a-linha.txt', 'git commit --file com-a-linha.txt']) {
+      const motivo = decidir(forma)
+      expect(motivo, forma).toMatch(/Commit bloqueado: a mensagem traz "Fora do processo:"/)
+      expect(motivo, forma).not.toMatch(/git commit -F <arquivo>/)
+    }
+    // O arquivo vale a partir da pasta em que o commit roda: o -C da outra árvore, e o cwd da sessão.
+    expect(decidir(`git -C ${outra} commit -F so-na-outra.txt`)).toMatch(/Fora do processo:/)
+    expect(decidir('git commit -F com-a-linha.txt', raiz)).toMatch(/Fora do processo:/)
+    // O cwd do comando é a pasta do commit: `so-na-outra.txt` só existe na `outra`, e a raiz da sessão é a `raiz`.
+    expect(decidir('git commit -F so-na-outra.txt', outra)).toMatch(/Fora do processo:/)
+    expect(decidir('git commit -F so-na-outra.txt')).toBeNull()
+    // A menção no meio da linha, e o `--no-verify` dentro do arquivo, passam: o hook lê a linha, e o desvio é o do comando.
+    expect(decidir('git commit -F com-a-mencao.txt')).toBeNull()
+    expect(decidir('git commit -F com-o-desvio.txt')).toBeNull()
+    expect(decidir('git commit -F nao-existe.txt')).toBeNull()
+  })
+
+  it('a marca e a linha de revisões vêm do arquivo de -F, como vinham do -m', () => {
+    const { raiz } = arvoreComMensagens()
+    mkdirSync(join(raiz, 'tasks/prd-exemplo'), { recursive: true })
+    writeFileSync(join(raiz, 'tasks/prd-exemplo/9_task.md'), TAREFA)
+    mkdirSync(join(raiz, 'apps'), { recursive: true })
+    writeFileSync(join(raiz, 'apps/codigo.ts'), 'export const a = 1\n')
+    writeFileSync(join(raiz, 'da-tarefa.txt'), 'Implementa x (tarefa 9.0)\n\nRevisões: ok\n')
+    const comando = (command: string) => ({ tool_input: { command } })
+    // Sem a marca no comando, o commit de código só passava pela marca; agora o arquivo a traz, e a decisão segue para os revisores.
+    expect(portao(comando('git add -A && git commit -F da-tarefa.txt'), raiz, '')).toMatch(/revisões de tasks\/prd-exemplo\/9_task\.md incompletas/)
+    expect(portao(comando('git add -A && git commit -F com-a-mencao.txt'), raiz, '')).toMatch(/leva código \(apps\/codigo\.ts\) sem "\(tarefa N\.0\)"/)
+  })
+})
+
+describe('decidirCommit e portao decidem igual (RF14)', () => {
+  const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe' })
+  const DOCUMENTO = 'tasks/prd-exemplo/9_task.md'
+  const REVISORES = ['infra-guardian', 'tenancy-guardian', 'test-engineer', 'revisor-geral']
+
+  /** Uma árvore com a tarefa 9.0 revisada por todos às 10:05, o código salvo às 09:00 e o portão local carimbado às 09:59:30. */
+  function arvoreRevisada() {
+    const raiz = mkdtempSync(join(tmpdir(), 'paridade-'))
+    git(raiz, 'init', '-q')
+    mkdirSync(join(raiz, 'tasks/prd-exemplo'), { recursive: true })
+    mkdirSync(join(raiz, 'apps'), { recursive: true })
+    const revisada = tarefaCom(...REVISORES.map((revisor) => rodada(revisor, 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:05:00')))
+    writeFileSync(join(raiz, DOCUMENTO), revisada.replace(', `frontend-reviewer`', ''))
+    writeFileSync(join(raiz, 'apps/codigo.ts'), 'export const a = 1\n')
+    writeFileSync(join(raiz, 'docs.md'), 'texto\n')
+    utimesSync(join(raiz, 'apps/codigo.ts'), new Date('2026-09-13T09:00:00'), new Date('2026-09-13T09:00:00'))
+    gravarCarimbo(raiz, { inicio: new Date('2026-09-13T09:59:30').toISOString(), suites: ['typecheck', 'lint', 'segredo', 'dependencias', 'test'] })
+    return raiz
+  }
+
+  /** Pelas duas entradas, com o que o comando levaria: tudo o que está alterado. */
+  function pelasDuas(raiz: string, mensagem: string, conferencia?: Parameters<typeof portao>[3], conteudoDe = conteudoDoDisco(raiz)) {
+    const comando = `git add -A && git commit -m "${mensagem}"`
+    return {
+      peloPortao: portao({ tool_input: { command: comando } }, raiz, '', conferencia),
+      peloHook: decidirCommit({ mensagem: comando, arquivos: arquivosAlterados(raiz), conteudoDe, raiz, papel: '' }, conferencia),
+    }
+  }
+
+  it('passam os dois, ou bloqueiam os dois com o mesmo motivo', () => {
+    const raiz = arvoreRevisada()
+    const marca = 'Implementa x (tarefa 9.0)\n\nRevisões: ok'
+    const verde = pelasDuas(raiz, marca)
+    expect(verde.peloPortao).toBeNull()
+    expect(verde.peloHook).toBeNull()
+
+    const semLinha = pelasDuas(raiz, 'Implementa x (tarefa 9.0)')
+    expect(semLinha.peloPortao).toMatch(/A mensagem do commit precisa da linha de revisões/)
+    expect(semLinha.peloHook).toBe(semLinha.peloPortao)
+
+    const codigoSemMarca = pelasDuas(raiz, 'Ajusta x')
+    expect(codigoSemMarca.peloPortao).toMatch(/leva código \(apps\/codigo\.ts\) sem "\(tarefa N\.0\)"/)
+    expect(codigoSemMarca.peloHook).toBe(codigoSemMarca.peloPortao)
+
+    const semDocumento = pelasDuas(raiz, 'Corrige x (correção 2026-09-13-x)')
+    expect(semDocumento.peloPortao).toMatch(/não tem tasks\/correcoes\/2026-09-13-x\.md/)
+    expect(semDocumento.peloHook).toBe(semDocumento.peloPortao)
+
+    const conferencia = () => 'portão local: as mutações não foram conferidas'
+    const comConferencia = pelasDuas(raiz, marca, conferencia)
+    expect(comConferencia.peloPortao).toMatch(/revisões de tasks\/prd-exemplo\/9_task\.md incompletas\.\n- portão local: as mutações não foram conferidas$/)
+    expect(comConferencia.peloHook).toBe(comConferencia.peloPortao)
+  })
+
+  it('o veto e o carimbo que não vale bloqueiam igual nas duas entradas', () => {
+    const raiz = arvoreRevisada()
+    const marca = 'Implementa x (tarefa 9.0)\n\nRevisões: ok'
+    writeFileSync(join(raiz, DOCUMENTO), acrescentarRevisao(readFileSync(join(raiz, DOCUMENTO), 'utf8'), rodada('tenancy-guardian', 'REPROVADO', '2026-09-13 10:20:00')))
+    const reprovado = pelasDuas(raiz, marca)
+    expect(reprovado.peloPortao).toMatch(/tenancy-guardian: a última rodada \(2ª/)
+    expect(reprovado.peloHook).toBe(reprovado.peloPortao)
+
+    rmSync(join(raiz, '.processo/portao.json'))
+    const semCarimbo = pelasDuas(raiz, marca)
+    expect(semCarimbo.peloPortao).toMatch(/portão local: nunca passou/)
+    expect(semCarimbo.peloHook).toBe(semCarimbo.peloPortao)
+  })
+
+  it('o revisor obrigatório sem rodada bloqueia igual nas duas entradas', () => {
+    const raiz = arvoreRevisada()
+    const semTestEngineer = tarefaCom(...REVISORES.filter((revisor) => revisor !== 'test-engineer').map((revisor) => rodada(revisor, 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:05:00')))
+    writeFileSync(join(raiz, DOCUMENTO), semTestEngineer.replace(', `frontend-reviewer`', ''))
+    const sem = pelasDuas(raiz, 'Implementa x (tarefa 9.0)\n\nRevisões: ok')
+    expect(sem.peloPortao).toMatch(/test-engineer: nenhuma rodada/)
+    expect(sem.peloHook).toBe(sem.peloPortao)
+  })
+
+  it('o documento que a entrada não consegue ler bloqueia, e diz qual', () => {
+    const raiz = arvoreRevisada()
+    // Só o `peloHook` é conferido: o `portao` monta o `conteudoDe` do disco e sempre acha o documento, e a entrada que não o lê é a do git hook.
+    const semDocumento = pelasDuas(raiz, 'Implementa x (tarefa 9.0)\n\nRevisões: ok', undefined, () => null)
+    expect(semDocumento.peloHook).toBe(`Commit bloqueado: não achei ${DOCUMENTO} para conferir as revisões.`)
+  })
+
+  it('o que o commit leva decide se há código; os alterados da árvore decidem a caducidade e a conferência', () => {
+    const raiz = arvoreRevisada()
+    const conteudoDe = conteudoDoDisco(raiz)
+    const marca = 'Implementa x (tarefa 9.0)\n\nRevisões: ok'
+    // O código muda às 10:30, depois da rodada. O commit leva só o documento: sem `alterados`, a caducidade não o vê.
+    writeFileSync(join(raiz, 'apps/codigo.ts'), 'export const a = 2\n')
+    utimesSync(join(raiz, 'apps/codigo.ts'), new Date('2026-09-13T10:30:00'), new Date('2026-09-13T10:30:00'))
+    const base = { mensagem: marca, conteudoDe, raiz, papel: undefined }
+    expect(decidirCommit({ ...base, arquivos: [DOCUMENTO] })).toBeNull()
+    expect(decidirCommit({ ...base, arquivos: [DOCUMENTO], alterados: ['apps/codigo.ts'] })).toMatch(/infra-guardian: apps\/codigo\.ts mudou/)
+    // Sem marca, quem decide se há código é o que o commit leva, e não o que a árvore tem alterado.
+    expect(decidirCommit({ ...base, mensagem: 'Atualiza o texto', arquivos: ['docs.md'], alterados: ['apps/codigo.ts'] })).toBeNull()
+    expect(decidirCommit({ ...base, mensagem: 'Atualiza o texto', arquivos: ['apps/codigo.ts'], alterados: ['docs.md'] })).toMatch(/leva código \(apps\/codigo\.ts\)/)
+    // Sem `alterados`, valem os arquivos do commit, e a conferência recebe o mesmo conjunto.
+    expect(decidirCommit({ ...base, arquivos: ['apps/codigo.ts'] })).toMatch(/infra-guardian: apps\/codigo\.ts mudou/)
+    const vistos: string[][] = []
+    decidirCommit({ ...base, arquivos: [DOCUMENTO], alterados: ['apps/codigo.ts', 'docs.md'] }, (_carimbo, _documento, _conteudo, arquivos) => (vistos.push(arquivos), null))
+    decidirCommit({ ...base, arquivos: [DOCUMENTO] }, (_carimbo, _documento, _conteudo, arquivos) => (vistos.push(arquivos), null))
+    expect(vistos).toEqual([['apps/codigo.ts', 'docs.md'], [DOCUMENTO]])
+  })
+
+  it('o conteúdo do disco: o arquivo que existe, e null para o que não existe', () => {
+    const raiz = arvoreRevisada()
+    expect(conteudoDoDisco(raiz)('docs.md')).toBe('texto\n')
+    expect(conteudoDoDisco(raiz)('nao-existe.md')).toBeNull()
+    // Uma pasta não é arquivo: devolve null em vez de lançar.
+    expect(conteudoDoDisco(raiz)('tasks')).toBeNull()
   })
 })

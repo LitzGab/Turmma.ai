@@ -31,7 +31,7 @@ if (modo === 'registrar') {
     // Com a conferência das mutações: o commit de tarefa só passa se o último portão conferiu os blocos como estão agora.
     motivo = portao(entrada, raiz, undefined, avaliarMutacoes)
   } catch (erro) {
-    motivo = `Commit bloqueado: o portão de revisões falhou (${(erro as Error).message}). Avise o Joaquim.`
+    motivo = `Comando bloqueado: o portão de revisões falhou (${(erro as Error).message}). Avise o Joaquim.`
   }
   if (motivo) {
     process.stdout.write(

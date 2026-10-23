@@ -10,7 +10,7 @@
 // A terceira marca é `(mvp: <resumo>)`, da fatia do MVP de apresentação (D77): não tem documento de
 // tarefa nem revisor por commit (os revisores passam por fase), e por isso sobra só o portão local
 // carimbado. Vale só em branch `mvp/…`, para o processo enxuto não vazar para a `develop`.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import {
   alteracaoQueCaduca,
@@ -33,11 +33,14 @@ import {
   arquivosPreparados,
   arvoreDoCommit,
   branchAtual,
-  documentoDoCommit,
+  desvioDoHook,
+  documentoDaMensagem,
   ehCommit,
+  ehPapelDoTime,
   marcadorDoMvp,
   pastaDoCommit,
   pushDoTime,
+  textoDosArquivosDeMensagem,
 } from './comando-git.ts'
 import { formatarHora, lerRevisoes, REVISORES_COM_VETO, revisoresObrigatorios, tipoDoDocumento, type EntradaHook, type Revisao } from './documento-de-revisao.ts'
 
@@ -284,20 +287,31 @@ function bloqueioAntesDaArvore(comando: string, raizDaSessao: string, cwd: strin
   return null
 }
 
-/** O commit que não cita documento: passa quando não leva código, vale pelo `(mvp: …)` na fatia do MVP, e bloqueia nos outros casos. */
-function bloqueioDoCommitSemDocumento(comando: string, raiz: string, arquivos: string[]): string | null {
-  const codigo = arquivosDoCommit(comando, raiz, arquivos, arquivosPreparados(raiz)).filter((arquivo) =>
-    PASTAS_DE_CODIGO.some((pasta) => arquivo.startsWith(pasta)),
-  )
+/** O que a decisão do commit precisa saber dele. É a mesma para as duas entradas: o `PreToolUse` do Bash e o git hook nativo. */
+export interface EntradaDoCommit {
+  /** O texto inteiro do commit. No `PreToolUse`, o comando mais o arquivo de `-F`; no git hook, a mensagem. */
+  mensagem: string
+  /** Os arquivos que o commit leva: é por eles que se vê se ele leva código. */
+  arquivos: string[]
+  /**
+   * Os arquivos alterados da árvore: são eles que caducam as rodadas e entram na conferência das mutações. O `PreToolUse`
+   * os lê do `git status`, mais largo que o commit; sem eles, valem os que o commit leva, que é o caso do git hook.
+   */
+  alterados?: string[]
+  /** O conteúdo de um arquivo, ou `null` quando ele não existe. No `PreToolUse` é o disco; o git hook entrega o índice. */
+  conteudoDe: (arquivo: string) => string | null
+  /** A raiz da árvore: dela vêm o carimbo, os instantâneos (`.processo/`), as pastas de `tasks/` e a hora dos arquivos. */
+  raiz: string
+  /** O papel da sessão (`CLAUDE_CODE_AGENT`). A tarefa 14.0 o lê, para as pastas de processo valerem só em sessão de papel (RF16). */
+  papel: string | undefined
+}
+
+const arquivosDeCodigo = (arquivos: string[]): string[] => arquivos.filter((arquivo) => PASTAS_DE_CODIGO.some((pasta) => arquivo.startsWith(pasta)))
+
+/** O commit que não cita documento: passa quando não leva código, e bloqueia quando leva. */
+function bloqueioDoCommitSemDocumento(arquivos: string[]): string | null {
+  const codigo = arquivosDeCodigo(arquivos)
   if (codigo.length === 0) return null
-  if (marcadorDoMvp(comando) !== null) {
-    return avaliarCommitDoMvp({
-      branch: branchAtual(raiz),
-      carimbo: lerCarimbo(raiz),
-      alteracoes: alteracoesDeCodigo(raiz, arquivos),
-      instantaneo: lerInstantaneos(raiz)[CHAVE_DO_PORTAO],
-    })
-  }
   return (
     `Commit bloqueado: ele leva código (${codigo.slice(0, 3).join(', ')}${codigo.length > 3 ? ', …' : ''}) sem "(tarefa N.0)" nem "(correção <slug>)". ` +
     'Código entra por tarefa ou por correção, que passam pelos revisores (o Orquestrador conduz, com /seguir). ' +
@@ -306,27 +320,116 @@ function bloqueioDoCommitSemDocumento(comando: string, raiz: string, arquivos: s
 }
 
 /** As revisões, o portão carimbado e a conferência a mais do documento que o commit cita. */
-function bloqueioDoDocumento(
-  comando: string,
-  raiz: string,
-  arquivos: string[],
-  caminho: string,
-  conferencia: ConferenciaDoDocumento,
-): string | null {
-  const conteudo = readFileSync(join(raiz, caminho), 'utf8')
+function bloqueioDoDocumento(entrada: EntradaDoCommit, alterados: string[], caminho: string, conferencia: ConferenciaDoDocumento): string | null {
+  const conteudo = entrada.conteudoDe(caminho)
+  if (conteudo === null) return `Commit bloqueado: não achei ${caminho} para conferir as revisões.`
   const { bloqueios } = avaliarPortao({
     obrigatorios: revisoresObrigatorios(conteudo, tipoDoDocumento(caminho)),
     revisoes: lerRevisoes(conteudo),
-    alteracoes: alteracoesDeCodigo(raiz, arquivos),
-    carimbo: lerCarimbo(raiz),
-    mensagemCommit: comando,
+    alteracoes: alteracoesDeCodigo(entrada.raiz, alterados),
+    carimbo: lerCarimbo(entrada.raiz),
+    mensagemCommit: entrada.mensagem,
     documento: caminho,
-    instantaneos: lerInstantaneos(raiz),
+    instantaneos: lerInstantaneos(entrada.raiz),
   })
-  const aMais = conferencia(lerCarimbo(raiz), caminho, conteudo, arquivos)
+  const aMais = conferencia(lerCarimbo(entrada.raiz), caminho, conteudo, alterados)
   if (aMais !== null) bloqueios.push(aMais)
   if (bloqueios.length === 0) return null
   return `Commit bloqueado: revisões de ${caminho} incompletas.\n- ${bloqueios.join('\n- ')}`
+}
+
+/**
+ * A decisão do commit, inteira e sem rodar git: a marca, o documento que ela cita, os revisores obrigatórios, as pastas de
+ * código, o portão carimbado e a conferência a mais do documento (a das mutações, que quem chama entrega porque este
+ * módulo não importa o `mutacoes.ts`). Devolve o motivo do bloqueio, ou `null` quando o commit passa.
+ *
+ * O `PreToolUse` (`portao`) a chama com o que o comando e a árvore dizem; o git hook nativo a chamará com o índice (11.0).
+ * Lê o disco da `raiz` em três pontos, e é divergência declarada (`10_task.md`, `techspec.md` §5a): o que o processo guarda
+ * (`.processo/`, a pasta `tasks/`, o documento de correção citado); e a caducidade (`alteracoesDeCodigo`), que compara bytes
+ * e hora dos arquivos de código com o carimbo, e por isso não passa por `conteudoDe`, que devolve texto: os bytes dos
+ * arquivos alterados saem do disco. O `conteudoDe` só lê o documento da tarefa.
+ */
+export function decidirCommit(entrada: EntradaDoCommit, conferencia: ConferenciaDoDocumento = () => null): string | null {
+  const alterados = entrada.alterados ?? entrada.arquivos
+  const documento = documentoDaMensagem(entrada.mensagem, entrada.raiz, alterados)
+  if (!documento) return bloqueioDoCommitSemDocumento(entrada.arquivos)
+  if ('erro' in documento) return documento.erro
+  return bloqueioDoDocumento(entrada, alterados, documento.caminho, conferencia)
+}
+
+/** O conteúdo de um arquivo da árvore, no disco; `null` quando não existe ou não é arquivo (uma pasta). É o `conteudoDe` do `PreToolUse`. */
+export function conteudoDoDisco(raiz: string): (arquivo: string) => string | null {
+  return (arquivo) => {
+    const caminho = join(raiz, arquivo)
+    return existsSync(caminho) && statSync(caminho).isFile() ? readFileSync(caminho, 'utf8') : null
+  }
+}
+
+/** O commit da fatia do MVP (D77): marcador com resumo, sem documento de tarefa, levando código. A tarefa 14.0 o tira (RF18). */
+function ehCommitDoMvp(entrada: EntradaDoCommit, alterados: string[]): boolean {
+  return (
+    marcadorDoMvp(entrada.mensagem) !== null &&
+    documentoDaMensagem(entrada.mensagem, entrada.raiz, alterados) === null &&
+    arquivosDeCodigo(entrada.arquivos).length > 0
+  )
+}
+
+export const TERMO_FORA_DO_PROCESSO = 'Fora do processo:'
+/** A linha da mensagem que dispensa a marca no commit do Joaquim (`techspec.md` §5a). */
+const LINHA_FORA_DO_PROCESSO = /^Fora do processo:/im
+
+/**
+ * O bloqueio da linha `Fora do processo:` em qualquer sessão do Claude Code, o Orquestrador inclusive: ela é só do
+ * terminal do Joaquim. No arquivo de `-F` vale a linha que começa pelo termo; no comando, o termo em qualquer lugar,
+ * porque dentro de `-m "…"` o hook não separa linha de menção, e a dica é gravar a mensagem num arquivo.
+ */
+export function bloqueioDoForaDoProcesso(comando: string, doArquivo: string): string | null {
+  const noArquivo = LINHA_FORA_DO_PROCESSO.test(doArquivo)
+  if (!noArquivo && !comando.toLowerCase().includes(TERMO_FORA_DO_PROCESSO.toLowerCase())) return null
+  const dica = noArquivo
+    ? ''
+    : ' Se o termo está na mensagem só como menção, grave a mensagem num arquivo e use `git commit -F <arquivo>`: no arquivo, só vale a linha que começa por ele.'
+  return (
+    `Commit bloqueado: a mensagem traz "${TERMO_FORA_DO_PROCESSO}", e essa linha é só do Joaquim, no terminal dele (D53). Sessão do Claude Code, ` +
+    `o Orquestrador inclusive, não a escreve: o commit de código leva "(tarefa N.0)" ou "(correção <slug>)" e os revisores.${dica}`
+  )
+}
+
+/** O bloqueio de o papel pular o git hook ou trocar o ambiente em que ele julga. */
+function bloqueioDoDesvio(comando: string, papel: string | undefined): string | null {
+  const desvio = ehPapelDoTime(papel) ? desvioDoHook(comando) : null
+  if (desvio === null) return null
+  return (
+    `Comando bloqueado: ele ${desvio}. O papel \`${papel ?? ''}\` commita pelo git hook e pelo portão do commit (D53), e os dois só ` +
+    'julgam o que o ambiente diz. Se um deles atrapalha, o caminho é `/seguir DIVERGÊNCIA` com `Motivo: portão`, e não o de fora dele.'
+  )
+}
+
+/** O commit do `PreToolUse`: lê o comando e a árvore, monta a entrada da decisão e a chama. */
+function bloqueioDoCommit(comando: string, raizDaSessao: string, cwd: string | undefined, papel: string | undefined, conferencia: ConferenciaDoDocumento): string | null {
+  const raiz = arvoreDoCommit(comando, raizDaSessao, cwd)
+  const onde = pastaDoCommit(comando, raizDaSessao, cwd)
+  const doArquivo = textoDosArquivosDeMensagem(comando, onde && 'pasta' in onde ? onde.pasta : raiz)
+  const fora = bloqueioDoForaDoProcesso(comando, doArquivo)
+  if (fora !== null) return fora
+  const alterados = arquivosAlterados(raiz)
+  const entrada: EntradaDoCommit = {
+    mensagem: `${comando}\n${doArquivo}`,
+    arquivos: arquivosDoCommit(comando, raiz, alterados, arquivosPreparados(raiz)),
+    alterados,
+    conteudoDe: conteudoDoDisco(raiz),
+    raiz,
+    papel,
+  }
+  if (ehCommitDoMvp(entrada, alterados)) {
+    return avaliarCommitDoMvp({
+      branch: branchAtual(raiz),
+      carimbo: lerCarimbo(raiz),
+      alteracoes: alteracoesDeCodigo(raiz, alterados),
+      instantaneo: lerInstantaneos(raiz)[CHAVE_DO_PORTAO],
+    })
+  }
+  return decidirCommit(entrada, conferencia)
 }
 
 export function portao(
@@ -336,15 +439,12 @@ export function portao(
   conferencia: ConferenciaDoDocumento = () => null,
 ): string | null {
   const comando = entrada.tool_input?.command ?? ''
+  const desvio = bloqueioDoDesvio(comando, papel)
+  if (desvio !== null) return desvio
   const push = pushDoTime(comando, raizDaSessao, entrada.cwd, papel)
   if (push !== null) return push
   if (!ehCommit(comando)) return null
   const antes = bloqueioAntesDaArvore(comando, raizDaSessao, entrada.cwd)
   if (antes !== null) return antes
-  const raiz = arvoreDoCommit(comando, raizDaSessao, entrada.cwd)
-  const arquivos = arquivosAlterados(raiz)
-  const documento = documentoDoCommit(comando, raiz, arquivos)
-  if (!documento) return bloqueioDoCommitSemDocumento(comando, raiz, arquivos)
-  if ('erro' in documento) return documento.erro
-  return bloqueioDoDocumento(comando, raiz, arquivos, documento.caminho, conferencia)
+  return bloqueioDoCommit(comando, raizDaSessao, entrada.cwd, papel, conferencia)
 }

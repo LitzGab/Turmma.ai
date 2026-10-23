@@ -121,12 +121,12 @@ describe('knip: a trava de dependência declarada onde é usada, sem sobra', () 
     expect(Object.keys(configuracao).sort()).toEqual(['$schema', 'ignore', 'workspaces'])
     expect(configuracao['ignore']).toEqual(['tools/guardas/__fixtures__/**', 'tools/ci/fixtures/**'])
     // Cada workspace só diz o que olhar (`entry`, `project`); só a raiz tem exceção de nome, e é de fora do npm: `k6` é o
-    // módulo do executor do k6 (`import http from 'k6/http'`); `flock` e `maestri` são comandos do sistema.
+    // módulo do executor do k6 (`import http from 'k6/http'`); `flock`, `maestri` e `mkfifo` são comandos do sistema.
     for (const [nome, workspace] of Object.entries(configuracao.workspaces)) {
       const permitidas = nome === '.' ? ['entry', 'ignoreBinaries', 'ignoreDependencies', 'project'] : ['entry', 'project']
       expect(Object.keys(workspace).sort(), `workspace ${nome}`).toEqual(permitidas)
     }
     expect(configuracao.workspaces['.']?.['ignoreDependencies']).toEqual(['k6'])
-    expect(configuracao.workspaces['.']?.['ignoreBinaries']).toEqual(['flock', 'maestri'])
+    expect(configuracao.workspaces['.']?.['ignoreBinaries']).toEqual(['flock', 'maestri', 'mkfifo'])
   })
 })

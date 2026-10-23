@@ -70,6 +70,41 @@ do índice (`git show :<arquivo>`). Erro de carga recusa; fora de sessão de pap
 `pre-push` lê as refs da entrada padrão e recusa o push de papel para `develop`, `release` ou `main`. O merge do
 encontro, sem papel, passa; o de papel passa pela decisão.
 
+No código (10.0): `decidirCommit(entrada, conferencia)` recebe a conferência das mutações como segundo parâmetro, porque o
+`portao.ts` não importa o `mutacoes.ts` (§5d), e a entrada ganha `alterados`, opcional: os arquivos alterados da árvore, que
+caducam as rodadas e entram na conferência, enquanto `arquivos` são os que o commit leva e decidem se ele leva código. O
+`PreToolUse` lê os alterados do `git status`, mais largo que o commit, como sempre leu; sem `alterados`, valem os
+`arquivos`, que é o caso do git hook (a 11.0). O `papel` fica na entrada e é a 14.0 quem o lê (as pastas de processo valem só
+em sessão de papel, §5e). O `documentoDoCommit` virou `documentoDaMensagem(mensagem, raiz, arquivos)`, sem a guarda de
+`git commit` no texto, porque a mensagem do git hook não a tem. A mensagem do `PreToolUse` é o comando inteiro mais o texto
+do arquivo de `-F`, lido da pasta em que o commit roda (`-C`, `cd`); o comando inteiro, e não só o `-m`, porque a mensagem
+pode vir de `$(cat <<EOF …)`. O caminho `(mvp: …)` (D77) continua no `portao`, antes da `decidirCommit`, e sai na 14.0 (RF18).
+A linha `Fora do processo:` não é da `decidirCommit`: `bloqueioDoForaDoProcesso(comando, doArquivo)` a nega no
+`PreToolUse` e o `hook-git.ts` a reaproveita. No arquivo vale a linha que começa pelo termo; no comando, o termo em
+qualquer lugar, porque dentro de `-m "…"` não se separa linha de menção; sem distinguir maiúscula, para a esteira (12.0)
+não aceitar o que o hook deixou passar. O desvio (`desvioDoHook`) lê o comando por palavras do shell (aspas, `;`, `&&`,
+`|`, quebra de linha), vê o git atrás de caminho absoluto, atribuição, `env`, `command`, `exec`, `nohup` e `time`, e pula as
+opções do git antes do subcomando (`-C`, `-c`, `--git-dir`, `--work-tree`, `--namespace`, `--config-env`, `--attr-source`, `--shallow-file`, `--super-prefix`: as de `handle_options` do `git.c`, que levam o argumento na palavra seguinte). `-n` é
+`--no-verify` só no `commit`; `export` e `unset` da variável do papel entram junto de `VAR=` e `env -u`. Fica fora, e é
+limite declarado: `sh -c`, script, substituição de comando e `xargs`.
+
+Fechado na ordem de correção da rodada 1: a barra invertida fora das aspas (`--no-verif\y`, `commi\t`, antes da quebra de linha) e `$'--no-verify'` saem como no shell, e o alias do git (`-c alias.*`, `--config-env alias.*`, `config alias.*`) é negado, porque é o jeito mais curto de chamar `commit -n` sem dizê-lo. Limites a mais: o octal ou hexadecimal dentro de `$'…'` (`$'\055\055no-verify'`) não é decodificado; um alias que já estava no config de antes não é visto (`git ci -m x`); e aspas duplas em número ímpar dentro de `-m "$(cat <<EOF …)"` desalinham a leitura e dão negação falsa, cuja saída é a mensagem em arquivo (`git commit -F`). O arquivo de `-F` só é lido se for arquivo regular (uma pasta, `/dev/stdin` ou um fifo prenderiam o hook).
+
+**A gramática do leitor é fechada (diagnóstico da 10.0).** O leitor do bash não fica completo, e a lista de limites não
+cresce forma a forma. Ele decodifica exatamente isto, e nada mais: aspas simples; aspas duplas e `$"…"`, com `\"` e `\\`
+dentro; `$'…'` com `\'` e `\\` dentro (o resto do escape fica cru); a barra invertida fora das aspas e antes da quebra
+de linha; os separadores `;`, `&`, `|`, parênteses e quebra de linha; e os pedaços colados numa palavra só, com qualquer
+um destes no começo, no meio ou no fim (`--no-verif$'y'`, `-$'n'`). Do git, lê as seis opções antes do subcomando, nas
+formas com espaço e com `=` (`--config-env=…`), e nega `alias.*` e `core.hooksPath` nas três formas de gravar
+configuração: `-c k=v`, `--config-env k=V` ou `--config-env=k=V`, e `git config k`. **Todo o resto é limite, por
+categoria:** expansão de parâmetro (`$X`, `${X}`), de chaves (`{y,}`), de til, glob, substituição de comando e
+aritmética, o escape numérico de `$'…'`, e configuração que vem de arquivo (`include.*`, `includeIf.*`, um alias ou
+`core.hooksPath` que já estava no config, `HOME` ou `XDG_CONFIG_HOME` trocados). A terceira camada (`verificar`, 12.0)
+recusa o commit sem marca venha ele de onde vier. Na revisão, a forma que passa e está dentro da gramática é bug; a que
+depende de algo fora dela é limite já escrito aqui, e não volta como bloqueante.
+
+A `decidirCommit` não é pura no sentido estrito: lê o disco da `raiz` para o que o processo guarda (`.processo/`, a pasta `tasks/`, a existência do documento de correção) e para a caducidade (`alteracoesDeCodigo`), que compara os bytes e a hora dos arquivos de código com o carimbo e por isso não passa por `conteudoDe`, que devolve texto. O conteúdo do documento da tarefa vem de `conteudoDe`. Na 11.0, o git hook lê o disco para a caducidade, que no commit comum é igual ao índice.
+
 **Limites declarados (RF14).** A máquina não barra `env -u CLAUDE_CODE_AGENT` ou `--no-verify` dentro de script (que
 fura também o `pre-push`), `commit-tree`, `update-ref`, `rebase`, `cherry-pick`, `am`, `revert`, `-F -`, nem o Edit em
 `git-hooks/` ou `.git/config`. A terceira camada é o job `verificar`, em push de `spec/**` e `correcao/**` (não na

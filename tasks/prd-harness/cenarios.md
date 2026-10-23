@@ -63,6 +63,14 @@ papel: `--no-verify`, `--no-verif`, `--no-ver`; `commit -n`, `-nm "x"`, `-anm "x
 `grep CLAUDE_CODE_AGENT`, `printenv CLAUDE_CODE_AGENT`, `git commit -F msg.txt` com `--no-verify` dentro do arquivo, e
 qualquer um dos negados acima sem papel, menos o `Fora do processo:`, que também é negado no arquivo da mensagem (`-F msg.txt`,
 `-Fmsg.txt`, `--file=msg.txt`); `-F -` com heredoc fica nos limites declarados. Termo só dentro de `-m "..."`: negado com a dica de `-F`.
+Acrescentados na 10.0 (`revisoes.test.ts`, as funções puras, e `hook-portao.test.ts` para as formas da lista acima): o git atrás de
+`/usr/bin/git`, `env`, `command`, atribuição, `-C` e `--git-dir`; `--no-v`; `push --no-verify`; `env --unset`, `env -uNOME` e `export`
+da variável; `-n` só no `commit` (`push -n` passa) e `-mn`, `-Fn`, `-uno` passam, porque a letra depois de `m`, `F`, `C`, `c`, `t`, `S`
+e `u` é o argumento; `--no-verify` e `CLAUDE_CODE_AGENT=` dentro de uma mensagem ou de uma mensagem a outro agente passam;
+`--` de caminhos passa; o `Fora do processo:` sem distinguir maiúscula, a menção no meio de uma linha do arquivo passa e a do
+`-m` é negada com a dica; a marca `(tarefa N.0)` e `Revisões:` valem também quando vêm do arquivo de `-F`; e `decidirCommit` e `portao`
+com a mesma entrada dão a mesma decisão (sem revisor, veto, carimbo ausente, código sem marca, documento de correção ausente,
+conferência a mais, documento ilegível, revisor obrigatório sem rodada), com os `alterados` da árvore caducando as rodadas mesmo quando o commit não os leva; a barra invertida fora das aspas e `$'…'` lidos como no shell (negados: `--no-verif\y`, `commi\t -n`, `$'--no-verify'`); o alias (`-c alias.*`, `config alias.*`) negado; `\"` dentro de aspas duplas passa; o `catch` do hook diz "Comando bloqueado". Limites a mais: o octal dentro de `$'…'`, o alias que já estava no config e as aspas duplas em número ímpar dentro de `$(cat <<EOF)` (negação falsa; a saída é `-F`). O arquivo de `-F` que não é regular não é lido. A gramática do leitor é fechada (`techspec.md` §5(a)): negados também `--no-verif$'y'`, `-$'n'`, `--no-verif$"y"` e `git --config-env=alias.c=V c`; passam `$'a\' --no-verify'` como mensagem e `git commit -m "custa $5"`; ficam como limite, com caso que fixa o `null`, `--no-verif${X}y`, `--no-verif{y,}` e `git -c include.path=x c`. A `decidirCommit` lê o disco da `raiz` para a caducidade, o carimbo e as pastas de `tasks/`; o conteúdo do documento vem de `conteudoDe`.
 
 **RF14, terceira camada** (`tools/ci/conferir-entregas.test.ts`, repositório temporário):
 - sai 0: histórico real de spec, com vários `(tarefa N.0)` e `Revisões:`, o último com código; o merge do encontro,

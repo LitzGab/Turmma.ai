@@ -27,7 +27,8 @@
       ],
       "ignoreBinaries": [
         "flock",
-        "maestri"
+        "maestri",
+        "mkfifo"
       ]
     },
     "apps/api": {

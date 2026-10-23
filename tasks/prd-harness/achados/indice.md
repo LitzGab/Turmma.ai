@@ -88,3 +88,14 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-23 17:00:02 | `privacy-guardian` | 2ª | APROVADO | `3_task` | nenhuma nova. |
 | 2026-10-23 17:00:05 | `infra-guardian` | 2ª | APROVADO | `3_task` | as quatro recomendações da 1ª rodada foram aplicadas. |
 | 2026-10-23 17:00:25 | `test-engineer` | 2ª | APROVADO | `3_task` | O bloco novo aplica a mesma mutação do bloco das linhas 220 a 226, e só o teste citado muda. Está certo, porque cada um prova um teste diferente. Uma linha de… |
+| 2026-10-23 17:53:29 | `infra-guardian` | 1ª | APROVADO | `10_task` | `tools/processo/portao.ts:440`: o `bloqueioDoDesvio` agora roda em todo Bash de sessão de papel, não só em commit e push. A mensagem do `catch` do hook… |
+| 2026-10-23 17:54:35 | `revisor-geral` | 1ª | REPROVADO | `10_task` | `tools/processo/portao.ts:329`, dentro de `decidirCommit` (linha 350), via `bloqueioDoDocumento`. |
+| 2026-10-23 17:55:29 | `test-engineer` | 1ª | REPROVADO | `10_task` | Linha 62, "sem revisor", não tem caso (`tools/processo/revisoes.test.ts:1826-1863`). |
+| 2026-10-23 18:31:35 | `infra-guardian` | 2ª | APROVADO | `10_task` | `tools/processo/comando-git.ts`, no `defineAlias`: no `git config`, qualquer palavra que comece por `alias.` é negada. Isso inclui só ler (`git config --get… |
+| 2026-10-23 18:32:19 | `revisor-geral` | 2ª | REPROVADO | `10_task` | `tools/processo/comando-git.ts:272`, `PEDACO_DO_SHELL`. A leitura de `$'…'` entrou nesta rodada e só funciona quando o `$'` abre a palavra. A alternativa da… |
+| 2026-10-23 18:33:48 | `test-engineer` | 2ª | REPROVADO | `10_task` | `tools/processo/comando-git.ts:384`: o alias por `--config-env=` passa. A expressão `DEFINICAO_DE_ALIAS = /^alias\./i` só olha o começo da palavra, e na forma… |
+| 2026-10-23 18:49:15 | `revisor-geral` | 3ª | APROVADO | `10_task` | Formas que ainda passam e que nenhuma categoria de limite da §5(a) nomeia. Pela frase "todo o resto é limite" elas não bloqueiam, mas a lista de categorias não… |
+| 2026-10-23 18:49:43 | `test-engineer` | 3ª | REPROVADO | `10_task` | `tools/processo/comando-git.ts:361`: o leitor perde o subcomando quando o git recebe uma opção global fora das seis. |
+| 2026-10-23 20:24:10 | `infra-guardian` | 4ª | APROVADO | `10_task` | As formas que o `revisor-geral` listou na 3ª rodada ainda passam no `desvioDoHook` e nenhuma categoria de limite da techspec §5(a) as nomeia: `! git …`, `{ git… |
+| 2026-10-23 20:24:17 | `revisor-geral` | 4ª | APROVADO | `10_task` | `--super-prefix` está descrito como opção atual na techspec. |
+| 2026-10-23 20:25:38 | `test-engineer` | 4ª | APROVADO | `10_task` | Acrescentar em `negados` o caso `git --shallow-file x -c core.hooksPath=/dev/null commit -m x`, que eu exigi na rodada anterior. É uma linha e fixa o caminho… |
