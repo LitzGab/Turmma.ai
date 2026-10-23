@@ -29,7 +29,9 @@ mudam a decisão do commit e precisam dela num lugar só.
 - [ ] 2.2 — `estado.ts` e `esteira.ts` importam do módulo novo, não do `revisoes.ts`
 - [ ] 2.3 — `tools/processo/harness/particao.test.ts`: lê os imports de `estado.ts` e `esteira.ts` e acusa
   `./revisoes.ts`
-- [ ] 2.4 — Testes: os atuais verdes **sem alteração** (o diff não toca `revisoes.test.ts` nem `hook-portao.test.ts`)
+- [ ] 2.4 — Testes: os atuais verdes **sem alteração** (o diff não toca `hook-portao.test.ts`; no `revisoes.test.ts`, só o
+  caso "sem o compilador instalado" muda, e só o arquivo que ele copia e importa: `caducidade.ts` no lugar de `revisoes.ts`,
+  com as asserções iguais; decisão do Joaquim, 23/10/2026, `prd.md` RF13)
 
 ## Arquivos previstos
 
@@ -49,7 +51,7 @@ mudam a decisão do commit e precisam dela num lugar só.
 
 | Cenário | Tipo | O que prova |
 |---|---|---|
-| `revisoes.test.ts`, `hook-portao.test.ts`, `estado.test.ts`, `esteira.test.ts`, `linhas.test.ts` sem alteração | unidade | o comportamento não mudou |
+| `revisoes.test.ts`, `hook-portao.test.ts`, `estado.test.ts`, `esteira.test.ts`, `linhas.test.ts` sem alteração, salvo o arquivo copiado no caso "sem o compilador instalado" (2.4) | unidade | o comportamento não mudou |
 | `estado.ts` com `import … from './revisoes.ts'` numa cópia | unidade | vermelho |
 | quem contorna é acusado: `import('./revisoes.ts')` e `export … from './revisoes.ts'` | unidade | vermelho, um caso por forma |
 | a guarda reprova quando o alvo dela não existe: `estado.ts` ausente na amostra | unidade | vermelho |

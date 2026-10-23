@@ -27,7 +27,9 @@ vermelho).
 **RF12.** Um rótulo tirado de `criar-tasks/task-template.md`, de `criar-tasks/tasks-template.md`, de `validar/template.md` ou do bloco do formato em `revisar-spec/SKILL.md`: vermelho, dizendo qual. Nome de revisor
 no modelo que não está em `REVISORES_COM_VETO` nem na lista do `revisor-geral`: vermelho.
 
-**RF13.** Os testes atuais de `revisoes.test.ts` e `hook-portao.test.ts` passam sem alteração. O `estado.ts` e o
+**RF13.** Os testes atuais de `revisoes.test.ts` e `hook-portao.test.ts` passam sem alteração, salvo o arquivo que o
+caso `revisoes.test.ts › a impressão sem comentários › sem o compilador instalado (antes do npm ci), não se aplica` copia:
+passa a ser o `caducidade.ts`, onde a função mora, com as asserções iguais (decisão do Joaquim, 23/10/2026). O `estado.ts` e o
 `esteira.ts` não importam `revisoes.ts` (teste lê os imports).
 
 **RF14, formas contra um git real** (`tools/processo/hook-git.int.test.ts`, repositório temporário, sem compose):
