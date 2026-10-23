@@ -17,7 +17,7 @@ import { dirname, join } from 'node:path'
 import { arquivoDoRelatorioDoE2e, motivoDaDuracaoDoE2e, VARIAVEL_DO_RELATORIO_DO_E2E } from '../ci/duracao-do-e2e.ts'
 import { e2eDosLiteraisRemovidos } from '../ci/e2e-que-cita-literal.ts'
 import { garantirFilaDeCarga } from '../ci/fila-de-carga.ts'
-import { avaliarMutacoes, conferirMutacoes, comandoDoTeste, impressaoDasMutacoes, lerMutacoes, pedeReconstrucao, rodarCalado } from './mutacoes.ts'
+import { avaliarMutacoes, conferirMutacoesDoDocumento, rodarCalado, type CarimboDasMutacoes } from './mutacoes.ts'
 import {
   alteracoesDeCodigo,
   alvosDoPortao,
@@ -178,31 +178,15 @@ if (duracaoDoE2e !== null) {
 }
 // As mutações do documento, depois das suítes: só com os testes verdes um teste vermelho quer dizer que a cláusula tem
 // quem a prove. Cada uma é aplicada, o teste citado roda, tem de cair, e o arquivo volta ao que era.
-let carimboDasMutacoes: { documento: string; impressao: string; total: number } | undefined
+let carimboDasMutacoes: CarimboDasMutacoes | undefined
 const documento = daTarefa ? documentoDasMutacoes() : null
 if (documento) {
-  const { mutacoes, erros } = lerMutacoes(readFileSync(join(raiz, documento), 'utf8'))
-  if (erros.length > 0) {
-    process.stdout.write(`\n✗ portão local vermelho nas mutações de ${documento}: ${erros.join('; ')}. Nenhum carimbo gravado.\n`)
+  const conferencia = conferirMutacoesDoDocumento(raiz, documento, readFileSync(join(raiz, documento), 'utf8'), rodarCalado(raiz), (texto) => process.stdout.write(texto))
+  if ('vermelho' in conferencia) {
+    process.stdout.write(`\n✗ portão local vermelho nas mutações de ${documento}: ${conferencia.vermelho}. Nenhum carimbo gravado.\n`)
     process.exit(1)
   }
-  if (mutacoes.length > 0) {
-    process.stdout.write(`\n▶ mutações de ${documento} (${String(mutacoes.length)})\n`)
-    const rodarMutacao = rodarCalado(raiz)
-    const resultados = conferirMutacoes(raiz, mutacoes, rodarMutacao, (texto) => process.stdout.write(texto))
-    // O e2e roda contra imagens construídas: a última mutação de tela deixou no ar a web mutada. Reconstrói do fonte
-    // restaurado, com o teste dela verde, para a vitrine e a Mesa fotografarem a tela de verdade.
-    const comReconstrucao = mutacoes.filter(pedeReconstrucao).at(-1)
-    const limpo = comReconstrucao ? comandoDoTeste(comReconstrucao) : null
-    const reconstruiu = limpo === null || rodarMutacao(limpo)
-    const falhas = resultados.filter((resultado) => resultado.veredito !== 'vermelho')
-    if (falhas.length > 0 || !reconstruiu) {
-      const motivo = falhas.length > 0 ? `${String(falhas.length)} de ${String(mutacoes.length)} mutações não deixaram o teste vermelho ou foram recusadas` : 'a web não reconstruiu depois das mutações'
-      process.stdout.write(`\n✗ portão local vermelho nas mutações de ${documento}: ${motivo}. Nenhum carimbo gravado.\n`)
-      process.exit(1)
-    }
-    carimboDasMutacoes = { documento, impressao: impressaoDasMutacoes(mutacoes), total: mutacoes.length }
-  }
+  carimboDasMutacoes = conferencia.carimbo
 }
 
 // Carimba o conteúdo do início, que é o que as suítes provaram, ou recusa se alguém editou no meio da corrida.
