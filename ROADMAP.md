@@ -289,20 +289,21 @@ pouca manutenção, com regra verificada por máquina e não por memória, e sej
 contida, visível e recuperável. A liberdade é **reorganizar dentro da stack**: refatorar, apagar
 código morto comprovado, mover pastas (o plano de 26/09 entra aqui), tornar contratos explícitos e
 transformar regra em trava por ferramenta. A stack (D16) e as decisões D1 a D80 não mudam, e trocar
-peça de stack vira proposta para depois. As etapas 1 a 6 da missão rodam em `.reengenharia/`, na
-branch da spec; cada onda vira tarefas da X5, com o Implementador, a Mesa, os revisores com veto, a
+peça de stack vira proposta para depois. As etapas 1 a 6 da missão rodaram numa pasta temporária, na
+branch da spec, apagada no fechamento com o que importa em `tasks/prd-reengenharia/` (a tag `reengenharia/temporario`
+guarda o resto); cada onda vira tarefas da X5, com o Implementador, a Mesa, os revisores com veto, a
 esteira e um pouso. Para nos quatro ⛔ (a entrevista, a linha de base, a arquitetura-alvo e a etapa
 de skills, agentes e regras), no pouso e em tudo que é irreversível; no resto segue com a
-recomendação e a registra em `DECISOES.md`. Nada em `.claude/` nem em `tools/processo/` muda antes
+recomendação e a registra em `tasks/prd-reengenharia/DECISOES.md`. Nada em `.claude/` nem em `tools/processo/` muda antes
 das ondas da Etapa 9, salvo o que destrave a própria missão. A missão e as respostas da Etapa 0
-estão em `.processo/reengenharia/` (`MISSAO.md` e `RESPOSTAS.md`; onde divergem, vale a segunda).
+estão em `tasks/prd-reengenharia/MISSAO.md` e `RESPOSTAS.md` (onde divergem, vale a segunda).
 
 **Recortada em 22/10/2026 (D81).** A lista tinha 94 tarefas e, no ritmo de 21 e 22/10, acabaria em dezembro. Ficam 32,
-na ordem do recorte (`.reengenharia/RECORTE.md`): os defeitos de conformidade da onda 0, o tenant travado por máquina, a
+na ordem do recorte (`tasks/prd-reengenharia/RECORTE.md`): os defeitos de conformidade da onda 0, o tenant travado por máquina, a
 prova que não perde resposta, a entrada pelo `ZodValidationPipe` do NestJS, os jobs tipados, a resiliência (prazo, falha
 final, provedor), as pastas do projeto inteiro, as camadas e o lint, a higiene e o guia do desenvolvedor. O resto vai para
 a X6. Sexta, 23/10, às 22h nenhuma tarefa nova parte; a meta é o pouso no sábado, 24/10, às 8h. Até o pouso, nenhuma
-parada chama o Joaquim: o Arquiteto decide e registra em `DECISOES.md`, e o pouso com push está autorizado com a
+parada chama o Joaquim: o Arquiteto decide e registra em `tasks/prd-reengenharia/DECISOES.md`, e o pouso com push está autorizado com a
 validação aprovada e a esteira verde. A Etapa 9 ⛔ (o harness) foi para a X6: o processo não muda no meio da corrida.
 
 **Pronto quando:** comparado com a linha de base, a tipagem, o lint, as guardas, a unidade, a integração, o e2e e o infra
@@ -313,7 +314,7 @@ resposta atrasada não sobrescreve a mais nova e a escolha pendente sobrevive ao
 no worker; job estourado, falha final e provedor fora têm cada um o teste que simula a falha; as pastas seguem uma
 convenção só, travada por teste; o que entrou de camadas, catraca, dependências e erro tipado está travado por
 ferramenta; o guia do desenvolvedor existe e o `docs/arquitetura.md` diz o que existe; os e2e obrigatórios da regra 40 e
-as invariantes das regras 10 e 70 continuam provados; `.reengenharia/` foi apagado com o que importa migrado; e o
+as invariantes das regras 10 e 70 continuam provados; a pasta temporária da missão foi apagada com o que importa migrado; e o
 relatório final diz o que foi feito, o que foi medido e o que foi para a X6, sem número que não foi coletado.
 
 ## A pele nova — X1 a X4 (D80)
@@ -453,7 +454,7 @@ pela D81 onde ela diz). Entra também o que a regra do corte da X5 deixar fora. 
   rotas próprio, 21.0 a 23.0); a web tolerante ao campo extra (20.0); as políticas em `conformidade/`, com a mutação por
   padrão e a trava do `ouro` (26.0 a 29.0); os subcaminhos e as leituras prontas da onda 2 (30.0 a 32.0, 37.0 a 41.0); a
   onda 5 (81.0 a 89.0, 91.0); e a Etapa 9 ⛔, o harness revisto com o Joaquim (92.0), com as perguntas da §5 do
-  `DIAGNOSTICO.md` marcadas "Para a Etapa 9"
+  `tasks/prd-reengenharia/DIAGNOSTICO.md` marcadas "Para a Etapa 9"
 
 **Pronto quando:** cada parte cumpre o critério do RF dela no PRD da X5 (`tasks/prd-reengenharia/prd.md`, §5 e §11),
 com o processo completo; o OpenAPI só entra com o consumidor que o pede.

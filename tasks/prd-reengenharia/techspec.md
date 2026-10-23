@@ -3,7 +3,7 @@
 **PRD:** `tasks/prd-reengenharia/prd.md` · **Status:** rascunho
 **Forma (R34, aceite do Joaquim em 21/10/2026):** este arquivo comum tem até 2.000 palavras, e cada onda tem um
 `onda-<n>.md` de até 1.500: `onda-0`, `onda-1a`, `onda-1b`, `onda-2`, `onda-3a`, `onda-3b`, `onda-3c`, `onda-4a`,
-`onda-4b` (a 3 e a 4 partidas na revisão, R42), `onda-5` e `onda-6`. A tarefa lê este arquivo e a sua onda. As decisões: `.reengenharia/DECISOES.md`
+`onda-4b` (a 3 e a 4 partidas na revisão, R42), `onda-5` e `onda-6`. A tarefa lê este arquivo e a sua onda. As decisões: `tasks/prd-reengenharia/DECISOES.md`
 (R32 a R42).
 
 > **Recorte de 22/10/2026 (D81).** Vale por cima deste documento e dos `onda-<n>.md`: a X5 fica com as 32 tarefas do
@@ -67,13 +67,13 @@ só da web (20.0), e `TEMPO_ESGOTADO` do job (43.0).
 
 **A ordem das ondas:** 0 (1.0 a 5.0); 1A (6.0 a 17.0) e 1B (18.0 a 29.0) juntas, com o tronco de `shared` em série;
 2 (30.0 a 41.0); 3 (42.0 a 54.0); 4 (55.0 a 80.0); a 5 (81.0 a 91.0) ao lado das 2 a 4; a Etapa 9 ⛔ (92.0); a 6; o
-Validador; o apagar de `.reengenharia/` (parada); e o pouso.
+Validador; o apagar da pasta temporária da missão, com o que importa em `tasks/prd-reengenharia/` (R64); e o pouso.
 
 **As tarefas nascem por onda (R41).** O `tasks.md` lista todas, e o `N_task.md` de uma onda nasce quando a anterior
 fecha, contra o código daquele momento (a onda 2 move pastas). O aviso "o documento N_task.md não existe" do `estado.ts`
 é o sinal para o Orquestrador pedir a onda seguinte.
 
-**O fecho de uma onda:** a esteira verde no último commit dela, e o Arquiteto atualiza `.reengenharia/MAPA.md` e escreve
+**O fecho de uma onda:** a esteira verde no último commit dela, e o Arquiteto atualizava o `MAPA.md` da missão (apagado na R64; lido na tag `reengenharia/temporario`) e escreve
 os documentos da próxima. Mudança de comportamento fora do PRD é divergência.
 
 **Dono e validação:** o Implementador, com a Mesa e os vetos de cada `onda-<n>.md`; valida a onda o seu "Falha" e os

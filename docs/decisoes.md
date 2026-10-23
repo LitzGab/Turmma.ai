@@ -1314,7 +1314,7 @@ conceito do domínio fica em português, e a X5 é recortada para pousar.** *(de
 Joaquim, no terminal "Claude Code #2": "faça o melhor para o meu produto, preciso terminar isso, fica
 muito parado porque me pergunta as coisas, não quero, só quero que siga em frente; e quero padrões de
 mercado, então o cara já entra com padrões: se ele usa Spring Boot, já sabe mais ou menos como faz";
-o recorte está em `.processo/reengenharia/RECORTE.md`, copiado para `.reengenharia/RECORTE.md`)*
+o recorte está em `.processo/reengenharia/RECORTE.md`, copiado para `tasks/prd-reengenharia/RECORTE.md`)*
 (1) **O princípio.** Quando o NestJS, o React, o TanStack Query, o Drizzle, o BullMQ ou o ESLint têm um
 jeito documentado de fazer, usamos esse jeito, com o nome que a documentação usa. Mecanismo próprio só
 entra com o motivo escrito: a regra que ele protege e por que o padrão não serve. O teste: **um dev que
@@ -1327,7 +1327,7 @@ nome do padrão que implementa (`ZodValidationPipe`, e não `PipeDeEntrada`). **
 que já existe**: o nome técnico em português (`Enfileirador`, `ContadorEmJanela`) só muda quando a
 tarefa já mexe nele, e o guia do desenvolvedor (`docs/guia-do-desenvolvedor.md`) dá o equivalente de
 mercado ao lado (`Enfileirador` = transactional outbox; `ContadorEmJanela` = rate limiter por janela de
-tempo, no Redis). (3) **O que muda no desenho da X5** (`.reengenharia/DIAGNOSTICO.md`, T1, T2, T18 e
+tempo, no Redis). (3) **O que muda no desenho da X5** (`tasks/prd-reengenharia/DIAGNOSTICO.md`, T1, T2, T18 e
 T11): a entrada HTTP passa a ser validada pelo `ZodValidationPipe` da documentação do NestJS ("Pipes",
 *Object schema validation*), no parâmetro, com um `IdPipe` no molde do `ParseUUIDPipe` que responde
 `NAO_ENCONTRADO` (regra 10.6) e normaliza para minúsculas, e a trava é o `no-restricted-syntax` do
@@ -1345,7 +1345,7 @@ resiliência, pastas, camadas e lint, higiene e o guia do desenvolvedor), e o re
 `reengenharia-continuacao`**, registrado no `ROADMAP.md`, que não segura a X4 nem o F2. Sexta, 23/10, às
 22h nenhuma tarefa nova parte; tarefa que passa de 4 horas ou bate duas vezes no limite das três
 reprovações vai para a X6 com o diagnóstico do Arquiteto. Até o pouso da X5, nenhuma parada chama o
-Joaquim: o Arquiteto decide com a recomendação dele e registra em `.reengenharia/DECISOES.md`; o pouso
+Joaquim: o Arquiteto decide com a recomendação dele e registra em `tasks/prd-reengenharia/DECISOES.md`; o pouso
 na `develop`, com push, está autorizado com a validação aprovada e a esteira verde. As decisões D1 a
 D80, as regras 10, 20, 30, 40 e 70, os revisores com veto, o portão da tarefa e a esteira não mudam.
 Motivo: a X5 tinha 94 tarefas e, no ritmo de 21 e 22/10, acabaria em dezembro, com a X4 congelada e o

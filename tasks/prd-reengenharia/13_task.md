@@ -14,7 +14,7 @@ base de hoje só encolhe (catraca).
 ## Contexto necessário
 
 - `onda-1a.md` §2, "T8 — Tamanho com catraca"; `techspec.md` §13 (o risco de quem só moveu o arquivo)
-- `prd.md` RF11; `.reengenharia/DECISOES.md` R37 e R39 (teste sem `max-lines-per-function`)
+- `prd.md` RF11; `tasks/prd-reengenharia/DECISOES.md` R37 e R39 (teste sem `max-lines-per-function`)
 - `.claude/rules/40-testes.md` (o portão roda o lint)
 - `eslint.config.mjs` (ESLint 10.10, os blocos por pasta) e `tools/guardas/eslint-das-guardas.ts` (`criarEslintDasGuardas`,
   a segunda passada com `allowInlineConfig: false` e `ruleFilter`)

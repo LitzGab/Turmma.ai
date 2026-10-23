@@ -1,6 +1,6 @@
 # Estado da execução — reengenharia
 
-A missão é `.reengenharia/MISSAO.md`, e o que vale sobre ela é `.reengenharia/RESPOSTAS.md` (Etapa 0,
+A missão é `tasks/prd-reengenharia/MISSAO.md`, e o que vale sobre ela é `tasks/prd-reengenharia/RESPOSTAS.md` (Etapa 0,
 respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão: não existe outro.
 
 ## Agora
@@ -62,7 +62,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 ## Etapas da missão
 | Etapa | Situação | Onde |
 |---|---|---|
-| 0 Entrevista ⛔ | respondida em 20/10/2026 | `.reengenharia/RESPOSTAS.md` |
+| 0 Entrevista ⛔ | respondida em 20/10/2026 | `tasks/prd-reengenharia/RESPOSTAS.md` |
 | 1 Descoberta e pesquisa | feita, `2d9ad5e` | `DESCOBERTA.md` |
 | 2 Compreensão por unidade | feita, `2d9ad5e` | `MAPA.md`, `unidades/U01`–`U12` |
 | 3 Material de trabalho | feita, `2d9ad5e` | `CONTRATOS`, `RISCOS`, `SUSPEITOS-MORTOS`, `DECISOES` |
@@ -152,7 +152,7 @@ Decisão: aprovar a priorização da §6 para seguir à Etapa 5: (a) a ordem, co
 testes em 4.º; (b) P4, agora recomendada como NÃO unificar a pilha de sessão do operador (só extrair
 as ~60 linhas literais); (c) a meta de saída da onda 4 (ramos ≥ 85 % na web, nenhuma função de tela
 acima de 80 linhas) como critério de aceite.
-Contexto: `.reengenharia/LINHA-DE-BASE.md` §5 (números) e §6 (ordem e ondas); `DECISOES.md` P4.
+Contexto: `tasks/prd-reengenharia/LINHA-DE-BASE.md` §5 (números) e §6 (ordem e ondas); `DECISOES.md` P4.
 Opções: aprovar as três | ajustar alguma (dizer qual)
 Recomendo: aprovar as três; os números sustentam a troca de ordem, e a P4 ganha conceito, não volume,
 com risco de segurança.

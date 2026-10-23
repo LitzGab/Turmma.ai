@@ -25,7 +25,7 @@ com o nome de mercado (D81). O `docs/arquitetura.md` passa a dizer o que existe,
 
 ## Contexto necessário
 
-- `.reengenharia/RECORTE.md` §4 e a D81 em `docs/decisoes.md`
+- `tasks/prd-reengenharia/RECORTE.md` §4 e a D81 em `docs/decisoes.md`
 - `README.md`, `docs/arquitetura.md` e o `tasks.md` (o que a X5 entrega e o que foi para a X6)
 
 ## Arquivos previstos
@@ -45,3 +45,13 @@ com o nome de mercado (D81). O `docs/arquitetura.md` passa a dizer o que existe,
 ## Fora do escopo desta tarefa
 
 Código, teste e portão. O guia da X6, que se escreve quando ela partir.
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-10-23 00:34:15 | 2026-10-23 00:36:49 | `revisor-geral` | 1 | APROVADO | afeab27864a3884ce |

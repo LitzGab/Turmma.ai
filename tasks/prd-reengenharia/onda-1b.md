@@ -159,7 +159,7 @@ O marcador forjado num commit só de docs, só a 3 pega; o guardião por caminho
   `apps/realtime`: `jose`; de `apps/worker`: `drizzle-orm`. Todas exatas, na versão do lock.
 - Sai o `pino` de `apps/despachante` e `apps/worker`.
 
-**A trava.** O `knip.json` da raiz, derivado de `.reengenharia/medicao/knip.json`, roda com
+**A trava.** O `knip.json` da raiz, derivado de `reengenharia/temporario:.reengenharia/medicao/knip.json`, roda com
 `--include dependencies,unlisted,binaries,unresolved` em `tools/ci/etapas-de-guarda.ts`. O knip é `devDependency` (R40),
 6.42.1 exato. O `guarda:dependencias` do `package.json` passa a ser `npm audit … && knip --include …`, porque o portão da
 tarefa só roda esse script e `tools/processo/` não muda antes da 92.0; a etapa do `ci:verificar` é a

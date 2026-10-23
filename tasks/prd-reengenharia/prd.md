@@ -6,7 +6,7 @@
 **Teto:** ~2.270 palavras (2.065 sem as barras das tabelas), acima das 2.000: são seis ondas numa spec só (RESPOSTAS 3),
 com 33 requisitos. Partir o PRD por onda separaria os requisitos transversais dos que eles protegem.
 
-A missão e o que vale sobre ela estão em `.reengenharia/MISSAO.md` e `RESPOSTAS.md`; o diagnóstico (temas T1 a T18), em
+A missão e o que vale sobre ela estão em `tasks/prd-reengenharia/MISSAO.md` e `RESPOSTAS.md`; o diagnóstico (temas T1 a T18), em
 `DIAGNOSTICO.md`; as decisões, em `DECISOES.md` (R1 a R37; as P e as N respondidas em 21/10 são a R32 e a R33).
 
 ## 1. Problema
@@ -161,7 +161,7 @@ turno do Tutor, além das metas dos RF10 e RF24.
 
 ## 11. O recorte de 22/10/2026 (D81)
 
-Pedido do Joaquim em 22/10/2026 (`.reengenharia/RECORTE.md`): a X5 pousa até sábado, 24/10, com 32 tarefas, e o resto vai
+Pedido do Joaquim em 22/10/2026 (`tasks/prd-reengenharia/RECORTE.md`): a X5 pousa até sábado, 24/10, com 32 tarefas, e o resto vai
 para a **X6 `reengenharia-continuacao`**. **Esta seção vale por cima das anteriores**, e o Validador valida cada RF pela
 coluna "Na X5".
 

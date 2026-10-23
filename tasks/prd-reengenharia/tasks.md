@@ -1,6 +1,6 @@
 # Tarefas — reengenharia (X5)
 
-**PRD:** `prd.md` · **Tech Spec:** `techspec.md`, mais o `onda-<n>.md` de cada tarefa · **Recorte:** `.reengenharia/RECORTE.md` (D81)
+**PRD:** `prd.md` · **Tech Spec:** `techspec.md`, mais o `onda-<n>.md` de cada tarefa · **Recorte:** `tasks/prd-reengenharia/RECORTE.md` (D81)
 <!-- Quantas estão concluídas não se escreve aqui: `node tools/processo/estado.ts` conta pela lista. -->
 
 **O recorte de 22/10/2026 (D81) vale por cima do resto deste documento, do PRD e da Tech Spec.** A X5 ficou com 32
@@ -18,11 +18,11 @@ escreve o guia, e o Arquiteto o revisa com o `revisor-geral` e o põe no commit,
   com a linha `→ X6` em "Saíram para a X6" e a marca tirada da lista acima.
 - Tarefa que passa de **4 horas**, ou que bate duas vezes no limite das três reprovações, vai para a X6 com o diagnóstico
   do Arquiteto (`.processo/ordens/diagnostico-<N>.md`); a linha volta ao último commit verde e pega a próxima.
-- Depois vem o fechamento: portão completo, esteira, Validador, retrospectiva curta, `.reengenharia/` apagado com o que
+- Depois vem o fechamento: portão completo, esteira, Validador, retrospectiva curta, a pasta temporária `.reengenharia` apagada com o que
   importa migrado para `tasks/prd-reengenharia/` e `docs/`, e pouso na `develop` com push. **Meta: pousado até sábado,
   24/10/2026, às 08h.**
 - Até o pouso, nenhuma parada chama o Joaquim: o Arquiteto decide com a recomendação dele e registra em
-  `.reengenharia/DECISOES.md` (RECORTE §6). A ressalva menor da validação vai para a X6; a crítica vira correção.
+  `tasks/prd-reengenharia/DECISOES.md` (RECORTE §6). A ressalva menor da validação vai para a X6; a crítica vira correção.
 - **A 95.0 sai até sexta às 20h**, aconteça o que acontecer com as outras.
 - **A onda 0 (3.0, 93.0, 94.0) não vai para a X6** (ajuste do Claude Code #2, 22/10, 11h02): o relógio das 4 horas
   conta de 10h55, e, se passar delas ou bater duas vezes no limite, o Arquiteto fecha a tarefa com a melhor versão que os
@@ -229,7 +229,7 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 
 - [x] **24.0 — Toda dependência é declarada onde é usada, sem sobra**
   - [x] 24.1 Declarar as dependências que faltam, na versão do `package-lock.json` e sem faixa: na raiz `pg`, `ioredis`, `@node-rs/argon2`, `otpauth`, `bullmq`, `socket.io-client` e `@opentelemetry/sdk-metrics`; em `apps/realtime`, `jose`; em `apps/worker`, `drizzle-orm`. Tirar o `pino` de `apps/despachante` e `apps/worker`
-  - [x] 24.2 `knip` 6.42.1 exato como `devDependency` da raiz, e o `knip.json` da raiz derivado do de `.reengenharia/medicao/`, com `ignore` só das fixtures de violação
+  - [x] 24.2 `knip` 6.42.1 exato como `devDependency` da raiz, e o `knip.json` da raiz derivado do de `reengenharia/temporario:.reengenharia/medicao/`, com `ignore` só das fixtures de violação
   - [x] 24.3 Etapa do knip (`--include dependencies,unlisted,binaries,unresolved`) em `tools/ci/etapas-de-guarda.ts`, no `ci:verificar`; para o portão da tarefa vê-la sem tocar `tools/processo/`, o script `guarda:dependencias` passa a rodar também o knip (declare a escolha)
   - [x] 24.4 Testes: etapa limpa, cada categoria reprova a sua fixture, versões exatas, worker e despachante sem `pino`
 
@@ -427,7 +427,7 @@ pastas; o Arquiteto confere os caminhos do `N_task.md` delas, e da 24.0 e da 25.
 
 Do `ROADMAP.md` (X5, "Pronto quando", revisto pelo recorte de 22/10/2026), detalhado com o PRD (§11, "O recorte"):
 
-- Comparado com a linha de base (`.reengenharia/LINHA-DE-BASE.md`), a tipagem, o lint, as guardas, a unidade, a
+- Comparado com a linha de base (`tasks/prd-reengenharia/LINHA-DE-BASE.md`), a tipagem, o lint, as guardas, a unidade, a
   integração, o e2e e o infra rodam verdes, com os resultados reais registrados; a falha preexistente não some sem
   registro
 - Os defeitos de conformidade da onda 0 fechados (D36, D55, S12, o hook), com o `ouro` no alvo desde a tarefa dona
@@ -445,6 +445,6 @@ Do `ROADMAP.md` (X5, "Pronto quando", revisto pelo recorte de 22/10/2026), detal
 - O guia do desenvolvedor existe, o `docs/arquitetura.md` diz o que existe, e o `README.md` aponta para o guia (95.0)
 - Os fluxos que não podem quebrar (os e2e obrigatórios da regra 40) e as invariantes das regras 10 e 70 continuam
   provados
-- `.reengenharia/` apagado, com o que importa migrado para `tasks/prd-reengenharia/` e `docs/`
+- A pasta temporária `.reengenharia` apagada, com o que importa migrado para `tasks/prd-reengenharia/` e `docs/` (R64, inventário em `saida-do-temporario.md`)
 - O relatório final diz o que foi feito, o que foi medido e o que ficou para a X6, sem número que não foi coletado
 - A esteira está verde no último commit que alterou código, e o Validador aprovou contra o PRD, RF a RF, pelo recorte
