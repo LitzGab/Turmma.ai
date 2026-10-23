@@ -31,12 +31,15 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
   - **Validação 1 REPROVADA** (~00:30 de 23/10, sobre `65f7e3c`, `validacao.md`): crítico 1 = supressão órfã de
     `tools/ci/compose.ts` em `eslint-suppressions.json` (lint e `catraca.test.ts:205` vermelhos); maior 1 = 95.0 sem
     "Revisões" no andar e `c88231a` sem rodada nova
-  - **Linha 1, correção `poda-supressao-orfa`** (`Implementador` e `Mesa`, reiniciados na l1 ~00:35): `npx eslint .
-    --prune-suppressions`, só as 5 linhas; `/seguir RELATÓRIO de Implementador` → `linhas.ts encontro 1`
-  - **`Arquiteto`** (reiniciado no andar da spec ~00:35), em paralelo e só docs: (a) maior 1: `revisor-geral` sobre o
-    diff de `c88231a` e o registro da revisão da 95.0 no repositório (ou decisão em `DECISOES.md`); (b) RF31: migrar
-    o que `tasks/`, `ROADMAP.md` e `docs/` citam e apagar `.reengenharia/`; (c) RF33: relatório final. `/seguir RELATÓRIO de Arquiteto`
-  - **Depois dos dois:** `Validador` reiniciado, revalidação (crítico, maior 1, RF31, RF33); ambiente 0 só dele
+  - **Linha 1, correção `poda-supressao-orfa`: feita e encontrada** (~00:45): `3c3d582` (poda + TETO da catraca 249→248),
+    encontro em `83cc03a`, test-engineer e revisor-geral 1ª APROVADO. Sugestão para a retro: `npm run lint` no encontro,
+    logo depois do merge (`.processo/ordens/poda-supressao-orfa-r1.md` na l1). Linhas todas ociosas
+  - **`Arquiteto`: feito** (~00:50, só docs): (a) maior 1, `revisor-geral` sobre `c88231a` APROVADO, rodadas da 95.0 no andar,
+    6 recomendações → TODO/X6 (`5283042`); (b) RF31, `.reengenharia/` apagada, inventário em `saida-do-temporario.md`, R64,
+    tag `reengenharia/temporario` (`d928b2f`); (c) RF33, `relatorio-final.md` (`8802ea5`, `f76c553`): suíte, cobertura e
+    bundle não medidos; vite alto e o `.dockerignore` que ainda cita a pasta no `TODO.md`
+  - **Revalidação (rodada 2)** pedida ao `Validador` reiniciado no andar (~00:52), sobre `f76c553`: crítico 1, maior 1, RF31,
+    RF33. Ambiente 0 só dele. `/seguir RELATÓRIO de Validador` → conferir `validacao.md` e, aprovada, `esteira.ts --fechamento`
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -57,7 +60,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `c88231a` (fecho do guia, só docs; último commit com código `2b68e74`). Esteira: `2b68e74` (`39893548090`) e `c88231a` (`39893870904`) na fila: valem para o fechamento (`esteira.ts --fechamento`); o VERMELHO de `7789cc2` é execução cancelada. Vigia ligada
+- **Base:** `spec/reengenharia` em `83cc03a` (encontro da poda; último commit com código). Esteira de `83cc03a` (`39896272821`) na fila: é a que vale para o fechamento (`esteira.ts --fechamento`); `2b68e74` (`39893548090`) rodando. ~00:46 cancelei 6 execuções só de documento superadas (`39893614951`, `39893870904`, `39893958763`, `39895587965`, `39896000711`, `39896070739`): o `esteira.ts` vai lê-las como VERMELHAS. O VERMELHO de `7789cc2` é execução cancelada. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
