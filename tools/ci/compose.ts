@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { parseEnv } from 'node:util'
+import { parse } from 'yaml'
 import { executarEtapas, raizRepositorio, type Etapa } from './executar.ts'
 
 /**
@@ -252,37 +253,15 @@ export function conteudoDoAmbienteDerivado(numero: number): string {
 
 /**
  * A imagem de cada serviço de um compose, com a âncora resolvida: `api-2`, que é `<<: *api`, tem a imagem da `api-1`.
- * Lido do texto, e não de `docker compose config`: este módulo é carregado por todo processo do Vitest e do
- * Playwright, e nenhum deles pode esperar o `docker` para saber com que ambiente fala. O teste de integração do
- * compose confere o resultado contra o `config` de verdade.
+ * Lido do texto, com `merge: true` para a chave `<<`, e não de `docker compose config`: este módulo é carregado por
+ * todo processo do Vitest e do Playwright, e nenhum deles pode esperar o `docker` para saber com que ambiente fala.
+ * O teste de integração do compose confere o resultado contra o `config` de verdade.
  */
 export function imagensDosServicos(conteudoCompose: string): Map<string, string> {
-  const declarado = new Map<string, { imagem?: string; ancora?: string; herda?: string }>()
-  let servico: string | null = null
-  let dentro = false
-  for (const linha of conteudoCompose.split('\n')) {
-    if (/^\S/.test(linha)) dentro = linha.startsWith('services:')
-    if (!dentro) continue
-    const cabecalho = /^ {2}([a-z0-9-]+):(?:\s+&([a-z0-9-]+))?\s*$/.exec(linha)
-    if (cabecalho) {
-      servico = cabecalho[1] ?? null
-      if (servico !== null) declarado.set(servico, cabecalho[2] === undefined ? {} : { ancora: cabecalho[2] })
-      continue
-    }
-    const atual = servico === null ? undefined : declarado.get(servico)
-    if (!atual) continue
-    const imagem = /^ {4}image:\s*(\S+)\s*$/.exec(linha)
-    if (imagem?.[1] !== undefined) atual.imagem = imagem[1]
-    const herda = /^ {4}<<:\s*\*([a-z0-9-]+)\s*$/.exec(linha)
-    if (herda?.[1] !== undefined) atual.herda = herda[1]
-  }
-  const porAncora = new Map([...declarado.values()].filter((item) => item.ancora !== undefined).map((item) => [item.ancora, item]))
-  const resolver = (item: { imagem?: string; herda?: string } | undefined, saltos = 0): string | undefined =>
-    item === undefined || saltos > declarado.size ? undefined : (item.imagem ?? (item.herda === undefined ? undefined : resolver(porAncora.get(item.herda), saltos + 1)))
+  const { services } = parse(conteudoCompose, { merge: true }) as { services: Record<string, { image?: string }> }
   const imagens = new Map<string, string>()
-  for (const [nome, item] of declarado) {
-    const imagem = resolver(item)
-    if (imagem !== undefined) imagens.set(nome, imagem)
+  for (const [nome, servico] of Object.entries(services)) {
+    if (servico.image !== undefined) imagens.set(nome, servico.image)
   }
   return imagens
 }

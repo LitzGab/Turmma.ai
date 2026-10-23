@@ -90,7 +90,7 @@ Números em `tasks/prd-reengenharia/medidas-da-onda-5.md` (só a máquina da lin
 **Dockerfile único (90.0):** `infra/docker/servico.Dockerfile` substitui os cinco.
 - `base` roda `npm ci` e o build de `shared` e `nucleo` uma vez; `construcao` e `final` são por app, com `target` em cada
   serviço. As `image: educa-<x>:local` ficam (as etiquetas `teste-N` dependem delas). A web vira target, com `vite preview` (R28).
-- **Antes:** `imagensDosServicos` (`tools/ci/compose.ts:259`) troca a regex por `yaml.parse(..., { merge: true })`.
+- **Antes do Dockerfile, no mesmo commit da tarefa:** `imagensDosServicos` (`tools/ci/compose.ts:259`) troca a regex por `yaml.parse(..., { merge: true })`. A medida "antes" é a do commit pai, feita antes de qualquer mudança.
 - `.dockerignore` ganha `mockups`, `.processo` e `.reengenharia`.
 - A trava: um teste exige que todo serviço com `build` use o arquivo único, com `target` que existe.
 - As imagens se medem (`docker compose build --no-cache`, `docker image ls`) no commit pai e no da tarefa.

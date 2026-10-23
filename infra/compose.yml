@@ -118,7 +118,8 @@ services:
     image: educa-api:local
     build:
       context: ..
-      dockerfile: infra/docker/api.Dockerfile
+      dockerfile: infra/docker/servico.Dockerfile
+      target: api
     command: [node, dist/ops/migrar.js]
     environment:
       BANCO_URL: postgres://${POSTGRES_USUARIO}:${POSTGRES_SENHA}@postgres:5432/${POSTGRES_BANCO}
@@ -137,7 +138,8 @@ services:
     image: educa-api:local
     build:
       context: ..
-      dockerfile: infra/docker/api.Dockerfile
+      dockerfile: infra/docker/servico.Dockerfile
+      target: api
     # Nome que não resolve (serviço fora do ar) falha em 1 s, e não nos 5 s padrão, segurando menos uma
     # thread do libuv (UV_THREADPOOL_SIZE). No musl da imagem alpine, `timeout` é o prazo total e `attempts`
     # só reenvia dentro dele; em imagem glibc `attempts` multiplica o prazo (docs/infra.md, "Threads e DNS").
@@ -248,7 +250,8 @@ services:
     image: educa-realtime:local
     build:
       context: ..
-      dockerfile: infra/docker/realtime.Dockerfile
+      dockerfile: infra/docker/servico.Dockerfile
+      target: realtime
     dns_opt: ['timeout:1', 'attempts:2']
     environment:
       AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
@@ -296,7 +299,8 @@ services:
     image: educa-despachante:local
     build:
       context: ..
-      dockerfile: infra/docker/despachante.Dockerfile
+      dockerfile: infra/docker/servico.Dockerfile
+      target: despachante
     dns_opt: ['timeout:1', 'attempts:2']
     environment:
       AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
@@ -344,7 +348,8 @@ services:
     image: educa-worker:local
     build:
       context: ..
-      dockerfile: infra/docker/worker.Dockerfile
+      dockerfile: infra/docker/servico.Dockerfile
+      target: worker
     dns_opt: ['timeout:1', 'attempts:2']
     environment:
       AMBIENTE: ${AMBIENTE:?defina AMBIENTE}
@@ -494,7 +499,8 @@ services:
   web:
     build:
       context: ..
-      dockerfile: infra/docker/web.Dockerfile
+      dockerfile: infra/docker/servico.Dockerfile
+      target: web
       args:
         # Só "1" leva a galeria das peças para o build (o e2e roda nela). Staging e produção definem outro valor.
         VITE_COM_GALERIA: ${VITE_COM_GALERIA:?defina VITE_COM_GALERIA}

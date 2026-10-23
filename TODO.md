@@ -360,8 +360,8 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       construção das imagens, antes de qualquer teste, com `npm error code ECONNRESET` e `network aborted`: na
       execução 38261610727, 1ª tentativa (`4956a51`; imagem `despachante`, `npm ci --omit=dev`), e na 38279991501,
       1ª tentativa (`bbae49e`; imagem `worker-lote`, `npm ci --ignore-scripts`). A segunda passou na 2ª tentativa sem
-      mudança de código. Os nove `RUN npm ci` de `infra/docker/*.Dockerfile` (linhas 12 e 30 de `api`, `worker`,
-      `realtime` e `despachante`; linha 15 de `web`) rodam uma vez só, e a esteira constrói as imagens do zero em cada
+      mudança de código. Os seis `RUN npm ci` de `infra/docker/servico.Dockerfile` (um no `base`, um em cada alvo de
+      produção e um na `web`) rodam uma vez só, e a esteira constrói as imagens do zero em cada
       job que sobe o compose (`up --build`, `tools/ci/prazo-do-e2e.ts:143`): uma queda de rede do registro derruba o
       job e custa uma reexecução à mão, com a esteira vermelha no meio. Saídas, a medir numa correção por `/corrigir`
       (`infra-guardian`): `fetch-retries` e `fetch-retry-maxtimeout` do npm maiores nesses `RUN`; cache do npm no
@@ -369,6 +369,11 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       chama. Nenhuma pode esconder falha que não é de rede: a nova tentativa vale só para erro de rede, com teto, e
       deixa a linha no log. O `npm ci` dos próprios jobs (`.github/workflows/ci.yml:34,50,67,97`) tem o mesmo risco,
       e `tools/ci/esteira.test.ts:130` fixa os comandos de cada job
+- [ ] **`imagensDosServicos` com compose vazio ou sem `services`.** `tools/ci/compose.ts` lê o compose por
+      `parse(texto, { merge: true })`, que devolve `null` para texto vazio e `undefined` para a chave que falta; a
+      desestruturação quebra com `TypeError` em vez de dizer qual arquivo veio sem serviços. Hoje todo chamador passa
+      `infra/compose.yml`. Quando algum passar outro compose: erro explícito com o nome do arquivo, com teste e
+      mutação próprios (achado do `infra-guardian` na 1ª rodada da 90.0)
 
 **Ao ligar HTTPS na borda do staging, as quatro coisas abaixo são da mesma tarefa.** Estão separadas
 porque item único vira execução parcial. Motivo e medição de cada uma em

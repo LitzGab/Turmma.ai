@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { createServer, type Server } from 'node:net'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { compose, composeOuFalha, recriarDoZero } from '../testes/compose.ts'
 import { AMBIENTE_DE_TESTE, ARGUMENTOS_COMPOSE, ETAPA_DO_LOG_DA_FALHA, PROJETO_TESTE, lerAmbienteDeTeste, valorObrigatorio } from './compose.ts'
@@ -39,6 +39,25 @@ describe('ambiente do compose', () => {
     const raiz = dockerLimpo(['compose', 'config', '--quiet'])
     expect(raiz.stderr).toBe('')
     expect(raiz.status).toBe(0)
+  })
+
+  it('o `build` resolvido de todo serviço aponta para um Dockerfile que existe, com o estágio do target (sem construir)', () => {
+    interface Build {
+      context: string
+      dockerfile?: string
+      target?: string
+    }
+    const configuracao = JSON.parse(composeOuFalha('config', '--format', 'json')) as { services: Record<string, { build?: Build }> }
+    const construidos: [string, Build][] = []
+    for (const [nome, servico] of Object.entries(configuracao.services)) if (servico.build !== undefined) construidos.push([nome, servico.build])
+    expect(construidos.length).toBeGreaterThanOrEqual(6)
+    for (const [nome, { context, dockerfile, target }] of construidos) {
+      expect(dockerfile, `${nome}: sem dockerfile`).toBeDefined()
+      expect(target, `${nome}: sem target`).toBeDefined()
+      const caminho = resolve(context, dockerfile ?? '')
+      expect(existsSync(caminho), `${nome}: ${caminho} não existe`).toBe(true)
+      expect(readFileSync(caminho, 'utf8'), `${nome}: sem o estágio ${target ?? ''}`).toMatch(new RegExp(`^FROM \\S+ AS ${target ?? ''}$`, 'm'))
+    }
   })
 
   it('toda porta publicada, de todos os serviços, escuta só no loopback da máquina', () => {
