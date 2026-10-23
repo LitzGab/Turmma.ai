@@ -2,7 +2,7 @@ import js from '@eslint/js'
 import reactHooks from 'eslint-plugin-react-hooks'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
-import { configuracaoDasGuardas } from './tools/guardas/index.mjs'
+import { ARQUIVOS_DE_TESTE, configuracaoDasGuardas } from './tools/guardas/index.mjs'
 
 // A entrada do controller (D81): o que cada seletor reprova. `@Req()` fica fora desta lista, num objeto à parte, porque
 // `sessao/` e `operacao/` o recuperam (o cookie e o IP só se leem da requisição).
@@ -139,6 +139,29 @@ export default tseslint.config(
     // O cenário de carga roda no runtime do k6, que dá `__ENV` e `open` ao script (infra/k6).
     files: ['infra/k6/**/*.js'],
     languageOptions: { globals: { __ENV: 'readonly', open: 'readonly' } },
+  },
+  {
+    // Tamanho com catraca (X5, 13.0; R37): função nova acima de 10 de complexidade, 80 linhas de código (sem branco nem
+    // comentário) ou aninhamento acima de 4 reprova. O que já passava disso em 22/10/2026 está em `eslint-suppressions.json`, que só
+    // encolhe: quem corta uma função roda `eslint . --prune-suppressions` na mesma tarefa, e `tools/guardas/catraca.test.ts`
+    // recusa supressão nova. As quatro regras estão em `REGRAS_DE_TAMANHO` (`tools/guardas/index.mjs`): o `eslint-disable`
+    // delas não fura a segunda passada do `npm run lint`.
+    files: ['**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'],
+    rules: {
+      complexity: ['error', 10],
+      'max-lines-per-function': ['error', { max: 80, skipBlankLines: true, skipComments: true }],
+      'max-depth': ['error', 4],
+    },
+  },
+  {
+    // Teste: o `describe` e o `it` são funções de centenas de linhas por desenho (R39), então só o comprimento da função sai;
+    // a complexidade e o aninhamento valem. O e2e ganha o teto do arquivo, porque um spec de mil linhas esconde o que prova.
+    files: [...ARQUIVOS_DE_TESTE, '**/test/**/*.ts', 'e2e/**/*.ts'],
+    rules: { 'max-lines-per-function': 'off' },
+  },
+  {
+    files: ['e2e/**/*.spec.ts'],
+    rules: { 'max-lines': ['error', 800] },
   },
   // Por último: nenhum bloco acima sobrescreve as guardas (tools/guardas).
   ...configuracaoDasGuardas,

@@ -1,0 +1,1165 @@
+{
+  "apps/api/src/app.module.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/api/src/artefato/artefato.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/assistente/assistente.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/atividade/correcao/correcao.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/atividade/desempenho/desempenho.service.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/config.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/credencial/configuracao-externa.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/credencial/senha/semaforo-de-hash.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/api/src/governanca/analista.service.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/governanca/governanca.repository.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/ia/orcamento.repository.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/material/extracao-de-pdf.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/operacao/segundo-fator/segundo-fator.service.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/ops/contagens-de-privacidade.repository.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/ops/escola.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/ops/incidente.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/ops/operador.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/api/src/ops/retencao.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/privacidade/privacidade.service.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/sessao/convite/convite.repository.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/sessao/convite/convite.service.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/sessao/externa/externa.service.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/sessao/login/login.service.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/sessao/mfa/mfa.service.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/sessao/sessao.module.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/api/src/tutor/sinais-do-turno.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/src/tutor/tutor.service.ts": {
+    "complexity": {
+      "count": 4
+    }
+  },
+  "apps/api/test/acesso-da-turma.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/arquitetura.test.ts": {
+    "complexity": {
+      "count": 4
+    },
+    "max-depth": {
+      "count": 4
+    }
+  },
+  "apps/api/test/arquivo-do-titular.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/contratos.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/decisao.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/escola-montada.int.test.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/api/test/incidente.int.test.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/api/test/material-de-teste.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/operacao-isolamento.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/painel-convite.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/painel-leitura.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/pedido-titular.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/rotas-registradas.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/sessao-matricula.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/api/test/virada-do-ano.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/despachante/src/despachante.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/despachante/src/montagem.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/nome-dos-chunks.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/api/cliente.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/web/src/api/etapas-do-login.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/api/sessao.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/web/src/areas/aluno/Atividade.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/aluno/Atividades.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/aluno/Tutor.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/aluno/tutor.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/estrutura/AnoEDisciplinas.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "apps/web/src/areas/coordenacao/estrutura/Estrutura.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "apps/web/src/areas/coordenacao/estrutura/ListaDaTurma.tsx": {
+    "complexity": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "apps/web/src/areas/coordenacao/governanca/Agentes.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/governanca/Analista.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/governanca/DadoNominal.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/governanca/Governanca.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/material/DialogoDeEnvioDeMaterial.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/material/Material.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/material/api/material.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/web/src/areas/coordenacao/material/material-envio.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/painel/Painel.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/painel/fila-da-coordenacao.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/privacidade/AcoesDoPedido.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/privacidade/AvisoDeIncidente.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/privacidade/DetalheDoPedido.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/privacidade/RegistrarPedido.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/privacidade/textos-do-pedido.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/professores/PainelDoProfessor.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/coordenacao/professores/Professores.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/artefatos/Artefato.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/artefatos/Criados.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/artefatos/api/artefatos.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/web/src/areas/professor/assistente/CaixaDoAssistente.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/assistente/Conversa.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/assistente/Time.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/assistente/api/assistente-e-entregas.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/assistente/conversa.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/atividades/AplicacaoDoArtefato.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/atividades/Aprovar.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/atividades/AtividadesDaTurma.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/ferramentas/CartaoDeFerramenta.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/ferramentas/ferramentas.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/inicio/Home.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/inicio/fila-do-professor.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "apps/web/src/areas/professor/turmas/AlunosDaTurma.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/turmas/Turma.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/turmas/TurmaHoje.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "apps/web/src/areas/professor/turmas/Turmas.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/turmas/Tutor.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/areas/professor/turmas/acesso/ConvidarAlunos.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "apps/web/src/componentes/CascaDaEscola.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/DialogoDoConvite.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "apps/web/src/componentes/LoginPorCima.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/SeletorDeEscola.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/meus-dados/MeusDados.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/pedidos/DialogoDeDecisao.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/pedidos/ListaDePedidos.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/sino/Sino.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/ui/campos/Campo.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/ui/campos/CampoLongo.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/ui/campos/Selecao.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/ui/ia/CaixaPedido.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/ui/ia/MotorFormulario.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/ui/ia/motor-formulario.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "apps/web/src/componentes/ui/icones/lugares.test.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/ui/sobrepostos/DialogoDeConfirmacao.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/ui/sobrepostos/Menu.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/ui/sobrepostos/flutuante.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/componentes/ui/sobrepostos/teclado-do-menu.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/estilos.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/galeria/secoes/estado.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/galeria/secoes/ia.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/operacao/api/sessao.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/operacao/api/sessao.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/operacao/paginas/ConfigurarMfa.tsx": {
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "apps/web/src/operacao/paginas/Convite.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/operacao/paginas/Escolas.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/operacao/paginas/Mfa.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/operacao/paginas/NovaEscola.tsx": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/operacao/paginas/Uso.tsx": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/paginas/Convite.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/paginas/Mfa.tsx": {
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/web/src/paginas/TurmaPublica.tsx": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 2
+    }
+  },
+  "apps/worker/src/config.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/worker/src/executor.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/worker/src/montagem.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "apps/worker/src/processadores/consolidar-uso.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "apps/worker/src/processadores/expurgar-escola.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 2
+    }
+  },
+  "apps/worker/test/expurgo-da-escola.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/__fixtures__/aluno.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/__fixtures__/assistente.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/__fixtures__/avatar.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/__fixtures__/painel.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/__fixtures__/professor/cena.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "e2e/acesso-da-turma.spec.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "e2e/casca.spec.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/convidar-alunos.spec.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/estrutura.spec.ts": {
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "e2e/incidentes.spec.ts": {
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "e2e/meus-dados.spec.ts": {
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "e2e/operacao-escolas.spec.ts": {
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "e2e/operacao-uso.spec.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/operacao.spec.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/pedidos.spec.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "e2e/professor-aprovar.spec.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "e2e/professor-artefato.spec.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/professor-conversa.spec.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/professor-entregas.spec.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/professor-ferramentas.spec.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "e2e/professor-inicio.spec.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/professor-turmas.spec.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "e2e/professores.spec.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "e2e/troca-de-escola.spec.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "e2e/turma-publica.spec.ts": {
+    "max-lines": {
+      "count": 1
+    }
+  },
+  "infra/k6/justica-entre-escolas.js": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "infra/k6/login-7h30.js": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "infra/k6/reivindicacao-em-sala.js": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "infra/scripts/carga-login.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "infra/scripts/carga-sala.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "infra/scripts/carga.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "infra/scripts/conferir-carga-login.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "infra/scripts/ensaio-alertas.ts": {
+    "complexity": {
+      "count": 2
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "infra/scripts/expurgo-da-carga.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "infra/test/alertas.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/auditoria/acoes.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/auditoria/registro-de-auditoria.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/config/config-ia.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/configuracao/configuracao-operacional.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/db/schema/mvp/tabelas-do-mvp.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/erro/filtro-global.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/fila/job-registro.repository.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/ia/adaptador-openai-compat.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/ia/material.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/ia/provedor.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/ia/tarefas/gerar-atividade-objetiva.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/ia/tarefas/propor-ferramenta.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "packages/nucleo/src/ia/tarefas/resumo-do-analista.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/ia/tarefas/turno-do-tutor.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/identidade/guarda-sessao.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/limite/guarda-limite.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "packages/nucleo/src/log/logger.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tools/ci/compose.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tools/ci/duracao-do-e2e.ts": {
+    "complexity": {
+      "count": 3
+    }
+  },
+  "tools/ci/e2e-que-cita-literal.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "tools/ci/esteira.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tools/ci/playwright.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tools/ci/prazo-do-e2e.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tools/guardas/alerta-tem-runbook.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tools/guardas/escopo-dos-repositories.ts": {
+    "complexity": {
+      "count": 5
+    },
+    "max-depth": {
+      "count": 3
+    },
+    "max-lines-per-function": {
+      "count": 1
+    }
+  },
+  "tools/guardas/regras-log.mjs": {
+    "complexity": {
+      "count": 5
+    }
+  },
+  "tools/processo/estado.ts": {
+    "complexity": {
+      "count": 4
+    }
+  },
+  "tools/processo/esteira.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tools/processo/linhas.ts": {
+    "complexity": {
+      "count": 5
+    }
+  },
+  "tools/processo/mutacoes.ts": {
+    "complexity": {
+      "count": 2
+    }
+  },
+  "tools/processo/revisoes.ts": {
+    "complexity": {
+      "count": 4
+    }
+  },
+  "tools/processo/separar-achados.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tools/vitrine/escola.int.test.ts": {
+    "complexity": {
+      "count": 1
+    }
+  },
+  "tools/vitrine/foto.ts": {
+    "complexity": {
+      "count": 1
+    },
+    "max-depth": {
+      "count": 3
+    }
+  },
+  "tools/vitrine/vitrine.ts": {
+    "complexity": {
+      "count": 1
+    }
+  }
+}

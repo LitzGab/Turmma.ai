@@ -45,6 +45,12 @@ export const ARQUIVOS_DE_TESTE = ['**/*.test.{ts,tsx}', 'e2e/**/*.spec.ts']
  * (o mesmo seletor-regra serve ao controller e ao kit) e por isso não se repete aqui.
  */
 export const REGRAS_DO_KIT = ['no-restricted-imports']
+/**
+ * O tamanho tem catraca (X5, 13.0; RF11, R37): complexidade 10, 80 linhas de código por função, aninhamento 4 e 800 linhas por
+ * spec de e2e. Entram na segunda passada, com `applySuppressions`, para o `eslint-disable` não furar o limite e a linha de base
+ * (`eslint-suppressions.json`) ser a única exceção.
+ */
+export const REGRAS_DE_TAMANHO = ['complexity', 'max-lines-per-function', 'max-depth', 'max-lines']
 export const REGRAS_DAS_GUARDAS = [
   ...REGRAS_DE_LOG,
   ...REGRAS_DE_SDK_DE_IA,
@@ -52,6 +58,7 @@ export const REGRAS_DAS_GUARDAS = [
   ...REGRAS_DE_TESTE,
   ...REGRAS_DE_ENTRADA,
   ...REGRAS_DO_KIT,
+  ...REGRAS_DE_TAMANHO,
 ]
 
 const TODOS_OS_ARQUIVOS = ['**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}']

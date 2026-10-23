@@ -5,7 +5,8 @@ import { join, matchesGlob } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { raizRepositorio } from '../ci/executar.ts'
 import { criarEslintDasGuardas, violacoesDasGuardas } from './eslint-das-guardas.ts'
-import { ARQUIVOS_DE_TESTE, EXCECOES_DAS_GUARDAS, REGRAS_DAS_GUARDAS, REGRAS_DE_LOG, REGRAS_DE_SDK_DE_IA, REGRAS_DE_TENANT, REGRAS_DE_TESTE, REGRAS_EM_TODO_ARQUIVO } from './index.mjs'
+import type { Supressoes } from './catraca.ts'
+import { ARQUIVOS_DE_TESTE, EXCECOES_DAS_GUARDAS, REGRAS_DAS_GUARDAS, REGRAS_DE_LOG, REGRAS_DE_SDK_DE_IA, REGRAS_DE_TAMANHO, REGRAS_DE_TENANT, REGRAS_DE_TESTE, REGRAS_EM_TODO_ARQUIVO } from './index.mjs'
 import { CHAVES_PESSOAIS, ehChaveOperacional, ehNomePessoal } from './regras-log.mjs'
 
 // Cada fixture em __fixtures__ traz, na própria linha, a marca "reprova: <regra>". O teste passa
@@ -455,6 +456,122 @@ describe('guarda desligada por comentário', () => {
     const { scripts } = JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 'utf8')) as { scripts: Record<string, string> }
     // A guarda de camadas vem depois das duas (X5, 12.0): o comando inteiro é fixado em `camadas.test.ts › guarda:camadas é o comando…`.
     expect(scripts['lint']).toMatch(/^eslint \. --max-warnings=0 && node tools\/guardas\/lint\.ts( && .+)?$/)
+  })
+})
+
+describe('tamanho com catraca (RF11, R37)', () => {
+  const regras = new Set<string>(REGRAS_DE_TAMANHO)
+  const PRODUCAO = 'apps/api/src/x/x.service.ts'
+  const EM_PRODUCAO = [PRODUCAO, 'apps/web/src/x.tsx', 'apps/worker/src/x.ts', 'packages/nucleo/src/x.ts', 'infra/scripts/x.ts', 'tools/x.ts']
+  const EM_TESTE = ['apps/api/src/x.test.ts', 'apps/api/src/x.int.test.ts', 'apps/web/src/x.test.tsx', 'apps/api/test/x.ts', 'e2e/x.spec.ts', 'e2e/__fixtures__/x.ts']
+  const FIXTURES = ['tamanho/complexidade.ts', 'tamanho/linhas.ts', 'tamanho/aninhamento.ts']
+  const umaPorLinha = (quantidade: number): string => Array.from({ length: quantidade }, (_, i) => `export const v${i} = ${i}`).join('\n')
+  const dasRegras = (resultado: ESLint.LintResult | undefined, regra: string): string[] =>
+    (resultado?.messages ?? []).filter((mensagem) => mensagem.ruleId === regra).map((mensagem) => `${mensagem.line} ${regra}`).sort()
+  const configuracaoDe = async (caminho: string) =>
+    (await eslint.calculateConfigForFile(join(raizRepositorio, caminho))) as { rules: Record<string, [number, ...unknown[]] | undefined> }
+
+  it.each(FIXTURES.flatMap((fixture) => EM_PRODUCAO.map((caminho) => [fixture, caminho] as const)))(
+    'na produção, a fronteira reprova só o que passa do limite: complexidade 11, 81 linhas de código (brancos e comentários não contam) e aninhamento 5: %s em %s',
+    async (fixture, caminho) => {
+      expect(await lintar(eslint, fixture, caminho, regras)).toEqual(marcasDeViolacao(fixture))
+    },
+  )
+
+  it.each(['tools/x.js', 'tools/guardas/x.mjs', 'infra/x.cjs', 'tools/x.mts', 'tools/x.cts', 'apps/web/src/x.jsx'])('o limite de complexidade vale também no JavaScript: %s', async (caminho) => {
+    const ifs = (quantidade: number) => Array.from({ length: quantidade }, (_, i) => `  if (n === ${i}) r += 1`).join('\n')
+    const funcao = (quantidade: number) => `function f(n) {\n  let r = 0\n${ifs(quantidade)}\n  return r\n}\n`
+    const complexidade = async (texto: string) => dasRegras((await eslint.lintText(texto, { filePath: join(raizRepositorio, caminho) }))[0], 'complexity')
+    expect(await complexidade(funcao(9))).toEqual([])
+    expect(await complexidade(funcao(10))).toEqual(['1 complexity'])
+  })
+
+  it.each(EM_TESTE)('em teste (%s) o limite de linhas da função não vale (R39): a função de 81 linhas passa', async (caminho) => {
+    expect(marcasDeViolacao('tamanho/linhas.ts')).toHaveLength(1)
+    expect(await lintar(eslint, 'tamanho/linhas.ts', caminho, regras)).toEqual([])
+  })
+
+  it.each(['tamanho/complexidade.ts', 'tamanho/aninhamento.ts'])('em teste a complexidade e o aninhamento valem como na produção: %s', async (fixture) => {
+    for (const caminho of EM_TESTE) expect(await lintar(eslint, fixture, caminho, regras), caminho).toEqual(marcasDeViolacao(fixture))
+  })
+
+  it('o e2e tem o teto de 800 linhas por spec: 800 passa e 801 reprova, e só o spec do e2e tem o teto', async () => {
+    const maxLines = async (texto: string, caminho: string) => dasRegras((await eslint.lintText(texto, { filePath: join(raizRepositorio, caminho) }))[0], 'max-lines')
+    expect(await maxLines(umaPorLinha(800), 'e2e/x.spec.ts')).toEqual([])
+    expect(await maxLines(umaPorLinha(801), 'e2e/x.spec.ts')).toEqual(['801 max-lines'])
+    for (const caminho of ['e2e/__fixtures__/x.ts', 'apps/api/src/x.ts', 'apps/api/src/x.test.ts']) expect(await maxLines(umaPorLinha(801), caminho), caminho).toEqual([])
+  })
+
+  /** O nível de cada regra por caminho: 2 é `error`, 0 é desligada. */
+  const NIVEIS: [string, string, number][] = [
+    ...['apps/api/src/main.ts', 'apps/web/src/paginas/Casca.tsx', 'tools/ci/verificar.ts'].flatMap((caminho): [string, string, number][] => [
+      [caminho, 'complexity', 2],
+      [caminho, 'max-depth', 2],
+      [caminho, 'max-lines-per-function', 2],
+      [caminho, 'max-lines', 0],
+    ]),
+    ...['apps/api/src/x.test.ts', 'e2e/entrar.spec.ts'].flatMap((caminho): [string, string, number][] => [
+      [caminho, 'complexity', 2],
+      [caminho, 'max-depth', 2],
+      [caminho, 'max-lines-per-function', 0],
+    ]),
+    ['e2e/entrar.spec.ts', 'max-lines', 2],
+    ['apps/api/src/x.test.ts', 'max-lines', 0],
+  ]
+
+  it.each(NIVEIS)('o nível em %s de %s é %s (2 é error, 0 desligada): as quatro estão em error onde valem', async (caminho, regra, nivel) => {
+    expect((await configuracaoDe(caminho)).rules[regra]?.[0] ?? 0).toBe(nivel)
+  })
+
+  it.each([
+    ['complexity', 'tamanho/complexidade.ts'],
+    ['max-lines-per-function', 'tamanho/linhas.ts'],
+    ['max-depth', 'tamanho/aninhamento.ts'],
+  ])('o eslint-disable-next-line de %s só esconde a violação do ESLint comum, e a passada sem comentários a reprova', async (regra, fixture) => {
+    const caminho = join(raizRepositorio, PRODUCAO)
+    const linhas = lerFixture(fixture).split('\n')
+    const marcada = linhas.findIndex((linha) => linha.includes(`reprova: ${regra}`))
+    expect(marcada, `a fixture ${fixture} perdeu a marca de ${regra}`).toBeGreaterThan(0)
+    const texto = [...linhas.slice(0, marcada), `// eslint-disable-next-line ${regra}`, ...linhas.slice(marcada)].join('\n')
+    const todas = marcas(texto)
+    expect(todas).toHaveLength(1)
+    expect(dasRegras((await eslint.lintText(texto, { filePath: caminho }))[0], regra)).toEqual([])
+    expect(dasRegras((await eslintDasGuardas.lintText(texto, { filePath: caminho }))[0], regra)).toEqual(todas)
+  })
+
+  it('o eslint-disable do arquivo inteiro não esconde o teto de linhas do spec do e2e na passada sem comentários', async () => {
+    const caminho = join(raizRepositorio, 'e2e/x.spec.ts')
+    const texto = `/* eslint-disable max-lines */\n${umaPorLinha(801)}`
+    expect(dasRegras((await eslint.lintText(texto, { filePath: caminho }))[0], 'max-lines')).toEqual([])
+    expect(dasRegras((await eslintDasGuardas.lintText(texto, { filePath: caminho }))[0], 'max-lines')).toEqual(['801 max-lines'])
+  })
+
+  it.each([
+    ['complexity', 'tamanho/complexidade.ts', '["error", 99]'],
+    ['max-lines-per-function', 'tamanho/linhas.ts', '["error", 999]'],
+    ['max-depth', 'tamanho/aninhamento.ts', '["error", 9]'],
+  ])('/* eslint %s: %s */ afrouxa o ESLint comum, e a passada sem comentários mantém o limite', async (regra, fixture, configuracao) => {
+    const caminho = join(raizRepositorio, PRODUCAO)
+    const texto = [`/* eslint ${regra}: ${configuracao} */`, lerFixture(fixture)].join('\n')
+    expect(dasRegras((await eslint.lintText(texto, { filePath: caminho }))[0], regra)).toEqual([])
+    expect(dasRegras((await eslintDasGuardas.lintText(texto, { filePath: caminho }))[0], regra)).toEqual(marcas(texto))
+  })
+
+  /** A primeira regra suprimida do primeiro arquivo da linha de base: um caso real, que acompanha o corte. */
+  function primeiraSupressao(): { arquivo: string; regra: string } {
+    const base = JSON.parse(readFileSync(join(raizRepositorio, 'eslint-suppressions.json'), 'utf8')) as Supressoes
+    const [arquivo, regrasDoArquivo] = Object.entries(base)[0] ?? ['', {}]
+    const regra = Object.keys(regrasDoArquivo)[0] ?? ''
+    expect(arquivo !== '' && regra !== '', 'a linha de base esvaziou: o corte acabou, e esta conferência e a catraca saem junto').toBe(true)
+    return { arquivo, regra }
+  }
+
+  it('a função da linha de base passa na passada sem comentários, que aplica as supressões; sem elas, a mesma passada a reprova', async () => {
+    const { arquivo, regra } = primeiraSupressao()
+    const caminho = join(raizRepositorio, arquivo)
+    const semSupressoes = new ESLint({ cwd: raizRepositorio, overrideConfigFile: join(raizRepositorio, 'eslint.config.mjs'), allowInlineConfig: false, ruleFilter: ({ ruleId }) => ruleId === regra })
+    expect(dasRegras((await semSupressoes.lintFiles([caminho]))[0], regra).length, 'o arquivo da linha de base deixou de violar a regra: rode eslint . --prune-suppressions').toBeGreaterThan(0)
+    expect(dasRegras((await eslintDasGuardas.lintFiles([caminho]))[0], regra)).toEqual([])
   })
 })
 

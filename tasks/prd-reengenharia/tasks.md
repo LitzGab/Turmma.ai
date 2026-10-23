@@ -219,7 +219,7 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
   - [x] 12.4 Sai do `arquitetura.test.ts` o que as regras cobrem, depois das fixtures verdes
   - [x] 12.5 Testes: `camadas.test.ts` com as fixtures, o repositório real e o tempo do lint
 
-- [ ] **13.0 — Função nova acima de 10/80/4 e supressão nova reprovam o lint**
+- [x] **13.0 — Função nova acima de 10/80/4 e supressão nova reprovam o lint**
   - [ ] 13.1 Bloco novo em `eslint.config.mjs`: produção com `complexity: 10`, `max-lines-per-function: 80` (sem branco nem comentário) e `max-depth: 4`; teste sem `max-lines-per-function`; e2e com `max-lines: 800`, tudo `error`
   - [ ] 13.2 `eslint . --suppress-all` gera `eslint-suppressions.json`; o `TETO` por regra fica no teste
   - [ ] 13.3 `criarEslintDasGuardas` ganha `applySuppressions: true` e as quatro regras no `ruleFilter`

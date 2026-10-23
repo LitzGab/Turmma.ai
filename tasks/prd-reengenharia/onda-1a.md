@@ -174,8 +174,35 @@ SQL, migration e rotas.
 a soma por regra seja igual ao `TETO` do teste, e que nenhum arquivo tenha mais supressões que no `git show HEAD:` do
 arquivo: trocar uma função longa por outra no mesmo commit não se esconde na soma.
 
-**O comentário não fura:** `criarEslintDasGuardas` ganha `applySuppressions: true` e as três regras no `ruleFilter`, e a
+**O comentário não fura:** `criarEslintDasGuardas` ganha `applySuppressions: true` e as quatro regras no `ruleFilter`, e a
 segunda passada ignora `eslint-disable`.
+
+**Como ficou (13.0).** `eslint-suppressions.json` nasceu com 330 supressões (`complexity` 249, `max-lines-per-function` 61,
+`max-depth` 12, `max-lines` 8, em 202 arquivos) e o `TETO` mora em `catraca.test.ts`. Seis leituras que o código fixou:
+- **São quatro regras, e não três, na segunda passada:** `REGRAS_DE_TAMANHO` (`tools/guardas/index.mjs`) leva também o
+  `max-lines` do spec de e2e, e entra em `REGRAS_DAS_GUARDAS`. O `/* eslint max-depth: ["error", 9] */` e o
+  `eslint-disable` não afrouxam nenhuma das quatro.
+- **A conferência é código, não só teste:** `tools/guardas/catraca.ts` (`conferirCatraca`) é quem compara a base com o `TETO`
+  e com o HEAD, e `catraca.test.ts` a chama com a base real e com bases inventadas. Assim a mutação da cláusula cai num
+  arquivo de produção.
+- **O HEAD vale no portão da tarefa.** Na esteira o HEAD é o próprio commit, e a comparação por arquivo passa sempre; quem
+  segura ali é a soma contra o `TETO`, que o diff de um PR mostra. Sem `eslint-suppressions.json` no HEAD (o commit que o
+  cria), só a soma e as regras valem.
+- **Arquivo movido segue o `git mv`:** `renomeadosDesdeOHead` lê `git diff --name-status --find-renames HEAD`, e o novo caminho
+  herda o limite do antigo (quem move a pasta não é reprovado, e a supressão não cresce). O `mv` sem `git add` aparece como
+  arquivo novo e reprova.
+  **Quem move arquivo com supressão** roda, depois do `git mv`, `npx eslint . --suppress-all` e em seguida
+  `npx eslint . --prune-suppressions`: o `eslint .` reprova o caminho novo (a supressão continua presa ao antigo), e só a poda
+  não cria a do novo. O `--suppress-all` põe a contagem no caminho novo, a poda tira a do antigo, e a soma por regra, o `TETO`,
+  não muda.
+- **A contagem é por arquivo e por regra, não por função:** trocar uma função longa por outra dentro do mesmo arquivo não
+  muda o número, e nem a catraca nem o ESLint a veem. É o limite do mecanismo de supressão do ESLint, e a catraca não promete
+  mais que isso: quem corta uma função e cria outra no mesmo arquivo é pego pelo `revisor-geral`, e não pelo lint.
+- **Teste:** sem `max-lines-per-function` em `*.test.{ts,tsx}`, `*.spec.ts`, `**/test/**` e `e2e/**` (os ajudantes do
+  e2e); a complexidade e o aninhamento valem. O `max-lines: 800` é só do `e2e/**/*.spec.ts`.
+- **A supressão sem uso reprova o CLI** (`eslint . --max-warnings=0` sai com 2 e manda rodar `--prune-suppressions`); o Node
+  API da segunda passada não a reporta, e por isso `npm run lint` não pode ganhar `--pass-on-unpruned-suppressions`
+  (`catraca.test.ts` o confere). Quem corta uma função roda `npx eslint . --prune-suppressions` e baixa o `TETO` no mesmo commit.
 
 ### T1 — Borda de entrada (RF5, revista pela D81 em 22/10/2026)
 

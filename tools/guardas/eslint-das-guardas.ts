@@ -18,6 +18,8 @@ export function criarEslintDasGuardas(): ESLint {
     cwd: raizDasGuardas,
     overrideConfigFile: join(raizDasGuardas, 'eslint.config.mjs'),
     allowInlineConfig: false,
+    // A linha de base do tamanho (`eslint-suppressions.json`, 13.0): sem ela a passada reprovaria as 330 funções de hoje.
+    applySuppressions: true,
     ruleFilter: ({ ruleId }) => regrasDasGuardas.has(ruleId),
   })
 }
