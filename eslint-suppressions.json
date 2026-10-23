@@ -1063,11 +1063,6 @@
       "count": 1
     }
   },
-  "tools/ci/compose.ts": {
-    "complexity": {
-      "count": 1
-    }
-  },
   "tools/ci/duracao-do-e2e.ts": {
     "complexity": {
       "count": 3
