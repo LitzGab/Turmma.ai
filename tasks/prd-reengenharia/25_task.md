@@ -6,7 +6,7 @@
 
 ## Objetivo
 
-Os 92 `throw new Error('…')` de produção viram erro tipado, e `guardas/erro-tipado` reprova o próximo.
+Os 84 `throw new Error('…')` de produção (contados em 22/10, depois da 96.0) viram erro tipado, e `guardas/erro-tipado` reprova o próximo.
 
 ## Contexto necessário
 
@@ -15,15 +15,15 @@ Os 92 `throw new Error('…')` de produção viram erro tipado, e `guardas/erro-
 - `prd.md` RF13
 - `.claude/rules/00-arquitetura.md` (item 9) e `20-lgpd-menores.md` (item 11)
 - Código: `packages/nucleo/src/erro/erro-de-dominio.ts` e `filtro-global.ts`; `tools/guardas/regras-log.mjs` (molde de
-  regra); `ArgumentoInvalido` em `apps/api/src/ops/comando.ts:14`, `uso.ts:37` e `sessao-sintetica.ts:19`
-- Busca: `rg -l "throw new Error\(" apps/*/src packages/nucleo/src -g '!*.test.*'` (73 arquivos)
+  regra); `ArgumentoInvalido` em `apps/api/src/ops/comando.ts:15`, `uso.ts:37` e `sessao-sintetica.ts:19`
+- Busca: `rg -l "throw new Error\(" apps/*/src packages/nucleo/src -g '!*.test.*'` (64 arquivos em 22/10)
 
 ## Subtarefas
 
 - [ ] 25.1 — `ErroDeInvariante` em `packages/nucleo/src/erro/`, com motivo fixo (recusa da interpolação pelo tipo ou por
   lint, declarada)
 - [ ] 25.2 — Trocar cada `throw new Error(` de produção, com a mensagem que um teste afirma igual
-- [ ] 25.3 — `conferencia-das-permissoes.ts:59` lança erro tipado com código, com controller e método em campos;
+- [ ] 25.3 — `packages/nucleo/src/permissao/conferencia-das-permissoes.ts:59` lança erro tipado com código, com controller e método em campos;
   `permissao-no-boot.test.ts:74` os lê dali (mudança declarada)
 - [ ] 25.4 — `ArgumentoInvalido` vira uma classe só, reexportada
 - [ ] 25.5 — `guardas/erro-tipado` (`tools/guardas/regras-erro.mjs`) em `apps/*/src` e `packages/nucleo/src`, fora de
@@ -35,8 +35,8 @@ Os 92 `throw new Error('…')` de produção viram erro tipado, e `guardas/erro-
 | Arquivo | Novo ou alterado |
 |---|---|
 | `packages/nucleo/src/erro/erro-de-invariante.ts` e `.test.ts` | novo |
-| `packages/nucleo/src/` (21 arquivos), `apps/api/src/` (41, com `ops/`) | alterado |
-| `apps/worker/src/`, `apps/despachante/src/`, `apps/realtime/src/`, `apps/web/src/` | alterado |
+| `packages/nucleo/src/` (18 arquivos), `apps/api/src/` (36, com `ops/`) | alterado |
+| `apps/worker/src/` (5), `apps/realtime/src/` (1), `apps/web/src/` (4); `apps/despachante/src/` não tem nenhum | alterado |
 | `apps/api/test/permissao-no-boot.test.ts` | alterado |
 | `tools/guardas/regras-erro.mjs`, `tools/guardas/__fixtures__/erro-sem-tipo.ts` | novo |
 | `tools/guardas/index.mjs`, `tools/guardas/guardas.test.ts`, `eslint.config.mjs` | alterado |
@@ -55,7 +55,7 @@ Os 92 `throw new Error('…')` de produção viram erro tipado, e `guardas/erro-
 | Em `*.test.ts`, passa | unidade | só produção | aplicar a teste |
 | Em `apps/web/src/main.tsx`, passa | unidade | a exceção única | tirar a exceção |
 | `eslint-disable-next-line guardas/erro-tipado` não fura | unidade | segunda passada | tirar a regra dela |
-| As mensagens que os testes de hoje afirmam seguem iguais (`execucao.int.test.ts:282`) | integração (existentes) | o texto de hoje | trocar o texto de um motivo |
+| As mensagens que os testes de hoje afirmam seguem iguais (`apps/worker/test/execucao.int.test.ts:453`) | integração (existentes) | o texto de hoje | trocar o texto de um motivo |
 | Rota sem `@Permite` derruba o boot com controller e método nos campos | unidade (`permissao-no-boot.test.ts`) | 25.3 | nomes só na `message` |
 | `ErroDeInvariante` no filtro global vira `ERRO_INTERNO`, sem motivo nem pilha | integração (`erro.int.test.ts`) | regra 20.11 | devolver `message` no corpo |
 | O `ArgumentoInvalido` de `ops/uso.ts` é `instanceof` o de `ops/comando.ts` | unidade (`ops/uso.test.ts`) | uma classe só | recriar a classe em `uso.ts` |

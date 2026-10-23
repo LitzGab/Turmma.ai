@@ -1,6 +1,6 @@
 # Tarefa 12.0 — Import contra a direção ou a camada, ou ciclo novo, reprova o lint
 
-**Funcionalidade:** reengenharia · **Depende de:** 9.0, 10.0, 11.0, 34.0, 35.0, 96.0 (as pastas antes, pelo recorte: os caminhos deste documento são conferidos de novo antes de partir)
+**Funcionalidade:** reengenharia · **Depende de:** 9.0, 10.0, 11.0, 34.0, 35.0, 96.0 (as pastas antes, pelo recorte; caminhos e linhas conferidos em 22/10 contra `561ff3b`)
 **Subagentes obrigatórios:** `tenancy-guardian`, `infra-guardian`, `test-engineer`, `revisor-geral`
 **Porte:** grande
 <!-- test-engineer e revisor-geral são obrigatórios em toda tarefa, marcados ou não.
@@ -12,9 +12,9 @@ O `npm run lint` reprova import contra a direção dos pacotes, contra a camada 
 
 ## Contexto necessário
 
-- `onda-1a.md` §2, "T7"; `techspec.md` §6 e §11; `prd.md` RF10; `.reengenharia/DECISOES.md` R7, R39, N9
+- `onda-1a.md` §2, "T7"; `techspec.md` §6 e §11; `prd.md` RF10; `.reengenharia/DECISOES.md` R7, R39, R63, N9
 - Regras 00 (camadas) e 10 (cercas)
-- `apps/api/test/arquitetura.test.ts` (:31, :58, :108, :122, :141, :172-183, :878)
+- `apps/api/test/arquitetura.test.ts` (:31, :59, :112, :127, :146, :160, :175, :214-225, :920)
 - A regra de só importar `credencial/` e `sessao/` pelo `index.ts` (`onda-2.md`, "As travas") vale para `apps/`, e deixa
   `e2e/`, `infra/` e `tools/` de fora: o e2e importa `credencial/hash-do-token.ts` direto, de propósito (33.0). Também fica de fora
   o arquivo de `apps/api/src` que o e2e carrega: `operacao/token-do-convite.ts` importa `credencial/hash-do-token.js` direto, porque o
@@ -26,7 +26,7 @@ O `npm run lint` reprova import contra a direção dos pacotes, contra a camada 
 
 - [ ] 12.1 — `dependency-cruiser@18.7.0` exato em `devDependencies`; `tools/guardas/camadas.cjs` com as regras do §2 da onda, todas `error`
 - [ ] 12.2 — `guarda:camadas` no `package.json`, e `lint` terminando em `&& npm run guarda:camadas`
-- [ ] 12.3 — As três cercas e a exceção de `expurgo-da-escola.repository.ts:3`; confere o `reaches`
+- [ ] 12.3 — As três cercas, por import direto, e a exceção de `packages/nucleo/src/retencao/expurgo-da-escola.repository.ts:3`; sem `reaches` (R63)
 - [ ] 12.4 — Sai do `arquitetura.test.ts` o que as regras cobrem, depois das fixtures verdes
 - [ ] 12.5 — Testes: `camadas.test.ts` com as fixtures, o repositório real e o tempo do lint
 
@@ -52,20 +52,20 @@ Cada fixture reprova com a violação exata.
 | `apps/worker/src` → `apps/api/src` reprova; entre `test/` passa | unidade | app não importa app | aplicar a teste |
 | web → `@educa/nucleo` ou `apps/api/src`; `apps/api/src` → `apps/api/test` | unidade | web e produção | tirar uma regra |
 | controller → repository ou `drizzle-orm`; service → `drizzle-orm`; repository → service ou controller | unidade | camadas da API | tirar uma regra |
-| `sessao/x.ts` → `operacao/y.ts` | unidade | substitui o `it` da 10.0 | tirar a regra |
+| `sessao/login/x.ts` → `operacao/eu/y.ts` | unidade | substitui o `it` da 10.0, com a subpasta | tirar a regra |
 | Cada cerca: import, `export *`, `import()` e `tools/x.ts` de fora | unidade | nenhuma forma fura | tirar `tools` do comando |
-| Cada cerca: de fora, via `sessao/x.ts` que reexporta | unidade | segue o reexport | `reaches` → `path` |
-| Teste importando a resolução e o painel passa | unidade | **mudança aceita** (`:52`, `:113-118`) | cercar teste |
-| Conta global: o subcaminho de `apps/worker` reprova; `ciclo-de-vida/x.ts` e `redefinicao-de-mfa.ts` passam | unidade | subcaminho cercado | tirar um do `pathNot` |
-| Painel: `operacao/eu.service.ts` importando reprova | unidade | a cerca é o arquivo, não a pasta | trocar por `operacao/` |
-| `app.module.ts` → `ops/uso.ts` reprova; `painel.service.ts` → `ops/escola.ts` passa | unidade | metade de `:878` | aceitar `ops/` |
-| `expurgo-da-escola.repository.ts` passa; outro com o mesmo import reprova | unidade | exceção por arquivo | por pasta |
-| Real: a aresta `redefinicao-de-mfa.ts → conta-global.repository.ts` no JSON | unidade | sem "0 módulos" (R7) | `tsConfig` inexistente |
-| Real: zero violações e zero ciclos | unidade | os 3 ciclos não voltam | devolver `./login.service.js` em `conclusao-de-login.ts` |
+| Cada cerca: de fora, via `sessao/login/x.ts` que a reexporta, reprova pela regra do `index.ts`; o reexport pelo `sessao/index.ts` é dos `it` de `:160` e `:175`, que ficam | unidade | o reexport não fura, sem `reaches` (R63) | tirar a regra do `index.ts` |
+| Teste importando a resolução e o painel passa | unidade | **mudança aceita** (`:53`, `:117-123`) | cercar teste |
+| Conta global: o subcaminho de `apps/worker` reprova; `packages/nucleo/src/ciclo-de-vida/x.ts` e `apps/api/src/sessao/mfa/redefinicao-de-mfa.ts` passam | unidade | subcaminho cercado | tirar um do `pathNot` |
+| Painel: `operacao/eu/eu.service.ts` importando reprova; `operacao/painel/painel.service.ts` passa | unidade | a cerca é o arquivo, não a pasta | trocar por `operacao/` |
+| `app.module.ts` → `ops/uso.ts` e `operacao/painel/painel.service.ts` → `ops/escola.ts` reprovam; `ops/x.ts` → `ops/escola.ts` passa | unidade | metade de `:920`, sem exceção desde a 35.0 (R63) | aceitar o `painel.service.ts` |
+| `packages/nucleo/src/retencao/expurgo-da-escola.repository.ts` passa; outro em `retencao/` com o mesmo import reprova | unidade | exceção por arquivo | por pasta |
+| Real: a aresta `apps/api/src/sessao/mfa/redefinicao-de-mfa.ts → packages/nucleo/src/ciclo-de-vida/conta-global.repository.ts` no JSON | unidade | sem "0 módulos" (R7) | `tsConfig` inexistente |
+| Real: zero violações e zero ciclos | unidade | os 3 ciclos não voltam | devolver `../login/login.service.js` em `sessao/conclusao/conclusao-de-login.ts` |
 | Toda regra é `error` | unidade | `warn` sai com 0 | uma em `warn` |
 | `guarda:camadas` é o comando do §2, e `lint` falha com violação | unidade | cinco pastas, na esteira | tirar `e2e` ou o `&&` |
 | `dependency-cruiser` em `18.7.0` exato | unidade | N9 | `^18.7.0` |
-| Cada caso removido de `arquitetura.test.ts` tem o substituto listado; ficam `:141`, `:173` e os de tabela, SQL, migration e rotas | revisão | o que continua protegendo | — |
+| Cada caso removido de `arquitetura.test.ts` tem o substituto listado; ficam `:146`, `:160`, `:175`, `:215` e os de tabela, SQL, migration e rotas | revisão | o que continua protegendo | — |
 | Tempo do `lint` antes e depois | medida | `onda-1a.md` §4 | — |
 
 ## Como testar
@@ -75,8 +75,11 @@ Cada fixture reprova com a violação exata.
 - Formas de import: `apps/api/test/arquitetura.test.ts › reprova o arquivo de fora que a importa, reexporta ou
   carrega por import dinâmico` vira fixture em disco.
 - Isolado: `npx vitest run --project unidade tools/guardas/camadas.test.ts apps/api/test/arquitetura.test.ts`.
-- Armadilhas: a fixture precisa de árvore em `tools/`, ou o caso de `tools` passa calado; sem `reaches`, o `describe` de
-  `:58` fica até a 34.0 (R39); a 9.0 e a 13.0 também mexem em `tools/guardas/`.
+- Armadilhas: a fixture precisa de árvore em `tools/`, ou o caso de `tools` passa calado; `reachable` acusaria o
+  `app.module.ts`, o `ops/` e a `sala/`, porque o `sessao/index.ts` reexporta `sessoes-sinteticas.ts` e
+  `redefinicao-de-mfa.ts` (R63); a cerca se lê no caminho resolvido (`^apps/api/src/sessao/`), não no texto: `operacao/sessao/`
+  e `estrutura/escola-sessao/` são outras pastas; `arquitetura.test.ts` importa `sessao/tenant/…` direto, de propósito
+  (`:160`, `:175`), e entra na exceção por arquivo da regra do `index.ts`; a 9.0 e a 13.0 também mexem em `tools/guardas/`.
 
 ## Fora do escopo desta tarefa
 

@@ -116,10 +116,10 @@ todas `error`:
   importa service nem controller;
 - `sessao/` não importa `operacao/`;
 - **as três cercas de tenant** hoje em texto no `arquitetura.test.ts`: só `apps/api/src/sessao/**` importa
-  `resolucao-de-tenant.repository` (`:58`); só `sessao/**` e `nucleo/src/ciclo-de-vida/**` importam a conta global
-  (`conta-global.repository` ou `@educa/nucleo/conta-global`, `:109`, `:122`); só `operacao/painel.service.ts` importa
-  `painel.repository` (`:179`, `:183`). Teste fica de fora, como **mudança aceita** (hoje vale com lista fechada,
-  `arquitetura.test.ts:52`, `:113-118`).
+  `resolucao-de-tenant.repository` (`:59`); só `sessao/**` e `nucleo/src/ciclo-de-vida/**` importam a conta global
+  (`conta-global.repository` ou `@educa/nucleo/conta-global`, `:113`, `:127`); só `operacao/painel/painel.service.ts` importa
+  `painel.repository` (`:221`, `:225`). Teste fica de fora, como **mudança aceita** (hoje vale com lista fechada,
+  `arquitetura.test.ts:53`, `:117-123`). Linhas de 22/10, depois da 96.0.
 
 Exceção: `nucleo/.../expurgo-da-escola.repository.ts:3`.
 
@@ -129,14 +129,16 @@ guarda:camadas`: a esteira e o portão já o rodam (R39).
 
 **O teste das regras.** `tools/guardas/camadas.test.ts` roda o CLI sobre fixtures e exige as violações exatas. As três
 cercas têm fixture de import, de `export * from`, de `import()` dinâmico, de `tools/x.ts` importando a resolução, e de
-quem está fora importando `sessao/x.ts`, que a reexporta: a regra segue o reexport (`reaches` do depcruise, que a 12.0 confere). Sem `reaches`, o describe do `arquitetura.test.ts` que varre pelo nome da
-classe fica até a 34.0. Tirar a regra deixa o teste vermelho. Outro caso, no repositório real, exige a aresta
-`redefinicao-de-mfa.ts → packages/nucleo/src/ciclo-de-vida/conta-global.repository.ts`: prova que o `typescript` foi
+quem está fora importando `sessao/login/x.ts`, que a reexporta: reprova pela regra do `index.ts` (onda 2), e o reexport pelo
+`sessao/index.ts` fica com os `it` em execução dos barris. Sem `reaches` (R63): depois da 34.0 o `sessao/index.ts` reexporta
+quem usa a resolução e a conta global, e um `reachable` acusaria todo importador da porta. Tirar a regra deixa o teste vermelho. Outro caso, no repositório real, exige a aresta
+`apps/api/src/sessao/mfa/redefinicao-de-mfa.ts → packages/nucleo/src/ciclo-de-vida/conta-global.repository.ts`: prova que o `typescript` foi
 achado e a rodada não deu "0 módulos" (R7).
 
 **O que sai de `apps/api/test/arquitetura.test.ts`,** só no commit em que as regras ficam verdes com as fixtures: o
 `describe` da resolução, os 2 primeiros `it` da conta global, os 2 últimos do painel e a metade "nenhum módulo importa
-`ops/`". Ficam o `it` dos métodos e `@SemEscopo` do painel e os por tabela, SQL, migration e rotas.
+`ops/`". Ficam o `it` dos métodos e `@SemEscopo` do painel, os três dos barris (`:146`, `:160`, `:175`) e os por tabela,
+SQL, migration e rotas.
 
 ### T8 — Tamanho com catraca (RF11)
 

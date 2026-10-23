@@ -215,7 +215,7 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 - [ ] **12.0 — Import contra a direção ou a camada, ou ciclo novo, reprova o lint**
   - [ ] 12.1 `dependency-cruiser@18.7.0` exato em `devDependencies`; `tools/guardas/camadas.cjs` com as regras do §2 da onda, todas `error`
   - [ ] 12.2 `guarda:camadas` no `package.json`, e `lint` terminando em `&& npm run guarda:camadas`
-  - [ ] 12.3 As três cercas e a exceção de `expurgo-da-escola.repository.ts:3`; confere o `reaches`
+  - [ ] 12.3 As três cercas, por import direto, e a exceção de `expurgo-da-escola.repository.ts:3`; sem `reaches` (R63)
   - [ ] 12.4 Sai do `arquitetura.test.ts` o que as regras cobrem, depois das fixtures verdes
   - [ ] 12.5 Testes: `camadas.test.ts` com as fixtures, o repositório real e o tempo do lint
 

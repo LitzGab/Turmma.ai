@@ -64,8 +64,8 @@ etiquetas `image: educa-<x>:local` (as `teste-N` dependem delas).
 - A leitura do compose: `tools/ci/ambiente-de-teste.test.ts › imagens construídas, por ambiente › a imagem de cada serviço
   sai com a âncora resolvida, e o que não é serviço fica de fora` (o `COMPOSE_DE_EXEMPLO`) e `› no compose de verdade,
   nenhum serviço fica com a imagem do ambiente 0 e dois ambientes não dividem etiqueta`.
-- A trava nova, no molde de `tools/ci/ambiente.test.ts`: `parse(lerArquivo('infra/compose.yml'))` com `lerArquivo` e
-  `raizRepositorio` de `executar.ts`; as linhas `FROM … AS` por regex sobre o texto do Dockerfile.
+- A trava nova, no molde de `tools/ci/ambiente.test.ts`: `parse(lerArquivo('infra/compose.yml'))`, com `raizRepositorio` de `tools/ci/executar.ts`
+  e um `lerArquivo` local, como o de `tools/ci/ambiente.test.ts:11`; as linhas `FROM … AS` por regex sobre o texto do Dockerfile.
 - Isolado: `npx vitest run --project unidade tools/ci/dockerfile.test.ts tools/ci/ambiente-de-teste.test.ts`; e
   `npx vitest run --project integracao tools/ci/compose.int.test.ts` (precisa de Docker).
 - À mão antes do commit, por alvo: `docker build -f infra/docker/servico.Dockerfile --target worker -t educa-worker:local .`;
