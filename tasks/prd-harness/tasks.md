@@ -52,10 +52,10 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [x] 8.2 Portão e `ci:verificar` pela mesma lista de `etapas-de-guarda.ts` (RF8)
   - [x] 8.3 Testes: RF7 e RF8 do `cenarios.md`
 
-- [ ] **9.0 — Tarefa de código sem mutação não recebe carimbo**
-  - [ ] 9.1 `mutacoes.ts --faltando` (RF5)
-  - [ ] 9.2 A exigência do RF17 no portão e na `decidirCommit`
-  - [ ] 9.3 Testes: RF5 e RF17 do `cenarios.md`
+- [x] **9.0 — Tarefa de código sem mutação não recebe carimbo**
+  - [x] 9.1 `mutacoes.ts --faltando` (RF5)
+  - [x] 9.2 A exigência do RF17 no portão e na `decidirCommit`
+  - [x] 9.3 Testes: RF5 e RF17 do `cenarios.md`
 
 - [ ] **10.0 — Uma decisão de commit para as duas entradas, e o `PreToolUse` nega o desvio**
   - [ ] 10.1 `decidirCommit` em `portao.ts`, chamada pelo `PreToolUse`

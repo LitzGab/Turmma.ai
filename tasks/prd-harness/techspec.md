@@ -97,6 +97,19 @@ documento e sem a linha `**Sem mutação:** <motivo>` (motivo vazio recusado). O
 não por conter bloco, e a mesma exigência vale na `decidirCommit`: carimbo de outro portão não passa. O `--faltando`
 olha as linhas acrescentadas com `if`, `&&`, `||`, `??`, `? :` de valor, `case`, `.where(` ou expressão regular, fora
 de teste; trata como alcançada a linha cujo texto um bloco do mesmo arquivo cita; e só imprime.
+No código (9.0): a base é o `HEAD` (`git status` para a produção alterada, `git diff -U0 HEAD` e os arquivos novos para
+o `--faltando`); a marca da tarefa é a alteração do documento na árvore, e o portão acha o único documento de tarefa ou
+de correção alterado (`documentoDaTarefa`; com mais de um e sem o `.md` na linha de comando, nenhum, e a produção
+alterada fica vermelha pedindo o documento). A exigência (`exigenciaDeMutacao`, em `mutacoes.ts`) chega ao commit pela
+conferência que o hook já recebe, `avaliarMutacoes`, que agora recebe também os arquivos alterados da árvore; o
+`avaliarPortao` não a leva porque `portao.ts` não importa `mutacoes.ts` (o `ConferenciaDoDocumento` existe para isso).
+O carimbo ganha o campo `documento` (o que o portão da tarefa achou): sem bloco, a linha `Sem mutação` não deixa rastro
+no carimbo, e é o campo que prova que o portão foi o deste documento. A linha é alcançada quando algum bloco do mesmo
+arquivo cita o texto em qualquer linha do trecho, inclusive a de contexto (o `.where(and(` do exemplo do `executar-task`).
+Produção só apagada fica fora: o `arquivosAlterados` pula o arquivo com estado `D`, e a tarefa que só remove código de
+produto não é cobrada (não há linha nova a provar). A linha `Sem mutação` dentro de um bloco cercado conta, e quem copia
+o exemplo do guia para o documento a libera por engano; o motivo é o que o revisor lê. O caminho do `.md` pedido ao
+portão é normalizado para relativo à raiz antes de ir ao carimbo.
 
 **(e) O RF16.** `PASTAS_DE_CODIGO` vale para toda sessão. Em sessão de papel somam-se `tools/`, `.github/`,
 `.claude/settings*.json`, `.claude/hooks/`, `docs/aia/ouro/`, `docs/aia/ouro-retido/`, `package.json`, `compose.yaml`, `.env.example`,

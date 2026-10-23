@@ -13,12 +13,23 @@
 //   node tools/processo/portao-local.ts revisores <documento>    diz o que o commit ainda encontraria: quem falta, reprovou ou caducou
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { ARGUMENTOS_COMPOSE, servicosDeJob } from '../ci/compose.ts'
 import { arquivoDoRelatorioDoE2e, motivoDaDuracaoDoE2e, VARIAVEL_DO_RELATORIO_DO_E2E } from '../ci/duracao-do-e2e.ts'
 import { e2eDosLiteraisRemovidos } from '../ci/e2e-que-cita-literal.ts'
 import { garantirFilaDeCarga } from '../ci/fila-de-carga.ts'
-import { avaliarMutacoes, conferirMutacoesDoDocumento, lerMutacoes, rodarCalado, type CarimboDasMutacoes } from './mutacoes.ts'
+import {
+  avaliarMutacoes,
+  conferirMutacoesDoDocumento,
+  documentoDaTarefa,
+  exigenciaDeMutacao,
+  lerMutacoes,
+  linhasNovasDaArvore,
+  linhasSemBloco,
+  relatorioDoFaltando,
+  rodarCalado,
+  type CarimboDasMutacoes,
+} from './mutacoes.ts'
 import {
   alteracoesDeCodigo,
   alvosDoPortao,
@@ -55,7 +66,7 @@ if (argumentos[0] === 'conferir') {
   const exigidas = documento === '--completo' ? SUITES_DO_PORTAO_COMPLETO : suitesExigidas()
   const motivo =
     avaliarCarimbo(lerCarimbo(raiz), exigidas, alteracoesDeCodigo(raiz, arquivosAlterados(raiz)), lerInstantaneos(raiz)[CHAVE_DO_PORTAO]) ??
-    (documento === '--completo' ? null : avaliarMutacoes(lerCarimbo(raiz), documento, readFileSync(join(raiz, documento), 'utf8')))
+    (documento === '--completo' ? null : avaliarMutacoes(lerCarimbo(raiz), documento, readFileSync(join(raiz, documento), 'utf8'), arquivosAlterados(raiz)))
   process.stdout.write(motivo ? `${motivo}\n` : `portão local válido para o código atual (${lerCarimbo(raiz)?.suites.join(', ')})\n`)
   process.exit(motivo ? 1 : 0)
 }
@@ -78,7 +89,7 @@ if (argumentos[0] === 'revisores') {
     documento,
     instantaneos: lerInstantaneos(raiz),
   })
-  const mutacoes = avaliarMutacoes(lerCarimbo(raiz), documento, conteudo)
+  const mutacoes = avaliarMutacoes(lerCarimbo(raiz), documento, conteudo, arquivosAlterados(raiz))
   if (mutacoes !== null) bloqueios.push(mutacoes)
   process.stdout.write(bloqueios.length > 0 ? `${bloqueios.map((bloqueio) => `- ${bloqueio}`).join('\n')}\n` : `nada pendente: ${linhaResumo}\n`)
   process.exit(bloqueios.length > 0 ? 1 : 0)
@@ -98,16 +109,14 @@ const daTarefa = argumentos.includes('--tarefa')
 // outro módulo que a tarefa pode ter quebrado, quando quem implementa ou quem revisa sabe qual é).
 const extras = argumentos.filter((argumento) => !argumento.startsWith('--') && !argumento.endsWith('.md') && existsSync(join(raiz, argumento)))
 /**
- * O documento cujas mutações o portão confere: o que veio na linha de comando ou, sem ele, o único documento de tarefa
- * ou de correção alterado na árvore que traz bloco `mutacao`. Com dois, quem roda diz qual.
+ * O documento cujas mutações o portão confere: o que veio na linha de comando ou, sem ele, o da tarefa pela alteração
+ * (`documentoDaTarefa`). Achá-lo por ter bloco deixava a tarefa de produção sem bloco fora da conferência.
  */
 function documentoDasMutacoes(): string | null {
-  const pedido = argumentos.find((argumento) => argumento.endsWith('.md') && existsSync(join(raiz, argumento)))
-  if (pedido) return pedido
-  const candidatos = arquivosAlterados(raiz)
-    .filter((arquivo) => /^tasks\/(prd-[^/]+\/\d+_task|correcoes\/[^/]+)\.md$/.test(arquivo) && existsSync(join(raiz, arquivo)))
-    .filter((arquivo) => readFileSync(join(raiz, arquivo), 'utf8').includes('```mutacao'))
-  return candidatos.length === 1 ? (candidatos[0] ?? null) : null
+  const pedido = argumentos.find((argumento) => argumento.endsWith('.md') && existsSync(resolve(raiz, argumento)))
+  // O carimbo guarda o caminho como o hook o compara no commit, relativo à raiz: `./tasks/…` e o caminho absoluto são o mesmo documento.
+  if (pedido) return relative(raiz, resolve(raiz, pedido))
+  return documentoDaTarefa(arquivosAlterados(raiz))
 }
 // Os e2e que citam um texto que o diff tirou de `apps/web/src` também rodam: o texto é o único elo entre a tela e o spec, e o
 // spec que não foi alterado quebrava na esteira (`tools/ci/e2e-que-cita-literal.ts`). Só no portão da tarefa: o completo roda todos.
@@ -132,13 +141,25 @@ function ambienteDoPasso(passo: PassoDoPortao): NodeJS.ProcessEnv {
   return daTarefa && passo.comando.includes('tools/ci/e2e.ts') ? { ...ambiente, [VARIAVEL_DO_RELATORIO_DO_E2E]: relatorioDoE2e } : ambiente
 }
 
+// O documento e o texto das mutações são lidos aqui, e não depois das suítes: a sequência também derruba os workers antes das mutações de integração.
+const documento = daTarefa ? documentoDasMutacoes() : null
+const textoDoDocumento = documento ? readFileSync(join(raiz, documento), 'utf8') : null
+if (daTarefa && documento === null) process.stdout.write('\n▶ nenhum documento de tarefa achado (ou mais de um alterado): as mutações não serão conferidas. Passe o documento para conferi-las.\n')
+// RF17: com código de produto alterado, o documento precisa de bloco de mutação ou da linha `Sem mutação` com motivo. Vermelho
+// antes de qualquer suíte: a falta está no documento, e as suítes não a consertam.
+const semMutacao = daTarefa ? exigenciaDeMutacao(arquivosAlterados(raiz), textoDoDocumento) : null
+if (semMutacao !== null) {
+  process.stdout.write(`\n✗ portão local vermelho: ${semMutacao}\nNenhum carimbo gravado.\n`)
+  process.exit(1)
+}
+// RF5: as linhas novas com condição que nenhum bloco alcança. Só informa; quem decide é o `test-engineer`.
+if (documento && textoDoDocumento !== null) {
+  process.stdout.write(`\n${relatorioDoFaltando(linhasSemBloco(linhasNovasDaArvore(raiz), lerMutacoes(textoDoDocumento).mutacoes), documento)}`)
+}
 // Com node_modules anterior ao lock (um pull que trouxe dependência nova), o typecheck falha com TS2307
 // sem dizer que falta instalar.
 const dependencias = rodar('[ -f node_modules/.package-lock.json ] && [ ! package-lock.json -nt node_modules/.package-lock.json ] || npm ci')
 // A sequência vem de `sequencia-do-portao.ts`: a ordem dos comandos e o `stop` dos workers antes da integração têm teste lá.
-// O documento e o texto das mutações são lidos aqui, e não depois das suítes: a sequência também derruba os workers antes das mutações de integração.
-const documento = daTarefa ? documentoDasMutacoes() : null
-const textoDoDocumento = documento ? readFileSync(join(raiz, documento), 'utf8') : null
 const mutacoesDeIntegracao = textoDoDocumento !== null && mutacaoDeIntegracao(lerMutacoes(textoDoDocumento).mutacoes)
 const sequencia = sequenciaDoPortao(suites, { alvos, docker: ['docker', ...ARGUMENTOS_COMPOSE], servicosDeJob: servicosDeJob(), mutacoesDeIntegracao })
 const falhou = !dependencias ? 'dependências' : sequencia.find((passo) => !rodar(passo.comando, ambienteDoPasso(passo)))?.suite
@@ -169,7 +190,7 @@ if (documento && textoDoDocumento !== null) {
 const todosOsAlvos = [...alvos.integracao, ...alvos.e2e, ...alvos.infra]
 const recusa = carimbarSeNadaMudou(
   raiz,
-  daTarefa ? { inicio, suites, alvos: todosOsAlvos, ...(carimboDasMutacoes ? { mutacoes: carimboDasMutacoes } : {}) } : { inicio, suites },
+  daTarefa ? { inicio, suites, alvos: todosOsAlvos, ...(documento ? { documento } : {}), ...(carimboDasMutacoes ? { mutacoes: carimboDasMutacoes } : {}) } : { inicio, suites },
   noInicio,
 )
 if (recusa) {

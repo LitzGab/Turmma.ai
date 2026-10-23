@@ -60,6 +60,8 @@ export const CAMINHO_CARIMBO = '.processo/portao.json'
 export interface Carimbo {
   inicio: string
   suites: string[]
+  /** Só no portão da tarefa: o documento da tarefa ou da correção que ele achou. É o que diz de quem é o carimbo (RF17). */
+  documento?: string
   /** Só no portão da tarefa: os arquivos de teste que ele rodou, além da unidade inteira. */
   alvos?: string[]
   /** As mutações que o portão da tarefa conferiu, e de que documento (`tools/processo/mutacoes.ts`). */
@@ -70,9 +72,11 @@ export interface Carimbo {
  * Conferência a mais sobre o documento do commit, que quem chama o portão entrega. Existe para este módulo não importar
  * o `mutacoes.ts`, que roda processo. O módulo que roda sozinho, antes do `npm ci`, é o `caducidade.ts`
  * (`impressaoSemComentarios`, e o teste que o copia para fora do repositório). Hoje é a das mutações (`avaliarMutacoes`),
- * entregue por `hook-revisoes.ts` e `portao-local.ts`.
+ * entregue por `hook-revisoes.ts` e `portao-local.ts`. Recebe também os arquivos alterados da árvore, porque a exigência
+ * do RF17 (produção sem mutação não recebe carimbo) depende de haver produção, e é por aqui, e não dentro do
+ * `avaliarPortao`, que ela chega ao commit: o `avaliarPortao` não pode importar o `mutacoes.ts`.
  */
-export type ConferenciaDoDocumento = (carimbo: Carimbo | null, documento: string, conteudo: string) => string | null
+export type ConferenciaDoDocumento = (carimbo: Carimbo | null, documento: string, conteudo: string, alterados: string[]) => string | null
 
 /** O portão completo: tudo, como a esteira. Roda uma vez por spec, antes da validação (D78 revista em 09/10/2026). */
 export const SUITES_DO_PORTAO_COMPLETO = ['typecheck', 'lint', 'segredo', 'dependencias', 'test', 'e2e', 'infra']
@@ -319,7 +323,7 @@ function bloqueioDoDocumento(
     documento: caminho,
     instantaneos: lerInstantaneos(raiz),
   })
-  const aMais = conferencia(lerCarimbo(raiz), caminho, conteudo)
+  const aMais = conferencia(lerCarimbo(raiz), caminho, conteudo, arquivos)
   if (aMais !== null) bloqueios.push(aMais)
   if (bloqueios.length === 0) return null
   return `Commit bloqueado: revisões de ${caminho} incompletas.\n- ${bloqueios.join('\n- ')}`

@@ -43,6 +43,7 @@ import {
   type Revisao,
   ultimaRodadaNosAchados,
 } from './revisoes.ts'
+import { avaliarMutacoes } from './mutacoes.ts'
 
 const TAREFA = `# Tarefa 9.0 — Exemplo
 
@@ -435,6 +436,42 @@ describe('hooks sobre um repositório de verdade', () => {
     expect(vista).toEqual([6, 'tasks/prd-exemplo/9_task.md', true])
   })
 
+  it('o commit com código de produto sem bloco de mutação nem a linha "Sem mutação" é recusado, e o carimbo tem de ser deste documento (RF17)', () => {
+    const raiz = repositorio()
+    const documento = 'tasks/prd-exemplo/9_task.md'
+    const commit = { tool_input: { command: COMMIT_DA_TAREFA } }
+    mkdirSync(join(raiz, 'apps/api/src'), { recursive: true })
+    writeFileSync(join(raiz, 'apps/api/src/pedidos.ts'), 'export const a = 1\n')
+    tocar(raiz, 'apps/api/src/pedidos.ts', '2026-09-13T09:00:00')
+    tocar(raiz, 'apps/codigo.ts', '2026-09-13T09:00:00')
+    for (const revisor of ['infra-guardian', 'tenancy-guardian', 'test-engineer', 'revisor-geral']) {
+      registrar(
+        { agent_type: revisor, agent_transcript_path: transcript(raiz, revisor, '2026-09-13T10:00:00'), last_assistant_message: 'VEREDITO: APROVADO' },
+        raiz,
+        new Date('2026-09-13T10:05:00'),
+      )
+    }
+    const suites = ['typecheck', 'lint', 'segredo', 'dependencias', 'test', 'infra']
+    const inicio = new Date('2026-09-13T10:06:00').toISOString()
+    gravarCarimbo(raiz, { inicio, suites, documento })
+    // Os revisores e o carimbo liberariam; a conferência das mutações é quem segura, e vê a produção da árvore.
+    const alterados: string[][] = []
+    expect(portao(commit, raiz, undefined, (_carimbo, _documento, _conteudo, arquivos) => (alterados.push(arquivos), null))).toBeNull()
+    expect(alterados[0]).toEqual(expect.arrayContaining(['apps/api/src/pedidos.ts', 'apps/codigo.ts']))
+    expect(portao(commit, raiz, undefined, avaliarMutacoes)).toMatch(/^Commit bloqueado: revisões de tasks\/prd-exemplo\/9_task\.md incompletas\.\n- portão local: a árvore altera código de produto \(apps\/api\/src\/pedidos\.ts\)/)
+    // A linha com motivo atende, com o carimbo deste documento.
+    writeFileSync(join(raiz, documento), `${readFileSync(join(raiz, documento), 'utf8')}\n**Sem mutação:** só o valor de uma constante\n`)
+    expect(portao(commit, raiz, undefined, avaliarMutacoes)).toBeNull()
+    // O mesmo carimbo de outro portão, ou de um portão sem documento, não serve.
+    gravarCarimbo(raiz, { inicio, suites, documento: 'tasks/prd-exemplo/8_task.md' })
+    expect(portao(commit, raiz, undefined, avaliarMutacoes)).toMatch(/o último portão não foi o de tasks\/prd-exemplo\/9_task\.md/)
+    gravarCarimbo(raiz, { inicio, suites })
+    expect(portao(commit, raiz, undefined, avaliarMutacoes)).toMatch(/o último portão não foi o de tasks\/prd-exemplo\/9_task\.md/)
+    // Sem produção na árvore, nada é cobrado: o código fora de src fica como estava.
+    rmSync(join(raiz, 'apps/api'), { recursive: true })
+    expect(portao(commit, raiz, undefined, avaliarMutacoes)).toBeNull()
+  })
+
   it('o hook, no repositório de verdade, deixa passar o arquivo mutado e restaurado, e barra o editado durante o portão', () => {
     // É o caminho que roda de verdade: `portao()`, com os instantâneos em disco. O caso de unidade prova o repasse
     // dentro do `avaliarPortao`; este prova que a fiação do hook o alcança. Sem ele, tirar o repasse — exatamente a
@@ -483,6 +520,105 @@ describe('hooks sobre um repositório de verdade', () => {
     expect(lerCarimbo(raiz)?.inicio).toBe(carimbo.inicio)
     expect(lerInstantaneos(raiz)[CHAVE_DO_PORTAO]).toEqual(instantaneoDe(noInicio))
   })
+
+  /**
+   * Uma árvore em que a tarefa 9.0 altera o documento e acrescenta produção com um `if`, pronta para o portão da tarefa rodar
+   * como processo. A base já tem outro documento de tarefa, com bloco, que a tarefa não altera.
+   */
+  function arvoreDoPortaoDaTarefa() {
+    const script = join(import.meta.dirname, 'portao-local.ts')
+    const documento = 'tasks/prd-exemplo/9_task.md'
+    const raiz = repositorio()
+    const git = (...args: string[]) => execFileSync('git', args, { cwd: raiz, stdio: 'pipe' })
+    // Cada suíte do portão da tarefa deixa uma marca: o vermelho do documento tem de vir antes de todas elas.
+    const scripts = Object.fromEntries(['typecheck', 'lint', 'guarda:segredo', 'guarda:dependencias', 'test:unidade', 'test', 'test:e2e', 'test:infra'].map((nome) => [nome, 'touch suite-rodou']))
+    writeFileSync(join(raiz, 'package.json'), JSON.stringify({ scripts }))
+    writeFileSync(join(raiz, 'package-lock.json'), '{}\n')
+    mkdirSync(join(raiz, 'node_modules'), { recursive: true })
+    writeFileSync(join(raiz, 'node_modules/.package-lock.json'), '{}\n')
+    writeFileSync(join(raiz, '.gitignore'), 'node_modules/\nsuite-rodou\n')
+    const blocoDaBase = ['```mutacao', 'arquivo: apps/api/src/pedidos.ts', 'teste: tools/processo/mutacoes.test.ts', '- export const f', '+ export const g', '```'].join('\n')
+    writeFileSync(join(raiz, 'tasks/prd-exemplo/7_task.md'), `# Tarefa 7.0\n\n${blocoDaBase}\n`)
+    git('config', 'user.email', 'teste@exemplo.com')
+    git('config', 'user.name', 'Teste')
+    git('add', '-A')
+    git('commit', '-q', '-m', 'base')
+    // A tarefa altera o documento e acrescenta produção com um `if`.
+    writeFileSync(join(raiz, documento), `${readFileSync(join(raiz, documento), 'utf8')}\n## Mutações\n\nNenhuma.\n`)
+    mkdirSync(join(raiz, 'apps/api/src'), { recursive: true })
+    writeFileSync(join(raiz, 'apps/api/src/pedidos.ts'), 'export const f = (x: number) => { if (x) return 1 }\n')
+    const fila = join(mkdtempSync(join(tmpdir(), 'fila-')), 'carga.lock')
+    const ambiente = { ...process.env, CLAUDE_PROJECT_DIR: raiz, EDUCA_FILA_DE_CARGA: fila }
+    const portaoDaTarefa = (...argumentos: string[]) => spawnSync('node', [script, '--tarefa', ...argumentos], { env: ambiente, encoding: 'utf8' })
+    const subcomando = (nome: 'conferir' | 'revisores') => spawnSync('node', [script, nome, documento], { env: ambiente, encoding: 'utf8' })
+    const semLinha = readFileSync(join(raiz, documento), 'utf8')
+    const comLinha = `${semLinha}\n**Sem mutação:** o valor padrão de uma constante\n`
+    return { script, documento, raiz, ambiente, portaoDaTarefa, subcomando, semLinha, comLinha }
+  }
+
+  it('o portão da tarefa, rodado como processo, fica vermelho com produção sem bloco nem linha antes de qualquer suíte, e acha o documento pela alteração (RF17)', () => {
+    const { script, documento, raiz, ambiente, portaoDaTarefa, comLinha } = arvoreDoPortaoDaTarefa()
+
+    const sem = portaoDaTarefa()
+    expect(sem.status).toBe(1)
+    expect(sem.stdout).toMatch(/portão local vermelho: a árvore altera código de produto \(apps\/api\/src\/pedidos\.ts\) e no documento não há bloco de mutação nem a linha/)
+    expect(existsSync(join(raiz, 'suite-rodou'))).toBe(false)
+    expect(lerCarimbo(raiz)).toBeNull()
+
+    // Com a linha e o motivo, passa, e o carimbo diz de que documento é. A lista das linhas sem bloco aparece antes das suítes.
+    // O outro documento da base, com bloco e não alterado (7_task.md), não é tomado pelo da tarefa.
+    writeFileSync(join(raiz, documento), comLinha)
+    const com = portaoDaTarefa()
+    expect(com.status).toBe(0)
+    expect(com.stdout).not.toMatch(/nenhum documento de tarefa achado/)
+    expect(com.stdout).toMatch(/Linhas novas de produção com condição que nenhum bloco de tasks\/prd-exemplo\/9_task\.md alcança \(1\):\n {2}apps\/api\/src\/pedidos\.ts:1 {2}\[if\]/)
+    expect(existsSync(join(raiz, 'suite-rodou'))).toBe(true)
+    expect(lerCarimbo(raiz)).toMatchObject({ documento })
+    expect(lerCarimbo(raiz)?.mutacoes).toBeUndefined()
+
+    // Outro documento alterado, este com bloco: sem dizer qual, o portão não escolhe por ter bloco, e pede o documento.
+    const bloco = ['```mutacao', 'arquivo: apps/api/src/pedidos.ts', 'teste: tools/processo/mutacoes.test.ts', '- export const f', '+ export const g', '```'].join('\n')
+    writeFileSync(join(raiz, 'tasks/prd-exemplo/8_task.md'), `# Tarefa 8.0\n\n${bloco}\n`)
+    const ambiguo = portaoDaTarefa()
+    expect(ambiguo.status).toBe(1)
+    expect(ambiguo.stdout).toMatch(/nenhum documento de tarefa achado \(ou mais de um alterado\)/)
+    expect(ambiguo.stdout).toMatch(/não achei o documento da tarefa entre os alterados/)
+    expect(portaoDaTarefa(documento).status).toBe(0)
+
+    // O portão completo não é o da tarefa: não procura documento nem cobra mutação, ainda que a árvore tenha produção.
+    const completo = spawnSync('node', [script, '--e2e', '--infra'], { env: ambiente, encoding: 'utf8' })
+    expect(completo.status).toBe(0)
+    expect(completo.stdout).not.toMatch(/nenhum documento de tarefa achado|portão local vermelho/)
+    // Cinco processos do portão em série: com a máquina carregada passam dos 5 s do padrão.
+  }, 30_000)
+
+  it('o conferir e o revisores veem a produção sem bloco como o hook vê, e o documento pedido por outro caminho é o mesmo (RF17)', () => {
+    const { documento, raiz, portaoDaTarefa, subcomando, semLinha, comLinha } = arvoreDoPortaoDaTarefa()
+
+    // Com a linha e o portão verde, os dois dizem que não há pendência de mutação.
+    writeFileSync(join(raiz, documento), comLinha)
+    expect(portaoDaTarefa().status).toBe(0)
+    expect(subcomando('conferir').status).toBe(0)
+    expect(subcomando('revisores').stdout).not.toMatch(/código de produto/)
+    // Tirada a linha, o carimbo continua válido para o código, mas o documento já não atende o RF17: o que a Mesa e quem
+    // implementa consultam tem de coincidir com o que o hook recusa.
+    writeFileSync(join(raiz, documento), semLinha)
+    const conferir = subcomando('conferir')
+    expect(conferir.status).toBe(1)
+    expect(conferir.stdout).toMatch(/a árvore altera código de produto \(apps\/api\/src\/pedidos\.ts\)/)
+    const revisores = subcomando('revisores')
+    expect(revisores.status).toBe(1)
+    expect(revisores.stdout).toMatch(/a árvore altera código de produto \(apps\/api\/src\/pedidos\.ts\)/)
+
+    // `./tasks/…` e o caminho absoluto são o documento da tarefa, e o carimbo o guarda como o hook o compara no commit.
+    // Com outro documento de tarefa alterado, só o pedido acha o da tarefa: sem ele, o portão pede o documento.
+    writeFileSync(join(raiz, documento), comLinha)
+    writeFileSync(join(raiz, 'tasks/prd-exemplo/8_task.md'), '# Tarefa 8.0\n')
+    for (const pedido of [`./${documento}`, join(raiz, documento)]) {
+      expect(portaoDaTarefa(pedido).status).toBe(0)
+      expect(lerCarimbo(raiz)).toMatchObject({ documento })
+    }
+  }, 60_000)
 
   it('o portão local, rodado como processo, não carimba o que a suíte editou no meio da corrida', () => {
     // O caso acima prova a decisão; este prova **onde** o conteúdo é lido. Mover a leitura do início para o fim

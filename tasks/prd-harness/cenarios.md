@@ -96,9 +96,12 @@ recusado. Sem papel: passa (salvo `infra/`, que é código em toda sessão: `inf
 recusado também sem papel).
 
 **RF17**: produção alterada e documento sem bloco nem linha: portão vermelho; `**Sem mutação:**` vazio: vermelho; com
-motivo: verde; com bloco: verde. Só teste, `.d.ts` ou `apps/web/vite.config.ts`: não exige. Documento achado pela marca. Pela `decidirCommit`, com
+motivo: verde; com bloco: verde. Só teste, `.d.ts` ou `apps/web/vite.config.ts`: não exige. Documento achado pela marca
+(a alteração do documento na árvore; o outro documento, com bloco e não alterado, não serve; com dois alterados e sem o
+`.md` na linha de comando, nenhum). Pela `decidirCommit`, com
 carimbo válido: produção no índice e documento sem bloco nem linha, recusado; com a linha, passa. Carimbo do portão de
-outra tarefa: recusado.
+outra tarefa: recusado (o carimbo traz o `documento` do portão, e a conferência das mutações, `avaliarMutacoes`, recebe
+os arquivos alterados: até a `decidirCommit` existir, a prova é pelo `portao()` do hook, com ela injetada).
 
 **RF18**: em `mvp/x`, commit com `(mvp: algo)`, código e carimbo válido: recusado com a mensagem de código sem tarefa. O
 teste de hoje que aceita esse caso é o único que muda, e o documento da tarefa diz isso.
