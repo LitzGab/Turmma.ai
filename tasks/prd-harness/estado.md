@@ -14,11 +14,11 @@
   - linha 1 (`Implementador`/`Mesa`): **correção `2026-10-23-agentes-suspensao-intermitente`**, desde ~16:45: a esteira
     `39996698191` (em `a691e02`, commit só de documento) caiu no e2e 1/7, `e2e/agentes.spec.ts:230` (`chromebook`,
     `locator.click` estourou 90 s); a `develop` está verde. Guardiões: `conformidade-reviewer`, `frontend-reviewer`.
-    Depois dela, a **4.0** (pequeno) parte na linha 1
+    Depois dela, o quadro diz o que parte
   - linha 2 (`Implementador 2`/`Mesa 2`): **correção `encontro-6`**, desde ~17:15: a 6.0 terminou (`8dce7e7`, infra-guardian,
     revisor-geral e test-engineer APROVADOS na 2ª rodada), e o encontro deu CONFLITO em `tasks/prd-harness/cenarios.md`.
     Guardião: `infra-guardian`. Depois dela, o encontro da linha 2 de novo
-  - linha 3 (`Implementador 3`/`Mesa 3`): **9.0** (grande), 1ª tentativa, desde ~16:35
+  - linha 3 (`Implementador 3`/`Mesa 3`): **4.0** (pequeno), 1ª tentativa, desde ~17:25 (a 9.0 se encontrou em `954821d`)
   - a 10.0 e a 15.0 também estão liberadas e partem nas primeiras linhas que se encontrarem
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Devo ainda:**
@@ -34,7 +34,7 @@
   - nota ao Arquiteto, se servir: o lote 5/7 do e2e passou dos 45 min do job na correção do `casca`, o que pesa no M1
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `690e0b4` (encontro da 3.0); a fila da esteira tem oito execuções na fila (`queued`)
+- **Base:** `spec/harness` em `38be9a3` (encontro da 9.0); a fila da esteira tem oito execuções na fila (`queued`)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -46,6 +46,7 @@
 | 2.0 | `4fcf89d` | Sonnet 5.5 | test-engineer 2, revisor-geral 2 | duas DIVERGÊNCIAS: o RF13, com BLOQUEIO, que o Joaquim resolveu com A; e a catraca, que o Arquiteto triou como detalhe A, com a correção complexidade-revisoes antes. Três divergências no `2_task.md` e sobras no `TODO.md` |
 | 5.0 | `9b676fc` | Sonnet 5.5 | infra-guardian 2, test-engineer 2, revisor-geral 2 (os três reprovaram na 1ª) | |
 | 3.0 | `201e9b3` | Sonnet 5.5 | infra-guardian 2, privacy-guardian 2, test-engineer 2, revisor-geral 2 | `gh run list` lê por evento (push e `workflow_dispatch`), não só `--event push`; o `tasks.md:26` ainda cita o antigo |
+| 9.0 | `954821d` | Sonnet 5.5 | test-engineer 2, revisor-geral 2 | |
 
 ## Esperando o Joaquim
 ## 23/10/2026 ~16:10 — X7 escopo (skills de projeto)
