@@ -171,8 +171,13 @@ Sem desvio. A 10, a 20 e a 70 seguem sempre carregadas e cobradas pelo caminho; 
 
 ## 12. Premissas não verificadas
 
-- ⚠️ NÃO VERIFICADO: o `CLAUDE_CODE_AGENT` chega ao Bash do papel e dos subagentes; a 1.0 prova antes de o hook
-  nativo depender dele
+- ✅ VERIFICADO pela 1.0 (`1_task.md`, "Prova da premissa", 23/10/2026): o `CLAUDE_CODE_AGENT` chega ao Bash do papel
+  e dos subagentes, nunca vazio, mas **no subagente o valor é o papel do terminal que o chamou**, e não o nome do
+  subagente: o `revisor-geral` chamado pela Mesa vê `mesa-de-revisao`. Por isso a 11.0 e o hook nativo (§5a) perguntam
+  só se o valor está em `PAPEIS_DO_TIME`, e **nada** pode supor `CLAUDE_CODE_AGENT=revisor-geral` (nem outro nome de
+  revisor) para saber quem está rodando. O Orquestrador, sem `--agent`, não tem a variável, e o hook não age nele.
+  O que a 1.0 deixou sem medir, o subagente de outro papel, o Arquiteto mediu no mesmo dia: o subagente que ele chama vê
+  `arquiteto`. A regra vale para todo papel que chama subagente
 - ⚠️ NÃO VERIFICADO: a regra com `paths:` carrega quando um subagente lê o arquivo; a saída está no §9
 - ⚠️ NÃO VERIFICADO: o `UserPromptSubmit` recebe o texto colado expandido, e o `SessionStart` distingue `clear`; se
   não valer, o RF29 e o RF27 ficam no aviso de início de sessão
