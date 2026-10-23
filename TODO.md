@@ -1814,3 +1814,15 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       A: 10 reprovações). (M5) `linhas.ts abandonar <n>`. (M6) o portão para o despachante e os workers do compose de teste antes da
       integração. (M7) o portão chama as guardas pelas etapas de `tools/ci/etapas-de-guarda.ts`, as mesmas do `ci:verificar`.
       (dono: Orquestrador)
+
+## Da X7 (harness), fora dela
+
+- [ ] **(X7, Tech Spec §9) Remover `tools/processo/separar-achados.ts` e o teste dele**: o hook já separa os achados por
+      documento desde a X5, e o script só serviu para a migração. Espera o ok do Gabriel (U11-10), porque ele roda o
+      processo na branch dele. (dono: Joaquim, com o Gabriel)
+- [ ] **(X7, revisão da spec, rodada 4) Para a retrospectiva da X7**, recomendações que mudariam a lista fechada do RF15 e
+      do RF16 e por isso não entraram na spec: (1) a citação por número de decisão (D45, D47, D55 a D59, D64) somar o
+      `conformidade-reviewer`, como a citação da regra 70 soma (`tasks/prd-harness/tabela-de-guardioes.md`, "Regras de
+      casamento"); (2) a linha `**Sem mutação:**` em arquivo que pede o `conformidade-reviewer` exigir a rodada dele;
+      (3) `.dockerignore`, `.nvmrc` e `package-lock.json` fora da lista do §5(e) de propósito: entrar muda a D53. (dono:
+      Arquiteto, na `retro` da X7)
