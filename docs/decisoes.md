@@ -1261,7 +1261,12 @@ que altera código de produção (`apps/*/src`, `packages/*/src`) sem nenhum blo
 "Sem mutação: <motivo>" não recebe carimbo, e o portão lista antes da Mesa as condições novas que nenhum
 bloco alcança. Motivo: sem o rótulo certo, os guardiões de tenant e de privacidade sumiam sem erro
 (U11-4), e zero mutações passava o portão (U11-8); a cláusula sem mutação foi a reprovação que mais
-voltou, 10 vezes na X5, sem mudar com quatro specs de texto.
+voltou, 10 vezes na X5, sem mudar com quatro specs de texto. (3) Mais dois avisos no lugar de parada, na
+lista da D78: a proposta da retrospectiva que muda só skill, papel ou modelo de documento (o Arquiteto mostra
+e aplica depois de 30 minutos sem objeção; código de processo, regra e decisão continuam parada), e a
+ressalva menor da validação, que vai para o `TODO.md` com dono e não segura o pouso (crítica e maior
+continuam parada). Motivo: nas últimas retrospectivas o Joaquim escolheu sempre o que o Arquiteto
+recomendou, e a parada só custou espera.
 
 **D80 — A pele do produto é o sistema Turmma do mockup de outubro: cor por família, borda de 2 px
 com degrau sólido, ícone ilustrado, a onça como mascote, modo escuro, e até quatro lugares por
