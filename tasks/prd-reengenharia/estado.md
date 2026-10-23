@@ -27,20 +27,13 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - **36 de 36 tarefas encontradas** (25.0 às 00:10, spec em `2b68e74`). Linhas ociosas; **não rodar `linhas.ts fechar` antes da validação aprovada** (correção da validação usa uma linha)
-  - `Arquiteto` (reiniciado no andar da spec às 00:12): **fecho do guia (95.0)**, a lista "Conferir depois das pastas" e as linhas a repor (abaixo); commit de documento na `spec/reengenharia`, com push, e `/seguir RELATÓRIO`. **Depois dele: commit "antes da validação" e o `Validador`** (passo 8)
-  - **guia (95.0) publicado** pelo `Arquiteto` em `202cb47` (RELATÓRIO às 18:18). Fica para o commit do fim da spec: a
-    lista "Conferir depois das pastas" e repor as linhas que ele tirou do guia (dependency-cruiser e complexidade da
-    12.0/13.0, API por pastas da 33–35/96, `lerEntrada` da 16.0) quando 12.0, 13.0, 16.0/17.0 e as pastas entrarem
-  - `Arquiteto`: caminhos da 12.0, 13.0, 24.0, 25.0 e 90.0 **conferidos** (`a0f1974`, RELATÓRIO às 22:13): 12.0 e T7 da onda 1a
-    com as subpastas, cercas sem reaches (R63); 25.0 e 90.0 ajustadas; 13.0 e 24.0 sem mudança. Livre
+  - **36 de 36 tarefas encontradas**; linhas ociosas; não rodar `linhas.ts fechar` antes da validação aprovada (correção da validação usa uma linha)
+  - **`Validador`** (reiniciado no andar da spec às ~00:16 de 23/10): validação da funcionalidade completa sobre `c88231a`; `/seguir RELATÓRIO`. Ninguém usa o ambiente de teste 0 enquanto ele roda
+  - fecho do guia (95.0) feito pelo `Arquiteto` em `c88231a` (RELATÓRIO às ~00:15): lista "Conferir depois das pastas" conferida e travas repostas (12.0, 13.0, 24.0, 25.0, API por pastas, entrada sem `lerEntrada`); só docs
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
-  - **95.0 (guia), entregue pelo Claude Code #2** em `/home/joaquimdp/Documentos/git/Educa.ia/.processo/reengenharia/guia/`
-    (`guia-do-desenvolvedor.md`, `arquitetura.md` corrigido, `LEIA.md` com o que conferir). Quando o `Arquiteto` tiver
-    folga: revisão do `revisor-geral` (pedida às ~11:30). **Publicar (commit) só depois das tarefas de pasta (33–36, 96,
-    97) e da 14.0–17.0**
+  - 95.0 (guia): publicada (`202cb47`) e fechada (`c88231a`); nada a fazer
   - todos os 36 documentos existem (`504a041`, `43a6ae2`, `bc9241f`); R55 e R56 em `DECISOES.md`. A 96.0 depende da
     97.0; a 90.0 espera a 24.0; a 43.0 e a 90.0 não correm juntas (`infra/compose.yml`)
   - **onda 0 fechada pelo recorte**: lote retido 2 do riscoAVida (R59) e lotes retidos 1 da 3.0 (`3b44efe`, medida abaixo
@@ -57,7 +50,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `2b68e74` (encontro da 25.0, 00:10; último commit com código). Esteira: `4d0219d` VERDE (o `casca.spec:67` de `a0f1974` foi intermitente); `62b5fc2` (`39890275233`) rodando; `462a835` e `7789cc2` canceladas às 00:11 (superadas); **`2b68e74` (`39893548090`) na fila: é a que vale para o fechamento**, junto da do commit do guia. Vigia ligada
+- **Base:** `spec/reengenharia` em `c88231a` (fecho do guia, só docs; último commit com código `2b68e74`). Esteira: `2b68e74` (`39893548090`) e `c88231a` (`39893870904`) na fila: valem para o fechamento (`esteira.ts --fechamento`); o VERMELHO de `7789cc2` é execução cancelada. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
