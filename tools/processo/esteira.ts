@@ -8,7 +8,7 @@
 // Sai com 0 quando dá para seguir (verde, rodando ou ainda sem execução, na pergunta da tarefa; verde, no fechamento)
 // e com 1 quando não dá, dizendo o commit, a execução e os jobs que caíram.
 import { execFileSync } from 'node:child_process'
-import { DOCUMENTO_QUE_UMA_SUITE_LE } from './revisoes.ts'
+import { DOCUMENTO_QUE_UMA_SUITE_LE } from './caducidade.ts'
 
 export type EstadoDaExecucao = 'verde' | 'vermelha' | 'rodando'
 

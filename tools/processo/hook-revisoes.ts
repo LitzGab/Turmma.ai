@@ -1,4 +1,5 @@
-// Entrada dos hooks de revisão (.claude/settings.json). A lógica e o teste ficam em revisoes.ts.
+// Entrada dos hooks de revisão (.claude/settings.json). A lógica está em documento-de-revisao.ts (`registrar`) e em
+// portao.ts (`portao`), com caducidade.ts e comando-git.ts; o revisoes.ts só os reexporta, e o teste fica em revisoes.test.ts.
 //   node tools/processo/hook-revisoes.ts registrar   ← SubagentStop
 //   node tools/processo/hook-revisoes.ts portao      ← PreToolUse do Bash
 import { readFileSync } from 'node:fs'

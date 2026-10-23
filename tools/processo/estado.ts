@@ -12,7 +12,8 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { arquivosAlterados, DOCUMENTO_QUE_UMA_SUITE_LE, lerRevisoes, REVISORES_COM_VETO, revisoresObrigatorios, type Revisao } from './revisoes.ts'
+import { arquivosAlterados, DOCUMENTO_QUE_UMA_SUITE_LE } from './caducidade.ts'
+import { lerRevisoes, REVISORES_COM_VETO, revisoresObrigatorios, type Revisao } from './documento-de-revisao.ts'
 
 export type Marca = 'pendente' | 'andamento' | 'concluida'
 

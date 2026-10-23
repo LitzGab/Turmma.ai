@@ -15,7 +15,7 @@ do Orquestrador, no fechamento, e não é tarefa.
   - [x] 1.2 Prova numa sessão real de que `CLAUDE_CODE_AGENT` chega ao Bash do papel e do subagente (§12)
   - [x] 1.3 Testes: rótulo tirado, revisor desconhecido
 
-- [ ] **2.0 — O `revisoes.ts` partido por responsabilidade, sem mudar comportamento**
+- [x] **2.0 — O `revisoes.ts` partido por responsabilidade, sem mudar comportamento**
   - [ ] 2.1 `documento-de-revisao.ts`, `caducidade.ts`, `comando-git.ts`, `portao.ts`; `revisoes.ts` só reexporta
   - [ ] 2.2 `estado.ts` e `esteira.ts` deixam de importar `revisoes.ts`
   - [ ] 2.3 Testes: os atuais verdes sem alteração; teste dos imports

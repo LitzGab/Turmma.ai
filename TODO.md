@@ -1849,3 +1849,17 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       guarda de `terminar`, máquina muito carregada pode ver o marcador só depois dos 1,5 s do SIGKILL, e uma `esperaMs` de uns 5 s
       tira a janela; (6) `durouMs < 5_000` do teste do prazo e do `rodarCalado` conta a subida do Node com folga de uns 4 s.
       (dono: Arquiteto, na `retro` da X7)
+- [ ] **(X7, 2.0) Comentários que ainda dizem onde a lógica do hook mora**: `tools/ci/etapas-de-guarda.ts:119`,
+      `tools/ci/e2e-que-cita-literal.ts:4` e `tools/processo/sequencia-do-portao.ts:80` citam `tools/processo/revisoes.ts`
+      (`alvosDoPortao` e outras peças), e o `executar-task/SKILL.md` cita `MARCAS_DE_DIRETIVA` e
+      `DOCUMENTO_QUE_UMA_SUITE_LE` no mesmo arquivo. Continuam certos pela reexportação; o nome certo agora é
+      `portao.ts` (`alvosDoPortao`) e `caducidade.ts` (as duas constantes). Os do `.claude/` entram no texto do RF20 a RF25.
+      Mais cinco da revisão da 2.0: (1) a linha do `revisoes.ts` no §2 da `techspec.md` não diz que `PAPEIS_DO_TIME` e
+      `BRANCHES_PROTEGIDAS` ficam no `comando-git.ts` (o `portao.ts` reexporta o primeiro); (2) `hook-portao.test.ts:84` quebra
+      só o `revisoes.ts`, e erro de sintaxe no `portao.ts` ou no `comando-git.ts` também derruba o hook sem teste que o
+      exercite (um caso por módulo, na 10.0); (3) o `break` do próximo cabeçalho e o da linha em branco de `corpoDaSecao`
+      sobrevivem a qualquer teste de hoje (falta seção vazia seguida de outra seção, e parágrafo solto seguido de linha em
+      branco); (4) os blocos de mutação do `particao.test.ts` em `2_task.md` citam o teste por um trecho do nome ("o arquivo
+      de hoje passa", "de um módulo que sumiu: vermelho", "o arquivo que não existe: vermelho"), e não pelo nome inteiro; (5) o
+      caso "módulo que sumiu" só tira `./caducidade.ts`, e se outro módulo sair de `REEXPORTADOS` nenhum teste fica vermelho
+      (um `it.each` sobre os quatro). (dono: Arquiteto, na `retro` da X7)

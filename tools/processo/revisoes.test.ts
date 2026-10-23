@@ -941,8 +941,8 @@ describe('mudança só de comentário', () => {
     it('sem o compilador instalado (antes do npm ci), não se aplica', () => {
       // O mesmo módulo, copiado para fora do repositório: dali não há `node_modules` para achar o `typescript`.
       const pasta = mkdtempSync(join(tmpdir(), 'sem-typescript-'))
-      writeFileSync(join(pasta, 'revisoes.ts'), readFileSync(join(import.meta.dirname, 'revisoes.ts')))
-      const programa = "import { impressaoSemComentarios } from './revisoes.ts'\nconsole.log(String(impressaoSemComentarios('a.ts', 'export const a = 1\\n')))\n"
+      writeFileSync(join(pasta, 'caducidade.ts'), readFileSync(join(import.meta.dirname, 'caducidade.ts')))
+      const programa = "import { impressaoSemComentarios } from './caducidade.ts'\nconsole.log(String(impressaoSemComentarios('a.ts', 'export const a = 1\\n')))\n"
       writeFileSync(join(pasta, 'rodar.ts'), programa)
       const saida = spawnSync('node', ['rodar.ts'], { cwd: pasta, encoding: 'utf8' })
       expect(saida.stderr).toBe('')
