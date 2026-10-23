@@ -1786,7 +1786,7 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   rodada): em `apps/api/src/operacao/escola/escola.repository.test.ts`, um `.test.tsx` ou `.spec.ts` que citasse o módulo seria
   acusado como código. Alinhar com o filtro das outras guardas, e conferir os três testes que usam a função, na próxima tarefa que
   mexer nela (`tasks/correcoes/2026-10-22-porta-unica-so-import.md`, linhas 110 e 115). (dono: Joaquim)
-- [ ] **(X5, esteira) `e2e/casca.spec.ts:67` [celular] passa do prazo do dado, e dois e2e do `celular` caíram uma vez na `develop`.**
+- [x] **(X5, esteira) `e2e/casca.spec.ts:67` [celular] passa do prazo do dado, e dois e2e do `celular` caíram uma vez na `develop`.**
       O caso "com dado: versão e componentes… em até 5 s" mede o tempo até o dado na tela contra `PRAZO_DO_DADO_MS = 5_000`
       (`casca.spec.ts:10`, asserção em `:73`) e caiu duas vezes na esteira: 5117 ms em `d6eb2f0` (`39896375281`, spec da X5,
       commit só de documento) e 5018 ms na `develop`, no pouso `5566974` (`39907941527`); antes, 151 ms acima em `a0f1974`. Não é
@@ -1795,6 +1795,10 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       dois no `celular`. **A correção do `casca` parte depois da retrospectiva da X5** (`tasks/prd-reengenharia/retro.md`),
       como `/corrigir` própria; os outros dois entram nela se caírem de novo, ou no censo de prazo do e2e (item "(X3,
       retrospectiva) Código de processo", M1). (dono: Orquestrador)
+      (**feito** em 23/10/2026 na correção `2026-10-23-casca-prazo-do-dado`, `6d1a2d3`: o caso lia o relógio quando a espera
+      do Playwright percebia o dado, nos degraus de 100/250/500/1000 ms, e não quando ele apareceu, a ~4,1 s; agora conta o
+      instante da página. Se passar de 5 s assim, a investigação vai para o peso da primeira carga. `areas.spec.ts:647` e
+      `troca-de-escola.spec.ts:156` ficaram fora: entram se caírem de novo, ou no censo de prazo do e2e da X7.)
 - [ ] **(X5, retrospectiva) Código de processo que a X5 pediu** (`tasks/prd-reengenharia/retro.md`, P4 e M1 a M7). **Destino que o
       Joaquim deu em 23/10/2026: a X7 (`harness`)**, a próxima spec, antes da X4, com teste e revisão, junto das
       M1 a M3 da X3 (item "(X3, retrospectiva) Código de processo", acima); a correção do `casca.spec.ts:67` parte antes dela. (P4)
