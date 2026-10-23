@@ -1,4 +1,5 @@
 import type { Locator, Page } from '@playwright/test'
+import { mensagemDoSegundoFator } from '../../packages/shared/src/erros/mensagens.ts'
 import { expect } from './perfis.ts'
 import { campoCodigo } from './segundo-fator.ts'
 import { codigoDoAutenticador, criarEquipeComSenha, type EquipeDeTeste } from './sessao.ts'
@@ -118,6 +119,9 @@ export const PRAZO_DA_ENTRADA_MS = 20_000
 /** Um passo do TOTP à frente: a ativação grava o passo usado, e só um passo maior entra depois (6.0 do F1). */
 const PASSO_SEGUINTE_SEGUNDOS = 30
 
+/** A ativação do segundo fator tenta duas vezes: a segunda cobre o Redis de fila que parou por um instante na esteira. */
+const TENTATIVAS_DA_ATIVACAO = 2
+
 async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
   if (hasTouch) await alvo.tap()
   else await alvo.click()
@@ -201,6 +205,29 @@ export async function abrirEstrutura(page: Page, hasTouch: boolean): Promise<voi
   await esperarEstrutura(page)
 }
 
+/** O aviso que a tela de ativação mostra quando a API recusa o código: o do código errado, o do já usado e o do Redis de fila parado são o mesmo. */
+const RECUSA_DA_ATIVACAO = mensagemDoSegundoFator('NAO_AUTENTICADO')
+
+/**
+ * Digita o código e ativa o segundo fator, e espera a tela dizer o que aconteceu: o link "Ir para a entrada" (ativou) ou o aviso de recusa.
+ *
+ * Com o disco da esteira ocupado, o Redis de fila pode passar dos 2 s do compose de teste, e a API recusa o desafio sem a marca dele
+ * (`login.desafio_sem_redis`, de propósito) **antes de gastar o código e o desafio**: a tela mostra o aviso do código errado, e o mesmo
+ * código, no mesmo desafio, vale na tentativa seguinte. Por isso a recusa tem uma segunda tentativa, com o código do passo de agora. Uma recusa
+ * que se repete é do código ou da API, e falha aqui, dizendo o que a tela mostrava, em vez de esperar o link até o fim do relógio do teste.
+ */
+async function ativarOSegundoFator(page: Page, segredo: string, hasTouch: boolean): Promise<void> {
+  const ativou = page.getByRole('link', { name: 'Ir para a entrada' })
+  const recusa = page.getByRole('alert').filter({ hasText: RECUSA_DA_ATIVACAO })
+  for (let tentativa = 1; tentativa <= TENTATIVAS_DA_ATIVACAO; tentativa += 1) {
+    await campoCodigo(page).fill(codigoDoAutenticador(segredo))
+    await acionar(page.getByRole('button', { name: /Ativar o segundo fator|Ativando/ }), hasTouch)
+    await expect(ativou.or(recusa)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    if (await ativou.isVisible()) return
+  }
+  throw new Error(`A API recusou a ativação do segundo fator ${String(TENTATIVAS_DA_ATIVACAO)} vezes seguidas, com o código do passo de agora: "${RECUSA_DA_ATIVACAO}"`)
+}
+
 /**
  * A coordenadora no primeiro acesso, a partir da tela de entrada já aberta e sem recarregar a página: configura o
  * segundo fator do jeito sem celular, volta à entrada e entra com o código. Sem recarga, o que o teste afirma sobre o
@@ -212,8 +239,7 @@ export async function entrarComoCoordenacaoNaMesmaAba(page: Page, coordenadora: 
   await entrarPorEmail(page, coordenadora, hasTouch)
   await expect(page.getByRole('heading', { name: 'Configurar o segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   const { segredo } = (await (await respostaDoSegredo).json()) as { segredo: string }
-  await campoCodigo(page).fill(codigoDoAutenticador(segredo))
-  await acionar(page.getByRole('button', { name: /Ativar o segundo fator|Ativando/ }), hasTouch)
+  await ativarOSegundoFator(page, segredo, hasTouch)
   await acionar(page.getByRole('link', { name: 'Ir para a entrada' }), hasTouch)
   await entrarPorEmail(page, coordenadora, hasTouch)
   await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })

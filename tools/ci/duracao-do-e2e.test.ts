@@ -533,6 +533,92 @@ describe('no repositório: o diff do git decide qual caso é alterado', () => {
     expect(motivo).toContain('e2e/movido.spec.ts:4 (chromebook) levou 20,0 s (limite 15,0 s)')
   })
 
+  describe('o caso retitulado (RF11): o título novo leva o prazo do caso de corpo idêntico', () => {
+    const retitular = (raiz: string, de: string, para: string, arquivo = 'e2e/antigo.spec.ts') =>
+      writeFileSync(join(raiz, arquivo), readFileSync(join(raiz, arquivo), 'utf8').replace(`test('${de}'`, `test('${para}'`))
+
+    it('título novo e corpo idêntico ao do HEAD com test.slow() herda os 90 s: 40 s cabem e 46 s não', () => {
+      const raiz = repositorioComCasoLento()
+      retitular(raiz, 'lento', 'lento com outro nome')
+      expect(prazosDoHead(raiz).get('lento com outro nome')).toBe(90_000)
+      expect(motivoDaDuracaoDoE2e(raiz, relatorioDoCaso(raiz, 'antigo.spec.ts', 'lento com outro nome', 40_000, 90_000, 1))).toBeNull()
+      const motivo = motivoDaDuracaoDoE2e(raiz, relatorioDoCaso(raiz, 'antigo.spec.ts', 'lento com outro nome', 46_000, 90_000, 1))
+      expect(motivo).toContain('e2e/antigo.spec.ts:1 (chromebook) levou 46,0 s (limite 45,0 s)')
+    })
+
+    it('lê a árvore como ela está: spec novo fora do git conta, spec apagado, ignorado ou que não é *.spec.ts não derruba nem se mistura', () => {
+      const raiz = repositorioComCasoLento()
+      writeFileSync(join(raiz, 'e2e/apagado.spec.ts'), ["test('apagado', async () => {", '  await z()', '})', ''].join('\n'))
+      git(raiz, 'add', '.')
+      git(raiz, 'commit', '-q', '-m', 'apagado')
+      rmSync(join(raiz, 'e2e/apagado.spec.ts'))
+      // Os dois com o corpo do caso lento: se algum fosse lido como caso da árvore, o corpo teria duas cópias.
+      const corpo = ["test('só no ajudante', async () => {", '  test.slow()', '  await a()', '})', ''].join('\n')
+      mkdirSync(join(raiz, 'e2e/__fixtures__'))
+      writeFileSync(join(raiz, 'e2e/__fixtures__/ajudante.ts'), corpo)
+      writeFileSync(join(raiz, '.gitignore'), 'e2e/ignorado.spec.ts\n')
+      writeFileSync(join(raiz, 'e2e/ignorado.spec.ts'), corpo.replace('só no ajudante', 'ignorado'))
+      // O caso muda de nome e de arquivo, e o arquivo novo ainda está fora do git.
+      writeFileSync(join(raiz, 'e2e/antigo.spec.ts'), ["test('comum', async () => {", '  await a()', '})', ''].join('\n'))
+      writeFileSync(join(raiz, 'e2e/movido.spec.ts'), ["test('lento no arquivo novo', async () => {", '  test.slow()', '  await a()', '})', ''].join('\n'))
+      expect(prazosDoHead(raiz).get('lento no arquivo novo')).toBe(90_000)
+    })
+
+    it('as pontas em branco não mudam o corpo: o último caso do spec, que perde o título e ganha linhas em branco no fim, ainda herda os 90 s', () => {
+      const raiz = repositorioComCasoLento()
+      writeFileSync(join(raiz, 'e2e/ultimo.spec.ts'), ["test('último lento', async () => {", '  test.slow()', '  await ultimo()', '})', ''].join('\n'))
+      git(raiz, 'add', '.')
+      git(raiz, 'commit', '-q', '-m', 'último')
+      writeFileSync(join(raiz, 'e2e/ultimo.spec.ts'), ["test('último lento com outro nome', async () => {", '  test.slow()', '  await ultimo()', '})', '', '', ''].join('\n'))
+      expect(prazosDoHead(raiz).get('último lento com outro nome')).toBe(90_000)
+    })
+
+    it('só mudar um comentário do corpo conta como corpo idêntico: o título novo herda os 90 s', () => {
+      const raiz = repositorioComCasoLento()
+      writeFileSync(join(raiz, 'e2e/comentado.spec.ts'), ["test('comentado lento', async () => {", '  test.slow()', '  // a primeira nota', '  await comentado()', '})', ''].join('\n'))
+      git(raiz, 'add', '.')
+      git(raiz, 'commit', '-q', '-m', 'comentado')
+      writeFileSync(
+        join(raiz, 'e2e/comentado.spec.ts'),
+        ["test('comentado lento com outro nome', async () => {", '  test.slow()', '  // outra nota, bem mais comprida que a primeira', '  await comentado()', '})', ''].join('\n'),
+      )
+      expect(prazosDoHead(raiz).get('comentado lento com outro nome')).toBe(90_000)
+    })
+
+    it('título novo e corpo mudado não herda: o test.slow() do caso velho não cobre o que mudou', () => {
+      const raiz = repositorioComCasoLento()
+      const texto = readFileSync(join(raiz, 'e2e/antigo.spec.ts'), 'utf8')
+      writeFileSync(join(raiz, 'e2e/antigo.spec.ts'), texto.replace("test('lento'", "test('lento mudado'").replace('  await a()\n})\ntest(\'comum', "  await b()\n})\ntest('comum"))
+      expect(prazosDoHead(raiz).has('lento mudado')).toBe(false)
+      const motivo = motivoDaDuracaoDoE2e(raiz, relatorioDoCaso(raiz, 'antigo.spec.ts', 'lento mudado', 20_000, 90_000, 1))
+      expect(motivo).toContain('e2e/antigo.spec.ts:1 (chromebook) levou 20,0 s (limite 15,0 s)')
+    })
+
+    it('dois corpos iguais no HEAD: nenhum herda, nem quando um deles sai da árvore', () => {
+      const raiz = repositorioComCasoLento()
+      writeFileSync(join(raiz, 'e2e/gemeo.spec.ts'), ["test('gêmeo lento', async () => {", '  test.slow()', '  await a()', '})', ''].join('\n'))
+      git(raiz, 'add', '.')
+      git(raiz, 'commit', '-q', '-m', 'gêmeo')
+      retitular(raiz, 'lento', 'lento com outro nome')
+      expect(prazosDoHead(raiz).has('lento com outro nome')).toBe(false)
+      expect(motivoDaDuracaoDoE2e(raiz, relatorioDoCaso(raiz, 'antigo.spec.ts', 'lento com outro nome', 20_000, 90_000, 1))).toContain('limite 15,0 s')
+      // O gêmeo que sai de vez da árvore também não faz do que ficou o dono do corpo: o HEAD ainda tinha dois.
+      rmSync(join(raiz, 'e2e/gemeo.spec.ts'))
+      expect(prazosDoHead(raiz).has('lento com outro nome')).toBe(false)
+    })
+
+    it('o corpo copiado para um caso novo, com o título velho ainda lá, não herda; nem duas cópias do corpo de um que sumiu', () => {
+      const raiz = repositorioComCasoLento()
+      writeFileSync(join(raiz, 'e2e/copia.spec.ts'), ["test('cópia do lento', async () => {", '  test.slow()', '  await a()', '})', ''].join('\n'))
+      expect(prazosDoHead(raiz).has('cópia do lento')).toBe(false)
+      expect(motivoDaDuracaoDoE2e(raiz, relatorioDoCaso(raiz, 'copia.spec.ts', 'cópia do lento', 20_000, 90_000, 1))).toContain('limite 15,0 s')
+      // O velho muda de nome e a cópia aparece junto: são dois corpos iguais na árvore, e não dá para dizer qual é o retitulado.
+      retitular(raiz, 'lento', 'lento com outro nome')
+      expect(prazosDoHead(raiz).has('lento com outro nome')).toBe(false)
+      expect(prazosDoHead(raiz).has('cópia do lento')).toBe(false)
+    })
+  })
+
   it('test.slow() posto agora num caso que o HEAD tinha sem prazo não aumenta o limite', () => {
     const raiz = repositorioComCasoLento()
     const texto = readFileSync(join(raiz, 'e2e/antigo.spec.ts'), 'utf8')

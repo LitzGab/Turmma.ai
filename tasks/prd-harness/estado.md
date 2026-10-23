@@ -11,15 +11,17 @@
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador`/`Mesa`): **correção `2026-10-23-agentes-suspensao-intermitente`**, desde ~16:45: a esteira
-    `39996698191` (em `a691e02`, commit só de documento) caiu no e2e 1/7, `e2e/agentes.spec.ts:230` (`chromebook`,
-    `locator.click` estourou 90 s); a `develop` está verde. Guardiões: `conformidade-reviewer`, `frontend-reviewer`.
-    Depois dela, o quadro diz o que parte
-  - linha 2 (`Implementador 2`/`Mesa 2`): **correção `encontro-6`**, desde ~17:15: a 6.0 terminou (`8dce7e7`, infra-guardian,
-    revisor-geral e test-engineer APROVADOS na 2ª rodada), e o encontro deu CONFLITO em `tasks/prd-harness/cenarios.md`.
-    Guardião: `infra-guardian`. Depois dela, o encontro da linha 2 de novo
+  - linha 1 (`Implementador`/`Mesa`): **ociosa** desde ~17:45 (a correção `agentes-suspensao-intermitente` se encontrou
+    em `dc11702`). Nada parte: todas as liberadas esperam a 4.0 ou a 10.0
+  - linha 2 (`Implementador 2`/`Mesa 2`): **10.0** (grande), 1ª tentativa, desde ~17:50 (a 6.0 se encontrou em `24b67f5`,
+    depois da correção `encontro-6-harness`, `e430451`)
+  - linha 2: desde ~18:15, **correção do zod** no meio da 10.0 (DIVERGÊNCIA `portão`, a mesma da linha 3), doc
+    `2026-10-23-zod-4-6-7-audit-linha-2`, repetindo a mudança de `bd292fb`; par reiniciado; guardião `infra-guardian`. Com o
+    RELATÓRIO, `PEDIDO de retomada` da 10.0: a ordem da rodada 1 está toda aplicada, falta o carimbo e a rodada 2 da Mesa 2
   - linha 3 (`Implementador 3`/`Mesa 3`): **4.0** (pequeno), 1ª tentativa, desde ~17:25 (a 9.0 se encontrou em `954821d`)
-  - a 10.0 e a 15.0 também estão liberadas e partem nas primeiras linhas que se encontrarem
+    - a correção do zod (`2026-10-23-zod-4-6-7-audit`) se fechou em `bd292fb`, na linha (sem encontro próprio): infra-guardian,
+      revisor-geral, test-engineer 1. Desde ~18:05, `PEDIDO de retomada` da 4.0 (falta portão com carimbo e revisão)
+  - a 15.0 está liberada, mas o `tasks.md` não a autoriza junto com a 4.0: parte depois do encontro da 4.0
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Devo ainda:**
   - **antes de partir a 16.0:** pedir ao `Arquiteto` que feche a fronteira no `16_task.md`. Hoje a 16.0 confere aspas em
@@ -32,9 +34,11 @@
   - nota ao Arquiteto, no próximo pedido: o encontro novo da 6.0 tem a saída de código 5 (começa por `VERIFICAÇÃO RECUSADA`),
     que pede a mesma correção do CONFLITO, e o `/seguir` (passo 6) ainda não a cita (aviso do Implementador 2)
   - nota ao Arquiteto, se servir: o lote 5/7 do e2e passou dos 45 min do job na correção do `casca`, o que pesa no M1
+  - para o `/retro`: na fixture `casca.ts`, o passo seguinte (código do MFA na entrada) tem a mesma causa possível (Redis de
+    fila parado 2 s), mas falha em 20 s com o erro certo (relatório da correção `agentes-suspensao-intermitente`)
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `38be9a3` (encontro da 9.0); a fila da esteira tem oito execuções na fila (`queued`)
+- **Base:** `spec/harness` em `5439cbc` (encontro da correção da linha 1); esteira `40021941702` rodando nele
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -47,6 +51,8 @@
 | 5.0 | `9b676fc` | Sonnet 5.5 | infra-guardian 2, test-engineer 2, revisor-geral 2 (os três reprovaram na 1ª) | |
 | 3.0 | `201e9b3` | Sonnet 5.5 | infra-guardian 2, privacy-guardian 2, test-engineer 2, revisor-geral 2 | `gh run list` lê por evento (push e `workflow_dispatch`), não só `--event push`; o `tasks.md:26` ainda cita o antigo |
 | 9.0 | `954821d` | Sonnet 5.5 | test-engineer 2, revisor-geral 2 | |
+| 6.0 | `8dce7e7` + `e430451` (encontro-6-harness) | Sonnet 5.5 | infra-guardian 2, revisor-geral 2, test-engineer 2; a correção: infra-guardian 1, revisor-geral 1, test-engineer 1 | CONFLITO no `cenarios.md` no encontro (3ª vez nesta spec); slug `encontro-6` já existia de outra spec; recomendação do infra-guardian virou item no `TODO.md` |
+| correção agentes-suspensao-intermitente | `dc11702` | Sonnet 5.5 | conformidade-reviewer 1, frontend-reviewer 1, test-engineer 1 | esteira vermelha em `a691e02`; causa: Redis de fila parado 2 s, a fixture esperava só o sucesso da ativação do MFA; não era a suspensão |
 
 ## Esperando o Joaquim
 ## 23/10/2026 ~16:10 — X7 escopo (skills de projeto)
@@ -73,3 +79,10 @@ Segue sem depender: a 5.0 (linha 2) e a 7.0 (linha 3), que não tocam o `revisoe
   já tinha mudado o mesmo arquivo. Virou a correção `encontro-8` na linha 3
 - 23/10 14:49: o push do encontro da 7.0 falhou (`TLS connect error ... unexpected eof`). Refiz `git push origin spec/harness`, que passou
 ## O que decidi sem perguntar
+- 23/10 ~17:50: DIVERGÊNCIA `portão` do Implementador 3 na 4.0 (aviso novo do `npm audit` para o zod). Virou correção na
+  linha 3, no meio da tarefa, com o `infra-guardian` ditado, porque o zod valida a entrada HTTP inteira (D81)
+- 23/10 ~18:15: a mesma DIVERGÊNCIA `portão` na linha 2 (10.0). Correção própria na linha 2, com a mudança de `bd292fb`
+  e documento novo, em vez de cherry-pick: a seção "Revisões" e a rodada da Mesa são de cada linha
+- 23/10 ~18:20: na correção do zod da linha 2, o portão parou no knip (`Unlisted binaries: mkfifo`, em `revisoes.test.ts`, arquivo da
+  10.0 sem commit). Decidi: o ajuste é da 10.0, feito agora na árvore e revisto na rodada 2 dela; o commit da correção leva só os
+  arquivos dela

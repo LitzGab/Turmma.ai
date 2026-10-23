@@ -26,11 +26,11 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [x] 3.2 Veredito com superada e `--event push` no `esteira.ts` (RF2)
   - [x] 3.3 Testes: os casos de RF1, RF2 e RF19 do `cenarios.md`
 
-- [ ] **4.0 — O censo do prazo do e2e e o caso retitulado**
-  - [ ] 4.1 O `ci.yml` sobe o reporter JSON de cada fatia também no verde
-  - [ ] 4.2 `esteira.ts --censo` (RF9)
-  - [ ] 4.3 A régua acha o prazo do caso retitulado (RF11)
-  - [ ] 4.4 Testes: RF9 e RF11 do `cenarios.md`
+- [x] **4.0 — O censo do prazo do e2e e o caso retitulado**
+  - [x] 4.1 O `ci.yml` sobe o reporter JSON de cada fatia também no verde
+  - [x] 4.2 `esteira.ts --censo` (RF9)
+  - [x] 4.3 A régua acha o prazo do caso retitulado (RF11)
+  - [x] 4.4 Testes: RF9 e RF11 do `cenarios.md`
 
 - [x] **5.0 — O quadro das linhas sob uma trava só, com a linha solta por comando e a base gravada**
   - [x] 5.1 `abrir`, `partida`, `abandonar` e `encontro` pegam o mesmo `flock`, relêem e gravam só a própria linha

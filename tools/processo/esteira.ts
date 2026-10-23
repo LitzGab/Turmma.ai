@@ -4,13 +4,20 @@
 //
 //   node tools/processo/esteira.ts                 ao fechar uma tarefa: a esteira de algum commit desta branch ficou vermelha?
 //   node tools/processo/esteira.ts --fechamento    no fim da spec: a esteira está verde no último commit que alterou código?
+//   node tools/processo/esteira.ts --censo [branch]   algum caso de e2e passa de dois terços do prazo na última esteira verde?
 //
 // Sai com 0 quando dá para seguir (verde, rodando ou ainda sem execução, na pergunta da tarefa; verde, no fechamento)
-// e com 1 quando não dá, dizendo o commit, a execução e os jobs que caíram.
+// e com 1 quando não dá, dizendo o commit, a execução e os jobs que caíram. O censo sai com 0 sem nenhum caso acima de dois
+// terços, com 1 listando os casos (o Orquestrador abre correção), e com 2 quando não há o que ler: sem execução verde, ou
+// com fatia faltando ou de artefato expirado (diz qual).
 //
 // Execução cancelada: se um push mais novo da mesma branch a cancelou (o `concurrency` do `ci.yml`), ela está superada e
 // não conta; sem esse push (o `timeout-minutes` de um job, um cancelamento à mão), é vermelha e o relatório cita o job.
 import { execFileSync } from 'node:child_process'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { ARQUIVO_DO_CENSO_DO_E2E, casosMedidos, PREFIXO_DO_ARTEFATO_DO_CENSO, type CasoMedido, type RelatorioDoPlaywright } from '../ci/duracao-do-e2e.ts'
 import { DOCUMENTO_QUE_UMA_SUITE_LE } from './caducidade.ts'
 
 /** `cancelada` é o que o GitHub diz; se ela é vermelha ou superada só se sabe vendo as outras (`execucoesQueValem`). */
@@ -150,6 +157,139 @@ export function relatorioDaEsteira(situacao: Situacao, branch: string, noFechame
   )
 }
 
+/** As fatias do e2e na matriz do `ci.yml` (`tools/ci/esteira.test.ts` confere que são as mesmas). */
+export const FATIAS_DO_E2E = [1, 2, 3, 4, 5, 6, 7] as const
+
+/** O caso do censo passa de dois terços do prazo que a esteira lhe deu: o runner oscila, e a folga que sobra é de um terço. */
+export function acimaDeDoisTercos(caso: Pick<CasoMedido, 'duracaoMs' | 'prazoMs'>): boolean {
+  return caso.duracaoMs * 3 > caso.prazoMs * 2
+}
+
+export interface CasoDoCenso extends CasoMedido {
+  fatia: number
+}
+
+/** Os casos acima de dois terços do prazo em todas as fatias, do mais perto do prazo para o mais longe. */
+export function casosDoCenso(fatias: readonly { fatia: number; relatorio: RelatorioDoPlaywright }[]): CasoDoCenso[] {
+  return fatias
+    .flatMap(({ fatia, relatorio }) => casosMedidos(relatorio).filter(acimaDeDoisTercos).map((caso) => ({ ...caso, fatia })))
+    .sort((a, b) => b.duracaoMs / b.prazoMs - a.duracaoMs / a.prazoMs)
+}
+
+/** A execução verde mais nova: a vermelha que veio depois dela não muda o que o censo lê. */
+export function ultimaVerde(execucoes: readonly Execucao[]): Execucao | undefined {
+  return execucoes.filter((execucao) => execucao.estado === 'verde').sort((a, b) => b.criadaEm.localeCompare(a.criadaEm))[0]
+}
+
+/** O que o GitHub diz de um artefato da execução. `expired`: passou do `retention-days` e não baixa mais. */
+export interface ArtefatoDoGh {
+  name: string
+  expired: boolean
+}
+
+/** A saída de `gh api …/actions/runs/<id>/artifacts`. */
+export function artefatosDoGh(saida: string): ArtefatoDoGh[] {
+  return (JSON.parse(saida) as { artifacts: ArtefatoDoGh[] }).artifacts.map(({ name, expired }) => ({ name, expired }))
+}
+
+export function argumentosDosArtefatos(execucao: number): string[] {
+  return ['api', `repos/{owner}/{repo}/actions/runs/${String(execucao)}/artifacts?per_page=100`]
+}
+
+export function nomeDoArtefatoDaFatia(fatia: number): string {
+  return `${PREFIXO_DO_ARTEFATO_DO_CENSO}${String(fatia)}`
+}
+
+export function argumentosDoDownloadDaFatia(execucao: number, fatia: number, pasta: string): string[] {
+  return ['run', 'download', String(execucao), '--name', nomeDoArtefatoDaFatia(fatia), '--dir', pasta]
+}
+
+/** As fatias sem relatório a ler: as que não têm artefato na execução, e as que têm, mas expirado. */
+export function fatiasSemRelatorio(artefatos: readonly ArtefatoDoGh[]): { faltando: number[]; expiradas: number[] } {
+  const faltando: number[] = []
+  const expiradas: number[] = []
+  for (const fatia of FATIAS_DO_E2E) {
+    const artefato = artefatos.find((candidato) => candidato.name === nomeDoArtefatoDaFatia(fatia))
+    if (artefato === undefined) faltando.push(fatia)
+    else if (artefato.expired) expiradas.push(fatia)
+  }
+  return { faltando, expiradas }
+}
+
+export function relatorioDaFatia(texto: string, fatia: number): RelatorioDoPlaywright {
+  try {
+    return JSON.parse(texto) as RelatorioDoPlaywright
+  } catch {
+    throw new Error(`o relatório da fatia ${String(fatia)} não é um JSON legível`)
+  }
+}
+
+export type Censo =
+  | { tipo: 'sem-verde' }
+  | { tipo: 'incompleto'; execucao: Execucao; faltando: number[]; expiradas: number[] }
+  | { tipo: 'lista'; execucao: Execucao; casos: CasoDoCenso[] }
+
+/**
+ * O censo da última execução verde: com as sete fatias a ler, a lista dos casos acima de dois terços do prazo; com fatia
+ * faltando ou expirada, nada é lido, porque lista de uma parte da suíte passaria pela suíte inteira.
+ */
+export function fazerOCenso(
+  execucoes: readonly Execucao[],
+  artefatosDe: (execucao: number) => ArtefatoDoGh[],
+  relatorioDe: (execucao: number, fatia: number) => RelatorioDoPlaywright,
+): Censo {
+  const execucao = ultimaVerde(execucoes)
+  if (execucao === undefined) return { tipo: 'sem-verde' }
+  const { faltando, expiradas } = fatiasSemRelatorio(artefatosDe(execucao.id))
+  if (faltando.length > 0 || expiradas.length > 0) return { tipo: 'incompleto', execucao, faltando, expiradas }
+  return { tipo: 'lista', execucao, casos: casosDoCenso(FATIAS_DO_E2E.map((fatia) => ({ fatia, relatorio: relatorioDe(execucao.id, fatia) }))) }
+}
+
+export function codigoDoCenso(censo: Censo): 0 | 1 | 2 {
+  if (censo.tipo !== 'lista') return 2
+  return censo.casos.length === 0 ? 0 : 1
+}
+
+function segundos(ms: number): string {
+  return (ms / 1000).toFixed(1).replace('.', ',')
+}
+
+export function relatorioDoCenso(censo: Censo, branch: string): string {
+  if (censo.tipo === 'sem-verde') return `censo do e2e de ${branch}: nenhuma execução verde da esteira para ler.`
+  const alvo = `execução ${String(censo.execucao.id)} (${curto(censo.execucao.sha)})`
+  if (censo.tipo === 'incompleto') {
+    const faltando = censo.faltando.length > 0 ? ` Fatia(s) sem artefato: ${censo.faltando.join(', ')}.` : ''
+    const expiradas = censo.expiradas.length > 0 ? ` Fatia(s) com artefato expirado: ${censo.expiradas.join(', ')}.` : ''
+    return `censo do e2e de ${branch}: a ${alvo} não tem o relatório de todas as fatias.${faltando}${expiradas} Uma execução verde mais nova o tem: gh workflow run esteira --ref ${branch}`
+  }
+  if (censo.casos.length === 0) return `censo do e2e de ${branch}, ${alvo}: nenhum caso acima de dois terços do prazo.`
+  const linhas = censo.casos.map(
+    (caso) =>
+      `  ${caso.arquivo}:${String(caso.linha)} (${caso.projeto}, fatia ${String(caso.fatia)}) levou ${segundos(caso.duracaoMs)} s de ${segundos(caso.prazoMs)} s — ${caso.titulo}`,
+  )
+  return `censo do e2e de ${branch}, ${alvo}: ${String(censo.casos.length)} caso(s) acima de dois terços do prazo.\n${linhas.join('\n')}`
+}
+
+/** A branch do `--censo [branch]`: o argumento que vem depois dele, ou a atual. */
+export function branchDoCenso(argumentos: readonly string[], atual: string): string {
+  const seguinte = argumentos[argumentos.indexOf('--censo') + 1]
+  return seguinte === undefined || seguinte.startsWith('--') ? atual : seguinte
+}
+
+/**
+ * Baixa o relatório de uma fatia numa pasta à parte, lê e apaga a pasta: nada do artefato fica na máquina. `baixar` roda o
+ * `gh` com os argumentos que recebe; o artefato chega como o arquivo `ARQUIVO_DO_CENSO_DO_E2E` dentro de `--dir`.
+ */
+export function baixarORelatorio(execucao: number, fatia: number, baixar: (argumentos: string[]) => void): RelatorioDoPlaywright {
+  const pasta = mkdtempSync(join(tmpdir(), 'censo-do-e2e-'))
+  try {
+    baixar(argumentosDoDownloadDaFatia(execucao, fatia, pasta))
+    return relatorioDaFatia(readFileSync(join(pasta, ARQUIVO_DO_CENSO_DO_E2E), 'utf8'), fatia)
+  } finally {
+    rmSync(pasta, { recursive: true, force: true })
+  }
+}
+
 function executar(comando: string, argumentos: string[], raiz: string): string {
   return execFileSync(comando, argumentos, { cwd: raiz, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
 }
@@ -230,7 +370,22 @@ if (import.meta.filename === process.argv[1]) {
   const raiz = process.env['CLAUDE_PROJECT_DIR'] ?? process.cwd()
   const noFechamento = process.argv.includes('--fechamento')
   try {
-    const branch = executar('git', ['rev-parse', '--abbrev-ref', 'HEAD'], raiz).trim()
+    const atual = executar('git', ['rev-parse', '--abbrev-ref', 'HEAD'], raiz).trim()
+    if (process.argv.includes('--censo')) {
+      const alvo = branchDoCenso(process.argv, atual)
+      const execucoes = EVENTOS_DO_VEREDITO.flatMap((evento) => execucoesDoGh(executar('gh', argumentosDaListaDeExecucoes(alvo, evento), raiz)))
+      const censo = fazerOCenso(
+        execucoes,
+        (id) => artefatosDoGh(executar('gh', argumentosDosArtefatos(id), raiz)),
+        (id, fatia) =>
+          baixarORelatorio(id, fatia, (argumentos) => {
+            executar('gh', argumentos, raiz)
+          }),
+      )
+      process.stdout.write(`${relatorioDoCenso(censo, alvo)}\n`)
+      process.exit(codigoDoCenso(censo))
+    }
+    const branch = atual
     const commits = lerCommits(raiz, 30)
     const execucoes = EVENTOS_DO_VEREDITO.flatMap((evento) => execucoesDoGh(executar('gh', argumentosDaListaDeExecucoes(branch, evento), raiz)))
     const situacao = noFechamento ? situacaoDoFechamento(commits, execucoes) : situacaoDaTarefa(commits, execucoes)

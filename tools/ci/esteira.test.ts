@@ -1,8 +1,10 @@
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
+import { FATIAS_DO_E2E } from '../processo/esteira.ts'
+import { ARQUIVO_DO_CENSO_DO_E2E, PREFIXO_DO_ARTEFATO_DO_CENSO, VARIAVEL_DO_RELATORIO_DO_E2E } from './duracao-do-e2e.ts'
 import { raizRepositorio } from './executar.ts'
 import { FRACAO_DE_FOLGA_DO_E2E, minutosEstimadosDoE2e, tetoDoE2e } from './prazo-do-e2e.ts'
 
@@ -281,7 +283,12 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
     expect(workflow.env).toBeUndefined()
     for (const job of Object.values(workflow.jobs)) {
       expect(job.env).toBeUndefined()
-      for (const passo of job.steps) expect(passo.env).toBeUndefined()
+      for (const passo of job.steps) {
+        // A única variável é o nome do arquivo do relatório do censo, no passo do e2e: literal, sem segredo nem contexto.
+        const ehOPassoDoE2e = passo.run?.trim().startsWith('npm run ci:e2e') === true
+        if (ehOPassoDoE2e) expect(passo.env).toEqual({ [VARIAVEL_DO_RELATORIO_DO_E2E]: ARQUIVO_DO_CENSO_DO_E2E })
+        else expect(passo.env).toBeUndefined()
+      }
     }
   })
 
@@ -316,7 +323,7 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
 
   it('o e2e publica o traço da falha, só quando falha e por prazo curto: sem isso o vermelho fica indiagnosticável', async () => {
     const passos = workflow.jobs['e2e']?.steps ?? []
-    const publicacoes = passos.filter((passo) => passo.uses?.startsWith('actions/upload-artifact@'))
+    const publicacoes = passos.filter((passo) => passo.uses?.startsWith('actions/upload-artifact@') && String(passo.with?.['name']).startsWith('traco-'))
     expect(publicacoes).toHaveLength(1)
     const [publicacao] = publicacoes
     expect(publicacao).toBeDefined()
@@ -335,7 +342,7 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
     // Depois de rodar o e2e: antes dele, o `if` dispararia por falha do `npm ci` e não haveria traço nenhum.
     const indiceDoE2e = passos.findIndex((passo) => passo.run?.trim().startsWith('npm run ci:e2e') === true)
     expect(indiceDoE2e).toBeGreaterThanOrEqual(0)
-    expect(passos.findIndex((passo) => passo.uses?.startsWith('actions/upload-artifact@'))).toBeGreaterThan(indiceDoE2e)
+    expect(passos.indexOf(publicacao as Passo)).toBeGreaterThan(indiceDoE2e)
 
     // Prazo curto: o artefato leva captura de tela e corpo de requisição do e2e (sintéticos, regra 20, item 17),
     // e serve para diagnosticar aquela execução, não para arquivo.
@@ -359,6 +366,53 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
       const saida = projeto.outputDir ?? configuracao.default.outputDir ?? PADRAO_DO_DIRETORIO_DE_SAIDA
       expect(caminhoPublicado, `diretório de saída de ${projeto.name ?? 'topo'}`).toBe(saida.replace(/\/$/, ''))
     }
+  })
+
+  /** O passo que publica o relatório do censo, o único do e2e com esse prefixo no nome. */
+  function publicacaoDoCenso(): Passo | undefined {
+    const publicacoes = (workflow.jobs['e2e']?.steps ?? []).filter(
+      (passo) => passo.uses?.startsWith('actions/upload-artifact@') && String(passo.with?.['name']).startsWith(PREFIXO_DO_ARTEFATO_DO_CENSO),
+    )
+    expect(publicacoes).toHaveLength(1)
+    return publicacoes[0]
+  }
+
+  it('o e2e publica o relatório do censo, também no verde: só o JSON da fatia, por 7 dias, sem o test-results/ do traço', () => {
+    const publicacao = publicacaoDoCenso()
+    // Um artefato por fatia, com o número dela no nome: é por ele que `esteira.ts --censo` procura cada relatório.
+    expect(publicacao?.with?.['name']).toBe(`${PREFIXO_DO_ARTEFATO_DO_CENSO}${EXPRESSAO_DA_FATIA}`)
+    // Só o arquivo do relatório: `test-results/` leva traço, captura de tela e anexo, e o artefato é público (regra 20).
+    expect(publicacao?.with?.['path']).toBe(ARQUIVO_DO_CENSO_DO_E2E)
+    expect(Number(publicacao?.with?.['retention-days'])).toBe(7)
+    // Reexecutar a fatia vermelha que passa publicaria de novo o mesmo nome.
+    expect(publicacao?.with?.['overwrite']).toBe(true)
+  })
+
+  it('o relatório do censo sobe também na execução verde, sem o cancelado, e só depois do e2e que o grava com o nome certo', () => {
+    const passos = workflow.jobs['e2e']?.steps ?? []
+    const publicacao = publicacaoDoCenso()
+    // Sem `success()` a fatia verde não publicaria nada, e o censo só lê a execução verde.
+    expect(publicacao?.if).toBe('success() || failure()')
+    // O arquivo que se publica é o que o Playwright grava: o passo do e2e liga o repórter com esse nome, e ele roda antes.
+    const indiceDoE2e = passos.findIndex((passo) => passo.run?.trim().startsWith('npm run ci:e2e') === true)
+    expect(indiceDoE2e).toBeGreaterThanOrEqual(0)
+    expect(passos[indiceDoE2e]?.env).toEqual({ [VARIAVEL_DO_RELATORIO_DO_E2E]: ARQUIVO_DO_CENSO_DO_E2E })
+    expect(passos.indexOf(publicacao as Passo)).toBeGreaterThan(indiceDoE2e)
+    // As fatias que o censo lê são as da matriz.
+    expect([...FATIAS_DO_E2E]).toEqual(fatiasDoE2e())
+  })
+
+  it('o job e2e publica exatamente dois artefatos, o traço e o relatório do censo: um terceiro, com outro nome, levaria o que não se declarou a um repositório público', () => {
+    const publicacoes = (workflow.jobs['e2e']?.steps ?? []).filter((passo) => passo.uses?.startsWith('actions/upload-artifact@'))
+    expect(publicacoes.map((passo) => passo.with?.['name'])).toEqual([NOME_DO_ARTEFATO_DO_TRACO, `${PREFIXO_DO_ARTEFATO_DO_CENSO}${EXPRESSAO_DA_FATIA}`])
+  })
+
+  it('nenhum arquivo de e2e/ anexa corpo ao resultado: o relatório do censo é público e o repórter json o grava dentro dele, em base64', () => {
+    const pasta = join(raizRepositorio, 'e2e')
+    const arquivos = readdirSync(pasta, { recursive: true, encoding: 'utf8' }).filter((arquivo) => arquivo.endsWith('.ts'))
+    expect(arquivos.length).toBeGreaterThan(0)
+    const comAnexo = arquivos.filter((arquivo) => /\.attach\(/.test(readFileSync(join(pasta, arquivo), 'utf8')))
+    expect(comAnexo).toEqual([])
   })
 
   it('o teto do e2e cobre a suíte que existe, fatia a fatia e com folga: estourado, a esteira cancela o job sem nenhum teste vermelho', () => {

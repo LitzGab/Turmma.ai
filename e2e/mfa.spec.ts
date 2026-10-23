@@ -1,6 +1,6 @@
 import { AVISO_DO_SEGUNDO_FATOR_CONSUMIDO, mensagemDoSegundoFator } from '../packages/shared/src/erros/mensagens.ts'
 import { QUANTIDADE_DE_CODIGOS_DE_RECUPERACAO } from '../packages/shared/src/sessao/mfa.ts'
-import { esperarPainel } from './__fixtures__/casca.ts'
+import { entrarComoCoordenacaoNaMesmaAba, esperarPainel } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { campoCodigo, configurarSegundoFator, configurarSegundoFatorPelaApi, entrarComSenha, gastarCodigoDeRecuperacaoPelaApi } from './__fixtures__/segundo-fator.ts'
 import { codigoDoAutenticador, criarEquipeComSenha } from './__fixtures__/sessao.ts'
@@ -121,6 +121,31 @@ test.describe('segundo fator da coordenação, sem celular', () => {
     await page.getByRole('button', { name: /^Entrar$/ }).click()
     // A coordenação abre em Governança (A5).
     await esperarPainel(page)
+  })
+
+  test('a ativação recusada uma vez com o código certo, porque o Redis de fila não respondeu: a entrada do teste tenta de novo e a coordenação entra', async ({ page, hasTouch }) => {
+    // A entrada de ponta a ponta (configurar, ativar, a senha de novo e o código) leva 13 s aqui e perto do dobro na esteira, contra os 30 s do relógio padrão.
+    test.slow()
+    const renata = await criarEquipeComSenha('coordenador')
+    // A API recusa o desafio sem a marca do Redis de fila (`login.desafio_sem_redis`) antes de gastar o código e o desafio, e a tela
+    // mostra o mesmo aviso do código errado. Parar o Redis de verdade pararia os outros casos que rodam ao mesmo tempo; a recusa é a da rede.
+    let pedidosDeAtivacao = 0
+    await page.route(
+      (url) => url.pathname === '/v1/conta/mfa/ativar',
+      async (rota) => {
+        pedidosDeAtivacao += 1
+        if (pedidosDeAtivacao > 1) return rota.continue()
+        return rota.fulfill({
+          status: 401,
+          contentType: 'application/json',
+          body: JSON.stringify({ erro: { codigo: 'NAO_AUTENTICADO', mensagem: 'texto da API que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } }),
+        })
+      },
+    )
+    await page.goto('/entrar')
+    await entrarComoCoordenacaoNaMesmaAba(page, renata, hasTouch)
+    await esperarPainel(page)
+    expect(pedidosDeAtivacao).toBe(2)
   })
 
   test('cinco códigos errados gastam o desafio: a tela volta à entrada explicando, e o código certo não entra sem refazer a senha', async ({ page }) => {
