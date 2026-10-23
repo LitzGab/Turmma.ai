@@ -11,19 +11,46 @@
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador`/`Mesa`): **1.0** (pequeno), 1ª tentativa
+  - linha 1 (`Implementador`/`Mesa`): **2.0** (grande), 1ª tentativa, desde ~14:35; **parada: BLOQUEIO do `Arquiteto`** (muda o
+    critério do RF13), à espera do Joaquim; a linha 1 fica ociosa, porque o quadro não tem outra tarefa liberada
   - linha 2 (`Implementador 2`/`Mesa 2`): **5.0** (grande), 1ª tentativa
   - linha 3 (`Implementador 3`/`Mesa 3`): **7.0** (grande), 1ª tentativa
-  - a 8.0 está liberada e parte na primeira linha que se encontrar
+  - a 8.0 parte quando a 7.0 se encontrar (o tasks.md não a autoriza junto com a 7.0)
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
-- **Devo ainda:** nada da correção do `casca`: esteira da `develop` VERDE em `47887fc` (`39966758971`). Notar ao Arquiteto, se servir: o lote 5/7 do e2e passou dos 45 min do job na correção do
+- **Triagem pedida ao `Arquiteto` (23/10 ~14:50)**, no andar da spec, junto com a premissa do §12. Quando ele responder,
+  a resposta vai ao `Implementador` (linha 1) como observação de um `PEDIDO de retomada` da 2.0. A DIVERGÊNCIA da 2.0
+  (Motivo: desenho), nas palavras do Implementador:
+  - Onde: `techspec.md` §2 (o `revisoes.ts` só reexporta) × `cenarios.md` RF13 e a subtarefa 2.4 (o `revisoes.test.ts` sem
+    alteração); `revisoes.test.ts:942-950`
+  - O que acontece: o caso "sem o compilador instalado" copia SÓ o `revisoes.ts` para uma pasta fora do repo e importa dali o
+    `impressaoSemComentarios`. Com o `revisoes.ts` reexportando de `./caducidade.ts` etc., o import estático falha na pasta,
+    o stderr não fica vazio e o caso fica vermelho. Não dá para manter o teste verde sem alterá-lo
+  - Proposta: o caso passa a copiar o `caducidade.ts`, que define a função e não importa nenhum outro .ts em tempo de
+    execução, no lugar do `revisoes.ts`: duas linhas no `revisoes.test.ts`, provando o mesmo comportamento. Nada foi
+    alterado na árvore
+  - O mesmo pedido leva a premissa do §12: a 1.0 mediu que o `CLAUDE_CODE_AGENT` chega ao Bash do papel e do subagente,
+    mas no subagente o valor é o papel do terminal que o chamou (`mesa-de-revisao`), não o nome do subagente. A 11.0 não
+    pode supor `CLAUDE_CODE_AGENT=revisor-geral`. Fonte: `1_task.md`, "Prova da premissa" e "Recomendações sem aplicar".
+    Isso precisa estar na Tech Spec antes de a 11.0 partir
+  - O terminal do Arquiteto tinha, desde as 14:03, este texto na caixa, sem enviar: "pode seguir com a correção da tabela".
+    Ele não tinha pergunta aberta. O reinício apagou o texto, que fica guardado aqui e foi dito ao Joaquim
+- **Devo ainda:** com a resposta do Joaquim (ver "Esperando o Joaquim"), mandar um `PEDIDO` ao `Arquiteto` (não reiniciá-lo: a
+  sessão dele tem o contexto) para ajustar o RF13 no `prd.md` e no `cenarios.md` e a 2.4 no `2_task.md`. Com o RELATÓRIO dele,
+  um `PEDIDO de retomada` da 2.0 ao `Implementador`. O §12 já está em `a691e02`.   Da correção do `casca`, nada: esteira da `develop` VERDE em `47887fc` (`39966758971`). Notar ao Arquiteto, se servir: o lote 5/7 do e2e passou dos 45 min do job na correção do
   `casca` (19 min de compose e 26 de teste, 187 casos), o que pesa no M1 (censo de prazo e a oitava fatia)
-- **Base:** `spec/harness` em `47887fc`
+- **Base:** `spec/harness` em `fb37f08`; esteira `39996137914` rodando nele (ler ao fechar a próxima)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
+| 1.0 | `ae688d8` | Sonnet 5.5 | test-engineer 2, revisor-geral 2 (aprovado nas duas) | premissa do §12 medida: no subagente `CLAUDE_CODE_AGENT` é o papel do terminal; levar ao Arquiteto antes da 11.0 |
 
 ## Esperando o Joaquim
+## 23/10/2026 ~15:00 — X7 tarefa 2.0 (BLOQUEIO do Arquiteto)
+Decisão: o RF13 ("testes atuais do hook verdes sem alteração") ganha a exceção do caso "sem o compilador instalado", ou a partição do `revisoes.ts` sai?
+Contexto: o caso `revisoes.test.ts:942` copia só o `revisoes.ts` para fora do repo, e ali a reexportação do §2 não resolve. O §2 e o RF13 juntos ficam impossíveis. Divergência em "Agora"; `prd.md` RF13, `techspec.md` §2
+Opções: (A) o caso copia o `caducidade.ts`, onde a função passa a morar, com as mesmas asserções, e o RF13 ganha "salvo o arquivo que esse caso copia" | (B) desistir da partição, o que tira a base da 9.0 à 14.0
+Recomendo: A. A mudança é de duas linhas, o mesmo comportamento continua provado, e a 9.0 à 14.0 continuam de pé
+Segue sem depender: a 5.0 (linha 2) e a 7.0 (linha 3), que não tocam o `revisoes.ts` nem dependem da 2.0. Ficam paradas a 2.0 e, atrás dela, a 3.0, a 4.0, a 9.0 à 14.0 e a 15.0
 ## O que falhou
 ## O que decidi sem perguntar
