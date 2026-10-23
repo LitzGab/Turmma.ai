@@ -16,8 +16,9 @@
 // ponta a ponta da A2 e da A3-A4), e medi-lo contra 15 s o obrigaria a deixar de ser de ponta a ponta (correção
 // `2026-10-18-duracao-do-e2e-le-o-prazo-declarado`). Mas só vale o prazo que **já estava no HEAD**: `test.slow()` posto agora num caso
 // que estourou a régua seria a saída mais curta para escapar dela, e o que o prazo maior encobre é justamente o caso que se tornou lento.
-// O prazo do HEAD se acha pelo título do caso, em qualquer spec (o caso movido para outro arquivo leva o prazo que tinha); caso
-// que não existia, ou cujo título o HEAD não escreve por extenso, conta 30 s.
+// O prazo do HEAD se acha pelo título do caso, em qualquer spec (o caso movido para outro arquivo leva o prazo que tinha); o caso que
+// só mudou de título leva o do caso de corpo idêntico (`prazosDosRetitulados`); caso que não existia, ou cujo título o HEAD não escreve
+// por extenso, conta 30 s.
 //
 // O que a leitura do HEAD não faz, e por isso o caso conta 30 s (cobra mais, nunca menos): ler `test.slow(condição)`, `describe.configure`
 // e `test.setTimeout(ident)` cuja constante não é só números e `*` no mesmo arquivo; e distinguir dois casos de mesmo título em specs
@@ -46,6 +47,14 @@ export const LIMITE_DO_CASO_DE_E2E_MS = PRAZO_PADRAO_DO_CASO_DE_E2E_MS / 2
 /** Quando posta, o Playwright grava o relatório de duração neste arquivo. Só o portão da tarefa a posta. */
 export const VARIAVEL_DO_RELATORIO_DO_E2E = 'EDUCA_RELATORIO_DO_E2E'
 export const CAMINHO_DO_RELATORIO_DO_E2E = '.processo/e2e-duracao.json'
+/**
+ * O censo (`node tools/processo/esteira.ts --censo`): na esteira, cada fatia do e2e grava o mesmo relatório neste arquivo e o
+ * publica como artefato `censo-do-e2e-<fatia>`, também no verde. Só o arquivo JSON, sem `test-results/`, mas o repórter `json`
+ * grava nele também `errors`, `stdout`, `stderr` e os metadados dos anexos de cada resultado, e o artefato é público: a garantia
+ * é todo dado do e2e ser sintético (regra 20, item 17), e `tools/ci/esteira.test.ts` fixa que nenhum spec anexa corpo.
+ */
+export const ARQUIVO_DO_CENSO_DO_E2E = 'censo-do-e2e.json'
+export const PREFIXO_DO_ARTEFATO_DO_CENSO = 'censo-do-e2e-'
 
 /**
  * Os repórteres do Playwright: a lista de sempre (a esteira anota as falhas no GitHub) e, só com o arquivo do relatório,
@@ -241,10 +250,22 @@ const FIM_DE_CASO = /\btest\.(?:describe|beforeEach|afterEach|beforeAll|afterAll
  * parênteses não são lidos, e o caso conta 30 s, que erra para o lado de cobrar mais.
  */
 export function prazosDosCasos(textoBruto: string): { titulo: string; prazoMs: number }[] {
+  return casosDoSpec(textoBruto).map(({ titulo, prazoMs }) => ({ titulo, prazoMs }))
+}
+
+/** Um caso do spec: o título, o prazo que o corpo declara e o corpo sem o título (para achar o caso que só mudou de nome). */
+export interface CasoDoSpec {
+  titulo: string
+  prazoMs: number
+  corpo: string
+}
+
+/** Os casos de um spec, na ordem do arquivo, com o que `prazosDosCasos` documenta. O corpo vai sem comentário e sem as pontas em branco. */
+export function casosDoSpec(textoBruto: string): CasoDoSpec[] {
   const texto = semComentarios(textoBruto)
   const constantes = constantesNumericas(texto)
   const inicios = [...texto.matchAll(INICIO_DE_CASO)]
-  const casos: { titulo: string; prazoMs: number }[] = []
+  const casos: CasoDoSpec[] = []
   for (const [indice, inicio] of inicios.entries()) {
     const titulo = tituloLiteral(inicio[2] ?? '')
     if (titulo === null) continue
@@ -262,28 +283,68 @@ export function prazosDosCasos(textoBruto: string): { titulo: string; prazoMs: n
       const declarado = /^\d/.test(declaracao[1]) ? Number(declaracao[1].replaceAll('_', '')) : constantes.get(declaracao[1])
       if (declarado !== undefined) prazoMs = declarado
     }
-    casos.push({ titulo, prazoMs })
+    casos.push({ titulo, prazoMs, corpo: doCaso.trim() })
   }
   return casos
 }
 
-/**
- * O prazo que cada título de caso declarava no HEAD, em qualquer spec de `e2e/`. Título repetido em dois specs fica com o menor
- * prazo. Sem HEAD (repositório sem commit), vazio: nenhum caso tem prazo próprio.
- */
-export function prazosDoHead(raiz: string): Map<string, number> {
-  const prazos = new Map<string, number>()
+/** Os casos dos specs de `e2e/` no HEAD. Sem HEAD (repositório sem commit), nenhum. */
+function casosDoHead(raiz: string): CasoDoSpec[] {
   try {
     const arquivos = execFileSync('git', ['ls-tree', '-r', '--name-only', 'HEAD', '--', 'e2e/'], { cwd: raiz, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
       .split('\n')
       .filter((arquivo) => arquivo.endsWith('.spec.ts'))
-    for (const arquivo of arquivos) {
-      const texto = execFileSync('git', ['show', `HEAD:${arquivo}`], { cwd: raiz, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] })
-      for (const { titulo, prazoMs } of prazosDosCasos(texto)) prazos.set(titulo, Math.min(prazos.get(titulo) ?? prazoMs, prazoMs))
-    }
+    return arquivos.flatMap((arquivo) =>
+      casosDoSpec(execFileSync('git', ['show', `HEAD:${arquivo}`], { cwd: raiz, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'ignore'] })),
+    )
   } catch {
-    return new Map()
+    return []
   }
+}
+
+/** Os casos dos specs de `e2e/` na árvore de trabalho: os versionados que ainda existem e os novos, fora do git. */
+function casosDaArvore(raiz: string): CasoDoSpec[] {
+  try {
+    const arquivos = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', 'e2e/'], { cwd: raiz, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .split('\n')
+      .filter((arquivo) => arquivo.endsWith('.spec.ts') && existsSync(join(raiz, arquivo)))
+    return arquivos.flatMap((arquivo) => casosDoSpec(readFileSync(join(raiz, arquivo), 'utf8')))
+  } catch {
+    return []
+  }
+}
+
+/**
+ * O prazo que um caso com título novo herda do caso que só mudou de nome (RF11): o HEAD tinha um único caso com aquele
+ * corpo (sem o título) e só um caso da árvore tem esse corpo. Corpo mudado, dois corpos iguais no HEAD, ou o corpo copiado
+ * para outro caso (o título velho continua, e são dois na árvore): ninguém herda, e o caso conta 30 s. O corpo é lido até o
+ * próximo `test(` ou `test.describe`, ou até o fim do arquivo no último caso, que leva junto o `})` de fechamento do `describe` e o
+ * que vier depois: o caso que muda de lugar dentro do spec e passa a terminar em outro `})` conta como corpo mudado, e mexer no
+ * código depois do último caso já basta para ele perder o prazo herdado. Os dois erram para o lado de cobrar mais.
+ */
+export function prazosDosRetitulados(doHead: readonly CasoDoSpec[], daArvore: readonly CasoDoSpec[]): Map<string, number> {
+  const titulosDoHead = new Set(doHead.map((caso) => caso.titulo))
+  const herdados = new Map<string, number>()
+  for (const novo of daArvore) {
+    if (titulosDoHead.has(novo.titulo)) continue
+    const [velho, ...outrosVelhos] = doHead.filter((caso) => caso.corpo === novo.corpo)
+    const iguaisNaArvore = daArvore.filter((caso) => caso.corpo === novo.corpo)
+    if (velho === undefined || outrosVelhos.length > 0 || iguaisNaArvore.length !== 1) continue
+    herdados.set(novo.titulo, velho.prazoMs)
+  }
+  return herdados
+}
+
+/**
+ * O prazo que cada título de caso declarava no HEAD, em qualquer spec de `e2e/`. Título repetido em dois specs fica com o menor
+ * prazo. O título novo de um caso que só mudou de nome leva o prazo do que ele tinha (`prazosDosRetitulados`). Sem HEAD
+ * (repositório sem commit), vazio: nenhum caso tem prazo próprio.
+ */
+export function prazosDoHead(raiz: string): Map<string, number> {
+  const doHead = casosDoHead(raiz)
+  const prazos = new Map<string, number>()
+  for (const { titulo, prazoMs } of doHead) prazos.set(titulo, Math.min(prazos.get(titulo) ?? prazoMs, prazoMs))
+  for (const [titulo, prazoMs] of prazosDosRetitulados(doHead, casosDaArvore(raiz))) prazos.set(titulo, prazoMs)
   return prazos
 }
 

@@ -132,10 +132,21 @@ regra, AIA e o resto de `docs/` continuam documento.
   execução"); o `pull_request` fica de fora, e só o `push` supera. O veredito sai da mais nova cujo código é o do HEAD;
   commit só de documento vale pelo de código, como hoje
 - **Censo (RF9):** o `ci.yml` sobe só o reporter JSON de cada fatia, sem trace nem anexo, também no verde, por 7 dias.
-  O `--censo` baixa as fatias da última execução verde e reaproveita `prazosDosCasos`; fatia faltando ou artefato
-  expirado sai 2 e diz qual
+  No código (4.0): o passo do `npm run ci:e2e` liga o repórter com `EDUCA_RELATORIO_DO_E2E: censo-do-e2e.json` (a única `env`
+  do YAML, e o teste de "sem segredo nem ambiente" a aceita só ali), e o passo seguinte publica `censo-do-e2e-<fatia>` com
+  `path: censo-do-e2e.json`, `if: success() || failure()` (o cancelado por prazo não termina o relatório) e
+  `overwrite: true` (reexecutar a fatia vermelha que passa publica o mesmo nome). O `--censo` acha a última execução
+  verde, lê os artefatos das sete fatias (`gh api …/artifacts`, `gh run download --name`) e lista o caso com
+  `duracaoMs * 3 > prazoMs * 2`, **lendo o prazo do próprio relatório** (`casosMedidos`: o `timeout` que o Playwright
+  deu ao caso, com `slow` e `setTimeout` aplicados), e não o do fonte (`prazosDosCasos`, que é do HEAD e não do commit
+  da execução). Sai 0 sem caso na lista, 1 com a lista, e 2 quando não há o que ler: sem execução verde, fatia sem
+  artefato ou de artefato expirado (o texto diz quais, em separado), e nenhuma fatia é lida então, porque lista de uma
+  parte da suíte passaria pela suíte inteira
 - **Retitulado (RF11):** sem o título no HEAD, vale o caso cujo corpo sem o título é idêntico; corpo mudado, ou dois
-  corpos iguais, não herdam prazo
+  corpos iguais, não herdam prazo. No código (4.0): o corpo é o texto do caso sem comentário, até o próximo `test(` ou
+  `test.describe`; o título novo herda só se o HEAD tinha **um** caso com aquele corpo e a árvore (`git ls-files
+  --cached --others --exclude-standard -- e2e/`, só `*.spec.ts` que ainda existe) tem **um** só: o corpo copiado para um
+  caso novo, com o título velho ainda lá, não herda
 - **Quadro (RF3, RF6):** `abrir`, `partida`, `abandonar` e `encontro` pegam o mesmo `flock`, no `.processo/` da raiz
   do andar, relêem o quadro e gravam só a própria linha; quem espera tem prazo de 7 min e sai com "encontro em curso";
   o `abrir` grava a linha ocupada e só então solta a trava para o `npm ci`; depois, pega a trava de novo e a grava livre,

@@ -108,7 +108,11 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # `EDUCA_RELATORIO_DO_E2E` liga o repórter `json` do `playwright.config.ts`: a duração e o prazo de cada caso da fatia,
+      # que o passo do censo (abaixo) publica.
       - run: npm run ci:e2e -- --shard=${{ matrix.fatia }}/7
+        env:
+          EDUCA_RELATORIO_DO_E2E: censo-do-e2e.json
       # O `trace: 'retain-on-failure'` do `playwright.config.ts` já escreve o traço e o contexto do erro
       # em `test-results/`; sem este passo eles morriam com o runner, e todo vermelho de e2e ficava sem
       # a linha de tempo das requisições que diz para onde o prazo foi. Só na falha, e por 7 dias: o
@@ -128,4 +132,21 @@ jobs:
           # `warn`, não `ignore`: o job já falhou, e diretório vazio aqui é sinal de que algo mudou —
           # configuração do traço, diretório de saída, ou o compose que não subiu. O aviso não
           # distingue a causa, mas qualquer uma delas tem de aparecer no log em vez de sumir.
+          if-no-files-found: warn
+      # O censo do prazo do e2e (`node tools/processo/esteira.ts --censo`): a duração de cada caso na última execução verde,
+      # para achar o caso que já passa de dois terços do prazo antes de ele estourar. Só o arquivo do relatório JSON da fatia,
+      # sem `test-results/`, trace nem o conteúdo dos anexos, e também no verde, que é a execução que se lê. O repórter `json`
+      # do Playwright grava em cada resultado, além do título, do arquivo, do tempo e do prazo, o texto de `errors`, `stdout` e
+      # `stderr` e os metadados dos anexos. O censo também sobe na execução de pull request, num repositório público, e por isso
+      # este passo depende de todo dado do e2e ser sintético (regra 20, item 17), como o do traço. Por 7 dias: serve ao censo
+      # da spec em andamento, não de arquivo. `cancelled()` fica de fora: o job cancelado pelo prazo não terminou o relatório.
+      # `overwrite`: reexecutar a fatia que ficou vermelha e passou publica de novo o mesmo nome, e sem ele o upload da fatia
+      # verde seria recusado.
+      - if: success() || failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: censo-do-e2e-${{ matrix.fatia }}
+          path: censo-do-e2e.json
+          retention-days: 7
+          overwrite: true
           if-no-files-found: warn

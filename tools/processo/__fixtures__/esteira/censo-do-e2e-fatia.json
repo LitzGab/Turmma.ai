@@ -1,0 +1,51 @@
+{
+  "config": { "rootDir": "/home/runner/work/Turmma.ai/Turmma.ai/e2e", "workers": 2, "shard": { "total": 7, "current": 3 } },
+  "suites": [
+    {
+      "title": "material.spec.ts",
+      "file": "material.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "material da coordenação",
+          "file": "material.spec.ts",
+          "line": 4,
+          "column": 6,
+          "specs": [
+            {
+              "title": "sobe o PDF licenciado",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectName": "chromebook",
+                  "results": [{ "workerIndex": 0, "status": "passed", "duration": 21000, "errors": [], "stdout": [], "stderr": [], "retry": 0, "attachments": [] }],
+                  "status": "expected"
+                },
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectName": "celular",
+                  "results": [{ "workerIndex": 1, "status": "passed", "duration": 9000, "errors": [], "stdout": [], "stderr": [], "retry": 0, "attachments": [] }],
+                  "status": "expected"
+                }
+              ],
+              "id": "a1b2c3d4e5f6",
+              "file": "material.spec.ts",
+              "line": 12,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": { "startTime": "2026-10-23T18:10:00.000Z", "duration": 61000, "expected": 2, "skipped": 0, "unexpected": 0, "flaky": 0 }
+}

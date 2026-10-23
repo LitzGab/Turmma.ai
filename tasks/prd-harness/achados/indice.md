@@ -82,3 +82,11 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-23 17:00:02 | `privacy-guardian` | 2ª | APROVADO | `3_task` | nenhuma nova. |
 | 2026-10-23 17:00:05 | `infra-guardian` | 2ª | APROVADO | `3_task` | as quatro recomendações da 1ª rodada foram aplicadas. |
 | 2026-10-23 17:00:25 | `test-engineer` | 2ª | APROVADO | `3_task` | O bloco novo aplica a mesma mutação do bloco das linhas 220 a 226, e só o teste citado muda. Está certo, porque cada um prova um teste diferente. Uma linha de… |
+| 2026-10-23 18:07:33 | `infra-guardian` | 1ª | APROVADO | `4_task` | `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness--l3/.github/workflows/ci.yml:136-141`: o comentário diz "sem ... anexo", mas o repórter… |
+| 2026-10-23 18:07:33 | `privacy-guardian` | 1ª | APROVADO | `4_task` | Corrigir os comentários em `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness--l3/.github/workflows/ci.yml:137-138`, no JSDoc de… |
+| 2026-10-23 18:08:07 | `revisor-geral` | 1ª | APROVADO | `4_task` | `tools/processo/esteira.ts:234`: o comentário diz "passaria por a suíte inteira"; o certo é "passaria pela suíte inteira". |
+| 2026-10-23 18:09:04 | `test-engineer` | 1ª | REPROVADO | `4_task` | Mutação com erro de sintaxe (`tasks/prd-harness/4_task.md:241-246`, bloco de `artefatosDoGh`). |
+| 2026-10-23 18:18:17 | `infra-guardian` | 2ª | APROVADO | `4_task` | nenhuma nova. |
+| 2026-10-23 18:18:19 | `privacy-guardian` | 2ª | APROVADO | `4_task` | O teste de anexo procura só `.attach(` e só em `e2e//*.ts`. Um `console.log` num spec, ou um `page.on('console')` que repasse o console do navegador, cairia em… |
+| 2026-10-23 18:18:35 | `revisor-geral` | 2ª | APROVADO | `4_task` | do `test-engineer` que entraram nesta rodada: |
+| 2026-10-23 18:19:08 | `test-engineer` | 2ª | APROVADO | `4_task` | `tools/ci/esteira.test.ts`, teste "nenhum arquivo de e2e/ anexa corpo": a busca por `/\.attach\(/` não pega `testInfo.attachments.push({ name, body })`, que… |

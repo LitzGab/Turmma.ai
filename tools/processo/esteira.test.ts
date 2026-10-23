@@ -1,19 +1,36 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import type { RelatorioDoPlaywright } from '../ci/duracao-do-e2e.ts'
 import {
+  acimaDeDoisTercos,
   argumentosDaListaDeExecucoes,
+  argumentosDoDownloadDaFatia,
+  baixarORelatorio,
+  argumentosDosArtefatos,
+  artefatosDoGh,
+  branchDoCenso,
   CAMPOS_DA_EXECUCAO,
+  casosDoCenso,
+  codigoDoCenso,
   ehSoDocumento,
   estadoDaExecucao,
   EVENTOS_DO_VEREDITO,
   execucaoDe,
   execucoesDoGh,
+  fatiasSemRelatorio,
+  fazerOCenso,
+  FATIAS_DO_E2E,
   jobsQueCairam,
   jobsQueNaoPassaram,
+  nomeDoArtefatoDaFatia,
   relatorioDaEsteira,
+  relatorioDaFatia,
+  relatorioDoCenso,
   situacaoDaTarefa,
   situacaoDoFechamento,
+  ultimaVerde,
+  type ArtefatoDoGh,
   type Commit,
   type Execucao,
 } from './esteira.ts'
@@ -254,5 +271,175 @@ describe('o que se pergunta ao GitHub', () => {
       expect(argumentos[argumentos.indexOf('--branch') + 1]).toBe('spec/x')
       expect(argumentos[argumentos.indexOf('--json') + 1]).toBe(CAMPOS_DA_EXECUCAO)
     }
+  })
+})
+
+describe('o censo do prazo do e2e (RF9): o caso acima de dois terços do prazo na última esteira verde', () => {
+  /** O formato do repórter `json` do Playwright, com um caso por linha pedida. */
+  function relatorioDe(...casos: { linha: number; titulo: string; duracaoMs: number; timeout?: number; projeto?: string }[]): RelatorioDoPlaywright {
+    return {
+      suites: [
+        {
+          title: 'material.spec.ts',
+          specs: casos.map((caso) => ({
+            title: caso.titulo,
+            file: 'material.spec.ts',
+            line: caso.linha,
+            tests: [{ projectName: caso.projeto ?? 'chromebook', status: 'expected', timeout: caso.timeout ?? 30_000, results: [{ duration: caso.duracaoMs }] }],
+          })),
+        },
+      ],
+    }
+  }
+  const dasFatias = (relatorios: Record<number, RelatorioDoPlaywright>) => (_execucao: number, fatia: number) => relatorios[fatia] ?? relatorioDe()
+  const completos: ArtefatoDoGh[] = FATIAS_DO_E2E.map((fatia) => ({ name: nomeDoArtefatoDaFatia(fatia), expired: false }))
+  const verde = execucao('abc', 'verde', '2026-10-23T10:00:00Z', 10)
+
+  it('o caso a 70% do prazo é listado, com a fatia e o prazo; o a 60% não', () => {
+    const censo = fazerOCenso(
+      [verde],
+      () => completos,
+      dasFatias({
+        3: relatorioDe({ linha: 5, titulo: 'a 70%', duracaoMs: 21_000 }, { linha: 9, titulo: 'a 60%', duracaoMs: 18_000 }),
+      }),
+    )
+    expect(censo).toMatchObject({ tipo: 'lista', execucao: { id: 10 } })
+    const casos = censo.tipo === 'lista' ? censo.casos : []
+    expect(casos.map((caso) => [caso.titulo, caso.fatia, caso.prazoMs])).toEqual([['a 70%', 3, 30_000]])
+    const texto = relatorioDoCenso(censo, 'spec/x')
+    expect(texto).toContain('e2e/material.spec.ts:5 (chromebook, fatia 3) levou 21,0 s de 30,0 s')
+    expect(texto).toContain('1 caso(s)')
+    expect(texto).not.toContain('a 60%')
+    expect(codigoDoCenso(censo)).toBe(1)
+  })
+
+  it('exatamente dois terços ainda cabe, e o prazo é o que a corrida deu ao caso: 63 s de 90 s é listado, 50 s de 90 s não', () => {
+    expect(acimaDeDoisTercos({ duracaoMs: 20_000, prazoMs: 30_000 })).toBe(false)
+    expect(acimaDeDoisTercos({ duracaoMs: 20_001, prazoMs: 30_000 })).toBe(true)
+    const casos = casosDoCenso([
+      {
+        fatia: 1,
+        relatorio: relatorioDe(
+          { linha: 1, titulo: 'slow a 70%', duracaoMs: 63_000, timeout: 90_000 },
+          { linha: 2, titulo: 'slow a 55%', duracaoMs: 50_000, timeout: 90_000 },
+        ),
+      },
+    ])
+    expect(casos.map((caso) => caso.titulo)).toEqual(['slow a 70%'])
+  })
+
+  it('a lista vem do caso mais perto do prazo para o mais longe, reunindo as fatias, e vazia dá código 0', () => {
+    const casos = casosDoCenso([
+      { fatia: 2, relatorio: relatorioDe({ linha: 1, titulo: 'a 75%', duracaoMs: 22_500 }) },
+      { fatia: 5, relatorio: relatorioDe({ linha: 1, titulo: 'a 95%', duracaoMs: 28_500 }, { linha: 2, titulo: 'a 80%', duracaoMs: 24_000 }) },
+    ])
+    expect(casos.map((caso) => [caso.titulo, caso.fatia])).toEqual([
+      ['a 95%', 5],
+      ['a 80%', 5],
+      ['a 75%', 2],
+    ])
+    const vazio = fazerOCenso([verde], () => completos, dasFatias({}))
+    expect(codigoDoCenso(vazio)).toBe(0)
+    expect(relatorioDoCenso(vazio, 'spec/x')).toContain('nenhum caso acima de dois terços do prazo')
+  })
+
+  it('fatia sem artefato sai 2 e diz qual; o censo não lê as outras', () => {
+    const lidas: number[] = []
+    const semAQuarta = completos.filter((artefato) => artefato.name !== nomeDoArtefatoDaFatia(4))
+    const censo = fazerOCenso([verde], () => semAQuarta, (_id, fatia) => (lidas.push(fatia), relatorioDe()))
+    expect(censo).toMatchObject({ tipo: 'incompleto', faltando: [4], expiradas: [] })
+    expect(codigoDoCenso(censo)).toBe(2)
+    const texto = relatorioDoCenso(censo, 'spec/x')
+    expect(texto).toContain('Fatia(s) sem artefato: 4.')
+    expect(texto).not.toContain('expirado')
+    expect(lidas).toEqual([])
+  })
+
+  it('artefato expirado sai 2 e diz qual, separado do que falta', () => {
+    const comAQuintaExpirada = completos.map((artefato) => (artefato.name === nomeDoArtefatoDaFatia(5) ? { ...artefato, expired: true } : artefato))
+    const censo = fazerOCenso([verde], () => comAQuintaExpirada, dasFatias({}))
+    expect(censo).toMatchObject({ tipo: 'incompleto', faltando: [], expiradas: [5] })
+    expect(codigoDoCenso(censo)).toBe(2)
+    const texto = relatorioDoCenso(censo, 'spec/x')
+    expect(texto).toContain('Fatia(s) com artefato expirado: 5.')
+    expect(texto).not.toContain('sem artefato')
+  })
+
+  it('o artefato de outro nome não vale pela fatia, e todas as fatias da matriz são pedidas', () => {
+    expect(fatiasSemRelatorio([{ name: 'traco-do-e2e-1', expired: false }])).toEqual({ faltando: [...FATIAS_DO_E2E], expiradas: [] })
+    expect(fatiasSemRelatorio(completos)).toEqual({ faltando: [], expiradas: [] })
+    expect(nomeDoArtefatoDaFatia(3)).toBe('censo-do-e2e-3')
+  })
+
+  it('com uma vermelha mais nova que a verde, o censo lê a verde; a rodando e a cancelada também ficam de fora', () => {
+    const execucoes = [
+      execucao('d', 'vermelha', '2026-10-23T12:00:00Z', 13),
+      execucao('c', 'rodando', '2026-10-23T11:30:00Z', 12),
+      execucao('b', 'verde', '2026-10-23T11:00:00Z', 11),
+      execucao('a', 'verde', '2026-10-23T10:00:00Z', 10),
+      execucao('z', 'cancelada', '2026-10-23T11:45:00Z', 14),
+    ]
+    expect(ultimaVerde(execucoes)?.id).toBe(11)
+    const lidas: number[] = []
+    const baixadas: [number, number][] = []
+    const censo = fazerOCenso(
+      execucoes,
+      (id) => (lidas.push(id), completos),
+      (id, fatia) => (baixadas.push([id, fatia]), relatorioDe()),
+    )
+    expect(censo).toMatchObject({ tipo: 'lista', execucao: { id: 11 } })
+    expect(new Set(lidas)).toEqual(new Set([11]))
+    // cada fatia da matriz, e só da verde: nem a vermelha mais nova, nem uma fatia pulada
+    expect(baixadas).toEqual(FATIAS_DO_E2E.map((fatia) => [11, fatia]))
+  })
+
+  it('sem nenhuma verde não há o que ler: sai 2', () => {
+    const censo = fazerOCenso([execucao('d', 'vermelha')], () => completos, dasFatias({}))
+    expect(censo).toEqual({ tipo: 'sem-verde' })
+    expect(codigoDoCenso(censo)).toBe(2)
+    expect(relatorioDoCenso(censo, 'spec/x')).toContain('nenhuma execução verde')
+  })
+
+  it('o relatório de uma fatia gravado pela esteira é lido: o caso a 70% do fixture aparece, o a 30% não, e JSON quebrado diz de qual fatia', () => {
+    const relatorio = relatorioDaFatia(fixture('censo-do-e2e-fatia.json'), 3)
+    const casos = casosDoCenso([{ fatia: 3, relatorio }])
+    expect(casos.map((caso) => [caso.arquivo, caso.linha, caso.projeto, caso.titulo, caso.fatia])).toEqual([
+      ['e2e/material.spec.ts', 12, 'chromebook', 'material da coordenação › sobe o PDF licenciado', 3],
+    ])
+    expect(() => relatorioDaFatia('{ quebrado', 6)).toThrow('fatia 6')
+  })
+
+  it('o que se pergunta ao GitHub: os artefatos da execução, e o download de uma fatia pelo nome, numa pasta à parte', () => {
+    expect(argumentosDosArtefatos(77)).toEqual(['api', 'repos/{owner}/{repo}/actions/runs/77/artifacts?per_page=100'])
+    expect(argumentosDoDownloadDaFatia(77, 2, '/tmp/x')).toEqual(['run', 'download', '77', '--name', 'censo-do-e2e-2', '--dir', '/tmp/x'])
+    expect(artefatosDoGh(JSON.stringify({ total_count: 1, artifacts: [{ id: 1, name: 'censo-do-e2e-1', expired: true, size_in_bytes: 9 }] }))).toEqual([
+      { name: 'censo-do-e2e-1', expired: true },
+    ])
+  })
+
+  it('o download traz o relatório da fatia pelo arquivo do artefato, na pasta que o gh recebe, e apaga a pasta depois', () => {
+    let pasta = ''
+    const relatorio = baixarORelatorio(77, 4, (argumentos) => {
+      expect(argumentos.slice(0, 5)).toEqual(['run', 'download', '77', '--name', 'censo-do-e2e-4'])
+      pasta = argumentos[argumentos.indexOf('--dir') + 1] ?? ''
+      writeFileSync(join(pasta, 'censo-do-e2e.json'), fixture('censo-do-e2e-fatia.json'))
+    })
+    expect(casosDoCenso([{ fatia: 4, relatorio }]).map((caso) => caso.linha)).toEqual([12])
+    expect(pasta).not.toBe('')
+    expect(existsSync(pasta)).toBe(false)
+    // O gh que falha também não deixa a pasta para trás.
+    expect(() =>
+      baixarORelatorio(77, 4, (argumentos) => {
+        pasta = argumentos[argumentos.indexOf('--dir') + 1] ?? ''
+        throw new Error('artefato expirado')
+      }),
+    ).toThrow('artefato expirado')
+    expect(existsSync(pasta)).toBe(false)
+  })
+
+  it('a branch do censo é a do argumento, ou a atual quando não vem nenhuma', () => {
+    expect(branchDoCenso(['node', 'esteira.ts', '--censo', 'spec/outra'], 'spec/x')).toBe('spec/outra')
+    expect(branchDoCenso(['node', 'esteira.ts', '--censo'], 'spec/x')).toBe('spec/x')
+    expect(branchDoCenso(['node', 'esteira.ts', '--censo', '--fechamento'], 'spec/x')).toBe('spec/x')
   })
 })
