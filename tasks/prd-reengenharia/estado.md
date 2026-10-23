@@ -33,8 +33,8 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     12.0/13.0, API por pastas da 33–35/96, `lerEntrada` da 16.0) quando 12.0, 13.0, 16.0/17.0 e as pastas entrarem
   - `Arquiteto`: caminhos da 12.0, 13.0, 24.0, 25.0 e 90.0 **conferidos** (`a0f1974`, RELATÓRIO às 22:13): 12.0 e T7 da onda 1a
     com as subpastas, cercas sem reaches (R63); 25.0 e 90.0 ajustadas; 13.0 e 24.0 sem mudança. Livre
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **24.0** (porte pequeno), partida às 22:48, 1ª tentativa. Depois dela: 90.0
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **ociosa** (nada liberado: 25.0 espera 13.0; 90.0 espera 24.0)
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **90.0** (porte grande), partida às 23:32, 1ª tentativa
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **ociosa** (nada liberado: 25.0 espera 13.0)
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -58,7 +58,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `4d0219d` (encontro da 12.0, 22:46). Esteira: `b01a142` (`39879299569`) VERDE; `561ff3b` (`39882315750`) e `a0f1974` (`39882806484`) rodando; `4d0219d` na fila. Vigia ligada
+- **Base:** `spec/reengenharia` em `94aca7d` (encontro da 24.0, 23:30). Esteira: `561ff3b` (`39882315750`) VERDE; `a0f1974` (`39882806484`) VERMELHA só em `e2e/casca.spec.ts:67` [celular] (5151 ms contra 5 s; commit só de documento, código igual ao da `561ff3b` verde): li como intermitente e segui. **No próximo encontro, conferir se `4d0219d` (`39887437533`) e `94aca7d` (`39889864144`) repetem o casca.spec:67; se repetir, correção numa linha ociosa antes da partida**. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -110,6 +110,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 35.0 | `17e5608` | Sonnet | 2 (tenancy-guardian na 1ª; test-engineer e revisor-geral aprovados na 1ª e na 2ª) | linha 1, pequena, 21:14–21:38; sem tela |
 | 96.0 | `47faf4d` | Sonnet | 2 (tenancy-guardian na 1ª; test-engineer e revisor-geral aprovados na 2ª) | linha 1, grande, 21:40–22:08; sem tela |
 | 12.0 | `3ffe292` | Sonnet | 2 (tenancy-guardian, infra-guardian, test-engineer, revisor-geral aprovados na 2ª) | linha 1, grande, 22:14–22:45; sem tela; o `it` da 11.0 (login.service) fica no `arquitetura.test.ts` (fora da tabela da 12.0); recomendações da r2 no documento e no TODO.md |
+| 24.0 | `32b277d` | Sonnet | 2 (infra-guardian na 1ª; test-engineer e revisor-geral aprovados na 2ª) | linha 2, pequena, 22:48–23:30; sem tela; divergências no 24_task.md e onda-1b.md (11 devDependencies na raiz, knip.json com ignores, guarda:dependencias roda audit e knip); test:infra só na esteira |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
@@ -162,6 +163,7 @@ critério de aceite.
 - 22/10 16:12, linha 1, 19.0: mutação que trava o teste (laço síncrono) segurou `/tmp/educa-carga.lock` por 41 min; o `mutacoes.ts` usa `spawnSync` sem timeout e conta a morte do processo como vermelho. Para a retro: timeout por mutação, com o estouro contado como `recusada`
 
 ## O que decidi sem perguntar
+- 22/10, 23:32 — esteira VERMELHA em `a0f1974` só no `casca.spec.ts:67` [celular], por 151 ms acima dos 5 s, num commit só de documento cujo código é o da `561ff3b`, verde. Não abri correção antes da partida da 90.0: o vermelho não vem de código da spec. Se as execuções seguintes repetirem, vira correção.
 - 22/10, ~12:28 — DIVERGÊNCIA (portão) da 6.0 (l1): a regra do guarda da 1.0 (`porta-unica.test.ts:56`) casa a menção ao
   nome, não a importação. Aceitei a proposta do Implementador (estreitar à importação) como correção `porta-unica-so-import`
   na l1, e recusei a alternativa de quebrar o caminho em pedaços para a varredura não ver.
