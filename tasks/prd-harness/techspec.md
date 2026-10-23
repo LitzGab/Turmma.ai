@@ -105,12 +105,19 @@ de teste; trata como alcançada a linha cujo texto um bloco do mesmo arquivo cit
 regra, AIA e o resto de `docs/` continuam documento.
 
 **(f) Esteira, censo e encontro.**
-- **`concurrency`:** em `spec/**` e `correcao/**`, o grupo é a ref, com `cancel-in-progress: true`. No `pull_request`,
-  é `pr-<número>`. Em `develop`, `release`, `main` e `workflow_dispatch`, é o `run_id`, que nunca cancela nem enfileira.
-  Sem `pull_request_target` nem segredo, com `permissions: contents: read`
-- **Veredito (RF2):** só é `superada` a cancelada com execução mais nova na mesma branch, de evento `push`; a cancelada
-  sem sucessora é vermelha e cita o job. O veredito sai da mais nova cujo código é o do HEAD; commit só de documento vale
-  pelo de código, como hoje
+- **`concurrency`:** em `spec/**` e `correcao/**` (evento `push`), o grupo é a ref, com `cancel-in-progress: true`. No
+  `pull_request`, é `pr-<número>`, também com `cancel-in-progress: true`: o push novo no PR substitui a execução dele. Em
+  `develop`, `release`, `main` e `workflow_dispatch` (inclusive numa branch de spec), é o `run_id`, com `cancel-in-progress`
+  falso: nunca cancela nem enfileira. As duas expressões leem só `github.event_name`, `github.ref`, `github.run_id` e
+  `github.event.pull_request.number`, e o teste as avalia ref a ref com essa lista fechada. Sem `pull_request_target`
+  nem segredo, com `permissions: contents: read`
+- **Veredito (RF2):** `cancelada` é o que o GitHub diz; `superada` não é estado guardado. A cancelada com execução mais
+  nova na mesma branch, de evento `push` (`criadaEm` estritamente maior: o empate não supera), é descartada, e a execução
+  que vale para o commit é a mais nova das que sobram; a cancelada sem sucessora é vermelha e cita o job (o `timeout-minutes`
+  inclusive). O `gh run list` roda uma vez por evento do veredito, `push` e `workflow_dispatch` (a execução manual é o que
+  o relatório manda disparar quando o push não gerou execução, e sem ela o fechamento da spec ficaria preso em "nenhuma
+  execução"); o `pull_request` fica de fora, e só o `push` supera. O veredito sai da mais nova cujo código é o do HEAD;
+  commit só de documento vale pelo de código, como hoje
 - **Censo (RF9):** o `ci.yml` sobe só o reporter JSON de cada fatia, sem trace nem anexo, também no verde, por 7 dias.
   O `--censo` baixa as fatias da última execução verde e reaproveita `prazosDosCasos`; fatia faltando ou artefato
   expirado sai 2 e diz qual

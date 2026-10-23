@@ -1355,6 +1355,9 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 O MVP de apresentação corre com dado sintético (D71, D77). Os revisores apontaram o que precisa existir antes de
 qualquer dado real:
 
+- [ ] **(X7, encontro-6-harness) Traço do e2e em `pull_request` de repositório público:** o `ci.yml` sobe o traço do e2e que
+      falhou também no `pull_request`, e o repositório é público. Hoje o dado é sintético; antes da primeira escola real, conferir
+      que nenhum seed com dado real chegue a esse job (ou que o upload do traço deixe de rodar em PR).
 - [ ] **(F3, 13.0) `STORAGE_URL_PUBLICA` no staging e na produção:** a URL assinada do arquivo do titular leva o host na assinatura,
       e o compose local aponta para `127.0.0.1:${STORAGE_PORTA_HOST}`. Quando o staging for criado (D42), a variável tem de ser o
       endereço `https` do storage gerenciado que o navegador alcança, e a API não deve subir com `AMBIENTE=staging` ou `producao`

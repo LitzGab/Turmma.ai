@@ -21,10 +21,10 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [ ] 2.2 `estado.ts` e `esteira.ts` deixam de importar `revisoes.ts`
   - [ ] 2.3 Testes: os atuais verdes sem alteração; teste dos imports
 
-- [ ] **3.0 — A esteira cancela a superada sozinha e não chama a cancelada de vermelha à toa**
-  - [ ] 3.1 `concurrency` e `pull_request` para a `develop` no `ci.yml` (RF1, RF19)
-  - [ ] 3.2 Veredito com superada e `--event push` no `esteira.ts` (RF2)
-  - [ ] 3.3 Testes: os casos de RF1, RF2 e RF19 do `cenarios.md`
+- [x] **3.0 — A esteira cancela a superada sozinha e não chama a cancelada de vermelha à toa**
+  - [x] 3.1 `concurrency` e `pull_request` para a `develop` no `ci.yml` (RF1, RF19)
+  - [x] 3.2 Veredito com superada e `--event push` no `esteira.ts` (RF2)
+  - [x] 3.3 Testes: os casos de RF1, RF2 e RF19 do `cenarios.md`
 
 - [ ] **4.0 — O censo do prazo do e2e e o caso retitulado**
   - [ ] 4.1 O `ci.yml` sobe o reporter JSON de cada fatia também no verde

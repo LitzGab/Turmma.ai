@@ -7,16 +7,23 @@
 //
 // Sai com 0 quando dá para seguir (verde, rodando ou ainda sem execução, na pergunta da tarefa; verde, no fechamento)
 // e com 1 quando não dá, dizendo o commit, a execução e os jobs que caíram.
+//
+// Execução cancelada: se um push mais novo da mesma branch a cancelou (o `concurrency` do `ci.yml`), ela está superada e
+// não conta; sem esse push (o `timeout-minutes` de um job, um cancelamento à mão), é vermelha e o relatório cita o job.
 import { execFileSync } from 'node:child_process'
 import { DOCUMENTO_QUE_UMA_SUITE_LE } from './caducidade.ts'
 
-export type EstadoDaExecucao = 'verde' | 'vermelha' | 'rodando'
+/** `cancelada` é o que o GitHub diz; se ela é vermelha ou superada só se sabe vendo as outras (`execucoesQueValem`). */
+export type EstadoDaExecucao = 'verde' | 'vermelha' | 'cancelada' | 'rodando'
 
 export interface Execucao {
   id: number
   sha: string
   estado: EstadoDaExecucao
   criadaEm: string
+  /** A branch da execução e o evento que a disparou (`push`, `pull_request`, `workflow_dispatch`). */
+  branch: string
+  evento: string
 }
 
 /** Um commit da branch, do mais novo para o mais antigo. `soDocumento`: nada nele roda em suíte nenhuma. */
@@ -43,11 +50,40 @@ export function execucaoDe(sha: string, execucoes: readonly Execucao[]): Execuca
 }
 
 /**
+ * Cancelada porque um push mais novo da mesma branch tomou o lugar dela (o `concurrency` do `ci.yml`, RF1): não diz
+ * nada sobre o código, e o veredito é o do push que a superou. Só `push` supera: o `workflow_dispatch` e o
+ * `pull_request` têm grupo próprio e nunca cancelam a execução da branch, e outra branch é outro assunto.
+ */
+function foiSuperada(execucao: Execucao, todas: readonly Execucao[]): boolean {
+  return (
+    execucao.estado === 'cancelada' &&
+    todas.some(
+      (outra) =>
+        outra.evento === 'push' &&
+        outra.branch === execucao.branch &&
+        outra.criadaEm.localeCompare(execucao.criadaEm) > 0,
+    )
+  )
+}
+
+/**
+ * As execuções que dizem alguma coisa sobre o código: a superada sai, e a cancelada que ninguém superou é vermelha.
+ * Sem push novo que a explique, ela foi o `timeout-minutes` de um job (a suíte travou ou passou do teto) ou um
+ * cancelamento à mão, e nos dois casos a esteira não provou o commit.
+ */
+export function execucoesQueValem(execucoes: readonly Execucao[]): Execucao[] {
+  return execucoes
+    .filter((execucao) => !foiSuperada(execucao, execucoes))
+    .map((execucao): Execucao => (execucao.estado === 'cancelada' ? { ...execucao, estado: 'vermelha' } : execucao))
+}
+
+/**
  * A pergunta de quem fecha uma tarefa. O que decide é a execução terminada mais nova: vermelha, a linha para e
  * corrige antes da tarefa seguinte; verde, segue. Execução ainda rodando não segura ninguém, e é por isso que a
  * esteira por push não custa espera: o veredito dela chega uma tarefa depois, no máximo.
  */
-export function situacaoDaTarefa(commits: readonly Commit[], execucoes: readonly Execucao[]): Situacao {
+export function situacaoDaTarefa(commits: readonly Commit[], todas: readonly Execucao[]): Situacao {
+  const execucoes = execucoesQueValem(todas)
   let rodando: Extract<Situacao, { tipo: 'rodando' }> | null = null
   for (const commit of commits) {
     const execucao = execucaoDe(commit.sha, execucoes)
@@ -68,7 +104,8 @@ export function situacaoDaTarefa(commits: readonly Commit[], execucoes: readonly
  * documento que vieram depois dele (o estado antes da validação, o fechamento) não mudam o que as suítes rodam, e o
  * verde de qualquer um deles vale igual. Vermelho num commit mais antigo não conta: o código já é outro.
  */
-export function situacaoDoFechamento(commits: readonly Commit[], execucoes: readonly Execucao[]): Situacao {
+export function situacaoDoFechamento(commits: readonly Commit[], todas: readonly Execucao[]): Situacao {
+  const execucoes = execucoesQueValem(todas)
   const ateOCodigo = commits.findIndex((commit) => !commit.soDocumento)
   const candidatos = ateOCodigo === -1 ? commits : commits.slice(0, ateOCodigo + 1)
   const comExecucao = candidatos.flatMap((commit) => {
@@ -136,28 +173,57 @@ interface ExecucaoDoGh {
   status: string
   conclusion: string | null
   createdAt: string
+  event: string
+  headBranch: string
+}
+
+/**
+ * Os campos que o `gh run list` devolve e este script lê; o fixture gravado tem exatamente estes. `actor` e
+ * `displayTitle` ficam de fora de propósito: são o login de quem fez o push e o texto livre do commit (regra 20,
+ * item 9), e nada aqui precisa deles. Quem ampliar a lista ou regravar o fixture mantém os dois fora.
+ */
+export const CAMPOS_DA_EXECUCAO = 'databaseId,headSha,status,conclusion,createdAt,event,headBranch'
+
+/**
+ * Os eventos cujo resultado é o veredito de um commit da branch: o `push` e a execução manual, que é o que o relatório
+ * manda disparar quando o push não gerou execução. O `pull_request` fica de fora (RF19): ele roda a esteira para quem
+ * revisa o PR, num grupo de `concurrency` próprio, e o resultado dele não é o do commit na branch da linha.
+ */
+export const EVENTOS_DO_VEREDITO = ['push', 'workflow_dispatch'] as const
+
+/** Uma chamada por evento: o `gh run list` só filtra por um. */
+export function argumentosDaListaDeExecucoes(branch: string, evento: (typeof EVENTOS_DO_VEREDITO)[number]): string[] {
+  return ['run', 'list', '--workflow', 'esteira', '--branch', branch, '--event', evento, '--limit', '30', '--json', CAMPOS_DA_EXECUCAO]
 }
 
 export function estadoDaExecucao(execucao: Pick<ExecucaoDoGh, 'status' | 'conclusion'>): EstadoDaExecucao {
   if (execucao.status !== 'completed') return 'rodando'
+  if (execucao.conclusion === 'cancelled') return 'cancelada'
   return execucao.conclusion === 'success' ? 'verde' : 'vermelha'
 }
 
-function lerExecucoes(raiz: string, branch: string): Execucao[] {
-  const saida = executar('gh', ['run', 'list', '--workflow', 'esteira', '--branch', branch, '--limit', '30', '--json', 'databaseId,headSha,status,conclusion,createdAt'], raiz)
+/** A saída do `gh run list --json`, já no formato que as situações leem. */
+export function execucoesDoGh(saida: string): Execucao[] {
   return (JSON.parse(saida) as ExecucaoDoGh[]).map((execucao) => ({
     id: execucao.databaseId,
     sha: execucao.headSha,
     estado: estadoDaExecucao(execucao),
     criadaEm: execucao.createdAt,
+    branch: execucao.headBranch,
+    evento: execucao.event,
   }))
 }
 
-function lerJobsVermelhos(raiz: string, id: number): string[] {
-  const saida = executar('gh', ['run', 'view', String(id), '--json', 'jobs'], raiz)
+/** Os jobs de uma execução que não passaram: o cancelado por prazo entra, o pulado não. Saída do `gh run view --json jobs`. */
+export function jobsQueNaoPassaram(saida: string): string[] {
   return (JSON.parse(saida) as { jobs: { name: string; conclusion: string | null }[] }).jobs
     .filter((job) => job.conclusion !== 'success' && job.conclusion !== 'skipped')
     .map((job) => job.name)
+}
+
+/** Só a execução que deu o veredito vermelho tem os jobs lidos: os da superada não aparecem, e nem são pedidos ao GitHub. */
+export function jobsQueCairam(situacao: Situacao, lerJobs: (execucao: number) => string[]): string[] {
+  return situacao.tipo === 'vermelha' ? lerJobs(situacao.execucao.id) : []
 }
 
 if (import.meta.filename === process.argv[1]) {
@@ -166,9 +232,9 @@ if (import.meta.filename === process.argv[1]) {
   try {
     const branch = executar('git', ['rev-parse', '--abbrev-ref', 'HEAD'], raiz).trim()
     const commits = lerCommits(raiz, 30)
-    const execucoes = lerExecucoes(raiz, branch)
+    const execucoes = EVENTOS_DO_VEREDITO.flatMap((evento) => execucoesDoGh(executar('gh', argumentosDaListaDeExecucoes(branch, evento), raiz)))
     const situacao = noFechamento ? situacaoDoFechamento(commits, execucoes) : situacaoDaTarefa(commits, execucoes)
-    const jobs = situacao.tipo === 'vermelha' ? lerJobsVermelhos(raiz, situacao.execucao.id) : []
+    const jobs = jobsQueCairam(situacao, (id) => jobsQueNaoPassaram(executar('gh', ['run', 'view', String(id), '--json', 'jobs'], raiz)))
     process.stdout.write(`${relatorioDaEsteira(situacao, branch, noFechamento, jobs)}\n`)
     const segue = noFechamento ? situacao.tipo === 'verde' : situacao.tipo !== 'vermelha'
     process.exit(segue ? 0 : 1)
