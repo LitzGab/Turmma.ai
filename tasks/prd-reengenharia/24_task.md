@@ -14,7 +14,7 @@ Todo pacote importado está declarado onde é usado, nenhum sobra, e o knip repr
 - `onda-1b.md`, "RF13 — Dependências e `throw`" (As dependências; A trava) e §5
 - `prd.md` RF13
 - `.claude/rules/00-arquitetura.md` (item 8) e `40-testes.md` (o portão)
-- Código: `.reengenharia/medicao/knip.json` (base do `knip.json` da raiz); `tools/ci/etapas-de-guarda.ts`
+- Código: `reengenharia/temporario:.reengenharia/medicao/knip.json` (base do `knip.json` da raiz); `tools/ci/etapas-de-guarda.ts`
   (`etapaAuditoriaDeDependencias`, o molde); `tools/ci/verificar.ts`; `apps/worker/package.json:19` e
   `apps/despachante/package.json:18` (o `pino`); `tools/processo/portao-local.ts:136` (o portão roda só
   `npm run guarda:dependencias`)
@@ -25,7 +25,7 @@ Todo pacote importado está declarado onde é usado, nenhum sobra, e o knip repr
   `@node-rs/argon2`, `otpauth`, `bullmq`, `socket.io-client` e `@opentelemetry/sdk-metrics`; em `apps/realtime`, `jose`;
   em `apps/worker`, `drizzle-orm`. Tirar o `pino` de `apps/despachante` e `apps/worker`
 - [x] 24.2 — `knip` 6.42.1 exato como `devDependency` da raiz, e o `knip.json` da raiz derivado do de
-  `.reengenharia/medicao/`, com `ignore` só das fixtures de violação
+  `reengenharia/temporario:.reengenharia/medicao/`, com `ignore` só das fixtures de violação
 - [x] 24.3 — Etapa do knip (`--include dependencies,unlisted,binaries,unresolved`) em `tools/ci/etapas-de-guarda.ts`, no
   `ci:verificar`; para o portão da tarefa vê-la sem tocar `tools/processo/`, o script `guarda:dependencias` passa a rodar
   também o knip (declare a escolha)

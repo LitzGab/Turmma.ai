@@ -11,7 +11,7 @@ libera a vaga. No SIGTERM, passada a graça de 20 s, o job sem tentativa para re
 
 ## Contexto necessário
 
-- `onda-3b.md` "RF17 — prazo por tipo (43.0)" e §3; `techspec.md` §7c; `prd.md` RF17 (§11); R39 em `.reengenharia/DECISOES.md`
+- `onda-3b.md` "RF17 — prazo por tipo (43.0)" e §3; `techspec.md` §7c; `prd.md` RF17 (§11); R39 em `tasks/prd-reengenharia/DECISOES.md`
 - Regras 80 (itens 3 e 10) e 20 (item 9); D49
 - `apps/worker/src/executor.ts` (`executar`, `falhar`), `montagem.ts` (`GRACA_DO_DESLIGAMENTO_MS`, `encerrar`),
   `processadores/sintetico.ts` (`SandboxDeCpu.queimar`), `packages/shared/src/sistema/jobs.ts` (`CodigoDeFalhaDeJob`)

@@ -25,7 +25,7 @@ com o nome de mercado (D81). O `docs/arquitetura.md` passa a dizer o que existe,
 
 ## Contexto necessário
 
-- `.reengenharia/RECORTE.md` §4 e a D81 em `docs/decisoes.md`
+- `tasks/prd-reengenharia/RECORTE.md` §4 e a D81 em `docs/decisoes.md`
 - `README.md`, `docs/arquitetura.md` e o `tasks.md` (o que a X5 entrega e o que foi para a X6)
 
 ## Arquivos previstos
@@ -45,3 +45,36 @@ com o nome de mercado (D81). O `docs/arquitetura.md` passa a dizer o que existe,
 ## Fora do escopo desta tarefa
 
 Código, teste e portão. O guia da X6, que se escreve quando ela partir.
+
+## Rodadas fora do hook
+
+As rodadas 1 a 4 do `revisor-geral` (22/10/2026, a 4ª APROVADO) correram no térreo, sobre o texto entregue em
+`.processo/reengenharia/guia/`, e o hook não as registrou. A cópia literal está em `95_revisao-rodadas-1-a-4.md`, nesta
+pasta (validação 1, maior 1). O fecho `c88231a`, que conferiu o guia e a arquitetura contra a árvore depois das pastas,
+teve rodada própria em 23/10/2026, registrada pelo hook abaixo e em `achados/95_task.md`: APROVADO, sem bloqueante (o hook
+a numera 1, porque não viu as quatro de antes).
+
+## Recomendações sem aplicar
+
+Da rodada sobre o `c88231a`. São precisões do texto, sem frase falsa; mudar o guia agora pediria rodada nova no
+fechamento. Vão juntas para o `TODO.md` ("Da X5 (reengenharia), fora dela"), para a X6, que reescreve a documentação na
+Etapa 11 completa.
+
+| Revisor e rodada | Recomendação | Destino ou motivo |
+|---|---|---|
+| revisor-geral (5ª, hook 1ª) | `guia-do-desenvolvedor.md:146-148`: dizer que `credencial/` também guarda seis repositories da sessão | `TODO.md`, X6 |
+| revisor-geral (5ª, hook 1ª) | guia `:148` e `arquitetura.md:53-54`: citar a exceção do `operacao/token-do-convite.ts` ao "só pelo `index.ts`" | `TODO.md`, X6 |
+| revisor-geral (5ª, hook 1ª) | `arquitetura.md:30-31`: dizer que `app-nao-importa-app` e a regra repository → service não valem para teste nem para o `expurgo-da-escola.repository.ts` | `TODO.md`, X6 |
+| revisor-geral (5ª, hook 1ª) | guia `:419`: citar `sessao-nao-importa-operacao`, `api-nao-importa-ops` e as três cercas por import | `TODO.md`, X6 |
+| revisor-geral (5ª, hook 1ª) | `arquitetura.md:51` e guia `:139`: o exemplo `estrutura/turma/` não tem os testes ao lado | `TODO.md`, X6 |
+| revisor-geral (5ª, hook 1ª) | guia `:418`: o `erro-tipado` não cobre `packages/shared/src` | `TODO.md`, X6 |
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-10-23 00:34:15 | 2026-10-23 00:36:49 | `revisor-geral` | 1 | APROVADO | afeab27864a3884ce |

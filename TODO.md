@@ -1756,3 +1756,22 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X5, 34.0) O `sessao/index.ts` exporta o que só os testes de `apps/api/test` usam** (`tenancy-guardian`): `ConviteRepository`, `ContaExternaRepository`, `CookieOidc`, `CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA` e `ESCOLA_DESCONHECIDA`. A 34.3 manda o índice trazer o que `apps/api/{src,test}` usam, e é assim que está. A regra do `dependency-cruiser` da 12.0 pode barrar o uso desses fora de `apps/api/test`, ou os testes passam a importar pelo arquivo
 - [ ] **(X5, 34.0) Três restos de texto e de reexport depois da `sessao/index.ts`** (`test-engineer` e `revisor-geral`, 2ª rodada): (1) o comentário de `apps/api/test/arquitetura.test.ts` (conferência do índice) ainda cita `export * from './tenant/index.js'`, arquivo que não existe; (2) `renovacao/renovacao.service.ts` reexporta `JANELA_DE_RENOVACAO_SIMULTANEA_MS` só para `renovacao.service.test.ts`: importar de `@educa/shared` no teste e apagar o reexport, na tarefa que mexer em `renovacao.service.ts`; (3) `tasks/prd-reengenharia/34_task.md`, tabela de testes, diz "as mutações 1 a 5", e com o bloco de aspas duplas são seis
 - [ ] **(X5, 96.0) A mensagem do teste do repositório em `tools/guardas/tamanho-das-pastas.test.ts` fala só da web** ("telas, hooks e cliente de API dele"): trocar por uma que sirva às duas raízes ("divida por assunto ou por recurso (D81)"). Na próxima tarefa que tocar o arquivo (`test-engineer`, 96.0, 2ª rodada)
+- [ ] **(X5, fora dela pelo diagnóstico) O que a Etapa 5 deixou fora da X5** (`tasks/prd-reengenharia/DIAGNOSTICO.md` §6,
+  com o achado de cada um em `tasks/prd-reengenharia/diagnostico/`). Cada um destrava com a decisão ou a fase que está ao lado:
+  (a) o corte do teto de IA da escola fora do Tutor (bloquear, avisar, cair de modelo), U03-6: com a decisão em aberto
+  "Valores das faixas de preço e teto de IA" (D14, D39); (b) o Analista sem modelo onde a regra já calcula, U03-12: mexe na
+  D32, por `/descobrir`; (c) "abrir a atividade sem responder" contar como aberta, U05-15: regra de produto, no PRD do F6;
+  (d) gatilho de auditoria no banco para a transição de `entrega.estado`, U05-3: migration em tabela da regra 70, no F16;
+  (e) a imagem de produção da web (Caddy ou borda), U10-9: com o staging (D42); (f) a janela de deploy contra a faixa dos
+  expurgos, U06: com o primeiro deploy em produção (D31); (g) backup, restauração e rollback, U10-17: no portão do piloto
+  (S13 de `tasks/prd-reengenharia/RISCOS.md`); (h) a rodada do despachante em lote no Redis, U06-8: depois de ~10 escolas
+  (D25), medindo antes; (i) a telemetria de falha do navegador, U07-8: canal novo de dado a partir de tela de menor, com o
+  `privacy-guardian` e a linha em `docs/lgpd.md` (a X5 deixou só a porta `reportarFalha`, sem envio). (dono: Joaquim)
+- [ ] **(X5, 95.0) Seis precisões do guia e da arquitetura** (`revisor-geral`, rodada sobre o `c88231a`, APROVADO; a lista
+  com linha está em "Recomendações sem aplicar" de `tasks/prd-reengenharia/95_task.md`): `credencial/` também guarda
+  repositories da sessão; a exceção do `operacao/token-do-convite.ts` ao "só pelo `index.ts`"; as regras de camada que não
+  valem para teste; as cercas que a linha do dependency-cruiser não cita; o exemplo `estrutura/turma/` sem os testes ao
+  lado; e o `erro-tipado` sem `packages/shared/src`. Na X6, quando a Etapa 11 reescrever a documentação. (dono: Joaquim)
+- [ ] **(X5, RF31) `.dockerignore` e `tools/ci/dockerfile.test.ts:128-130` ainda citam `.reengenharia`**, a pasta que o
+  fechamento da X5 apagou (R64). A linha não faz mal (ignora uma pasta que não existe), e tirá-la é código, com o teste junto:
+  na próxima tarefa que tocar o Dockerfile ou o `.dockerignore` (onda 5, na X6). (dono: Joaquim)
