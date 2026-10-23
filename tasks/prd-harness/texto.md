@@ -19,10 +19,11 @@ O texto de cada conflito mora em `docs/skills-de-terceiros.md`. Um teste do harn
 | Decisões tomadas | uma linha por decisão, só número e título |
 | Conflitos já resolvidos | topo de `docs/decisoes.md` |
 | Decisões em aberto | `docs/decisoes-em-aberto.md`, lido pelo `estado.ts` |
-| Skills (time, revisores, hook) | `.claude/skills/seguir/protocolo.md` |
+| Skills (time, revisores, hook) | `.claude/skills/seguir/time.md`, lido no passo 3 |
 | Conflitos de skill | `docs/skills-de-terceiros.md` |
 
-Ficam o produto, as seis regras, o recorte, a stack e o mapa. Limite da base fixa: 40.000 B.
+Ficam o produto, as seis regras, o recorte, a stack e o mapa. A base fixa é o `CLAUDE.md` mais as regras sem `paths:`
+(75 KB hoje); limite de 40.000 B.
 
 **As regras ganham `paths:`.** A 10, a 20 e a 70 não ganham, continuam sempre carregadas, e os itens delas não saem do
 texto.
@@ -52,10 +53,10 @@ premissa do §12 cair, também nos revisores. A regra 40 passa a dizer o RF17.
 | regra 80.5 (sessão no Redis) × o código | nota na regra, até a N2 |
 | `docs/aia/ouro/README.md` manda commitar com `(ouro: <política>)` × RF16 | o README passa a `(correção <slug>)` com o `conformidade-reviewer` |
 
-**`/seguir` e papéis.** O `/seguir` fica com os passos 1, 2, 5 e 6 e um índice; os outros vão para
-`.claude/skills/seguir/passos/`, lidos ao entrar no passo. Orçamento de 20 KB por tarefa: a soma
-dos bytes do `SKILL.md`, do `protocolo.md` e do arquivo do passo de tarefa, com teste. O passo de fechamento da spec
-diz quando rodar o `esteira.ts --censo` e abrir correção (RF9). A autoconferência do `executar-task` vira até doze perguntas no `task-template.md`, e os incidentes, com data
+**`/seguir` e papéis.** O `SKILL.md` fica com o cabeçalho, um índice e os passos 1, 2 e 5 (cerca de 7 KB); os outros,
+o 6 (o ciclo de uma tarefa) inclusive, vão para `.claude/skills/seguir/passos/`, lidos ao entrar no passo. Orçamento por
+tarefa: `SKILL.md` + `protocolo.md` + `passos/6-tarefa.md` até 24 KB (hoje são 41 KB), com teste; o passo 6 perde o que
+repete o protocolo. O passo de fechamento diz quando rodar o `esteira.ts --censo` e abrir correção (RF9). A autoconferência do `executar-task` vira até doze perguntas no `task-template.md`, e os incidentes, com data
 e origem, vão para `docs/processo-licoes.md`. Na deduplicação, a lista "O que verificar" e o bloco do formato da
 resposta de cada guardião com veto não mudam.
 

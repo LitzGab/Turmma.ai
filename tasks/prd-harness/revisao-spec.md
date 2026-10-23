@@ -111,6 +111,39 @@ sobra é a tabela, que cada guardião achou furada de novo, e cenários de um la
 - §5(c): o socorro perde o que não foi commitado, e o conserto é commitado pelo Joaquim fora de sessão de papel
 - O censo sobe só o reporter JSON, sem trace nem anexo (privacy)
 
+## Rodada 3 — 23/10/2026
+
+**Veredito: REPROVADA**
+
+O padrão dos quatro fechou os furos de pasta: os guardiões conferiram cada exceção contra o código e as correções da
+rodada 2 contra o texto. Nenhum bloqueante muda desenho ou critério do PRD.
+
+| Revisor | Veredito | Bloqueantes |
+|---|---|---|
+| `tenancy-guardian` | REPROVADO | 1: sufixos, `@SemEscopo(` e "regra 10" sem caso no teste da tabela |
+| `privacy-guardian` | REPROVADO | 1: `infra/Caddyfile`, `infra/grafana/alertas/` e `tools/ci/borda.test.ts` sem P |
+| `conformidade-reviewer` | REPROVADO | 1: "regra 10" e "regra 70" somando o guardião sem caso |
+| `infra-guardian` | REPROVADO | 3: `componentes/ui/` declara a regra 80 e pede só C; `tools/ci/` e `tools/testes/` sem I; só o encontro pega a trava do quadro |
+| `test-engineer` | REPROVADO | 4: dos três termos do prazo da mutação só o piso tem caso; regras de casamento sem caso; linhas do RF16 de um lado só; a terceira camada sem caso de `tools/`, `.github/` e correção |
+| `revisor-geral` | REPROVADO | 2: a linha `Fora do processo:` não identifica quem escreveu, sem estar declarado; o orçamento do RF26 cita arquivo que o corte não cria e não fecha a conta |
+
+### Correções feitas, sem mudar desenho
+- Tabela: a citação soma o guardião em todo arquivo classificado como código, lida no HEAD e no índice ("regra 10" T,
+  "regra 20" e "LGPD" P, "regra 70" C, "regra 80" I); `componentes/ui/` C I, `ui/ia/` P C I, `estilos.css` C,
+  `galeria/` P C, `infra/` I P na seção do código; `tools/testes/` no padrão; `tools/ci/` I, `borda.test.ts` I P,
+  `tools/ia/` P C, `.github/` I P, `playwright.config.ts` P; os aplicadores e as entradas do hook (`hook-git.ts`,
+  `git-hooks/`, `revisoes.ts`, `hook-revisoes.ts`, `comando-git.ts`, `conferir-entregas.ts`, `settings*.json`) com os
+  quatro; o teste da tabela com um caso por regra e por linha, dos dois lados
+- §5(a): `Fora do processo:` recusada pelo `PreToolUse` em qualquer sessão do Claude Code; o limite de quem escreve a
+  linha declarado; `am`, `revert`, `pre-push` furado por script, `origin/develop..HEAD`
+- §5(f): `abrir`, `partida`, `abandonar` e `encontro` sob o mesmo `flock`, cada um gravando só a própria linha; prazo
+  do encontro (3 min, ou 6 com `npm ci`)
+- §7c: o prazo do teste é o `testTimeout` do projeto ou o do caso
+- `texto.md`: o passo 6 vai para `passos/`; orçamento de 24 KB com os três arquivos que existem (hoje 41 KB); a seção
+  Skills do `CLAUDE.md` vai para `seguir/time.md`; a base fixa definida
+- `cenarios.md`: os três termos do prazo da mutação, as corridas do quadro com arquivo-sinal, os operadores do RF5, os
+  casos da terceira camada, o `prepare`, o RF17 fora de `src`, a versão gravada dos guardiões e a `status`
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -131,3 +164,9 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-23 13:02:27 | 2026-10-23 13:06:46 | `infra-guardian` | 2 | REPROVADO | ac40d49e57fe8286e |
 | 2026-10-23 13:02:34 | 2026-10-23 13:08:12 | `test-engineer` | 2 | REPROVADO | abbbf7801aaeb881d |
 | 2026-10-23 13:02:40 | 2026-10-23 13:08:37 | `revisor-geral` | 2 | REPROVADO | a0542617ee93340d2 |
+| 2026-10-23 13:32:18 | 2026-10-23 13:34:41 | `tenancy-guardian` | 3 | REPROVADO | a22a5550f81e8b28d |
+| 2026-10-23 13:32:43 | 2026-10-23 13:35:01 | `test-engineer` | 3 | REPROVADO | adb2c5df512fd0eed |
+| 2026-10-23 13:32:29 | 2026-10-23 13:35:23 | `conformidade-reviewer` | 3 | REPROVADO | af7eb2b93333697a0 |
+| 2026-10-23 13:32:35 | 2026-10-23 13:35:46 | `infra-guardian` | 3 | REPROVADO | a725462c0080e1c95 |
+| 2026-10-23 13:32:23 | 2026-10-23 13:35:59 | `privacy-guardian` | 3 | REPROVADO | ab62b6cefba59496a |
+| 2026-10-23 13:32:50 | 2026-10-23 13:37:33 | `revisor-geral` | 3 | REPROVADO | a2a3c0d4f547f18d7 |

@@ -899,3 +899,457 @@ Arquivos lidos:
 - /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
 - /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/linhas.ts
 - /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/revisoes.ts
+
+## tenancy-guardian · 3ª rodada · REPROVADO · 2026-10-23 13:34:41 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Tabelas verificadas: a X7 não cria tabela nenhuma (Tech Spec §3). Comparei cada exceção de `tabela-de-guardioes.md` com o código:
+- `apps/web/src/componentes/ui/` (C): não tem `escolaId`, `anoLetivoId`, `fetch`, `useQuery` nem `@SemEscopo`, e nenhum arquivo cita "regra 10". `MotorFormulario.tsx` e `Mensagem.tsx` só citam `GET /v1/execucoes` em comentário; quem chama a API é quem usa a peça.
+- `estilos.css`, `tema.ts` e os testes deles (nenhum): só cor e tema.
+- `galeria/` (P): dado sintético. A única coisa que importa da API é o tipo `ErroDaApi`.
+- `vite.config.ts`, `nome-dos-chunks.ts` e `rebaixar-cor.ts` (I): o único ponto de rede é o proxy de `/v1` para a borda, sem escopo.
+- `apps/despachante/` (T P I): `despachante.ts:136-172` lê `escolaId` e roda em `executarNoContexto(contextoDaEscola(...))`. A exceção mantém o T, então está certa.
+
+Correções da rodada 2, conferidas, todas feitas pelo padrão dos quatro:
+- `auditoria/`, `retencao/`, `limite/` e `erro/` do núcleo agora pedem os quatro.
+- `shared/src/sistema/` também.
+- `apps/*/test/` também, com caso nomeado: `apps/api/test/estrutura-isolamento.int.test.ts`.
+- `tools/guardas/**` inteiro, `eslint.config.mjs` e `eslint-suppressions.json` também.
+- `e2e/**` (está em `PASTAS_DE_CODIGO`, `revisoes.ts:41`) também.
+
+Queries verificadas: fora de `apps/`, `packages/`, `e2e/` e `tools/guardas/`, tem SQL com `escola_id` só em:
+- `tools/vitrine/escola.ts:109-227`: seed sintético das fotos de tela, fora do runtime, e já pede P C.
+- `tools/ia/medir-risco-a-vida.ts:156`: escola fixa da medida.
+
+Nenhuma exceção da tabela tem query, escopo, contexto montado do token, nem contrato com `escolaId` ou `anoLetivoId`.
+
+Teste de isolamento: não se aplica, porque a spec não cria módulo de produto. O teste da tabela (`tabela-de-guardioes.md:46-52`, `cenarios.md:73-76`) é efetivo para o padrão e para o `*.repository.ts`. Falta prova para três das regras de casamento (bloqueante abaixo).
+
+Bloqueantes:
+
+1. **`tabela-de-guardioes.md:15-17` e `:49-50` (com `cenarios.md:73-76`): três regras de casamento não têm teste.**
+   - **O que está errado.** São três regras:
+     - "nunca cai em exceção" para `*.controller.ts`, `*.gateway.ts` e `*.service.ts`;
+     - o gatilho por conteúdo `@SemEscopo(` (regra 10, item 9; item 8 da minha lista);
+     - "arquivo de exceção que cita 'regra 10' soma T".
+
+     O teste só exercita o nome `*.repository.ts` e o "regra 20 soma P". Nenhuma exceção de hoje contém `@SemEscopo(` nem cita "regra 10". Por isso a varredura de "todo arquivo versionado" não alcança essas regras: apagar o gatilho de `@SemEscopo(`, tirar os três sufixos ou ligar "regra 10" ao guardião errado deixa a suíte verde.
+   - **Correção exigida.** Em "O teste da tabela" e no RF15 de `cenarios.md`, somar estes casos, cada um com bloco de mutação:
+     - um arquivo de cada exceção com nome `*.controller.ts`, `*.gateway.ts` e `*.service.ts` pede os quatro (`it.each`);
+     - um arquivo em `apps/web/src/componentes/ui/`, com nome comum e `@SemEscopo(` no conteúdo do índice, pede os quatro; o mesmo arquivo sem o decorador continua só com C;
+     - um arquivo de exceção que cita "regra 10" soma T, e um que cita "regra 70" soma C, ao lado do caso de "regra 20" que já existe.
+
+Recomendações:
+- Somar T também a arquivo de exceção que contém `escolaId`, `anoLetivoId` ou `/v1/` fora de comentário. Isso cobre um hook de dados que nasça dentro de `componentes/ui/`. E casar "regra 10" sem distinguir maiúscula de minúscula.
+- Alguns arquivos alimentam a `decidirCommit` e estão em "o resto de `tools/`" e em `.claude/settings*.json` (nenhum): `hook-git.ts`, a lista de arquivos tirada do `git diff --cached`, o `revisoes.ts` que reexporta, o `comando-git.ts` e a entrada do `PreToolUse` no `settings.json`. Mexer neles anula a tabela só com `revisor-geral` e `test-engineer`. Vale pôr os quatro nesses arquivos, ou declarar o limite no §5(a).
+- `vitest.config.ts` e `playwright.config.ts` (nenhum) e `.github/workflows/ci.yml` (só I) decidem quais testes de isolamento rodam. Vale um teste do harness: todo `*-isolamento*.int.test.ts` e o `apps/api/test/arquitetura.test.ts` caem em algum projeto do vitest que a esteira executa.
+- A terceira camada (§5a) só confere o texto da marca e da linha `Revisões:`. Um commit forjado por script com `--no-verify` passa sem a minha rodada. Vale cruzar com a tabela "Revisões" do documento da tarefa, exigindo APROVADO dos guardiões que o caminho pede, ou declarar isso nos limites.
+- Escrever que "nunca cai em exceção" vale também para as linhas da seção RF16. Por exemplo, um `@SemEscopo(` em `tools/vitrine/`.
+
+Arquivos auditados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/prd.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/despachante/src/despachante.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/vitrine/escola.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/revisoes.ts
+
+## test-engineer · 3ª rodada · REPROVADO · 2026-10-23 13:35:01 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos:** os mesmos da rodada 2. São os cenários da esteira (RF1, RF2, RF9, RF19), das linhas (RF3, RF6, RF10), das mutações (RF4, RF5, RF17), do portão (RF7, RF8) e do hook (RF12 a RF18). No RF14 entram as formas, índice contra árvore, merge e `pre-push` dos dois lados, a negação do `PreToolUse` e a terceira camada. O RF15 vai linha a linha, pela `decidirCommit`, e o RF16 caminho a caminho, coerente com a tabela. Entram também a guarda de IA (RF24), o texto (RF20 a RF26 e RF30), o Maestri (RF27 a RF29) e os sete casos do PRD §7.
+
+O que entrou nesta rodada também precisa de cenário:
+- as regras de casamento da tabela;
+- as linhas da tabela "Fora do código de produto";
+- a classificação da terceira camada;
+- o `flock` do encontro.
+
+Domínio escolar e isolamento de escola não se aplicam: nada lê dado de escola.
+
+**Cobertos:** conferi os 10 bloqueantes da rodada 2.
+- **2 (RF2), resolvido** em `cenarios.md:14`:
+  - (d) com a sucessora ainda `rodando`;
+  - (e) sem os jobs da superada;
+  - (c) a (e) testados nas duas funções;
+  - `cancelled` pelo `timeout-minutes`;
+  - (g) com outra branch ou com `pull_request`.
+- **3 (RF9), resolvido** em `cenarios.md:21`: a vermelha mais nova leva à verde, e o artefato expirado sai 2.
+- **4 (merge), resolvido** em `cenarios.md:43-45`: os dois lados do merge de papel.
+- **5 (`pre-push`), resolvido** em `cenarios.md:53`: sem papel, o `push` para a `develop` passa.
+- **6 (terceira camada), resolvido em parte** (`cenarios.md:64-68`). Entraram o histórico real de spec, a marca sem `Revisões:` e o `Fora do processo:`, que o papel tem recusado em `:46`. O que falta está no bloqueante 4.
+- **7 (RF17 na `decidirCommit`), resolvido** em `cenarios.md:85-87`.
+- **8 (guarda de IA), resolvido** em `cenarios.md:103`, dos dois lados.
+- **9 (`compose.yaml` e `.env.example`), resolvido no §5(e)** (`techspec.md:95`, `cenarios.md:79`). O lado do guardião ficou sem caso: está no bloqueante 3.
+- **10 (testes fora de `src`), resolvido** em `tabela-de-guardioes.md:47,51-52`.
+- **1 (RF4), resolvido em parte:** o vocabulário está certo e o piso de 60 s está provado (`cenarios.md:16`). Os outros termos do prazo estão no bloqueante 1.
+
+Fora da rodada 2, também estão cobertos:
+- RF3 com `flock` e `npm ci`, dos dois lados;
+- RF5 com o `--faltando` saindo 0;
+- RF12, RF13 e RF18;
+- a negação do `PreToolUse` com os casos que passam;
+- o início de sessão;
+- a seção C, com amostra quebrada e contagem mínima;
+- RF27 a RF29.
+
+**Bloqueantes:**
+
+1. **`cenarios.md:16`, RF4: dos três termos do prazo, só o piso tem prova.**
+   - O que está errado: `techspec.md:145` define o prazo do mutado como "o maior entre 3 × a medida, o prazo do teste e 60 s, até 10 min". Os casos (e) e "falha em 5 s" usam uma corrida limpa de 1 s. Com ela, o máximo é sempre o piso. Trocar a regra por "prazo = 60 s" passa em todos os casos.
+   - Correção exigida, com relógio injetado:
+     - 3 × a medida: limpa de 30 s e mutado que falha em 80 s dá `vermelho`. Sem o termo, dá `recusada`.
+     - prazo do teste: limpa de 1 s, teste com prazo de 120 s e mutado que falha em 90 s dá `vermelho`.
+     - teto: limpa de 4 min dá prazo de 10 min, e não de 12 (mutado de 11 min dá `recusada`).
+
+2. **`tabela-de-guardioes.md:15-17` e `:49-50`: das regras de casamento, só duas têm caso.**
+   - O que está errado: só `*.repository.ts` e "regra 20 soma P" têm caso.
+   - Sem caso, e removíveis da implementação sem nenhum teste vermelho:
+     - os sufixos `*.controller.ts`, `*.gateway.ts` e `*.service.ts`;
+     - o casamento pelo conteúdo `@SemEscopo(`, que é outro mecanismo (lê o arquivo, não o nome) e é exatamente o caso da regra 10;
+     - "regra 10" soma T e "regra 70" soma C.
+   - Correção exigida: um caso para cada um, dentro de uma exceção. Por exemplo, `apps/web/src/componentes/ui/x.gateway.ts` e um arquivo de `apps/web/src/galeria/` com `@SemEscopo(`, os dois pedindo os quatro; e um arquivo de exceção citando "regra 10" (soma T) e "regra 70" (soma C). Os literais ficam escritos no teste, não lidos da constante.
+
+3. **`cenarios.md:78-82` contra `tabela-de-guardioes.md:34-42`, RF16: só três das sete linhas da tabela têm o lado do guardião testado.**
+   - O que está errado: `tools/guardas/` (P), `eslint.config.mjs` (T) e `ouro` (C) têm caso. As linhas abaixo não têm:
+     - `tools/processo/guardioes-por-caminho.ts`, `portao.ts`, `caducidade.ts` e `documento-de-revisao.ts`, que pedem os quatro. É a tabela governando a si mesma: "mexer na exceção pede os quatro" (`tabela-de-guardioes.md:11`) não tem teste, e um commit que a reduz a "nenhum" não é pego.
+     - `tools/vitrine/` (P e C).
+     - `tools/ia/` (C).
+     - `infra/`, `compose.yaml`, `.env.example` e `.github/` (I).
+     - `eslint-suppressions.json` (os quatro).
+     - O outro lado: "o resto de `tools/`" passa com só `revisor-geral` e `test-engineer`.
+   - Correção exigida: para cada linha, um arquivo dela, sem o guardião da linha, recusado, e com ele, aceito. Para o resto, `tools/processo/linhas.ts` passa sem nenhum guardião com veto.
+
+4. **`cenarios.md:63-69` contra `techspec.md:70-72`, terceira camada: a classificação e a marca de correção não têm caso.**
+   - O que está errado: a camada classifica por "código de produto mais a lista do §5e", mas todo caso de "código" é de produto. Uma implementação que usa só `PASTAS_DE_CODIGO` (`revisoes.ts:41`) deixa passar um commit em `tools/guardas/` sem marca, empurrado por `env -u CLAUDE_CODE_AGENT`. Esse é justamente o furo que a camada existe para pegar.
+   - E nenhum commit `(correção <slug>)` com `Revisões:` aparece no lado que sai 0, embora o `ci.yml` a chame em `correcao/**`. A regra "aceita só `(tarefa`" passa no teste e deixa vermelho todo push de correção.
+   - Correção exigida:
+     - sai 1: commit sem marca só em `tools/guardas/x.mjs`, e outro só em `.github/workflows/ci.yml`;
+     - sai 0: histórico de `correcao/x` com `(correção x)` e `Revisões:`.
+
+**Recomendações:**
+- **RF4 (a) a (c):** declarar o prazo injetado curto (2 s). Com o piso real de 60 s, cada caso leva um minuto.
+- **RF3, "dois encontros ao mesmo tempo":** dois processos de fato em paralelo, com o primeiro preso na trava por um comando de verificação injetado que espera um sinal (arquivo), e não por `sleep`. Assim o teste não depende da folga da máquina.
+- **RF14, negação:** pôr no lado que passa `git -c user.name=x commit` e `GIT_AUTHOR_DATE=x git commit`. Hoje, recusar todo `-c` e todo `VAR=` passa no teste.
+- **RF5:** cobrir também `&&`, `||`, ternário, `case` e expressão regular, que o §5(d) lista.
+- **RF17:** caso em que só `apps/web/vite.config.ts` (fora de `src`) muda e o bloco não é exigido.
+- **Terceira camada:** `Fora do processo:` com motivo vazio sai 1.
+- **`package.json`:** um teste de que o `prepare` aponta `tools/processo/git-hooks`. Sem ele, um clone novo nasce sem hook e só o aviso de sessão percebe.
+[… 4 linhas cortadas]
+
+## conformidade-reviewer · 3ª rodada · REPROVADO · 2026-10-23 13:35:23 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Caminhos de escrita em Nota: a X7 não cria nenhum caminho de escrita em Nota. Hoje o que faz as vezes de Nota é a aprovação do lote. Conferi três caminhos que gravam essa aprovação:
+- `correcao.repository.ts`, que grava `validacao_do_lote` com `confirmada_por NOT NULL` e o gatilho do banco. Pede T P C I.
+- O seed `e2e/__fixtures__/governanca.ts`, que agora pede T P C I.
+- `tools/vitrine/escola.ts`, que chama esse seed e pede P C.
+
+O `infra/scripts/expurgo-da-carga.ts`, que pede só I, grava apenas `execucao_agente` sintética de carga. Não grava aprovação nem nota.
+Todos com autor humano? sim.
+
+Decisão autônoma sobre aluno: ausente. A spec não põe IA no caminho do aluno.
+
+Aprovação registrada: ok. `titular/`, `privacidade/`, `retencao/` e `ciclo-de-vida/` caem no padrão dos quatro. `componentes/ui/` inteiro pede C, e com isso `ui/ia/LinhaAprovacao.tsx` e `aprovacao.ts` também.
+
+Supervisão do tutor: ok. `Faixa.tsx`, `onca/` e `Contador.tsx` estão em `componentes/ui/`, que pede C. `e2e/**` inteiro pede os quatro, com `aluno-tutor.spec.ts` no teste (`tabela-de-guardioes.md:51-52`). O realtime cai no padrão.
+
+Autonomia declarada e visível: sim. `packages/shared/src/time/` e as áreas da web caem no padrão dos quatro.
+
+**Correções da rodada 2, conferidas**
+- **Bloqueante 1: feita.** As cinco pastas do núcleo, da api e do shared ficaram no padrão. A faixa e a onça ficaram em `componentes/ui/` com C. O §7b (`techspec.md:133`) e o PRD §8b (`prd.md:125`) agora dizem o que a tabela cobre de fato.
+- **Bloqueante 2: feita.** `e2e/**`, specs e fixtures pedem os quatro (`tabela-de-guardioes.md:9-10`). O caso "`e2e/x.spec.ts` não exige nenhum" saiu do `cenarios.md`.
+- **Recomendações atendidas:**
+  - o ouro entrou na lista do RF21 (`texto.md:53`) e tem caso no RF16 (`cenarios.md:82`)
+  - o bloco do formato não muda (`texto.md:59-60`)
+  - as skills da marcação estão nomeadas (`texto.md:63`)
+  - a vitrine pede P C
+  - a contagem dos itens das regras 10, 20 e 70 entrou (`cenarios.md:98`)
+  - "achado das regras 10, 20 e 70 nunca é menor" está em `texto.md:64` e na D79 revista
+
+**Exceções contra o código.** Nenhuma exceção sem C cobre nota, validação humana, tutor, autonomia, decisão sobre aluno ou indicador de professor:
+- `apps/despachante/` só tira job do banco e publica no Redis. A lógica mora no `DespachoRepository` do núcleo, que pede os quatro.
+- `tema.ts`, `vite.config.ts`, `nome-dos-chunks.ts` e `rebaixar-cor.ts` são cor, tema e bundle.
+- `estilos.css` é CSS global (ver recomendações).
+- `galeria/` não cria peça: só monta peças de `componentes/`, que pedem C ou os quatro. O `pecas-ia.spec.ts` confere o texto exato da linha de aprovação e as assinaturas, com a contagem.
+
+Bloqueantes:
+1. **`tabela-de-guardioes.md:17` e `:50`. A regra "arquivo de exceção que cita regra 10, 20 ou 70 soma o guardião da regra citada" só tem teste para "regra 20 → P".**
+   - Essa regra é a única rede que traz C a um arquivo novo dentro de uma exceção sem C (`galeria/`, `despachante/`, tema, bundle).
+   - Uma mutação que tire "regra 70" ou "regra 10" do mapa passa no teste do jeito que ele está.
+   - Pelo critério de severidade, isso é regra sem teste que a prove.
+   - **Correção exigida:**
+     - Em "O teste da tabela" (`tabela-de-guardioes.md:50`) e no RF15 de `cenarios.md:73-76`, um caso por regra citada:
+       - "arquivo em `apps/web/src/galeria/` com 'regra 70' no texto sai com P C"
+       - "arquivo em `apps/despachante/src/` com 'regra 10' sai com T P I" (já tem T por padrão: use uma exceção sem T, por exemplo `apps/web/vite.config.ts` com 'regra 10' sai com I T)
+       - o lado que passa: "arquivo de exceção sem citação não soma"
+     - Cada caso com bloco de mutação que tira a entrada do mapa.
+
+Recomendações:
+- **Galeria com C.** `apps/web/src/galeria/secoes/ia.tsx` e `marca-onca.tsx` são o dado do `e2e/pecas-ia.spec.ts` e do `pecas-marca-onca.spec.ts`, que provam o item 3 (autor, data, rejeição com motivo) e a D58. Mesmo motivo que deu P C à `tools/vitrine/`.
+- **`estilos.css` com C, ou um motivo mais estreito.** É CSS global: uma regra `display:none` pode esconder o selo "IA" ou a faixa do Tutor. Hoje o arquivo pede "nenhum" (`tabela-de-guardioes.md:25`).
+- **Entradas do hook na linha T P C I.** Hoje pedem "nenhum": `hook-git.ts`, `git-hooks/`, `tools/ci/conferir-entregas.ts`, o comando do `PreToolUse` em `.claude/settings.json` e `tools/processo/harness/guardioes.test.ts`. São as entradas que chamam a `decidirCommit`, e esse é o teste que prova a tabela. Dizer também em que arquivo fica o `REVISORES_COM_VETO` depois da partição (hoje está em `tools/processo/revisoes.ts:31`, que vira só reexportação).
+- **Tarefa que edita guardião ou regra marca o guardião.** A tarefa da X7 que edita `.claude/rules/70-conformidade-cne.md` ou `.claude/agents/conformidade-reviewer.md` deve marcar `conformidade-reviewer`, porque documento não chama guardião pelo caminho. Na deduplicação do RF21, a frase da seção "Fotos da tela" que é própria da regra de cada guardião não muda, como já vale para "O que verificar" e para o formato.
+- **Contagem dos itens da regra 70.** Declarar que conta os subitens (2a, 4a a 4d, 6a) e as linhas da tabela "A classificação, traduzida".
+- **Soma por número de decisão.** A soma por citação poderia valer também para D45, D47, D55 a D59 e D64, e não só para "regra 70".
+- **RF17 sem mutação.** Nos arquivos que pedem C, a linha "Sem mutação" deveria precisar também da concordância do `conformidade-reviewer` (repito da rodada 1).
+- **Commit "Fora do processo".** O commit do Joaquim com `Fora do processo:` que leva código de produto entra na spec sem nenhum guardião. É prerrogativa dele (D53), mas o `/validar` poderia listar esses commits antes do pouso.
+
+Arquivos citados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/texto.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/prd.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/web/src/galeria/secoes/ia.tsx
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/web/src/estilos.css
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/e2e/pecas-ia.spec.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/revisoes.ts
+
+## infra-guardian · 3ª rodada · REPROVADO · 2026-10-23 13:35:46 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+Caminho quente tocado: nenhum no produto. A tabela do RF15 e do RF16 decide quem audita login, tutor, sala, prova, fila, IA e migration. Conferi as exceções contra o código.
+Rate limit: não se aplica, porque a spec não cria rota. Com os quatro como padrão, todo limite em `apps/**` e `packages/**` passa a pedir o `infra-guardian`.
+Fila e prioridade: problema. Em `compose.yaml` a separação entre worker interativo e worker de lote pede o `infra-guardian`. O teste que prova essa separação, `tools/ci/ambiente.test.ts`, não pede (bloqueante 2).
+Concorrência: corrida em `tools/processo/linhas.ts:307` (`partida`) e `:278` (`abrir`), e no `abandonar` novo do RF6, contra o encontro sob trava da Tech Spec §5(f) (bloqueante 3).
+Índice e paginação: ok na cobertura. A `Tabela.tsx` de `componentes/ui/` declara a regra 80.8 e fica sem I (bloqueante 1).
+Degradação de IA: não se aplica à spec. O aviso de degradação no cliente (`AvisoFila.tsx`) fica sem `infra-guardian` (bloqueante 1).
+Migration: não se aplica. `drizzle/`, `src/db/` e `drizzle.config.ts` pedem os quatro.
+Métrica e alerta: ok. O censo do RF9 sai com 2 quando o artefato expira ou falta uma fatia, e sobe só o JSON.
+
+Correções da rodada 2:
+
+| Rodada 2 | Situação |
+|---|---|
+| 1 a 4. Web, shared, núcleo e api sem I | Feitas: com os quatro como padrão, todas pedem I. Conferi que nenhuma cai em exceção |
+| 5. `apps/*/test/` e `drizzle.config.ts` | Feita. O teste de pasta nova cobre `apps/**` inteiro |
+| 6. RF2 do PRD | Feita (`prd.md:48`). O PRD agora bate com a §5(f) e com os casos (a) a (g) do `cenarios.md` |
+| 7. Encontro sem trava | Feita em parte: só o encontro pega a trava (bloqueante 3) |
+
+As exceções existem no código. `vite.config.ts`, `nome-dos-chunks.ts`, `rebaixar-cor.ts`, os testes deles, `estilos.css`, `tema.ts`, `galeria/` e `apps/despachante/` (`src/` e `test/`) estão nos caminhos da tabela. As que levam I estão certas. `galeria/` e `tema.ts` não cruzam nada da regra 80.
+
+Bloqueantes:
+
+1. **Exceção de `componentes/ui/` e regra de soma sem a regra 80** (`tasks/prd-harness/tabela-de-guardioes.md:24` e `:17`). A exceção dá só C, com o motivo "peça visual sem dado nem chamada". No código, três peças dela declaram a regra 80:
+   - `apps/web/src/componentes/ui/ia/AvisoFila.tsx:13`: "nunca erro cru", que é a regra 80.4, a degradação de IA na tela do aluno.
+   - `apps/web/src/componentes/ui/sobrepostos/DialogoDeConfirmacao.tsx:36`: "o clique duplo não manda duas decisões", que é a regra 80.7, e é a peça que o `Aprovar` do professor usa.
+   - `apps/web/src/componentes/ui/Tabela.tsx:41`: a regra 80.8.
+
+   A regra de casamento da linha 17 só soma guardião para "regra 10", "regra 20" e "regra 70". Fazer o `AvisoFila` receber a mensagem do erro, ou soltar o `disabled={confirmando}`, passa sem o `infra-guardian`.
+
+   **Correção exigida:**
+   - A linha 17 passa a somar I para o arquivo que cita "regra 80".
+   - O teste da tabela ganha estes casos: `componentes/ui/ia/AvisoFila.tsx` sai com C P I, e `componentes/ui/sobrepostos/DialogoDeConfirmacao.tsx` sai com C I.
+
+2. **O resto de `tools/` sem guardião, contra o próprio RF16** (`tabela-de-guardioes.md:42`; `prd.md`, RF16: "o guardião da regra que a guarda ou o corpus protege"). Três caminhos ficam com "nenhum" e protegem a regra 80:
+   - `tools/ci/ambiente.test.ts` prova o que o `compose.yaml` (com I) promete: o `worker-interativo` atende interativa e normal, o `worker-lote` só lote, os pools e as vagas de dez escolas (D25), o healthcheck e o `migrar` antes das instâncias.
+   - `tools/ci/dockerfile.test.ts` prova a imagem de produção.
+   - `tools/testes/` traz `redis-travado.ts`, `metricas.ts`, `promql.ts` e `integracao.setup.ts`. São fixtures de 80 testes em `apps/`, `packages/` e `infra/`, entre eles os do Redis fora e do contador em janela.
+
+   Enfraquecer qualquer um deles derruba a prova da fila e da degradação sem a minha rodada. É o mesmo furo do bloqueante 5 da rodada 2, agora fora de `apps/`.
+
+   **Correção exigida:**
+   - I em `tools/ci/ambiente.test.ts`, em `tools/ci/dockerfile.test.ts` e em `tools/testes/`.
+   - Um caso de cada um no `guardioes.test.ts` e no caso do RF16 em `cenarios.md`.
+
+3. **Só o encontro pega a trava; os outros que gravam o quadro, não** (`techspec.md:112`; `cenarios.md:15` e `:18`; `tools/processo/linhas.ts:278`, `:307` e o `abandonar` do RF6).
+   - Agora o encontro segura o quadro lido no início por cerca de 80 s, ou cerca de 4 min com `npm ci`, e grava `restante` a partir dessa leitura (`linhas.ts:435-436`).
+   - `partida`, `abrir` e o `abandonar` novo leem e gravam o `linhas.json` sem trava.
+   - Uma `partida 2` durante o encontro da linha 1 grava a linha 2 como ocupada, e o encontro sobrescreve com a leitura velha: a linha 2 volta a livre enquanto o Implementador 2 trabalha.
+   - É o padrão "busca, verifica, grava" sem trava, que a spec já admite ao prever dois encontros ao mesmo tempo.
+
+   **Correção exigida:**
+   - `abrir`, `partida`, `abandonar` e `encontro` pegam a mesma trava, no `.processo/` da raiz do andar, onde está o quadro, e não no checkout da linha.
+   - Cada um relê o quadro com a trava e grava só a própria linha.
+   - Casos novos no RF3 e no RF6: `partida 2` durante o encontro da linha 1 deixa o quadro final com a 2 ocupada e a 1 livre; `abandonar 3` durante o encontro da linha 1 deixa a 3 livre e não volta.
+
+Recomendações:
+- `.dockerignore` e `.nvmrc` decidem a imagem e o runtime, e o `dockerfile.test.ts` os lê. Hoje caem em "documento" no §5(e). Vale somá-los à lista do RF16 com I.
+- Na §7c, dizer de onde sai "o prazo do teste" na conta do prazo da mutada: o `testTimeout` do projeto Vitest do arquivo, ou o declarado no caso.
+- Na §5(f), escrever que a `partida` espera a trava com prazo, ou sai com o código "encontro em curso", para o Orquestrador não ficar parado 4 min sem saber por quê.
+
+Arquivos citados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/prd.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/linhas.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/web/src/componentes/ui/ia/AvisoFila.tsx
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/web/src/componentes/ui/sobrepostos/DialogoDeConfirmacao.tsx
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/web/src/componentes/ui/Tabela.tsx
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/ci/ambiente.test.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/ci/dockerfile.test.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/testes/redis-travado.ts
+
+## privacy-guardian · 3ª rodada · REPROVADO · 2026-10-23 13:35:59 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Campos pessoais tocados:** nenhum. A spec não cria tabela nem rota e não usa IA (Tech Spec §3, §4). Fora do git, só `.processo/limpeza.json`, que guarda `{pedida, feita}`.
+
+**Fora da tabela de dados do docs/lgpd.md:** nada.
+
+**Autorização por objeto:** não se aplica, porque a spec não cria rota. O que cobra a minha regra é a tabela do RF15 e do RF16, e ela ainda deixa um furo (bloqueante 1).
+
+**Logs:** limpos no desenho. O log do hook leva caminho e nome de revisor (§7), o `UserPromptSubmit` não grava o texto (§5h, `cenarios.md:119`), e a linha `Fora do processo:` não carrega dado de pessoa.
+
+**Auditoria:** não se aplica, porque a X7 não cria nenhuma ação auditável.
+
+**Envio externo:** nenhum novo. O `--censo` baixa da própria esteira o JSON do Playwright, e o `ci.yml` sobe só o reporter JSON, sem trace nem anexo, por 7 dias (`techspec.md:107`). Isso cumpre a minha recomendação da rodada 2.
+
+**Seed/fixture:** sintético. `e2e/__fixtures__/` e `apps/web/src/__fixtures__/` agora pedem os quatro guardiões (`tabela-de-guardioes.md:9-10`).
+
+**Correções da rodada 2, conferidas:**
+- **Bloqueante 1** (`contexto/`, `config/`, `fila/`, `limite/`, `shared/erros` e `sistema`, `api/sistema` e a raiz, `web/componentes`, `areas/` com pasta nova): feito pela inversão do padrão. Nenhuma dessas pastas aparece entre as exceções, e o caso "pasta nova inventada sai com os quatro" está em `tabela-de-guardioes.md:51-52`.
+- **Bloqueante 2:** feito. `tools/guardas/` e `eslint.config.mjs`/`eslint-suppressions.json` pedem T P C I (`tabela-de-guardioes.md:36`, `:38`), e `cenarios.md:81` tem o caso `tools/guardas/index.mjs` sem `privacy-guardian`: recusado.
+- **Recomendações da rodada 2:** o aplicador da tabela pede os quatro (`:37`), o despachante pede P (`:28`), e o censo sobe só o JSON (§5f). Todas feitas.
+
+**As exceções conferidas contra o código:**
+- **`componentes/ui/` → C:** "sem dado nem chamada" vale quase sempre. Duas peças aplicam a regra 20 e citam "regra 20" no texto, então somam P:
+  - `ui/ia/motor-formulario.ts:11`: a Adaptação sem texto livre (regra 20, item 3).
+  - `ui/ia/AvisoFila.tsx:13`: nenhum texto de exceção chega à conversa (item 11).
+
+  O `MotorFormulario.tsx` cita só "D35, D67", então fica com C. Não é vazamento, porque o servidor recusa texto livre pelo `z.enum(TIPOS_DE_ADAPTACAO)` em `packages/shared/src/assistente/conteudo.ts:47`, que pede os quatro. Ficou como recomendação.
+- **`estilos.css`, `tema.ts` → nenhum:** ok. O `localStorage` de `tema.ts:43-86` guarda só a preferência de aparência do aparelho.
+- **`galeria/` → P:** ok. Só dado sintético, e a galeria só entra no build com `VITE_COM_GALERIA`.
+- **`vite.config.ts`, `nome-dos-chunks.ts`, `rebaixar-cor.ts` → I:** ok. Alvo de navegador, proxy local e nome de chunk; nada de dado, token, log ou envio.
+- **`apps/despachante/` → T P I:** ok. Os logs levam só `jobId`, `evento` e o erro resumido (`despachante.ts:100-307`).
+
+**Bloqueantes:**
+
+1. **`infra/` pede só I, e o resto de `tools/` não pede guardião nenhum (`tabela-de-guardioes.md:41` e `:42`; Tech Spec §5e).** Isso contradiz o RF16 do PRD e a D53 revista, que pedem "o guardião da regra que a guarda protege". Três coisas da regra 20 ficam sem a minha rodada:
+   - **`infra/Caddyfile:9-18`:** é a única barreira que impede a borda de logar URL com query, IP e User-Agent de toda requisição de aluno (regra 20, item 9). Basta tirar o `exclude http.log.access` para isso voltar ao log.
+   - **`tools/ci/borda.test.ts:100-128`:** é o teste que prova essa barreira, e hoje cai em "nenhum".
+   - **`infra/grafana/alertas/`:** `eliminacao-vencida.yaml`, `arquivo-em-preparacao.yaml`, `expurgo-noites-incompletas.yaml` e `incidente-sem-confirmacao.yaml` são os alarmes dos prazos de eliminação (LGPD art. 18, VI), de acesso e portabilidade (art. 19, II), de retenção (regra 20.16) e de incidente (art. 48). Apagar um deles faz o prazo do titular vencer calado.
+
+   A regra "arquivo de exceção que cita regra 20 soma P" (`:17`) não resolve. Ela fala de "exceção" e está escrita para a tabela do código, `borda.test.ts` não cita a regra 20, e os alertas citam "LGPD", não "regra 20".
+
+   **Correção exigida:**
+   - `infra/` → I P. Se preferir uma lista fina: `infra/Caddyfile` e `infra/grafana/alertas/` → I P.
+   - `tools/ci/borda.test.ts` → P.
+   - Em `cenarios.md` (RF16), dos dois lados: `infra/Caddyfile` sem `privacy-guardian`: recusado; `tools/ci/borda.test.ts` sem `privacy-guardian`: recusado; um arquivo de `infra/k6/` com `infra-guardian` e `privacy-guardian`: passa.
+
+**Recomendações:**
+- **Regra de casamento da citação (`tabela-de-guardioes.md:17`, teste em `:50`).** Ela deve ler o texto do HEAD **e** o do índice. Hoje, o commit que tira a garantia junto com o comentário "regra 20" deixa de somar P. Vale um caso em `cenarios.md`: arquivo de exceção que citava "regra 20" no HEAD e não cita no índice, sem `privacy-guardian`: recusado. Vale também escrever se a regra vale para as linhas do RF16.
+- **`apps/web/src/componentes/ui/ia/` → P C**, como entrada mais longa. O `MotorFormulario.tsx` é o formulário que recebe a Adaptação (D35, D67). Retiro a concessão que fiz na rodada 2 ("`ui/ia/` segue `conformidade`"): hoje o servidor segura, mas a peça é o ponto de coleta.
+- **`.github/` e `playwright.config.ts` → +P.** O repositório é público, e são eles que decidem o que entra no artefato (trace, captura de tela, corpo de requisição). O comentário em `ci.yml:103-104` já cita a regra 20, item 17.
+- **`tools/ia/` → P C.** `exigirModeloDaMedida` (`tools/ia/medir-risco-a-vida.ts:199-206`) é a trava "modelo local, salvo `--provedor-contratado`" da regra 20, item 13. O corpus é sintético, então hoje não há vazamento.
+- **Mantida da rodada 1:** a decisão do Joaquim sobre `.claude/rules/20-lgpd-menores.md`, `.claude/agents/privacy-guardian.md` e `docs/lgpd.md` continuarem mudando como documento, sem rodada.
+
+**Pergunta de fechamento:** a X7 não toca o caminho do titular. `packages/nucleo/src/titular/` e o resto do código de produto continuam pedindo os quatro guardiões, e o teste da tabela (`tabela-de-guardioes.md:51`) prova isso para `titular/leitura-do-titular.ts`. O furo do bloqueante 1 é no rastro operacional (log da borda e alertas de prazo), não na resposta ao titular.
+
+Arquivos lidos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/prd.md (diff)
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/achados/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/infra/Caddyfile
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/ci/borda.test.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/web/src/componentes/ui/ia/motor-formulario.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/web/vite.config.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/despachante/src/despachante.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/ia/medir-risco-a-vida.ts
+
+```
+VEREDITO: REPROVADO
+Campos pessoais tocados: nenhum
+Fora da tabela de dados do docs/lgpd.md: nada
+Autorização por objeto: não se aplica (sem rota); a cobrança vem da tabela do RF15/RF16, furada no RF16 (bloqueante 1)
+Logs: limpos no desenho; mas a config que impede log de requisição na borda (infra/Caddyfile:9-18) muda sem privacy-guardian
+Auditoria: não se aplica
+Envio externo: nenhum novo; o censo baixa só o reporter JSON da própria esteira (techspec.md:107)
+Seed/fixture: sintético; e2e/__fixtures__ e apps/web/src/__fixtures__ pedem os quatro
+Bloqueantes: tabela-de-guardioes.md:41-42 — infra/Caddyfile (regra 20.9), tools/ci/borda.test.ts e infra/grafana/alertas/ dos prazos LGPD sem P; exigido: infra/ → I P (ou Caddyfile e alertas/ → I P), tools/ci/borda.test.ts → P, e os casos em cenarios.md (RF16)
+Recomendações: regra da citação lendo HEAD e índice, e valendo para o RF16; ui/ia/ → P C; .github/ e playwright.config.ts +P; tools/ia/ +P; documentos da regra 20 mantidos da rodada 1
+[… 1 linhas cortadas]
+
+## revisor-geral · 3ª rodada · REPROVADO · 2026-10-23 13:37:33 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+Escopo: respeitado
+Aderência à Tech Spec: há divergência em dois pontos. No §5(a), nos limites declarados do RF14. No `texto.md`, na definição do orçamento do RF26, que não bate com o corte do `/seguir`.
+Portão local: não se aplica. É revisão de spec e não há código. O `conferir` responde "nunca passou nesta árvore", como na rodada 2.
+
+**Os dois bloqueantes da rodada 2 foram corrigidos.**
+- **Terceira camada.** O §5(a) agora tem regra própria:
+  - confere commit a commit de `develop..HEAD`;
+  - usa a classificação da `decidirCommit` com a lista do §5(e);
+  - julga o merge por `--remerge-diff`;
+  - intervalo vazio sai 0, e o job usa `fetch-depth: 0`.
+
+  O `cenarios.md` já traz os três casos que pedi: merge limpo, merge com conflito em código e o commit só de `skills-lock.json`.
+- **`compose.yaml` e `.env.example`.** Estão no §5(e), no RF16 do PRD e na D53 revista.
+
+**As recomendações da rodada 2 também foram atendidas:**
+- o conflito vem depois do frontmatter;
+- a negação só nos argumentos do git e no ambiente, com `GIT_CONFIG_`;
+- a saída do RF3 manda refazer o merge;
+- o socorro diz o que perde e quem commita;
+- o `cancelled` do RF2;
+- o passo do RF9;
+- a base do RF10;
+- os destinos do RF23 e do RF24;
+- os quatro aplicadores da tabela;
+- `apps/*/test/` sob o padrão;
+- o merge limpo de papel.
+
+**Bloqueantes:**
+
+1. **§5(a), "Limites declarados (RF14)", `techspec.md:68-74`. A linha `Fora do processo:` não identifica quem escreveu, e isso não está declarado.**
+   - Quem recusa a linha vinda de papel é só o `hook-git.ts`. Ele não roda justamente nos casos que a terceira camada existe para pegar: `env -u CLAUDE_CODE_AGENT` ou `--no-verify` dentro de script, `commit-tree`.
+   - Nesses casos, um commit com a linha `Fora do processo: x` passa nas três camadas. O mesmo vale para o Orquestrador, que não tem papel: um commit dele por `/usr/bin/git` ou `sh -c` não passa pelo `commit-msg`.
+   - O RF14 do PRD exige que o que a máquina não barra "fica escrito". A D53 revista diz que "a esteira recusa" esse commit. Sem a ressalva, as duas afirmações valem menos do que dizem.
+   - **Correção exigida:**
+     - escrever no §5(a) que a terceira camada não sabe quem escreveu a linha, e que papel que escapou do hook e o Orquestrador passam com ela;
+     - pôr no `cenarios.md` o caso "`env -u` com `Fora do processo:` sai 0 na terceira camada", como limite conhecido;
+     - dizer se a `decidirCommit`, chamada pelo `PreToolUse` numa sessão sem papel, aceita `Fora do processo:`. O PRD §4 proíbe o Orquestrador de commitar código.
+
+2. **`texto.md:55-58` (RF22 e RF26). O orçamento cita um arquivo que o próprio corte não cria, e a conta não fecha.**
+   - O texto mantém no `SKILL.md` os passos 1, 2, 5 e 6. O passo 6 é "O ciclo de uma tarefa". Mesmo assim, o orçamento soma "o arquivo do passo de tarefa", que nesse desenho não existe.
+   - Medido hoje, só o que fica passa de 20 KB:
+
+     | Parte | Tamanho |
+     |---|---|
+     | Cabeçalho e passos 1, 2, 5 e 6 | ≈ 12,6 KB |
+     | `protocolo.md` | 7,9 KB |
+     | Seção Skills do `CLAUDE.md`, que vai para o `protocolo.md` | 4,0 KB |
+     | **Total** | **≈ 24,5 KB, mais o índice** |
+
+   - O passo 6 não tem entrada datada de diário de incidentes, então o RF22 não tira bytes dele.
+   - O Implementador vai encontrar o teste do RF26 vermelho e vai ter de escolher sozinho o que corta ou o que move.
+   - **Correção exigida:**
+     - decidir se o passo 6 fica no `SKILL.md` ou vai para `passos/`;
+     - reescrever o orçamento só com arquivos que existem no desenho;
+     - escrever de onde saem os cerca de 5 KB que faltam, ou rever o teto de 20 KB com o Joaquim. O teto está no critério do RF26.
+
+**Recomendações:**
+- **`tabela-de-guardioes.md:37`:** pelo próprio critério ("aplicam a tabela e a lista de veto"), também anulam a tabela:
+  - `hook-revisoes.ts` e `hook-git.ts`;
+  - `revisoes.ts`, que continua sendo a importação do `hook-revisoes.ts` depois de partido;
+  - `comando-git.ts` e `git-hooks/`;
+  - a linha do `PreToolUse` no `.claude/settings.json`.
+
+  Hoje esses arquivos saem com "nenhum" guardião.
+- **`tabela-de-guardioes.md:41`:** `infra/` está sob o título "só em sessão de papel". Só que o `infra/` está em `PASTAS_DE_CODIGO` (`revisoes.ts:41`), que vale para toda sessão (§5e). Mover para a seção de código, com o motivo de pedir só I.
+- **§5(a), limites:** acrescentar `git am` e `revert` à lista (`am` não chama o `commit-msg`). Escrever também que o `--no-verify` dentro de script fura o `pre-push` e que a terceira camada não roda na `develop`. Usar `origin/develop..HEAD`, que é a ref que existe no checkout da esteira.
+- **§5(e):** `package-lock.json` e `.dockerignore` estão fora da lista. Avaliar se entram.
+- **`texto.md:25`:** definir o que a "base fixa" soma. Pela conta dos 75 KB do PRD §1, é o `CLAUDE.md` mais as regras sem `paths:`.
+- **§5(f), RF3:** os "~80 s / ~4 min" são estimativa. Falta um prazo que encerre o encontro.
+
+Arquivos lidos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/prd.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/texto.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/achados/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/docs/decisoes.md
+[… 3 linhas cortadas]

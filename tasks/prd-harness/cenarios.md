@@ -12,10 +12,10 @@ vermelho).
 |---|---|---|---|
 | RF1 | `spec/x` e `correcao/x`: o grupo avaliado dá a ref, com `cancel-in-progress: true` | `develop`, `release`, `main` e `workflow_dispatch`: o grupo avaliado dá o `run_id`; PR: `pr-<número>`, com o `cancel-in-progress` escrito; sem `pull_request_target` nem `secrets.` | `tools/ci/esteira.test.ts`, avaliando a expressão ref a ref |
 | RF2 | (a) cancelada mais nova sem sucessora, com o job `cancelled` pelo `timeout-minutes`: vermelha, citando o job; (b) vermelha mais nova que uma verde: vermelha | (c) cancelada com `push` mais novo na mesma branch, concluído: superada, vale o mais novo; (d) o mesmo com o mais novo ainda rodando: `rodando`; (e) os jobs da superada não aparecem em `jobsVermelhos`; (f) commit só de documento: vale o de código; (g) sucessora em outra branch ou de `pull_request`: não supera | `tools/processo/esteira.test.ts`, com saída real do `gh` gravada; (c) a (e) em `situacaoDaTarefa` e em `situacaoDoFechamento` |
-| RF3 | duas linhas verdes que juntas quebram o lint: código de saída próprio, a spec não anda, a linha volta ao commit de antes do merge, sem push, linha ocupada, e a saída manda refazer o merge; dois encontros ao mesmo tempo: o segundo espera a trava, e o quadro final tem as duas linhas certas | as duas verdes que juntas passam: a spec avança por `--ff-only`; lock alterado: `npm ci` roda antes; lock igual: não roda | `tools/processo/linhas.test.ts`, repositório temporário, comando de verificação injetado |
-| RF4 | (a) mutado que dorme além do prazo: sai no prazo, `recusada`; (b) o neto que o teste abriu também morre (pid conferido); (c) o arquivo volta ao conteúdo de antes; (d) corrida limpa acima do teto: falha dizendo isso, sem mutar; (e) relógio injetado: limpa de 1 s, mutado de 61 s: `recusada` | mutado que falha rápido: `vermelho`; mutado que passa: `verde`; limpa de 1 s e mutado que falha em 5 s (dentro do piso de 60 s): `vermelho`; depois do prazo, uma segunda corrida pega o `flock` | `tools/processo/mutacoes.test.ts` |
-| RF5 | linha nova de produção com `if`, `??` ou `.where(` que nenhum bloco cita: listada | a mesma linha citada por um bloco do arquivo; linha nova em teste; linha só de import; o `--faltando` sai 0 nos dois casos | `tools/processo/mutacoes.test.ts` |
-| RF6 | — | `abandonar 2`: a linha 2 fica livre no quadro, a branch não é apagada, as outras linhas não mudam | `tools/processo/linhas.test.ts` |
+| RF3 | duas linhas verdes que juntas quebram o lint: código de saída próprio, a spec não anda, a linha volta ao commit de antes do merge, sem push, linha ocupada, e a saída manda refazer o merge; dois encontros em processos paralelos (o primeiro preso por um comando injetado que espera um arquivo-sinal, sem `sleep`): o segundo espera, e o quadro final tem as duas linhas certas; `partida 2` durante o encontro da linha 1: o quadro final tem a 2 ocupada e a 1 livre; quem espera além do prazo sai com "encontro em curso"; verificação acima do prazo: tratada como vermelha | as duas verdes que juntas passam: a spec avança por `--ff-only`; lock alterado: `npm ci` roda antes; lock igual: não roda | `tools/processo/linhas.test.ts`, repositório temporário, comando de verificação injetado |
+| RF4 | (a) mutado que dorme além do prazo: sai no prazo, `recusada`; (b) o neto que o teste abriu também morre (pid conferido); (c) o arquivo volta ao conteúdo de antes; (d) corrida limpa acima do teto: falha dizendo isso, sem mutar; (e) relógio injetado: limpa de 1 s, mutado de 61 s: `recusada`; (f) limpa de 4 min: prazo de 10 min, não 12, e mutado de 11 min dá `recusada` | mutado que falha rápido: `vermelho`; mutado que passa: `verde`; limpa de 1 s e mutado que falha em 5 s (piso de 60 s): `vermelho`; limpa de 30 s e mutado que falha em 80 s (3 ×): `vermelho`; limpa de 1 s, `testTimeout` de 120 s e mutado que falha em 90 s: `vermelho`; depois do prazo, uma segunda corrida pega o `flock`. Os casos (a) a (c) usam prazo injetado de 2 s | `tools/processo/mutacoes.test.ts` |
+| RF5 | linha nova de produção com `if`, `&&`, `\|\|`, `??`, ternário, `case`, `.where(` ou expressão regular que nenhum bloco cita: listada, um caso por operador | a mesma linha citada por um bloco do arquivo; linha nova em teste; linha só de import; o `--faltando` sai 0 nos dois casos | `tools/processo/mutacoes.test.ts` |
+| RF6 | — | `abandonar 2`: a linha 2 fica livre no quadro, a branch não é apagada, as outras linhas não mudam; `abandonar 3` durante o encontro da linha 1: a 3 fica livre e não volta | `tools/processo/linhas.test.ts` |
 | RF7 | com `worker` de pé, a sequência do portão o derruba antes da integração (o teste confere a ordem) | sem integração alterada, nada é derrubado; depois da integração, o e2e sobe os workers de novo | `tools/processo/portao-local.test.ts` (novo), sobre a função que monta a sequência |
 | RF8 | uma guarda a mais no `ci:verificar` e não no portão: vermelho | as duas listas iguais, lidas de `tools/ci/etapas-de-guarda.ts` | `tools/ci/scripts.test.ts` |
 | RF9 | caso a 70% do prazo numa fatia: listado, com fatia e prazo; fatia faltando ou artefato expirado: sai 2, dizendo qual | caso a 60%; com uma vermelha mais nova que a verde, o censo lê a verde; o `ci.yml` sobe só o JSON, também no verde | `tools/processo/esteira.test.ts` e `tools/ci/esteira.test.ts` |
@@ -56,7 +56,8 @@ no modelo que não está em `REVISORES_COM_VETO` nem na lista do `revisor-geral`
 **RF14, negação no `PreToolUse`** (`hook-portao.test.ts`, com o comando do `settings.json`). Negados em sessão de
 papel: `--no-verify`, `--no-verif`, `--no-ver`; `commit -n`, `-nm "x"`, `-anm "x"`; `-c core.hooksPath=/dev/null`,
 `-c core.HOOKSPATH=x`, `config core.hookspath`; `CLAUDE_CODE_AGENT= git commit`, `unset CLAUDE_CODE_AGENT`,
-`env -u CLAUDE_CODE_AGENT`, `GIT_CONFIG_COUNT=1 git commit`. Passam: `git log -n 3`, `git diff --no-ext-diff`,
+`env -u CLAUDE_CODE_AGENT`, `GIT_CONFIG_COUNT=1 git commit`. Negado em qualquer sessão do Claude Code, com ou sem papel: mensagem com `Fora do processo:`. Passam: `git log -n 3`,
+`git diff --no-ext-diff`, `git -c user.name=x commit`, `GIT_AUTHOR_DATE=x git commit`,
 `grep CLAUDE_CODE_AGENT`, `printenv CLAUDE_CODE_AGENT`, `git commit -F msg.txt` com `--no-verify` dentro do arquivo, e
 qualquer um deles sem papel. Termo só dentro de `-m "..."`: negado com a dica de `-F`.
 
@@ -64,25 +65,33 @@ qualquer um deles sem papel. Termo só dentro de `-m "..."`: negado com a dica d
 - sai 0: histórico real de spec, com vários `(tarefa N.0)` e `Revisões:`, o último com código; o merge do encontro,
   limpo, com o `tasks.md` resolvido; um merge da `develop`; commits de documento sem marca; um commit só de
   `skills-lock.json`; um commit de código com `Fora do processo: ajuste`; e o intervalo vazio
+- sai 0: histórico de `correcao/x` com `(correção x)` e `Revisões:`
 - sai 1, citando o hash: commit de código sem marca; marca sem a linha `Revisões:`; merge com conflito resolvido em
-  código, sem marca (`--remerge-diff`)
+  código, sem marca (`--remerge-diff`); commit sem marca só em `tools/guardas/x.mjs`, e outro só em
+  `.github/workflows/ci.yml`; `Fora do processo:` com motivo vazio
+- limite conhecido, afirmado como tal: commit de papel feito com `env -u CLAUDE_CODE_AGENT` e `Fora do processo: x` sai 0
 - o `ci.yml` chama em `spec/**` e `correcao/**`, com `fetch-depth: 0`, e não na `develop`
+
+**Instalação.** O `prepare` do `package.json` aponta `tools/processo/git-hooks` (teste lê o arquivo).
 
 **Início de sessão.** Com `core.hooksPath` ausente, o aviso sai; com ele certo, não sai.
 
-**RF15** (`tools/processo/harness/guardioes.test.ts` e `revisoes.test.ts`, pela `decidirCommit`): os casos de
-`tabela-de-guardioes.md`, seção "O teste da tabela"; repository alterado sem `tenancy-guardian` marcado e sem rodada
+**RF15** (`tools/processo/harness/guardioes.test.ts` e `revisoes.test.ts`, pela `decidirCommit`): todos os casos de
+`tabela-de-guardioes.md`, seção "O teste da tabela", cada regra de casamento com bloco de mutação; repository alterado sem `tenancy-guardian` marcado e sem rodada
 dele: recusado, com a rodada APROVADO: passa; marcado e não pedido pelo caminho continua obrigatório; o portão imprime
 a lista unida.
 
 **RF16** (`revisoes.test.ts`): em sessão de papel, sem tarefa, um arquivo de cada caminho do §5(e) é recusado
 (`tsconfig.base.json`, `.claude/settings.local.json`, `compose.yaml` e `.env.example` incluídos);
 `.claude/skills/x/SKILL.md`, `.claude/rules/40-testes.md`, `docs/aia/tutor.md` e `tasks/` passam. Com correção marcada
-e sem `revisor-geral`: recusado. `tools/guardas/index.mjs` sem `privacy-guardian`, `eslint.config.mjs` sem
-`tenancy-guardian` e `docs/aia/ouro/x.json` sem `conformidade-reviewer`: recusados. Sem papel: passa.
+e sem `revisor-geral`: recusado. Uma linha de cada linha da tabela do RF16, dos dois lados (sem o guardião
+dela, recusado; com ele, aceito), entre elas `tools/guardas/index.mjs` sem `privacy-guardian`, `eslint.config.mjs` sem
+`tenancy-guardian`, `docs/aia/ouro/x.json` sem `conformidade-reviewer`, `hook-git.ts` sem os quatro, `infra/Caddyfile`
+e `tools/ci/borda.test.ts` sem `privacy-guardian`; `infra/k6/x.js` com `infra-guardian` e `privacy-guardian` passa;
+`tools/processo/linhas.ts` passa sem guardião com veto. Sem papel: passa.
 
 **RF17**: produção alterada e documento sem bloco nem linha: portão vermelho; `**Sem mutação:**` vazio: vermelho; com
-motivo: verde; com bloco: verde. Só teste ou `.d.ts`: não exige. Documento achado pela marca. Pela `decidirCommit`, com
+motivo: verde; com bloco: verde. Só teste, `.d.ts` ou `apps/web/vite.config.ts`: não exige. Documento achado pela marca. Pela `decidirCommit`, com
 carimbo válido: produção no índice e documento sem bloco nem linha, recusado; com a linha, passa. Carimbo do portão de
 outra tarefa: recusado.
 
@@ -96,13 +105,13 @@ teste de hoje que aceita esse caso é o único que muda, e o documento da tarefa
 | RF | Vermelho | Verde |
 |---|---|---|
 | RF20 | base fixa acima de 40.000 B; regra sempre carregada diferente de {10, 20, 70}; menos itens numerados na 10, na 20 ou na 70 do que na medida de hoje | a medida de hoje gravada como "antes" |
-| RF21 | dois blocos que deveriam ser idênticos entre revisores diferindo | os blocos iguais |
+| RF21 | dois blocos que deveriam ser idênticos entre revisores diferindo; "O que verificar" ou o formato de um guardião com veto diferente da versão gravada de hoje | os blocos iguais |
 | RF22 | `seguir/SKILL.md` ou `executar-task/SKILL.md` com 500 linhas ou mais; um `passos/*.md` citado que não existe | — |
 | RF23 | skill de terceiro da lista sem a linha de conflito depois do frontmatter, ou diferente de `docs/skills-de-terceiros.md` (acusa, não reaplica); `frontend-design` no `skills-lock.json` | as cinco com a linha |
-| RF24 | caminho citado em papel, regra ou guarda que não existe (amostra: `apps/api/src/inexistente.ts`); papel sem a seção de critério de saída | os caminhos de hoje, com contagem mínima |
+| RF24 | caminho citado em papel, regra ou guarda que não existe (amostra: `apps/api/src/inexistente.ts`); papel sem a seção de critério de saída; a skill `status` ainda citada | os caminhos de hoje, com contagem mínima |
 | RF24, guarda de IA (`tools/guardas/guardas.test.ts`) | SDK em `packages/nucleo/src/ia/porta.ts` ou `adaptador.ts`, e no caminho antigo `apps/api/src/ia/adapters/x.ts`: reprovado | SDK em `packages/nucleo/src/ia/adaptador-openai-compat.ts`: passa; a lista de exceções do teste atualizada |
 | RF25 | regra que cita checagem que não existe | regra que diz "só a revisão garante" |
-| RF26 | `SKILL.md` + `protocolo.md` + o passo de tarefa acima de 20 KB | — |
+| RF26 | `SKILL.md` + `protocolo.md` + `passos/6-tarefa.md` acima de 24 KB; um dos três ausente | os três abaixo do teto |
 | RF30 | skill sem `name` ou `description`; papel sem `model` ou `tools`; `paths:` que não casa com nada; comando de hook apontando arquivo que não existe | o repositório de hoje |
 
 Cada checagem do C roda sobre o repositório e sobre uma amostra quebrada em pasta temporária, e afirma uma contagem
