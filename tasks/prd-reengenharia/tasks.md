@@ -227,11 +227,11 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 
 ### Higiene
 
-- [ ] **24.0 — Toda dependência é declarada onde é usada, sem sobra**
-  - [ ] 24.1 Declarar as dependências que faltam, na versão do `package-lock.json` e sem faixa: na raiz `pg`, `ioredis`, `@node-rs/argon2`, `otpauth`, `bullmq`, `socket.io-client` e `@opentelemetry/sdk-metrics`; em `apps/realtime`, `jose`; em `apps/worker`, `drizzle-orm`. Tirar o `pino` de `apps/despachante` e `apps/worker`
-  - [ ] 24.2 `knip` 6.42.1 exato como `devDependency` da raiz, e o `knip.json` da raiz derivado do de `.reengenharia/medicao/`, com `ignore` só das fixtures de violação
-  - [ ] 24.3 Etapa do knip (`--include dependencies,unlisted,binaries,unresolved`) em `tools/ci/etapas-de-guarda.ts`, no `ci:verificar`; para o portão da tarefa vê-la sem tocar `tools/processo/`, o script `guarda:dependencias` passa a rodar também o knip (declare a escolha)
-  - [ ] 24.4 Testes: etapa limpa, cada categoria reprova a sua fixture, versões exatas, worker e despachante sem `pino`
+- [x] **24.0 — Toda dependência é declarada onde é usada, sem sobra**
+  - [x] 24.1 Declarar as dependências que faltam, na versão do `package-lock.json` e sem faixa: na raiz `pg`, `ioredis`, `@node-rs/argon2`, `otpauth`, `bullmq`, `socket.io-client` e `@opentelemetry/sdk-metrics`; em `apps/realtime`, `jose`; em `apps/worker`, `drizzle-orm`. Tirar o `pino` de `apps/despachante` e `apps/worker`
+  - [x] 24.2 `knip` 6.42.1 exato como `devDependency` da raiz, e o `knip.json` da raiz derivado do de `.reengenharia/medicao/`, com `ignore` só das fixtures de violação
+  - [x] 24.3 Etapa do knip (`--include dependencies,unlisted,binaries,unresolved`) em `tools/ci/etapas-de-guarda.ts`, no `ci:verificar`; para o portão da tarefa vê-la sem tocar `tools/processo/`, o script `guarda:dependencias` passa a rodar também o knip (declare a escolha)
+  - [x] 24.4 Testes: etapa limpa, cada categoria reprova a sua fixture, versões exatas, worker e despachante sem `pino`
 
 - [ ] **25.0 — Todo `throw` de produção é tipado, e o lint barra o resto**
   - [ ] 25.1 `ErroDeInvariante` em `packages/nucleo/src/erro/`, com motivo fixo (recusa da interpolação pelo tipo ou por lint, declarada)

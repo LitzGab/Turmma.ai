@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { parseEnv } from 'node:util'
 import { afterEach, describe, expect, it } from 'vitest'
-import { argumentosGitleaks, IMAGEM_GITLEAKS } from './etapas-de-guarda.ts'
+import { argumentosGitleaks, ARGUMENTOS_DO_KNIP, IMAGEM_GITLEAKS } from './etapas-de-guarda.ts'
 import { raizRepositorio } from './executar.ts'
 
 // Os scripts reais da esteira, com `npm`, `npx` e `docker` trocados por imitações que só
@@ -97,7 +97,7 @@ function afirmarDespejoCarimbado(chamadas: string[], derrubou = true): void {
 }
 
 describe('scripts ci:* reais', () => {
-  it('ci:verificar roda tipos, lint com guardas, gitleaks, npm audit e unidade, e sai verde só se todos passarem', () => {
+  it('ci:verificar roda tipos, lint com guardas, gitleaks, npm audit, knip e unidade, e sai verde só se todos passarem', () => {
     const verde = rodarScript('verificar.ts', null)
     expect(verde.codigo).toBe(0)
     expect(verde.chamadas).toEqual([
@@ -105,11 +105,12 @@ describe('scripts ci:* reais', () => {
       'npm run lint',
       `docker ${argumentosGitleaks(raizRepositorio).join(' ')}`,
       'npm audit --audit-level=high --omit=dev',
+      `npx --no knip ${ARGUMENTOS_DO_KNIP.join(' ')}`,
       'npm run test:unidade',
     ])
   })
 
-  it.each(['npm run lint', IMAGEM_GITLEAKS, 'npm audit --audit-level=high --omit=dev', 'npm run test:unidade'])(
+  it.each(['npm run lint', IMAGEM_GITLEAKS, 'npm audit --audit-level=high --omit=dev', 'npx --no knip', 'npm run test:unidade'])(
     'ci:verificar sai vermelho quando "%s" falha: guarda é portão, não aviso',
     (etapa) => {
       expect(rodarScript('verificar.ts', etapa).codigo).not.toBe(0)

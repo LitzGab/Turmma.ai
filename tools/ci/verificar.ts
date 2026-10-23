@@ -1,5 +1,5 @@
 import { encerrarCom, executarEtapas } from './executar.ts'
-import { etapaAuditoriaDeDependencias, etapaSegredos } from './etapas-de-guarda.ts'
+import { etapaAuditoriaDeDependencias, etapaDependenciasDeclaradas, etapaSegredos } from './etapas-de-guarda.ts'
 
 await encerrarCom(
   executarEtapas([
@@ -7,6 +7,7 @@ await encerrarCom(
     { nome: 'lint e guardas', comando: 'npm', argumentos: ['run', 'lint'] },
     etapaSegredos,
     etapaAuditoriaDeDependencias,
+    etapaDependenciasDeclaradas,
     { nome: 'testes de unidade', comando: 'npm', argumentos: ['run', 'test:unidade'] },
   ]),
 )

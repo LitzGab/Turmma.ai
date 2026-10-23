@@ -1,0 +1,1 @@
+{ "name": "fixture-binario-nao-declarado", "private": true, "type": "module", "scripts": { "tipos": "tsc --noEmit" } }
