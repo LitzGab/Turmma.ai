@@ -1767,6 +1767,11 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   (S13 de `tasks/prd-reengenharia/RISCOS.md`); (h) a rodada do despachante em lote no Redis, U06-8: depois de ~10 escolas
   (D25), medindo antes; (i) a telemetria de falha do navegador, U07-8: canal novo de dado a partir de tela de menor, com o
   `privacy-guardian` e a linha em `docs/lgpd.md` (a X5 deixou só a porta `reportarFalha`, sem envio). (dono: Joaquim)
+- [ ] **(X5, 95.0) Seis precisões do guia e da arquitetura** (`revisor-geral`, rodada sobre o `c88231a`, APROVADO; a lista
+  com linha está em "Recomendações sem aplicar" de `tasks/prd-reengenharia/95_task.md`): `credencial/` também guarda
+  repositories da sessão; a exceção do `operacao/token-do-convite.ts` ao "só pelo `index.ts`"; as regras de camada que não
+  valem para teste; as cercas que a linha do dependency-cruiser não cita; o exemplo `estrutura/turma/` sem os testes ao
+  lado; e o `erro-tipado` sem `packages/shared/src`. Na X6, quando a Etapa 11 reescrever a documentação. (dono: Joaquim)
 - [ ] **(X5, RF31) `.dockerignore` e `tools/ci/dockerfile.test.ts:128-130` ainda citam `.reengenharia`**, a pasta que o
   fechamento da X5 apagou (R64). A linha não faz mal (ignora uma pasta que não existe), e tirá-la é código, com o teste junto:
   na próxima tarefa que tocar o Dockerfile ou o `.dockerignore` (onda 5, na X6). (dono: Joaquim)
