@@ -1,6 +1,7 @@
 import { exigirAnoEmCurso, exigirEscolaDoContexto, listaNome, reivindicacao, sessaoDaRequisicao, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { ConsultaPaginada, DecisorDaReivindicacao } from '@educa/shared'
 import { and, asc, eq, exists, gt, sql, type SQL } from 'drizzle-orm'
+import { ErroDeInvariante } from '@educa/shared'
 
 /**
  * Como quem decide alcança o pedido, pela célula `reivindicacao.decidir` da `MATRIZ`: a coordenação, todo pedido da escola
@@ -111,7 +112,7 @@ export class DecisaoRepository {
     if (linha === undefined) return undefined
     const { turmaId, listaNomeId, senhaHash } = linha
     // O check `reivindicacao_segredo_so_pendente` e o `reivindicacao_pendente_com_nome` garantem os dois no pendente.
-    if (listaNomeId === null || senhaHash === null) throw new Error('pedido pendente sem nome ou sem hash')
+    if (listaNomeId === null || senhaHash === null) throw new ErroDeInvariante('pedido pendente sem nome ou sem hash')
     return { turmaId, listaNomeId, senhaHash }
   }
 

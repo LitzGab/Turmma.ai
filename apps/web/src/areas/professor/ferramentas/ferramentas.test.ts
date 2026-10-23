@@ -1,7 +1,7 @@
-import { esquemaPedidoAdaptarArtefato, esquemaPedidoGerarComFerramenta, FERRAMENTAS, ROTULOS_DA_ADAPTACAO, TIPOS_DE_ADAPTACAO } from '@educa/shared'
+import { ErroDeInvariante, esquemaPedidoAdaptarArtefato, esquemaPedidoGerarComFerramenta, FERRAMENTAS, ROTULOS_DA_ADAPTACAO, TIPOS_DE_ADAPTACAO } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { problemaDaDescricao, validarFormulario, valoresPadrao } from '../../../componentes/ui/ia/motor-formulario'
-import { CATALOGO_DE_FERRAMENTAS, CATEGORIAS_DE_FERRAMENTA, catalogoPorCategoria, COMO_VAI_SAIR, descricaoDaFerramenta, ehFerramenta, iniciaisDoPedido, montarPedido, TEMPOS_EXTRAS, type OpcoesDaDescricao } from './ferramentas'
+import { CATALOGO_DE_FERRAMENTAS, CATEGORIAS_DE_FERRAMENTA, catalogoPorCategoria, COMO_VAI_SAIR, descricaoDaFerramenta, ehFerramenta, ferramentaDoCatalogo, iniciaisDoPedido, montarPedido, TEMPOS_EXTRAS, type OpcoesDaDescricao } from './ferramentas'
 
 const TURMA = '0190f5a0-0000-7000-8000-00000000002b'
 const DISCIPLINA = '0190f5a0-0000-7000-8000-0000000000c1'
@@ -199,5 +199,15 @@ describe('"Como vai sair": o texto fixo de cada ferramenta (telas do professor, 
     for (const palavra of ['aluno', 'laudo', 'diagnóstico', 'TDAH', 'dislexia', 'condição']) expect(palavra).toMatch(FALA_DE_ALUNO_OU_CONDICAO)
     // O vocabulário permitido não é pego por engano: "anotar" não é "nota", e "gabarito" e "acerto" são o que a tela diz.
     for (const palavra of ['anotar', 'gabarito', 'acerto', 'Criados']) expect(palavra).not.toMatch(VOCABULARIO_PROIBIDO)
+  })
+})
+
+describe('ferramentaDoCatalogo', () => {
+  it('a ferramenta fora do catálogo é um ErroDeInvariante de motivo fixo, sem o nome recebido', () => {
+    const fora = 'ferramenta-que-nao-existe' as never
+
+    expect(() => ferramentaDoCatalogo(fora)).toThrow(ErroDeInvariante)
+    expect(() => ferramentaDoCatalogo(fora)).toThrow(new ErroDeInvariante('ferramenta fora do catálogo'))
+    expect(() => ferramentaDoCatalogo(fora)).not.toThrow('ferramenta-que-nao-existe')
   })
 })

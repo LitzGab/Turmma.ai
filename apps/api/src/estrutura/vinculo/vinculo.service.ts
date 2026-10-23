@@ -3,6 +3,7 @@ import { CicloDeVidaRepository } from '@educa/nucleo/ciclo-de-vida'
 import { Logger } from '@nestjs/common'
 import {
   CodigoDeErro,
+  ErroDeInvariante,
   esquemaRespostaListaDeVinculos,
   esquemaRespostaMeusVinculos,
   esquemaRespostaVinculo,
@@ -169,7 +170,7 @@ export class VinculoService {
 
   async #lido(leitura: Promise<VinculoLido | undefined>): Promise<VinculoLido> {
     const lido = await leitura
-    if (lido === undefined) throw new Error('vínculo lido na mesma transação não encontrado')
+    if (lido === undefined) throw new ErroDeInvariante('vínculo lido na mesma transação não encontrado')
     return lido
   }
 }

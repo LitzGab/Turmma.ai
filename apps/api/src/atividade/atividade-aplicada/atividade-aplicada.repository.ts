@@ -1,6 +1,7 @@
 import { artefato, atividadeAplicada, entrega, exigirAnoEmCurso, exigirEscolaDoContexto, sessaoDaRequisicao, tentativaAtividade, turma, usuario, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { ConsultaAtividadesAplicadas, EstadoDeAtividadeAplicada, EstadoDeEntrega, TipoDeArtefato } from '@educa/shared'
 import { and, desc, eq, lt, sql, type AnyColumn, type SQL } from 'drizzle-orm'
+import { ErroDeInvariante } from '@educa/shared'
 import { comVinculoConfirmadoDoProfessor, disciplinaDoArtefato } from '../../assistente/turma-do-professor.repository.js'
 
 /** Uma atividade aplicada como a professora da turma a lê: só contagem de participação, sem aluno. */
@@ -159,7 +160,7 @@ export class AtividadeAplicadaRepository {
       .insert(atividadeAplicada)
       .values({ escolaId: exigirEscolaDoContexto(), anoLetivoId: exigirAnoEmCurso(), turmaId: nova.turmaId, artefatoId: nova.artefatoId, avaliativa: nova.avaliativa, aplicadaPor: sessaoDaRequisicao().usuarioId })
       .returning({ id: atividadeAplicada.id })
-    if (criada === undefined) throw new Error('atividade aplicada não criada')
+    if (criada === undefined) throw new ErroDeInvariante('atividade aplicada não criada')
     return criada.id
   }
 

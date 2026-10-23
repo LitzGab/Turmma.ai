@@ -1,6 +1,7 @@
 import { exigirEscolaDoContexto, serie, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { ConsultaPaginada, PedidoCriarSerie, Serie } from '@educa/shared'
 import { and, asc, eq, gt } from 'drizzle-orm'
+import { ErroDeInvariante } from '@educa/shared'
 
 const colunas = { id: serie.id, etapa: serie.etapa, ano: serie.ano }
 
@@ -13,7 +14,7 @@ export class SerieRepository {
 
   async criar(pedido: PedidoCriarSerie): Promise<Serie> {
     const [criada] = await this.banco.insert(serie).values({ escolaId: exigirEscolaDoContexto(), etapa: pedido.etapa, ano: pedido.ano }).returning(colunas)
-    if (criada === undefined) throw new Error('série não criada')
+    if (criada === undefined) throw new ErroDeInvariante('série não criada')
     return criada
   }
 

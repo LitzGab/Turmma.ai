@@ -11,7 +11,7 @@ import {
   type VagasPorEscola,
   type VagasPorFila,
 } from '@educa/nucleo'
-import { CodigoDeErro, CodigoDeFalhaDeJob, DEFINICOES_DE_JOB, type DadosLidosDoJob, type Fila, type RegistroDeJobs, type TipoDeJob } from '@educa/shared'
+import { CodigoDeErro, CodigoDeFalhaDeJob, DEFINICOES_DE_JOB, ErroDeInvariante, type DadosLidosDoJob, type Fila, type RegistroDeJobs, type TipoDeJob } from '@educa/shared'
 import { DelayedError, UnrecoverableError, type Job } from 'bullmq'
 import { randomUUID } from 'node:crypto'
 import { FalhaDeJob } from './falha-de-job.js'
@@ -392,7 +392,7 @@ export class ExecutorDeJobs {
    * linha continua `publicado`, e o despachante segue renovando a vaga de quem a tem.
    */
   private async esperarVaga(job: JobDaFila, { fila, escolaId }: VagaDoJob, token: string | undefined): Promise<never> {
-    if (token === undefined) throw new Error('job sem token do BullMQ não pode voltar à espera')
+    if (token === undefined) throw new ErroDeInvariante('job sem token do BullMQ não pode voltar à espera')
     // Métrica, e não log: com a escola no teto, cada job volta aqui a cada segundo, e uma linha por volta
     // encheria o log sem dizer mais que a contagem por escola.
     this.dependencias.aoAguardarVaga?.(fila, escolaId)

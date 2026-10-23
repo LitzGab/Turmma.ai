@@ -10,7 +10,7 @@ import {
   type EmissorDeToken,
   type Meter,
 } from '@educa/nucleo'
-import { CodigoDeErro, JANELA_DE_RENOVACAO_SIMULTANEA_MS, type RespostaRenovacao } from '@educa/shared'
+import { CodigoDeErro, ErroDeInvariante, JANELA_DE_RENOVACAO_SIMULTANEA_MS, type RespostaRenovacao } from '@educa/shared'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { COOKIE_SESSAO, lerCookie, serializarCookie } from '../../credencial/cookies.js'
 import { BYTES_DO_REFRESH, hashDoRefresh } from '../../credencial/identificadores-do-login.js'
@@ -146,7 +146,7 @@ export class RenovacaoService {
           return { resultado }
         }
         const rotacionadoEm = await sessoes.rotacionar(achada.id, hashDoRefresh(novoRefresh), resultado === 'ok')
-        if (rotacionadoEm === undefined) throw new Error('sessão travada não rotacionou')
+        if (rotacionadoEm === undefined) throw new ErroDeInvariante('sessão travada não rotacionou')
         await new RegistroDeAcessoRepository(tx).gravar('renovacao', achada.usuarioId, ipParaRegistro(ip))
         return { resultado, sessao: achada, rotacionadoEm, novoRefresh }
       })

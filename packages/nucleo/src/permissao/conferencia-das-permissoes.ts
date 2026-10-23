@@ -1,6 +1,7 @@
 import type { OnModuleInit } from '@nestjs/common'
 import { PATH_METADATA } from '@nestjs/common/constants.js'
 import { Reflector, type DiscoveryService } from '@nestjs/core'
+import { ErroDeInvariante } from '@educa/shared'
 import { METADADO_ENTRADA_DE_OPERACAO, METADADO_ROTA_DE_OPERACAO } from '../identidade/marcadores-de-operacao.js'
 import { METADADO_ROTA_ANONIMA } from '../limite/rota-anonima.decorator.js'
 import { METADADO_PERMITE } from './permite.decorator.js'
@@ -21,12 +22,18 @@ function metodosDaCadeia(prototipo: object): string[] {
 /** As marcações que dizem quem pode chamar a rota: a célula da matriz, a rota anônima e os dois marcadores da operação. */
 const DECLARACOES_DE_ACESSO = [METADADO_PERMITE, METADADO_ROTA_ANONIMA, METADADO_ROTA_DE_OPERACAO, METADADO_ENTRADA_DE_OPERACAO] as const
 
+/** Uma rota sem declaração de acesso: o nome da classe do controller e o do método. */
+export interface RotaSemDeclaracao {
+  readonly controller: string
+  readonly metodo: string
+}
+
 /**
  * As rotas dos controllers que não declaram quem pode chamá-las — nem `@Permite`, nem `@RotaAnonima`, nem um dos dois
- * marcadores da área da operação (`@RotaDeOperacao`, `@EntradaDeOperacao`, Tech Spec da A0) —, no método ou na classe,
- * como `Controller.metodo`. Rota é o método com caminho registrado pelo `@Get`, `@Post` e afins.
+ * marcadores da área da operação (`@RotaDeOperacao`, `@EntradaDeOperacao`, Tech Spec da A0) —, no método ou na classe.
+ * Rota é o método com caminho registrado pelo `@Get`, `@Post` e afins.
  */
-export function rotasSemPermissao(controladores: readonly Controlador[]): string[] {
+function rotasSemDeclaracao(controladores: readonly Controlador[]): RotaSemDeclaracao[] {
   return controladores.flatMap((controlador) => {
     const prototipo = controlador.prototype as Record<string, unknown>
     const marcadaNaClasse = (chave: string) => reflector.get<unknown>(chave, controlador) !== undefined
@@ -38,8 +45,28 @@ export function rotasSemPermissao(controladores: readonly Controlador[]): string
         const marcadoNoMetodo = (chave: string) => reflector.get<unknown>(chave, metodo) !== undefined
         return !DECLARACOES_DE_ACESSO.some((chave) => marcadoNoMetodo(chave) || marcadaNaClasse(chave))
       })
-      .map((nome) => `${controlador.name}.${nome}`)
+      .map((nome) => ({ controller: controlador.name, metodo: nome }))
   })
+}
+
+/** As rotas sem declaração de acesso, como `Controller.metodo`. */
+export function rotasSemPermissao(controladores: readonly Controlador[]): string[] {
+  return rotasSemDeclaracao(controladores).map(({ controller, metodo }) => `${controller}.${metodo}`)
+}
+
+/**
+ * O boot recusado porque há rota sem declaração de acesso. A mensagem é fixa; o controller e o método de cada rota
+ * ficam em `rotas`, que o teste lê sem depender do texto. O log do processo (`registrarErrosDoProcesso`) leva só o tipo e a
+ * pilha do erro (`resumirErro`), então `rotas` aparece em quem captura o erro (o teste, o Nest com `abortOnError: false`), e
+ * não no log do boot real.
+ */
+export class RotasSemPermissao extends ErroDeInvariante {
+  readonly codigo = 'ROTA_SEM_PERMISSAO'
+
+  constructor(readonly rotas: readonly RotaSemDeclaracao[]) {
+    super('rota sem @Permite, @RotaAnonima nem marcador da operação')
+    this.name = 'RotasSemPermissao'
+  }
 }
 
 /**
@@ -55,7 +82,7 @@ export class ConferenciaDasPermissoes implements OnModuleInit {
       .getControllers()
       .map((embrulho) => embrulho.metatype)
       .filter((metatipo): metatipo is Controlador => typeof metatipo === 'function')
-    const semPermissao = rotasSemPermissao(controladores)
-    if (semPermissao.length > 0) throw new Error(`rota sem @Permite, @RotaAnonima nem marcador da operação: ${semPermissao.join(', ')}`)
+    const semPermissao = rotasSemDeclaracao(controladores)
+    if (semPermissao.length > 0) throw new RotasSemPermissao(semPermissao)
   }
 }

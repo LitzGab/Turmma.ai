@@ -177,6 +177,30 @@ workspace).
   `packages/nucleo/src`, fora de teste, exceto `apps/web/src/main.tsx`.
 - `ArgumentoInvalido`, triplicado em `ops/`, vira uma classe.
 
+**Como a 25.0 ficou (o que a implementação fixou):**
+- A contagem de 22/10 (84) incluía 7 ocorrências em `__fixtures__` (4 da web, 3 do `nucleo`) e o `main.tsx` da web, que é a exceção
+  única: foram convertidos os 76 de produção. A guarda também deixa de fora `**/__fixtures__/**` (apoio de teste, como na
+  `camadas.cjs`): o texto com o caminho ajuda quem depura o teste, e o motivo fixo o apagaria.
+- `ErroDeInvariante` mora em `packages/shared/src/erros/`, e não no `nucleo`: a web também lança invariante
+  (`ferramentaDoCatalogo`) e não importa o `nucleo` (`web-nao-importa-nucleo-nem-backend`). O `nucleo` e as apps o importam de
+  `@educa/shared`.
+- O motivo fixo é do lint, e não do tipo: `guardas/erro-tipado` reprova `new ErroDeInvariante(x)` e o `super(x)` de uma subclasse
+  quando `x` não é um texto escrito (literal, ou template sem expressão); `'a' + x`, `${}` e variável reprovam. Reprova também
+  `throw new Error(…)`, `throw Error(…)`, `globalThis.Error` e qualquer literal lançado, com `as`, `!` e `satisfies` por cima, e as
+  duas pontas de `?:` e de `||`. Limite: `Error` guardado em outro nome (`const E = Error`) não é reconhecido. Entra na segunda passada
+  (`REGRAS_DAS_GUARDAS`), então o `eslint-disable` não a fura.
+- Quatro mensagens montavam valor e viraram motivo fixo, sem o valor: `categoria sem prazo no catálogo`, `nome de coluna fora do
+  formato`, `papel fora da busca de titulares` e `ferramenta fora do catálogo`. A lista de rotas sem `@Permite` (25.3) sai em
+  `RotasSemPermissao.rotas` (`{ controller, metodo }`, com `codigo = 'ROTA_SEM_PERMISSAO'`), e a de problemas do mapa de auditoria em
+  `MapaDeAuditoriaInvalido.problemas`; as duas são subclasses de `ErroDeInvariante` com a `message` fixa. `acoes.ts` ganha
+  `exigirMapaDeAcoesValido(mapa)`, para a cláusula que lança ter teste. Limite: a chamada que o módulo faz ao carregar
+  (`exigirMapaDeAcoesValido(ACOES_DE_AUDITORIA)`) não tem teste que falhe sem ela, porque carregar o módulo no teste já é rodá-la;
+  o que se prova é a função, e a chamada é a única linha de `acoes.ts` fora do teste.
+- `ArgumentoInvalido` fica em `ops/comando.ts` e recebe a opção com os traços; `uso.ts` e `sessao-sintetica.ts` o reexportam e
+  passam `'--dia'` onde passavam `'dia'`, e o texto no terminal é o mesmo.
+- O filtro global responde `ERRO_INTERNO` 500 ao `ErroDeInvariante` sem o motivo, e o log leva `erro.tipo = 'ErroDeInvariante'`
+  (`apps/api/test/erro.int.test.ts`).
+
 ## 3. Falha
 
 | Peça | O que o teste mostra |

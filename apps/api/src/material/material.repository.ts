@@ -1,6 +1,7 @@
 import { exigirEscolaDoContexto, material, SemEscopo, sessaoDaRequisicao, trecho, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { ConsultaMateriais, EstadoDeMaterial, FalhaDeMaterial, LicencaDeMaterial, TitularidadeDeMaterial } from '@educa/shared'
 import { and, asc, desc, eq, exists, gt, gte, isNull, lt, sql, type SQL } from 'drizzle-orm'
+import { ErroDeInvariante } from '@educa/shared'
 import type { PaginaExtraida } from './extracao-de-pdf.js'
 
 /**
@@ -159,7 +160,7 @@ export class MaterialRepository {
       .insert(material)
       .values({ ...novo, escolaId: exigirEscolaDoContexto(), declaracao: true, enviadoPor: usuarioId })
       .returning({ ...colunas, trechos: sql<number>`0` })
-    if (gravado === undefined) throw new Error('material não gravado')
+    if (gravado === undefined) throw new ErroDeInvariante('material não gravado')
     return gravado
   }
 

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { raizRepositorio } from '../ci/executar.ts'
 import { criarEslintDasGuardas, violacoesDasGuardas } from './eslint-das-guardas.ts'
 import type { Supressoes } from './catraca.ts'
-import { ARQUIVOS_DE_TESTE, EXCECOES_DAS_GUARDAS, REGRAS_DAS_GUARDAS, REGRAS_DE_LOG, REGRAS_DE_SDK_DE_IA, REGRAS_DE_TAMANHO, REGRAS_DE_TENANT, REGRAS_DE_TESTE, REGRAS_EM_TODO_ARQUIVO } from './index.mjs'
+import { ARQUIVOS_DE_TESTE, EXCECOES_DAS_GUARDAS, REGRAS_DAS_GUARDAS, REGRAS_DE_ERRO, REGRAS_DE_LOG, REGRAS_DE_SDK_DE_IA, REGRAS_DE_TAMANHO, REGRAS_DE_TENANT, REGRAS_DE_TESTE, REGRAS_EM_TODO_ARQUIVO } from './index.mjs'
 import { CHAVES_PESSOAIS, ehChaveOperacional, ehNomePessoal } from './regras-log.mjs'
 
 // Cada fixture em __fixtures__ traz, na própria linha, a marca "reprova: <regra>". O teste passa
@@ -402,6 +402,73 @@ describe('guarda de tabela fora do repository (regra 00, item 3; regra 10, item 
   }, 120_000)
 })
 
+describe('guarda de erro tipado (RF13; regra 00, item 9; regra 20, item 11)', () => {
+  const FIXTURE = 'erro-sem-tipo.ts'
+  const regras = new Set(['guardas/erro-tipado'])
+
+  it.each([
+    'apps/api/src/x/x.service.ts',
+    'apps/worker/src/x.ts',
+    'apps/realtime/src/x.ts',
+    'apps/despachante/src/x.ts',
+    'apps/web/src/x.ts',
+    'packages/nucleo/src/x/x.ts',
+  ])('reprova Error genérico, texto e literal lançados e o motivo do ErroDeInvariante que não é texto fixo, em %s', async (caminho) => {
+    expect(await lintar(eslint, FIXTURE, caminho, regras)).toEqual(marcasDeViolacao(FIXTURE))
+  })
+
+  it('reprova `throw new Error(…)`, `throw Error(…)` e o `globalThis.Error`: o atalho sem `new` não escapa', async () => {
+    const dos = (trecho: string) => marcasDeViolacao(FIXTURE).filter((marca) => lerFixture(FIXTURE).split('\n')[Number(marca.split(' ')[0]) - 1]?.includes(trecho))
+    expect(dos('throw Error(').length, 'a fixture perdeu o `throw Error(`').toBe(1)
+    expect(dos('globalThis.Error').length, 'a fixture perdeu o `globalThis.Error`').toBe(1)
+    expect(await lintar(eslint, FIXTURE, 'apps/api/src/x.ts', regras)).toEqual(expect.arrayContaining(dos('throw Error(')))
+  })
+
+  it('o jeito certo passa: ErroDeInvariante com texto fixo, ErroDeDominio, classe do módulo, relançamento e subclasse com campo', async () => {
+    expect(marcas(lerFixture('erro-tipado-permitido.ts'))).toEqual([])
+    for (const caminho of ['apps/api/src/x.ts', 'packages/nucleo/src/x.ts']) {
+      expect(await lintar(eslint, 'erro-tipado-permitido.ts', caminho, regras), caminho).toEqual([])
+    }
+  })
+
+  it.each([
+    'apps/api/src/x/x.test.ts',
+    'apps/api/src/x/x.int.test.ts',
+    'apps/web/src/x.test.tsx',
+    'packages/nucleo/src/x/x.test.ts',
+    'apps/web/src/__fixtures__/tela.ts',
+    'packages/nucleo/src/ia/__fixtures__/entradas.ts',
+  ])('em teste e em __fixtures__ a mesma fixture passa: %s', async (caminho) => {
+    expect(await lintar(eslint, FIXTURE, caminho, regras)).toEqual([])
+  })
+
+  it('a exceção única é o main.tsx da web: nele passa, e em qualquer outro arquivo da web reprova', async () => {
+    expect(await lintar(eslint, FIXTURE, 'apps/web/src/main.tsx', regras)).toEqual([])
+    expect(await lintar(eslint, FIXTURE, 'apps/web/src/rotas.tsx', regras)).toEqual(marcasDeViolacao(FIXTURE))
+  })
+
+  it.each(['apps/api/test/x.ts', 'e2e/x.spec.ts', 'tools/ci/x.ts', 'infra/scripts/x.ts', 'packages/shared/src/x.ts'])(
+    'fora de apps/*/src e de packages/nucleo/src a regra não vale: %s',
+    async (caminho) => {
+      expect(await lintar(eslint, FIXTURE, caminho, regras)).toEqual([])
+    },
+  )
+
+  it('o eslint-disable não fura: o ESLint comum aceita o comentário e reprova a diretiva, e a passada sem comentários reprova o throw', async () => {
+    const fixture = 'erro-sem-tipo-desligado.ts'
+    const diretivas = new Set(['@eslint-community/eslint-comments/no-restricted-disable', 'guardas/erro-tipado'])
+    expect(await lintar(eslint, fixture, 'apps/api/src/x.ts', diretivas)).toEqual(marcasDeViolacao(fixture))
+    expect(await lintar(eslintDasGuardas, fixture, 'apps/api/src/x.ts', regras)).toEqual(['4 guardas/erro-tipado'])
+  })
+
+  it('o repositório de hoje não tem violação: nenhum arquivo de produção lança Error genérico ou literal', async () => {
+    const eslintDoRepositorio = criarEslintDasGuardas()
+    const resultados = await eslintDoRepositorio.lintFiles(['apps/*/src/**/*.{ts,tsx}', 'packages/nucleo/src/**/*.{ts,tsx}'])
+    const violacoes = resultados.flatMap((resultado) => resultado.messages.filter((mensagem) => mensagem.ruleId === 'guardas/erro-tipado').map((mensagem) => `${resultado.filePath}:${mensagem.line}`))
+    expect(violacoes).toEqual([])
+  }, 120_000)
+})
+
 describe('guarda desligada por comentário', () => {
   it.each(['desabilitar-na-linha.ts', 'desabilitar-tudo.ts'])(
     'o ESLint reprova a diretiva que desliga uma guarda: %s',
@@ -576,13 +643,15 @@ describe('tamanho com catraca (RF11, R37)', () => {
 })
 
 describe('configuração das guardas', () => {
-  it('as únicas exceções são o SDK nos adaptadores, a tabela no repository, no teste e no db/ do núcleo, a própria guarda de tabela, o teste do redact e a mensagem repassada pelo LoggerDoNest', () => {
+  it('as únicas exceções são o SDK nos adaptadores, a tabela no repository, no teste e no db/ do núcleo, a própria guarda de tabela, o erro tipado em teste, em __fixtures__ e no main.tsx da web, o teste do redact e a mensagem repassada pelo LoggerDoNest', () => {
     expect(EXCECOES_DAS_GUARDAS).toEqual([
       { files: ['apps/api/src/ia/adapters/**'], regras: REGRAS_DE_SDK_DE_IA },
       { files: ['**/*.repository.ts'], regras: REGRAS_DE_TENANT },
       { files: ARQUIVOS_DE_TESTE, regras: REGRAS_DE_TENANT },
       { files: ['packages/nucleo/src/db/**'], regras: REGRAS_DE_TENANT },
       { files: ['tools/guardas/regras-tenant.mjs'], regras: REGRAS_DE_TENANT },
+      { files: [...ARQUIVOS_DE_TESTE, '**/__fixtures__/**'], regras: REGRAS_DE_ERRO },
+      { files: ['apps/web/src/main.tsx'], regras: REGRAS_DE_ERRO },
       { files: ['packages/nucleo/src/log/logger.test.ts'], regras: REGRAS_DE_LOG },
       { files: ['packages/nucleo/src/log/logger-do-nest.ts'], regras: ['guardas/log-sem-conteudo-montado'] },
     ])
@@ -594,6 +663,19 @@ describe('configuração das guardas', () => {
       expect(REGRAS_EM_TODO_ARQUIVO, regra).toContain(regra)
       expect(REGRAS_DAS_GUARDAS, regra).toContain(regra)
     }
+  })
+
+  it('a guarda de erro tipado fica entre as que a passada sem comentários roda, e está em erro na produção e desligada em teste, em __fixtures__ e no main.tsx', async () => {
+    expect(REGRAS_DE_ERRO).toEqual(['guardas/erro-tipado'])
+    expect(REGRAS_DAS_GUARDAS).toContain('guardas/erro-tipado')
+    const nivelEm = async (caminho: string) =>
+      ((await eslint.calculateConfigForFile(join(raizRepositorio, caminho))) as { rules: Record<string, [number, ...unknown[]]> }).rules['guardas/erro-tipado']?.[0] ?? 0
+    expect(await nivelEm('apps/api/src/x/x.service.ts')).toBe(2)
+    expect(await nivelEm('packages/nucleo/src/x/x.ts')).toBe(2)
+    expect(await nivelEm('apps/web/src/rotas.tsx')).toBe(2)
+    expect(await nivelEm('apps/api/src/x/x.test.ts')).toBe(0)
+    expect(await nivelEm('apps/web/src/__fixtures__/tela.tsx')).toBe(0)
+    expect(await nivelEm('apps/web/src/main.tsx')).toBe(0)
   })
 
   it('não existe eslint.config fora da raiz: numa subpasta ele substituiria a configuração e as guardas', () => {

@@ -5,6 +5,7 @@ import {
   CHAVES_DE_PRAZO_FIXO,
   CHAVES_DE_RETENCAO,
   CodigoDeErro,
+  ErroDeInvariante,
   FINALIDADE_DO_AJUSTE_DE_RETENCAO,
   retencaoDaEscola,
   type RetencaoDaCategoria,
@@ -103,7 +104,7 @@ export function ajustarRetencao(banco: Banco, autor: ConferenciaDoAutor, pedido:
           autorOperador,
         })
         const efetiva = retencaoDaEscola(await repositorio.ajustes()).find((retencao) => retencao.categoria === categoria)
-        if (efetiva === undefined) throw new Error('categoria ajustada fora do catálogo')
+        if (efetiva === undefined) throw new ErroDeInvariante('categoria ajustada fora do catálogo')
         return efetiva
       })
     }),

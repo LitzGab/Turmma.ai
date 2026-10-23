@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { describe, expect, it } from 'vitest'
-import { ACOES_DE_AUDITORIA, CAMPOS_PROIBIDOS_NA_AUDITORIA, problemasDoMapaDeAcoes, type DefinicaoDeAcao } from './acoes.js'
+import { ErroDeInvariante } from '@educa/shared'
+import { ACOES_DE_AUDITORIA, CAMPOS_PROIBIDOS_NA_AUDITORIA, exigirMapaDeAcoesValido, MapaDeAuditoriaInvalido, problemasDoMapaDeAcoes, type DefinicaoDeAcao } from './acoes.js'
 
 const acaoCom = (depois: z.ZodObject): Record<string, DefinicaoDeAcao> => ({ 'teste.acao': { entidade: 'teste', antes: null, depois, finalidade: null } })
 
@@ -8,6 +9,24 @@ describe('mapa de ações da auditoria', () => {
   it('o mapa real passa na conferência: nenhum nome proibido, todo objeto estrito, só tipos de id, estado ou data', () => {
     expect(Object.keys(ACOES_DE_AUDITORIA).length).toBeGreaterThan(0)
     expect(problemasDoMapaDeAcoes(ACOES_DE_AUDITORIA)).toEqual([])
+  })
+
+  it('o mapa com problema é recusado com um ErroDeInvariante de mensagem fixa e os caminhos num campo; o mapa real passa', () => {
+    const mapa: Record<string, DefinicaoDeAcao> = { 'teste.frouxo': { entidade: 'teste', antes: null, depois: z.object({ turmaId: z.uuid() }), finalidade: null } }
+
+    const recusa = (() => {
+      try {
+        exigirMapaDeAcoesValido(mapa)
+      } catch (erro) {
+        return erro
+      }
+      return undefined
+    })()
+
+    expect(recusa).toBeInstanceOf(MapaDeAuditoriaInvalido)
+    expect(recusa).toBeInstanceOf(ErroDeInvariante)
+    expect(recusa).toMatchObject({ name: 'MapaDeAuditoriaInvalido', message: 'mapa de auditoria inválido', problemas: ['teste.frouxo.depois: objeto não estrito'] })
+    expect(() => exigirMapaDeAcoesValido(ACOES_DE_AUDITORIA)).not.toThrow()
   })
 
   it('a lista proibida é a da Tech Spec, seção 3, mais senha', () => {

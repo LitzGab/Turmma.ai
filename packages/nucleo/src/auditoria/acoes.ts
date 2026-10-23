@@ -5,6 +5,7 @@ import {
   CHAVES_DE_RETENCAO,
   CONTESTACOES_DE_VINCULO,
   DECISORES_DA_REIVINDICACAO,
+  ErroDeInvariante,
   ESTADOS_DE_MATERIAL,
   ESTADOS_DE_VINCULO,
   ESTADOS_DO_PEDIDO,
@@ -800,6 +801,22 @@ export function problemasDoMapaDeAcoes(mapa: Readonly<Record<string, DefinicaoDe
   ])
 }
 
+/**
+ * O mapa tem campo proibido ou objeto não estrito. Os problemas são caminhos do próprio mapa (`teste.acao.depois.dados`),
+ * escritos no código e sem dado de pessoa: vão num campo, e a mensagem continua fixa.
+ */
+export class MapaDeAuditoriaInvalido extends ErroDeInvariante {
+  constructor(readonly problemas: readonly string[]) {
+    super('mapa de auditoria inválido')
+    this.name = 'MapaDeAuditoriaInvalido'
+  }
+}
+
+/** Recusa o mapa que tem problema, com os caminhos deles no erro. */
+export function exigirMapaDeAcoesValido(mapa: Readonly<Record<string, DefinicaoDeAcao>>): void {
+  const problemas = problemasDoMapaDeAcoes(mapa)
+  if (problemas.length > 0) throw new MapaDeAuditoriaInvalido(problemas)
+}
+
 // Falha no carregamento do módulo: um mapa com campo proibido não chega a gravar uma linha.
-const problemasDoMapa = problemasDoMapaDeAcoes(ACOES_DE_AUDITORIA)
-if (problemasDoMapa.length > 0) throw new Error(`mapa de auditoria inválido: ${problemasDoMapa.join('; ')}`)
+exigirMapaDeAcoesValido(ACOES_DE_AUDITORIA)

@@ -2,6 +2,7 @@ import { ErroDeDominio, exigirAnoEmCurso, RegistroDeAuditoria, sessaoDaRequisica
 import {
   alcanceDe,
   CodigoDeErro,
+  ErroDeInvariante,
   esquemaRespostaAlunosDaTurma,
   esquemaRespostaListaDeTurmas,
   esquemaRespostaTurma,
@@ -69,7 +70,7 @@ export class TurmaService {
       if (gravada === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_ENCONTRADO)
       const { serieId, ...turma } = gravada
       const serie = await new SerieRepository(tx).porId(serieId)
-      if (serie === undefined) throw new Error('série da turma não encontrada')
+      if (serie === undefined) throw new ErroDeInvariante('série da turma não encontrada')
       return { ...turma, serie }
     })
     return esquemaRespostaTurma.parse(renomeada)

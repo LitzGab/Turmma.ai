@@ -16,6 +16,7 @@ import {
 } from '@educa/nucleo'
 import type { ConsultaPaginada, DiagnosticoGravado, EstadoDeAtividadeAplicada } from '@educa/shared'
 import { and, asc, desc, eq, exists, isNull, lt, sql, type SQL } from 'drizzle-orm'
+import { ErroDeInvariante } from '@educa/shared'
 
 /** Uma atividade da turma do aluno, na lista dele: sem acerto, sem gabarito, sem colega. */
 export interface MinhaAtividadeLida {
@@ -191,7 +192,7 @@ export class MinhaAtividadeRepository {
         set: { iniciadaEm: sql`${tentativaAtividade.iniciadaEm}` },
       })
       .returning({ iniciadaEm: tentativaAtividade.iniciadaEm, enviadaEm: tentativaAtividade.enviadaEm })
-    if (linha === undefined) throw new Error('tentativa não aberta')
+    if (linha === undefined) throw new ErroDeInvariante('tentativa não aberta')
     return linha
   }
 
@@ -241,7 +242,7 @@ export class MinhaAtividadeRepository {
             .select(COLUNAS_DA_RESPOSTA)
             .from(respostaAtividade)
             .where(and(this.#minha(respostaAtividade, atividadeAplicadaId), eq(respostaAtividade.questao, questao)))
-    if (lida === undefined) throw new Error('resposta não gravada')
+    if (lida === undefined) throw new ErroDeInvariante('resposta não gravada')
     return lida
   }
 

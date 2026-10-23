@@ -1,5 +1,6 @@
 import 'reflect-metadata'
-import { ConferenciaDasPermissoes, METADADO_ENTRADA_DE_OPERACAO, METADADO_ROTA_DE_OPERACAO, Permite, RotaAnonima } from '@educa/nucleo'
+import { ConferenciaDasPermissoes, METADADO_ENTRADA_DE_OPERACAO, METADADO_ROTA_DE_OPERACAO, Permite, RotaAnonima, RotasSemPermissao } from '@educa/nucleo'
+import { ErroDeInvariante } from '@educa/shared'
 import { Controller, Get, Module, SetMetadata } from '@nestjs/common'
 import { DiscoveryModule, DiscoveryService, NestFactory } from '@nestjs/core'
 import { describe, expect, it } from 'vitest'
@@ -72,8 +73,15 @@ describe('boot da API: toda rota declara quem pode chamá-la', () => {
   })
 
   it('rota sem @Permite, sem @RotaAnonima e sem marcador da operação derruba o boot, com o nome do controller e do método', async () => {
-    await expect(subir([ComPermissaoController, OperacaoNoMetodoController, EsquecidoController])).rejects.toThrow(
-      'rota sem @Permite, @RotaAnonima nem marcador da operação: EsquecidoController.rotaNova',
-    )
+    const recusa = await subir([ComPermissaoController, OperacaoNoMetodoController, EsquecidoController]).catch((erro: unknown) => erro)
+
+    expect(recusa).toBeInstanceOf(RotasSemPermissao)
+    expect(recusa).toBeInstanceOf(ErroDeInvariante)
+    expect(recusa).toMatchObject({
+      name: 'RotasSemPermissao',
+      message: 'rota sem @Permite, @RotaAnonima nem marcador da operação',
+      codigo: 'ROTA_SEM_PERMISSAO',
+      rotas: [{ controller: 'EsquecidoController', metodo: 'rotaNova' }],
+    })
   })
 })

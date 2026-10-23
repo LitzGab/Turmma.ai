@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 import { contextoAtual, criarLogger, ErroDeDominio, Permite, RotaAnonima, TENTE_DE_NOVO_PADRAO_SEGUNDOS, type PoolBanco } from '@educa/nucleo'
-import { CodigoDeErro, MENSAGENS_DE_ERRO } from '@educa/shared'
+import { CodigoDeErro, ErroDeInvariante, MENSAGENS_DE_ERRO } from '@educa/shared'
 import {
   Body,
   Controller,
@@ -27,6 +27,7 @@ import { BancadaDeSessoes } from './sessao-de-teste.js'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const TABELA = `teste_erro_${Date.now()}`
 const NOME_SINTETICO = 'Enzo Martins'
+const MOTIVO_DA_INVARIANTE = 'turma gravada sem a linha de volta'
 
 // Escola sintética que o cliente tenta injetar pelo cabeçalho: não precisa existir.
 const ESCOLA_INJETADA = '0190f5a0-0000-7000-8000-00000000000b'
@@ -44,6 +45,11 @@ class ControladorDeTeste {
   @Get('excecao')
   lancar(): never {
     throw new Error(`falhou ao gravar ${NOME_SINTETICO} com select * from aluno where nome = '${NOME_SINTETICO}'`)
+  }
+
+  @Get('invariante')
+  invariante(): never {
+    throw new ErroDeInvariante(MOTIVO_DA_INVARIANTE)
   }
 
   @Get('dominio/limite')
@@ -149,6 +155,19 @@ describe('erro tipado e log sem dado pessoal', () => {
     expect(linha).toMatchObject({ requisicaoId, status: 500, codigo: CodigoDeErro.ERRO_INTERNO, erro: { tipo: 'Error' } })
     expect(linhasDeLog.join('')).not.toContain(NOME_SINTETICO)
     expect(linhasDeLog.join('')).not.toContain('select * from')
+  })
+
+  it('ErroDeInvariante vira ERRO_INTERNO 500 sem o motivo na resposta, e o log leva só o nome da classe', async () => {
+    const resposta = await request(app.getHttpServer()).get('/teste/invariante')
+
+    expect(resposta.status).toBe(500)
+    const requisicaoId = esperarEnvelopeSemVazamento(resposta.body, CodigoDeErro.ERRO_INTERNO)
+    expect(resposta.text).not.toContain(MOTIVO_DA_INVARIANTE)
+    expect(resposta.text).not.toContain('ErroDeInvariante')
+
+    const [linha] = registros().filter((registro) => registro.evento === 'http.erro')
+    expect(linha).toMatchObject({ requisicaoId, status: 500, codigo: CodigoDeErro.ERRO_INTERNO, erro: { tipo: 'ErroDeInvariante' } })
+    expect(linhasDeLog.join('')).not.toContain(MOTIVO_DA_INVARIANTE)
   })
 
   it('ErroDeDominio lançado pelo código sai com o próprio código e status, e o status informado vale', async () => {

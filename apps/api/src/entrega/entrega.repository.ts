@@ -2,6 +2,7 @@ import { artefato, atividadeAplicada, entrega, exigirAnoEmCurso, exigirEscolaDoC
 import type { ChaveDeFuncao, ConsultaEntregas, EstadoDeEntrega, TipoDeEntrega } from '@educa/shared'
 import { and, desc, eq, lt, sql, type SQL } from 'drizzle-orm'
 import { alias } from 'drizzle-orm/pg-core'
+import { ErroDeInvariante } from '@educa/shared'
 import { comVinculoConfirmadoDoProfessor, disciplinaDaEntrega } from '../assistente/turma-do-professor.repository.js'
 
 /** Uma entrega como o professor da turma a lê: com o título do artefato a que se refere e o nome de quem decidiu. */
@@ -116,7 +117,7 @@ export class EntregaRepository {
       .insert(entrega)
       .values({ escolaId: exigirEscolaDoContexto(), anoLetivoId: exigirAnoEmCurso(), turmaId: nova.turmaId, funcao: 'adaptacao', tipo: 'versao_adaptada', artefatoId: nova.artefatoId, execucaoId: nova.execucaoId })
       .returning({ id: entrega.id })
-    if (criada === undefined) throw new Error('entrega não criada')
+    if (criada === undefined) throw new ErroDeInvariante('entrega não criada')
     return criada.id
   }
 }

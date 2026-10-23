@@ -4,7 +4,10 @@ import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
 import { criarSessoesSinteticas, emissorDeTokenSintetico, QUANTIDADE_MAXIMA_DE_SESSOES_SINTETICAS } from '../sessao/index.js'
+import { ArgumentoInvalido } from './comando.js'
 import { urlDoBancoDeOperacao } from './uso.js'
+
+export { ArgumentoInvalido }
 
 /**
  * Sessão real para teste local, esteira e cenário de carga, na escola informada:
@@ -15,13 +18,6 @@ import { urlDoBancoDeOperacao } from './uso.js'
  * linha, emitidos pelo `EmissorDeToken`: valem 10 min, e a sessão, 12 h. Só roda com `AMBIENTE=local`, conferido
  * antes de abrir o banco. Nenhum dado de pessoa entra ou sai: o nome é fixo e sintético.
  */
-
-export class ArgumentoInvalido extends Error {
-  constructor(readonly opcao: string) {
-    super(`Opção inválida ou ausente: --${opcao}`)
-    this.name = 'ArgumentoInvalido'
-  }
-}
 
 export interface SaidaDoComando {
   saida: (texto: string) => void
@@ -56,13 +52,13 @@ export function lerPedidoDeSessao(argumentos: string[]): PedidoDoComando {
     }).values
   } catch {
     // O erro do parseArgs repete o argumento recebido; a mensagem fica só com as opções aceitas.
-    throw new ArgumentoInvalido('escola, --papel ou --quantidade')
+    throw new ArgumentoInvalido('--escola, --papel ou --quantidade')
   }
-  if (valores.escola === undefined || !z.uuid().safeParse(valores.escola).success) throw new ArgumentoInvalido('escola')
+  if (valores.escola === undefined || !z.uuid().safeParse(valores.escola).success) throw new ArgumentoInvalido('--escola')
   const papel = PAPEIS_DE_USUARIO.find((aceito) => aceito === valores.papel)
-  if (papel === undefined) throw new ArgumentoInvalido('papel')
+  if (papel === undefined) throw new ArgumentoInvalido('--papel')
   const texto = valores.quantidade ?? '1'
-  if (!/^[1-9][0-9]{0,3}$/.test(texto) || Number(texto) > QUANTIDADE_MAXIMA_DE_SESSOES_SINTETICAS) throw new ArgumentoInvalido('quantidade')
+  if (!/^[1-9][0-9]{0,3}$/.test(texto) || Number(texto) > QUANTIDADE_MAXIMA_DE_SESSOES_SINTETICAS) throw new ArgumentoInvalido('--quantidade')
   return { escolaId: valores.escola.toLowerCase(), papel, quantidade: Number(texto) }
 }
 

@@ -2,6 +2,7 @@ import { contextoAtual, ErroDeDominio, executarNoContexto, RegistroDeAuditoria, 
 import {
   alcanceDe,
   CodigoDeErro,
+  ErroDeInvariante,
   esquemaRespostaBuscaDeMaterial,
   esquemaRespostaListaDeMateriais,
   esquemaRespostaMaterial,
@@ -178,7 +179,7 @@ export class MaterialService {
   #agendarExtracao(materialId: string, bytes: Buffer): void {
     const { escolaId } = sessaoDaRequisicao()
     const requisicaoId = contextoAtual()?.requisicaoId
-    if (requisicaoId === undefined) throw new Error('contexto da requisição ausente')
+    if (requisicaoId === undefined) throw new ErroDeInvariante('contexto da requisição ausente')
     this.dependencias.fila.agendar(escolaId, (sinal) => executarNoContexto({ requisicaoId, escolaId }, () => this.#extrair(materialId, bytes, sinal)))
   }
 

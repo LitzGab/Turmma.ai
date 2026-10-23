@@ -233,13 +233,13 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
   - [x] 24.3 Etapa do knip (`--include dependencies,unlisted,binaries,unresolved`) em `tools/ci/etapas-de-guarda.ts`, no `ci:verificar`; para o portão da tarefa vê-la sem tocar `tools/processo/`, o script `guarda:dependencias` passa a rodar também o knip (declare a escolha)
   - [x] 24.4 Testes: etapa limpa, cada categoria reprova a sua fixture, versões exatas, worker e despachante sem `pino`
 
-- [ ] **25.0 — Todo `throw` de produção é tipado, e o lint barra o resto**
-  - [ ] 25.1 `ErroDeInvariante` em `packages/nucleo/src/erro/`, com motivo fixo (recusa da interpolação pelo tipo ou por lint, declarada)
-  - [ ] 25.2 Trocar cada `throw new Error(` de produção, com a mensagem que um teste afirma igual
-  - [ ] 25.3 `conferencia-das-permissoes.ts:59` lança erro tipado com código, com controller e método em campos; `permissao-no-boot.test.ts:74` os lê dali (mudança declarada)
-  - [ ] 25.4 `ArgumentoInvalido` vira uma classe só, reexportada
-  - [ ] 25.5 `guardas/erro-tipado` (`tools/guardas/regras-erro.mjs`) em `apps/*/src` e `packages/nucleo/src`, fora de teste, exceto `apps/web/src/main.tsx`
-  - [ ] 25.6 Testes: classe, formas proibidas, exceções, segunda passada, filtro global, ops
+- [x] **25.0 — Todo `throw` de produção é tipado, e o lint barra o resto**
+  - [x] 25.1 `ErroDeInvariante` em `packages/nucleo/src/erro/`, com motivo fixo (recusa da interpolação pelo tipo ou por lint, declarada)
+  - [x] 25.2 Trocar cada `throw new Error(` de produção, com a mensagem que um teste afirma igual
+  - [x] 25.3 `conferencia-das-permissoes.ts:59` lança erro tipado com código, com controller e método em campos; `permissao-no-boot.test.ts:74` os lê dali (mudança declarada)
+  - [x] 25.4 `ArgumentoInvalido` vira uma classe só, reexportada
+  - [x] 25.5 `guardas/erro-tipado` (`tools/guardas/regras-erro.mjs`) em `apps/*/src` e `packages/nucleo/src`, fora de teste, exceto `apps/web/src/main.tsx`
+  - [x] 25.6 Testes: classe, formas proibidas, exceções, segunda passada, filtro global, ops
 
 - [ ] **90.0 — Um Dockerfile com `target`, imagens medidas antes e depois**
   - [ ] 90.1 O `90_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-5.md`

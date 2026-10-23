@@ -1,5 +1,5 @@
 import { artefato, atividadeAplicada, entrega, exigirAnoEmCurso, exigirEscolaDoContexto, material, sessaoDaRequisicao, type Banco, type TransacaoBanco } from '@educa/nucleo'
-import { MAXIMO_DE_VERSOES_NO_ARTEFATO, type ConsultaArtefatos, type ConteudoDoArtefato, type EstadoDeAtividadeAplicada, type EstadoDeEntrega, type TipoDeArtefato } from '@educa/shared'
+import { ErroDeInvariante, MAXIMO_DE_VERSOES_NO_ARTEFATO, type ConsultaArtefatos, type ConteudoDoArtefato, type EstadoDeAtividadeAplicada, type EstadoDeEntrega, type TipoDeArtefato } from '@educa/shared'
 import { and, desc, eq, exists, inArray, lt, ne, not, sql, type SQL } from 'drizzle-orm'
 import { comVinculoConfirmadoDoProfessor, disciplinaDoArtefato } from '../assistente/turma-do-professor.repository.js'
 
@@ -175,7 +175,7 @@ export class ArtefatoRepository {
         criadoPor: sessaoDaRequisicao().usuarioId,
       })
       .returning({ id: artefato.id })
-    if (criado === undefined) throw new Error('artefato não criado')
+    if (criado === undefined) throw new ErroDeInvariante('artefato não criado')
     return criado.id
   }
 }

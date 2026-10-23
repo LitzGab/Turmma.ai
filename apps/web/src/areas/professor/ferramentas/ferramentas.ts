@@ -1,4 +1,5 @@
 import {
+  ErroDeInvariante,
   esquemaParametrosDeFerramenta,
   FERRAMENTAS,
   MAXIMO_DE_QUESTOES_POR_ATIVIDADE,
@@ -111,7 +112,7 @@ export function ehFerramenta(valor: string): valor is Ferramenta {
 
 export function ferramentaDoCatalogo(ferramenta: Ferramenta): FerramentaDoCatalogo {
   const achada = CATALOGO_DE_FERRAMENTAS.find((item) => item.ferramenta === ferramenta)
-  if (achada === undefined) throw new Error(`ferramenta fora do catálogo: ${ferramenta}`)
+  if (achada === undefined) throw new ErroDeInvariante('ferramenta fora do catálogo')
   return achada
 }
 

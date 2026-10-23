@@ -1,4 +1,4 @@
-import { retencaoDaEscola, type LinhaDoCompartilhamento, type PapelDoTitular } from '@educa/shared'
+import { ErroDeInvariante, retencaoDaEscola, type LinhaDoCompartilhamento, type PapelDoTitular } from '@educa/shared'
 import type { Banco, TransacaoBanco } from '../db/banco.js'
 import { relogioDoSistema, type Relogio } from '../relogio.js'
 import { RetencaoDaEscolaRepository } from '../retencao/retencao-da-escola.repository.js'
@@ -66,7 +66,7 @@ export class Compartilhamento {
     const agora = this.relogio.agora()
     const ajustes = await new RetencaoDaEscolaRepository(this.banco).ajustes()
     const retencao = retencaoDaEscola(ajustes).find((candidata) => candidata.categoria === 'consumo_por_aluno')
-    if (retencao === undefined) throw new Error('prazo de consumo_por_aluno ausente do catálogo de retenção')
+    if (retencao === undefined) throw new ErroDeInvariante('prazo de consumo_por_aluno ausente do catálogo de retenção')
     const { horizonte, fimDoDia } = await leituras.datasDeReferencia(agora, retencao.meses)
     const periodo = await this.#periodoDoTitular(leituras, alvo, horizonte, fimDoDia)
     const suboperadores = await new SuboperadorDaEscolaRepository(this.banco).daEscola()

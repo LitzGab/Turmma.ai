@@ -1,3 +1,4 @@
+import { ErroDeInvariante } from '@educa/shared'
 import { contextoAtual } from './contexto.js'
 
 /**
@@ -7,6 +8,6 @@ import { contextoAtual } from './contexto.js'
  */
 export function exigirEscolaDoContexto(): string {
   const escolaId = contextoAtual()?.escolaId
-  if (escolaId === undefined) throw new Error('consulta com escopo sem escola no contexto')
+  if (escolaId === undefined) throw new ErroDeInvariante('consulta com escopo sem escola no contexto')
   return escolaId
 }

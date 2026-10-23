@@ -1,6 +1,7 @@
 import { acessoTurma, anoLetivo, exigirAnoEmCurso, exigirEscolaDoContexto, serie, sessaoDaRequisicao, turma, usuario, vinculo, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { AlunoDaTurma, ConsultaPaginada, RespostaTurmaAberta, Turma, Turno } from '@educa/shared'
 import { and, asc, eq, exists, gt, isNotNull, isNull, not, or, sql, type SQL } from 'drizzle-orm'
+import { ErroDeInvariante } from '@educa/shared'
 import { excluirSemReferencia } from '../exclusao.js'
 
 export interface NovaTurma {
@@ -107,7 +108,7 @@ export class TurmaRepository {
       .insert(turma)
       .values({ escolaId: exigirEscolaDoContexto(), anoLetivoId: exigirAnoEmCurso(), serieId: nova.serieId, nome: nova.nome, turno: nova.turno })
       .returning(colunas)
-    if (criada === undefined) throw new Error('turma não criada')
+    if (criada === undefined) throw new ErroDeInvariante('turma não criada')
     return criada
   }
 

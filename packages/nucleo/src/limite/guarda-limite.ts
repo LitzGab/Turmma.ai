@@ -1,4 +1,4 @@
-import { CodigoDeErro } from '@educa/shared'
+import { CodigoDeErro, ErroDeInvariante } from '@educa/shared'
 import type { CanActivate, ExecutionContext } from '@nestjs/common'
 import type { Reflector } from '@nestjs/core'
 import type { IncomingMessage } from 'node:http'
@@ -117,7 +117,7 @@ export class GuardaDeLimite implements CanActivate {
     // Sem token verificado (guarda fora de ordem), falha fechada.
     if (token === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
     const requisicaoId = contextoAtual()?.requisicaoId
-    if (requisicaoId === undefined) throw new Error('contexto da requisição ausente')
+    if (requisicaoId === undefined) throw new ErroDeInvariante('contexto da requisição ausente')
     const identidade = { escolaId: token.escolaId, usuarioId: token.usuarioId }
     const limites = await executarNoContexto({ requisicaoId, escolaId: token.escolaId }, () => this.limitesDaEscola.daEscola())
     return this.limitador.consumirAutenticada(identidade, limites)

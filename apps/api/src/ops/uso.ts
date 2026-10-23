@@ -15,8 +15,10 @@ import { randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { abrirBancoDeOperacao, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
+import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import type { ConferenciaDoAutor } from '../sessao/index.js'
+
+export { ArgumentoInvalido }
 
 // Mora em `comando.ts` desde a A0; reexportado para quem já o importava daqui (`ops:sessao-sintetica`).
 export { urlDoBancoDeOperacao } from './comando.js'
@@ -33,13 +35,6 @@ export { urlDoBancoDeOperacao } from './comando.js'
  * contexto dela, pelo mesmo repository com escopo que qualquer outro código usaria. Desde a A0 lê o `OPERADOR`, como os
  * outros `ops:*`: com operador ativo, só um deles consulta.
  */
-
-export class ArgumentoInvalido extends Error {
-  constructor(readonly opcao: string) {
-    super(`Opção inválida ou ausente: --${opcao}`)
-    this.name = 'ArgumentoInvalido'
-  }
-}
 
 export interface PedidoDeUso {
   escolaId: string
@@ -63,17 +58,17 @@ function lerOpcoes(argumentos: string[]) {
     }).values
   } catch {
     // O erro do parseArgs repete o argumento recebido; a mensagem fica só com as opções aceitas.
-    throw new ArgumentoInvalido('escola, --dia ou --mes')
+    throw new ArgumentoInvalido('--escola, --dia ou --mes')
   }
 }
 
 export function lerPedidoDeUso(argumentos: string[], relogio: Relogio = relogioDoSistema): PedidoDeUso {
   const valores = lerOpcoes(argumentos)
-  if (valores.escola === undefined || !z.uuid().safeParse(valores.escola).success) throw new ArgumentoInvalido('escola')
+  if (valores.escola === undefined || !z.uuid().safeParse(valores.escola).success) throw new ArgumentoInvalido('--escola')
   const dia = valores.dia ?? diaAnterior(diaDeUso(relogio.agora()))
-  if (!diaValido(dia)) throw new ArgumentoInvalido('dia')
+  if (!diaValido(dia)) throw new ArgumentoInvalido('--dia')
   const mes = valores.mes ?? dia.slice(0, 7)
-  if (!FORMATO_MES.test(mes)) throw new ArgumentoInvalido('mes')
+  if (!FORMATO_MES.test(mes)) throw new ArgumentoInvalido('--mes')
   return { escolaId: valores.escola.toLowerCase(), dia, mes }
 }
 

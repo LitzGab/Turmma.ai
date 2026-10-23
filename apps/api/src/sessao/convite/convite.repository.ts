@@ -1,5 +1,5 @@
 import { convite, ErroDeDominio, erroDoPostgresEm, escola, exigirEscolaDoContexto, usuario, type Banco, type DadosDaCoordenacao, type DadosDoProfessor, type TipoDeConvite, type TransacaoBanco } from '@educa/nucleo'
-import { CodigoDeErro } from '@educa/shared'
+import { CodigoDeErro, ErroDeInvariante } from '@educa/shared'
 import { and, desc, eq, exists, gte, isNotNull, isNull, sql } from 'drizzle-orm'
 
 /**
@@ -63,7 +63,7 @@ export class ConviteRepository {
       if (doPostgres?.code === '23505' && doPostgres.constraint === 'convite_pendente_unico') throw new ErroDeDominio(CodigoDeErro.CONFLITO)
       throw erro
     }
-    if (criado === undefined) throw new Error('convite não devolvido pelo insert')
+    if (criado === undefined) throw new ErroDeInvariante('convite não devolvido pelo insert')
     return criado.id
   }
 

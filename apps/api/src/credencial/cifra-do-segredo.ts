@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
+import { ErroDeInvariante } from '@educa/shared'
 
 /** Bytes do vetor de inicialização do GCM: 96 bits, sorteado a cada cifra. */
 const BYTES_DO_IV = 12
@@ -35,7 +36,7 @@ export class CifraDoSegredo {
     private readonly versaoAtual: number,
     private readonly chaves: ReadonlyMap<number, Uint8Array>,
   ) {
-    if (!chaves.has(versaoAtual)) throw new Error('chave de cifra da versão atual ausente')
+    if (!chaves.has(versaoAtual)) throw new ErroDeInvariante('chave de cifra da versão atual ausente')
   }
 
   cifrar(segredo: Uint8Array, contaId: string): SegredoCifrado {
@@ -65,7 +66,7 @@ export class CifraDoSegredo {
 
   #chave(versao: number): Uint8Array {
     const chave = this.chaves.get(versao)
-    if (chave === undefined) throw new Error('chave de cifra ausente')
+    if (chave === undefined) throw new ErroDeInvariante('chave de cifra ausente')
     return chave
   }
 }

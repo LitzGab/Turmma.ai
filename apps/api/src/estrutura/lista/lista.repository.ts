@@ -1,6 +1,7 @@
 import { credencialMatricula, exigirAnoEmCurso, exigirEscolaDoContexto, listaNome, sessaoDaRequisicao, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { ConsultaPaginada, NomeDaLista } from '@educa/shared'
 import { and, asc, eq, gt, inArray, sql } from 'drizzle-orm'
+import { ErroDeInvariante } from '@educa/shared'
 
 /** Um nome a gravar: nome e matrícula já conferidos, sem espaço nas pontas. */
 export interface NomeNovo {
@@ -120,7 +121,7 @@ export class ListaRepository {
       .insert(listaNome)
       .values({ escolaId: exigirEscolaDoContexto(), anoLetivoId: exigirAnoEmCurso(), turmaId, nome, matricula, criadoPor: sessaoDaRequisicao().usuarioId })
       .returning(colunas)
-    if (criado === undefined) throw new Error('nome da lista não criado')
+    if (criado === undefined) throw new ErroDeInvariante('nome da lista não criado')
     return criado
   }
 

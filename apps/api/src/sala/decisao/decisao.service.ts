@@ -2,6 +2,7 @@ import { ErroDeDominio, exigirEscolaDoContexto, RegistroDeAuditoria, sessaoDaReq
 import {
   alcanceDe,
   CodigoDeErro,
+  ErroDeInvariante,
   esquemaRespostaDecisao,
   esquemaRespostaPedidosDaTurma,
   type ConsultaPedidosDaTurma,
@@ -134,9 +135,9 @@ export class DecisaoService {
       let matriculaAprovada: string | undefined
       if (decisao === 'aprovar') {
         const nome = await decisoes.nomeDoPedido(pedido.listaNomeId)
-        if (nome === undefined) throw new Error('nome do pedido pendente não encontrado')
+        if (nome === undefined) throw new ErroDeInvariante('nome do pedido pendente não encontrado')
         const [aluno] = await new CriacaoDeSessaoRepository(tx).criarUsuarios([{ contaId: null, papel: 'aluno', nome: nome.nome }])
-        if (aluno === undefined) throw new Error('aluno não criado')
+        if (aluno === undefined) throw new ErroDeInvariante('aluno não criado')
         await new CredencialMatriculaRepository(tx).criar([{ usuarioId: aluno.id, matricula: nome.matricula, senhaHash: pedido.senhaHash }])
         await new VinculoRepository(tx).criarAlunoConfirmado(aluno.id, pedido.turmaId)
         await decisoes.aprovarNome(pedido.listaNomeId, aluno.id)

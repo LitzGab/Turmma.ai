@@ -1,5 +1,6 @@
 import { ConfiguracaoInvalida } from '@educa/nucleo'
 import { describe, expect, it, vi } from 'vitest'
+import { ArgumentoInvalido as ArgumentoInvalidoDoComando } from './comando.js'
 import { ArgumentoInvalido, executarOpsUso, lerPedidoDeUso, urlDoBancoDeOperacao } from './uso.js'
 
 const ESCOLA_A = '0190f5a0-0000-7000-8000-00000000000a'
@@ -20,17 +21,24 @@ describe('lerPedidoDeUso', () => {
   })
 
   it.each([
-    ['sem --escola', [], 'escola'],
-    ['escola que não é UUID', ['--escola', '1837'], 'escola'],
-    ['dia inexistente', ['--escola', ESCOLA_A, '--dia', '2026-02-30'], 'dia'],
-    ['dia em outro formato', ['--escola', ESCOLA_A, '--dia', '15/09/2026'], 'dia'],
-    ['mês inválido', ['--escola', ESCOLA_A, '--mes', '2026-13'], 'mes'],
+    ['sem --escola', [], '--escola'],
+    ['escola que não é UUID', ['--escola', '1837'], '--escola'],
+    ['dia inexistente', ['--escola', ESCOLA_A, '--dia', '2026-02-30'], '--dia'],
+    ['dia em outro formato', ['--escola', ESCOLA_A, '--dia', '15/09/2026'], '--dia'],
+    ['mês inválido', ['--escola', ESCOLA_A, '--mes', '2026-13'], '--mes'],
   ])('%s: recusa citando só a opção', (_caso, argumentos, opcao) => {
     expect(() => lerPedidoDeUso(argumentos, relogio)).toThrow(new ArgumentoInvalido(opcao))
   })
 
+  it('o ArgumentoInvalido do uso é o de comando.ts, uma classe só, com a mensagem de sempre no terminal', () => {
+    expect(ArgumentoInvalido).toBe(ArgumentoInvalidoDoComando)
+    expect(() => lerPedidoDeUso([], relogio)).toThrow(ArgumentoInvalidoDoComando)
+    expect(() => lerPedidoDeUso([], relogio)).toThrow('Opção inválida ou ausente: --escola')
+  })
+
   it('opção desconhecida não repete o valor recebido na mensagem', () => {
     expect(() => lerPedidoDeUso(['--escola', ESCOLA_A, '--senha', 'segredo_sintetico'], relogio)).toThrow(ArgumentoInvalido)
+    expect(() => lerPedidoDeUso(['--escola', ESCOLA_A, '--senha', 'segredo_sintetico'], relogio)).toThrow('Opção inválida ou ausente: --escola, --dia ou --mes')
     expect(() => lerPedidoDeUso(['--escola', ESCOLA_A, '--senha', 'segredo_sintetico'], relogio)).not.toThrow(/segredo_sintetico/)
   })
 })

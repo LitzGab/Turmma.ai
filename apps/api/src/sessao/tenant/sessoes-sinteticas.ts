@@ -9,7 +9,7 @@ import {
   type Banco,
   type Relogio,
 } from '@educa/nucleo'
-import { CodigoDeErro, type PapelDeUsuario } from '@educa/shared'
+import { CodigoDeErro, ErroDeInvariante, type PapelDeUsuario } from '@educa/shared'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { CredencialMatriculaRepository } from '../../credencial/credencial-matricula.repository.js'
@@ -144,7 +144,7 @@ export async function criarAlunosComMatricula(
       const usuarios = await new CriacaoDeSessaoRepository(tx).criarUsuarios(alunos.map(() => ({ contaId: null, papel: 'aluno' as const, nome: NOME_SINTETICO })))
       const credenciais = alunos.map((aluno, posicao) => {
         const usuario = usuarios[posicao]
-        if (usuario === undefined) throw new Error('aluno sintético não criado')
+        if (usuario === undefined) throw new ErroDeInvariante('aluno sintético não criado')
         return { usuarioId: usuario.id, matricula: aluno.matricula, senhaHash: aluno.senhaHash }
       })
       await new CredencialMatriculaRepository(tx).criar(credenciais)

@@ -1,3 +1,4 @@
+import { ErroDeInvariante } from '@educa/shared'
 import type { TokenVerificado } from './verificar-token.js'
 
 /**
@@ -11,7 +12,7 @@ import type { TokenVerificado } from './verificar-token.js'
 const tokens = new WeakMap<object, TokenVerificado>()
 
 export function guardarTokenDaRequisicao(requisicao: object, token: TokenVerificado): void {
-  if (tokens.has(requisicao)) throw new Error('token da requisição já definido')
+  if (tokens.has(requisicao)) throw new ErroDeInvariante('token da requisição já definido')
   tokens.set(requisicao, token)
 }
 

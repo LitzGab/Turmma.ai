@@ -2,6 +2,7 @@ import type { Fila } from '@educa/shared'
 import type { Redis } from 'ioredis'
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
+import { ErroDeInvariante } from '@educa/shared'
 
 /** Quanto uma vaga vale sem renovação. Worker morto segurando vaga a perde nesse prazo (Tech Spec, seção 5). */
 export const VALIDADE_DA_VAGA_MS = 60_000
@@ -61,7 +62,7 @@ export class VagasPorEscola {
   async tomar(fila: Fila, escolaId: string | null, limite: number, jobIds: readonly string[]): Promise<ReadonlySet<string>> {
     if (jobIds.length === 0) return new Set()
     const concedidos = await this.executar(this.chave(fila, escolaId), 'tomar', this.validadeMs, limite, ...jobIds)
-    if (!Array.isArray(concedidos)) throw new Error('vaga.lua devolveu resposta inesperada ao tomar')
+    if (!Array.isArray(concedidos)) throw new ErroDeInvariante('vaga.lua devolveu resposta inesperada ao tomar')
     return new Set(concedidos.map(String))
   }
 

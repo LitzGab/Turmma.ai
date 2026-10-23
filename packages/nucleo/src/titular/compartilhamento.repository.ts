@@ -1,4 +1,5 @@
 import { sql, type SQL } from 'drizzle-orm'
+import { ErroDeInvariante } from '@educa/shared'
 import { exigirEscolaDoContexto } from '../contexto/escola-do-contexto.js'
 import type { Banco, TransacaoBanco } from '../db/banco.js'
 import { FUSO_DO_USO, diaDeUso } from '../uso/dia-de-uso.js'
@@ -62,7 +63,7 @@ export class CompartilhamentoRepository {
     `)
     const horizonte = dataDoBanco(rows[0]?.horizonte ?? null)
     const fimDoDia = dataDoBanco(rows[0]?.fimDoDia ?? null)
-    if (horizonte === null || fimDoDia === null) throw new Error('datas de referência do compartilhamento não calculadas')
+    if (horizonte === null || fimDoDia === null) throw new ErroDeInvariante('datas de referência do compartilhamento não calculadas')
     return { horizonte, fimDoDia }
   }
 

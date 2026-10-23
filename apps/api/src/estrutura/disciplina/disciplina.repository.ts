@@ -1,6 +1,7 @@
 import { disciplina, exigirEscolaDoContexto, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { ConsultaPaginada, Disciplina, PedidoCriarDisciplina } from '@educa/shared'
 import { and, asc, eq, gt } from 'drizzle-orm'
+import { ErroDeInvariante } from '@educa/shared'
 import { excluirSemReferencia } from '../exclusao.js'
 
 const colunas = { id: disciplina.id, nome: disciplina.nome, area: disciplina.area }
@@ -17,7 +18,7 @@ export class DisciplinaRepository {
       .insert(disciplina)
       .values({ escolaId: exigirEscolaDoContexto(), nome: pedido.nome, area: pedido.area ?? null })
       .returning(colunas)
-    if (criada === undefined) throw new Error('disciplina não criada')
+    if (criada === undefined) throw new ErroDeInvariante('disciplina não criada')
     return criada
   }
 

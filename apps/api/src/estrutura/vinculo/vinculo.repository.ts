@@ -12,6 +12,7 @@ import {
   type TransacaoBanco,
 } from '@educa/nucleo'
 import {
+  ErroDeInvariante,
   ESTADOS_DO_PROFESSOR_ALOCAVEIS,
   type ConsultaPaginada,
   type ContestacaoDeVinculo,
@@ -93,7 +94,7 @@ export class VinculoRepository {
         criadoPor,
       })
       .returning({ id: vinculo.id })
-    if (criado === undefined) throw new Error('vínculo não criado')
+    if (criado === undefined) throw new ErroDeInvariante('vínculo não criado')
     return criado.id
   }
 

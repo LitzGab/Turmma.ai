@@ -15,7 +15,7 @@ import {
   type Relogio,
   type RetencaoDaEscolaRepository,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, retencaoDaEscola, type TIPO_EXPURGAR_ESCOLA } from '@educa/shared'
+import { CodigoDeFalhaDeJob, ErroDeInvariante, retencaoDaEscola, type TIPO_EXPURGAR_ESCOLA } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 
@@ -78,7 +78,7 @@ export function criarExpurgoDaEscola({ repositorio, arquivos, armazem, retencao,
     let linhasTotal = 0
     for (const categoria of ordem) {
       const meses = prazos.get(categoria)
-      if (meses === undefined) throw new Error(`categoria sem prazo no catálogo: ${categoria}`)
+      if (meses === undefined) throw new ErroDeInvariante('categoria sem prazo no catálogo')
       let linhasDaCategoriaTotal = 0
       try {
         for (const alvo of ALVOS_DO_EXPURGO_DA_ESCOLA[categoria]) {

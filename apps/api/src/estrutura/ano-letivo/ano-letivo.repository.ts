@@ -1,6 +1,7 @@
 import { acessoTurma, anoLetivo, exigirEscolaDoContexto, listaNome, reivindicacao, type Banco, type TransacaoBanco } from '@educa/nucleo'
 import type { AnoLetivo, ConsultaPaginada, PedidoCriarAnoLetivo, SituacaoDoAnoLetivo } from '@educa/shared'
 import { and, asc, eq, gt, inArray, isNull, sql } from 'drizzle-orm'
+import { ErroDeInvariante } from '@educa/shared'
 
 /** O que a virada fez na sala das turmas do ano: só contagens, que a auditoria `ano_letivo.encerrado` leva. */
 export interface ViradaDaSala {
@@ -27,7 +28,7 @@ export class AnoLetivoRepository {
       .insert(anoLetivo)
       .values({ escolaId: exigirEscolaDoContexto(), ano: pedido.ano, inicio: pedido.inicio, fim: pedido.fim, situacao: 'planejado' })
       .returning(colunas)
-    if (criado === undefined) throw new Error('ano letivo não criado')
+    if (criado === undefined) throw new ErroDeInvariante('ano letivo não criado')
     return criado
   }
 

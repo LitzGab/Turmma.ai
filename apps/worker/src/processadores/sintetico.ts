@@ -1,5 +1,5 @@
 import type { EfeitoSinteticoRepository } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, type TIPO_JOB_SINTETICO } from '@educa/shared'
+import { CodigoDeFalhaDeJob, ErroDeInvariante, type TIPO_JOB_SINTETICO } from '@educa/shared'
 import { Worker } from 'node:worker_threads'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
@@ -46,7 +46,7 @@ export class SandboxDeCpu implements QueimaDeCpu {
     private readonly threadsMaximo: number,
     private readonly arquivo: URL = ARQUIVO_DO_SANDBOX,
   ) {
-    if (!Number.isInteger(threadsMaximo) || threadsMaximo < 1) throw new Error('o sandbox de CPU precisa de pelo menos uma thread')
+    if (!Number.isInteger(threadsMaximo) || threadsMaximo < 1) throw new ErroDeInvariante('o sandbox de CPU precisa de pelo menos uma thread')
   }
 
   /** Threads existentes agora, ociosas ou não. Nunca passa de `threadsMaximo`, salvo a que o aborto de um job está terminando. */

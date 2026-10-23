@@ -10,7 +10,7 @@ import {
   type LoggerBase,
   type Relogio,
 } from '@educa/nucleo'
-import { CodigoDeFalhaDeJob, TIPO_EXPURGAR_ESCOLA, type TIPO_EXPURGAR_DADO_PESSOAL } from '@educa/shared'
+import { CodigoDeFalhaDeJob, ErroDeInvariante, TIPO_EXPURGAR_ESCOLA, type TIPO_EXPURGAR_DADO_PESSOAL } from '@educa/shared'
 import type { Processador } from '../executor.js'
 import { FalhaDeJob } from '../falha-de-job.js'
 
@@ -63,6 +63,6 @@ export function criarRotinaDeExpurgo({ escolas, banco, enfileirador, janelaDaEsc
     }
     const escolasTotal = ids.length
     logger.info({ evento: 'retencao.rotina_disparada', escolasTotal, enfileiradosTotal, jaEnfileiradosTotal, falhasTotal })
-    if (falhasTotal > 0) throw new Error('expurgo não enfileirado em alguma escola')
+    if (falhasTotal > 0) throw new ErroDeInvariante('expurgo não enfileirado em alguma escola')
   }
 }

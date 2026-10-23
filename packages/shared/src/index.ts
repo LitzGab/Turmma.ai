@@ -1,5 +1,6 @@
 export { CodigoDeErro } from './erros/codigo-de-erro.js'
 export type { RespostaDeErro } from './erros/codigo-de-erro.js'
+export { ErroDeInvariante } from './erros/erro-de-invariante.js'
 export {
   avisoDoSegundoFatorConsumido,
   AVISO_DA_TROCA_RECUSADA,

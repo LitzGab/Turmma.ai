@@ -1,5 +1,5 @@
 import { exigirEscolaDoContexto, incidente, incidenteEscola, SemEscopo, suboperador, suboperadorEscola, type Banco, type TransacaoBanco } from '@educa/nucleo'
-import type { AlcanceDoSuboperador, CategoriaDeDadoDoIncidente, CategoriaDeDadoDoSuboperador, RiscoDoIncidente } from '@educa/shared'
+import { ErroDeInvariante, type AlcanceDoSuboperador, type CategoriaDeDadoDoIncidente, type CategoriaDeDadoDoSuboperador, type RiscoDoIncidente } from '@educa/shared'
 import { and, eq, isNull, sql } from 'drizzle-orm'
 
 /** O que o `ops:suboperador cadastrar` grava: a empresa, e quem da equipe a cadastrou. */
@@ -107,7 +107,7 @@ export class OperacaoPrivacidadeRepository {
    */
   async registrarIncidente(conhecidoEm: Date, registradoPor: string): Promise<string> {
     const [criado] = await this.banco.insert(incidente).values({ conhecidoEm, registradoPor }).returning({ id: incidente.id })
-    if (criado === undefined) throw new Error('incidente não gravado')
+    if (criado === undefined) throw new ErroDeInvariante('incidente não gravado')
     return criado.id
   }
 
@@ -121,7 +121,7 @@ export class OperacaoPrivacidadeRepository {
       .insert(incidenteEscola)
       .values({ incidenteId, escolaId: exigirEscolaDoContexto(), ...secao, categorias: [...secao.categorias] })
       .returning({ id: incidenteEscola.id })
-    if (criada === undefined) throw new Error('seção do incidente não gravada')
+    if (criada === undefined) throw new ErroDeInvariante('seção do incidente não gravada')
     return criada.id
   }
 

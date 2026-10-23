@@ -2,6 +2,7 @@ import { ConfiguracaoInvalida, ErroDeDominio, executarNoContexto, RegistroDeAudi
 import {
   CHAVES_DE_CATEGORIA_DO_INCIDENTE,
   CodigoDeErro,
+  ErroDeInvariante,
   FINALIDADE_DO_REGISTRO_DE_INCIDENTE,
   MAXIMO_DE_ESCOLAS_DO_INCIDENTE,
   MAXIMO_DE_TITULARES_ESTIMADOS,
@@ -175,7 +176,7 @@ export function registrarIncidente(banco: Banco, autor: ConferenciaDoAutor, pedi
       }
       pedido.secoes.forEach((secao, posicao) => {
         const propria = nomes[posicao]
-        if (propria === undefined) throw new Error('escola sem nome lido')
+        if (propria === undefined) throw new ErroDeInvariante('escola sem nome lido')
         const outras = nomes.filter((_, outra) => outra !== posicao)
         if ([secao.circunstancias, secao.contencao, secao.correcao].some((texto) => citaOutraEscola(texto, propria, outras))) {
           throw new ArgumentoInvalido(`--arquivo (a seção ${posicao + 1} cita o nome ou o id de outra escola afetada)`)

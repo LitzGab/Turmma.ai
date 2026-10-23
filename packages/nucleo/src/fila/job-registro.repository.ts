@@ -1,4 +1,4 @@
-import type { CodigoDeFalhaDeJob, EstadoDeJob, Fila } from '@educa/shared'
+import { ErroDeInvariante, type CodigoDeFalhaDeJob, type EstadoDeJob, type Fila } from '@educa/shared'
 import { and, eq, inArray, isNull, like, notInArray, sql, type SQL } from 'drizzle-orm'
 import { contextoAtual } from '../contexto/contexto.js'
 import type { Banco, TransacaoBanco } from '../db/banco.js'
@@ -72,15 +72,15 @@ export class JobRegistroRepository {
   async inserir(tx: TransacaoBanco, linha: LinhaNova): Promise<string> {
     const contexto = contextoAtual()
     const doSistema = linha.tipo.startsWith(PREFIXO_TIPO_SISTEMA)
-    if (!doSistema && contexto?.escolaId === undefined) throw new Error('job de escola sem escola no contexto')
+    if (!doSistema && contexto?.escolaId === undefined) throw new ErroDeInvariante('job de escola sem escola no contexto')
     if (doSistema && (contexto?.rotinaDoSistema !== true || contexto.escolaId !== undefined)) {
-      throw new Error('job de sistema só nasce de rotina do sistema')
+      throw new ErroDeInvariante('job de sistema só nasce de rotina do sistema')
     }
     const [inserida] = await tx
       .insert(jobRegistro)
       .values({ ...linha, escolaId: contexto?.escolaId ?? null, requisicaoId: contexto?.requisicaoId ?? null })
       .returning({ id: jobRegistro.id })
-    if (inserida === undefined) throw new Error('insert em job_registro não devolveu linha')
+    if (inserida === undefined) throw new ErroDeInvariante('insert em job_registro não devolveu linha')
     await tx.execute(sql`select pg_notify(${CANAL_NOTIFICACAO_JOB}, '')`)
     return inserida.id
   }
@@ -99,7 +99,7 @@ export class JobRegistroRepository {
   async inserirUmaVez(tx: TransacaoBanco, linha: LinhaNova, chaveIdempotencia: string, depoisDaColisao?: () => Promise<void>): Promise<ResultadoDaChave> {
     const contexto = contextoAtual()
     const escolaId = contexto?.escolaId
-    if (escolaId === undefined || linha.tipo.startsWith(PREFIXO_TIPO_SISTEMA)) throw new Error('chave de idempotência só em job de escola, com a escola no contexto')
+    if (escolaId === undefined || linha.tipo.startsWith(PREFIXO_TIPO_SISTEMA)) throw new ErroDeInvariante('chave de idempotência só em job de escola, com a escola no contexto')
     const [inserida] = await tx
       .insert(jobRegistro)
       .values({ ...linha, escolaId, requisicaoId: contexto?.requisicaoId ?? null, chaveIdempotencia })
@@ -130,7 +130,7 @@ export class JobRegistroRepository {
   /** O job da escola do token, ou `undefined` (inexistente ou de outra escola, sem distinção). */
   async buscarDaEscola(id: string): Promise<EstadoRegistrado | undefined> {
     const escolaId = contextoAtual()?.escolaId
-    if (escolaId === undefined) throw new Error('consulta de job sem escola no contexto')
+    if (escolaId === undefined) throw new ErroDeInvariante('consulta de job sem escola no contexto')
     const [linha] = await this.banco
       .select({
         estado: jobRegistro.estado,
@@ -214,5 +214,5 @@ export function escopoDoJobNoContexto(): SQL {
   if (contexto?.rotinaDoSistema === true) {
     return and(isNull(jobRegistro.escolaId), like(jobRegistro.tipo, `${PREFIXO_TIPO_SISTEMA}%`)) as SQL
   }
-  throw new Error('job_registro sem escola nem rotina do sistema no contexto não tem escopo')
+  throw new ErroDeInvariante('job_registro sem escola nem rotina do sistema no contexto não tem escopo')
 }
