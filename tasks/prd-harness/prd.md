@@ -1,6 +1,6 @@
 # PRD — Harness (X7)
 
-**Status:** aprovado (Joaquim, 23/10/2026, no terminal do Arquiteto); RF2, RF14, RF15, RF16 e §6 revistos por ele na revisão da spec
+**Status:** aprovado (Joaquim, 23/10/2026, no terminal do Arquiteto); RF2, RF14, RF15, RF16 e §6 revistos por ele na revisão da spec; RF32 acrescentado por ele em 23/10/2026 ~16:10 (tarefa 21.0)
 **Funcionalidade do roadmap:** X7
 **Depende de:** X5 (`5566974`) e a correção do `casca.spec.ts:67` (`6d1a2d3`). A X4 espera esta pousar.
 **Teto de tarefas:** de 18 a 24, acima das doze da D79, com o aceite do Joaquim em 23/10/2026 ("uma spec, sem prazo").
@@ -79,6 +79,7 @@ provada por uso.
 | RF23 | Cada skill, de processo e de terceiro, auditada (objetivo, escopo, conflito, redundância, desatualização), com os padrões da X5; a de terceiro fica, sai ou é atualizada | Tabela da auditoria; conflito que fica escrito onde sobrevive à atualização |
 | RF24 | Cada papel com responsabilidade única, critério de saída e entrega verificável; nenhum papel, regra ou guarda cita caminho que não existe (U11-13) | Teste de existência dos caminhos citados |
 | RF25 | Cada regra aponta a checagem que a garante ou declara que só a revisão garante; o que repete decisão ou skill migra com registro | Teste: a checagem citada existe |
+| RF32 | Uma skill de projeto curta ensina o jeito de construir o Turmma (MISSAO 9.1, "incorpore os padrões finais"): carrega pelo assunto e, para cada receita do `docs/guia-do-desenvolvedor.md` §5, aponta a seção, o arquivo de exemplo real e as travas da §7 que a pegam, sem copiar o guia (a receita mora num lugar só, RF21). O `executar-task` e o modelo da Tech Spec apontam para ela (decisão do Joaquim, 23/10/2026) | Teste na esteira: caminho citado que não existe, exemplo fora da seção do guia que a linha aponta, receita do guia sem linha na skill e trecho de código copiado na skill deixam a esteira vermelha |
 
 **D. Maestri** (MISSAO 9.4)
 

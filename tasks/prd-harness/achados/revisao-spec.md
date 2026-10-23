@@ -2015,3 +2015,268 @@ VEREDITO: APROVADO
 Arquivos conferidos:
 - `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md`
 - `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md`
+
+## revisor-geral · 6ª rodada · REPROVADO · 2026-10-23 16:16:28 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+Escopo: respeitado
+Aderência à Tech Spec: divergência no techspec §9 (Receitas, RF32) e no cenarios RF32. Os dois exigem que todo caminho citado nas §5 a §7 do guia exista, mas não dizem o que conta como caminho. Com isso a 21.0 não fecha sem uma decisão tomada em silêncio.
+Portão local: não se aplica. É revisão de spec, sem código. O `conferir` responde "nunca passou nesta árvore", o que é esperado.
+
+As cinco condições do Joaquim estão no RF32, no techspec §9 e na 21.0:
+- A receita fica num lugar só: a skill só aponta, e bloco de código cercado deixa a esteira vermelha.
+- A skill é curta e carrega pelo assunto: até 60 linhas, e a `description` nomeia os assuntos.
+- A skill cita arquivos de exemplo reais e as travas da §7.
+- O `executar-task` e o `criar-techspec/template.md` apontam para ela, com um caso de teste cada.
+- Há teste na esteira, e a 21.0 entra depois da 18.0 e da 19.0.
+
+Nada contradiz o RF16: a skill continua documento, e o que pega a quebra é a esteira, não o hook. Também nada contradiz o RF21, o RF30 nem o teto de 18 a 24 tarefas. Ordem e paralelismo estão certos:
+- A 21.0 precisa da extração de caminhos da 16.0.
+- Precisa do `executar-task` já abaixo de 500 linhas, que é a 18.0.
+- Precisa do teste de metadados e do `CLAUDE.md` sem a skill `status`, que é a 19.0.
+- Com a 20.0 não divide nenhum arquivo: a 20.0 mexe em `vigia.ts`, nos hooks, no `settings.json`, em `6-tarefa.md` e em `docs/processo-sem-maestri.md`.
+
+Bloqueantes:
+
+1. **techspec §9 (Receitas), cenarios RF32 (coluna "o repositório de hoje") e 21.0 ("Fora do escopo" e "Testes que provam a regra").** A spec não define o que é um caminho citado nem contra que pasta ele é resolvido. O guia de hoje cita nas §5 a §7 muitos fragmentos relativos que não existem a partir da raiz:
+   - `rotas.tsx`, `estilos.css`, `componentes/dialogos.tsx` e `componentes/estado/`, que existem só sob `apps/web/src`;
+   - `privacidade.service.ts` e `escopo-dos-repositories.ts`, citados só pelo nome do arquivo;
+   - `ia/prompts/`, `sessao/`, `operacao/`, `componentes/ui/` e `api/`;
+   - na §6, `atividade/atividade-isolamento.int.test.ts`, `tutor/tutor.int.test.ts` e `sessao/convite/convite.repository.int.test.ts`;
+   - placeholders sem `<...>`, como `x.int.test.ts`, e `<modulo>.module.ts`, que não tem pasta antes do placeholder;
+   - globs relativos como `*.test.tsx` e `*.controller.ts`, que não casam nada na raiz;
+   - strings entre aspas nos blocos de código, como `'/v1/disciplinas'`, que a extração da 16.0 acusa "entre aspas".
+
+   O mesmo vale para a skill. Ela cita as travas "pelo nome da linha da tabela", e esses nomes trazem `guardas/log-sem-dado-pessoal` e `guardas/sdk-de-ia-so-no-adaptador` entre crases, que a extração lê como caminhos inexistentes.
+
+   Do jeito que está escrito, ou o caso "o repositório de hoje" fica vermelho, ou o Implementador inventa um critério de reconhecimento, ou reescreve o guia. O guia não pode ser reescrito: a 21.0 põe "Mudar as receitas do guia" fora do escopo, e o §2 limita a alteração do guia a "uma linha no topo". As três saídas são decisão tomada em silêncio.
+
+   **Correção exigida.** O techspec §9 e o cenarios RF32 dizem o que conta como caminho e como ele se resolve. Uma opção: só o token que começa por uma raiz do repositório (`apps/`, `packages/`, `tools/`, `e2e/`, `infra/`, `docs/`, `.claude/`) ou que é arquivo existente na raiz. Fragmento relativo e nome de regra de lint ficam fora, ou são resolvidos contra a pasta citada antes na mesma seção. Cada lado ganha um cenário: o fragmento `componentes/dialogos.tsx` e a trava `guardas/log-sem-dado-pessoal` não acusam, e `apps/api/src/inexistente.ts` acusa. A alternativa é autorizar a 21.0 a escrever por extenso os caminhos relativos do guia. Nesse caso o §2 ("uma linha no topo") e o "Fora do escopo" da 21.0 precisam dizer isso. Seja qual for a escolha, ela vale também para a extração da 16.0, que a 21.0 reaproveita.
+
+Recomendações:
+- techspec §2: a linha `CLAUDE.md, .claude/rules/, .claude/skills/...` cita "RF20 a RF25, RF28" e não cita o RF32, embora a 21.0 altere o `executar-task`, o `criar-techspec/template.md` e o mapa do `CLAUDE.md`. O `tools/processo/harness/caminhos.ts` da 21.4 também não aparece no §2.
+- 21.0, "Como testar": como o `CLAUDE.md` ganha uma linha, incluir no "Rodar" o teste da base fixa do RF20, que é da 15.0 (teto de 40.000 B).
+- tasks.md: a linha 9 do parágrafo de abertura passou da largura das outras. Na tabela "Subagentes por tarefa", a linha da 21.0 ficou entre a 16.0/18.0 e a 17.0, fora de ordem.
+- 21.0: a receita do job (5.3) é regra 80 e não tem `infra-guardian`. O teto de três é escolha legítima do Arquiteto, mas vale escrever no comentário do cabeçalho por que o `infra-guardian` ficou de fora.
+
+Arquivos auditados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/21_task.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/prd.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tasks.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/docs/guia-do-desenvolvedor.md
+
+## test-engineer · 11ª rodada · REPROVADO · 2026-10-23 16:16:28 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos:** cada cláusula do RF32 (PRD §C) e do parágrafo "Receitas (RF32)" (techspec §9), com o vermelho e o verde. A lista:
+- a skill é curta: até 60 linhas e sem bloco de código;
+- ela carrega pelo assunto: `name` e uma `description` que nomeia os seis assuntos;
+- cada `### 5.x` do guia tem uma linha na skill, com a seção, o exemplo que a seção cita e ao menos uma trava da §7;
+- os caminhos citados existem, nos dois lados: na skill e nas §5 a §7 do guia, com placeholder e glob;
+- as três frases fora da tabela;
+- o `executar-task` (passo 1) e o `criar-techspec/template.md` (§2) apontam para a skill;
+- o mapa do `CLAUDE.md` cita o guia, e o topo do guia cita a skill;
+- as linhas fixas de guarda: "quem contorna é acusado" e "a guarda reprova quando o alvo não existe";
+- o verde tem contagem mínima.
+
+**Cobertos:** cada item que o `cenarios.md` C, RF32, separa por ponto e vírgula tem a sua linha na tabela do `21_task.md`, e cada linha prova um comportamento. Estão lá:
+- caminho inexistente na skill;
+- `./` e aspas, um caso por forma;
+- caminho inexistente nas §5 a §7 do guia;
+- glob que não casa nada;
+- placeholder `<modulo>` verde;
+- exemplo fora da seção;
+- `### 5.x` sem linha na skill;
+- trava fora da §7;
+- bloco cercado;
+- 61 linhas;
+- `executar-task` e `template.md`, um caso cada;
+- guia ausente e guia sem §5, as duas linhas de alvo ausente;
+- o repositório de hoje.
+
+**Bloqueantes:**
+
+1. **O verde do "repositório de hoje" é impossível do jeito que a spec está** (techspec §9, "Receitas"; `21_task.md`, "Como testar" e "Fora do escopo").
+   - A spec manda reusar a extração da 16.0, que confere "todo caminho entre crases". Extraí os tokens entre crases das §5 a §7 do guia de hoje. Muitos não existem a partir da raiz:
+     - caminhos relativos ao módulo: `componentes/dialogos.tsx`, `componentes/estado/`, `rotas.tsx`, `estilos.css`, `privacidade.service.ts`, `turma.ts`, `atividade/atividade-isolamento.int.test.ts`, `tutor/tutor.int.test.ts`, `ia/prompts/`, `api/`, `areas/`;
+     - nomes fictícios: `x.test.ts`, `x.int.test.ts`;
+     - globs sem pasta: `*.controller.ts`, `*.int.test.ts`, `*.test.tsx`;
+     - nomes de regra de lint, que não são caminho: `guardas/erro-tipado`, `guardas/log-sem-dado-pessoal`.
+   - Os nomes de regra de lint aparecem no próprio nome das travas da §7. A skill que citar a trava pelo nome cai no mesmo problema.
+   - O exemplo da §5.3 (`privacidade.service.ts`) e o da §5.2 (`turma.ts`) são relativos. Pela regra de existência, a skill teria de escrever o caminho inteiro, e aí o exemplo não aparece literalmente na seção.
+   - O resultado é que o implementador só fecha a tarefa mudando o guia, o que a tarefa põe fora do escopo, ou inventando uma regra de extração que nenhum cenário prende.
+   - **Correção exigida:** a techspec §9 declara qual token das §5 a §7 é caminho, por exemplo só o que começa por pasta da raiz (`apps/`, `packages/`, `tools/`, `docs/`, `e2e/`, `infra/`, `.claude/`). Ou então traz para o escopo reescrever esses caminhos a partir da raiz. Também declara como a coluna "exemplo" da skill se compara com a seção: o token exato do guia, a partir da raiz. Cenário dos dois lados no `cenarios.md` e uma linha cada no `21_task.md`:
+     - caminho relativo e nome de regra de lint fora da conferência: verde;
+     - caminho a partir da raiz que não existe: vermelho (já existe);
+     - exemplo da skill sem pasta da raiz: vermelho.
+
+2. **O placeholder só tem o lado verde** (`cenarios.md` RF32; `21_task.md`, linha do placeholder).
+   - Uma extração que simplesmente pula todo token com `<` passa em todos os casos de hoje.
+   - **Correção exigida:** um vermelho com placeholder cuja pasta antes dele não existe, por exemplo `apps/api/src/inexistente/<modulo>/x.ts`.
+
+3. **A linha da skill sem exemplo ou sem trava não tem vermelho** (`cenarios.md` RF32).
+   - "Cada uma com exemplo existente e ao menos uma trava" só é afirmado sobre o repositório de hoje.
+   - Uma linha com a célula de exemplo vazia passa na conferência "o exemplo aparece na seção", porque `includes('')` é sempre verdadeiro. Uma linha sem trava também passa, porque não há trava para acusar.
+   - **Correção exigida:** dois vermelhos, um por caso: linha sem exemplo, e linha sem trava.
+
+4. **A contagem mínima do verde não pega uma conferência de caminhos que não acha nada** (`cenarios.md` C, a frase "zero achados é vermelho"; `21_task.md`, linha do repositório de hoje).
+   - O verde conta receitas, exemplos e travas, mas não quantos caminhos foram conferidos.
+   - Uma extração que só lê a §5, ou que lê a §7 como vazia, continua passando: o vermelho da amostra põe o caminho falso numa seção só.
+   - **Correção exigida:**
+     - o verde afirma o número de caminhos conferidos por seção: §5, §6 e §7, cada uma acima de zero. A §6 e a §7 citam caminhos (`apps/api/test/...`, `tools/guardas/...`);
+     - afirma também quantos caminhos conferiu na skill;
+     - deixa explícito que "seis receitas" quer dizer seis `### 5.x` achadas no guia e seis linhas na skill;
+     - e conta as linhas achadas na tabela da §7.
+
+5. **Quem contorna a regra do bloco de código não é acusado** (`cenarios.md` RF32, "bloco de código cercado").
+   - A linha fixa existe só para caminhos. Uma cerca `~~~` ou um bloco recuado de quatro espaços copia código do guia e passa num teste que só procura ` ``` `.
+   - **Correção exigida:** um vermelho para cada forma: ` ``` `, `~~~` e o recuo de quatro espaços.
+
+6. **Cláusulas do §9 e do RF32 sem nenhum cenário** (`cenarios.md` RF32; `21_task.md`, subtarefas 21.1 a 21.3).
+   - "Carrega pelo assunto": a `description` que nomeia os seis assuntos (endpoint, tabela e migration, job, chamada de IA, tela, teste de isolamento). O RF30 só confere se `description` existe, não o que ela diz.
+   - As três frases fora da tabela:
+     - ler a seção antes de escrever;
+     - o desvio vai para a seção 11 da Tech Spec, com o motivo (D81);
+     - quem muda o exemplo no guia muda a linha da skill no mesmo commit.
+   - O mapa do `CLAUDE.md` cita o guia em "Para construir", e o topo do guia diz que a skill aponta para ele.
+   - O precedente do RF26 já exige texto presente, uma ausência por caso.
+   - **Correção exigida:** um vermelho por ausência e o verde de hoje. São estes:
+     - `description` sem um dos assuntos, uma amostra;
+     - skill sem a menção à seção 11 da Tech Spec;
+     - `CLAUDE.md` sem `docs/guia-do-desenvolvedor.md`;
+     - guia sem o nome da skill.
+
+[… 16 linhas cortadas]
+
+## revisor-geral · 7ª rodada · REPROVADO · 2026-10-23 16:19:41 · `tasks/prd-harness/revisao-spec.md`
+
+**VEREDITO: REPROVADO**
+
+**Escopo:** respeitado. A 21.0 faz o que o RF32 pede. A 21.3 só mexe no `caminhos.test.ts` da 16.0 para extrair a função. A 21.0 depende de 16.0, 18.0 e 19.0, e o que fica fora dela está declarado.
+
+**Aderência à Tech Spec:** há uma divergência no §9, no parágrafo "O que conta como caminho", quando ele é aplicado à 16.0. Detalhe abaixo.
+
+**Portão local:** não se aplica, porque esta rodada revisa spec e não tem código. O `conferir` responde "nunca passou nesta árvore", o que é esperado.
+
+**O bloqueante da rodada 11 está resolvido para a 21.0.** O critério de caminho, a resolução a partir da raiz, o exemplo tirado da linha "Exemplo:" e os casos dos dois lados agora existem no §9, no `cenarios.md` RF32 e no `21_task.md`. Testei o critério sobre as §5, §6 e §7 de hoje no `docs/guia-do-desenvolvedor.md`: todo caminho existe e todo glob casa algum arquivo. Cada `### 5.x` tem caminho a partir da raiz na sua linha "Exemplo:".
+
+**Bloqueantes**
+
+1. **`tasks/prd-harness/techspec.md`, §9, parágrafo "O que conta como caminho" (diff +183 a +190): o critério quebra a 16.0 do jeito que está escrito.**
+   - O §9 diz que o critério "vale para a extração da 16.0". A 16.2 confere `tools/guardas/`, e essa pasta é código, não texto. Pelo critério, todo literal entre aspas ou crase que começa por `apps/`, `infra/` e as outras pastas listadas entra na conferência.
+   - Os testes das guardas usam de propósito caminhos de fixture que não existem no repositório:
+     - `tools/guardas/camadas.test.ts`: `'apps/api/src/camadas/a.controller.ts'`, `apps/worker/src/usa-api.ts`, `infra/painel-import.ts` e cerca de 25 outros.
+     - `tools/guardas/alerta-tem-runbook.test.ts:10`, `:19`, `:65` e `:70`: `'infra/grafana/alertas/fila-parada.yaml'`, com template literal na linha 70.
+   - O mesmo problema aparece em `.claude/agents/arquiteto.md:98`. Os caminhos `` `apps/api/test/…` `` e `` `e2e/__fixtures__/…` `` usam reticências, e o critério só reconhece placeholder no formato `<...>`. Logo eles caem em "o resto existe" e ficam vermelhos. O `arquiteto.md` não está entre os arquivos previstos da 16.0.
+   - Resultado: o caso "RF24: os caminhos de hoje — verde, com contagem mínima" da 16.0 não tem como passar sem divergência decidida em silêncio. A 16.0 precisaria excluir os testes, mudar as fixtures ou editar um papel que não está na lista dela.
+   - **Correção exigida:**
+     - No §9, dizer o que se confere dentro de `tools/guardas/`. Uma opção é tirar `*.test.ts` e as fixtures. Outra é conferir só o texto e não os literais de código. Pode ser também outra fronteira, desde que escrita.
+     - Dizer se `…` conta como placeholder. Se não contar, pôr o `arquiteto.md` nos arquivos da 16.0.
+     - Levar os dois casos ao `cenarios.md` RF24 dos dois lados: a fixture de teste da guarda fica fora (ou é tratada como o §9 decidir) e o `…` segue a regra escolhida.
+     - Atualizar o texto da 16.2 ("todo caminho entre crases") para apontar o critério do §9 e não ficar com uma definição própria.
+
+**Recomendações**
+
+- No §9, a lista "pasta da raiz (`apps/`, `packages/`, `tools/`, `e2e/`, `infra/`, `docs/`, `.claude/`)" pode ser lida como exemplo e não como lista fechada. Vale escrever "uma destas pastas". Se alguém ler como "qualquer pasta da raiz", `.processo/vitrine/` e `.processo/ordens/` entram na conferência. Eles são citados em `validador.md:81`, `mesa-de-revisao.md:21` e `frontend-reviewer.md:53`, e a pasta `.processo/` está no `.gitignore` (linha 26). A conferência passa na máquina e fica vermelha na esteira.
+- No `21_task.md`, o caso "trava pela metade ('Lint')" pede que a comparação seja com a célula inteira da coluna "Trava". O texto exato dessas células tem crases, por exemplo "Lint `guardas/log-sem-dado-pessoal` e `log-sem-conteudo-montado`". Vale dizer se a skill copia a célula com as crases ou sem elas, para o teste não depender de quem escrever.
+
+Arquivos citados:
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/16_task.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/21_task.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/guardas/camadas.test.ts`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/guardas/alerta-tem-runbook.test.ts`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/.claude/agents/arquiteto.md`
+
+```
+VEREDITO: REPROVADO
+Escopo: respeitado
+Aderência à Tech Spec: divergência em techspec.md §9, "O que conta como caminho", aplicado à 16.0
+Portão local: não se aplica (revisão de spec, sem código)
+Bloqueantes: tasks/prd-harness/techspec.md §9 (diff +183 a +190): o critério, que "vale para a extração da 16.0", confere literais entre aspas ou crase em tools/guardas/, e lá as fixtures de teste não existem (camadas.test.ts com 'apps/api/src/camadas/a.controller.ts' e cerca de 25 outros; alerta-tem-runbook.test.ts:10/19/65/70 com 'infra/grafana/alertas/fila-parada.yaml'); arquiteto.md:98 usa `apps/api/test/…` e `e2e/__fixtures__/…`, que o critério não trata como placeholder e o arquiteto.md não está nos arquivos da 16.0. O "caminhos de hoje verde" da 16.0 fica impossível. Correção: definir no §9 o que se confere dentro de tools/guardas/ (código de teste e fixture fora, ou só texto) e se "…" é placeholder (se não for, o arquiteto.md entra na 16.0); os dois casos no cenarios.md RF24 dos dois lados; a 16.2 passa a apontar o critério do §9.
+Recomendações: escrever "uma destas pastas" para fechar a lista (.processo/ está no .gitignore e ficaria vermelho na esteira); dizer se a trava na skill leva as crases da célula da §7.
+```
+
+## test-engineer · 12ª rodada · APROVADO · 2026-10-23 16:20:03 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: APROVADO
+
+**Os seis bloqueantes da rodada 11**
+
+1. **O verde de hoje era impossível.** Resolvido em `techspec.md` §9, no parágrafo "O que conta como caminho". Conferi contra o `docs/guia-do-desenvolvedor.md`:
+   - Cada "Exemplo:" de 5.1 a 5.6 tem ao menos um caminho a partir da raiz:
+     - 5.1: `packages/shared/src/estrutura/disciplina.ts` e `apps/api/src/estrutura/`
+     - 5.2: `packages/nucleo/src/db/schema/disciplina.ts`
+     - 5.3: `apps/worker/src/processadores/`
+     - 5.4: `apps/api/src/artefato/ferramentas.service.ts`
+     - 5.5: `apps/web/src/api/estrutura.ts`
+     - 5.6: `apps/api/test/estrutura-isolamento.int.test.ts`
+   - Extraí os 45 tokens de §5 a §7 que começam por pasta da raiz e conferi cada um com `ls`. Todos existem. As pastas antes dos placeholders existem (`<modulo>`, `<nome>`, `<tarefa>`), e os globs `infra/test/*.int.test.ts`, `e2e/*.spec.ts` e `apps/worker/test/*.int.test.ts` acham arquivos.
+   - Os fragmentos (`turma.ts`, `privacidade.service.ts`, `componentes/...`) e as rotas ficam fora da conferência, como o §9 declara.
+   - As contagens acima de zero são possíveis nas quatro partes: §5, §6, §7 e skill.
+2. **Placeholder sem vermelho.** Resolvido em `21_task.md`, linha 45, e no `cenarios.md`, RF32. O caso verde com a pasta existente está na linha 46.
+3. **Linha sem exemplo ou sem trava.** Resolvido nas linhas 51 e 52, com a trava pela metade na linha 56 e a trava fora da coluna na linha 55.
+4. **Contagem que não pegava conferência vazia.** Resolvido na linha 67: as quatro contagens são afirmadas acima de zero e as linhas da §7 são contadas. O alvo ausente (guia ausente, guia sem §5) está na linha 66.
+5. **Código por `~~~` e por recuo passava.** Resolvido na linha 57, com um caso para cada forma, e no §9.
+6. **Cláusulas sem cenário.** Resolvido nas linhas 60 a 65: `description`, seção 11, passo 1 do `executar-task` (o nome em outro passo não vale), §2 do modelo da Tech Spec, `CLAUDE.md` e guia.
+
+A tabela da tarefa bate item a item com a linha RF32 do `cenarios.md` C, inclusive os três lados verdes. Não há provedor de IA, concorrência nem dado de escola: isolamento e corrida não se aplicam.
+
+**Algo novo bloqueia?** Não.
+
+Cenários exigidos: os casos vermelhos do `cenarios.md` RF32 (caminho, placeholder, glob, forma `./` ou aspas em cada lado, exemplo, linha, trava, código, tamanho, `description`, seção 11, os quatro apontamentos, alvo ausente) e os verdes (o que fica fora da conferência, placeholder com a pasta existente, o repositório de hoje com contagens).
+
+Cobertos: todos, linha por linha, em `tasks/prd-harness/21_task.md`, linhas 42 a 67.
+
+Bloqueantes: nenhum.
+
+Recomendações:
+- **`techspec.md` §9, "a linha 'Exemplo:'".** Na 5.6 o "Exemplo:" fica no meio da linha ("Todo módulo novo entrega um (regra 10.5). Exemplo: ..."). Um leitor com `^Exemplo:` fica vermelho no verde de hoje. Escrever "a linha que contém `Exemplo:`" evita isso.
+- **§9, separador entre travas na célula da skill.** O texto exato da §7 tem `,` e ` e ` dentro da própria trava: "ESLint `complexity`, `max-lines-per-function`, `max-depth`", "`gitleaks`, `npm audit` e `knip`" e "Lint `guardas/log-sem-dado-pessoal` e `log-sem-conteudo-montado`". Vale declarar o separador (`;` ou `<br>`), ou dizer que a célula, tiradas as travas exatas, só pode sobrar separador.
+- **`cenarios.md` RF32, "`description` sem um dos seis assuntos".** Como está, um caso só. Se a lista perder um assunto, o teste só acusa quando a amostra tira justamente aquele. Melhor fazer seis casos (`it.each`) e declarar a palavra exata de cada assunto ("tabela e migration" exige as duas?).
+- **Duas frases da skill sem teste.** "Ler a seção antes" e "mudar a linha no mesmo commit" não têm teste de presença. A segunda já é garantida pela conferência do exemplo; registrar isso no §9 basta.
+- **Apontamentos sem lugar conferido.** "Guia sem o nome da skill" e "`CLAUDE.md` sem o guia" não conferem o lugar (o topo do guia, o mapa do `CLAUDE.md`), ao contrário do passo 1 do `executar-task`. Não exigir o lugar é aceitável; exigir deixa o teste coerente com o §9.
+- **"Corpo" ou arquivo inteiro?** O §9 diz "o corpo, até 60 linhas e 6.000 B" e o cenário diz "skill com 61 linhas". Falta declarar se o frontmatter conta.
+- **"Seis `### 5.x`" no verde de hoje.** Afirmar exatamente seis faz uma receita nova quebrar o teste. Afirmar "igual ao número de `### 5.x` do guia, e pelo menos seis" mantém a contagem sem ficar velho.
+- **Para a 16.0, que herda o critério.** `.claude/agents/` e `.claude/rules/` citam `apps/api/test/…`, `e2e/__fixtures__/…` (com reticência) e `apps/api/src/ia/adapters`. Pelo "o resto existe", os três ficam vermelhos. O §9 deveria dizer como tratar a reticência, ou a 16.0 reescreve essas citações. Arquivo da raiz sem pasta (`eslint.config.mjs`, `.size-limit.json`, `vitest.config.ts`) fica fora da conferência. Se isso é intencional, vale dizer.
+
+Arquivos: `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md` (§9), `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md` (RF32), `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/21_task.md`, `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/docs/guia-do-desenvolvedor.md`.
+
+## revisor-geral · 8ª rodada · APROVADO · 2026-10-23 16:22:23 · `tasks/prd-harness/revisao-spec.md`
+
+**VEREDITO: APROVADO**
+
+O bloqueante da rodada 12 foi resolvido. O §9 agora diz que o critério vale só no `receitas.test.ts`, como filtro sobre o que a extração da 16.0 devolve, "sem mudar o que ela devolve nem o que a 16.0 confere". A lista de pastas está fechada ("uma destas pastas"), e a 21.3 move a extração sem mudar o que ela devolve. O critério não chega mais às fixtures de `tools/guardas/*.test.ts` nem ao `arquiteto.md:98`.
+
+Nada novo bloqueia. Conferi a spec contra o guia de hoje:
+- **Exemplos:** cada `### 5.x`, de 5.1 a 5.6, tem um caminho a partir da raiz na linha que contém `Exemplo:`. Na 5.6 o `Exemplo:` fica no meio da linha, e a redação nova cobre isso.
+- **Caminhos:** todo caminho das §5 a §7 que começa por uma das pastas da lista existe. As pastas antes dos placeholders existem, e os três globs acham arquivos.
+- **Travas:** nenhuma célula da coluna "Trava" da §7 tem `;` nem `|`. Copiar a célula exata, separada por `;`, cabe numa célula da tabela da skill.
+- **Guardiões e dependências:** `user-invocable: false` é o padrão das skills de processo. Os guardiões marcados batem com a `tabela-de-guardioes.md`. As dependências 16.0, 18.0 e 19.0 cobrem os arquivos em comum (`executar-task`, `CLAUDE.md`), e a 20.0 não toca arquivo da 21.0.
+- **Recomendações da rodada 12:** o `test-engineer` pediu a linha que contém `Exemplo:`, o arquivo inteiro com frontmatter no teto, um caso por assunto da `description` e a contagem igual ao número de `### 5.x`. Eu pedi o separador das travas com as crases da célula e a lista de pastas fechada. Está tudo no §9, no `cenarios.md` RF32 e no `21_task.md`.
+
+```
+VEREDITO: APROVADO
+Escopo: respeitado
+Aderência à Tech Spec: ok
+Portão local: não se aplica (revisão de spec, sem código; o conferir responde "nunca passou nesta árvore", o que é esperado)
+Bloqueantes: nenhum
+Recomendações:
+- 16_task.md, 16.2, e techspec §9: a 21.0 agora depende do que a extração da 16.0 devolve. Ela precisa receber o token cru, com `<...>`, `*` e a `/` final (o exemplo da 5.1 é `apps/api/src/estrutura/`). Isso não está escrito em lugar nenhum. Se a 16.0 resolver o próprio problema com as fixtures descartando esses tokens na extração, os casos de placeholder da 21.0 ficam inalcançáveis, porque "não reescreva" a extração. Vale escrever no §9 que a extração devolve o token cru e cada teste filtra o seu.
+- O mesmo problema que eu levantei na rodada 12 continua na 16.0 sozinha, e veio de antes do RF32. A 16.0 confere aspas e crases em `tools/guardas/`, cujas fixtures (`camadas.test.ts`, `alerta-tem-runbook.test.ts`) não existem, e o `arquiteto.md:98` usa `…`. Está fora do recorte desta rodada, mas o Implementador da 16.0 vai parar nisso. Vale fechar a fronteira no `16_task.md` antes de a 16.0 começar.
+- tasks.md:116-119: a lista da 21.0 tem 21.1 a 21.3, com 21.3 = "Testes". No `21_task.md`, 21.3 é a extração e 21.4 são os testes. Vale alinhar a numeração.
+- 21_task.md e cenarios.md RF32, "passo 1 do `executar-task`": vale nomear a seção (`## 1. Contexto`). A 18.0 reescreve esse arquivo antes, e "passo 1" pode ser lido como o item 1 da lista.
+```
+
+Arquivos auditados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/21_task.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/16_task.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tasks.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/docs/guia-do-desenvolvedor.md
