@@ -212,12 +212,12 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
   - [x] 11.3 `etapaDoLogin` vai para `conclusao-de-login.ts`; os importadores trocam o caminho; `login.service.ts` não reexporta
   - [x] 11.4 Testes: os de unidade divididos pelos arquivos novos, e os dois `it` de quem importa o `login.service`
 
-- [ ] **12.0 — Import contra a direção ou a camada, ou ciclo novo, reprova o lint**
-  - [ ] 12.1 `dependency-cruiser@18.7.0` exato em `devDependencies`; `tools/guardas/camadas.cjs` com as regras do §2 da onda, todas `error`
-  - [ ] 12.2 `guarda:camadas` no `package.json`, e `lint` terminando em `&& npm run guarda:camadas`
-  - [ ] 12.3 As três cercas, por import direto, e a exceção de `expurgo-da-escola.repository.ts:3`; sem `reaches` (R63)
-  - [ ] 12.4 Sai do `arquitetura.test.ts` o que as regras cobrem, depois das fixtures verdes
-  - [ ] 12.5 Testes: `camadas.test.ts` com as fixtures, o repositório real e o tempo do lint
+- [x] **12.0 — Import contra a direção ou a camada, ou ciclo novo, reprova o lint**
+  - [x] 12.1 `dependency-cruiser@18.7.0` exato em `devDependencies`; `tools/guardas/camadas.cjs` com as regras do §2 da onda, todas `error`
+  - [x] 12.2 `guarda:camadas` no `package.json`, e `lint` terminando em `&& npm run guarda:camadas`
+  - [x] 12.3 As três cercas, por import direto, e a exceção de `expurgo-da-escola.repository.ts:3`; sem `reaches` (R63)
+  - [x] 12.4 Sai do `arquitetura.test.ts` o que as regras cobrem, depois das fixtures verdes
+  - [x] 12.5 Testes: `camadas.test.ts` com as fixtures, o repositório real e o tempo do lint
 
 - [ ] **13.0 — Função nova acima de 10/80/4 e supressão nova reprovam o lint**
   - [ ] 13.1 Bloco novo em `eslint.config.mjs`: produção com `complexity: 10`, `max-lines-per-function: 80` (sem branco nem comentário) e `max-depth: 4`; teste sem `max-lines-per-function`; e2e com `max-lines: 800`, tudo `error`

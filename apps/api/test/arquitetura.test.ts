@@ -7,7 +7,7 @@ import { getTableName, is } from 'drizzle-orm'
 import { PgTable } from 'drizzle-orm/pg-core'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import type { IncomingMessage } from 'node:http'
-import { basename, join, relative, sep } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { AppModule } from '../src/app.module.js'
@@ -19,7 +19,6 @@ import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { controladoresDoModulo, ROTAS_COM_SESSAO_DE_OPERADOR, ROTAS_DO_PAINEL, rotasDe, rotasDeOperacaoSemGuarda, rotasForaDaCerca, type RotaRegistrada } from './rotas-registradas.js'
 
 const RAIZ = fileURLToPath(new URL('../../../', import.meta.url))
-const MODULO_SESSAO = 'apps/api/src/sessao/'
 const ESTE_ARQUIVO = 'apps/api/test/arquitetura.test.ts'
 
 interface Arquivo {
@@ -40,44 +39,72 @@ function arquivosDoRepositorio(): Arquivo[] {
   )
 }
 
-const ARQUIVO_DA_RESOLUCAO = 'resolucao-de-tenant.repository.ts'
-/** Cita a classe ou o arquivo dela: importação, reexportação ou `import()` dinâmico. */
-const USO_DA_RESOLUCAO = /\bResolucaoDeTenantRepository\b|resolucao-de-tenant\.repository/
-
 /**
- * Os arquivos fora de `apps/api/src/sessao` que usam a `ResolucaoDeTenantRepository`. A classe concentra os
- * `@SemEscopo` da resolução de tenant (Tech Spec, seção 6), e o desvio da regra 10, item 9 só é aceito porque fica
- * contido no módulo de sessão.
+ * As três classes que a regra 10, item 9, cerca (X5, 12.0). O `guarda:camadas` olha quem **importa o arquivo** da classe; o
+ * reexport feito de dentro da zona (um `export { X }` no `painel.service.ts`, numa ponte de `ciclo-de-vida/` ou de `sessao/`)
+ * deixa qualquer arquivo importá-la por outro caminho, sem violação nenhuma. Aqui se olha o **nome**: código de produção fora
+ * da zona não cita a classe, por qual arquivo quer que a tenha achado. Teste e fixture ficam de fora (mudança aceita da 12.0).
  */
-function usosForaDoModuloSessao(arquivos: readonly Arquivo[]): string[] {
-  return arquivos
-    .filter((arquivo) => !arquivo.caminho.startsWith(MODULO_SESSAO) && arquivo.caminho !== ESTE_ARQUIVO)
-    .filter((arquivo) => USO_DA_RESOLUCAO.test(arquivo.texto))
-    .map((arquivo) => arquivo.caminho)
+const ZONAS_DAS_CLASSES_CERCADAS: readonly { classe: string; uso: RegExp; zona: readonly string[] }[] = [
+  { classe: 'ResolucaoDeTenantRepository', uso: /\bResolucaoDeTenantRepository\b|resolucao-de-tenant\.repository/, zona: ['apps/api/src/sessao/'] },
+  { classe: 'ContaGlobalRepository', uso: /\bContaGlobalRepository\b|conta-global\.repository|@educa\/nucleo\/conta-global/, zona: ['apps/api/src/sessao/', 'packages/nucleo/src/ciclo-de-vida/'] },
+  // A zona do painel é o arquivo do service e o do repository, e não a pasta `operacao/painel/`.
+  { classe: 'PainelRepository', uso: /\bPainelRepository\b|painel\.repository/, zona: ['apps/api/src/operacao/painel/painel.service.ts', 'apps/api/src/operacao/painel/painel.repository.ts'] },
+]
+
+/** `classe: caminho`, de cada arquivo de produção fora da zona dela que a cita no código (comentário não conta). */
+function usosForaDaZona(arquivos: readonly Arquivo[]): string[] {
+  return ZONAS_DAS_CLASSES_CERCADAS.flatMap(({ classe, uso, zona }) =>
+    arquivos
+      .filter((arquivo) => !deTeste(arquivo.caminho) && !arquivo.caminho.includes('/__fixtures__/'))
+      .filter((arquivo) => !zona.some((permitido) => arquivo.caminho.startsWith(permitido)))
+      .filter((arquivo) => uso.test(semComentarios(arquivo.texto)))
+      .map((arquivo) => `${classe}: ${arquivo.caminho}`),
+  )
 }
 
-describe('arquitetura: a resolução de tenant fica dentro do módulo de sessão', () => {
-  it('a varredura enxerga o código: acha a própria classe dentro do módulo de sessão', () => {
+describe('arquitetura: o nome das classes cercadas só aparece dentro da zona de cada uma, também pelo reexport (X5, 12.0)', () => {
+  it('a varredura enxerga o código: acha as três classes dentro da zona delas', () => {
     const arquivos = arquivosDoRepositorio()
     expect(arquivos.length).toBeGreaterThan(100)
-    // O arquivo da classe é achado pelo nome, dentro do módulo de sessão: a regra é "dentro de sessao/", e não a subpasta onde ele mora (34.0).
-    const daClasse = arquivos.filter((arquivo) => USO_DA_RESOLUCAO.test(arquivo.texto) && basename(arquivo.caminho) === ARQUIVO_DA_RESOLUCAO).map((arquivo) => arquivo.caminho)
-    expect(daClasse).toHaveLength(1)
-    expect(daClasse[0]?.startsWith(MODULO_SESSAO)).toBe(true)
+    for (const { classe, uso, zona } of ZONAS_DAS_CLASSES_CERCADAS) {
+      const dentro = arquivos.filter((arquivo) => zona.some((permitido) => arquivo.caminho.startsWith(permitido)) && uso.test(semComentarios(arquivo.texto)))
+      expect(dentro.length, classe).toBeGreaterThan(0)
+    }
   })
 
-  it('nenhum arquivo fora de apps/api/src/sessao importa ou cita a ResolucaoDeTenantRepository', () => {
-    expect(usosForaDoModuloSessao(arquivosDoRepositorio())).toEqual([])
+  it('nenhum código de produção fora da zona cita a ResolucaoDeTenantRepository, a ContaGlobalRepository nem o PainelRepository', () => {
+    expect(usosForaDaZona(arquivosDoRepositorio())).toEqual([])
   })
 
-  it('reprova o arquivo de fora que a importa, reexporta ou carrega por import dinâmico', () => {
+  it('reprova quem usa a classe por uma ponte de dentro da zona, em apps, packages, tools e infra, e deixa passar a zona, o teste, a fixture e o comentário', () => {
     const fora = [
-      { caminho: 'apps/api/src/estrutura/turma/turma.service.ts', texto: "import { ResolucaoDeTenantRepository } from '../sessao/resolucao-de-tenant.repository.js'" },
-      { caminho: 'apps/api/src/sistema/atalho.ts', texto: "export * from '../sessao/resolucao-de-tenant.repository.js'" },
-      { caminho: 'apps/worker/src/expurgo.ts', texto: "const modulo = await import('../../api/src/sessao/resolucao-de-tenant.repository.js')" },
+      // O reexport pelo service do painel, por uma ponte de `ciclo-de-vida/` e por uma de `sessao/`: o arquivo da classe não aparece no import.
+      { caminho: 'apps/api/src/estrutura/turma/vaza.ts', texto: "import { PainelRepository } from '../../operacao/painel/painel.service.js'" },
+      { caminho: 'packages/nucleo/src/retencao/vaza.ts', texto: "import { ContaGlobalRepository } from '../ciclo-de-vida/ponte.js'" },
+      { caminho: 'tools/vaza.ts', texto: "import { ResolucaoDeTenantRepository } from '../apps/api/src/sessao/login/ponte.js'" },
+      { caminho: 'infra/vaza.ts', texto: "import { ContaGlobalRepository } from '../apps/api/src/sessao/login/ponte.js'" },
+      // Outro arquivo da pasta do painel não é a zona.
+      { caminho: 'apps/api/src/operacao/painel/relatorio.ts', texto: "import { PainelRepository } from './painel.repository.js'" },
     ]
-    const dentro = { caminho: 'apps/api/src/sessao/login/login.service.ts', texto: "import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'" }
-    expect(usosForaDoModuloSessao([...fora, dentro])).toEqual(fora.map((arquivo) => arquivo.caminho))
+    const dentro = [
+      { caminho: 'apps/api/src/sessao/login/ponte.ts', texto: "export { ResolucaoDeTenantRepository } from '../tenant/resolucao-de-tenant.repository.js'" },
+      { caminho: 'packages/nucleo/src/ciclo-de-vida/ponte.ts', texto: "export { ContaGlobalRepository } from './conta-global.repository.js'" },
+      { caminho: 'apps/api/src/operacao/painel/painel.service.ts', texto: "import { PainelRepository } from './painel.repository.js'" },
+    ]
+    const inocentes = [
+      { caminho: 'apps/api/test/painel-leitura.int.test.ts', texto: "import { PainelRepository } from '../src/operacao/painel/painel.repository.js'" },
+      { caminho: 'tools/guardas/__fixtures__/camadas/infra/painel-import.ts', texto: "import { PainelRepository } from '../apps/api/src/operacao/painel/painel.repository.js'" },
+      { caminho: 'apps/api/src/estrutura/turma/turma.service.ts', texto: "/** Antes vinha da `ContaGlobalRepository`. */\n// e do @educa/nucleo/conta-global" },
+      { caminho: 'apps/api/src/telemetria/metricas.ts', texto: "const chave = 'metrica.conta-global.limpas'" },
+    ]
+    expect(usosForaDaZona([...fora, ...dentro, ...inocentes])).toEqual([
+      'ResolucaoDeTenantRepository: tools/vaza.ts',
+      'ContaGlobalRepository: packages/nucleo/src/retencao/vaza.ts',
+      'ContaGlobalRepository: infra/vaza.ts',
+      'PainelRepository: apps/api/src/estrutura/turma/vaza.ts',
+      'PainelRepository: apps/api/src/operacao/painel/relatorio.ts',
+    ])
   })
 })
 
@@ -86,63 +113,10 @@ describe('arquitetura: a resolução de tenant fica dentro do módulo de sessão
  * da resolução de tenant para a `ContaGlobalRepository`, em `packages/nucleo/src/ciclo-de-vida`, quando o ciclo de vida
  * foi para o `nucleo`. A exceção da `Conta` (`docs/modelo-de-dados.md`, regras transversais, item 1) passa a aceitar dois
  * caminhos: o módulo `sessao` da API e a pasta do ciclo de vida. A classe não sai pelo barrel do pacote nem pelo
- * subcaminho do ciclo de vida, só pelo `@educa/nucleo/conta-global`, e a lista de quem a importa é fechada aqui.
+ * subcaminho do ciclo de vida, só pelo `@educa/nucleo/conta-global`. Quem a importa é a regra `cerca-conta-global` do
+ * `guarda:camadas` (X5, 12.0), por import direto; o que os barris trazem em execução, o reexport que ela não vê, é conferido aqui.
  */
-const CAMINHOS_DA_CONTA_GLOBAL = [MODULO_SESSAO, 'packages/nucleo/src/ciclo-de-vida/']
-const ARQUIVO_DA_CONTA_GLOBAL = 'packages/nucleo/src/ciclo-de-vida/conta-global.repository.ts'
-/** Cita a classe, o arquivo dela ou o subcaminho do pacote: importação, reexportação ou `import()` dinâmico. */
-const USO_DA_CONTA_GLOBAL = /\bContaGlobalRepository\b|conta-global\.repository|@educa\/nucleo\/conta-global/
-
-/**
- * Quem usa a `ContaGlobalRepository` no código, fora o próprio arquivo e este teste (que a importa por `import()` para
- * conferir o barrel): citá-la num comentário não é usá-la.
- */
-function quemUsaAContaGlobal(arquivos: readonly Arquivo[]): string[] {
-  return arquivos
-    .filter((arquivo) => arquivo.caminho !== ARQUIVO_DA_CONTA_GLOBAL && arquivo.caminho !== ESTE_ARQUIVO)
-    .filter((arquivo) => USO_DA_CONTA_GLOBAL.test(semComentarios(arquivo.texto)))
-    .map((arquivo) => arquivo.caminho)
-}
-
-/** Os que a citam fora dos dois caminhos da exceção da `Conta`. */
-function usosDaContaGlobalForaDosCaminhos(arquivos: readonly Arquivo[]): string[] {
-  return quemUsaAContaGlobal(arquivos).filter((caminho) => !CAMINHOS_DA_CONTA_GLOBAL.some((permitido) => caminho.startsWith(permitido)))
-}
-
 describe('arquitetura: a conta global só pelo módulo sessao e pelo ciclo de vida (F3, tarefa 1.0)', () => {
-  it('quem importa a ContaGlobalRepository é exatamente esta lista, e ninguém fora dos dois caminhos', () => {
-    const arquivos = arquivosDoRepositorio()
-    // A varredura enxerga o código: acha o próprio arquivo da classe.
-    expect(arquivos.filter((arquivo) => USO_DA_CONTA_GLOBAL.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toContain(ARQUIVO_DA_CONTA_GLOBAL)
-    expect(usosDaContaGlobalForaDosCaminhos(arquivos)).toEqual([])
-    // Dentro do módulo de sessão, os dois são achados pelo nome (a pasta de cada um é do desenho da 34.0, não da regra).
-    const usos = quemUsaAContaGlobal(arquivos).sort()
-    expect(usos.filter((caminho) => caminho.startsWith(MODULO_SESSAO)).map((caminho) => basename(caminho))).toEqual(['redefinicao-de-mfa.ts', 'resolucao-de-tenant.repository.int.test.ts'])
-    expect(usos.filter((caminho) => !caminho.startsWith(MODULO_SESSAO))).toEqual([
-      'packages/nucleo/src/ciclo-de-vida/ciclo-de-vida.repository.test.ts',
-      'packages/nucleo/src/ciclo-de-vida/ciclo-de-vida.service.ts',
-    ])
-  })
-
-  it('reprova o terceiro caminho que a importa, reexporta ou carrega por import dinâmico, e deixa os dois caminhos passarem', () => {
-    const fora = [
-      { caminho: 'apps/api/src/estrutura/vinculo/vinculo.service.ts', texto: "import { ContaGlobalRepository } from '@educa/nucleo/conta-global'" },
-      { caminho: 'packages/nucleo/src/retencao/atalho.ts', texto: "export * from '../ciclo-de-vida/conta-global.repository.js'" },
-      { caminho: 'apps/worker/src/processadores/eliminar.ts', texto: "const { ContaGlobalRepository } = await import('@educa/nucleo/conta-global')" },
-      { caminho: 'apps/worker/src/processadores/expurgar.ts', texto: "import * as global from '@educa/nucleo/conta-global'" },
-    ]
-    const dentro = [
-      { caminho: 'apps/api/src/sessao/mfa/redefinicao-de-mfa.ts', texto: "import { ContaGlobalRepository } from '@educa/nucleo/conta-global'" },
-      { caminho: 'packages/nucleo/src/ciclo-de-vida/ciclo-de-vida.service.ts', texto: "import { ContaGlobalRepository } from './conta-global.repository.js'" },
-    ]
-    // Citar a classe num comentário, ou um texto que só contém "conta-global", fora dos dois caminhos, não é usá-la.
-    const inocentes = [
-      { caminho: 'packages/nucleo/src/db/schema/conta.ts', texto: '/** A `ContaGlobalRepository` escreve aqui. */\n// e o @educa/nucleo/conta-global também' },
-      { caminho: 'apps/api/src/telemetria/metricas.ts', texto: "const chave = 'metrica.conta-global.limpas'" },
-    ]
-    expect(usosDaContaGlobalForaDosCaminhos([...fora, ...dentro, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
-  })
-
   it('nem o barrel do @educa/nucleo nem o subcaminho do ciclo de vida exportam a ContaGlobalRepository, com o nome dela ou outro', async () => {
     const { ContaGlobalRepository } = await import('@educa/nucleo/conta-global')
     const cicloDeVida = await import('@educa/nucleo/ciclo-de-vida')
@@ -197,42 +171,15 @@ describe('arquitetura: a conta global só pelo módulo sessao e pelo ciclo de vi
 
 /**
  * I1 (Tech Spec da A0b, seção 6; regra 10, item 9): a leitura entre escolas do painel mora num repository só, o
- * `PainelRepository`, com exatamente três métodos, cada um `@SemEscopo` com a justificativa do painel; e só o
- * `painel.service.ts` o usa. Um quarto método sem escopo, ou outro arquivo que o importe, é mudança da spec.
+ * `PainelRepository`, com exatamente três métodos, cada um `@SemEscopo` com a justificativa do painel. Um quarto método
+ * sem escopo é mudança da spec. Que só o `painel.service.ts` o use é a regra `cerca-painel-repository` do `guarda:camadas`
+ * (X5, 12.0).
  */
-const REPOSITORY_DO_PAINEL = 'apps/api/src/operacao/painel/painel.repository.ts'
-const USO_DO_PAINEL_REPOSITORY = /\bPainelRepository\b|painel\.repository/
-
-/** Quem, fora de teste e do próprio arquivo, cita a classe ou o arquivo dela: importação, reexportação ou `import()`. */
-function quemUsaOPainelRepository(arquivos: readonly Arquivo[]): string[] {
-  return arquivos
-    .filter((arquivo) => !deTeste(arquivo.caminho) && arquivo.caminho !== REPOSITORY_DO_PAINEL)
-    .filter((arquivo) => USO_DO_PAINEL_REPOSITORY.test(arquivo.texto))
-    .map((arquivo) => arquivo.caminho)
-}
-
-describe('arquitetura: a leitura entre escolas mora só no PainelRepository, e só o painel.service.ts o usa (I1)', () => {
+describe('arquitetura: a leitura entre escolas mora só no PainelRepository, com três métodos @SemEscopo (I1)', () => {
   it('os métodos são exatamente redes, escolas e uso, cada um @SemEscopo com a justificativa que cita o painel', () => {
     const metodos = Object.getOwnPropertyNames(PainelRepository.prototype).filter((nome) => nome !== 'constructor')
     expect(metodos.toSorted()).toEqual(['escolas', 'redes', 'uso'])
     for (const metodo of metodos) expect(nucleo.justificativaSemEscopo(PainelRepository, metodo), metodo).toMatch(/^painel do operador: /)
-  })
-
-  it('fora de teste, só o painel.service.ts o importa', () => {
-    expect(quemUsaOPainelRepository(arquivosDoRepositorio())).toEqual(['apps/api/src/operacao/painel/painel.service.ts'])
-  })
-
-  it('a varredura reprova quem de fora o importa, reexporta ou carrega por import dinâmico, e deixa o teste passar', () => {
-    const fora = [
-      { caminho: 'apps/api/src/estrutura/turma/turma.service.ts', texto: "import { PainelRepository } from '../../operacao/painel/painel.repository.js'" },
-      { caminho: 'apps/api/src/operacao/eu/eu.service.ts', texto: "export * from './painel.repository.js'" },
-      { caminho: 'apps/worker/src/consolidacao.ts', texto: "const { PainelRepository } = await import('../../api/src/operacao/painel/painel.repository.js')" },
-    ]
-    const permitidos = [
-      { caminho: 'apps/api/src/operacao/painel/painel.service.ts', texto: "import { PainelRepository } from './painel.repository.js'" },
-      { caminho: 'apps/api/test/painel-leitura.int.test.ts', texto: "import { PainelRepository } from '../src/operacao/painel/painel.repository.js'" },
-    ]
-    expect(quemUsaOPainelRepository([...fora, ...permitidos])).toEqual(['apps/api/src/estrutura/turma/turma.service.ts', 'apps/api/src/operacao/eu/eu.service.ts', 'apps/worker/src/consolidacao.ts', 'apps/api/src/operacao/painel/painel.service.ts'])
   })
 })
 
@@ -890,15 +837,14 @@ describe('arquitetura: toda rota @EntradaDeOperacao está num dos três grupos d
  * métodos que os inserem são o `criar` e o `criarConvite` do `OperadorRepository` (e só ele toca as tabelas, C45); aqui
  * se prova que só o comando os chama, e que nenhum módulo da API importa o código dos comandos, sem exceção: `criarRede` e
  * `criarEscola`, o caso de uso das duas rotas de criação do painel da operação (A0b), moram em `operacao/escola/`, e
- * `ops/` só tem terminal (X5, 35.0). Quem importa o caso de uso fica preso em `escola.repository.test.ts` (I2).
+ * `ops/` só tem terminal (X5, 35.0). Que nenhum arquivo da API fora de `ops/` importe o código dos comandos é a regra
+ * `api-nao-importa-ops` do `guarda:camadas` (X5, 12.0); aqui fica a chamada pelo nome. Quem importa o caso de uso fica
+ * preso em `escola.repository.test.ts` (I2).
  */
 const COMANDO_DO_OPERADOR = 'apps/api/src/ops/operador.ts'
 const PASTA_DOS_COMANDOS = 'apps/api/src/ops/'
-const IMPORTACAO_DOS_COMANDOS = /from\s+['"](?:\.\.?\/)+(?:[^'"]*\/)?ops\/([^'"]+)['"]/g
-/** O arquivo da API, fora de `ops/`, e o comando que ele pode importar: nenhum (a lista fica para a exceção que um dia precisar de motivo escrito). */
-const COMANDOS_QUE_A_API_IMPORTA: Readonly<Record<string, readonly string[]>> = {}
 
-/** Os arquivos de produção que criam operador ou convite de operador fora do comando, ou que importam os comandos na API. */
+/** Os arquivos de produção que criam operador ou convite de operador fora do comando. */
 function quemCriaOperadorForaDoComando(arquivos: readonly Arquivo[]): string[] {
   return arquivos
     .filter((arquivo) => /^(apps|packages)\/[^/]+\/src\//.test(arquivo.caminho) && !deTeste(arquivo.caminho))
@@ -906,34 +852,24 @@ function quemCriaOperadorForaDoComando(arquivos: readonly Arquivo[]): string[] {
       const codigo = semComentarios(arquivo.texto)
       const chamaORepository = /\bOperadorRepository\b/.test(codigo) && /\.(?:criar|criarConvite)\s*\(/.test(codigo) && arquivo.caminho !== COMANDO_DO_OPERADOR
       const chamaOComando = /\b(?:criarOperador|gerarConviteDeOperador|executarOpsOperador)\s*\(/.test(codigo) && !arquivo.caminho.startsWith(PASTA_DOS_COMANDOS)
-      const permitidos = COMANDOS_QUE_A_API_IMPORTA[arquivo.caminho] ?? []
-      const importaOsComandos =
-        arquivo.caminho.startsWith('apps/api/src/') &&
-        !arquivo.caminho.startsWith(PASTA_DOS_COMANDOS) &&
-        [...codigo.matchAll(IMPORTACAO_DOS_COMANDOS)].some((importacao) => !permitidos.includes(importacao[1] ?? ''))
-      return chamaORepository || chamaOComando || importaOsComandos
+      return chamaORepository || chamaOComando
     })
     .map((arquivo) => arquivo.caminho)
 }
 
 describe('arquitetura: nenhuma rota registrada cria operador (C44)', () => {
-  it('só o comando cria operador e convite de operador, e nenhum módulo da API importa os comandos', () => {
+  it('só o comando cria operador e convite de operador', () => {
     const arquivos = arquivosDoRepositorio()
     // A varredura enxerga o código: o comando cria pelo repository.
     expect(arquivos.find((arquivo) => arquivo.caminho === COMANDO_DO_OPERADOR)?.texto).toMatch(/repositorio\.criar\(/)
     expect(quemCriaOperadorForaDoComando(arquivos)).toEqual([])
   })
 
-  it('a varredura reprova a rota que cria pelo repository ou pelo comando, e o módulo que importa os comandos; não confunde comentário, teste nem outro repository', () => {
+  it('a varredura reprova a rota que cria pelo repository ou pelo comando; não confunde comentário, teste nem outro repository', () => {
     const fora = [
       { caminho: 'apps/api/src/operacao/painel/painel.service.ts', texto: "import { OperadorRepository } from './operador.repository.js'\nawait new OperadorRepository(tx).criar(dados)" },
       { caminho: 'apps/api/src/operacao/convite.service.ts', texto: "import { OperadorRepository } from './operador.repository.js'\nawait repositorio.criarConvite({ operadorId })" },
       { caminho: 'apps/api/src/operacao/atalho.controller.ts', texto: "import { criarOperador } from '../ops/operador.js'\nawait criarOperador(banco, autor, dados)" },
-      { caminho: 'apps/api/src/app.module.ts', texto: "import { algo } from './ops/uso.js'" },
-      // Nem o painel importa comando: `criarRede` e `criarEscola` vêm de `operacao/escola/`.
-      { caminho: 'apps/api/src/operacao/painel/painel.service.ts', texto: "import { criarEscola } from '../ops/escola.js'\nimport { executarOpsUso } from '../ops/uso.js'" },
-      { caminho: 'apps/api/src/operacao/painel/painel.service.ts', texto: "import { criarEscola, criarRede } from '../ops/escola.js'" },
-      { caminho: 'apps/api/src/operacao/eu/eu.service.ts', texto: "import { criarEscola } from '../ops/escola.js'" },
     ]
     const inocentes = [
       { caminho: COMANDO_DO_OPERADOR, texto: "import { OperadorRepository } from '../operacao/operador/operador.repository.js'\nawait repositorio.criar(dados)" },
@@ -1445,21 +1381,14 @@ describe('arquitetura: o que a auditoria diz de outra pessoa não entra no arqui
   })
 })
 
-describe('arquitetura: o módulo de sessão não depende da operação, e o arquivo de prazos não fecha ciclo com o repository (X5, 10.0)', () => {
-  /** Provisório: a regra definitiva é a do depcruise, da 12.0, que então substitui estes `it`. */
-  const IMPORTA_A_OPERACAO = /from '(\.\.\/)+operacao\/|import\('(\.\.\/)+operacao\//
+// Que `sessao/` não importe `operacao/` é a regra `sessao-nao-importa-operacao` do `guarda:camadas` (X5, 12.0); o ciclo que
+// o arquivo de prazos fechava com o repository, a `sem-ciclo`. Aqui fica o que a guarda não vê: o que o arquivo declara.
+describe('arquitetura: o arquivo de prazos da sessão do operador não fecha ciclo com o repository (X5, 10.0)', () => {
   const codigoDe = (caminho: string): string => {
     const arquivo = arquivosDoRepositorio().find((candidato) => candidato.caminho === caminho)
     if (arquivo === undefined) throw new Error(`arquivo não encontrado: ${caminho}`)
     return semComentarios(arquivo.texto)
   }
-
-  it('nenhum arquivo do módulo de sessão importa o módulo da operação', () => {
-    const sessao = arquivosDoRepositorio().filter((arquivo) => arquivo.caminho.startsWith(MODULO_SESSAO))
-    expect(sessao.length).toBeGreaterThan(40)
-    expect(sessao.some((arquivo) => arquivo.caminho.startsWith(`${MODULO_SESSAO}externa/`))).toBe(true)
-    expect(sessao.filter((arquivo) => IMPORTA_A_OPERACAO.test(semComentarios(arquivo.texto))).map((arquivo) => arquivo.caminho)).toEqual([])
-  })
 
   it('operacao/sessao/prazos-da-sessao.ts não importa operador.repository', () => {
     expect(codigoDe('apps/api/src/operacao/sessao/prazos-da-sessao.ts')).not.toContain('operador.repository')

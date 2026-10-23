@@ -1556,6 +1556,23 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 
 ## Da X5 (reengenharia), fora dela
 
+- **O `TESTE` da `guarda:camadas` libera das cercas qualquer `src/**/__fixtures__/` e `src/**/test/`** (X5, 12.0,
+  `tenancy-guardian`): hoje existem `apps/web/src/__fixtures__`, `apps/web/src/operacao/__fixtures__` e
+  `packages/nucleo/src/ia/__fixtures__`, e um arquivo de produção posto numa pasta com esse nome passa pelas três cercas. Restringir o
+  padrão de `tools/guardas/camadas.cjs` a `*.test.ts`, `*.spec.ts`, `apps/*/test/`, `e2e/` e `__fixtures__/` fora de `src/`, ou deixar
+  escrito por que não; a varredura por nome (linha abaixo) tem o mesmo furo. Muda o que o lint acusa no código de hoje (as `__fixtures__` de `src/` precisam de nome de teste)
+- **A varredura por nome das classes cercadas** (X5, 12.0, `arquitetura.test.ts › o nome das classes cercadas…`, recomendações da 2ª rodada):
+  (a) não vê alias, `export { PainelRepository as Leitor }` numa ponte de dentro da zona: reprovar `export` do nome da classe, e
+  `export *` do arquivo dela, em arquivo da zona que não seja o da classe nem um barril permitido; (b) o primeiro `it` não exige
+  arquivo lido em `tools/` nem em `infra/`: exigir ao menos um em cada pasta, com mutação que tire `tools` da lista; (c) não lê
+  `.cjs` nem `.cts`; (d) o `deTeste` do arquivo não reconhece `*.spec.ts` nem `*.test.tsx`, e o `TESTE` do `camadas.cjs` sim, e
+  `src/**/test/` e `src/**/__fixtures__/` ficam de fora dos dois (mesma pendência da linha do `TESTE`, acima); (e) a tabela de
+  testes da `12_task.md` não tem linha para o `real: todo alvo de regra existe no grafo…` nem para esse `describe`, e três
+  blocos de mutação se repetem (o que tira `tools` do comando quebra o caminho da configuração, em vez de tirar só `tools`)
+- **A rodada real do `guarda:camadas` exclui só `__fixtures__/camadas/`** (X5, 12.0, `test-engineer`): as fixtures da 9.0 e
+  `tools/ci/fixtures/` entram no grafo real. Excluir todo `__fixtures__/` e `tools/ci/fixtures/` do `exclude` de
+  `tools/guardas/camadas.cjs`, ou registrar a escolha. A 13.0 acrescenta fixture em `tools/guardas/__fixtures__/` e mexe no mesmo
+  `exclude`: decidir lá
 - **A vitrine não tem pedido com arquivo pronto em "Meus dados"** (correção `2026-10-22-intermitentes-desafio-e-meus-dados`,
   `frontend-reviewer`): as fotos de `tools/vitrine/` não mostram o botão "Baixar meus dados" nem o diálogo. Acrescentar o
   pedido pronto e o diálogo aberto à vitrine na próxima tarefa que mexer em `tools/vitrine/`

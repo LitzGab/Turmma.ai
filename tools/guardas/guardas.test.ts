@@ -453,7 +453,8 @@ describe('guarda desligada por comentário', () => {
 
   it('npm run lint roda a passada sem comentários depois do ESLint, e falha se qualquer uma falhar', () => {
     const { scripts } = JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 'utf8')) as { scripts: Record<string, string> }
-    expect(scripts['lint']).toBe('eslint . --max-warnings=0 && node tools/guardas/lint.ts')
+    // A guarda de camadas vem depois das duas (X5, 12.0): o comando inteiro é fixado em `camadas.test.ts › guarda:camadas é o comando…`.
+    expect(scripts['lint']).toMatch(/^eslint \. --max-warnings=0 && node tools\/guardas\/lint\.ts( && .+)?$/)
   })
 })
 

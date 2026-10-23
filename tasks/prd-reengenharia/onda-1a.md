@@ -123,6 +123,29 @@ todas `error`:
 
 Exceção: `nucleo/.../expurgo-da-escola.repository.ts:3`.
 
+**Como ficou (12.0).** A exceção é da regra "repository não importa service": a linha 3 é o `import` do `CicloDeVidaService`, e o
+expurgo da escola o usa para enfileirar a eliminação do titular. Por ser em `packages/nucleo/src`, a regra vale ali e na API, e a
+exceção é o arquivo, não `retencao/` (outro `*.repository.ts` da pasta com o mesmo import reprova). As regras têm o nome da
+cláusula (`sem-ciclo`, `cerca-conta-global`…), e as duas do `index.ts` (`sessao-so-pelo-index`, `credencial-so-pelo-index`) e a
+`api-nao-importa-ops` entram aqui, da onda 2 e da R63. Três leituras que o código fixou:
+- "fora de `credencial/` e `sessao/`" é fora **das duas**: a `sessao/` importa a `credencial/` por dentro (81 imports), e a regra
+  do `index.ts` vale para quem está fora de ambas, em `apps/api/src` e `apps/api/test`;
+- o `exclude` do depcruise não pode listar `node_modules`: ele tira do grafo também a aresta para o `drizzle-orm`, e as duas
+  regras do `drizzle-orm` passariam sem nunca olhar (o `doNotFollow` basta para não entrar no pacote);
+- o teste roda o CLI numa **cópia** da fixture em pasta temporária, com os links `@educa/*` e um `drizzle-orm` de mentira: dentro do
+  repositório, o Node acharia o `node_modules` da raiz e a aresta sairia com `../` na frente. O `vitest.config.ts` ignora
+  `tools/guardas/__fixtures__/`, porque a árvore tem um arquivo chamado `arquitetura.test.ts` (a exceção do `index.ts` é por nome).
+O que a R63 não cobre, e quem cobre: a regra olha quem importa o **arquivo** da classe, e por isso não vê o reexport feito de
+dentro da zona (uma ponte em `sessao/` ou em `ciclo-de-vida/`, ou o `export` do `painel.service.ts`): quem reexporta de dentro
+não viola nada, e qualquer arquivo importa a classe pela ponte. Isso é do teste `arquitetura.test.ts › o nome das classes
+cercadas só aparece dentro da zona de cada uma`, que olha o **nome** da `ResolucaoDeTenantRepository`, da `ContaGlobalRepository` e
+do `PainelRepository` no código de produção de `apps`, `packages`, `tools` e `infra` (a antiga varredura, só que sem teste nem
+fixture), com a zona do painel sendo os dois arquivos e não a pasta. O reexport pelo barril que a zona permite fica com os `it`
+dos barris. Um `import()` com o caminho calculado em tempo de execução só o nome pega.
+`package-lock.json`: o `dependency-cruiser` subiu duas transitivas que já existiam, `acorn` de 8.18.0 para 8.19.0 e
+`enhanced-resolve` de 5.25.1 para 5.26.0; a guarda de dependências passou no portão.
+Linha de base do lint (22/10/2026, a máquina da tarefa): `eslint .` 17,7 s, passada das guardas 9,3 s, `guarda:camadas` 2,9 s.
+
 **Onde roda.** Um comando só, nas cinco pastas da varredura de hoje (`arquitetura.test.ts:32`): `guarda:camadas` roda
 `depcruise --config tools/guardas/camadas.cjs apps packages tools infra e2e`, e `lint` termina em `&& npm run
 guarda:camadas`: a esteira e o portão já o rodam (R39).

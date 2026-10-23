@@ -3,7 +3,8 @@ import { defineConfig } from 'vitest/config'
 
 // `.claude/worktrees/` guarda checkouts inteiros do repositório (os de subagente): sem isto, cada teste rodaria de novo
 // para cada worktree aberto, com o código de outra árvore.
-const ignorados = ['**/node_modules/**', '**/dist/**', 'e2e/**', 'tools/ci/fixtures/**', 'mockups/**', '.claude/worktrees/**']
+// `tools/guardas/__fixtures__/` tem árvores de arquivo que só a guarda de camadas lê, uma delas com o nome `arquitetura.test.ts` (a exceção da regra do `index.ts` é por nome).
+const ignorados = ['**/node_modules/**', '**/dist/**', 'e2e/**', 'tools/ci/fixtures/**', 'tools/guardas/__fixtures__/**', 'mockups/**', '.claude/worktrees/**']
 
 // Os de `infra/` provam a borda, as métricas, os alertas e os jobs contra o compose inteiro, e esperam o
 // relógio real (o `for:` de 5 min do alerta, a sonda da borda, a exportação de métricas): uns 16 min dos
