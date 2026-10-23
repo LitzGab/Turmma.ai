@@ -14,8 +14,8 @@
   - linha 1 (`Implementador`/`Mesa`): **2.0** (grande), 1ª tentativa, desde ~14:35; **parada: BLOQUEIO do `Arquiteto`** (muda o
     critério do RF13), à espera do Joaquim; a linha 1 fica ociosa, porque o quadro não tem outra tarefa liberada
   - linha 2 (`Implementador 2`/`Mesa 2`): **5.0** (grande), 1ª tentativa
-  - linha 3 (`Implementador 3`/`Mesa 3`): **7.0** (grande), 1ª tentativa
-  - a 8.0 parte quando a 7.0 se encontrar (o tasks.md não a autoriza junto com a 7.0)
+  - linha 3 (`Implementador 3`/`Mesa 3`): **8.0** (pequeno), 1ª tentativa, desde ~15:10. Ela não depende do BLOQUEIO da 2.0:
+    não tem dependência e trata do portão, não do `revisoes.ts`
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Triagem pedida ao `Arquiteto` (23/10 ~14:50)**, no andar da spec, junto com a premissa do §12. Quando ele responder,
   a resposta vai ao `Implementador` (linha 1) como observação de um `PEDIDO de retomada` da 2.0. A DIVERGÊNCIA da 2.0
@@ -38,12 +38,14 @@
   sessão dele tem o contexto) para ajustar o RF13 no `prd.md` e no `cenarios.md` e a 2.4 no `2_task.md`. Com o RELATÓRIO dele,
   um `PEDIDO de retomada` da 2.0 ao `Implementador`. O §12 já está em `a691e02`.   Da correção do `casca`, nada: esteira da `develop` VERDE em `47887fc` (`39966758971`). Notar ao Arquiteto, se servir: o lote 5/7 do e2e passou dos 45 min do job na correção do
   `casca` (19 min de compose e 26 de teste, 187 casos), o que pesa no M1 (censo de prazo e a oitava fatia)
-- **Base:** `spec/harness` em `fb37f08`; esteira `39996137914` rodando nele (ler ao fechar a próxima)
+- **Base:** `spec/harness` em `89ff3b1` (encontro da 7.0; o push falhou por TLS e foi refeito à mão); esteira `39996698191`
+  rodando em `a691e02`; ler o veredito ao fechar a próxima
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
 |---|---|---|---|---|
 | 1.0 | `ae688d8` | Sonnet 5.5 | test-engineer 2, revisor-geral 2 (aprovado nas duas) | premissa do §12 medida: no subagente `CLAUDE_CODE_AGENT` é o papel do terminal; levar ao Arquiteto antes da 11.0 |
+| 7.0 | `f775960` | Sonnet 5.5 | infra-guardian 2, revisor-geral 2, test-engineer 2 (os três reprovaram na 1ª) | push do encontro falhou (TLS) e foi refeito |
 
 ## Esperando o Joaquim
 ## 23/10/2026 ~15:00 — X7 tarefa 2.0 (BLOQUEIO do Arquiteto)
@@ -53,4 +55,5 @@ Opções: (A) o caso copia o `caducidade.ts`, onde a função passa a morar, com
 Recomendo: A. A mudança é de duas linhas, o mesmo comportamento continua provado, e a 9.0 à 14.0 continuam de pé
 Segue sem depender: a 5.0 (linha 2) e a 7.0 (linha 3), que não tocam o `revisoes.ts` nem dependem da 2.0. Ficam paradas a 2.0 e, atrás dela, a 3.0, a 4.0, a 9.0 à 14.0 e a 15.0
 ## O que falhou
+- 23/10 ~15:10: o push do encontro da 7.0 falhou (`TLS connect error ... unexpected eof`). Refiz `git push origin spec/harness`, que passou
 ## O que decidi sem perguntar
