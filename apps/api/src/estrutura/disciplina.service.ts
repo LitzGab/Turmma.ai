@@ -10,7 +10,7 @@ import {
   type RespostaListaDeDisciplinas,
 } from '@educa/shared'
 import { DisciplinaRepository } from './disciplina.repository.js'
-import { paginar } from './entrada.js'
+import { paginar } from '../http/paginacao.js'
 
 /**
  * A coordenação cria, lista, renomeia e exclui as disciplinas da escola (RF2 do F1; RF3 da A1). O nome repetido na

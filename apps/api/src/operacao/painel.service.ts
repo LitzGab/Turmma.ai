@@ -29,7 +29,7 @@ import {
 } from '@educa/shared'
 import { Logger } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
-import { criarEscola, criarRede } from '../ops/escola.js'
+import { criarEscola, criarRede } from './casos-de-uso/escola.js'
 import { type ConferenciaDoAutor, criarConviteDeCoordenador, refazerConviteDaCoordenacao, revogarConvitePeloOperador } from '../sessao/index.js'
 import { OperadorRepository } from './operador.repository.js'
 import { PainelRepository, type ReferenciaDoUso } from './painel.repository.js'

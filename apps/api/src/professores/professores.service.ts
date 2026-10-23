@@ -7,7 +7,7 @@ import {
   type RespostaConviteDeProfessor,
   type RespostaListaDeProfessores,
 } from '@educa/shared'
-import { paginarPor } from '../estrutura/entrada.js'
+import { paginarPor } from '../http/paginacao.js'
 import { cadastrarProfessor, refazerConviteDeProfessor, revogarConviteDeProfessor } from '../sessao/index.js'
 import { ProfessoresRepository } from './professores.repository.js'
 

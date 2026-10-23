@@ -8,7 +8,8 @@ import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { abrirBancoDeOperacao, criarEscola, criarRede, executarOpsEscola, type BancoDoComando } from '../src/ops/escola.js'
+import { criarEscola, criarRede } from '../src/operacao/casos-de-uso/escola.js'
+import { abrirBancoDeOperacao, executarOpsEscola, type BancoDoComando } from '../src/ops/escola.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 
 /** O autor dos casos de uso chamados direto, sem o comando: fixo, sem conferir operador ativo. */

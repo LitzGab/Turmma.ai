@@ -888,15 +888,15 @@ describe('arquitetura: toda rota @EntradaDeOperacao está num dos três grupos d
 /**
  * C44 (Tech Spec da A0, seção 6; PRD, RF1): o operador e o convite dele nascem só pelo `ops:operador`. Os únicos
  * métodos que os inserem são o `criar` e o `criarConvite` do `OperadorRepository` (e só ele toca as tabelas, C45); aqui
- * se prova que só o comando os chama, e que nenhum módulo da API importa o código dos comandos, com uma exceção escrita:
- * o painel da operação (A0b) importa o `ops:escola`, cujos `criarRede` e `criarEscola` são o caso de uso das duas rotas
- * de criação (Tech Spec da A0b, seção 1). Quem o importa fica preso também em `escola.repository.test.ts` (I2).
+ * se prova que só o comando os chama, e que nenhum módulo da API importa o código dos comandos, sem exceção: `criarRede` e
+ * `criarEscola`, o caso de uso das duas rotas de criação do painel da operação (A0b), moram em `operacao/casos-de-uso/`, e
+ * `ops/` só tem terminal (X5, 35.0). Quem importa o caso de uso fica preso em `escola.repository.test.ts` (I2).
  */
 const COMANDO_DO_OPERADOR = 'apps/api/src/ops/operador.ts'
 const PASTA_DOS_COMANDOS = 'apps/api/src/ops/'
 const IMPORTACAO_DOS_COMANDOS = /from\s+['"](?:\.\.?\/)+(?:[^'"]*\/)?ops\/([^'"]+)['"]/g
-/** O arquivo da API, fora de `ops/`, e o comando que ele pode importar. */
-const COMANDOS_QUE_A_API_IMPORTA: Readonly<Record<string, readonly string[]>> = { 'apps/api/src/operacao/painel.service.ts': ['escola.js'] }
+/** O arquivo da API, fora de `ops/`, e o comando que ele pode importar: nenhum (a lista fica para a exceção que um dia precisar de motivo escrito). */
+const COMANDOS_QUE_A_API_IMPORTA: Readonly<Record<string, readonly string[]>> = {}
 
 /** Os arquivos de produção que criam operador ou convite de operador fora do comando, ou que importam os comandos na API. */
 function quemCriaOperadorForaDoComando(arquivos: readonly Arquivo[]): string[] {
@@ -930,8 +930,9 @@ describe('arquitetura: nenhuma rota registrada cria operador (C44)', () => {
       { caminho: 'apps/api/src/operacao/convite.service.ts', texto: "import { OperadorRepository } from './operador.repository.js'\nawait repositorio.criarConvite({ operadorId })" },
       { caminho: 'apps/api/src/operacao/atalho.controller.ts', texto: "import { criarOperador } from '../ops/operador.js'\nawait criarOperador(banco, autor, dados)" },
       { caminho: 'apps/api/src/app.module.ts', texto: "import { algo } from './ops/uso.js'" },
-      // O painel importa só o `ops:escola`: outro comando, ou o escola de outro arquivo, continua reprovado.
+      // Nem o painel importa comando: `criarRede` e `criarEscola` vêm de `operacao/casos-de-uso/`.
       { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { criarEscola } from '../ops/escola.js'\nimport { executarOpsUso } from '../ops/uso.js'" },
+      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { criarEscola, criarRede } from '../ops/escola.js'" },
       { caminho: 'apps/api/src/operacao/eu.service.ts', texto: "import { criarEscola } from '../ops/escola.js'" },
     ]
     const inocentes = [
@@ -939,7 +940,7 @@ describe('arquitetura: nenhuma rota registrada cria operador (C44)', () => {
       { caminho: 'apps/api/src/estrutura/turma.service.ts', texto: 'await turmas.criar({ nome })' },
       { caminho: 'apps/api/src/operacao/eu.service.ts', texto: "import type { OperadorRepository } from './operador.repository.js'\n// nunca chama .criar( daqui" },
       { caminho: 'apps/api/test/registros-operador.int.test.ts', texto: "import { criarOperador } from '../src/ops/operador.js'\nawait criarOperador(banco, autor, dados)" },
-      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { criarEscola, criarRede } from '../ops/escola.js'" },
+      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { criarEscola, criarRede } from './casos-de-uso/escola.js'" },
     ]
     expect(quemCriaOperadorForaDoComando([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
   })
@@ -1506,7 +1507,7 @@ describe('arquitetura: o controller valida pelo pipe no parâmetro, e as funçõ
   /** A trava do resto é o bloco `no-restricted-syntax` do ESLint; estes `it` pegam o `safeParse` e as três funções, que o bloco não vê. */
   const CHAMA_O_LEITOR_ANTIGO = /\b(safeParse|lerEntrada|idDoCaminho|lerConsultaPaginada)\b/
   const DECLARA_UMA_DAS_TRES = /\b(function|const)\s+(lerEntrada|idDoCaminho|lerConsultaPaginada)\b/
-  const ARQUIVO_DA_ENTRADA = 'apps/api/src/estrutura/entrada.ts'
+  const ARQUIVO_DA_PAGINACAO = 'apps/api/src/http/paginacao.ts'
   const ehControllerDaApi = (caminho: string): boolean => /^apps\/api\/src\/.+\.controller\.ts$/.test(caminho)
 
   /** Os controllers cujo código (sem comentário) chama uma das quatro. */
@@ -1523,10 +1524,10 @@ describe('arquitetura: o controller valida pelo pipe no parâmetro, e as funçõ
     expect(quemLeAEntradaPorFora(arquivos)).toEqual([])
   })
 
-  it('lerEntrada, idDoCaminho e lerConsultaPaginada não são declaradas em apps nem em packages, e o entrada.ts só guarda a paginação', () => {
+  it('lerEntrada, idDoCaminho e lerConsultaPaginada não são declaradas em apps nem em packages, e o paginacao.ts só guarda a paginação', () => {
     const arquivos = arquivosDoRepositorio().filter((arquivo) => /^(apps|packages)\//.test(arquivo.caminho) && arquivo.caminho !== ESTE_ARQUIVO)
     expect(arquivos.filter((arquivo) => DECLARA_UMA_DAS_TRES.test(semComentarios(arquivo.texto))).map((arquivo) => arquivo.caminho)).toEqual([])
-    const entrada = arquivos.find((arquivo) => arquivo.caminho === ARQUIVO_DA_ENTRADA)
+    const entrada = arquivos.find((arquivo) => arquivo.caminho === ARQUIVO_DA_PAGINACAO)
     expect(entrada?.texto).toContain('export function paginar')
     expect(semComentarios(entrada?.texto ?? '')).not.toMatch(/\b(lerEntrada|idDoCaminho|lerConsultaPaginada)\b/)
   })

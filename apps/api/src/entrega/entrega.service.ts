@@ -1,6 +1,6 @@
 import { ErroDeDominio, RegistroDeAuditoria, type Banco } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaEntrega, esquemaRespostaListaDeEntregas, type ConsultaEntregas, type PedidoDecidirEntrega, type RespostaEntrega, type RespostaListaDeEntregas } from '@educa/shared'
-import { paginar } from '../estrutura/entrada.js'
+import { paginar } from '../http/paginacao.js'
 import { EntregaRepository, type EntregaLida } from './entrega.repository.js'
 
 const registro = new RegistroDeAuditoria()

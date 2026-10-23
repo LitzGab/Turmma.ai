@@ -17,7 +17,7 @@ import {
 import { ExecucaoDoPedidoRepository } from '../assistente/execucao-do-pedido.repository.js'
 import type { LimiteDePedidosDeIa } from '../assistente/limite-de-pedidos-de-ia.js'
 import { EntregaRepository } from '../entrega/entrega.repository.js'
-import { paginar } from '../estrutura/entrada.js'
+import { paginar } from '../http/paginacao.js'
 import type { AgendadorDeExecucoes } from '../ia/agendador-de-execucoes.js'
 import { ArtefatoRepository, type ArtefatoLido } from './artefato.repository.js'
 import { citacoesDoConteudo, exigirAdaptacaoFiel } from './conferencia.js'

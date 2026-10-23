@@ -19,7 +19,7 @@ import {
   type RespostaFuncoesDaGovernanca,
   type RespostaResumoDaGovernanca,
 } from '@educa/shared'
-import { paginar } from '../estrutura/entrada.js'
+import { paginar } from '../http/paginacao.js'
 import { GovernancaRepository, type SuspensaoLida } from './governanca.repository.js'
 
 const registro = new RegistroDeAuditoria()

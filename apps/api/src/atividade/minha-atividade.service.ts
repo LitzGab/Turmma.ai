@@ -17,7 +17,7 @@ import {
   type RespostaQuestaoSalva,
   type SituacaoDaMinhaAtividade,
 } from '@educa/shared'
-import { paginar } from '../estrutura/entrada.js'
+import { paginar } from '../http/paginacao.js'
 import { habilidadesDaAtividade } from './lote.js'
 import { MinhaAtividadeRepository, type MinhaAtividadeLida } from './minha-atividade.repository.js'
 

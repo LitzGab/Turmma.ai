@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { RedeEEscolaRepository } from './escola.repository.js'
 
-const RAIZ = fileURLToPath(new URL('../../../../', import.meta.url))
-const REPOSITORY = 'apps/api/src/ops/escola.repository.ts'
-const COMANDO = 'apps/api/src/ops/escola.ts'
+const RAIZ = fileURLToPath(new URL('../../../../../', import.meta.url))
+const REPOSITORY = 'apps/api/src/operacao/casos-de-uso/escola.repository.ts'
+const CASO_DE_USO = 'apps/api/src/operacao/casos-de-uso/escola.ts'
 
 function arquivosDeCodigo(): { caminho: string; texto: string }[] {
   return ['apps', 'packages', 'infra', 'tools'].flatMap((pasta) =>
@@ -25,15 +25,16 @@ function arquivosDeCodigo(): { caminho: string; texto: string }[] {
 const CRIACAO_DE_REDE_OU_ESCOLA = /\binsert\s*\(\s*(?:schema\.)?(?:rede|escola)\b|\binsert\s+into\s+(?:"?public"?\.)?"?(?:rede|escola)"?[\s(]/i
 
 /**
- * Quem, fora de arquivo `.test.ts`, importa o comando `ops:escola` (que exporta `criarRede` e `criarEscola`): o painel da
- * operação (`painel.service.ts`, A0b), a única rota que cria rede e escola, só com sessão de operador Turmma; e o que
- * monta escola sintética: a bancada dos testes de integração da API (que desde a tarefa 2.0 exige sessão real), a
+ * Quem, fora de arquivo `.test.ts`, importa o caso de uso (`operacao/casos-de-uso/escola.ts`, que exporta `criarRede` e
+ * `criarEscola`): o painel da operação (`painel.service.ts`, A0b), a única rota que cria rede e escola, só com sessão de
+ * operador Turmma; o comando `ops:escola` (`ops/escola.ts`), que é o terminal sobre ele; e o que monta escola sintética: a bancada dos testes de integração da API (que desde a tarefa 2.0 exige sessão real), a
  * bancada da fila (desde a tarefa 3.0 `job_registro` tem FK para `escola`), o ensaio de alertas, que só roda com
  * `AMBIENTE=local`, e os cenários de carga "login às 7h30" (16.0) e "reivindicação em sala" (A1, 9.0), que montam as
  * escolas sintéticas no banco do compose de carga. Outra rota que chame a criação, com qualquer nome, entra aqui e a revisão confere.
  */
-const IMPORTADORES_PERMITIDOS_DO_COMANDO: readonly string[] = [
+const IMPORTADORES_PERMITIDOS_DO_CASO_DE_USO: readonly string[] = [
   'apps/api/src/operacao/painel.service.ts',
+  'apps/api/src/ops/escola.ts',
   'apps/api/test/sessao-de-teste.ts',
   'apps/worker/test/fila-de-teste.ts',
   'infra/scripts/carga-login.ts',
@@ -60,23 +61,23 @@ describe('RedeEEscolaRepository: a criação de rede e escola é só do operador
     for (const metodo of semEscopo) expect(justificativaSemEscopo(RedeEEscolaRepository, metodo), metodo).toMatch(/comando ou o painel do operador/)
   })
 
-  it('nenhum código fora do repository do operador cria rede ou escola, e só o comando ops:escola o importa', () => {
+  it('nenhum código fora do repository do operador cria rede ou escola, e só o caso de uso o importa', () => {
     const arquivos = arquivosDeCodigo()
     expect(arquivos.filter((arquivo) => CRIACAO_DE_REDE_OU_ESCOLA.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toEqual([REPOSITORY])
     // O caminho do arquivo, e não o fim de outro nome: `retencao-da-escola.repository` (F3, tarefa 2.0) é outro repository.
-    expect(arquivos.filter((arquivo) => /[/'"]escola\.repository\b/.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toEqual([COMANDO])
+    expect(arquivos.filter((arquivo) => /[/'"]escola\.repository\b/.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toEqual([CASO_DE_USO])
   })
 
-  it('fora de teste, só o painel da operação e as bancadas importam o comando: criarRede e criarEscola chegam a uma rota só, a do operador', () => {
+  it('fora de teste, só o painel da operação, o comando ops:escola e as bancadas importam o caso de uso: criarRede e criarEscola chegam a uma rota só, a do operador', () => {
     const importadores = arquivosDeCodigo()
-      .filter((arquivo) => importacoesRelativas(arquivo).includes(COMANDO))
+      .filter((arquivo) => importacoesRelativas(arquivo).includes(CASO_DE_USO))
       .map((arquivo) => arquivo.caminho)
     // A ordem da varredura é a do sistema de arquivos: compara as listas ordenadas.
-    expect([...importadores].sort()).toEqual([...IMPORTADORES_PERMITIDOS_DO_COMANDO].sort())
-    // A resolução enxerga importação relativa de verdade: o comando importa o repository.
-    const comando = arquivosDeCodigo().find((arquivo) => arquivo.caminho === COMANDO)
-    expect(comando && importacoesRelativas(comando)).toContain(REPOSITORY)
-    expect(importacoesRelativas({ caminho: 'apps/api/src/onboarding/nova-escola.controller.ts', texto: "import { criarEscola } from '../ops/escola.js'" })).toEqual([COMANDO])
+    expect([...importadores].sort()).toEqual([...IMPORTADORES_PERMITIDOS_DO_CASO_DE_USO].sort())
+    // A resolução enxerga importação relativa de verdade: o caso de uso importa o repository.
+    const casoDeUso = arquivosDeCodigo().find((arquivo) => arquivo.caminho === CASO_DE_USO)
+    expect(casoDeUso && importacoesRelativas(casoDeUso)).toContain(REPOSITORY)
+    expect(importacoesRelativas({ caminho: 'apps/api/src/onboarding/nova-escola.controller.ts', texto: "import { criarEscola } from '../operacao/casos-de-uso/escola.js'" })).toEqual([CASO_DE_USO])
   })
 
   it('a varredura pega a criação em qualquer forma', () => {

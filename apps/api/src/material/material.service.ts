@@ -17,7 +17,7 @@ import {
 } from '@educa/shared'
 import { createHash } from 'node:crypto'
 import { DisciplinaRepository } from '../estrutura/disciplina.repository.js'
-import { paginar } from '../estrutura/entrada.js'
+import { paginar } from '../http/paginacao.js'
 import { temAssinaturaDePdf, type ExtratorDePdf } from './extracao-de-pdf.js'
 import { PRAZO_DA_EXTRACAO_MS, type FilaDeExtracao } from './fila-de-extracao.js'
 import { MaterialParadoRepository, MaterialRepository, type AlcanceDoMaterial, type MaterialLido } from './material.repository.js'

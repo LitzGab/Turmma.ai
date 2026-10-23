@@ -16,7 +16,7 @@ import {
   type RespostaTurma,
   type RespostaTurmaAberta,
 } from '@educa/shared'
-import { paginar, paginarPor } from './entrada.js'
+import { paginar, paginarPor } from '../http/paginacao.js'
 import { SerieRepository } from './serie.repository.js'
 import { TurmaRepository, type AlcanceDaTurma } from './turma.repository.js'
 

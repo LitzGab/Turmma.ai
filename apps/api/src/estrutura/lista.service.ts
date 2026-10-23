@@ -15,7 +15,7 @@ import {
   type RespostaListaDaTurma,
   type RespostaPreviaDaLista,
 } from '@educa/shared'
-import { paginar } from './entrada.js'
+import { paginar } from '../http/paginacao.js'
 import { errosDasLinhas, lerTextoDaLista, type LinhaLida } from './leitor-da-lista.js'
 import { ListaRepository } from './lista.repository.js'
 import { TurmaRepository } from './turma.repository.js'

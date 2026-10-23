@@ -11,7 +11,7 @@ import {
   type RespostaAtividadeEncerrada,
   type RespostaListaDeAtividadesAplicadas,
 } from '@educa/shared'
-import { paginar } from '../estrutura/entrada.js'
+import { paginar } from '../http/paginacao.js'
 import type { ConferenciaDeFuncao } from '../ia/conferencia-de-funcao.js'
 import { AtividadeAplicadaRepository, type AplicacaoLida, type AplicacaoTravada } from './atividade-aplicada.repository.js'
 import { acertosDoLote, corrigirTentativa, destaquesDaTentativa, type HistoricoAprovado } from './correcao-de-objetiva.js'

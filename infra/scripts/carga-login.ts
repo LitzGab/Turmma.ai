@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { setTimeout as esperar } from 'node:timers/promises'
 import { pathToFileURL } from 'node:url'
 import pg from 'pg'
-import type { criarEscola, criarRede } from '../../apps/api/src/ops/escola.ts'
+import type { criarEscola, criarRede } from '../../apps/api/src/operacao/casos-de-uso/escola.ts'
 import type { HashDeSenha } from '../../apps/api/src/credencial/hash-de-senha.ts'
 import type { criarAlunosComMatricula, criarSessoesSinteticas } from '../../apps/api/src/sessao/tenant/sessoes-sinteticas.ts'
 import type { criarBanco, criarPool } from '@educa/nucleo'
@@ -309,7 +309,7 @@ async function importarDaApi(): Promise<ModulosDaApi> {
   const importar = <T>(caminho: string) => import(pathToFileURL(join(raizRepositorio, caminho)).href) as Promise<T>
   return {
     nucleo: await importar('packages/nucleo/dist/index.js'),
-    escolas: await importar('apps/api/dist/ops/escola.js'),
+    escolas: await importar('apps/api/dist/operacao/casos-de-uso/escola.js'),
     sessoes: await importar('apps/api/dist/sessao/tenant/sessoes-sinteticas.js'),
     hash: await importar('apps/api/dist/credencial/hash-de-senha.js'),
   }

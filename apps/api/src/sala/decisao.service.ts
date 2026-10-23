@@ -12,7 +12,7 @@ import {
   type RespostaPedidosDaTurma,
   type ResultadoDaDecisao,
 } from '@educa/shared'
-import { paginar } from '../estrutura/entrada.js'
+import { paginar } from '../http/paginacao.js'
 import { TurmaRepository } from '../estrutura/turma.repository.js'
 import { VinculoRepository } from '../estrutura/vinculo.repository.js'
 import { type ContadorDeTentativas, CredencialMatriculaRepository, CriacaoDeSessaoRepository, identificadorDoAluno } from '../credencial/index.js'

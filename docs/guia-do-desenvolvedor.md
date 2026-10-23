@@ -140,7 +140,8 @@ apps/api/src/
     turma.repository.ts
     *.test.ts                  unidade, ao lado do código
   credencial/senha/            senha, hash, ContadorEmJanela, SemaforoDeHash: primitivas que outros módulos usam
-  estrutura/entrada.ts         paginar e paginarPor, o corte da página de uma listagem
+  http/paginacao.ts            paginar e paginarPor, o corte da página de uma listagem
+  operacao/casos-de-uso/       criarRede e criarEscola, que o painel e o comando ops:escola chamam
   ops/                         só comandos de terminal (npm run ops:*), finos, sobre os casos de uso de operacao/
 apps/api/test/                 testes de integração: entre outros, os que cruzam módulos, os de arquitetura e os
                                HTTP de vários módulos; muitos módulos também têm *.int.test.ts ao lado do código
@@ -211,7 +212,7 @@ Exemplo: a disciplina (`apps/api/src/estrutura/`, `packages/shared/src/estrutura
    .where(and(eq(disciplina.escolaId, exigirEscolaDoContexto()), eq(disciplina.id, id)))
    ```
    Tabela que varia por ano usa também `exigirAnoEmCurso()`. Listagem é paginada por cursor (`paginar`, de
-   `apps/api/src/estrutura/entrada.ts`).
+   `apps/api/src/http/paginacao.ts`).
    **O alcance do objeto também é do repository**, e cada alcance tem o seu jeito:
    - **`turma_vinculada`:** um `exists` sobre o vínculo `confirmado` do usuário do contexto na turma da linha.
      - **Linha com disciplina** (artefato, atividade aplicada, entrega): o vínculo precisa ser também naquela
