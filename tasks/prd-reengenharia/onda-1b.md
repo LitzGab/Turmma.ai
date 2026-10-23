@@ -154,12 +154,22 @@ O marcador forjado num commit só de docs, só a 3 pega; o guardião por caminho
 **As dependências (24.0)**, as do knip, nas versões do lock:
 
 - `devDependencies` da raiz: `pg`, `ioredis`, `@node-rs/argon2`, `otpauth`, `bullmq`, `socket.io-client`,
-  `@opentelemetry/sdk-metrics`; de `apps/realtime`: `jose`; de `apps/worker`: `drizzle-orm`.
+  `@opentelemetry/sdk-metrics`, e também `drizzle-orm` e `zod` (os testes de `tools/guardas/` as importam, e o
+  `definicoes-de-job.test.ts` nasceu na 18.0, depois da medição: a lista saiu do knip e não da leitura); de
+  `apps/realtime`: `jose`; de `apps/worker`: `drizzle-orm`. Todas exatas, na versão do lock.
 - Sai o `pino` de `apps/despachante` e `apps/worker`.
 
 **A trava.** O `knip.json` da raiz, derivado de `.reengenharia/medicao/knip.json`, roda com
 `--include dependencies,unlisted,binaries,unresolved` em `tools/ci/etapas-de-guarda.ts`. O knip é `devDependency` (R40),
-6.42.1 exato.
+6.42.1 exato. O `guarda:dependencias` do `package.json` passa a ser `npm audit … && knip --include …`, porque o portão da
+tarefa só roda esse script e `tools/processo/` não muda antes da 92.0; a etapa do `ci:verificar` é a
+`etapaDependenciasDeclaradas` (`npx --no knip …`), com os argumentos numa constante só (`ARGUMENTOS_DO_KNIP`).
+
+O `knip.json` tem, além do `ignore` (só as duas pastas de fixture), `ignoreDependencies: ["k6"]` e
+`ignoreBinaries: ["flock", "maestri"]` no workspace da raiz, que não são pacote npm (`k6/http` é do executor do k6; os
+outros dois são comandos do sistema); a `apps/web` tem `src/estilos.css` como entrada, para o knip seguir o
+`@import 'tailwindcss'`. `knip.test.ts` afirma que não há outra porta (`ignoreWorkspaces`, `ignoreIssues`, `ignore` por
+workspace).
 
 **O `throw` (25.0).** São 94 `throw new Error('…')` em produção, quase todos invariantes.
 - `ErroDeInvariante extends Error` (`packages/nucleo/src/erro/`) leva motivo fixo, sem interpolar valor.

@@ -1,0 +1,1 @@
+{ "name": "fixture-limpo", "private": true, "type": "module", "dependencies": { "pino": "10.3.1" }, "scripts": { "ola": "node --version" } }

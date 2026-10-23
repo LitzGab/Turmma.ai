@@ -94,3 +94,15 @@ export const etapaAuditoriaDeDependencias: Etapa = {
   comando: 'npm',
   argumentos: ['audit', '--audit-level=high', '--omit=dev'],
 }
+
+/**
+ * As categorias do knip que a esteira reprova (RF13, 24.0): pacote declarado e não usado, pacote usado e não declarado,
+ * binário chamado em script e não declarado, e import que não resolve. Export e arquivo morto ficam de fora (ondas 2 e 6).
+ */
+export const ARGUMENTOS_DO_KNIP = ['--include', 'dependencies,unlisted,binaries,unresolved'] as const
+
+export const etapaDependenciasDeclaradas: Etapa = {
+  nome: 'dependência declarada onde é usada, sem sobra (knip)',
+  comando: 'npx',
+  argumentos: ['--no', 'knip', ...ARGUMENTOS_DO_KNIP],
+}

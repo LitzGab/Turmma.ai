@@ -1,0 +1,1 @@
+{ "name": "fixture-declarado-e-sem-uso", "private": true, "type": "module", "dependencies": { "pino": "10.3.1" } }
