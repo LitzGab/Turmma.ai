@@ -341,7 +341,8 @@ simplificados em mudanças pequenas e verificáveis, sem redesenho. Entram tamb�
   barrada no portão (regra 40); o fim do caminho `(mvp:)` do hook (D77); o histórico de `achados/` fora do git depois do
   pouso; e a esteira em `pull_request` para a `develop` (D23). A ordem segura de mexer no hook está em
   `.reengenharia/diagnostico/U11.md` §7, na tag `reengenharia/temporario`. Cada uma é do Joaquim, e a que muda decisão vira
-  revisão dela.
+  revisão dela. **Respondidas em 23/10/2026**, no terminal do Arquiteto: todas sim, menos o `achados/`, que fica no git
+  (revisões da D23, D53, D77 e D79; `tasks/prd-harness/prd.md`).
 
 **Pronto quando:** cada skill, papel, regra, hook e rotina está no lugar e no formato que o Claude Code e o Maestri
 **descobrem e executam**, provado por uso e não pela existência do arquivo: a skill é listada e carrega, o papel sobe com

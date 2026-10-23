@@ -181,6 +181,10 @@ do Maestri, na branch `spec/<funcionalidade>`, que só entra na `develop` por po
 Joaquim; a esteira roda uma vez por spec, na branch, antes do pouso. Decisão, retrospectiva e
 documento que não é de spec continuam na `develop`. O merge para `release` e `main` não muda.
 
+Revista em 23/10/2026, na X7 (`harness`), pelo Joaquim no terminal do Arquiteto: a esteira roda também
+no `pull_request` para a `develop`, e a branch do Gabriel passa a ser testada antes do merge, e não
+depois. O pouso do Orquestrador continua merge direto, com a esteira da spec já lida (U10-13).
+
 **D24 — Na primeira semana, a coordenação precisa ver quatro coisas funcionando.**
 A escola inteira cadastrada sem trabalho manual, o painel de governança de IA com 100% das
 notas aprovadas por humano, professores gerando prova e plano a partir da apostila com a
@@ -465,6 +469,17 @@ execuções de revisor, com `tenancy-guardian` e `infra-guardian` aprovando as q
 rodava três vezes na mesma árvore; três commits de correção entraram sem revisor; e a Tech Spec do F1
 saiu com 5.393 palavras para um teto de 2.000. Os vetos, o commit direto no `main` (D23) e a esteira
 como portão (D31) continuam.
+
+Revista em 23/10/2026, na X7 (`harness`), pelo Joaquim no terminal do Arquiteto: (1) em sessão de papel
+do time, commit que altera `tools/`, `.github/`, `eslint.config.mjs`, `.claude/settings*.json` ou
+`.claude/hooks/` passa a exigir tarefa ou correção, `revisor-geral`, `test-engineer` e carimbo, como o
+código de produto; skill, papel e regra continuam documento. (2) A trava do commit ganha uma segunda
+camada, o git hook nativo (`pre-commit` e `pre-push`), que vale para qualquer forma de chamar o git em
+sessão de papel; o hook do Claude Code fica como a mensagem na frente, e o commit do Joaquim fora de
+sessão de papel continua livre. (3) O histórico de `achados/` continua no git. Motivo: o diagnóstico do
+harness (U11-3, U11-5) mostrou que `/usr/bin/git commit`, `env … git commit` e `sh -c '…'` passam sem
+revisão, e que o código que impõe as regras (as guardas e o próprio hook) entrava sem revisor; o
+`achados/` é o rastro de auditoria do processo, e a retrospectiva lê dele depois do pouso (U11-15).
 
 ---
 
@@ -956,6 +971,11 @@ Motivo: a A1 levou cerca de sete dias, a esteira leva cerca de 30 a 40 min por c
 roteiro de demonstração precisa estar de pé em 06/10/2026. Revisão: o processo completo volta
 antes da primeira escola real — F2, F3 e o portão do piloto.
 
+Revista em 23/10/2026, na X7 (`harness`), pelo Joaquim no terminal do Arquiteto: o caminho `(mvp: …)` sai
+do hook. Uma fatia sintética nova, se vier, roda no processo de hoje: as linhas da D79 já dão a
+velocidade que o processo enxuto buscava, e o caminho, sem branch `mvp/` desde 05/10/2026, era código que
+ninguém exercitava (U11-10).
+
 **D78 — O processo roda no Maestri: um andar por spec, um comando, e modelo por papel.** *(decidida
 pelo Joaquim em 08/10/2026)*
 Revisa a D23 (onde o trabalho acontece e quando a esteira roda) e a D53 (quem chama os revisores e
@@ -1234,6 +1254,14 @@ paradas não mudam. **Sem prova ainda:** os comandos do Maestri para o andar e o
 mais, o e2e de três linhas ao mesmo tempo nesta máquina, o consumo por hora do plano com mais de um par,
 quanto tempo de spec as linhas tiram, e se o comando vazio da rotina de fato não acorda o modelo. Para
 desfazer sem mexer em código: não autorizar paralelo no `tasks.md`.
+Revista em 23/10/2026, na X7 (`harness`), pelo Joaquim no terminal do Arquiteto: (1) o commit exige a
+rodada de cada guardião com veto que o caminho alterado pede, por uma tabela no código do hook, somada à
+marcação da tarefa; o teto de três guardiões vale para o que o Arquiteto marca. (2) Tarefa ou correção
+que altera código de produção (`apps/*/src`, `packages/*/src`) sem nenhum bloco de mutação e sem a linha
+"Sem mutação: <motivo>" não recebe carimbo, e o portão lista antes da Mesa as condições novas que nenhum
+bloco alcança. Motivo: sem o rótulo certo, os guardiões de tenant e de privacidade sumiam sem erro
+(U11-4), e zero mutações passava o portão (U11-8); a cláusula sem mutação foi a reprovação que mais
+voltou, 10 vezes na X5, sem mudar com quatro specs de texto.
 
 **D80 — A pele do produto é o sistema Turmma do mockup de outubro: cor por família, borda de 2 px
 com degrau sólido, ícone ilustrado, a onça como mascote, modo escuro, e até quatro lugares por
