@@ -307,6 +307,37 @@ describe('imagens construídas, por ambiente', () => {
     })
   })
 
+  it('imagem entre aspas, com comentário na linha e depois de `<<`, resolve do mesmo jeito, até na âncora de âncora', () => {
+    const escrito = [
+      'services:',
+      '  api-1: &api',
+      '    image: "educa-api:local"   # aspas e comentário na mesma linha',
+      '  api-2: &api-dois',
+      '    <<: *api',
+      '  api-3:',
+      '    <<: *api-dois',
+      '    image: educa-api:outra',
+      '  api-4:',
+      '    <<: *api-dois',
+      '  worker-1:',
+      "    <<: *api",
+      "    image: 'educa-worker:local'",
+      '  web:',
+      '    build: .',
+      '',
+    ].join('\n')
+    // Só entra no mapa o serviço que tem imagem: a `web` constrói e não declara nome.
+    expect([...imagensDosServicos(escrito).keys()]).toEqual(['api-1', 'api-2', 'api-3', 'api-4', 'worker-1'])
+    expect(Object.fromEntries(imagensDosServicos(escrito))).toEqual({
+      'api-1': 'educa-api:local',
+      'api-2': 'educa-api:local',
+      'api-3': 'educa-api:outra',
+      // Sem imagem própria, dois saltos: `api-4` → `api-dois` → `api`.
+      'api-4': 'educa-api:local',
+      'worker-1': 'educa-worker:local',
+    })
+  })
+
   it('só a imagem que o compose constrói troca de etiqueta, e a de terceiro continua a mesma', () => {
     const texto = conteudoDasImagensDoAmbiente(2, COMPOSE_DE_EXEMPLO)
     expect(texto.split('\n').filter((linha) => !linha.startsWith('#'))).toEqual([

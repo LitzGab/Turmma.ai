@@ -241,7 +241,7 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
   - [x] 25.5 `guardas/erro-tipado` (`tools/guardas/regras-erro.mjs`) em `apps/*/src` e `packages/nucleo/src`, fora de teste, exceto `apps/web/src/main.tsx`
   - [x] 25.6 Testes: classe, formas proibidas, exceções, segunda passada, filtro global, ops
 
-- [ ] **90.0 — Um Dockerfile com `target`, imagens medidas antes e depois**
+- [x] **90.0 — Um Dockerfile com `target`, imagens medidas antes e depois**
   - [ ] 90.1 O `90_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-5.md`
 
 ### O guia do desenvolvedor
