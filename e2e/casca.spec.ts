@@ -2,12 +2,15 @@ import type { Locator, Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { entrarComoCoordenacaoNaMesmaAba, entrarComoAluno, entrarComoProfessora, gaveta, PRAZO_DA_ENTRADA_MS, reservaDaBarraDeBaixo, secoes } from './__fixtures__/casca.ts'
 import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
+import { instanteGravado, vigiarODado } from './__fixtures__/dado-na-tela.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, criarEquipeComSenha } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 const ROTA_ESTADO = '**/v1/sistema/estado'
 const ROTA_AVISOS = '**/v1/sistema/avisos'
 const PRAZO_DO_DADO_MS = 5_000
+/** Da resposta entregue ao dado pintado, com a CPU ×4: ~15 ms na máquina; a espera do Playwright, no mesmo ponto, passa de 450. */
+const PINTURA_DO_DADO_MS = 250
 
 const envelope = (codigo: keyof typeof MENSAGENS_DE_ERRO) => ({
   erro: { codigo, mensagem: 'mensagem da API que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' },
@@ -47,6 +50,14 @@ async function esperarEstadoComDado(page: Page, prazo = PRAZO_DO_DADO_MS): Promi
   await expect(secao.getByRole('listitem').filter({ hasText: 'Banco de dados' })).toContainText('Disponível', { timeout: prazo })
 }
 
+/** O instante (`Date.now()`) em que o dado apareceu na tela, depois de `esperarEstadoComDado` confirmar que ele está lá. */
+async function instanteDoDado(page: Page): Promise<number> {
+  await esperarEstadoComDado(page)
+  const instante = await instanteGravado(page)
+  expect(instante, 'a página vigiada não gravou quando o dado apareceu: `vigiarODado` vem antes do `goto`').toBeDefined()
+  return instante ?? 0
+}
+
 /** Toque no celular, clique no Chromebook: a mesma ação pela entrada que cada aparelho tem. */
 async function acionar(page: Page, nome: string, hasTouch: boolean): Promise<void> {
   const botao = page.getByRole('button', { name: nome })
@@ -66,10 +77,12 @@ async function esperarAlvoDeToque(page: Page, nome: string): Promise<void> {
 test.describe('casca da web', () => {
   test('com dado: versão e componentes vindos da API real, em até 5 s, sem rolagem horizontal e sem violação grave', async ({ page }) => {
     const respostaEstado = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/sistema/estado')
+    await vigiarODado(page)
     const inicio = Date.now()
     await page.goto('/sistema')
-    await esperarEstadoComDado(page)
-    const decorrido = Date.now() - inicio
+    // O relógio é o instante em que o dado apareceu (`instanteDoDado`), e não `Date.now()` depois da asserção: o caso "o prazo do
+    // dado conta quando o dado aparece…" trava a diferença, e ler `Date.now() - inicio` aqui de novo traz de volta o degrau da espera.
+    const decorrido = (await instanteDoDado(page)) - inicio
     expect(decorrido, `dado na tela em ${decorrido} ms`).toBeLessThanOrEqual(PRAZO_DO_DADO_MS)
 
     const estado = await respostaEstado
@@ -83,6 +96,35 @@ test.describe('casca da web', () => {
     await expect(page.locator('meta[name="viewport"]')).toHaveAttribute('content', 'width=device-width, initial-scale=1')
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('o prazo do dado conta quando o dado aparece na tela, não quando o teste o percebe', async ({ page }) => {
+    // O dado só sai 1,45 s depois de o pedido chegar, logo depois de um degrau da espera do Playwright (~1,36 s): quem mede quando o teste percebe lê ~1,87 s.
+    let liberadoEm = 0
+    await page.route(ROTA_ESTADO, async (rota) => {
+      await new Promise((resolver) => setTimeout(resolver, 1_450))
+      liberadoEm = Date.now()
+      await rota.fulfill({ contentType: 'application/json', body: JSON.stringify(estadoFalso()) })
+    })
+    // Avisos que dizem "API" e "Disponível" chegam antes do estado: um vigia que olhasse a página inteira gravaria o instante deles.
+    await page.route(ROTA_AVISOS, (rota) =>
+      rota.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          itens: [
+            { id: 'api-no-ar', texto: 'API Disponível', publicadoEm: '2026-09-13' },
+            { id: 'banco-no-ar', texto: 'Banco de dados Disponível', publicadoEm: '2026-09-12' },
+          ],
+        }),
+      }),
+    )
+    await vigiarODado(page)
+    await page.goto('/sistema')
+    const apareceuEm = await instanteDoDado(page)
+    expect(liberadoEm, 'o pedido do estado não passou pela rota').toBeGreaterThan(0)
+    const pintura = apareceuEm - liberadoEm
+    expect(pintura, `o dado apareceu ${pintura} ms depois de liberado`).toBeGreaterThanOrEqual(0)
+    expect(pintura, `o dado apareceu ${pintura} ms depois de liberado`).toBeLessThanOrEqual(PINTURA_DO_DADO_MS)
   })
 
   test('vazio: sem avisos na configuração, a seção convida a verificar de novo, e o botão busca de novo', async ({ page, hasTouch }) => {
