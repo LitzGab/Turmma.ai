@@ -1543,8 +1543,8 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X3, 14.0 e validação) Vocabulário (RF21): a lista proibida está em dois lugares, e sete telas não têm teste (`privacy-guardian` e `revisor-geral`, 14.0, 1ª rodada; validação da X3, rodada 1, M3).** (a) Juntar `VOCABULARIO_PROIBIDO` (`e2e/professor-aprovar.spec.ts:19` e `aprovar.test.ts`) com `VOCABULARIO_DE_NOTA` (`e2e/__fixtures__/professor/cena.ts:17`, repetido em `e2e/a3-a4-professor.spec.ts:19` e `e2e/roteiro-da-demonstracao.spec.ts:63`) num lugar só, na tarefa que alterar `cena.ts` (mais três specs a importam). (b) Criados, Turmas, Início, Conversa, o documento, Convidar e o sino não têm teste de vocabulário. (c) O regex `\bmédia\b` não pega "Acerto médio" (`aprovar.ts:236`): ver "Para o Joaquim saber" abaixo. (dono: Joaquim)
 - [ ] **(X3, `tools/ci/duracao-do-e2e.ts`) Retitular um caso de e2e o faz parecer novo para o HEAD (diário do Orquestrador; vizinha da letra (a) do item "(X1, retrospectiva) Código de processo").** A régua acha o prazo declarado no HEAD pelo título do caso; com o título trocado, não acha e cobra 15 s. Hoje isso trava renomear casos lentos: o `a3-a4` leva 64 s e o `lugares` 28–31 s, e é por isso que os títulos com "Seu time" ficaram (validação da X3, N4, na linha dos menores abaixo). Correção própria em `tools/ci/duracao-do-e2e.ts`, com teste e bloco de mutação. (dono: Joaquim) **Entra no código de processo da retrospectiva da X3, logo abaixo (M3).**
 - [ ] **(X3, retrospectiva) Código de processo que a X3 pediu** (`tasks/prd-telas-do-professor/retro.md`, M1 a M3). **Destino que o
-      Joaquim deu em 19/10/2026: antes da primeira tarefa da X4**, numa correção própria, com teste e revisão; mexe em `tools/processo/` e
-      `tools/ci/`: (M1) **censo de prazo do e2e**: `tools/processo/esteira.ts` ganha um comando que lê o log do e2e da última execução
+      Joaquim deu em 19/10/2026: antes da primeira tarefa da X4**; **em 23/10/2026, a X7 (`harness`)**, que vem antes da X4, junto
+      da P4 e das M1 a M7 da X5, com teste e revisão; mexe em `tools/processo/` e `tools/ci/`: (M1) **censo de prazo do e2e**: `tools/processo/esteira.ts` ganha um comando que lê o log do e2e da última execução
       verde da spec e lista os casos acima de dois terços do próprio prazo (o declarado, que `duracao-do-e2e.ts` já sabe ler; 20 s nos que
       não declaram), e o Orquestrador, ao fechar cada tarefa, abre uma correção para a lista que não estiver vazia, antes de o caso ficar
       vermelho. Seis dos oito vermelhos da esteira da X3 foram prazo de caso que a tarefa não tocou (areas:204, mfa:85,
@@ -1776,7 +1776,7 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   §2): correção sem versão maior, em 8.3.5 e 5.0.5. A trava (`guarda:dependencias`) olha só produção, e por isso não
   acusa; mas a imagem `web` roda `vite preview` (`tasks/prd-reengenharia/medidas-da-onda-5.md`). Subir antes do staging,
   numa correção com o portão. (dono: Joaquim)
-- [ ] **(X5, validação 1) O encontro das linhas rodar o `eslint .` depois do merge** (X6, Etapa 9): a supressão órfã de
+- [ ] **(X5, validação 1) O encontro das linhas rodar o `eslint .` depois do merge** (X7, `harness`; é a M2 da X5): a supressão órfã de
   `tools/ci/compose.ts` nasceu de duas tarefas verdes, cada uma no seu portão (13.0 e 90.0), e só a validação a viu.
   (dono: Joaquim)
 - [ ] **(X5, RF31) `.dockerignore` e `tools/ci/dockerfile.test.ts:128-130` ainda citam `.reengenharia`**, a pasta que o
@@ -1796,7 +1796,7 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       como `/corrigir` própria; os outros dois entram nela se caírem de novo, ou no censo de prazo do e2e (item "(X3,
       retrospectiva) Código de processo", M1). (dono: Orquestrador)
 - [ ] **(X5, retrospectiva) Código de processo que a X5 pediu** (`tasks/prd-reengenharia/retro.md`, P4 e M1 a M7). **Destino que o
-      Joaquim deu em 23/10/2026: antes da primeira tarefa da próxima spec**, numa correção própria, com teste e revisão, junto das
+      Joaquim deu em 23/10/2026: a X7 (`harness`)**, a próxima spec, antes da X4, com teste e revisão, junto das
       M1 a M3 da X3 (item "(X3, retrospectiva) Código de processo", acima); a correção do `casca.spec.ts:67` parte antes dela. (P4)
       `.github/workflows/ci.yml` com `concurrency: { group: esteira-${{ github.ref }}, cancel-in-progress }` só em `spec/**` e
       `correcao/**` (44 de 91 execuções da spec canceladas à mão); entra com a M1, porque é ela que impede o cancelamento de virar

@@ -306,6 +306,7 @@ final, provedor), as pastas do projeto inteiro, as camadas e o lint, a higiene e
 a X6. Sexta, 23/10, às 22h nenhuma tarefa nova parte; a meta é o pouso no sábado, 24/10, às 8h. Até o pouso, nenhuma
 parada chama o Joaquim: o Arquiteto decide e registra em `tasks/prd-reengenharia/DECISOES.md`, e o pouso com push está autorizado com a
 validação aprovada e a esteira verde. A Etapa 9 ⛔ (o harness) foi para a X6: o processo não muda no meio da corrida.
+Em 23/10/2026 ela saiu da X6 e virou a X7, antes da X4.
 
 **Pronto quando:** comparado com a linha de base, a tipagem, o lint, as guardas, a unidade, a integração, o e2e e o infra
 rodam verdes, com os resultados reais registrados; os defeitos de conformidade da onda 0 estão fechados, com o `ouro` no
@@ -317,6 +318,38 @@ convenção só, travada por teste; o que entrou de camadas, catraca, dependênc
 ferramenta; o guia do desenvolvedor existe e o `docs/arquitetura.md` diz o que existe; os e2e obrigatórios da regra 40 e
 as invariantes das regras 10 e 70 continuam provados; a pasta temporária da missão foi apagada com o que importa migrado; e o
 relatório final diz o que foi feito, o que foi medido e o que foi para a X6, sem número que não foi coletado.
+
+## X7 — `harness` [ ]
+**Depende de:** X5 · **vem antes da X4**, que espera ela pousar; parte depois da correção do `e2e/casca.spec.ts:67`
+
+O `.claude`, as skills e o fluxo do Maestri revistos para o sistema continuar sendo feito com IA sem voltar ao estado
+anterior, pedido pelo Joaquim em 23/10/2026. É a Etapa 9 ⛔ da missão da X5 (a 92.0; `tasks/prd-reengenharia/MISSAO.md`,
+9.1 a 9.5), que sai da X6. As **skills**, de processo e técnicas, auditadas por objetivo, escopo, conflito, redundância e
+desatualização, com os padrões que a X5 fixou (contratos primeiro, resiliência, código morto seguro, testes, pastas,
+critério de pronto). Os **papéis** de `.claude/agents/`, cada um com responsabilidade única, critério de saída e entrega
+verificável, sem papel novo que não atenda responsabilidade distinta. As **regras** e o `CLAUDE.md`, curtos e
+verificáveis, cada regra apontando a checagem que a garante; o que repete `docs/decisoes.md` ou uma skill é medido e
+migrado, nunca descartado em silêncio (a P9 da X5 mediu 74.140 B de base fixa, 24,6 KB dela em tabela que repete
+`docs/decisoes.md`). O **fluxo do Maestri** (distribuição, mensagens, revisão, validação, estado, vigia), o hook e a esteira
+simplificados em mudanças pequenas e verificáveis, sem redesenho. Entram também:
+
+- **a correção de processo das retrospectivas**, que está no `TODO.md`: a P4 e as M1 a M7 da X5
+  (`tasks/prd-reengenharia/retro.md`) e as M1 a M3 da X3 (`tasks/prd-telas-do-professor/retro.md`), com teste e revisão;
+- **as perguntas "Para a Etapa 9"** da §5 de `tasks/prd-reengenharia/DIAGNOSTICO.md`: o git hook nativo como segunda
+  camada; o guardião exigido pelo caminho alterado, e não só pela marcação do Arquiteto (muda a D79); revisão obrigatória
+  em `tools/guardas/`, `tools/processo/` e `.claude/` (muda a D53); a tarefa de código sem teste alterado nem mutação
+  barrada no portão (regra 40); o fim do caminho `(mvp:)` do hook (D77); o histórico de `achados/` fora do git depois do
+  pouso; e a esteira em `pull_request` para a `develop` (D23). A ordem segura de mexer no hook está em
+  `.reengenharia/diagnostico/U11.md` §7, na tag `reengenharia/temporario`. Cada uma é do Joaquim, e a que muda decisão vira
+  revisão dela.
+
+**Pronto quando:** cada skill, papel, regra, hook e rotina está no lugar e no formato que o Claude Code e o Maestri
+**descobrem e executam**, provado por uso e não pela existência do arquivo: a skill é listada e carrega, o papel sobe com
+`claude --agent` e o modelo certo, o hook dispara e bloqueia o commit que deve bloquear, a regra carrega pelo `paths:`
+dela; os metadados estão corretos e nada se contradiz entre `CLAUDE.md`, regras, skills, papéis e `docs/decisoes.md`; toda
+regra aponta a checagem que a garante; a P4 e as M1 a M7 da X5 e as M1 a M3 da X3 estão feitas, cada uma com o teste que
+a prova; cada pergunta "Para a Etapa 9" tem resposta do Joaquim, aplicada ou registrada; e a base fixa que toda sessão
+carrega está medida antes e depois.
 
 ## A pele nova — X1 a X4 (D80)
 
@@ -393,6 +426,7 @@ do professor não ganha ranking, tempo ocioso nem texto livre sobre aluno; cada 
 
 ## X4 — `telas-do-aluno-e-primeiro-acesso` [ ]
 Congelada em 20/10/2026 pela X5; a 1.0 está em `1477850`, na branch local `spec/telas-do-aluno-e-primeiro-acesso`, e é refeita depois.
+Espera a X7 (`harness`), que o Joaquim pôs antes dela em 23/10/2026.
 **Depende de:** X1 · **pode correr em paralelo com X2 e X3**
 
 As telas do aluno, e a primeira vez de cada papel. **Início**: o Tutor com a onça, a faixa de que o
@@ -454,8 +488,8 @@ pela D81 onde ela diz). Entra também o que a regra do corte da X5 deixar fora. 
 - **O resto:** o OpenAPI, pelo `@nestjs/swagger` 12, quando houver consumidor fora do `apps/web` (no lugar do registro de
   rotas próprio, 21.0 a 23.0); a web tolerante ao campo extra (20.0); as políticas em `conformidade/`, com a mutação por
   padrão e a trava do `ouro` (26.0 a 29.0); os subcaminhos e as leituras prontas da onda 2 (30.0 a 32.0, 37.0 a 41.0); a
-  onda 5 (81.0 a 89.0, 91.0); e a Etapa 9 ⛔, o harness revisto com o Joaquim (92.0), com as perguntas da §5 do
-  `tasks/prd-reengenharia/DIAGNOSTICO.md` marcadas "Para a Etapa 9"
+  onda 5 (81.0 a 89.0, 91.0). A Etapa 9 ⛔ (92.0), com as perguntas "Para a Etapa 9" do
+  `tasks/prd-reengenharia/DIAGNOSTICO.md`, saiu daqui em 23/10/2026 e é a X7 (`harness`)
 
 **Pronto quando:** cada parte cumpre o critério do RF dela no PRD da X5 (`tasks/prd-reengenharia/prd.md`, §5 e §11),
 com o processo completo; o OpenAPI só entra com o consumidor que o pede.

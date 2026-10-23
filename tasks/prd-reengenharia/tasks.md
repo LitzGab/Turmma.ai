@@ -325,7 +325,8 @@ com as perguntas da §5 do `DIAGNOSTICO.md` marcadas "Para a Etapa 9"):
 - **88.0 — Infra por arquivo, p95 da sessão e custo da rede lenta medidos** → X6
 - **89.0 — Os quatro jobs avisam no limiar do teto** → X6
 - **91.0 — E2e sem observabilidade, realtime atrás de profile, nada apagado** → X6
-- **92.0 — Etapa 9: skills, agentes, regras e orquestração revistos com o Joaquim, e as tarefas da onda 6 numeradas** → X6
+- **92.0 — Etapa 9: skills, agentes, regras e orquestração revistos com o Joaquim, e as tarefas da onda 6 numeradas** → X7
+  (`harness`, desde 23/10/2026, com as perguntas "Para a Etapa 9")
 
 ## Dependências e paralelismo
 
