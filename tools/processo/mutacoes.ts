@@ -23,11 +23,11 @@
 // Uma terceira linha de cabeçalho, `projeto: celular`, é opcional e só vale para teste de e2e: diz em que projeto do
 // Playwright o caso roda. Sem ela é o `chromebook`. A cláusula que só existe no celular (o ramo de toque, o menu de baixo)
 // não é alcançada no computador, e o teste ficaria verde sem ela; o bloco diz onde ela se prova.
-import { spawn, spawnSync } from 'node:child_process'
+import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export interface Mutacao {
@@ -491,13 +491,22 @@ export function conferirMutacoesDoDocumento(
 
 /**
  * O que o commit e a Mesa perguntam: as mutações deste documento, como estão escritas agora, foram conferidas pelo
- * último portão? Documento sem bloco nenhum não é cobrado aqui: cláusula sem bloco é achado do `test-engineer`.
+ * último portão? Documento sem bloco nenhum só é cobrado quando a árvore altera código de produto (RF17): aí ele precisa
+ * dos blocos ou da linha `**Sem mutação:** <motivo>`, e o carimbo tem de ser do portão deste documento.
+ *
+ * `alterados` é a lista de arquivos alterados da árvore do commit (`arquivosAlterados`), obrigatória de propósito: sem ela
+ * a exigência do RF17 não teria de onde saber se há produção.
  */
-export function avaliarMutacoes(carimbo: { mutacoes?: CarimboDasMutacoes } | null, documento: string, conteudo: string): string | null {
+export function avaliarMutacoes(
+  carimbo: { documento?: string; mutacoes?: CarimboDasMutacoes } | null,
+  documento: string,
+  conteudo: string,
+  alterados: readonly string[],
+): string | null {
   const { mutacoes, erros } = lerMutacoes(conteudo)
   const comando = `node tools/processo/portao-local.ts --tarefa ${documento}`
   if (erros.length > 0) return `portão local: ${erros.join('; ')}. Corrija o bloco e rode \`${comando}\`.`
-  if (mutacoes.length === 0) return null
+  if (mutacoes.length === 0) return avaliarSemBloco(carimbo?.documento, documento, conteudo, alterados, comando)
   const conferidas = carimbo?.mutacoes
   if (!conferidas || conferidas.documento !== documento) {
     return `portão local: as ${String(mutacoes.length)} mutações de ${documento} não foram conferidas pelo último portão. Rode \`${comando}\`.`
@@ -508,8 +517,198 @@ export function avaliarMutacoes(carimbo: { mutacoes?: CarimboDasMutacoes } | nul
   return null
 }
 
+/**
+ * O documento sem bloco: só é cobrado com produção alterada (RF17), e então precisa da linha `Sem mutação` com motivo e do
+ * carimbo do portão deste documento (`documentoDoCarimbo`), porque sem bloco o carimbo não traz mais nada que diga de quem é.
+ */
+function avaliarSemBloco(documentoDoCarimbo: string | undefined, documento: string, conteudo: string, alterados: readonly string[], comando: string): string | null {
+  const exigencia = exigenciaDeMutacao(alterados, conteudo)
+  if (exigencia !== null) return `portão local: ${exigencia}`
+  if (!alterados.some(ehArquivoDeProducao) || documentoDoCarimbo === documento) return null
+  return `portão local: o último portão não foi o de ${documento}: a linha "Sem mutação:" só vale com o portão deste documento. Rode \`${comando}\`.`
+}
+
+// ─── Produção sem mutação (RF17) e cláusula sem bloco (RF5) ───
+
+/**
+ * Produção é o arquivo de `apps/<pacote>/src/**` ou `packages/<pacote>/src/**` que não é teste nem `.d.ts`: é o que o
+ * usuário executa, e por isso cada cláusula dele precisa de quem a prove. Teste é o que a convenção do repositório chama
+ * de teste: `*.test.ts(x)`, `*.spec.ts`, `__fixtures__/` e `test/`. `apps/web/vite.config.ts` fica fora: não está em `src`.
+ */
+export function ehArquivoDeProducao(arquivo: string): boolean {
+  if (!/^(?:apps|packages)\/[^/]+\/src\//.test(arquivo)) return false
+  if (/\.d\.ts$/.test(arquivo)) return false
+  if (/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(arquivo)) return false
+  return !/(?:^|\/)(?:test|tests|__tests__|__fixtures__)\//.test(arquivo)
+}
+
+/**
+ * A linha `**Sem mutação:** <motivo>` do documento: `motivo` (há uma com motivo), `vazia` (há, sem motivo, ou só o
+ * `<motivo>` do modelo) ou `ausente`. A linha existe para a tarefa de produção que não tem cláusula a provar (tipo,
+ * renomeação, texto), e o motivo é o que o revisor lê para discordar.
+ */
+export function semMutacaoDeclarada(conteudo: string): 'motivo' | 'vazia' | 'ausente' {
+  const linhas = [...conteudo.matchAll(/^\*\*Sem mutação:\*\*[ \t]*(.*?)[ \t]*$/gm)].map((achado) => achado[1] ?? '')
+  if (linhas.length === 0) return 'ausente'
+  return linhas.some((motivo) => motivo !== '' && !/^<[^>]*>$/.test(motivo)) ? 'motivo' : 'vazia'
+}
+
+/**
+ * O que o RF17 recusa: a árvore altera produção e o documento não tem bloco de mutação nem a linha `Sem mutação` com
+ * motivo. `conteudo` nulo é o documento que não se achou. `null`: não exige, ou está atendido.
+ */
+export function exigenciaDeMutacao(alterados: readonly string[], conteudo: string | null): string | null {
+  const producao = alterados.filter(ehArquivoDeProducao)
+  if (producao.length === 0) return null
+  const quais = `${producao.slice(0, 3).join(', ')}${producao.length > 3 ? ', …' : ''}`
+  if (conteudo === null) {
+    return `a árvore altera código de produto (${quais}) e não achei o documento da tarefa entre os alterados. Passe-o: \`node tools/processo/portao-local.ts --tarefa <documento>\`.`
+  }
+  if (lerMutacoes(conteudo).mutacoes.length > 0) return null
+  const declarada = semMutacaoDeclarada(conteudo)
+  if (declarada === 'motivo') return null
+  const falta = declarada === 'vazia' ? 'a linha "**Sem mutação:**" está sem motivo' : 'não há bloco de mutação nem a linha "**Sem mutação:** <motivo>"'
+  return `a árvore altera código de produto (${quais}) e no documento ${falta}. Cada cláusula nova ganha um bloco; só quando não há cláusula a provar (tipo, renomeação, texto) vale a linha, com o motivo.`
+}
+
+/**
+ * O documento que o portão da tarefa confere quando ninguém o diz: o único documento de tarefa ou de correção alterado na
+ * árvore. Achá-lo pela alteração, e não por ter bloco, é o que faz a tarefa de produção sem bloco ser cobrada no documento
+ * dela, e não ficar fora da conferência. Com mais de um alterado não se escolhe: quem roda diz qual.
+ */
+export function documentoDaTarefa(alterados: readonly string[]): string | null {
+  const candidatos = alterados.filter((arquivo) => /^tasks\/(?:prd-[^/]+\/\d+_task|correcoes\/[^/]+)\.md$/.test(arquivo))
+  return candidatos.length === 1 ? (candidatos[0] ?? null) : null
+}
+
+export interface LinhaNova {
+  arquivo: string
+  linha: number
+  texto: string
+}
+
+/** As linhas que um `git diff -U0` acrescenta, com o arquivo e o número delas no arquivo novo. Arquivo apagado não tem linha nova. */
+export function linhasAcrescentadas(diff: string): LinhaNova[] {
+  const linhas: LinhaNova[] = []
+  let arquivo: string | null = null
+  let numero = 0
+  let noTrecho = false
+  for (const linha of diff.split('\n')) {
+    if (linha.startsWith('diff --git ')) {
+      noTrecho = false
+      // O git põe entre aspas o nome com acento (`+++ "b/…"`), que não casa com o cabeçalho abaixo: sem zerar, as linhas do
+      // arquivo seguinte ficariam no anterior.
+      arquivo = null
+      continue
+    }
+    if (!noTrecho) {
+      const novo = /^\+\+\+ (?:b\/(.+)|\/dev\/null)$/.exec(linha)
+      if (novo) arquivo = novo[1] ?? null
+    }
+    const cabecalho = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(linha)
+    if (cabecalho) {
+      noTrecho = true
+      numero = Number(cabecalho[1])
+      continue
+    }
+    if (noTrecho && arquivo !== null && linha.startsWith('+')) {
+      linhas.push({ arquivo, linha: numero, texto: linha.slice(1) })
+      numero += 1
+    }
+  }
+  return linhas
+}
+
+/** O texto da linha sem o que está entre aspas e sem o comentário do fim: `'a && b'` e `// se x ? y` não são condição. */
+function semTextoLiteral(linha: string): string {
+  return linha
+    .replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`/g, "''")
+    .replace(/\s\/\/.*$/, '')
+}
+
+/** A expressão regular escrita no código: depois de `(`, `,`, `=`, `:`, `[`, `!`, `&`, `|`, `?`, `{`, `}`, `;` ou `return`, ou `new RegExp(`. */
+const EXPRESSAO_REGULAR = /(?:^|[(,=:[!&|?{};]|\breturn\b)\s*\/(?![/*])(?:[^/\\\n[]|\\.|\[(?:[^\]\\\n]|\\.)*\])+\/[dgimsuvy]*|\bnew RegExp\(/
+
+/** Os operadores de condição, com o jeito de achar cada um: no texto sem aspas nem comentário do fim, ou no texto inteiro (a expressão regular). */
+const OPERADORES_DE_CONDICAO: readonly { nome: string; acha: (codigo: string, inteiro: string) => boolean }[] = [
+  { nome: 'if', acha: (codigo) => /\bif\s*\(/.test(codigo) },
+  { nome: '&&', acha: (codigo) => codigo.includes('&&') },
+  { nome: '||', acha: (codigo) => codigo.includes('||') },
+  { nome: '??', acha: (codigo) => codigo.includes('??') },
+  { nome: '?:', acha: (codigo) => /(?:^|\s)\?(?=\s|$)/.test(codigo) },
+  { nome: 'case', acha: (codigo) => /^case\b/.test(codigo) },
+  { nome: '.where(', acha: (codigo) => codigo.includes('.where(') },
+  { nome: 'regex', acha: (_codigo, inteiro) => EXPRESSAO_REGULAR.test(inteiro) },
+]
+
+/** Os operadores de condição que a linha tem: `if`, `&&`, `||`, `??`, ternário de valor, `case`, `.where(` e expressão regular. */
+export function condicoesDaLinha(texto: string): string[] {
+  const aparada = texto.trim()
+  if (/^(?:\/\/|\/\*|\*)/.test(aparada)) return []
+  const codigo = semTextoLiteral(aparada)
+  return OPERADORES_DE_CONDICAO.filter((operador) => operador.acha(codigo, aparada)).map((operador) => operador.nome)
+}
+
+export interface LinhaSemBloco extends LinhaNova {
+  condicoes: string[]
+}
+
+/**
+ * As linhas acrescentadas em produção com condição que nenhum bloco alcança. Alcançar é um bloco do **mesmo arquivo**
+ * citar o texto da linha (trecho que sai, troca ou serve de contexto): o `.where(and(` do exemplo do `executar-task` é
+ * contexto, e é ele que localiza a cláusula que sai.
+ */
+export function linhasSemBloco(novas: readonly LinhaNova[], mutacoes: readonly Mutacao[]): LinhaSemBloco[] {
+  const citadas = new Map<string, Set<string>>()
+  for (const mutacao of mutacoes) {
+    const doArquivo = citadas.get(mutacao.arquivo) ?? new Set<string>()
+    for (const linha of mutacao.antes) doArquivo.add(linha)
+    citadas.set(mutacao.arquivo, doArquivo)
+  }
+  return novas
+    .filter((nova) => ehArquivoDeProducao(nova.arquivo))
+    .map((nova) => ({ ...nova, condicoes: condicoesDaLinha(nova.texto) }))
+    .filter((nova) => nova.condicoes.length > 0 && !citadas.get(nova.arquivo)?.has(nova.texto.trim()))
+    .sort((a, b) => (a.arquivo === b.arquivo ? a.linha - b.linha : a.arquivo < b.arquivo ? -1 : 1))
+}
+
+/** O que a árvore acrescentou em produção em relação ao HEAD: o diff dos versionados e todas as linhas dos arquivos novos. */
+export function linhasNovasDaArvore(raiz: string): LinhaNova[] {
+  const git = (...argumentos: string[]) => execFileSync('git', argumentos, { cwd: raiz, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
+  const novas = linhasAcrescentadas(git('diff', '-U0', '--no-color', '--no-ext-diff', '--no-renames', 'HEAD', '--', 'apps', 'packages'))
+  for (const arquivo of git('ls-files', '--others', '--exclude-standard', '-z', '--', 'apps', 'packages').split('\0')) {
+    if (arquivo === '') continue
+    const linhas = readFileSync(join(raiz, arquivo), 'utf8').split('\n')
+    if (linhas.at(-1) === '') linhas.pop()
+    linhas.forEach((texto, indice) => novas.push({ arquivo, linha: indice + 1, texto }))
+  }
+  return novas.filter((nova) => ehArquivoDeProducao(nova.arquivo))
+}
+
+/** O texto do `--faltando`: a lista, ou a frase de que não falta nada. Só informa: quem decide é o `test-engineer`. */
+export function relatorioDoFaltando(faltando: readonly LinhaSemBloco[], documento: string): string {
+  if (faltando.length === 0) return `Nenhuma linha nova de produção com condição fica sem bloco em ${documento}.\n`
+  const linhas = faltando.map((nova) => `  ${nova.arquivo}:${String(nova.linha)}  [${nova.condicoes.join(' ')}]  ${nova.texto.trim()}`)
+  return `Linhas novas de produção com condição que nenhum bloco de ${documento} alcança (${String(faltando.length)}):\n${linhas.join('\n')}\n`
+}
+
 // Chamado como supervisor (`rodarCalado`), este arquivo não é módulo: roda o comando e sai com o código da corrida.
 if (process.argv[2] === MARCA_DO_SUPERVISOR) {
   const [prazo = '0', espera = '0', , ...comando] = process.argv.slice(3)
   process.exit(await supervisionar(comando, Number(prazo), Number(espera)))
+}
+
+// `node tools/processo/mutacoes.ts --faltando <documento>`: só imprime, e sai 0 também quando a lista não vem.
+if (process.argv[2] === '--faltando' && resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) {
+  const documento = process.argv[3]
+  if (!documento) {
+    process.stderr.write('uso: node tools/processo/mutacoes.ts --faltando <tasks/.../documento.md>\n')
+    process.exit(2)
+  }
+  const raizDaArvore = process.env['CLAUDE_PROJECT_DIR'] ?? process.cwd()
+  try {
+    process.stdout.write(relatorioDoFaltando(linhasSemBloco(linhasNovasDaArvore(raizDaArvore), lerMutacoes(readFileSync(join(raizDaArvore, documento), 'utf8')).mutacoes), documento))
+  } catch (erro) {
+    process.stdout.write(`não foi possível listar as linhas sem bloco (${(erro as Error).message})\n`)
+  }
 }
