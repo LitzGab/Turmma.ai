@@ -38,10 +38,10 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [x] 5.3 `linhas.ts abandonar <n>` (RF6)
   - [x] 5.4 Testes: as corridas do quadro com arquivo-sinal, RF6 e RF10 do `cenarios.md`
 
-- [ ] **6.0 — O encontro roda tipagem e lint e recusa o vermelho sem avançar a spec**
-  - [ ] 6.1 Verificação no checkout da linha, depois do merge e antes do `--ff-only` (RF3)
-  - [ ] 6.2 Prazo, grupo de processo e a ordem matar, voltar, soltar
-  - [ ] 6.3 Testes: RF3 do `cenarios.md`
+- [x] **6.0 — O encontro roda tipagem e lint e recusa o vermelho sem avançar a spec**
+  - [x] 6.1 Verificação no checkout da linha, depois do merge e antes do `--ff-only` (RF3)
+  - [x] 6.2 Prazo, grupo de processo e a ordem matar, voltar, soltar
+  - [x] 6.3 Testes: RF3 do `cenarios.md`
 
 - [x] **7.0 — A mutação que trava sai no prazo e solta o ambiente**
   - [ ] 7.1 Corrida limpa medida, prazo da mutada, grupo de processo (RF4, §7c)
@@ -52,10 +52,10 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [x] 8.2 Portão e `ci:verificar` pela mesma lista de `etapas-de-guarda.ts` (RF8)
   - [x] 8.3 Testes: RF7 e RF8 do `cenarios.md`
 
-- [ ] **9.0 — Tarefa de código sem mutação não recebe carimbo**
-  - [ ] 9.1 `mutacoes.ts --faltando` (RF5)
-  - [ ] 9.2 A exigência do RF17 no portão e na `decidirCommit`
-  - [ ] 9.3 Testes: RF5 e RF17 do `cenarios.md`
+- [x] **9.0 — Tarefa de código sem mutação não recebe carimbo**
+  - [x] 9.1 `mutacoes.ts --faltando` (RF5)
+  - [x] 9.2 A exigência do RF17 no portão e na `decidirCommit`
+  - [x] 9.3 Testes: RF5 e RF17 do `cenarios.md`
 
 - [ ] **10.0 — Uma decisão de commit para as duas entradas, e o `PreToolUse` nega o desvio**
   - [ ] 10.1 `decidirCommit` em `portao.ts`, chamada pelo `PreToolUse`

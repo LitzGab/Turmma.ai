@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from 'node:child_process'
+import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -8,22 +8,32 @@ import {
   aplicarMutacao,
   avaliarMutacoes,
   comandoDoTeste,
+  condicoesDaLinha,
   conferirMutacoes,
   conferirMutacoesDoDocumento,
+  documentoDaTarefa,
+  ehArquivoDeProducao,
+  exigenciaDeMutacao,
   impressaoDasMutacoes,
   lerMutacoes,
+  linhasAcrescentadas,
+  linhasNovasDaArvore,
+  linhasSemBloco,
   MARCA_DO_SUPERVISOR,
   pedeReconstrucao,
   prazoDaMutada,
   PROJETOS_DO_E2E,
   reconstruirDepoisDasMutacoes,
+  relatorioDoFaltando,
   rodarCalado,
   SAIDA_DO_PRAZO,
+  semMutacaoDeclarada,
   sinalAoGrupo,
   testTimeoutDaMutacao,
   testTimeoutDoCaso,
   testTimeoutDoProjeto,
   tipoDoTeste,
+  type LinhaNova,
   type Mutacao,
   type Rodar,
 } from './mutacoes.ts'
@@ -302,8 +312,8 @@ describe('o carimbo vale para as mutações como estão escritas agora', () => {
   const carimbo = { mutacoes: { documento, impressao: impressaoDasMutacoes(mutacoes), total: mutacoes.length } }
 
   it('conferidas pelo último portão, passa; e mexer no texto em volta dos blocos não invalida', () => {
-    expect(avaliarMutacoes(carimbo, documento, DOCUMENTO)).toBeNull()
-    expect(avaliarMutacoes(carimbo, documento, DOCUMENTO.replace('A cláusula de escopo de cada consulta.', 'Outra frase.'))).toBeNull()
+    expect(avaliarMutacoes(carimbo, documento, DOCUMENTO, [])).toBeNull()
+    expect(avaliarMutacoes(carimbo, documento, DOCUMENTO.replace('A cláusula de escopo de cada consulta.', 'Outra frase.'), [])).toBeNull()
   })
 
   it('bloco novo, trecho trocado ou teste trocado depois do portão bloqueia, com o comando a rodar', () => {
@@ -311,19 +321,359 @@ describe('o carimbo vale para as mutações como estão escritas agora', () => {
     const comOutroTeste = DOCUMENTO.replace('teste: apps/web/src/Pedidos.test.tsx', 'teste: apps/web/src/Outro.test.tsx')
     const comMaisUm = `${DOCUMENTO}\n${bloco('arquivo: a.ts', 'teste: a.test.ts', '- x')}\n`
     for (const conteudo of [comOutroTrecho, comOutroTeste, comMaisUm]) {
-      expect(avaliarMutacoes(carimbo, documento, conteudo)).toMatch(/mudou depois do último portão\. Rode `node tools\/processo\/portao-local\.ts --tarefa tasks\/prd-x\/3_task\.md` de novo/)
+      expect(avaliarMutacoes(carimbo, documento, conteudo, [])).toMatch(/mudou depois do último portão\. Rode `node tools\/processo\/portao-local\.ts --tarefa tasks\/prd-x\/3_task\.md` de novo/)
     }
   })
 
   it('portão que não conferiu este documento, ou não conferiu mutação nenhuma, bloqueia', () => {
-    expect(avaliarMutacoes(null, documento, DOCUMENTO)).toMatch(/as 2 mutações de tasks\/prd-x\/3_task\.md não foram conferidas/)
-    expect(avaliarMutacoes({}, documento, DOCUMENTO)).toMatch(/não foram conferidas/)
-    expect(avaliarMutacoes({ mutacoes: { ...carimbo.mutacoes, documento: 'tasks/prd-x/4_task.md' } }, documento, DOCUMENTO)).toMatch(/não foram conferidas/)
+    expect(avaliarMutacoes(null, documento, DOCUMENTO, [])).toMatch(/as 2 mutações de tasks\/prd-x\/3_task\.md não foram conferidas/)
+    expect(avaliarMutacoes({}, documento, DOCUMENTO, [])).toMatch(/não foram conferidas/)
+    expect(avaliarMutacoes({ mutacoes: { ...carimbo.mutacoes, documento: 'tasks/prd-x/4_task.md' } }, documento, DOCUMENTO, [])).toMatch(/não foram conferidas/)
   })
 
   it('bloco malformado bloqueia mesmo com carimbo, e documento sem bloco não é cobrado', () => {
-    expect(avaliarMutacoes(carimbo, documento, `${DOCUMENTO}\n${bloco('arquivo: a.ts', '- x')}\n`)).toMatch(/mutação 3: falta a linha "teste:"/)
-    expect(avaliarMutacoes(null, documento, '## Mutações\n\nnenhuma cláusula nova\n')).toBeNull()
+    expect(avaliarMutacoes(carimbo, documento, `${DOCUMENTO}\n${bloco('arquivo: a.ts', '- x')}\n`, [])).toMatch(/mutação 3: falta a linha "teste:"/)
+    expect(avaliarMutacoes(null, documento, '## Mutações\n\nnenhuma cláusula nova\n', [])).toBeNull()
+  })
+})
+
+
+describe('produção alterada sem mutação não recebe carimbo (RF17)', () => {
+  const documento = 'tasks/prd-x/3_task.md'
+  const producao = ['apps/api/src/pedidos.repository.ts']
+  const SEM_NADA = '# Tarefa 3.0\n\n## Mutações\n\nNenhuma cláusula nova.\n'
+  const comLinha = (motivo: string) => `${SEM_NADA}\n**Sem mutação:** ${motivo}\n`
+  const comBloco = `${SEM_NADA}\n${bloco('arquivo: apps/api/src/pedidos.repository.ts', 'teste: apps/api/test/pedidos.int.test.ts', '- x', '+ y')}\n`
+
+  it.each([
+    { nome: 'de apps', arquivo: 'apps/api/src/pedidos.repository.ts', producao: true },
+    { nome: 'de packages', arquivo: 'packages/nucleo/src/ia/porta.ts', producao: true },
+    { nome: 'de tela', arquivo: 'apps/web/src/areas/Tela.tsx', producao: true },
+    { nome: 'teste de unidade em src', arquivo: 'apps/api/src/pedidos.test.ts', producao: false },
+    { nome: 'teste de integração em src', arquivo: 'packages/nucleo/src/retencao/retencao.int.test.ts', producao: false },
+    { nome: 'teste de tela em src', arquivo: 'apps/web/src/Tela.test.tsx', producao: false },
+    { nome: 'spec em src', arquivo: 'apps/web/src/Tela.spec.ts', producao: false },
+    { nome: 'fixture em src', arquivo: 'apps/web/src/__fixtures__/tela.tsx', producao: false },
+    { nome: 'pasta test de src', arquivo: 'apps/api/src/test/ajuda.ts', producao: false },
+    { nome: 'declaração de tipos', arquivo: 'apps/web/src/vite-env.d.ts', producao: false },
+    { nome: 'configuração fora de src', arquivo: 'apps/web/vite.config.ts', producao: false },
+    { nome: 'teste fora de src', arquivo: 'apps/api/test/pedidos.int.test.ts', producao: false },
+    { nome: 'e2e', arquivo: 'e2e/areas.spec.ts', producao: false },
+    { nome: 'processo', arquivo: 'tools/processo/mutacoes.ts', producao: false },
+  ])('o arquivo $nome é produção ou não', ({ arquivo, producao }) => {
+    expect(ehArquivoDeProducao(arquivo)).toBe(producao)
+  })
+
+  it('a linha "Sem mutação" vale com motivo, e vazia ou só com o <motivo> do modelo não vale', () => {
+    expect(semMutacaoDeclarada(comLinha('só o tipo do retorno mudou'))).toBe('motivo')
+    expect(semMutacaoDeclarada(comLinha(''))).toBe('vazia')
+    expect(semMutacaoDeclarada(comLinha('<motivo>'))).toBe('vazia')
+    expect(semMutacaoDeclarada(SEM_NADA)).toBe('ausente')
+    // Uma linha vazia e outra com motivo: vale a que tem motivo.
+    expect(semMutacaoDeclarada(`${comLinha('')}\n**Sem mutação:** renomeia um tipo\n`)).toBe('motivo')
+    // A regra citada no meio de uma frase não é a linha: sem a âncora do começo, todo documento que a repete no Objetivo se liberaria.
+    expect(semMutacaoDeclarada('Sem bloco nem a linha `**Sem mutação:** <motivo>`, e o hook recusa.\n')).toBe('ausente')
+    // Aceito: a linha dentro de um bloco cercado (um exemplo copiado para o documento) conta como a linha.
+    expect(semMutacaoDeclarada('```\n**Sem mutação:** só um exemplo\n```\n')).toBe('motivo')
+  })
+
+  it('produção alterada: sem bloco nem linha, vermelho; linha vazia, vermelho; com motivo ou com bloco, verde', () => {
+    expect(exigenciaDeMutacao(producao, SEM_NADA)).toMatch(/altera código de produto \(apps\/api\/src\/pedidos\.repository\.ts\).*não há bloco de mutação nem a linha "\*\*Sem mutação:\*\* <motivo>"/)
+    expect(exigenciaDeMutacao(producao, comLinha(''))).toMatch(/a linha "\*\*Sem mutação:\*\*" está sem motivo/)
+    expect(exigenciaDeMutacao(producao, comLinha('só o tipo do retorno mudou'))).toBeNull()
+    expect(exigenciaDeMutacao(producao, comBloco)).toBeNull()
+  })
+
+  it('só teste, .d.ts, configuração fora de src ou documento: não exige', () => {
+    const semProducao = ['apps/api/test/pedidos.int.test.ts', 'apps/web/src/vite-env.d.ts', 'apps/web/vite.config.ts', 'e2e/areas.spec.ts', 'tasks/prd-x/3_task.md']
+    expect(exigenciaDeMutacao(semProducao, SEM_NADA)).toBeNull()
+    expect(exigenciaDeMutacao([], null)).toBeNull()
+  })
+
+  it('a lista de arquivos cita os três primeiros e conta o resto', () => {
+    const muitos = ['a', 'b', 'c', 'd'].map((nome) => `apps/api/src/${nome}.ts`)
+    expect(exigenciaDeMutacao(muitos, SEM_NADA)).toContain('(apps/api/src/a.ts, apps/api/src/b.ts, apps/api/src/c.ts, …)')
+    expect(exigenciaDeMutacao(muitos.slice(0, 3), SEM_NADA)).toContain('(apps/api/src/a.ts, apps/api/src/b.ts, apps/api/src/c.ts)')
+  })
+
+  it('sem o documento achado, a produção alterada fica vermelha pedindo o documento', () => {
+    expect(exigenciaDeMutacao(producao, null)).toMatch(/não achei o documento da tarefa.*portao-local\.ts --tarefa <documento>/)
+  })
+
+  it('o documento é achado pela alteração, e não por ter bloco', () => {
+    // A tarefa de produção sem bloco é o único documento alterado: é ele, e não um documento que tem bloco e não foi alterado.
+    expect(documentoDaTarefa([documento, 'apps/api/src/x.ts', 'tasks/prd-x/tasks.md'])).toBe(documento)
+    expect(documentoDaTarefa(['tasks/correcoes/2026-10-23-x.md'])).toBe('tasks/correcoes/2026-10-23-x.md')
+    // Dois alterados: sem pedido, não se escolhe; quem roda diz qual. Nenhum alterado: nenhum.
+    expect(documentoDaTarefa([documento, 'tasks/prd-x/4_task.md'])).toBeNull()
+    expect(documentoDaTarefa(['tasks/prd-x/tasks.md', 'apps/api/src/x.ts'])).toBeNull()
+  })
+
+  it('o commit: produção sem bloco nem linha é recusada; com a linha passa só com o carimbo deste documento', () => {
+    const doPortao = { documento }
+    expect(avaliarMutacoes(doPortao, documento, SEM_NADA, producao)).toMatch(/^portão local: a árvore altera código de produto/)
+    expect(avaliarMutacoes(doPortao, documento, comLinha(''), producao)).toMatch(/sem motivo/)
+    expect(avaliarMutacoes(doPortao, documento, comLinha('só o tipo mudou'), producao)).toBeNull()
+    // Carimbo do portão de outra tarefa, sem carimbo, ou de um portão que não achou documento: recusado.
+    const comando = `\`node tools/processo/portao-local.ts --tarefa ${documento}\``
+    expect(avaliarMutacoes({ ...doPortao, documento: 'tasks/prd-x/4_task.md' }, documento, comLinha('só o tipo mudou'), producao)).toBe(
+      `portão local: o último portão não foi o de ${documento}: a linha "Sem mutação:" só vale com o portão deste documento. Rode ${comando}.`,
+    )
+    expect(avaliarMutacoes(null, documento, comLinha('só o tipo mudou'), producao)).toMatch(/o último portão não foi o de/)
+    expect(avaliarMutacoes({}, documento, comLinha('só o tipo mudou'), producao)).toMatch(/o último portão não foi o de/)
+  })
+
+  it('o commit sem produção não cobra bloco, linha nem carimbo do documento', () => {
+    expect(avaliarMutacoes(null, documento, SEM_NADA, ['apps/api/test/pedidos.int.test.ts', 'tools/processo/mutacoes.ts'])).toBeNull()
+  })
+
+  it('com produção e com bloco, o carimbo das mutações de outro documento não vale', () => {
+    const { mutacoes } = lerMutacoes(comBloco)
+    const dele = { mutacoes: { documento, impressao: impressaoDasMutacoes(mutacoes), total: 1 } }
+    expect(avaliarMutacoes(dele, documento, comBloco, producao)).toBeNull()
+    expect(avaliarMutacoes({ mutacoes: { ...dele.mutacoes, documento: 'tasks/prd-x/4_task.md' } }, documento, comBloco, producao)).toMatch(/não foram conferidas/)
+  })
+})
+
+describe('as linhas novas de produção com condição que nenhum bloco alcança (RF5)', () => {
+  const DIFF = `diff --git a/apps/api/src/pedidos.repository.ts b/apps/api/src/pedidos.repository.ts
+index 1111111..2222222 100644
+--- a/apps/api/src/pedidos.repository.ts
++++ b/apps/api/src/pedidos.repository.ts
+@@ -3,0 +4,2 @@ export function acharPedido() {
++    .where(and(
++      eq(pedidos.escolaId, escolaId),
+@@ -9 +11 @@ export function listar() {
+-  return a
++  if (a) return b
+diff --git a/apps/api/src/velho.ts b/apps/api/src/velho.ts
+deleted file mode 100644
+index 3333333..0000000
+--- a/apps/api/src/velho.ts
++++ /dev/null
+@@ -1,2 +0,0 @@
+-if (x) y
+-z
+diff --git a/apps/web/src/Nova.tsx b/apps/web/src/Nova.tsx
+new file mode 100644
+index 0000000..4444444
+--- /dev/null
++++ b/apps/web/src/Nova.tsx
+@@ -0,0 +1,2 @@
++++ b/aparente.ts
++const a = b ?? c
+`
+
+  it('lê do diff só as linhas acrescentadas, com o número delas no arquivo novo', () => {
+    expect(linhasAcrescentadas(DIFF)).toEqual([
+      { arquivo: 'apps/api/src/pedidos.repository.ts', linha: 4, texto: '    .where(and(' },
+      { arquivo: 'apps/api/src/pedidos.repository.ts', linha: 5, texto: '      eq(pedidos.escolaId, escolaId),' },
+      { arquivo: 'apps/api/src/pedidos.repository.ts', linha: 11, texto: '  if (a) return b' },
+      // Uma linha de conteúdo que parece o cabeçalho de outro arquivo (`+++ b/…`) não troca o arquivo.
+      { arquivo: 'apps/web/src/Nova.tsx', linha: 1, texto: '++ b/aparente.ts' },
+      { arquivo: 'apps/web/src/Nova.tsx', linha: 2, texto: 'const a = b ?? c' },
+    ])
+  })
+
+  it('o arquivo de nome entre aspas, que o git escreve com acento, não herda as linhas do anterior', () => {
+    const diff = [
+      'diff --git a/apps/api/src/a.ts b/apps/api/src/a.ts',
+      '--- a/apps/api/src/a.ts',
+      '+++ b/apps/api/src/a.ts',
+      '@@ -1,0 +2 @@',
+      '+const a = 1',
+      'diff --git "a/apps/api/src/configura\\303\\247\\303\\243o.ts" "b/apps/api/src/configura\\303\\247\\303\\243o.ts"',
+      '--- "a/apps/api/src/configura\\303\\247\\303\\243o.ts"',
+      '+++ "b/apps/api/src/configura\\303\\247\\303\\243o.ts"',
+      '@@ -1,0 +1 @@',
+      '+const b = 2',
+    ].join('\n')
+    expect(linhasAcrescentadas(diff)).toEqual([{ arquivo: 'apps/api/src/a.ts', linha: 2, texto: 'const a = 1' }])
+  })
+
+  it.each([
+    { rotulo: 'if', operador: 'if', linha: 'if (pedido === undefined) {' },
+    { rotulo: 'if', operador: 'if', linha: '} else if (a) {' },
+    { rotulo: 'e lógico', operador: '&&', linha: 'const ok = a && b' },
+    { rotulo: 'ou lógico', operador: '||', linha: 'const ok = a || b' },
+    { rotulo: 'coalescência', operador: '??', linha: 'const nome = dado ?? padrao' },
+    { rotulo: 'ternário', operador: '?:', linha: 'const rotulo = ativo ? "sim" : "não"' },
+    { rotulo: 'ternário', operador: '?:', linha: '  ? sim' },
+    { rotulo: 'case', operador: 'case', linha: "case 'professor':" },
+    { rotulo: 'where', operador: '.where(', linha: '.where(and(' },
+    { rotulo: 'expressão regular', operador: 'regex', linha: 'const so = /^\\d+$/.test(texto)' },
+    { rotulo: 'expressão regular', operador: 'regex', linha: 'return /[a-z/]+/i.test(x)' },
+    { rotulo: 'expressão regular', operador: 'regex', linha: 'const r = new RegExp(padrao)' },
+  ])('o operador $rotulo é achado na linha', ({ operador, linha }) => {
+    expect(condicoesDaLinha(linha)).toContain(operador)
+  })
+
+  it.each([
+    { nome: 'import', linha: "import { se } from './if-pronto.ts'" },
+    { nome: 'texto entre aspas', linha: "const aviso = 'a && b || c ?? d'" },
+    { nome: 'comentário de linha inteira', linha: '// if (a) b && c' },
+    { nome: 'comentário no fim', linha: 'const a = 1 // quando x ? y : z' },
+    { nome: 'docblock', linha: ' * se a && b, então if (c)' },
+    { nome: 'encadeamento opcional', linha: 'const a = b?.c' },
+    { nome: 'propriedade opcional de tipo', linha: 'nome?: string' },
+    { nome: 'divisão', linha: 'const media = soma / total / 2' },
+    { nome: 'caminho em modelo de texto', linha: 'const caminho = `${base}/${nome}`' },
+    { nome: 'fecho de JSX', linha: '</div>' },
+    { nome: 'linha em branco', linha: '   ' },
+  ])('$nome não é condição', ({ linha }) => {
+    expect(condicoesDaLinha(linha)).toEqual([])
+  })
+
+  const novas = linhasAcrescentadas(DIFF)
+  const sobre = (arquivo: string, ...trechos: string[]): Mutacao => ({ arquivo, teste: 'apps/api/test/x.int.test.ts', caso: null, antes: trechos, depois: [] })
+
+  it('sem bloco, a linha com condição é listada; o código sem condição, não', () => {
+    const faltando = linhasSemBloco(novas, [])
+    expect(faltando.map((linha) => `${linha.arquivo}:${String(linha.linha)} ${linha.condicoes.join('+')}`)).toEqual([
+      'apps/api/src/pedidos.repository.ts:4 .where(',
+      'apps/api/src/pedidos.repository.ts:11 if',
+      'apps/web/src/Nova.tsx:2 ??',
+    ])
+  })
+
+  it('a mesma linha citada por um bloco do mesmo arquivo não é listada, ainda que seja contexto', () => {
+    const doArquivo = sobre('apps/api/src/pedidos.repository.ts', '.where(and(', 'eq(pedidos.escolaId, escolaId),')
+    expect(linhasSemBloco(novas, [doArquivo]).map((linha) => linha.texto.trim())).toEqual(['if (a) return b', 'const a = b ?? c'])
+    // O espaço do começo e do fim não conta, como na leitura do bloco.
+    expect(linhasSemBloco(novas, [sobre('apps/api/src/pedidos.repository.ts', 'if (a) return b')]).map((linha) => linha.linha)).toEqual([4, 2])
+  })
+
+  it('bloco de outro arquivo, mesmo com o mesmo texto, não alcança a linha', () => {
+    const deOutro = sobre('apps/api/src/outro.repository.ts', 'if (a) return b', '.where(and(')
+    expect(linhasSemBloco(novas, [deOutro])).toHaveLength(3)
+  })
+
+  it('dois blocos do mesmo arquivo alcançam, juntos, as linhas que cada um cita', () => {
+    const primeiro = sobre('apps/api/src/pedidos.repository.ts', '.where(and(')
+    const segundo = sobre('apps/api/src/pedidos.repository.ts', 'if (a) return b')
+    expect(linhasSemBloco(novas, [primeiro, segundo]).map((linha) => linha.texto.trim())).toEqual(['const a = b ?? c'])
+  })
+
+  it('a lista sai por arquivo e por linha, e não na ordem em que o git a deu', () => {
+    const desordenadas = [...novas].reverse()
+    expect(linhasSemBloco(desordenadas, []).map((linha) => `${linha.arquivo}:${String(linha.linha)}`)).toEqual([
+      'apps/api/src/pedidos.repository.ts:4',
+      'apps/api/src/pedidos.repository.ts:11',
+      'apps/web/src/Nova.tsx:2',
+    ])
+  })
+
+  it('linha nova em teste, em .d.ts e fora de src não é listada', () => {
+    const emTeste: LinhaNova[] = [
+      { arquivo: 'apps/api/src/pedidos.test.ts', linha: 1, texto: 'if (a) b' },
+      { arquivo: 'apps/web/src/vite-env.d.ts', linha: 1, texto: 'x ? y : z' },
+      { arquivo: 'apps/web/vite.config.ts', linha: 1, texto: 'a && b' },
+      { arquivo: 'apps/api/test/x.int.test.ts', linha: 1, texto: 'a ?? b' },
+    ]
+    expect(linhasSemBloco(emTeste, [])).toEqual([])
+  })
+
+  it('o relatório lista arquivo, linha, operador e texto, ou diz que não falta nada', () => {
+    const lista = relatorioDoFaltando(linhasSemBloco(novas, []), 'tasks/prd-x/3_task.md')
+    expect(lista).toBe(
+      'Linhas novas de produção com condição que nenhum bloco de tasks/prd-x/3_task.md alcança (3):\n' +
+        '  apps/api/src/pedidos.repository.ts:4  [.where(]  .where(and(\n' +
+        '  apps/api/src/pedidos.repository.ts:11  [if]  if (a) return b\n' +
+        '  apps/web/src/Nova.tsx:2  [??]  const a = b ?? c\n',
+    )
+    // Duas condições na mesma linha saem separadas por espaço.
+    expect(relatorioDoFaltando([{ arquivo: 'apps/api/src/a.ts', linha: 7, texto: '  if (a && b) {', condicoes: ['if', '&&'] }], 'tasks/prd-x/3_task.md')).toBe(
+      'Linhas novas de produção com condição que nenhum bloco de tasks/prd-x/3_task.md alcança (1):\n  apps/api/src/a.ts:7  [if &&]  if (a && b) {\n',
+    )
+    expect(relatorioDoFaltando([], 'tasks/prd-x/3_task.md')).toBe('Nenhuma linha nova de produção com condição fica sem bloco em tasks/prd-x/3_task.md.\n')
+  })
+})
+
+describe('--faltando, sobre uma árvore de verdade', () => {
+  const script = join(dirname(fileURLToPath(import.meta.url)), 'mutacoes.ts')
+
+  /** Um repositório com um arquivo de produção versionado, um de teste e o documento da tarefa. */
+  function repositorio(documento: string): string {
+    const raiz = mkdtempSync(join(tmpdir(), 'faltando-'))
+    const git = (...argumentos: string[]) => execFileSync('git', argumentos, { cwd: raiz, stdio: 'pipe' })
+    git('init', '-q')
+    git('config', 'user.email', 'teste@exemplo.com')
+    git('config', 'user.name', 'Teste')
+    for (const [arquivo, conteudo] of Object.entries({ 'apps/api/src/velho.ts': 'export const a = 1\n', 'apps/api/test/velho.int.test.ts': '// teste\n', 'tasks/prd-x/3_task.md': documento })) {
+      mkdirSync(dirname(join(raiz, arquivo)), { recursive: true })
+      writeFileSync(join(raiz, arquivo), conteudo)
+    }
+    git('add', '-A')
+    git('commit', '-q', '-m', 'base')
+    writeFileSync(join(raiz, 'apps/api/src/velho.ts'), 'export const a = 1\nexport const b = a && 2\n')
+    // No índice, como na hora do commit: `git diff` sem o HEAD não o veria.
+    git('add', 'apps/api/src/velho.ts')
+    writeFileSync(join(raiz, 'apps/api/test/velho.int.test.ts'), '// teste\nif (x) y\n')
+    writeFileSync(join(raiz, 'apps/api/src/novo.ts'), 'export function f(x: number) {\n  if (x > 1) return 1\n  return 0\n}\n')
+    return raiz
+  }
+
+  const rodar = (raiz: string) =>
+    spawnSync(process.execPath, [...process.execArgv, script, '--faltando', 'tasks/prd-x/3_task.md'], { cwd: raiz, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: raiz } })
+
+  it('lê o diff dos versionados e as linhas dos arquivos novos, e deixa o teste de fora', () => {
+    const raiz = repositorio('# Tarefa\n')
+    expect(linhasNovasDaArvore(raiz).map((linha) => `${linha.arquivo}:${String(linha.linha)}`)).toEqual([
+      'apps/api/src/velho.ts:2',
+      'apps/api/src/novo.ts:1',
+      'apps/api/src/novo.ts:2',
+      'apps/api/src/novo.ts:3',
+      'apps/api/src/novo.ts:4',
+    ])
+  })
+
+  it('lista o que nenhum bloco alcança e sai 0', () => {
+    const raiz = repositorio('# Tarefa\n')
+    const saida = rodar(raiz)
+    expect(saida.status).toBe(0)
+    const lista =
+      'Linhas novas de produção com condição que nenhum bloco de tasks/prd-x/3_task.md alcança (2):\n' +
+      '  apps/api/src/novo.ts:2  [if]  if (x > 1) return 1\n' +
+      '  apps/api/src/velho.ts:2  [&&]  export const b = a && 2\n'
+    expect(saida.stdout).toBe(lista)
+    // Sem a variável do projeto, a árvore é a do diretório onde o comando roda.
+    const semVariavel = spawnSync(process.execPath, [...process.execArgv, script, '--faltando', 'tasks/prd-x/3_task.md'], { cwd: raiz, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: undefined } })
+    expect(semVariavel.stdout).toBe(lista)
+  })
+
+  it('rodado sem --faltando, o módulo não faz nada', () => {
+    const raiz = repositorio('# Tarefa\n')
+    const saida = spawnSync(process.execPath, [...process.execArgv, script], { cwd: raiz, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: raiz } })
+    expect(saida.status).toBe(0)
+    expect(saida.stdout).toBe('')
+    expect(saida.stderr).toBe('')
+  })
+
+  it('com um bloco que cita as linhas, não falta nada, e sai 0', () => {
+    const documento = `# Tarefa\n\n${bloco('arquivo: apps/api/src/velho.ts', 'teste: apps/api/test/velho.int.test.ts', '- export const b = a && 2', '+ export const b = a')}\n\n${bloco('arquivo: apps/api/src/novo.ts', 'teste: apps/api/test/velho.int.test.ts', '- if (x > 1) return 1')}\n`
+    const raiz = repositorio(documento)
+    const saida = rodar(raiz)
+    expect(saida.status).toBe(0)
+    expect(saida.stdout).toBe('Nenhuma linha nova de produção com condição fica sem bloco em tasks/prd-x/3_task.md.\n')
+  })
+
+  it('importado por outro script, o módulo não roda o --faltando, ainda que o argumento seja o dele', () => {
+    const raiz = repositorio('# Tarefa\n')
+    const importador = join(mkdtempSync(join(tmpdir(), 'importador-')), 'importador.ts')
+    writeFileSync(importador, `import ${JSON.stringify(script)}\n`)
+    const saida = spawnSync(process.execPath, [...process.execArgv, importador, '--faltando', 'tasks/prd-x/3_task.md'], { cwd: raiz, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: raiz } })
+    expect(saida.status).toBe(0)
+    expect(saida.stdout).toBe('')
+  })
+
+  it('sem o documento, o uso sai 2; documento que não existe, avisa e sai 0', () => {
+    const raiz = repositorio('# Tarefa\n')
+    const semDocumento = spawnSync(process.execPath, [...process.execArgv, script, '--faltando'], { cwd: raiz, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: raiz } })
+    expect(semDocumento.status).toBe(2)
+    expect(semDocumento.stderr).toMatch(/^uso: node tools\/processo\/mutacoes\.ts --faltando/)
+    const inexistente = spawnSync(process.execPath, [...process.execArgv, script, '--faltando', 'tasks/nao-existe.md'], { cwd: raiz, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: raiz } })
+    expect(inexistente.status).toBe(0)
+    expect(inexistente.stdout).toMatch(/^não foi possível listar as linhas sem bloco/)
   })
 })
 
