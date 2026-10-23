@@ -33,7 +33,7 @@ linha de base · **Recorte:** o de 22/10 (D81, `RECORTE.md`, `prd.md` §11): 36 
 | Vulnerabilidades, produção (crítica, alta, moderada) | 0 / 0 / 0 | 0 / 0 / 0 | `npm audit --omit=dev` |
 | Vulnerabilidades, tudo | 0 / 2 / 4 | 0 / **3** / **6** | `npm audit`. As novas: `vite` 8.3.0 (alta, direta, correção em 8.3.5) e `vitest` 5.0.0 com o `@vitest/mocker` (moderadas, correção em 5.0.5) |
 | Tipos | verde | verde | `npm run typecheck`, pelo Validador em 23/10 |
-| Lint | verde | **vermelho** até a correção da linha 1 | a supressão órfã de `tools/ci/compose.ts` (validação 1, crítico 1) |
+| Lint | verde | **vermelho** em `5283042` | a supressão órfã de `tools/ci/compose.ts` (validação 1, crítico 1). A correção `poda-supressao-orfa` entrou em `3c3d582`, depois desta medida |
 | Dockerfiles, imagens e build | não medido (imagens do cache) | 172 → 113 linhas, 9 → 6 `npm ci`; imagens do mesmo tamanho; `build --no-cache` 80 s → 78 s | `medidas-da-onda-5.md` (90.0), commit pai contra o da tarefa |
 | Esteira, de criada a concluída | 39,5 min | 46,5 min (run 39887437533, `4d0219d`, verde) | `gh run list`. É uma execução só, com a fila do GitHub dentro; não diz se a X5 deixou a esteira mais lenta |
 
@@ -62,7 +62,7 @@ linha de base · **Recorte:** o de 22/10 (D81, `RECORTE.md`, `prd.md` §11): 36 
 
 ## 4. O que ficou pendente
 
-- **Antes do pouso:** a correção da supressão órfã (linha 1), o portão completo, a esteira verde no último commit com
+- **Antes do pouso:** o portão completo, com o lint depois da correção `3c3d582`, a esteira verde no último commit com
   código e a revalidação. A revalidação confere também o RF31 (`saida-do-temporario.md`, R64) e este relatório.
 - **Na X6** (`tasks.md`, "Saíram para a X6", e o `ROADMAP.md`):
   - antes do portão do piloto: a IA e o PDF no worker, o prazo do cliente e o Redis fora (42.0, 45.0 a 47.0, 49.0, 50.0,
