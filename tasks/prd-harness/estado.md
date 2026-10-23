@@ -12,18 +12,32 @@
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
   - linha 1 (`Implementador`/`Mesa`): **ociosa** desde ~17:45 (a correção `agentes-suspensao-intermitente` se encontrou
-    em `dc11702`). Nada parte: todas as liberadas esperam a 4.0 ou a 10.0
+    em `dc11702`)
   - linha 2 (`Implementador 2`/`Mesa 2`): **10.0** (grande), 1ª tentativa, desde ~17:50 (a 6.0 se encontrou em `24b67f5`,
     depois da correção `encontro-6-harness`, `e430451`)
-  - linha 2: desde ~18:15, **correção do zod** no meio da 10.0 (DIVERGÊNCIA `portão`, a mesma da linha 3), doc
-    `2026-10-23-zod-4-6-7-audit-linha-2`, repetindo a mudança de `bd292fb`; par reiniciado; guardião `infra-guardian`. Com o
-    RELATÓRIO, `PEDIDO de retomada` da 10.0: a ordem da rodada 1 está toda aplicada, falta o carimbo e a rodada 2 da Mesa 2
-  - linha 3 (`Implementador 3`/`Mesa 3`): **4.0** (pequeno), 1ª tentativa, desde ~17:25 (a 9.0 se encontrou em `954821d`)
-    - a correção do zod (`2026-10-23-zod-4-6-7-audit`) se fechou em `bd292fb`, na linha (sem encontro próprio): infra-guardian,
-      revisor-geral, test-engineer 1. Desde ~18:05, `PEDIDO de retomada` da 4.0 (falta portão com carimbo e revisão)
-  - a 15.0 está liberada, mas o `tasks.md` não a autoriza junto com a 4.0: parte depois do encontro da 4.0
+  - linha 2: a correção do zod (`zod-4-6-7-audit-linha-2`) fechou em `995ff72`, na linha. A 10.0 retomada às ~18:35; às ~18:55
+    **ESCALADA da Mesa 2**: revisor-geral e test-engineer reprovaram 2 vezes seguidas (infra-guardian aprovou). Ordem
+    `10_task-r2.md` (4 bloqueantes, 6 recomendações) ainda não enviada. Pedi ao `Arquiteto`, reiniciado no checkout da linha 2,
+    o diagnóstico (`.processo/ordens/diagnostico-10.md`). Com ele: `PEDIDO de retomada` ao Implementador 2 apontando
+    `10_task-r2.md` e o diagnóstico. A próxima reprovação do mesmo revisor é a 3ª: limite, parada
+    - ~19:00: diagnóstico pronto; retomada com a r2. ~19:10: **BLOQUEIO da Mesa 2**, 3ª reprovação seguida do test-engineer.
+      Parada respondida às ~19:15: opção A (as duas opções na lista, com caso em negados e mutação, e conferir as outras opções
+      globais do git com argumento separado). Destravado; retomada enviada; o ajuste ficou pronto (`--attr-source`,
+      `--shallow-file`, `--super-prefix`)
+    - ~20:15: nova DIVERGÊNCIA `portão` na 10.0: `npm audit` acusa high em vite 8.3.0–8.3.2 (direta), body-parser, brace-expansion,
+      source-map-js. Correção `2026-10-23-audit-vite-e-transitivas` na linha 2, par reiniciado, guardião `infra-guardian`. Com o
+      RELATÓRIO, `PEDIDO de retomada` da 10.0 (falta portão com carimbo e a rodada 4 da Mesa 2; contagem do test-engineer destravada)
+    - ~20:25: a correção fechou em `02386f8` (vite 8.3.5; infra-guardian e test-engineer 1; 6 moderados do esbuild/drizzle-kit ficam,
+      só saem com --force). Par reiniciado e `PEDIDO de retomada` da 10.0 enviado; espero o RELATÓRIO (rodada 4)
+    - as linhas 1 e 3 recebem a correção pela spec na partida seguinte (depois do encontro da 10.0)
+  - linha 3 (`Implementador 3`/`Mesa 3`): **ociosa** desde ~18:25 (a 4.0 se encontrou em `5341e20`)
+  - linhas 1 e 3 ociosas: nada parte até o encontro da 10.0 (11.0, 12.0 e 13.0 esperam a 10.0; a 15.0 não está autorizada
+    junto com a 10.0)
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Devo ainda:**
+  - no fechamento, levar ao `TODO.md` as três "Recomendações sem aplicar" do `4_task.md` (destino TODO.md)
+  - nota ao Arquiteto, no próximo pedido: o push de cada encontro cancela a esteira em curso na `spec/harness` e o
+    `esteira.ts` lê a cancelada como VERMELHA; com encontros a cada ~30 min, a spec não chega a ter esteira concluída
   - **antes de partir a 16.0:** pedir ao `Arquiteto` que feche a fronteira no `16_task.md`. Hoje a 16.0 confere aspas em
     `tools/guardas/`, onde há fixtures que não existem, e o `arquiteto.md` tem caminhos com reticências. Ver o
     `revisao-spec.md`, rodadas 11 a 13
@@ -38,7 +52,9 @@
     fila parado 2 s), mas falha em 20 s com o erro certo (relatório da correção `agentes-suspensao-intermitente`)
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `5439cbc` (encontro da correção da linha 1); esteira `40021941702` rodando nele
+- **Base:** `spec/harness` em `0068e5d` (encontro da 4.0); esteira `40026244263` na fila. As três anteriores (`40017905038`,
+  `40018797893`, `40021941702`) foram **canceladas** pelo push seguinte, não reprovadas: o `esteira.ts` lê cancelada como
+  VERMELHA. Não abri correção. Sem esteira concluída na spec desde `a691e02`
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -53,8 +69,20 @@
 | 9.0 | `954821d` | Sonnet 5.5 | test-engineer 2, revisor-geral 2 | |
 | 6.0 | `8dce7e7` + `e430451` (encontro-6-harness) | Sonnet 5.5 | infra-guardian 2, revisor-geral 2, test-engineer 2; a correção: infra-guardian 1, revisor-geral 1, test-engineer 1 | CONFLITO no `cenarios.md` no encontro (3ª vez nesta spec); slug `encontro-6` já existia de outra spec; recomendação do infra-guardian virou item no `TODO.md` |
 | correção agentes-suspensao-intermitente | `dc11702` | Sonnet 5.5 | conformidade-reviewer 1, frontend-reviewer 1, test-engineer 1 | esteira vermelha em `a691e02`; causa: Redis de fila parado 2 s, a fixture esperava só o sucesso da ativação do MFA; não era a suspensão |
+| 4.0 | `5341e20` + `bd292fb` (correção zod) | Sonnet 5.5 | infra-guardian 2, privacy-guardian 2, test-engineer 2, revisor-geral 2; a correção: infra-guardian 1, revisor-geral 1, test-engineer 1 | DIVERGÊNCIA `portão` (zod <4.6.6, GHSA-mrhx-c7xc-m3w5) virou a correção `zod-4-6-7-audit` na linha; três recomendações para o TODO.md |
 
 ## Esperando o Joaquim
+## 23/10/2026 ~19:10 — X7 tarefa 10.0 (limite: 3 reprovações do test-engineer)
+Decisão: como destravar a 10.0, que o `test-engineer` reprovou na 3ª rodada seguida (infra-guardian e revisor-geral aprovaram)?
+Contexto: bloqueante único em `tools/processo/comando-git.ts:361` (linha 2): `OPCOES_DO_GIT_COM_ARGUMENTO` não tem `--attr-source` nem
+`--shallow-file`, e `git --attr-source HEAD commit -n -m x` passa pelo leitor. Achados em `tasks/prd-harness/achados/10_task.md`; o
+diagnóstico do Arquiteto em `.processo/ordens/diagnostico-10.md` (linha 2)
+Opções: (A) incluir as duas opções no Set, com caso em negados e bloco de mutação, e conferir de uma vez as outras opções globais do
+git que levam argumento separado | (B) declarar "opção global do git fora da lista" como limite na Tech Spec §5(a), com caso em passam
+Recomendo: A. A brecha é concreta, a correção cabe em poucas linhas, e o revisor-geral apontou a mesma forma. Conferir a lista
+inteira agora evita uma 4ª rodada pela próxima opção
+**Respondida em 23/10 ~19:15 pelo Joaquim, no terminal do Orquestrador: "faca o recomendado pode escolher".** Opção A.
+Destravado em `rodadas.md` da linha 2; retomada da 10.0 ao Implementador 2
 ## 23/10/2026 ~16:10 — X7 escopo (skills de projeto)
 Decisão: a X7 ganha uma tarefa que ensina aos agentes o jeito de construir o Turmma, que a Etapa 9.1 da MISSAO pedia
 ("incorpore os padrões finais") e nenhuma das 20 tarefas cobre? Hoje nenhuma skill, papel nem o `CLAUDE.md` aponta o
@@ -86,3 +114,5 @@ Segue sem depender: a 5.0 (linha 2) e a 7.0 (linha 3), que não tocam o `revisoe
 - 23/10 ~18:20: na correção do zod da linha 2, o portão parou no knip (`Unlisted binaries: mkfifo`, em `revisoes.test.ts`, arquivo da
   10.0 sem commit). Decidi: o ajuste é da 10.0, feito agora na árvore e revisto na rodada 2 dela; o commit da correção leva só os
   arquivos dela
+- 23/10 ~20:15: segunda DIVERGÊNCIA `portão` de dependência na linha 2 (vite e transitivas). Correção na própria linha, como a do
+  zod: as outras linhas estão ociosas e recebem pela spec
