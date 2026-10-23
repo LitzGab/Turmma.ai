@@ -163,7 +163,9 @@ O marcador forjado num commit só de docs, só a 3 pega; o guardião por caminho
 `--include dependencies,unlisted,binaries,unresolved` em `tools/ci/etapas-de-guarda.ts`. O knip é `devDependency` (R40),
 6.42.1 exato. O `guarda:dependencias` do `package.json` passa a ser `npm audit … && knip --include …`, porque o portão da
 tarefa só roda esse script e `tools/processo/` não muda antes da 92.0; a etapa do `ci:verificar` é a
-`etapaDependenciasDeclaradas` (`npx --no knip …`), com os argumentos numa constante só (`ARGUMENTOS_DO_KNIP`).
+`etapaDependenciasDeclaradas` (`npx --no -- knip …`), com os argumentos numa constante só (`ARGUMENTOS_DO_KNIP`). O `--`
+é obrigatório: sem ele o `npx` toma `--include` por opção do npm e não a repassa, e o knip roda com todas as categorias
+(correção `knip-exportacoes-na-esteira`).
 
 O `knip.json` tem, além do `ignore` (só as duas pastas de fixture), `ignoreDependencies: ["k6"]` e
 `ignoreBinaries: ["flock", "maestri"]` no workspace da raiz, que não são pacote npm (`k6/http` é do executor do k6; os
