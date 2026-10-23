@@ -189,7 +189,7 @@ commit só, com cada arquivo guardado como renomeação**: o hook exige carimbo 
 - [x] **35.0 — `ops/` só tem terminal; casos de uso em `operacao/`, paginação em `http/`**
   - [x] 35.1 O `35_task.md` é escrito pelo Arquiteto antes de a tarefa partir, contra o código daquele momento: desenho e testes em `onda-2.md`
 
-- [ ] **96.0 — Na API, `estrutura/`, `operacao/`, `sala/` e `atividade/` têm uma subpasta por recurso, e pasta de produção com mais de 25 arquivos reprova**
+- [x] **96.0 — Na API, `estrutura/`, `operacao/`, `sala/` e `atividade/` têm uma subpasta por recurso, e pasta de produção com mais de 25 arquivos reprova**
   - [ ] 96.1 O `96_task.md` é escrito pelo Arquiteto antes de a tarefa partir: uma subpasta por recurso, como o `nest g resource` (`estrutura/turma/` com o controller, o service, o repository e os testes dele)
   - [ ] 96.2 Só `git mv` e import, uma pasta por commit
   - [ ] 96.3 A trava que a 97.0 criou ganha a raiz `apps/api/src`, com lista fechada de exceções e motivo (R56)

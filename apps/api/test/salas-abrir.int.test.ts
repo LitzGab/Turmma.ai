@@ -12,7 +12,7 @@ import {
 import { randomBytes, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { ListaLivreRepository } from '../src/sala/lista-livre.repository.js'
+import { ListaLivreRepository } from '../src/sala/reivindicacao/lista-livre.repository.js'
 import { sortearCodigoDaTurma } from '../src/sala/codigo-da-sala.js'
 import { chamar, subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { MONTAGEM_DE_TESTE } from './configuracao-de-teste.js'

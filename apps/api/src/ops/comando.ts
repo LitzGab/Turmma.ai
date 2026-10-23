@@ -2,7 +2,7 @@ import { ConfiguracaoInvalida, criarBanco, criarPool, validarAmbiente, type Banc
 import { esquemaNomeDigitado, FORMATO_OPERADOR } from '@educa/shared'
 import { open, type FileHandle } from 'node:fs/promises'
 import { z } from 'zod'
-import { OperadorRepository } from '../operacao/operador.repository.js'
+import { OperadorRepository } from '../operacao/operador/operador.repository.js'
 import type { ConferenciaDoAutor } from '../sessao/index.js'
 
 /**

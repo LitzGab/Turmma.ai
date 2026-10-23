@@ -3,7 +3,7 @@ import type { PapelDeUsuario } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
-import { criarEscola, criarRede } from '../src/operacao/casos-de-uso/escola.js'
+import { criarEscola, criarRede } from '../src/operacao/escola/escola.js'
 import { CriacaoDeSessaoRepository } from '../src/credencial/index.js'
 import { type AlunoComMatriculaSintetico, criarAlunosComMatricula, criarSessoesSinteticas, emissorDeTokenSintetico, NOME_SINTETICO } from '../src/sessao/index.js'
 

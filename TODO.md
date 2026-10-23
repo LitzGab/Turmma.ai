@@ -115,7 +115,7 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [x] **(F3, 13.0) O resumo do arquivo do titular diz "Os pedidos de entrada na turma que você fez ou decidiu"** — *resolvido na correção `2026-10-10-resumo-do-arquivo-do-pedido-de-entrada`: o texto do arquivo é o da tela, e a consulta diz que o pedido recusado antes entra de propósito. O rótulo por papel ficou de fora: o texto com os dois caminhos é verdadeiro para os dois, e um por papel muda a forma de `LeituraDaTabela` (desenho).*
       (`packages/nucleo/src/titular/leitura-do-titular.ts`, `LEITURAS_DO_ARQUIVO.reivindicacao.descricao`), e a consulta do
       aluno traz todo pedido feito no nome dele na lista, inclusive o recusado antes, que pode ser de outra pessoa (a recusa
-      devolve o nome a `livre` e o pedido continua na linha: `devolverNome`, `apps/api/src/sala/decisao.repository.ts`). A
+      devolve o nome a `livre` e o pedido continua na linha: `devolverNome`, `apps/api/src/sala/decisao/decisao.repository.ts`). A
       tela da 18.0 diz "feitos com o seu nome ou decididos por você": alinhar o texto do arquivo e o comentário da consulta
       ("o pedido que o aprovou") por `/corrigir`, antes da validação do F3. Ao alinhar, escreva na consulta que o pedido
       recusado antes naquele nome entra de propósito e não identifica outra pessoa (`privacy-guardian`, 3ª rodada).
@@ -847,9 +847,9 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] Aceite do convite de operador e `renovar` em paralelo, e aceite e segundo fator em paralelo, sem teste de
       concorrência próprio; o rebaixamento do `convite/aceitar` com o Redis de cache fora só é provado pelo C36, com
       limitador falso (`test-engineer` da 9.0 da A0b). Destino: próxima tarefa que tocar
-      `apps/api/src/operacao/convite-operador.service.ts` ou `sessao.service.ts` da operação
+      `apps/api/src/operacao/convite/convite-operador.service.ts` ou `sessao.service.ts` da operação
 - [ ] Página e `total` do painel em duas consultas paralelas, com fotografias diferentes do banco: uma escola criada entre
-      as duas deixa o total fora da página (`apps/api/src/operacao/painel.repository.ts`, `TOTAL_DE_ESCOLAS` e
+      as duas deixa o total fora da página (`apps/api/src/operacao/painel/painel.repository.ts`, `TOTAL_DE_ESCOLAS` e
       `escolasDaPagina`; 5.0 da A0b). Ler o total na própria consulta da página, com `count(*) over ()` antes do `limit`,
       também tira uma conexão. Destino: próxima tarefa que tocar `painel.repository.ts`
 - [ ] `apps/web/src/operacao/paginas/Uso.tsx`: o `VazioDoUso` (`:114`) repete o `EstadoVazio`; e o número longo com
@@ -872,7 +872,7 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       do `<dialog>` modal reaberto, inerte para o leitor de tela: quem o usa pode não saber que o pedido cancelado criou a
       escola e repetir. No Nova rede nada segura o duplicado (`frontend-reviewer` da correção `7d495d0`). Destino: próxima
       tarefa que tocar `Escolas.tsx`
-- [ ] `apps/api/src/operacao/painel.service.ts:62` (`naEscola`): o mesmo caminho morto que a correção
+- [ ] `apps/api/src/operacao/painel/painel.service.ts:62` (`naEscola`): o mesmo caminho morto que a correção
       `2026-09-25-acabamento-da-a0b` tirou do segundo fator, `contextoAtual() ?? { requisicaoId: randomUUID() }`. Aqui a
       linha é escrita depois da gravação, então a falha fechada vai no começo do caso de uso, não no log. O mesmo vale para
       `refazerConviteDaCoordenacao` (`apps/api/src/sessao/convite/convite.service.ts`), que só o painel chama; no gerar e no
@@ -938,7 +938,7 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] O formato do token opaco de 43 caracteres base64url está em dois lugares: `esquemaTokenDeLink`
       (`packages/shared/src/sessao/token.ts`: convite da coordenação, link da sala e, desde a 14.0 da A1, o convite de
       professor) e o `FORMATO_DO_REFRESH` (`apps/api/src/sessao/renovacao/renovacao.service.ts` e
-      `apps/api/src/operacao/sessao.service.ts`). Unificar os dois da API no mesmo formato (`revisor-geral` da 4.0 da A1).
+      `apps/api/src/operacao/sessao/sessao.service.ts`). Unificar os dois da API no mesmo formato (`revisor-geral` da 4.0 da A1).
       A 14.0 fez a parte do convite de professor; o refresh é da API de sessão, fora de uma tarefa de tela. Destino:
       correção própria
 - [ ] **(X1, retrospectiva) Código de processo que a X1 pediu** (`tasks/prd-pele-e-casca/retro.md`, M1 a M3). Correção
@@ -1723,13 +1723,14 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   `arquitetura.test.ts` casaria `outro-login.service.js` e não pega import sem extensão, e a varredura de `login.service.test.ts` não
   pega `export default <nome>` nem `export = <nome>`; a 12.0 substitui esses `it` e decide o que fica (`test-engineer`, 11.0, 1ª e 2ª rodadas)
 - [ ] **(X5, 17.0) Alinhar o `.trim()` do `slug`:** só o da query do login externo é cortado, o do caminho de `/v1/escolas/:slug/acesso` não; mudar o segundo muda a rota `/e/:slug`, para quando a tela for revista (`tenancy-guardian`, 16.0, 1ª rodada)
-- [ ] **(X5, 17.0) Um `esquemaSemCorpo` só:** exportar `esquemaPedidoSemCorpoDeOperador.default({})` de `packages/shared` no lugar das três cópias (`painel.controller.ts`, `operacao/sessao.controller.ts` e o `revogar` de `sala/acesso-da-turma.controller.ts`, da 15.0) (`revisor-geral`, 16.0, 1ª rodada)
+- [ ] **(X5, 17.0) Um `esquemaSemCorpo` só:** exportar `esquemaPedidoSemCorpoDeOperador.default({})` de `packages/shared` no lugar das três cópias (`painel.controller.ts`, `operacao/sessao/sessao.controller.ts` e o `revogar` de `sala/acesso-da-turma/acesso-da-turma.controller.ts`, da 15.0) (`revisor-geral`, 16.0, 1ª rodada)
 - [ ] **(X5, 17.0) O segundo bloco do ESLint lista só quem usa o `@Req()`:** hoje vale em `sessao` e `operacao` inteiros (divergência 6 da 16.0) e deixa a porta aberta em quatro controllers que não o usam; a 17.0 generaliza o primeiro bloco e decide a lista (`infra-guardian`, 16.0, 1ª rodada)
 - [ ] **(X5) O `describe('ops:redefinir-mfa')` de `mfa.int.test.ts` cria o próprio operador:** hoje depende de o `operador-teste` existir, defeito anterior à 16.0 (`infra-guardian`, 16.0, 1ª rodada)
 - [ ] **(X5, 17.0) Contagem exata das marcas de `requisicao.body|query|params` em `guardas.test.ts`:** o `toEqual(esperadas)` vem da própria fixture, e apagar as três marcas de `daRequisicao` o deixa verde; a 17.0 generaliza o primeiro bloco e mexe nesse teste (`revisor-geral`, 16.0, 2ª rodada)
 - [ ] **(X5, 17.0) Dois jeitos de montar o corpo vazio que pode faltar** (`revisor-geral`, junto do "Um `esquemaSemCorpo` só" acima): a constante local `esquemaSemCorpo = X.default({})`
-  em `professores.controller.ts`, `operacao/sessao.controller.ts`, `operacao/painel.controller.ts` e `sala/acesso-da-turma.controller.ts`,
+  em `professores.controller.ts`, `operacao/sessao/sessao.controller.ts`, `operacao/painel/painel.controller.ts` e `sala/acesso-da-turma/acesso-da-turma.controller.ts`,
   e o `esquemaPedidoSemCorpoOuAusente` de `packages/shared` (atividade). Unificar na próxima tarefa que mexa nesses controllers;
   quatro arquivos de outros módulos não cabiam na 17.0
 - [ ] **(X5, 34.0) O `sessao/index.ts` exporta o que só os testes de `apps/api/test` usam** (`tenancy-guardian`): `ConviteRepository`, `ContaExternaRepository`, `CookieOidc`, `CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA` e `ESCOLA_DESCONHECIDA`. A 34.3 manda o índice trazer o que `apps/api/{src,test}` usam, e é assim que está. A regra do `dependency-cruiser` da 12.0 pode barrar o uso desses fora de `apps/api/test`, ou os testes passam a importar pelo arquivo
 - [ ] **(X5, 34.0) Três restos de texto e de reexport depois da `sessao/index.ts`** (`test-engineer` e `revisor-geral`, 2ª rodada): (1) o comentário de `apps/api/test/arquitetura.test.ts` (conferência do índice) ainda cita `export * from './tenant/index.js'`, arquivo que não existe; (2) `renovacao/renovacao.service.ts` reexporta `JANELA_DE_RENOVACAO_SIMULTANEA_MS` só para `renovacao.service.test.ts`: importar de `@educa/shared` no teste e apagar o reexport, na tarefa que mexer em `renovacao.service.ts`; (3) `tasks/prd-reengenharia/34_task.md`, tabela de testes, diz "as mutações 1 a 5", e com o bloco de aspas duplas são seis
+- [ ] **(X5, 96.0) A mensagem do teste do repositório em `tools/guardas/tamanho-das-pastas.test.ts` fala só da web** ("telas, hooks e cliente de API dele"): trocar por uma que sirva às duas raízes ("divida por assunto ou por recurso (D81)"). Na próxima tarefa que tocar o arquivo (`test-engineer`, 96.0, 2ª rodada)

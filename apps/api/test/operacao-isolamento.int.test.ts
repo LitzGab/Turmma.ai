@@ -12,7 +12,7 @@ import { aguardarSaudavel, compose, composeOuFalha } from '../../../tools/testes
 import { AppModule } from '../src/app.module.js'
 import { BANCO } from '../src/banco.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { DisciplinaRepository } from '../src/estrutura/disciplina.repository.js'
+import { DisciplinaRepository } from '../src/estrutura/disciplina/disciplina.repository.js'
 import { provedoresDaGuardaDeOperador, SESSOES_DE_OPERADOR, type LeituraDaSessaoDeOperador } from '../src/operacao/guarda-de-operador.js'
 import { RotaDeOperacao } from '../src/operacao/marcadores.js'
 import { executarOpsOperador } from '../src/ops/operador.js'

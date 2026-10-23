@@ -61,9 +61,9 @@ realtime, despachante, worker, web.
 | Projeto Maven multi-módulo | npm workspaces (`apps/*`, `packages/*`) | `package.json` |
 | Módulo `-api` com os DTOs, compartilhado | `packages/shared` (esquemas zod) | `packages/shared/src/estrutura/disciplina.ts` |
 | `@Configuration` + `@Bean` | `@Module` do NestJS; o módulo que recebe configuração usa `static com(config): DynamicModule` | `apps/api/src/app.module.ts`, `estrutura/estrutura.module.ts` |
-| `@RestController` + `@RequestMapping("/v1/x")` | `@Controller('v1/x')` | `apps/api/src/estrutura/disciplina.controller.ts` |
-| `@Service` | classe de service, criada pelo módulo com `useFactory` | `estrutura/disciplina.service.ts` |
-| `@Repository` + filtro de tenant do Hibernate | repository do Drizzle que lê a escola por `exigirEscolaDoContexto()` | `estrutura/disciplina.repository.ts` |
+| `@RestController` + `@RequestMapping("/v1/x")` | `@Controller('v1/x')` | `apps/api/src/estrutura/disciplina/disciplina.controller.ts` |
+| `@Service` | classe de service, criada pelo módulo com `useFactory` | `estrutura/disciplina/disciplina.service.ts` |
+| `@Repository` + filtro de tenant do Hibernate | repository do Drizzle que lê a escola por `exigirEscolaDoContexto()` | `estrutura/disciplina/disciplina.repository.ts` |
 | Entidade JPA | tabela do Drizzle, sem lazy loading e sem entidade gerenciada | `packages/nucleo/src/db/schema/disciplina.ts` |
 | Flyway | migrations do `drizzle-kit`, aplicadas pelo serviço `migrar` do compose | `packages/nucleo/drizzle/` |
 | Bean Validation (`@Valid` no `@RequestBody`) | esquema zod de `shared` com o `ZodValidationPipe` do NestJS | §5.1 |
@@ -124,9 +124,10 @@ navegador ──HTTP──▶ borda (Caddy) ──▶ api
 
 ## 4. Onde fica cada coisa
 
-**Na API, uma pasta por módulo de domínio**, com o controller, o service e o repository de cada recurso lado a lado
-(`estrutura/turma.controller.ts`, `turma.service.ts`, `turma.repository.ts`). **Na web, a pasta se parte por assunto**
-quando passa de ~20 arquivos de produção, e um teste reprova a que passar de 25
+**Na API, uma pasta por módulo de domínio** e, nos módulos que têm vários recursos (`estrutura/`, `operacao/`, `sala/` e
+`atividade/`), uma subpasta por recurso, como o `nest g resource`, com o controller, o service e o repository dele lado a lado
+(`estrutura/turma/turma.controller.ts`, `turma.service.ts`, `turma.repository.ts`). **Na web, a pasta se parte por assunto**
+quando passa de ~20 arquivos de produção. Em toda a API e na web, um teste reprova a pasta que passar de 25
 (`tools/guardas/tamanho-das-pastas.test.ts`).
 
 ```
@@ -135,13 +136,14 @@ apps/api/src/
   <modulo>/                    estrutura, professores, material, ia, assistente, artefato, entrega,
                                atividade, tutor, governanca, privacidade, sala, operacao, sistema, sessao, credencial
     <modulo>.module.ts
-    turma.controller.ts        um trio por recurso, direto na pasta do módulo
-    turma.service.ts
-    turma.repository.ts
+    turma/                     um recurso: o trio abaixo e os testes dele (nos módulos com vários recursos)
+      turma.controller.ts
+      turma.service.ts
+      turma.repository.ts
     *.test.ts                  unidade, ao lado do código
   credencial/senha/            senha, hash, ContadorEmJanela, SemaforoDeHash: primitivas que outros módulos usam
   http/paginacao.ts            paginar e paginarPor, o corte da página de uma listagem
-  operacao/casos-de-uso/       criarRede e criarEscola, que o painel e o comando ops:escola chamam
+  operacao/escola/             criarRede e criarEscola, que o painel e o comando ops:escola chamam
   ops/                         só comandos de terminal (npm run ops:*), finos, sobre os casos de uso de operacao/
 apps/api/test/                 testes de integração: entre outros, os que cruzam módulos, os de arquitetura e os
                                HTTP de vários módulos; muitos módulos também têm *.int.test.ts ao lado do código
@@ -218,7 +220,7 @@ Exemplo: a disciplina (`apps/api/src/estrutura/`, `packages/shared/src/estrutura
      - **Linha com disciplina** (artefato, atividade aplicada, entrega): o vínculo precisa ser também naquela
        disciplina. Use o `comVinculoConfirmadoDoProfessor` de `apps/api/src/assistente/turma-do-professor.repository.ts`.
      - **Linha sem disciplina** (a própria turma e os alunos dela): basta o vínculo na turma, em qualquer disciplina.
-       Veja o `#comVinculoDoProfessor` de `apps/api/src/estrutura/turma.repository.ts`.
+       Veja o `#comVinculoDoProfessor` de `apps/api/src/estrutura/turma/turma.repository.ts`.
      - **Linha com disciplina e sem turma** (o material): basta o vínculo confirmado naquela disciplina no ano em
        curso, sem olhar a turma (`#noAlcance` de `apps/api/src/material/material.repository.ts`).
      - No ano em curso, vínculo pendente, contestado ou encerrado não dá alcance. Na leitura de um ano encerrado, a

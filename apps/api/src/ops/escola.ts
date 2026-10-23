@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
-import { criarEscola, criarRede } from '../operacao/casos-de-uso/escola.js'
+import { criarEscola, criarRede } from '../operacao/escola/escola.js'
 
 // O que é comum aos comandos do operador mora em `comando.ts`; reexportado aqui para quem já o importava daqui.
 export { abrirBancoDeOperacao, ArgumentoInvalido, lerOperador, type BancoDoComando, type SaidaDoComando }
@@ -13,7 +13,7 @@ export { abrirBancoDeOperacao, ArgumentoInvalido, lerOperador, type BancoDoComan
 /**
  * Criação de rede e de escola pelo operador Turmma (RF1, D2): por este comando, ou pelo painel da operação
  * (`POST /v1/operacao/redes` e `/escolas`, A0b); os dois chamam os mesmos `criarRede` e `criarEscola`, que moram em
- * `operacao/casos-de-uso/escola.ts`. Este arquivo é só o terminal. Não há rota de escola nem cadastro público: a escola
+ * `operacao/escola/escola.ts`. Este arquivo é só o terminal. Não há rota de escola nem cadastro público: a escola
  * nasce só por um dos dois.
  *
  *   OPERADOR=<pessoa da equipe> npm run -s ops:escola -- rede criar --nome <nome> --tipo prefeitura|grupo|independente

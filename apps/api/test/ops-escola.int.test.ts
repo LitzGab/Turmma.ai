@@ -8,7 +8,7 @@ import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
-import { criarEscola, criarRede } from '../src/operacao/casos-de-uso/escola.js'
+import { criarEscola, criarRede } from '../src/operacao/escola/escola.js'
 import { abrirBancoDeOperacao, executarOpsEscola, type BancoDoComando } from '../src/ops/escola.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 

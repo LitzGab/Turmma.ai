@@ -8,10 +8,10 @@ import { alunosComSessao, aplicarAtividade, aprovarOLote, criarAtividade, encerr
 import { copiarArtefatoParaOAnoAnterior, montarAnoAnterior, montarEscolaComAssistente, vincularProfessor, type EscolaComAssistente } from '../../test/escola-com-assistente.js'
 import { lancarLote } from '../../test/escola-com-tutor.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from '../../test/sessao-de-teste.js'
-import { AtividadeAplicadaRepository } from './atividade-aplicada.repository.js'
-import { CorrecaoRepository } from './correcao.repository.js'
-import { DesempenhoRepository } from './desempenho.repository.js'
-import { MinhaAtividadeRepository } from './minha-atividade.repository.js'
+import { AtividadeAplicadaRepository } from './atividade-aplicada/atividade-aplicada.repository.js'
+import { CorrecaoRepository } from './correcao/correcao.repository.js'
+import { DesempenhoRepository } from './desempenho/desempenho.repository.js'
+import { MinhaAtividadeRepository } from './minha-atividade/minha-atividade.repository.js'
 
 /**
  * O isolamento do módulo da atividade (regra 10, itens 4, 5 e 6; regra 20, item 5): cada rota, batida por quem não é

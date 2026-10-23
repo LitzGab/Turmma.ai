@@ -910,7 +910,7 @@ Se reprovar, a saída diz a fase e o critério:
 - **disputa com dois vencedores, ou nome com dois pedidos:** a restrição de um pendente por nome ou a transação da
   reivindicação (Tech Spec da A1, seção 5, passo 4) deixou passar a corrida. É defeito, não capacidade.
 - **`decidir` acima de 2 s:** o lote de 40 transações ficou lento. Com o Redis lento, olhe o zerar dos contadores depois do
-  lote (`apps/api/src/sala/decisao.service.ts`).
+  lote (`apps/api/src/sala/decisao/decisao.service.ts`).
 - **login da outra escola acima de 1 s:** a sala está tirando a vez do login no semáforo. Confira a espera por balde no
   painel.
 

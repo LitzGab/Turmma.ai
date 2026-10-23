@@ -13,8 +13,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { AppModule } from '../src/app.module.js'
 import { EntradaDeOperacao, RotaDeOperacao } from '../src/operacao/marcadores.js'
 import { OperacaoModule } from '../src/operacao/operacao.module.js'
-import { PainelController } from '../src/operacao/painel.controller.js'
-import { PainelRepository } from '../src/operacao/painel.repository.js'
+import { PainelController } from '../src/operacao/painel/painel.controller.js'
+import { PainelRepository } from '../src/operacao/painel/painel.repository.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { controladoresDoModulo, ROTAS_COM_SESSAO_DE_OPERADOR, ROTAS_DO_PAINEL, rotasDe, rotasDeOperacaoSemGuarda, rotasForaDaCerca, type RotaRegistrada } from './rotas-registradas.js'
 
@@ -72,7 +72,7 @@ describe('arquitetura: a resolução de tenant fica dentro do módulo de sessão
 
   it('reprova o arquivo de fora que a importa, reexporta ou carrega por import dinâmico', () => {
     const fora = [
-      { caminho: 'apps/api/src/estrutura/turma.service.ts', texto: "import { ResolucaoDeTenantRepository } from '../sessao/resolucao-de-tenant.repository.js'" },
+      { caminho: 'apps/api/src/estrutura/turma/turma.service.ts', texto: "import { ResolucaoDeTenantRepository } from '../sessao/resolucao-de-tenant.repository.js'" },
       { caminho: 'apps/api/src/sistema/atalho.ts', texto: "export * from '../sessao/resolucao-de-tenant.repository.js'" },
       { caminho: 'apps/worker/src/expurgo.ts', texto: "const modulo = await import('../../api/src/sessao/resolucao-de-tenant.repository.js')" },
     ]
@@ -126,7 +126,7 @@ describe('arquitetura: a conta global só pelo módulo sessao e pelo ciclo de vi
 
   it('reprova o terceiro caminho que a importa, reexporta ou carrega por import dinâmico, e deixa os dois caminhos passarem', () => {
     const fora = [
-      { caminho: 'apps/api/src/estrutura/vinculo.service.ts', texto: "import { ContaGlobalRepository } from '@educa/nucleo/conta-global'" },
+      { caminho: 'apps/api/src/estrutura/vinculo/vinculo.service.ts', texto: "import { ContaGlobalRepository } from '@educa/nucleo/conta-global'" },
       { caminho: 'packages/nucleo/src/retencao/atalho.ts', texto: "export * from '../ciclo-de-vida/conta-global.repository.js'" },
       { caminho: 'apps/worker/src/processadores/eliminar.ts', texto: "const { ContaGlobalRepository } = await import('@educa/nucleo/conta-global')" },
       { caminho: 'apps/worker/src/processadores/expurgar.ts', texto: "import * as global from '@educa/nucleo/conta-global'" },
@@ -200,7 +200,7 @@ describe('arquitetura: a conta global só pelo módulo sessao e pelo ciclo de vi
  * `PainelRepository`, com exatamente três métodos, cada um `@SemEscopo` com a justificativa do painel; e só o
  * `painel.service.ts` o usa. Um quarto método sem escopo, ou outro arquivo que o importe, é mudança da spec.
  */
-const REPOSITORY_DO_PAINEL = 'apps/api/src/operacao/painel.repository.ts'
+const REPOSITORY_DO_PAINEL = 'apps/api/src/operacao/painel/painel.repository.ts'
 const USO_DO_PAINEL_REPOSITORY = /\bPainelRepository\b|painel\.repository/
 
 /** Quem, fora de teste e do próprio arquivo, cita a classe ou o arquivo dela: importação, reexportação ou `import()`. */
@@ -219,20 +219,20 @@ describe('arquitetura: a leitura entre escolas mora só no PainelRepository, e s
   })
 
   it('fora de teste, só o painel.service.ts o importa', () => {
-    expect(quemUsaOPainelRepository(arquivosDoRepositorio())).toEqual(['apps/api/src/operacao/painel.service.ts'])
+    expect(quemUsaOPainelRepository(arquivosDoRepositorio())).toEqual(['apps/api/src/operacao/painel/painel.service.ts'])
   })
 
   it('a varredura reprova quem de fora o importa, reexporta ou carrega por import dinâmico, e deixa o teste passar', () => {
     const fora = [
-      { caminho: 'apps/api/src/estrutura/turma.service.ts', texto: "import { PainelRepository } from '../operacao/painel.repository.js'" },
-      { caminho: 'apps/api/src/operacao/eu.service.ts', texto: "export * from './painel.repository.js'" },
-      { caminho: 'apps/worker/src/consolidacao.ts', texto: "const { PainelRepository } = await import('../../api/src/operacao/painel.repository.js')" },
+      { caminho: 'apps/api/src/estrutura/turma/turma.service.ts', texto: "import { PainelRepository } from '../../operacao/painel/painel.repository.js'" },
+      { caminho: 'apps/api/src/operacao/eu/eu.service.ts', texto: "export * from './painel.repository.js'" },
+      { caminho: 'apps/worker/src/consolidacao.ts', texto: "const { PainelRepository } = await import('../../api/src/operacao/painel/painel.repository.js')" },
     ]
     const permitidos = [
-      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { PainelRepository } from './painel.repository.js'" },
-      { caminho: 'apps/api/test/painel-leitura.int.test.ts', texto: "import { PainelRepository } from '../src/operacao/painel.repository.js'" },
+      { caminho: 'apps/api/src/operacao/painel/painel.service.ts', texto: "import { PainelRepository } from './painel.repository.js'" },
+      { caminho: 'apps/api/test/painel-leitura.int.test.ts', texto: "import { PainelRepository } from '../src/operacao/painel/painel.repository.js'" },
     ]
-    expect(quemUsaOPainelRepository([...fora, ...permitidos])).toEqual(['apps/api/src/estrutura/turma.service.ts', 'apps/api/src/operacao/eu.service.ts', 'apps/worker/src/consolidacao.ts', 'apps/api/src/operacao/painel.service.ts'])
+    expect(quemUsaOPainelRepository([...fora, ...permitidos])).toEqual(['apps/api/src/estrutura/turma/turma.service.ts', 'apps/api/src/operacao/eu/eu.service.ts', 'apps/worker/src/consolidacao.ts', 'apps/api/src/operacao/painel/painel.service.ts'])
   })
 })
 
@@ -242,7 +242,7 @@ describe('arquitetura: a leitura entre escolas mora só no PainelRepository, e s
  * prazo, o acesso, a sessão e o convite da operação. Ficam de fora o schema delas, o barrel do pacote, as migrations
  * (`.sql`, que não são varridas) e os testes.
  */
-const REPOSITORY_DA_OPERACAO = 'apps/api/src/operacao/operador.repository.ts'
+const REPOSITORY_DA_OPERACAO = 'apps/api/src/operacao/operador/operador.repository.ts'
 const EXPURGO_DA_OPERACAO = 'packages/nucleo/src/retencao/expurgo-de-acesso.repository.ts'
 const QUEM_PODE_TOCAR_A_OPERACAO = [REPOSITORY_DA_OPERACAO, EXPURGO_DA_OPERACAO]
 /** O que o expurgo pode tocar da operação: nunca `operador`, `codigo_recuperacao_operador` nem `auditoria_operacao`. */
@@ -684,7 +684,7 @@ describe('arquitetura: os marcadores da operação só na pasta da operação (C
     const arquivos = arquivosDoRepositorio()
     // A varredura enxerga o código: os decoradores e o controller do /eu usam os marcadores.
     expect(arquivos.filter((arquivo) => NOMES_DOS_MARCADORES.test(semComentarios(arquivo.texto))).map((arquivo) => arquivo.caminho)).toEqual(
-      expect.arrayContaining(['apps/api/src/operacao/marcadores.ts', 'apps/api/src/operacao/eu.controller.ts']),
+      expect.arrayContaining(['apps/api/src/operacao/marcadores.ts', 'apps/api/src/operacao/eu/eu.controller.ts']),
     )
     expect(marcadoresForaDaOperacao(arquivos)).toEqual([])
   })
@@ -701,13 +701,13 @@ describe('arquitetura: os marcadores da operação só na pasta da operação (C
 
   it('a varredura reprova o marcador fora da pasta, na classe, no método ou pela chave, e não confunde comentário com uso', () => {
     const fora = [
-      { caminho: 'apps/api/src/estrutura/turma.controller.ts', texto: "import { RotaDeOperacao } from '../operacao/marcadores.js'\n@RotaDeOperacao()\n@Controller('v1/turmas')\nexport class TurmaController {}" },
+      { caminho: 'apps/api/src/estrutura/turma/turma.controller.ts', texto: "import { RotaDeOperacao } from '../operacao/marcadores.js'\n@RotaDeOperacao()\n@Controller('v1/turmas')\nexport class TurmaController {}" },
       { caminho: 'apps/api/src/sessao/atalho.controller.ts', texto: 'export class Atalho {\n  @Get()\n  @EntradaDeOperacao()\n  obter() {}\n}' },
       { caminho: 'apps/api/src/sessao/chave.ts', texto: "import { METADADO_ROTA_DE_OPERACAO } from '@educa/nucleo'\nSetMetadata(METADADO_ROTA_DE_OPERACAO, true)" },
       { caminho: 'packages/nucleo/src/limite/outro.ts', texto: 'reflector.get(METADADO_ENTRADA_DE_OPERACAO, alvo)' },
     ]
     const inocentes = [
-      { caminho: 'apps/api/src/operacao/painel.controller.ts', texto: '@RotaDeOperacao()\nexport class PainelController {}' },
+      { caminho: 'apps/api/src/operacao/painel/painel.controller.ts', texto: '@RotaDeOperacao()\nexport class PainelController {}' },
       { caminho: 'packages/nucleo/src/limite/guarda-limite.ts', texto: '/** A rota `@RotaDeOperacao()` conta no rl:op. */\n// e a @EntradaDeOperacao não\nconst x = 1' },
       { caminho: 'apps/api/test/qualquer.int.test.ts', texto: '@RotaDeOperacao()\nclass X {}' },
       { caminho: 'apps/api/test/rotas-registradas.ts', texto: "import { METADADO_ROTA_DE_OPERACAO } from '@educa/nucleo'" },
@@ -889,7 +889,7 @@ describe('arquitetura: toda rota @EntradaDeOperacao está num dos três grupos d
  * C44 (Tech Spec da A0, seção 6; PRD, RF1): o operador e o convite dele nascem só pelo `ops:operador`. Os únicos
  * métodos que os inserem são o `criar` e o `criarConvite` do `OperadorRepository` (e só ele toca as tabelas, C45); aqui
  * se prova que só o comando os chama, e que nenhum módulo da API importa o código dos comandos, sem exceção: `criarRede` e
- * `criarEscola`, o caso de uso das duas rotas de criação do painel da operação (A0b), moram em `operacao/casos-de-uso/`, e
+ * `criarEscola`, o caso de uso das duas rotas de criação do painel da operação (A0b), moram em `operacao/escola/`, e
  * `ops/` só tem terminal (X5, 35.0). Quem importa o caso de uso fica preso em `escola.repository.test.ts` (I2).
  */
 const COMANDO_DO_OPERADOR = 'apps/api/src/ops/operador.ts'
@@ -926,21 +926,21 @@ describe('arquitetura: nenhuma rota registrada cria operador (C44)', () => {
 
   it('a varredura reprova a rota que cria pelo repository ou pelo comando, e o módulo que importa os comandos; não confunde comentário, teste nem outro repository', () => {
     const fora = [
-      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { OperadorRepository } from './operador.repository.js'\nawait new OperadorRepository(tx).criar(dados)" },
+      { caminho: 'apps/api/src/operacao/painel/painel.service.ts', texto: "import { OperadorRepository } from './operador.repository.js'\nawait new OperadorRepository(tx).criar(dados)" },
       { caminho: 'apps/api/src/operacao/convite.service.ts', texto: "import { OperadorRepository } from './operador.repository.js'\nawait repositorio.criarConvite({ operadorId })" },
       { caminho: 'apps/api/src/operacao/atalho.controller.ts', texto: "import { criarOperador } from '../ops/operador.js'\nawait criarOperador(banco, autor, dados)" },
       { caminho: 'apps/api/src/app.module.ts', texto: "import { algo } from './ops/uso.js'" },
-      // Nem o painel importa comando: `criarRede` e `criarEscola` vêm de `operacao/casos-de-uso/`.
-      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { criarEscola } from '../ops/escola.js'\nimport { executarOpsUso } from '../ops/uso.js'" },
-      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { criarEscola, criarRede } from '../ops/escola.js'" },
-      { caminho: 'apps/api/src/operacao/eu.service.ts', texto: "import { criarEscola } from '../ops/escola.js'" },
+      // Nem o painel importa comando: `criarRede` e `criarEscola` vêm de `operacao/escola/`.
+      { caminho: 'apps/api/src/operacao/painel/painel.service.ts', texto: "import { criarEscola } from '../ops/escola.js'\nimport { executarOpsUso } from '../ops/uso.js'" },
+      { caminho: 'apps/api/src/operacao/painel/painel.service.ts', texto: "import { criarEscola, criarRede } from '../ops/escola.js'" },
+      { caminho: 'apps/api/src/operacao/eu/eu.service.ts', texto: "import { criarEscola } from '../ops/escola.js'" },
     ]
     const inocentes = [
-      { caminho: COMANDO_DO_OPERADOR, texto: "import { OperadorRepository } from '../operacao/operador.repository.js'\nawait repositorio.criar(dados)" },
-      { caminho: 'apps/api/src/estrutura/turma.service.ts', texto: 'await turmas.criar({ nome })' },
-      { caminho: 'apps/api/src/operacao/eu.service.ts', texto: "import type { OperadorRepository } from './operador.repository.js'\n// nunca chama .criar( daqui" },
+      { caminho: COMANDO_DO_OPERADOR, texto: "import { OperadorRepository } from '../operacao/operador/operador.repository.js'\nawait repositorio.criar(dados)" },
+      { caminho: 'apps/api/src/estrutura/turma/turma.service.ts', texto: 'await turmas.criar({ nome })' },
+      { caminho: 'apps/api/src/operacao/eu/eu.service.ts', texto: "import type { OperadorRepository } from './operador.repository.js'\n// nunca chama .criar( daqui" },
       { caminho: 'apps/api/test/registros-operador.int.test.ts', texto: "import { criarOperador } from '../src/ops/operador.js'\nawait criarOperador(banco, autor, dados)" },
-      { caminho: 'apps/api/src/operacao/painel.service.ts', texto: "import { criarEscola, criarRede } from './casos-de-uso/escola.js'" },
+      { caminho: 'apps/api/src/operacao/painel/painel.service.ts', texto: "import { criarEscola, criarRede } from '../escola/escola.js'" },
     ]
     expect(quemCriaOperadorForaDoComando([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho))
   })
@@ -1461,12 +1461,12 @@ describe('arquitetura: o módulo de sessão não depende da operação, e o arqu
     expect(sessao.filter((arquivo) => IMPORTA_A_OPERACAO.test(semComentarios(arquivo.texto))).map((arquivo) => arquivo.caminho)).toEqual([])
   })
 
-  it('operacao/prazos-da-sessao.ts não importa operador.repository', () => {
-    expect(codigoDe('apps/api/src/operacao/prazos-da-sessao.ts')).not.toContain('operador.repository')
+  it('operacao/sessao/prazos-da-sessao.ts não importa operador.repository', () => {
+    expect(codigoDe('apps/api/src/operacao/sessao/prazos-da-sessao.ts')).not.toContain('operador.repository')
   })
 
   it('operador.repository.ts não declara nem reexporta ConferenciaDoAutor', () => {
-    expect(codigoDe('apps/api/src/operacao/operador.repository.ts')).not.toMatch(/\bConferenciaDoAutor\b/)
+    expect(codigoDe('apps/api/src/operacao/operador/operador.repository.ts')).not.toMatch(/\bConferenciaDoAutor\b/)
   })
 })
 
@@ -1492,7 +1492,7 @@ describe('arquitetura: só o controller e o módulo importam o login.service (X5
   it('a varredura reprova quem mais o importa, reexporta ou carrega por import dinâmico, e deixa o teste e o comentário passarem', () => {
     const fora = [
       { caminho: 'apps/api/src/sessao/conclusao/conclusao-de-login.ts', texto: "import { hashDoRefresh } from './login.service.js'" },
-      { caminho: 'apps/api/src/operacao/sessao.service.ts', texto: "export * from '../sessao/login.service.js'" },
+      { caminho: 'apps/api/src/operacao/sessao/sessao.service.ts', texto: "export * from '../sessao/login.service.js'" },
       { caminho: 'apps/worker/src/atalho.ts', texto: "const modulo = await import('../../api/src/sessao/login.service.js')" },
     ]
     const inocentes = [
@@ -1537,7 +1537,7 @@ describe('arquitetura: o controller valida pelo pipe no parâmetro, e as funçõ
       { caminho: 'apps/api/src/tutor/tutor.controller.ts', texto: 'const lida = esquema.safeParse(corpo)' },
       { caminho: 'apps/api/src/material/material.controller.ts', texto: 'return lerEntrada(esquema, corpo)' },
       { caminho: 'apps/api/src/privacidade/privacidade.controller.ts', texto: 'idDoCaminho(id)' },
-      { caminho: 'apps/api/src/estrutura/turma.controller.ts', texto: 'lerConsultaPaginada(consulta)' },
+      { caminho: 'apps/api/src/estrutura/turma/turma.controller.ts', texto: 'lerConsultaPaginada(consulta)' },
       { caminho: 'apps/api/src/modulo-novo/modulo-novo.controller.ts', texto: 'esquema.safeParse(corpo)' },
     ]
     const inocentes = [

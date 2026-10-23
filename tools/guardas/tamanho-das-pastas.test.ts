@@ -10,8 +10,8 @@ import { raizRepositorio } from '../ci/executar.ts'
 /** O teto de arquivos de produção direto numa pasta. Teste, `.d.ts` e `__fixtures__` não contam. */
 const LIMITE_DE_ARQUIVOS_POR_PASTA = 25
 
-/** As raízes que a trava percorre, relativas à raiz do repositório. A 96.0 acrescenta `apps/api/src`. */
-const RAIZES_DA_TRAVA: readonly string[] = ['apps/web/src']
+/** As raízes que a trava percorre, relativas à raiz do repositório. */
+const RAIZES_DA_TRAVA: readonly string[] = ['apps/web/src', 'apps/api/src']
 
 /** As pastas que passam do teto de propósito, com o motivo. Lista fechada: entrar nela é decisão, e não conserto. */
 const EXCECOES_DA_TRAVA: readonly { pasta: string; motivo: string }[] = []
@@ -101,18 +101,20 @@ describe('trava: pasta com mais de 25 arquivos de produção', () => {
     ])
   })
 
-  it('as raízes são só apps/web/src, e as exceções são nenhuma: lista fechada, que cresce por decisão e com motivo', () => {
-    expect(RAIZES_DA_TRAVA).toEqual(['apps/web/src'])
-    expect(EXCECOES_DA_TRAVA).toEqual([])
-  })
-
-  it('no repositório, nenhuma pasta de apps/web/src passa de 25 arquivos de produção, e a conta enxerga as áreas partidas', () => {
+  it('no repositório, nenhuma pasta das raízes da trava, web e API, passa de 25 arquivos de produção, e a conta enxerga as áreas e os recursos partidos', () => {
     const todos = arquivosDasRaizes(RAIZES_DA_TRAVA)
-    // A conta não ficou vazia: ela alcança as pastas que a 97.0 criou e a fachada que fica na raiz de cada área.
+    // A conta não ficou vazia, e cada raiz da lista conta: sem a da API, os pontos de conferência dela somem e o caso reprova.
     expect(todos).toContain('apps/web/src/areas/professor/rotas.tsx')
     expect(todos).toContain('apps/web/src/areas/professor/turmas/Turmas.tsx')
     expect(todos).toContain('apps/web/src/areas/coordenacao/estrutura/Estrutura.tsx')
-    expect(todos.filter(ehArquivoDeProducao).length).toBeGreaterThan(300)
+    expect(todos).toContain('apps/api/src/estrutura/turma/turma.controller.ts')
+    expect(todos).toContain('apps/api/src/operacao/painel/painel.service.ts')
+    expect(todos).toContain('apps/api/src/sala/salas/salas.controller.ts')
+    expect(todos).toContain('apps/api/src/atividade/correcao/correcao.service.ts')
+    expect(todos.filter(ehArquivoDeProducao).length).toBeGreaterThan(500)
     expect(pastasAcimaDoLimite(todos), 'divida a pasta por assunto, em subpastas com as telas, os hooks e o cliente de API dele (D81)').toEqual([])
+    // Lista fechada: toda exceção tem o motivo escrito e ainda passa do teto. Exceção que a pasta já não precisa sai da lista.
+    const acima = new Set(pastasAcimaDoLimite(todos, []).map((pasta) => pasta.pasta))
+    expect(EXCECOES_DA_TRAVA.filter((excecao) => excecao.motivo.trim() === '' || !acima.has(excecao.pasta))).toEqual([])
   })
 })

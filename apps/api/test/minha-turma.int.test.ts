@@ -3,7 +3,7 @@ import { CodigoDeErro, esquemaRespostaDecisao, esquemaRespostaLogin, esquemaResp
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { MinhaTurmaRepository } from '../src/sala/minha-turma.repository.js'
+import { MinhaTurmaRepository } from '../src/sala/minha-turma/minha-turma.repository.js'
 import { chamar, subirApi, type ApiDeTeste, type RespostaHttp } from './api-com-sessao.js'
 import { FerramentasDaSala, pedidoDaSala, SENHA_DA_SALA, type SalaDeTeste } from './sala-de-teste.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'

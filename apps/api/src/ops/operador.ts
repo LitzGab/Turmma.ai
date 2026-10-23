@@ -16,7 +16,7 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { OperadorRepository } from '../operacao/operador.repository.js'
+import { OperadorRepository } from '../operacao/operador/operador.repository.js'
 import { hashDoTokenDeConvite, sortearTokenDeConvite } from '../operacao/token-do-convite.js'
 import {
   abrirBancoDeOperacao,

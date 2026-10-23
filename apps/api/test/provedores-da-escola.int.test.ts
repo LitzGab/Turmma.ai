@@ -3,7 +3,7 @@ import { CodigoDeErro, TENANT_DE_CONTA_PESSOAL_MICROSOFT } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { ProvedoresLiberadosRepository } from '../src/estrutura/provedores-liberados.repository.js'
+import { ProvedoresLiberadosRepository } from '../src/estrutura/provedores-da-escola/provedores-liberados.repository.js'
 import { chamar, subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 

@@ -5,8 +5,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi, type MockIns
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { POOL_BANCO } from '../src/banco.module.js'
 import { sortearCodigoDaTurma } from '../src/sala/codigo-da-sala.js'
-import { ListaLivreRepository } from '../src/sala/lista-livre.repository.js'
-import { ReivindicacaoRepository } from '../src/sala/reivindicacao.repository.js'
+import { ListaLivreRepository } from '../src/sala/reivindicacao/lista-livre.repository.js'
+import { ReivindicacaoRepository } from '../src/sala/reivindicacao/reivindicacao.repository.js'
 import { ESPERA_MAXIMA_PELO_HASH_MS, HashDeSenha, RETRY_AFTER_MAXIMO_S, RETRY_AFTER_MINIMO_S, SemaforoDeHash } from '../src/credencial/index.js'
 import { aguardar, esperarNaTrava, GatilhoDeParada } from './gatilho-de-parada.js'
 import { chamar, subirApi, type ApiDeTeste } from './api-com-sessao.js'
@@ -19,7 +19,7 @@ import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
  * A reivindicação do nome pela página pública da sala (A1, tarefa 6.0; `tasks/prd-apresentacao-escola/cenarios.md`):
  * `POST /v1/salas/reivindicar`, sem login. Cobre I5, R2, R5, E21 e C1 (com os contadores da 7.0), E23, E24,
  * C2 (com os contadores), C4, L9, a gravação do E30 (7.0), a parte de `salas/reivindicar` de I4, R1, P5, L10, A6 e A7, o pedido do E2 e a retirada do reivindicado
- * do E7. O R3 com o hash falso é o teste de unidade `apps/api/src/sala/reivindicacao.service.test.ts`, e aqui o R2 o
+ * do E7. O R3 com o hash falso é o teste de unidade `apps/api/src/sala/reivindicacao/reivindicacao.service.test.ts`, e aqui o R2 o
  * confere com o hash de verdade; o A3 e o A4 da rota moram na varredura de `escola-montada.int.test.ts`. Postgres e
  * Redis reais do compose de teste.
  *

@@ -3,7 +3,7 @@ import { CodigoDeErro } from '@educa/shared'
 import { randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { EscolaSessaoRepository } from '../src/estrutura/escola-sessao.repository.js'
+import { EscolaSessaoRepository } from '../src/estrutura/escola-sessao/escola-sessao.repository.js'
 import { chamar, subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 

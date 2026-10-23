@@ -66,7 +66,7 @@ export const REPOSITORIES_SEM_ESCOPO: readonly EntradaSemEscopo[] = [
     metodos: ['marcarRodando', 'marcarConcluida', 'concluirRodando', 'marcarFalhou'],
   },
   {
-    arquivo: 'apps/api/src/operacao/operador.repository.ts',
+    arquivo: 'apps/api/src/operacao/operador/operador.repository.ts',
     motivo: 'as tabelas da operação Turmma são da equipe e não têm escola_id: nenhum método do OperadorRepository tem escopo de escola a aplicar',
     metodos: ['autorAtivoNaTransacao', 'travarOperadores', 'situacaoDoAutor', 'ativoParaAtualizar', 'contarAtivos', 'criar', 'criarConvite', 'revogarConvitePendente', 'desativar', 'apagarCodigosDeRecuperacao', 'encerrarSessoes', 'lerSessaoParaGuarda', 'marcarUsoDaSessao', 'sessaoParaRenovar', 'rotacionarSessao', 'encerrarSessao', 'encerrarSessaoPelaSaida', 'daSessao', 'conviteValidoPorHash', 'aceitarConvite', 'gravarSegredoParaConfigurar', 'trocarCodigosDeRecuperacao', 'ativoParaSegundoFator', 'avancarPassoDoSegundoFator', 'usarCodigoDeRecuperacao', 'ativarSegundoFator', 'abrirSessao', 'credencialDeEntrada', 'registrarFalhaDeEntrada', 'registrarAcesso', 'auditar'],
   },

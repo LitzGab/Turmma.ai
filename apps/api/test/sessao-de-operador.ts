@@ -2,7 +2,7 @@ import { criarPool, EmissorDeTokenDeOperador, type PoolBanco } from '@educa/nucl
 import { createHash, randomBytes } from 'node:crypto'
 import { lerAmbienteDeTeste } from '../../../tools/ci/compose.ts'
 import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
-import { DURACAO_DA_SESSAO_DE_OPERADOR_HORAS } from '../src/operacao/prazos-da-sessao.js'
+import { DURACAO_DA_SESSAO_DE_OPERADOR_HORAS } from '../src/operacao/sessao/prazos-da-sessao.js'
 
 /** Um operador ativo com uma sessão aberta, e o token de acesso dela. */
 export interface SessaoDeOperadorDeTeste {
