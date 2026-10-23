@@ -19,6 +19,10 @@
 // `abrir` é o único que larga a trava no meio: ele grava a linha como ocupada, solta a trava para o `npm ci` (minutos) e
 // pega de novo para gravá-la livre.
 //
+// O encontro verifica antes de avançar a spec (RF3): depois do merge da spec na linha, `npm run typecheck` e `npm run lint`
+// no checkout dela (com `npm ci` antes, se o lock mudou), com prazo e em grupo de processo próprio. Vermelho ou prazo: o
+// grupo morre, a linha volta ao commit de antes do merge e só então a trava se solta; a spec não anda e não há push.
+//
 // Existe porque uma spec de 16 tarefas levou 55 horas com uma tarefa por vez (F3), e o Joaquim pediu que as tarefas
 // que não se tocam corram juntas, quantas a máquina aguentar.
 import { execFileSync, spawn } from 'node:child_process'
@@ -37,6 +41,18 @@ export const CAMINHO_DO_QUADRO = '.processo/linhas.json'
 export const CAMINHO_DA_TRAVA = '.processo/linhas.lock'
 /** Quanto quem espera a trava espera antes de desistir com "encontro em curso". */
 export const PRAZO_DA_TRAVA_MS = 7 * 60 * 1000
+/** O que o encontro roda no checkout da linha, depois do merge e antes de avançar a spec. */
+export const COMANDO_DA_VERIFICACAO = 'npm run typecheck && npm run lint'
+export const COMANDO_DE_INSTALACAO = 'npm ci'
+/** O prazo da verificação, e o dela com o `npm ci` na frente (o lock mudou). Quem espera a trava espera mais que isto. */
+export const PRAZO_DA_VERIFICACAO_MS = 3 * 60 * 1000
+export const PRAZO_DA_VERIFICACAO_COM_NPM_CI_MS = 6 * 60 * 1000
+/** Do SIGTERM ao SIGKILL no grupo da verificação. */
+export const ESPERA_ATE_SIGKILL_MS = 5_000
+/** Depois do SIGKILL, quanto esperar o grupo sumir antes de mexer na árvore: o sinal chega, e o processo morre um instante depois. */
+const ESPERA_DEPOIS_DO_SIGKILL_MS = 1_000
+/** O código de saída do encontro cuja verificação ficou vermelha ou passou do prazo: nada avançou. */
+export const CODIGO_DA_VERIFICACAO = 5
 const SUFIXO_DA_LINHA = '--l'
 
 export function branchDaLinha(spec: string, numero: number): string {
@@ -247,7 +263,10 @@ const sujeira = (raiz: string) => git(raiz, 'status', '--porcelain').split('\n')
 const branchDe = (raiz: string) => tenta(raiz, 'symbolic-ref', '--short', '-q', 'HEAD').saida
 
 export interface Resultado {
-  /** 0 feito; 1 recusado, nada mudou; 3 feito, mas o push falhou; 4 conflito no encontro, nada mudou. */
+  /**
+   * 0 feito; 1 recusado, nada mudou; 3 feito, mas o push falhou; 4 conflito no encontro, nada mudou; 5 a verificação do
+   * encontro ficou vermelha ou passou do prazo: a spec não andou e a linha voltou ao commit de antes do merge.
+   */
   codigo: number
   texto: string
 }
@@ -274,6 +293,8 @@ function contextoDe(raiz: string): Contexto | string {
 const emCursoNo = (quadro: Quadro) => quadro.linhas.flatMap((linha) => (linha.tarefa === null ? [] : [linha.tarefa]))
 const comTrabalho = (linha: Linha) => linha.tarefa !== null || linha.correcao !== null
 const ocupada = (linha: Linha) => comTrabalho(linha) || linha.abrindo === true
+/** O slug da correção que conserta o encontro da linha: a tarefa dela, ou a correção que ela fazia. */
+const slugDoEncontro = (linha: Linha) => `encontro-${String(linha.tarefa ?? linha.correcao)}`
 /** A linha 1 usa o par que o térreo sempre teve; as outras, um par com o número dela. */
 export const terminaisDa = (numero: number) => (numero === 1 ? 'Implementador e Mesa' : `Implementador ${String(numero)} e Mesa ${String(numero)}`)
 const oQueFaz = (linha: Linha) =>
@@ -295,17 +316,31 @@ export interface Opcoes {
   /** Quanto esperar a trava do quadro; o padrão é `PRAZO_DA_TRAVA_MS`. Só o teste o encurta. */
   prazoDaTravaMs?: number
   /**
-   * O ponto de injeção do encontro: roda por `sh -c` no checkout da linha, com a trava na mão, depois das conferências e
-   * antes do merge da spec. Saída diferente de 0 recusa o encontro sem mudar nada. É onde a verificação do encontro entra.
+   * O que o encontro roda no lugar de `COMANDO_DA_VERIFICACAO`: por `sh -c` no checkout da linha, com a trava na mão,
+   * depois do merge da spec e antes de ela avançar. Saída diferente de 0 é vermelho. A saída do encontro diz qual comando
+   * rodou, para que a troca não passe calada.
    */
   comandoSobATrava?: string
+  /** Quanto a verificação pode durar; o padrão é `PRAZO_DA_VERIFICACAO_MS`, ou o dele com o `npm ci`. Só o teste o troca. */
+  prazoDaVerificacaoMs?: number
+  /** Do SIGTERM ao SIGKILL no grupo da verificação; o padrão é `ESPERA_ATE_SIGKILL_MS`. Só o teste o encurta. */
+  esperaAteSigkillMs?: number
+}
+
+const numeroPositivo = (valor: string | undefined): number | null => {
+  const numero = Number(valor)
+  return Number.isFinite(numero) && numero > 0 ? numero : null
 }
 
 /** As opções que o teste de processo passa pelo ambiente, porque ali o comando é outro processo. */
 export function opcoesDoAmbiente(ambiente: NodeJS.ProcessEnv): Opcoes {
-  const prazo = Number(ambiente['EDUCA_QUADRO_PRAZO_DA_TRAVA_MS'])
+  const prazoDaTrava = numeroPositivo(ambiente['EDUCA_QUADRO_PRAZO_DA_TRAVA_MS'])
+  const prazoDaVerificacao = numeroPositivo(ambiente['EDUCA_ENCONTRO_PRAZO_DA_VERIFICACAO_MS'])
+  const esperaAteSigkill = numeroPositivo(ambiente['EDUCA_ENCONTRO_ESPERA_ATE_SIGKILL_MS'])
   return {
-    ...(Number.isFinite(prazo) && prazo > 0 ? { prazoDaTravaMs: prazo } : {}),
+    ...(prazoDaTrava === null ? {} : { prazoDaTravaMs: prazoDaTrava }),
+    ...(prazoDaVerificacao === null ? {} : { prazoDaVerificacaoMs: prazoDaVerificacao }),
+    ...(esperaAteSigkill === null ? {} : { esperaAteSigkillMs: esperaAteSigkill }),
     ...(ambiente['EDUCA_COMANDO_DE_INSTALACAO'] === undefined ? {} : { comandoDeInstalacao: ambiente['EDUCA_COMANDO_DE_INSTALACAO'] }),
     ...(ambiente['EDUCA_ENCONTRO_SOB_A_TRAVA'] === undefined ? {} : { comandoSobATrava: ambiente['EDUCA_ENCONTRO_SOB_A_TRAVA'] }),
   }
@@ -363,6 +398,62 @@ function rodarNoCheckout(checkout: string, comando: string): Promise<boolean> {
     filho.once('error', () => resolver(false))
     filho.once('close', (codigo) => resolver(codigo === 0))
   })
+}
+
+const dormir = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms))
+
+/** Manda o sinal ao grupo de processo inteiro. `false`: o grupo não existe mais (ou o sinal 0 não achou ninguém). */
+function sinalAoGrupo(grupo: number, sinal: NodeJS.Signals | 0): boolean {
+  try {
+    process.kill(-grupo, sinal)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Acaba com o grupo: SIGTERM e, se ele ainda existe `esperaMs` depois, SIGKILL; e espera o SIGKILL fazer efeito, porque o
+ * que o grupo escreve na árvore até morrer tem de acabar antes de o encontro mexer nela. Grupo que já não existe não espera.
+ */
+async function matarGrupo(grupo: number, esperaMs: number): Promise<void> {
+  if (!sinalAoGrupo(grupo, 'SIGTERM')) return
+  const limite = Date.now() + esperaMs
+  while (sinalAoGrupo(grupo, 0) && Date.now() < limite) await dormir(25)
+  sinalAoGrupo(grupo, 'SIGKILL')
+  const fim = Date.now() + ESPERA_DEPOIS_DO_SIGKILL_MS
+  while (sinalAoGrupo(grupo, 0) && Date.now() < fim) await dormir(25)
+}
+
+type Veredito = 'passou' | 'vermelha' | 'prazo' | 'interrompida'
+
+/**
+ * Roda o comando por `sh -c` no checkout, em grupo de processo próprio (`detached` é um `setsid`: o pgid é o do filho), e
+ * não deixa nada dele de pé: o grupo inteiro morre quando o comando acaba, passa do prazo ou o encontro é interrompido, e
+ * não só o `sh`, porque o `npx`, o `tsc` e o `eslint` são netos e seguem segurando a árvore e o `node_modules`. A saída do
+ * comando vai para o erro deste, para quem lê o encontro ver o que quebrou.
+ */
+async function rodarEmGrupo(checkout: string, comando: string, prazoMs: number, esperaMs: number): Promise<Veredito> {
+  const filho = spawn('sh', ['-c', comando], { cwd: checkout, detached: true, stdio: ['ignore', 2, 2] })
+  const saiu = new Promise<'passou' | 'vermelha'>((resolver) => {
+    filho.once('error', () => resolver('vermelha'))
+    filho.once('exit', (codigo) => resolver(codigo === 0 ? 'passou' : 'vermelha'))
+  })
+  const desligar: (() => void)[] = []
+  const interrompido = new Promise<'prazo' | 'interrompida'>((resolver) => {
+    const relogio = setTimeout(() => resolver('prazo'), prazoMs)
+    desligar.push(() => clearTimeout(relogio))
+    // Ctrl-C ou kill no encontro não alcança o grupo (outra sessão): o encontro o leva junto, e só depois volta a linha.
+    for (const sinal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+      const aoSinal = () => resolver('interrompida')
+      process.on(sinal, aoSinal)
+      desligar.push(() => process.off(sinal, aoSinal))
+    }
+  })
+  const veredito = await Promise.race([saiu, interrompido])
+  for (const fechar of desligar) fechar()
+  if (filho.pid !== undefined) await matarGrupo(filho.pid, esperaMs)
+  return veredito
 }
 
 interface Abertura {
@@ -425,7 +516,7 @@ async function concluirAbertura(raiz: string, numero: number, aberta: Abertura, 
 export async function abrir(raiz: string, numero: number, checkoutDado: string, opcoes: Opcoes = {}): Promise<Resultado> {
   const aberta = await sobATrava(raiz, opcoes, () => prepararAbertura(raiz, numero, checkoutDado, opcoes))
   if ('codigo' in aberta) return aberta
-  const instalou = (opcoes.instalar ?? true) ? await rodarNoCheckout(aberta.checkout, opcoes.comandoDeInstalacao ?? 'npm ci') : true
+  const instalou = (opcoes.instalar ?? true) ? await rodarNoCheckout(aberta.checkout, opcoes.comandoDeInstalacao ?? COMANDO_DE_INSTALACAO) : true
   return concluirAbertura(raiz, numero, aberta, instalou, opcoes)
 }
 
@@ -575,6 +666,58 @@ export function conferir(raiz: string, opcoes: { emCurso?: boolean } = {}): Resu
   return { codigo: 0, texto: `Conferido em ${branch}: marca e revisões em todo commit com código, ${alterados.length === 0 ? 'árvore limpa' : `árvore com ${String(alterados.length)} arquivo(s) da tarefa em curso`} e push feito.` }
 }
 
+/** O prazo da verificação: o padrão é um, e o `npm ci` na frente (o lock mudou) dobra; o teste põe o seu. */
+export function prazoDaVerificacao(comNpmCi: boolean, opcoes: Opcoes = {}): number {
+  return opcoes.prazoDaVerificacaoMs ?? (comNpmCi ? PRAZO_DA_VERIFICACAO_COM_NPM_CI_MS : PRAZO_DA_VERIFICACAO_MS)
+}
+
+interface Verificacao<V extends Veredito = Veredito> {
+  veredito: V
+  comando: string
+  prazoMs: number
+}
+
+/**
+ * A verificação do encontro, no checkout da linha, com o merge da spec já feito: `npm ci` se o lock mudou entre antes do
+ * merge e agora, e depois a tipagem e o lint. Tudo num só grupo de processo e sob um só prazo: o `&&` faz o `npm ci` que
+ * falha valer vermelho sem rodar o resto. Quando devolve, o grupo já morreu.
+ */
+async function verificarOMerge(checkout: string, antes: string, opcoes: Opcoes): Promise<Verificacao> {
+  const lockMudou = git(checkout, 'diff', '--name-only', antes, 'HEAD', '--', 'package-lock.json') !== ''
+  const verificar = opcoes.comandoSobATrava ?? COMANDO_DA_VERIFICACAO
+  const comando = lockMudou ? `(${opcoes.comandoDeInstalacao ?? COMANDO_DE_INSTALACAO}) && (${verificar})` : verificar
+  const prazoMs = prazoDaVerificacao(lockMudou, opcoes)
+  const veredito = await rodarEmGrupo(checkout, comando, prazoMs, opcoes.esperaAteSigkillMs ?? ESPERA_ATE_SIGKILL_MS)
+  return { veredito, comando, prazoMs }
+}
+
+/** A linha volta ao commit de antes do merge. Só se chama com o grupo da verificação morto. Texto do erro, ou `null` quando voltou. */
+function desfazerOMerge(checkout: string, antes: string): string | null {
+  const volta = tenta(checkout, 'reset', '--hard', antes)
+  return volta.ok ? null : volta.saida
+}
+
+function recusaDaVerificacao(linha: Linha, spec: string, antes: string, verificacao: Verificacao<Exclude<Veredito, 'passou'>>, erroDoReset: string | null): Resultado {
+  const [numero, curto] = [String(linha.numero), antes.slice(0, 7)]
+  const motivo = {
+    vermelha: `a tipagem ou o lint (ou o npm ci, se o lock mudou) falhou com a ${spec} junto; a saída está acima.`,
+    prazo: `a verificação passou de ${String(verificacao.prazoMs / 1000)} s e foi morta: vale como vermelha.`,
+    interrompida: 'o encontro recebeu um sinal de fim enquanto verificava: a verificação foi morta e vale como vermelha.',
+  }[verificacao.veredito]
+  return {
+    codigo: CODIGO_DA_VERIFICACAO,
+    texto: [
+      `VERIFICAÇÃO RECUSADA no encontro da linha ${numero} (${oQueFaz(linha)}): ${motivo}`,
+      `Comando: ${verificacao.comando}`,
+      erroDoReset === null
+        ? `Nada avançou: a linha ${numero} voltou ao commit ${curto}, de antes do merge; a ${spec} não andou e não houve push. A linha continua com a ${oQueFaz(linha)}.`
+        : `A LINHA NÃO VOLTOU: o reset para ${curto} falhou (${erroDoReset}). Rode \`git reset --hard ${antes}\` na linha ${numero} antes de qualquer outro comando. A ${spec} não andou e não houve push.`,
+      `É correção na própria linha, com o slug ${slugDoEncontro(linha)}: o Implementador ${numero} roda \`git merge ${spec}\`, conserta o que quebrou, passa o portão e a Mesa,`,
+      'e fecha o conserto com o commit da correção. Depois, este comando de novo.',
+    ].join('\n'),
+  }
+}
+
 async function encontroSobATrava(raiz: string, numero: number, opcoes: Opcoes): Promise<Resultado> {
   const contexto = contextoDe(raiz)
   if (typeof contexto === 'string') return recusa(contexto)
@@ -591,10 +734,8 @@ async function encontroSobATrava(raiz: string, numero: number, opcoes: Opcoes): 
   // Documento a meio no andar da spec (o Arquiteto aplicando uma decisão) não impede o encontro; código, sim.
   const codigoNoAndar = sujeira(raiz).filter((item) => !soDocumento([item.slice(3)]))
   if (codigoNoAndar.length > 0) return recusa(`o andar da spec tem código alterado, e nele ninguém implementa:\n${codigoNoAndar.join('\n')}`)
-  if (opcoes.comandoSobATrava !== undefined && !(await rodarNoCheckout(checkout, opcoes.comandoSobATrava))) {
-    return recusa(`o comando sob a trava falhou na linha ${String(numero)}: nada mudou`)
-  }
   const commit = git(checkout, 'rev-parse', '--short', 'HEAD')
+  const antes = git(checkout, 'rev-parse', 'HEAD')
 
   const juncao = tenta(checkout, 'merge', '--no-edit', spec)
   if (!juncao.ok) {
@@ -611,12 +752,14 @@ async function encontroSobATrava(raiz: string, numero: number, opcoes: Opcoes): 
         codigo: 4,
         texto: [
           `CONFLITO no encontro da linha ${String(numero)} (${oQueFaz(linha)}): ${emConflito.join(', ')}`,
-          `Nada mudou. É correção na própria linha, com o slug encontro-${String(linha.tarefa ?? linha.correcao)}: o Implementador ${String(numero)} roda \`git merge ${spec}\`, resolve,`,
+          `Nada mudou. É correção na própria linha, com o slug ${slugDoEncontro(linha)}: o Implementador ${String(numero)} roda \`git merge ${spec}\`, resolve,`,
           'passa o portão e a Mesa, e fecha o merge com o commit da correção. Depois, este comando de novo.',
         ].join('\n'),
       }
     }
   }
+  const { veredito, comando, prazoMs } = await verificarOMerge(checkout, antes, opcoes)
+  if (veredito !== 'passou') return recusaDaVerificacao(linha, spec, antes, { veredito, comando, prazoMs }, desfazerOMerge(checkout, antes))
   const avanco = tenta(raiz, 'merge', '--ff-only', branch)
   if (!avanco.ok) return recusa(`a ${spec} não avança até a ${branch}:\n${avanco.saida}`)
   if (sujeira(raiz).some((item) => item.slice(3) === diario)) {
@@ -630,6 +773,7 @@ async function encontroSobATrava(raiz: string, numero: number, opcoes: Opcoes): 
     codigo: enviado.ok ? 0 : 3,
     texto: [
       `Encontro da linha ${String(numero)}: ${oQueFaz(linha)} em ${commit}; a ${spec} está em ${git(raiz, 'rev-parse', '--short', 'HEAD')}.`,
+      `Verificação do merge: passou (${comando}), com prazo de ${String(prazoMs / 1000)} s.`,
       enviado.ok ? ((opcoes.push ?? true) ? 'Push feito: a esteira roda sobre a soma das linhas.' : 'Sem push.') : `O PUSH FALHOU, e a esteira não rodou:\n${enviado.saida}`,
       '',
       textoDoQuadro(raiz),

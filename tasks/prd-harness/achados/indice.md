@@ -71,3 +71,9 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-23 16:19:41 | `revisor-geral` | 7ª | REPROVADO | `revisao-spec` | `tasks/prd-harness/techspec.md`, §9, parágrafo "O que conta como caminho" (diff +183 a +190): o critério quebra a 16.0 do jeito que está escrito. |
 | 2026-10-23 16:20:03 | `test-engineer` | 12ª | APROVADO | `revisao-spec` | `techspec.md` §9, "a linha 'Exemplo:'". Na 5.6 o "Exemplo:" fica no meio da linha ("Todo módulo novo entrega um (regra 10.5). Exemplo: ..."). Um leitor com… |
 | 2026-10-23 16:22:23 | `revisor-geral` | 8ª | APROVADO | `revisao-spec` | 16_task.md, 16.2, e techspec §9: a 21.0 agora depende do que a extração da 16.0 devolve. Ela precisa receber o token cru, com `<...>`, `*` e a `/` final (o… |
+| 2026-10-23 16:53:12 | `revisor-geral` | 1ª | APROVADO | `6_task` | `tools/processo/linhas.ts:517`: o `abrir` ainda usa o literal `'npm ci'`, embora a tarefa tenha criado `COMANDO_DE_INSTALACAO`. Isso deixa dois jeitos de dizer… |
+| 2026-10-23 16:53:47 | `infra-guardian` | 1ª | APROVADO | `6_task` | `tools/processo/linhas.ts:1102`: quando o lock mudou e a verificação fica vermelha, o `npm ci` já instalou o `node_modules` do lock da spec. O `reset --hard`… |
+| 2026-10-23 16:55:08 | `test-engineer` | 1ª | REPROVADO | `6_task` | `linhas.ts:445`: o SIGINT e o SIGHUP não têm teste. |
+| 2026-10-23 17:09:49 | `infra-guardian` | 2ª | APROVADO | `6_task` | nenhuma nova. Conferi o diff da rodada contra o código: |
+| 2026-10-23 17:09:56 | `revisor-geral` | 2ª | APROVADO | `6_task` | `tools/processo/linhas.test.ts:1309`: o `it` dentro do `for (const sinal …)` não foi indentado, e o `}` de fechamento na linha 1326 fica alinhado com o `it`.… |
+| 2026-10-23 17:10:29 | `test-engineer` | 2ª | APROVADO | `6_task` | Em `linhas.test.ts:1279`, o `expect(encontroDaLinha1.jaSaiu()).toBe(false)` só prova que o encontro ainda estava vivo na hora em que o `spawn` da espia foi… |
