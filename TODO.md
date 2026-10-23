@@ -1833,3 +1833,19 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       `abrindo: false` ao concluir a abertura; (2) trocar um dos dois blocos de `aindaAbrindo` por uma mutação que prove
       outra coisa (`randomUUID()` por constante); (3) completar a tabela de testes do `5_task.md` com os cinco testes que
       só têm o bloco. Nenhum muda comportamento. (dono: Implementador da 6.0, no mesmo `linhas.ts`)
+- [ ] **(X7, tarefa 7.0, rodada 1) Para a retrospectiva da X7**, recomendações da mutação que trava que não entraram: (1) Ctrl-C
+      no portão mata o pai sem passar pelo `finally` que devolve o arquivo mutado; (2) `testTimeoutDoProjeto` lê o primeiro
+      `testTimeout:` do `vitest.config.ts` sem saber de que projeto é e fixa 5 s e 30 s sem ler o `playwright.config.ts`; (3) o
+      teste que sai normalmente e deixa um neto vivo não leva o grupo junto (SIGTERM ao grupo também no `close`); (4) nenhum
+      teste roda dois `rodarCalado` em paralelo, nem há bloco que tire o `rename` de `copiaDoSupervisor`. (dono: Arquiteto, na
+      `retro` da X7)
+- [ ] **(X7, tarefa 7.0, rodada 2) Para a retrospectiva da X7**, recomendações da 2ª rodada que não viraram ordem: (1) o parágrafo do
+      topo de "Mutações" de `tasks/prd-harness/7_task.md` não cita as cláusulas da reconstrução da web e de
+      `conferirMutacoesDoDocumento`; (2) o auxiliar `conferir` do teste de reconstrução (`mutacoes.test.ts`) acha o fonte mutado
+      por um trecho exato com `\n` e indentação de `REPOSITORIO`, e mudar a formatação o faria ver tudo como mutado; (3) a tabela
+      "Testes que provam a regra" do `7_task.md` não tem linha para a reconstrução que estoura, cai ou roda com mutação
+      reprovada, nem para a guarda de `terminar` (o Validador confere: os testes existem e os blocos de mutação os citam); (4) o
+      ramo `if ('vermelho' in conferencia) { … process.exit(1) }` de `portao-local.ts` não tem bloco de mutação; (5) no teste da
+      guarda de `terminar`, máquina muito carregada pode ver o marcador só depois dos 1,5 s do SIGKILL, e uma `esperaMs` de uns 5 s
+      tira a janela; (6) `durouMs < 5_000` do teste do prazo e do `rodarCalado` conta a subida do Node com folga de uns 4 s.
+      (dono: Arquiteto, na `retro` da X7)

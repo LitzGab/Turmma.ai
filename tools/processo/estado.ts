@@ -57,6 +57,30 @@ export const GUARDIOES_DE_TAREFA_GRANDE = 3
 
 const MARCAS: Record<string, Marca> = { ' ': 'pendente', '~': 'andamento', x: 'concluida' }
 
+/**
+ * Os rótulos que este arquivo procura nos modelos de documento. Cada um está escrito num modelo (`.claude/skills/`), e
+ * `tools/processo/harness/rotulos.test.ts` confere que continua lá: o modelo que perde o rótulo deixa a esteira vermelha,
+ * em vez de o `estado.ts` ler "sem porte" ou "sem validação" em silêncio.
+ */
+export const TITULO_DA_TABELA_DE_DEPENDENCIAS = '## Dependências e paralelismo'
+/** As colunas da tabela, lidas por posição (a primeira é a `Tarefa`); o modelo precisa trazer cada título na sua posição. */
+export const COLUNAS_DE_DEPENDENCIAS = {
+  dependeDe: { posicao: 2, titulo: 'Depende de' },
+  paralelo: { posicao: 3, titulo: 'Pode correr em paralelo com' },
+} as const
+export const ROTULO_DO_PORTE = '**Porte:**'
+export const TITULO_DA_RODADA_DA_VALIDACAO = '## Rodada '
+export const ROTULO_DO_ESCOPO = '**Escopo:**'
+export const ROTULO_DO_VEREDITO = '**Veredito: '
+/** Nesta ordem: "APROVADA COM RESSALVAS" antes de "APROVADA", que é prefixo dele. */
+export const VEREDITOS_DA_VALIDACAO: readonly VereditoDaValidacao[] = ['APROVADA COM RESSALVAS', 'APROVADA', 'REPROVADA']
+
+const escaparTexto = (texto: string): string => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const ESCOPO_DE_TAREFA = new RegExp(`^${escaparTexto(ROTULO_DO_ESCOPO)}\\s*tarefa\\b`, 'im')
+const VEREDITO_DA_VALIDACAO = new RegExp(`^${escaparTexto(ROTULO_DO_VEREDITO)}(${VEREDITOS_DA_VALIDACAO.join('|')})\\*\\*(.*)$`, 'm')
+const VEREDITO_DA_SPEC_APROVADA = new RegExp(`^${escaparTexto(ROTULO_DO_VEREDITO)}APROVADA\\*\\*`, 'm')
+
 export function lerRoadmap(conteudo: string): ItemDoRoadmap[] {
   return [...conteudo.matchAll(/^## ([A-Z]\d+[a-z]?) — `([a-z0-9-]+)` \[([ x~])\]/gm)].map((achado) => ({
     id: achado[1] ?? '',
@@ -89,7 +113,7 @@ export function expandirTarefas(celula: string): number[] {
 
 /** Uma coluna da tabela "Dependências e paralelismo" do `tasks.md`, por tarefa. */
 function lerColunaDeTarefas(conteudoTasks: string, coluna: number): Map<number, number[]> {
-  const inicio = conteudoTasks.indexOf('\n## Dependências e paralelismo')
+  const inicio = conteudoTasks.indexOf(`\n${TITULO_DA_TABELA_DE_DEPENDENCIAS}`)
   if (inicio === -1) return new Map()
   const fim = conteudoTasks.indexOf('\n## ', inicio + 1)
   const secao = conteudoTasks.slice(inicio, fim === -1 ? undefined : fim)
@@ -104,7 +128,7 @@ function lerColunaDeTarefas(conteudoTasks: string, coluna: number): Map<number, 
 
 /** A coluna "Depende de" da tabela de dependências do `tasks.md`, por tarefa. */
 export function lerDependencias(conteudoTasks: string): Map<number, number[]> {
-  return lerColunaDeTarefas(conteudoTasks, 2)
+  return lerColunaDeTarefas(conteudoTasks, COLUNAS_DE_DEPENDENCIAS.dependeDe.posicao)
 }
 
 /**
@@ -112,7 +136,7 @@ export function lerDependencias(conteudoTasks: string): Map<number, number[]> {
  * diferentes (`tools/processo/linhas.ts`); vale nos dois sentidos, escrita num só. Sem ela, a tarefa corre sozinha.
  */
 export function lerParalelismo(conteudoTasks: string): Map<number, number[]> {
-  return lerColunaDeTarefas(conteudoTasks, 3)
+  return lerColunaDeTarefas(conteudoTasks, COLUNAS_DE_DEPENDENCIAS.paralelo.posicao)
 }
 
 export interface Escolha {
@@ -145,7 +169,7 @@ export interface Porte {
  */
 export function lerPorte(conteudoTask: string): Porte {
   // Até o fim da linha: `pequeno | grande`, o texto do modelo deixado sem preencher, não declara nada.
-  const declarado = /\*\*Porte:\*\*\s*`?(pequeno|grande)`?\s*$/m.exec(conteudoTask)?.[1]
+  const declarado = new RegExp(`${escaparTexto(ROTULO_DO_PORTE)}\\s*\`?(pequeno|grande)\`?\\s*$`, 'm').exec(conteudoTask)?.[1]
   if (declarado === 'pequeno' || declarado === 'grande') return { porte: declarado, inferido: false }
   const guardioes = revisoresObrigatorios(conteudoTask).filter((revisor) => GUARDIOES.includes(revisor))
   return { porte: guardioes.length >= GUARDIOES_DE_TAREFA_GRANDE ? 'grande' : 'pequeno', inferido: true }
@@ -160,8 +184,8 @@ export function lerPorte(conteudoTask: string): Porte {
  */
 export function lerValidacao(conteudo: string): { veredito: VereditoDaValidacao; ressalvasAceitas: boolean } | null {
   // Rodada de escopo de tarefa (`**Escopo:** tarefa N.0`) não diz nada da funcionalidade: fica de fora.
-  const rodadas = conteudo.split(/^(?=## Rodada )/m).filter((rodada) => !/^\*\*Escopo:\*\*\s*tarefa\b/im.test(rodada))
-  const achado = rodadas.map((rodada) => /^\*\*Veredito: (APROVADA COM RESSALVAS|APROVADA|REPROVADA)\*\*(.*)$/m.exec(rodada)).find((veredito) => veredito !== null)
+  const rodadas = conteudo.split(new RegExp(`^(?=${escaparTexto(TITULO_DA_RODADA_DA_VALIDACAO)})`, 'm')).filter((rodada) => !ESCOPO_DE_TAREFA.test(rodada))
+  const achado = rodadas.map((rodada) => VEREDITO_DA_VALIDACAO.exec(rodada)).find((veredito) => veredito !== null)
   if (!achado) return null
   const resto = achado[2] ?? ''
   const aceitas = /\baceit[ao]s?\*{0,2}\s+por\s+\S/i.test(resto) && !/\bnão\b[^.;]*\baceit/i.test(resto)
@@ -170,7 +194,7 @@ export function lerValidacao(conteudo: string): { veredito: VereditoDaValidacao;
 
 /** A spec está aprovada quando alguma rodada do `revisao-spec.md` fechou APROVADA: as rodadas só se acumulam. */
 export function specAprovada(conteudoRevisao: string): boolean {
-  return /^\*\*Veredito: APROVADA\*\*/m.test(conteudoRevisao)
+  return VEREDITO_DA_SPEC_APROVADA.test(conteudoRevisao)
 }
 
 export interface Artefatos {
