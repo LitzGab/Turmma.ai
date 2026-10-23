@@ -1826,6 +1826,13 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       casamento"); (2) a linha `**Sem mutação:**` em arquivo que pede o `conformidade-reviewer` exigir a rodada dele;
       (3) `.dockerignore`, `.nvmrc` e `package-lock.json` fora da lista do §5(e) de propósito: entrar muda a D53. (dono:
       Arquiteto, na `retro` da X7)
+- [ ] **(X7, 5.0) O CLI de `linhas.ts` lê `EDUCA_ENCONTRO_SOB_A_TRAVA` e `EDUCA_COMANDO_DE_INSTALACAO` de `process.env` em
+      toda execução**: escrever na saída quando uma estiver ligada, ou restringir às execuções de teste. Decide a 6.0, ao
+      mover o ponto de injeção para depois do merge. (dono: Implementador da 6.0)
+- [ ] **(X7, 5.0, recomendações da 2ª rodada) Acabamento do quadro e da tarefa**: (1) apagar a marca `abertura` junto com
+      `abrindo: false` ao concluir a abertura; (2) trocar um dos dois blocos de `aindaAbrindo` por uma mutação que prove
+      outra coisa (`randomUUID()` por constante); (3) completar a tabela de testes do `5_task.md` com os cinco testes que
+      só têm o bloco. Nenhum muda comportamento. (dono: Implementador da 6.0, no mesmo `linhas.ts`)
 - [ ] **(X7, tarefa 7.0, rodada 1) Para a retrospectiva da X7**, recomendações da mutação que trava que não entraram: (1) Ctrl-C
       no portão mata o pai sem passar pelo `finally` que devolve o arquivo mutado; (2) `testTimeoutDoProjeto` lê o primeiro
       `testTimeout:` do `vitest.config.ts` sem saber de que projeto é e fixa 5 s e 30 s sem ler o `playwright.config.ts`; (3) o

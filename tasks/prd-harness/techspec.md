@@ -117,7 +117,14 @@ regra, AIA e o resto de `docs/` continuam documento.
   do andar, relêem o quadro e gravam só a própria linha; quem espera tem prazo de 7 min e sai com "encontro em curso";
   o `abrir` grava a linha ocupada e só então solta a trava para o `npm ci`; depois, pega a trava de novo e a grava livre,
   ou, se o `npm ci` falhou, tira a linha do quadro e manda abrir de novo; se essa espera passa do prazo, a linha fica
-  ocupada e a saída manda `abandonar <n>` e abrir de novo
+  ocupada e a saída manda `abandonar <n>` e abrir de novo. No código (5.0): a trava é um `flock` que um processo do
+  próprio comando segura (`flock -w <prazo> -E 99 <arquivo> sh -c 'echo travado; cat'`; solta ao fechar a entrada dele e
+  morre com o comando, sem arquivo para limpar), e por isso `abrir`, `partida`, `abandonar`, `encontro` e `fechar` (que
+  também muda o quadro) devolvem `Promise<Resultado>`. A linha em abertura é `abrindo: true`, com `base` (a branch da
+  spec); `abandonar` a tira do quadro, e a que tem trabalho fica livre, com a branch e o checkout como estão. O ponto de
+  injeção do encontro é `Opcoes.comandoSobATrava` (`EDUCA_ENCONTRO_SOB_A_TRAVA`: `sh -c` no checkout da linha, com a
+  trava, antes do merge; saída diferente de 0 recusa sem mudar nada) e a 6.0 o põe depois do merge. O `conferir` compara
+  com a `base` do quadro (sem ela, com a `spec` do quadro); no andar da própria spec, ou sem quadro, com a `develop`
 - **Encontro (RF3):** tipagem e lint no checkout da linha, depois do `merge --no-edit` da spec e antes do `--ff-only`,
   com prazo de 3 min, ou 6 com `npm ci` quando o lock mudou, em grupo de processo próprio. No vermelho ou no prazo, nesta ordem: o
   grupo morre como o da mutação (§7c), a linha volta ao commit de antes do merge, a trava é solta; a spec não anda, sem push, linha ocupada, código de saída próprio, e a saída diz que a correção refaz o merge
