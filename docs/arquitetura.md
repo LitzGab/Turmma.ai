@@ -26,7 +26,9 @@ packages/nucleo   TS                  contexto, guardas, erro, schema e migratio
 Postgres 18 · Redis (fila e cache) · S3-compatível · LLMProvider (falso | OpenAI-compatível)
 ```
 
-A direção das dependências é `shared ← nucleo ← apps`, e a web depende só de `shared`.
+A direção das dependências é `shared ← nucleo ← apps`, e a web depende só de `shared`. O `dependency-cruiser`
+(`tools/guardas/camadas.cjs`, que o `npm run lint` roda pelo `guarda:camadas`) reprova o import contra essa direção, a
+app que importa outra app, a produção que importa teste e qualquer ciclo de import.
 
 ## Camadas do backend
 
@@ -37,6 +39,22 @@ módulo/recurso
  ├── repository     único acesso a dados, escopo de tenant sempre, lido do contexto
  └── contrato       esquema zod de pedido e resposta em packages/shared, nunca a linha serializada
 ```
+
+Nas camadas, o mesmo `dependency-cruiser` reprova o controller que importa repository ou Drizzle, o service que importa
+Drizzle e o repository que importa service ou controller. O tamanho tem catraca: função acima de 10 de complexidade, 80
+linhas de código ou 4 níveis de aninhamento reprova o ESLint, e o que já passava disso em 22/10/2026 está em
+`eslint-suppressions.json`, que só encolhe (`tools/guardas/catraca.test.ts`). Em produção só se lança erro com tipo:
+`ErroDeDominio` com o `CodigoDeErro`, uma classe do módulo, ou `ErroDeInvariante` para o que não pode acontecer, com o
+motivo em texto fixo (lint `guardas/erro-tipado`, regra 00, item 9).
+
+**As pastas.** Uma por módulo de domínio. Nos módulos com vários recursos (`estrutura`, `operacao`, `sala` e
+`atividade`), cada recurso tem a sua subpasta, com o controller, o service, o repository e os testes dele
+(`estrutura/turma/`); a `sessao/` se parte por fluxo (`login/`, `convite/`, `renovacao/`...), com a `tenant/`, que
+resolve a escola antes de haver sessão. As primitivas da entrada (senha, hash, cookie, desafio, os contadores e o
+semáforo do hash) ficam em `credencial/`, sem módulo Nest; de fora, `sessao/` e `credencial/` só se importam pelo
+`index.ts` de cada uma. A paginação fica em `http/paginacao.ts`, os casos de uso de rede e escola em `operacao/escola/`,
+e `ops/` tem só os comandos de terminal e os repositories deles. Nenhuma pasta de produção da API ou da web passa de 25
+arquivos direto nela (`tools/guardas/tamanho-das-pastas.test.ts`). O mapa completo está no guia, seção 4.
 
 **A entrada.** O controller valida pelo `ZodValidationPipe` do NestJS, com o esquema de `shared`
 (`packages/nucleo/src/entrada/`), e o `IdPipe` lê o id do caminho. Todo controller de `apps/api/src` valida assim: o ESLint
@@ -89,7 +107,8 @@ pelos leitores que a escola já usa (`docs/modelo-de-dados.md`, "A leitura da op
 - Um usuário pode ter vínculo em mais de uma escola; o token carrega a escola ativa.
 - Convite é token único, com validade curta, uso único e revogável.
 - **O `SessaoModule` é global desde a A0**, como o `BancoModule` e o `LimiteModule`. Ele exporta o
-  semáforo do hash de senha, o hash, o contador de tentativas e o cliente do Redis de fila do login,
+  semáforo do hash de senha, o hash, o contador de tentativas e o cliente do Redis de fila do login
+  (as classes moram em `apps/api/src/credencial/` desde a X5),
   e o `OperacaoModule` (a entrada, o convite e o segundo fator do operador Turmma) recebe a **mesma
   instância**: o teto do semáforo é o das threads do processo, e dois semáforos dobrariam o argon2
   que a instância aceita ao mesmo tempo; o contador é um só, com o prefixo `login-op` separando as

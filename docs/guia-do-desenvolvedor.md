@@ -81,7 +81,7 @@ realtime, despachante, worker, web.
 | Actuator `/health`, graceful shutdown | `/saude` e `ProntidaoController`; `Drenagem` | `apps/api/src/sistema/prontidao.controller.ts`, `nucleo/src/instancia/drenagem.ts` |
 | JUnit + Mockito | Vitest, projeto `unidade` (`x.test.ts`) | `vitest.config.ts` |
 | `@SpringBootTest` + Testcontainers | Vitest, projeto `integracao` (`x.int.test.ts`), com Postgres e Redis reais no compose de teste | `tools/testes/integracao.setup.ts` |
-| ArchUnit / Checkstyle | regras de ESLint em `tools/guardas/` e testes de arquitetura | §7 |
+| ArchUnit / Checkstyle | regras de ESLint em `tools/guardas/`, `dependency-cruiser` e testes de arquitetura | §7 |
 | `mvn verify` | `npm run typecheck && npm run lint && npm run test` | §8 |
 
 **O que é diferente de propósito:**
@@ -134,17 +134,22 @@ quando passa de ~20 arquivos de produção. Em toda a API e na web, um teste rep
 apps/api/src/
   app.module.ts                módulos montados, guardas globais
   <modulo>/                    estrutura, professores, material, ia, assistente, artefato, entrega,
-                               atividade, tutor, governanca, privacidade, sala, operacao, sistema, sessao, credencial
+                               atividade, tutor, governanca, privacidade, sala, operacao, sistema, sessao
     <modulo>.module.ts
     turma/                     um recurso: o trio abaixo e os testes dele (nos módulos com vários recursos)
       turma.controller.ts
       turma.service.ts
       turma.repository.ts
     *.test.ts                  unidade, ao lado do código
-  credencial/senha/            senha, hash, ContadorEmJanela, SemaforoDeHash: primitivas que outros módulos usam
+  sessao/                      uma subpasta por fluxo (login/, convite/, renovacao/, externa/...) e tenant/, a
+                               resolução da escola antes de haver sessão; de fora, só pelo sessao/index.ts
+  credencial/                  as primitivas da entrada, sem módulo Nest: senha, hash, cookie, desafio,
+                               ContadorDeTentativas e, em senha/, ContadorEmJanela e SemaforoDeHash; de fora de
+                               sessao/, só pelo credencial/index.ts
   http/paginacao.ts            paginar e paginarPor, o corte da página de uma listagem
   operacao/escola/             criarRede e criarEscola, que o painel e o comando ops:escola chamam
-  ops/                         só comandos de terminal (npm run ops:*), finos, sobre os casos de uso de operacao/
+  ops/                         só os comandos de terminal (npm run ops:*) e os repositories deles; nada de
+                               apps/api/src importa daqui
 apps/api/test/                 testes de integração: entre outros, os que cruzam módulos, os de arquitetura e os
                                HTTP de vários módulos; muitos módulos também têm *.int.test.ts ao lado do código
 
@@ -403,15 +408,18 @@ falha?**
 | Lint `guardas/log-sem-dado-pessoal` e `log-sem-conteudo-montado` | nome, nota ou conteúdo em log | `tools/guardas/regras-log.mjs` |
 | Lint `guardas/sdk-de-ia-so-no-adaptador` | import de SDK de IA fora do adaptador (não a chamada ao adaptador: essa é da revisão) | `tools/guardas/regras-ia.mjs` |
 | Lint `guardas/teste-sem-desligar` | `.skip`, `.only`, `.todo` | `tools/guardas/regras-teste.mjs` |
-| Lint de entrada | `@Body()`, `@Query()` ou `@Param()` sem pipe, e `@Req()` cru, nos módulos que já usam o pipe | `eslint.config.mjs` |
+| Lint de entrada | `@Body()`, `@Query()` ou `@Param()` sem pipe em todo controller da API, e `@Req()` cru fora de `sessao/` e `operacao/` | `eslint.config.mjs` |
 | Lint do kit | `componentes/ui/` importando `api/`, `areas/` ou `sessao/` | `eslint.config.mjs` |
 | Lint de tabela | importar tabela do núcleo fora de um repository | `tools/guardas/tabelas-do-nucleo.mjs` |
-| Teste dos repositories | repository sem prova de escopo nem motivo escrito | `tools/guardas/escopo-dos-repositories.ts` |
-| Teste do tamanho de pasta | pasta de produção da web com mais de 25 arquivos | `tools/guardas/tamanho-das-pastas.test.ts` |
-| `arquitetura.test.ts` | tabela sem `escola_id` fora das exceções, tabela sem classificação de retenção, leitura entre escolas fora do lugar certo | `apps/api/test/arquitetura.test.ts` |
+| Lint `guardas/erro-tipado` | `throw new Error(...)` ou literal lançado em produção, e `ErroDeInvariante` com motivo que não é texto fixo | `tools/guardas/regras-erro.mjs` |
+| `dependency-cruiser` | import contra a direção `shared ← nucleo ← apps`, app importando app, produção importando teste, controller importando repository ou Drizzle, service importando Drizzle, repository importando service, `sessao/` e `credencial/` por fora do `index.ts`, e ciclo | `tools/guardas/camadas.cjs`, `npm run guarda:camadas` (dentro do `npm run lint`) |
+| ESLint `complexity`, `max-lines-per-function`, `max-depth` | função acima de 10 de complexidade, 80 linhas de código ou 4 níveis de aninhamento. O que já passava disso em 22/10/2026 está em `eslint-suppressions.json`, que só encolhe: supressão nova reprova | `eslint.config.mjs`, `tools/guardas/catraca.test.ts` |
+| Teste dos repositories | repository sem prova de escopo nem motivo escrito | `tools/guardas/repositories-com-escopo.test.ts`, sobre `escopo-dos-repositories.ts` |
+| Teste do tamanho de pasta | pasta de produção da API ou da web com mais de 25 arquivos direto nela | `tools/guardas/tamanho-das-pastas.test.ts` |
+| `arquitetura.test.ts` | tabela sem `escola_id` fora das exceções, tabela sem classificação de retenção, leitura entre escolas fora do lugar certo, classe cercada (`PainelRepository`, `ContaGlobalRepository`, `ResolucaoDeTenantRepository`) citada fora da zona dela | `apps/api/test/arquitetura.test.ts` |
 | Teste de tokens | cor fora da paleta | `apps/web/src/estilos.test.ts` |
 | `size-limit` | bundle da web acima do teto | `.size-limit.json` |
-| `gitleaks` e `npm audit` | segredo no código, dependência vulnerável | `npm run guarda:segredo`, `guarda:dependencias` |
+| `gitleaks`, `npm audit` e `knip` | segredo no código, dependência vulnerável, dependência usada sem estar declarada ou declarada sem uso | `npm run guarda:segredo`, `guarda:dependencias` |
 
 ---
 
@@ -422,10 +430,11 @@ npm ci                         # dependências (sempre ci, nunca install, para r
 docker compose up              # sobe tudo; web em http://127.0.0.1:58080, API pela borda em :53000/saude, Grafana em :53300
 npm run build                  # compila os pacotes na ordem certa
 npm run typecheck              # tipos da raiz, do e2e, da infra e de cada workspace
-npm run lint                   # ESLint sem aviso tolerado, e as guardas
+npm run lint                   # ESLint sem aviso tolerado, as guardas e o dependency-cruiser (guarda:camadas)
 npm run test                   # unidade e integração
 npm run test:e2e               # Playwright nos projetos chromebook e celular
 npm run test:infra             # contra o compose inteiro (~16 min)
+npm run guarda:dependencias    # npm audit e knip
 npm run db:gerar               # gera a migration a partir do schema
 npm run ops:<comando>          # operação de terminal (escola, convite, retenção...)
 ```
@@ -446,6 +455,7 @@ Ainda não há `npm run dev` com recarga a quente: a stack sobe pelo compose. O 
 | `VagasPorEscola` | Limite de concorrência por tenant (semáforo distribuído no Redis, em Lua) |
 | `ExecutorDeJobs` e `Processador` | Registro de job handlers por tipo |
 | `ErroDeDominio` + `CodigoDeErro` | Domain exception com código de erro |
+| `ErroDeInvariante` | `IllegalStateException`: o que não pode acontecer, com motivo em texto fixo |
 | `FiltroGlobalDeErro` | Global exception handler (`@ControllerAdvice`) |
 | `@Permite` + `MATRIZ` | Autorização declarativa (`@PreAuthorize`) com matriz de permissões |
 | `GuardaDeAutenticacao`, `DeLimite`, `DeSessao`, `DePermissao` | Filter chain de segurança |
