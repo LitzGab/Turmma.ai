@@ -33,8 +33,8 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     12.0/13.0, API por pastas da 33–35/96, `lerEntrada` da 16.0) quando 12.0, 13.0, 16.0/17.0 e as pastas entrarem
   - `Arquiteto`: caminhos da 12.0, 13.0, 24.0, 25.0 e 90.0 **conferidos** (`a0f1974`, RELATÓRIO às 22:13): 12.0 e T7 da onda 1a
     com as subpastas, cercas sem reaches (R63); 25.0 e 90.0 ajustadas; 13.0 e 24.0 sem mudança. Livre
-  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **90.0** (porte grande), partida às 23:32, 1ª tentativa
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **ociosa** (o quadro não libera nada para ela; restam 25.0 e 90.0)
+  - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **ociosa** (90.0 encontrada às 00:03, `a3505d9`; spec em `462a835`)
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **ociosa** (só resta a 25.0, na linha 1). **Depois da 25.0: validação** (passo 8)
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -58,7 +58,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `62b5fc2` (encontro da 13.0, 23:34). Esteira: `561ff3b` VERDE; `a0f1974` (`39882806484`) VERMELHA só em `e2e/casca.spec.ts:67` [celular], lida como intermitente. `4d0219d` (`39887437533`) ainda rodando às 23:34; `94aca7d` cancelada (superada por `62b5fc2`, `39890275233`, na fila). **No próximo encontro, conferir se `4d0219d` ou `62b5fc2` repetem o casca.spec:67; se repetir, correção numa linha ociosa antes da partida**. Vigia ligada
+- **Base:** `spec/reengenharia` em `462a835` (encontro da 90.0, 00:03). Esteira: `4d0219d` (12.0, `39887437533`) **VERDE**, então o `casca.spec:67` de `a0f1974` foi intermitente; `94aca7d` só cancelada (o `esteira.ts` a lê como VERMELHA, `aca066e`); `62b5fc2` (`39890275233`) rodando e `462a835` (`39892996438`) na fila. Ler de novo no encontro da 25.0. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -112,6 +112,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 12.0 | `3ffe292` | Sonnet | 2 (tenancy-guardian, infra-guardian, test-engineer, revisor-geral aprovados na 2ª) | linha 1, grande, 22:14–22:45; sem tela; o `it` da 11.0 (login.service) fica no `arquitetura.test.ts` (fora da tabela da 12.0); recomendações da r2 no documento e no TODO.md |
 | 24.0 | `32b277d` | Sonnet | 2 (infra-guardian na 1ª; test-engineer e revisor-geral aprovados na 2ª) | linha 2, pequena, 22:48–23:30; sem tela; divergências no 24_task.md e onda-1b.md (11 devDependencies na raiz, knip.json com ignores, guarda:dependencias roda audit e knip); test:infra só na esteira |
 | 13.0 | `6f10b86` | Sonnet | 2 (test-engineer reprovou na 1ª; revisor-geral aprovado nas duas) | linha 1, pequena, 22:48–23:34; sem tela |
+| 90.0 | `a3505d9` | Sonnet | 2 (infra-guardian na 1ª; test-engineer e revisor-geral aprovados na 2ª) | linha 2, grande, 23:32–00:03; sem tela; `medidas-da-onda-5.md`: build --no-cache 80 s → 78 s, imagens do mesmo tamanho; a 90.2 foi no commit da tarefa (Divergências) |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
