@@ -52,15 +52,22 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
   - **Linha 2 encontrada** (23/10): `shared-sem-entrada-na-integracao` em `2e2a2e2` (test-engineer 2ª, infra-guardian 1ª,
     revisor-geral 2ª, APROVADO), encontro em `dcd189f`, esteira `39903026138` rodando.
   - **Linha 1 encontrada** (23/10): `knip-exportacoes-na-esteira` em `eb515ae` (test-engineer 2ª, revisor-geral 2ª, APROVADO),
-    encontro em `107fd56` (último commit com código). **Espero: o `RELATÓRIO` do `Validador`, rodada 3, sobre `107fd56`**, e a
-    esteira de `107fd56` verde (`esteira.ts --fechamento`). Ninguém usa o compose enquanto ele valida
-  - **Devo, depois da validação e antes do fechamento:** `PEDIDO` ao `Arquiteto` (só docs): `onda-1b.md:166` e `24_task.md:95`
-    ainda citam `npx --no knip`, que a correção do knip mostrou não repassar `--include`
+    encontro em `107fd56` (último commit com código).
+  - **Revalidação (rodada 3): APROVADA** (23/10, sobre `087b0b2`, último com código `107fd56`; `validacao.md` na árvore, sem
+    commit: entra no fechamento). Menores feitos: `Arquiteto` alinhou `onda-1b.md` e `24_task.md` (`b50e2b0`, só docs); a linha
+    do `TODO.md` (`arquivosDeCodigo`) escrita na árvore, entra no fechamento
+  - **Fechada em 23/10/2026:** esteira `39903756120` VERDE em `b50e2b0` (todos os jobs; daí à ponta só documento),
+    `linhas.ts fechar` feito, `ROADMAP.md` `[x]`, `techspec.md` implementada, `TODO.md` com a linha de `arquivosDeCodigo`.
+    **Devo agora:** pouso na `develop` e push (autorizado pelo recorte §6, com validação aprovada e esteira verde), esteira
+    da `develop` em segundo plano, `floor delete` das L1–L3, retrospectiva pelo `Arquiteto` no térreo; dizer ao Joaquim que
+    a AIA do Tutor e a lacuna da onda 0 merecem o olhar dele antes do piloto
+  - (histórico) **Esperava a esteira de `b50e2b0` (`39903756120`) verde**, que leva o código de `107fd56` (`esteira.ts --fechamento`).
+    Cancelei as superadas `39903026138`, `39903109912`, `39903276665`, `39903304846`. Verde: `linhas.ts fechar`, commit de
+    fechamento (`validacao.md`, `ROADMAP.md`, `techspec.md`, `TODO.md`, `estado.md`), pouso e push (recorte), `floor delete`
+    das L1–L3, retro. Vermelha: correção numa linha e revalidação
     A esteira de `d6eb2f0` (`39896375281`, só docs) teve também `e2e/casca.spec.ts:67` [celular] em 5117 ms (limite 5 s),
     que não caiu em `83cc03a` com o mesmo código: tratado como intermitente; se cair de novo em `dcd189f` ou depois, é correção
 - **Devo ainda:**
-  - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
-    `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
   - 95.0 (guia): publicada (`202cb47`) e fechada (`c88231a`); nada a fazer
   - todos os 36 documentos existem (`504a041`, `43a6ae2`, `bc9241f`); R55 e R56 em `DECISOES.md`. A 96.0 depende da
     97.0; a 90.0 espera a 24.0; a 43.0 e a 90.0 não correm juntas (`infra/compose.yml`)

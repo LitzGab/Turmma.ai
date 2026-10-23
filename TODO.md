@@ -1782,3 +1782,7 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X5, RF31) `.dockerignore` e `tools/ci/dockerfile.test.ts:128-130` ainda citam `.reengenharia`**, a pasta que o
   fechamento da X5 apagou (R64). A linha não faz mal (ignora uma pasta que não existe), e tirá-la é código, com o teste junto:
   na próxima tarefa que tocar o Dockerfile ou o `.dockerignore` (onda 5, na X6). (dono: Joaquim)
+- [ ] **(X5, correção `porta-unica-so-import`) `arquivosDeCodigo` só deixa de fora o `.test.ts`** (`privacy-guardian`, 1ª
+  rodada): em `apps/api/src/operacao/escola/escola.repository.test.ts`, um `.test.tsx` ou `.spec.ts` que citasse o módulo seria
+  acusado como código. Alinhar com o filtro das outras guardas, e conferir os três testes que usam a função, na próxima tarefa que
+  mexer nela (`tasks/correcoes/2026-10-22-porta-unica-so-import.md`, linhas 110 e 115). (dono: Joaquim)

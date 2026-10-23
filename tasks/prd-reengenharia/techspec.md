@@ -1,6 +1,6 @@
 # Tech Spec — Reengenharia (X5)
 
-**PRD:** `tasks/prd-reengenharia/prd.md` · **Status:** rascunho
+**PRD:** `tasks/prd-reengenharia/prd.md` · **Status:** implementada em 23/10/2026 (rascunho até a aprovação da spec na 5ª rodada, `7fac74f`, em 21/10/2026)
 **Forma (R34, aceite do Joaquim em 21/10/2026):** este arquivo comum tem até 2.000 palavras, e cada onda tem um
 `onda-<n>.md` de até 1.500: `onda-0`, `onda-1a`, `onda-1b`, `onda-2`, `onda-3a`, `onda-3b`, `onda-3c`, `onda-4a`,
 `onda-4b` (a 3 e a 4 partidas na revisão, R42), `onda-5` e `onda-6`. A tarefa lê este arquivo e a sua onda. As decisões: `tasks/prd-reengenharia/DECISOES.md`

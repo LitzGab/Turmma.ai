@@ -1,5 +1,111 @@
 # Validação — reengenharia (X5)
 
+## Rodada 3 — 23/10/2026 (revalidação depois das correções da esteira)
+
+**Escopo:** funcionalidade completa, pelo recorte de 22/10/2026 (`prd.md` §11, D81). Esta rodada revalida o que mudou depois da
+rodada 2: as correções `shared-sem-entrada-na-integracao` (`2e2a2e2`) e `knip-exportacoes-na-esteira` (`eb515ae`), que
+entraram por encontro em `dcd189f` e `107fd56`. As duas saíram da esteira `39896272821`, de `83cc03a`, que estava vermelha. O
+resto da rodada 2 não foi refeito.
+**Commit validado:** `087b0b2` (o último com código é o encontro `107fd56`)
+**Veredito: APROVADA**
+
+Desde `d6eb2f0`, o código mudou só em cinco arquivos de `tools/` e em `vitest.config.ts`, mais a fixture nova
+`tools/guardas/__fixtures__/knip/export-sem-uso/`. Nenhum arquivo de `apps/`, `packages/`, `e2e/` ou `infra/` mudou.
+
+Os dois defeitos que a esteira mostrou foram reproduzidos na máquina antes da correção, e os dois estão resolvidos. O primeiro
+reproduzi tirando o `dist` do shared da árvore e a linha nova de `vitest.config.ts`: `npx vitest run --project integracao
+tools/ci/compose.int.test.ts` caiu com `Failed to resolve entry for package "@educa/shared"` (`ERR_RESOLVE_PACKAGE_ENTRY_FAIL`),
+o erro da esteira. Com a linha de volta, e ainda sem `dist`, deu 13 de 13 verdes. No segundo, `npx --no -- knip --include
+dependencies,unlisted,binaries,unresolved` sai com 0 no repositório. Pelo `npx`, na fixture `nao-declarado`, sai com 1. Ou seja,
+o `--` repassa o `--include` ao knip, e a trava das quatro categorias continua reprovando o que deve.
+
+O `node_modules` estava em dia com o `package-lock.json`, e não precisei de `npm ci`. Tirei o `packages/shared/dist`, que é
+ignorado pelo git, para a pasta temporária da sessão e o devolvi no fim. A árvore terminou limpa, como começou.
+
+### 1. RF a RF (só o que as duas correções tocam)
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF13 | ATENDIDO | `tools/ci/etapas-de-guarda.ts:111`: a etapa passa a `['--no', '--', 'knip', ...ARGUMENTOS_DO_KNIP]`, com o porquê no comentário (`:104-108`). `tools/ci/scripts.test.ts:108` e `:113` acompanham a linha nova | `tools/guardas/knip.test.ts`: 10 de 10. O caso "a etapa do ci:verificar, rodada pelo `npx` como a esteira a roda… export sem uso não reprova" (`:72`) roda o `npx` de verdade. "o controle: com todas as categorias, o knip acha o export sem uso" (`:63`) prova que a fixture tem o que reprovar. `tools/ci/scripts.test.ts`: verde | Prova de mutação abaixo. As fixtures das quatro categorias chamam o binário direto, com os mesmos `ARGUMENTOS_DO_KNIP`. Pelo `npx`, conferi à mão que `nao-declarado` sai com 1, então o caminho da esteira também reprova |
+| RF32 | ATENDIDO no que rodei (a esteira é conferida no fechamento) | `vitest.config.ts:35`: `environments: { __vitest__: { resolve: { conditions: condicoes } } }`, com o comentário do porquê (`:28-31`) | `tools/ci/resolucao-do-shared.test.ts`: 2 de 2 verdes, um caso por projeto (`integracao` e `infra`), resolvendo `@educa/shared` a partir de `contexto.ts` pelo environment do `globalSetup`. `tools/ci/compose.int.test.ts` no projeto `integracao`, sem `dist`: 13 de 13 | O teste fica vermelho também com o `dist` construído, porque a resolução vai para `dist/index.js` e ele exige `src/index.ts`. Ele não depende de a máquina estar limpa como a esteira está. Nenhum teste foi apagado nem desligado em `d6eb2f0..087b0b2`: os de teste que mudaram são `scripts.test.ts` (a linha nova da etapa) e `knip.test.ts`, com dois casos novos e o auxiliar `copiarFixture` |
+
+As demais linhas da rodada 2 e da rodada 1 continuam valendo: RF1 a RF5, RF8 a RF14, RF17 a RF19, RF21, RF29, RF31 e RF33
+ATENDIDOS. O RF30 saiu (D81), e o resto é da X6.
+
+Provas de mutação (cada arquivo voltou com `git checkout --`, e a árvore terminou limpa):
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF32 | `vitest.config.ts:35`, a linha `environments: { __vitest__: … }` (com o `dist` do shared na árvore) | `resolucao-do-shared.test.ts`: os 2 vermelhos. Esperava `packages/shared/src/index.ts` e recebeu `packages/shared/dist/index.js` |
+| RF32 | a mesma linha, agora sem o `dist` na árvore, como na esteira | `npx vitest run --project integracao tools/ci/compose.int.test.ts`: "No test files found" e `Failed to resolve entry for package "@educa/shared"` (`ERR_RESOLVE_PACKAGE_ENTRY_FAIL`). É o sintoma da esteira `39896272821` |
+| RF13 | `etapas-de-guarda.ts:111`, o `'--'` | `knip.test.ts` › "a etapa do ci:verificar, rodada pelo `npx`…": vermelho em `expect(resultado.stderr).not.toContain('invalid config')` (`:83`); os outros 9 continuam verdes |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Pronto: tipagem, lint, guardas, unidade, integração, e2e e infra verdes | cumprido no que rodei; a suíte inteira e a esteira são conferidas no fechamento | `eslint` nos arquivos mudados: 0 erros (só o aviso de arquivo ignorado das fixtures); os três arquivos de teste acima: 34 de 34; `compose.int.test.ts` sem `dist`: 13 de 13 |
+| Pronto: esteira verde no último commit com código (`107fd56`) | conferida no fechamento pelo Orquestrador | não entra no veredito. A Mesa (test-engineer, 1ª rodada da `shared-sem-entrada-na-integracao`) pediu que fique registrado: o que confirma de vez esta correção é a esteira verde nos jobs `integração` e `infra` |
+| Os demais itens | como na rodada 2 | — |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck` | não rodou. Mudaram dois arquivos de teste, uma constante de argumentos e uma chave do `vitest.config.ts`, e os testes que os importam passaram |
+| `npm run lint` | não rodou inteiro. `npx eslint` nos 7 arquivos mudados: 0 erros |
+| `npm run test` | não rodou inteiro. Só a evidência: `tools/ci/resolucao-do-shared.test.ts`, `tools/guardas/knip.test.ts` e `tools/ci/scripts.test.ts`, com 34 de 34 |
+| `npm run test:e2e` | não se aplica (nenhum código de tela mudou) |
+| Integração | só `tools/ci/compose.int.test.ts` no projeto `integracao`, sem `dist`: 13 de 13 |
+| Esteira do GitHub | conferida no fechamento (D78): não entra no veredito |
+| Revisões com veto registradas e aprovadas | ✅ `shared-sem-entrada-na-integracao`: `test-engineer` (2ª), `infra-guardian` (1ª) e `revisor-geral` (2ª), todos APROVADO. `knip-exportacoes-na-esteira`: `test-engineer` (2ª) e `revisor-geral` (2ª), APROVADO. Os dois commits levam `(correção <slug>)`, e o encontro `107fd56` não traz código além deles |
+
+### 4. Achados
+
+**Críticos**
+- nenhum.
+
+**Maiores**
+- nenhum.
+
+**Menores**
+- `tasks/correcoes/knip-exportacoes-na-esteira.md`, "Recomendações sem aplicar", 1ª linha: o destino diz `TODO.md`, mas o
+  `TODO.md` não tem a linha. `tasks/prd-reengenharia/onda-1b.md:166` e `tasks/prd-reengenharia/24_task.md:95` ainda mostram a
+  etapa como `npx --no knip …`, que é a forma com o defeito. O destino real hoje é o `estado.md:57-58`: um `PEDIDO` ao Arquiteto
+  antes do fechamento. **Correção:** o Arquiteto troca as duas linhas por `npx --no -- knip …`, ou entra uma linha no `TODO.md`,
+  como o documento da correção diz.
+- `tools/guardas/knip.test.ts:64`: o comentário do controle ainda depende da posição ("o teste da etapa abaixo"). Fica para a
+  próxima tarefa que tocar o arquivo, como a correção registrou.
+- `tools/ci/resolucao-do-shared.test.ts` usa API interna do Vitest 5 e do Vite 8 (`vite.environments.__vitest__`,
+  `pluginContainer.resolveId`). O comentário do arquivo avisa disso, e o `?.` faz a chave sumida dar vermelho, sem passar calada.
+  Quando o Vitest ou o Vite subirem de versão (`TODO.md`, antes do staging), olhar este teste primeiro.
+- Continuam os da rodada 2: `.dockerignore:10` e `dockerfile.test.ts:128-130` ainda citam a pasta apagada;
+  `saida-do-temporario.md:8` diz "(42)" quando são 41; `relatorio-final.md` §3 atribui ao Validador a suíte inteira;
+  `techspec.md:3` ainda diz "rascunho"; e há subtarefas sem marca no `tasks.md`.
+
+**Positivos**
+- As duas correções reproduziram o defeito no mesmo caminho da esteira: o `npx` real e o environment do `globalSetup` sem
+  `dist`. Elas não ficaram na imitação que tinha deixado o defeito passar.
+- O teste da resolução fica vermelho mesmo na máquina de quem já construiu o `dist`. O defeito era invisível justamente ali.
+
+### 5. Conclusão
+
+APROVADA. Os dois defeitos que deixaram vermelha a esteira de `83cc03a` estão corrigidos, e cada um tem teste que fica vermelho
+quando a correção sai. Reproduzi os dois sintomas da esteira na máquina e confirmei que não aparecem mais. A revisão das duas
+correções está completa e aprovada. Não há crítico nem maior. Os menores são texto e um aviso de manutenção.
+
+Falta o que é do Orquestrador no fechamento: a esteira verde em `107fd56`, o último commit com código, em especial nos jobs
+`verificar`, `integração` e `infra`.
+
+### 6. Pendências herdadas
+
+- As da rodada 2 continuam, sem mudança.
+- Antes do fechamento, a troca de `npx --no knip` por `npx --no -- knip` em `onda-1b.md:166` e `24_task.md:95`
+  (`estado.md:57-58`).
+- O `estado.md:59-60` registra que a esteira de `d6eb2f0` teve `e2e/casca.spec.ts:67` [celular] em 5117 ms, com limite de 5 s.
+  Não rodei esse teste, porque nenhum código de tela mudou desde a rodada 1. Ele está na esteira que o Orquestrador confere. Se
+  cair de novo, é correção, como o próprio `estado.md` diz.
+
 ## Rodada 2 — 23/10/2026 (revalidação)
 
 **Escopo:** funcionalidade completa, pelo recorte de 22/10/2026 (`prd.md` §11, D81). É a revalidação dos achados da
