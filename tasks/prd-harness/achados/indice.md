@@ -32,3 +32,11 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-23 13:41:54 | `infra-guardian` | 4ª | REPROVADO | `revisao-spec` | `techspec.md:117` e `cenarios.md:15`: o prazo do encontro não diz o que acontece com a verificação que estourou. |
 | 2026-10-23 13:43:05 | `revisor-geral` | 4ª | REPROVADO | `revisao-spec` | `texto.md:56-58` e `cenarios.md:114` (RF26): o orçamento soma três arquivos, mas o passo 6 manda ler outros passos em toda tarefa. |
 | 2026-10-23 13:43:20 | `test-engineer` | 4ª | REPROVADO | `revisao-spec` | `cenarios.md:16`, RF4: o piso de 60 s continua sem prova, e "ou o do caso" não tem caso. |
+| 2026-10-23 13:44:28 | `infra-guardian` | 5ª | APROVADO | `revisao-spec` | `techspec.md:117-120`: a ordem dos passos no prazo fica implícita. Escrever a sequência: matar o grupo, voltar a linha ao commit de antes do merge, soltar o… |
+| 2026-10-23 13:45:36 | `test-engineer` | 5ª | REPROVADO | `revisao-spec` | `tabela-de-guardioes.md:20`: `@SemEscopo(` numa linha do RF16 não tem caso. |
+| 2026-10-23 13:45:38 | `revisor-geral` | 5ª | APROVADO | `revisao-spec` | `texto.md:59`: nomear o reinício do par da linha entre o que vai para o `6-tarefa.md`. O item 4 do passo 6 de hoje (`.claude/skills/seguir/SKILL.md:218-219`)… |
+| 2026-10-23 13:47:15 | `test-engineer` | 6ª | REPROVADO | `revisao-spec` | `techspec.md:116`: o `abrir` grava a linha como ocupada antes de soltar a trava, e nenhum caso prova isso. |
+| 2026-10-23 13:49:45 | `test-engineer` | 7ª | REPROVADO | `revisao-spec` | `cenarios.md:15` com `techspec.md:116`: o caso novo do `abrir` não chega à cláusula. O erro vem da minha correção da rodada 6, que partiu de uma premissa… |
+| 2026-10-23 13:52:30 | `test-engineer` | 8ª | REPROVADO | `revisao-spec` | `techspec.md:116` com `cenarios.md:15`: depois do `npm ci`, a linha marcada ocupada não tem caso que prove a saída desse estado. A cláusula nova cria um estado… |
+| 2026-10-23 13:54:38 | `test-engineer` | 9ª | REPROVADO | `revisao-spec` | Falta um caso para a volta à trava, e falta dizer o que acontece se ela demorar. |
+| 2026-10-23 13:56:17 | `test-engineer` | 10ª | APROVADO | `revisao-spec` | Em `tasks/prd-harness/cenarios.md:15`, o "não termina enquanto o encontro segura a trava" (e o "tira a linha 1 só então") precisa de uma observação escrita. A… |

@@ -56,8 +56,9 @@ premissa do §12 cair, também nos revisores. A regra 40 passa a dizer o RF17.
 **`/seguir` e papéis.** O `SKILL.md` fica com o cabeçalho, um índice e os passos 1, 2 e 5 (cerca de 7 KB); os outros,
 o 6 (o ciclo de uma tarefa) inclusive, vão para `.claude/skills/seguir/passos/`, lidos ao entrar no passo. Orçamento por
 tarefa: `SKILL.md` + `protocolo.md` + `passos/6-tarefa.md` até 24 KB (hoje são 41 KB), com teste; o passo 6 perde o que
-repete o protocolo e traz na própria página o que usa em toda tarefa (o comando da limpeza, a abertura de linha), sem
-mandar ler outro passo. O passo de fechamento diz quando rodar o `esteira.ts --censo` e abrir correção (RF9). A autoconferência do `executar-task` vira até doze perguntas no `task-template.md`, e os incidentes, com data
+repete o protocolo e traz na própria página o que usa em toda tarefa (o comando da limpeza, a abertura de linha, o reinício
+do par da linha com o `recruit --replace`), sem mandar ler o passo 3, o 9 nem o `time.md`; os passos condicionais (7,
+8, 10) são apontados pelo índice do `SKILL.md`. O passo de fechamento diz quando rodar o `esteira.ts --censo` e abrir correção (RF9). A autoconferência do `executar-task` vira até doze perguntas no `task-template.md`, e os incidentes, com data
 e origem, vão para `docs/processo-licoes.md`. Na deduplicação, a lista "O que verificar" e o bloco do formato da
 resposta de cada guardião com veto não mudam.
 

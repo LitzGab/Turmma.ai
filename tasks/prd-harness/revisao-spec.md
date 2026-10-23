@@ -174,6 +174,37 @@ rodada 2 contra o texto. Nenhum bloqueante muda desenho ou critério do PRD.
 - `.dockerignore`, `.nvmrc` e `package-lock.json` fora do §5(e) de propósito: entrar muda a lista fechada do RF16 e da
   D53, e fica para a retro (infra, revisor-geral)
 
+## Rodadas 5 a 10 — 23/10/2026
+
+**Veredito: APROVADA** (rodada 10)
+
+| Revisor | Rodada | Veredito |
+|---|---|---|
+| `infra-guardian` | 5 | APROVADO |
+| `revisor-geral` | 5 | APROVADO |
+| `test-engineer` | 5 a 9 | REPROVADO, um bloqueante por rodada, cada um num caso de corrida do quadro ou do RF26 |
+| `test-engineer` | 10 | APROVADO |
+
+O `tenancy-guardian`, o `privacy-guardian` e o `conformidade-reviewer` aprovaram na rodada 4, e nada do que mudou depois
+toca o que eles auditam.
+
+### Correções feitas, sem mudar desenho
+- §5(f), Quadro: o `abrir` grava a linha ocupada antes de soltar a trava para o `npm ci`, volta à trava e a grava livre;
+  com o `npm ci` falhando, tira a linha e manda abrir de novo; se a volta passa do prazo, a linha fica ocupada e a saída
+  manda `abandonar <n>`. Encontro: o grupo morre, a linha volta ao commit de antes do merge, e só então a trava é solta
+- §5(a): as três formas do arquivo da mensagem (`-F x`, `-Fx`, `--file=x`); `-F -` nos limites declarados
+- cenários RF3: segundo `abrir 1` e `partida 1` recusados durante o `npm ci`, que roda uma vez; a saída pelo sucesso, pela
+  falha e pelo prazo; a ref lida direto do disco por quem pega a trava; o neto que ignora o SIGTERM
+- cenários RF26: um caso por termo, os três itens do `6-tarefa.md`, e o índice do `SKILL.md` citando todo passo
+- cenários RF12: os modelos reais (`criar-tasks/task-template.md`, `criar-tasks/tasks-template.md`,
+  `validar/template.md`, o bloco do formato em `revisar-spec/SKILL.md`); o `revisao-template.md` não existe
+- tabela: os dois lados do RF16 num `it.each` por caminho, no `revisoes.test.ts`; o conjunto exato só no
+  `guardioes.test.ts`; `tools/vitrine/x.ts` com `@SemEscopo(`
+
+### Recomendações (aplicadas nas tarefas)
+- A janela do "não termina enquanto o encontro segura a trava", soltar o encontro antes do `abandonar`, e um bloco de
+  mutação por cláusula do §5(f) (test-engineer, rodada 10): na 5.0
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -206,3 +237,11 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-23 13:40:37 | 2026-10-23 13:41:54 | `infra-guardian` | 4 | REPROVADO | af0676cf2d3da0ba3 |
 | 2026-10-23 13:40:49 | 2026-10-23 13:43:05 | `revisor-geral` | 4 | REPROVADO | afc3f38aefa6ddef1 |
 | 2026-10-23 13:40:43 | 2026-10-23 13:43:20 | `test-engineer` | 4 | REPROVADO | a85fd6816e1aa7503 |
+| 2026-10-23 13:43:55 | 2026-10-23 13:44:28 | `infra-guardian` | 5 | APROVADO | afc02c32999a7dbc8 |
+| 2026-10-23 13:44:00 | 2026-10-23 13:45:36 | `test-engineer` | 5 | REPROVADO | ab1d2560cb7f0e885 |
+| 2026-10-23 13:44:05 | 2026-10-23 13:45:38 | `revisor-geral` | 5 | APROVADO | a2f9a904efc2e0f32 |
+| 2026-10-23 13:45:59 | 2026-10-23 13:47:15 | `test-engineer` | 6 | REPROVADO | a7bc401a7d0fd68f6 |
+| 2026-10-23 13:47:38 | 2026-10-23 13:49:45 | `test-engineer` | 7 | REPROVADO | a75c4858409cb1689 |
+| 2026-10-23 13:50:56 | 2026-10-23 13:52:30 | `test-engineer` | 8 | REPROVADO | a787f9f319c24d294 |
+| 2026-10-23 13:53:44 | 2026-10-23 13:54:38 | `test-engineer` | 9 | REPROVADO | adf15f950ff8974ae |
+| 2026-10-23 13:55:26 | 2026-10-23 13:56:17 | `test-engineer` | 10 | APROVADO | a9680fa1e325eb3c9 |

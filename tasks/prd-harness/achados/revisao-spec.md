@@ -1653,3 +1653,365 @@ Arquivos citados:
 - `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md`
 - `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md`
 - `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/vitest.config.ts`
+
+## infra-guardian · 5ª rodada · APROVADO · 2026-10-23 13:44:28 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: APROVADO
+Caminho quente tocado: nenhum no produto. A spec mexe só no processo, e a tabela do RF15 e do RF16 decide quem audita login, tutor, sala, prova, fila, IA e migration.
+Rate limit: não se aplica, porque a spec não cria rota.
+Fila e prioridade: ok
+Concorrência: protegida. A corrida da rodada 4 está fechada, conforme abaixo.
+Índice e paginação: ok na cobertura da tabela.
+Degradação de IA: não se aplica à spec. O caso do `AvisoFila.tsx` continua em `tabela-de-guardioes.md`.
+Migration: não se aplica
+Métrica e alerta: ok
+
+Correção da rodada 4:
+
+| Exigido | Situação |
+|---|---|
+| A verificação do encontro roda em grupo de processo próprio. No prazo, SIGTERM e, 5 s depois, SIGKILL. A trava só é solta depois de o grupo morrer | Feita. Está em `techspec.md:117-120`, com remissão à §7c (`techspec.md:150`) |
+| Caso no RF3 com o neto morto, conferido pelo pid, antes de o `flock` ser solto | Feita. Está em `cenarios.md:15`, com o neto aberto pelo comando injetado |
+| Recomendação: o prazo de quem espera a trava, e o `abrir` sem a trava durante o `npm ci` | Feita. O prazo é de 7 min (`techspec.md:115-116`), maior que os 6 min do encontro mais os 5 s até o SIGKILL. O prazo é injetado no teste, e o caso do `abrir` com `npm ci` preso por arquivo-sinal está em `cenarios.md:15` |
+| Recomendação: `.dockerignore` e `.nvmrc` | Não feita, por decisão registrada. Fica para a retro, porque entrar muda a lista fechada do RF16 e da D53 |
+
+O resto do diff (`29e5104..8d89fe2`) não abre risco de carga. Ele cobre o `tools/guardas/` e o `tools/testes/` no padrão dos quatro, o `@SemEscopo(` lido no HEAD, o `-F` lido pelo `PreToolUse` e o `it.each` por caminho.
+
+Bloqueantes: nenhum
+
+Recomendações:
+- `techspec.md:117-120`: a ordem dos passos no prazo fica implícita. Escrever a sequência: matar o grupo, voltar a linha ao commit de antes do merge, soltar o `flock`. Assim ninguém faz o `reset` com o `tsc` ou o `npm ci` ainda vivo no checkout.
+- `techspec.md:115-116`: dizer que o `abrir` grava a linha como ocupada no quadro antes de soltar a trava para o `npm ci`. Sem isso, um `abrir` concorrente pode pegar o mesmo número.
+- `techspec.md:150-151`: na tabela da §7c, acrescentar a linha "O encontro estoura o prazo", apontando para a §5(f), ao lado da linha do lint vermelho.
+- `.dockerignore` e `.nvmrc` ficam registrados para a retro, como já combinado.
+
+Arquivos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+
+## test-engineer · 5ª rodada · REPROVADO · 2026-10-23 13:45:36 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+O motivo é uma única cláusula nova, de correção simples. As três correções que exigi na rodada 4 estão feitas e provam a regra.
+
+**Cenários exigidos:**
+- RF4: piso de 60 s; "ou o do caso"; os outros termos do prazo, que já estavam provados.
+- RF16: um caso por caminho de cada linha, com o conjunto exato, dos dois lados.
+- `@SemEscopo(` só no HEAD.
+- Citação no resto de `tools/`.
+- O `abrir` solta a trava antes do `npm ci`.
+- Toda cláusula que este diff acrescentou, também com caso.
+
+Domínio escolar e isolamento de escola não se aplicam: nada aqui lê dado de escola.
+
+**Cobertos:**
+- **RF4, o piso (`cenarios.md:16`).** O caso tem limpa de 1 s, `testTimeout` injetado de 2 s e mutado que falha em 5 s. Sem o piso, o prazo seria o maior entre 3 s e 2 s, ou seja, 3 s, e o caso daria `recusada` no lugar de `vermelho`. Provado.
+- **RF4, "ou o do caso" (`cenarios.md:16`).** O caso tem projeto com 5 s, caso declarando 120 s e mutado que falha em 90 s. Sem ler o prazo do caso, ele cai para 60 s e o resultado vira `recusada`. Provado, com uma condição na recomendação 1.
+- **RF16, um caso por caminho (`tabela-de-guardioes.md:62`, `cenarios.md:88-94`).** Um `it.each` por caminho de cada linha, com o conjunto literal e os dois lados pela `decidirCommit`. Tirar `caducidade.ts` da linha dos aplicadores, ou encolher a linha do `eslint` para só T, agora deixa teste vermelho.
+- **Cláusulas da rodada 4:**
+  - `@SemEscopo(` só no HEAD sai com os quatro (`tabela-de-guardioes.md:65-66`).
+  - `tools/processo/x.ts` citando "regra 20" sai com P (`:70`); o outro lado continua coberto por `linhas.ts`, que passa sem guardião.
+  - O `abrir` preso no `npm ci` enquanto uma `partida` de outra linha termina (`cenarios.md:15`). Se a trava continuar presa durante o `npm ci`, a `partida` fica parada e o teste fica vermelho.
+- **Cláusulas novas deste diff, com caso:**
+  - Na RF3, o neto do encontro com o pid conferido e o prazo injetado de quem espera (`cenarios.md:15`).
+  - O `Fora do processo:` no `-F` também negado sem papel (`cenarios.md:62`, com `techspec.md` §5a).
+  - `infra/Caddyfile` recusado sem papel (`cenarios.md:93-94`).
+  - `tools/guardas/` e `tools/testes/` no padrão (`tabela-de-guardioes.md:60`).
+  - "LGPD" no `tema.ts` soma P (`:68`).
+  - `tools/vitrine/x.service.ts` sai com os quatro (`:70`).
+  - O `6-tarefa.md` que cita outro passo fica vermelho (`cenarios.md`, linha RF26).
+- **As quatro recomendações da rodada 4 foram feitas:** o prazo de quem espera é injetado, a crase está corrigida, o `-F` é lido, e a linha "qualquer um deles sem papel" saiu.
+
+**Bloqueantes:**
+
+1. **`tabela-de-guardioes.md:20`: `@SemEscopo(` numa linha do RF16 não tem caso.**
+   - **A cláusula nova.** O arquivo com `@SemEscopo(` pede os quatro "onde estiverem, linhas do RF16 inclusive".
+   - **O que está provado.** A metade dos sufixos tem caso dentro de uma linha do RF16: é o `tools/vitrine/x.service.ts` (`:70`).
+   - **O que falta.** Todo caso de `@SemEscopo(` está em `componentes/ui/` (`:65-66`), que é exceção do código. Suponha uma implementação que só procura o decorador nas exceções de `apps/` e `packages/`. Nela, `tools/vitrine/` (a escola cheia das fotos de tela, P C) com uma consulta sem escopo sai com P C, e nenhum teste fica vermelho.
+   - **Correção exigida.** Em `guardioes.test.ts`, `tools/vitrine/x.ts` com `@SemEscopo(` no índice sai com os quatro. O mesmo vale com o decorador só no HEAD.
+
+**Recomendações:**
+
+1. **Escrever a limpa no caso do prazo do caso (`cenarios.md:16`).** O caso "projeto com 5 s, caso com 120 s" não diz a duração da limpa. Com limpa de 30 s ou mais, 3 × a limpa já dá 90 s, e o caso fica verde sem ler o prazo declarado no `it(...)`. Basta escrever "limpa de 1 s".
+2. **Observar a ordem no encontro (`cenarios.md:15`).** O cenário pede o neto morto "antes de o `flock` ser solto". Se o teste conferir o pid só depois de o encontro sair, a troca de ordem passa: soltar a trava e só depois matar o grupo. A conferência precisa ser feita pelo processo que pega a trava, no momento em que a pega.
+3. **Outras formas de ler a mensagem do arquivo (`cenarios.md:62`, `techspec.md` §5a).** Hoje só o `-F` tem caso. Faltam `--file=msg.txt`, `-Fmsg.txt` e `-F -` com heredoc, contendo `Fora do processo:`. Ou o `PreToolUse` lê cada uma, ou elas entram nos limites declarados. O `-F -` é o mais provável de escapar.
+4. **Prazo padrão de quem espera (`techspec.md:115`).** Como ele agora é injetado no teste, nenhum caso confere o valor padrão. Vale afirmar que os 7 min ficam acima do prazo maior do encontro, os 6 min com `npm ci`. Um padrão menor faria quem espera sair durante um encontro normal.
+5. **Um lugar só para o caso por caminho.** O `it.each` por caminho do RF16 aparece em `cenarios.md:88`, sob `revisoes.test.ts`, e em `tabela-de-guardioes.md:62`, sob `harness/guardioes.test.ts`. Vale fixar um arquivo, para não nascerem dois testes que divergem.
+
+Arquivos citados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+
+## revisor-geral · 5ª rodada · APROVADO · 2026-10-23 13:45:38 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: APROVADO
+Escopo: respeitado
+Aderência à Tech Spec: ok
+Portão local: não se aplica. É revisão de spec e não há código. O `conferir` responde "nunca passou nesta árvore", como nas rodadas 2 a 4.
+
+**O bloqueante da rodada 4 está corrigido.**
+- `texto.md:58-60` fica com a segunda saída. O `passos/6-tarefa.md` traz na própria página o que usa em toda tarefa e não manda ler outro passo.
+- `cenarios.md:117` (RF26) ganhou o caso vermelho, com a amostra "veja o passo 9". O caso verde exige o comando da limpeza dentro do arquivo.
+- A conta fecha. Pela medida da rodada 4, os três arquivos dão cerca de 20,5 KB. O comando da limpeza e a abertura de linha somam perto de 2 KB. O passo 6 ainda perde o que repete o protocolo. O total fica abaixo de 24 KB.
+
+**As recomendações da rodada 4:**
+- O Orquestrador agora é nomeado no limite (`techspec.md:74-75`).
+- O `PreToolUse` lê o arquivo do `-F` (`techspec.md:50`). O lado do teste está em `cenarios.md:62-63`.
+- A crase está certa (`techspec.md:116`).
+- `package-lock.json` e `.dockerignore` ficam fora de propósito, registrado em `revisao-spec.md`.
+
+A árvore tem edições em `techspec.md` que ainda não foram commitadas: as recomendações do `infra-guardian` da rodada 5, nas linhas 114-119. Auditei a versão da árvore, e ela não contradiz o resto.
+
+Bloqueantes: nenhum
+
+Recomendações:
+- **`texto.md:59`: nomear o reinício do par da linha entre o que vai para o `6-tarefa.md`.** O item 4 do passo 6 de hoje (`.claude/skills/seguir/SKILL.md:218-219`) reinicia o par da linha em toda tarefa e confere os cabeçalhos. Para isso precisa da tabela de comandos e do `recruit --replace`, que estão no passo 3, "O time", e que vão para o `time.md` ou para os `passos/`. A frase "o que usa em toda tarefa" já cobre o caso, mas o parêntese cita só a limpeza e a abertura de linha. Quem implementar pode tomar a lista como fechada e voltar a mandar ler o `time.md`. São perto de 1 KB a mais, que ainda cabem no teto.
+- **`cenarios.md:117`: dizer como o `6-tarefa.md` aponta os passos condicionais.**
+  - O passo 6 de hoje diz "Parada (passo 7)" e "o `PEDIDO` da correção (passo 10)" (`SKILL.md:276`, `283`). Pela amostra "veja o passo 9", o teste também ficaria vermelho com essas menções.
+  - Escrever que esse caminho passa pelo índice do `SKILL.md`, que está no orçamento. Ou então que o teste proíbe só os passos lidos em toda tarefa (3 e 9) e o `time.md`, e aceita o 7, o 8 e o 10. Sem uma das duas, quem implementar escolhe sozinho.
+
+Arquivos lidos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/texto.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/prd.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/achados/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/.claude/skills/seguir/SKILL.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/revisoes.ts
+
+## test-engineer · 6ª rodada · REPROVADO · 2026-10-23 13:47:15 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos:**
+- Meu bloqueante da rodada 5: `@SemEscopo(` numa linha do RF16.
+- Toda cláusula que este diff (`8d89fe2..árvore`) acrescentou precisa de caso:
+  - o RF4 com a limpa de 1 s;
+  - o neto conferido por quem pega a trava;
+  - o prazo padrão de quem espera;
+  - o `-Fmsg.txt` e o `--file=`;
+  - o conjunto exato num lugar só;
+  - o `abrir` gravando a linha antes de soltar a trava;
+  - a ordem matar, reset e soltar no encontro;
+  - o RF26 com a lista fechada e o `recruit --replace`.
+
+Domínio escolar e isolamento de escola não se aplicam: nada aqui lê dado de escola.
+
+**Cobertos:**
+- **Meu bloqueante da rodada 5 está corrigido** (`tabela-de-guardioes.md:71-72`). O caso tem `tools/vitrine/x.ts` com `@SemEscopo(` no índice e também só no HEAD, e sai com os quatro. Uma implementação que procura o decorador só nas exceções de `apps/` e `packages/` faria esse arquivo sair com P C, e o caso ficaria vermelho.
+- **RF4, "ou o do caso"** (`cenarios.md:16`). Com limpa de 1 s, 3 × dá 3 s, o projeto tem 5 s e o piso é 60 s. Sem ler os 120 s do caso, o prazo seria 60 s e o mutado de 90 s daria `recusada`. Agora prova.
+- **RF3, neto morto antes de soltar a trava** (`cenarios.md:15`). O pid é conferido pelo processo que pega a trava, no momento em que a pega. Se a ordem for trocada, o neto ainda está vivo nessa hora e o teste fica vermelho.
+- **RF3, prazo padrão de quem espera** (`cenarios.md:15`). O teste afirma que ele é maior que o maior prazo do encontro.
+- **RF14** (`cenarios.md:62-63`). `-F msg.txt`, `-Fmsg.txt` e `--file=msg.txt` com `Fora do processo:` são negados. O `-F -` está nos limites declarados (`techspec.md:69`).
+- **RF16, conjunto exato num lugar só.**
+  - O conjunto literal por caminho fica no `guardioes.test.ts` (`tabela-de-guardioes.md:62-64`). Mexer numa entrada da tabela deixa esse teste vermelho.
+  - O `revisoes.test.ts` (`cenarios.md:88-94`) prova que a `decidirCommit` usa o conjunto, recusando e aceitando.
+
+**Bloqueantes:**
+
+1. **`techspec.md:116`: o `abrir` grava a linha como ocupada antes de soltar a trava, e nenhum caso prova isso.**
+   - O caso de hoje (`cenarios.md:15`) só prova que a trava é solta: uma `partida` de outra linha termina enquanto o `npm ci` espera.
+   - Se o `abrir` soltar a trava antes de gravar, esse caso continua verde. Mas um segundo `abrir` concorrente pega o mesmo número de linha, que é a corrida da regra 80.7.
+   - **Correção exigida, em `linhas.test.ts`:** com o primeiro `abrir` preso no `npm ci` por arquivo-sinal, um segundo `abrir` em processo paralelo termina com outro número. O quadro final tem as duas linhas ocupadas e distintas.
+
+2. **`techspec.md:118-119`: na ordem "matar, reset, soltar", o reset antes de soltar a trava não tem caso.**
+   - O caso de hoje confere "a linha volta ao commit de antes do merge" só depois de o encontro sair.
+   - Se a trava for solta antes do reset, o caso continua verde.
+   - **Correção exigida, em `cenarios.md:15`:** o processo que pega a trava confere, no mesmo momento em que confere o pid, que o HEAD do checkout da linha já é o commit de antes do merge.
+
+3. **`cenarios.md:117` (RF26): a lista fechada tem três termos e uma amostra só, e o conteúdo novo do `texto.md:59-60` não tem caso.**
+   - O vermelho proíbe o passo 3, o passo 9 e o `time.md`, mas a única amostra é "veja o passo 9". Se a checagem só procurar o 9, nenhum teste fica vermelho com "veja o passo 3" ou "leia o `time.md`".
+   - O verde aceita "citar o passo 7", mas o `texto.md:60` declara como condicionais o 7, o 8 e o 10.
+   - O `texto.md:59` passou a exigir no `6-tarefa.md` o reinício do par da linha com `recruit --replace`. O verde só afirma o comando da limpeza, e a abertura de linha também segue sem asserção. Com o `time.md` proibido, faltar o `recruit --replace` deixa o Orquestrador sem o comando, e o teste continua verde.
+   - **Correção exigida:**
+     - um caso vermelho por termo: passo 3, passo 9 e `time.md`;
+     - verde para o 7, o 8 e o 10;
+     - o verde afirma o comando da limpeza, a abertura de linha e o `recruit --replace` dentro do `6-tarefa.md`.
+
+**Recomendações:**
+- **`tabela-de-guardioes.md:63-64`:** a frase "sem o guardião da linha, recusado; com ele, aceito" vem depois do parêntese que manda os dois lados para o `revisoes.test.ts`, e lê como se também fosse do `guardioes.test.ts`. Vale reescrever para que cada arquivo tenha o seu lado.
+- **`techspec.md:50`:** onde diz "arquivo do `-F`", nomear as três formas (`-F x`, `-Fx`, `--file=x`), como o `cenarios.md:62-63` já faz.
+- **`cenarios.md:15`:** comparar o prazo padrão de quem espera com 6 min mais os 5 s até o SIGKILL, e não só com 6 min.
+- **Ordem matar antes do reset (`techspec.md:118`):** é provável com um neto que escreve num arquivo versionado do checkout até morrer. O checkout precisa estar limpo quando a trava é pega. Hoje essa ordem fica sem prova.
+
+Arquivos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/texto.md
+
+## test-engineer · 7ª rodada · REPROVADO · 2026-10-23 13:49:45 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Cenários exigidos (o que mudou desde `8d89fe2`):
+- Os meus três bloqueantes da rodada 6:
+  - o `abrir` grava a linha antes de soltar a trava;
+  - a ordem matar, reset, soltar no encontro;
+  - o RF26 com um caso por termo e o conteúdo novo do `6-tarefa.md`.
+- As cláusulas novas deste diff:
+  - o prazo de quem espera comparado com 6 min mais os 5 s;
+  - as três formas do `-F` e o `-F -` nos limites;
+  - o RF16 com um lado em cada arquivo;
+  - `tools/vitrine/x.ts` com `@SemEscopo(`;
+  - os passos 7, 8 e 10 apontados pelo índice do `SKILL.md`.
+- Domínio escolar e isolamento de escola não se aplicam: nada aqui lê dado de escola.
+
+Cobertos:
+- **Ordem matar, reset, soltar** (`cenarios.md:15`). Quem pega a trava confere, nesse momento, duas coisas: o pid do neto morto e o HEAD do checkout já no commit de antes do merge. Também tem caso a ordem matar antes do reset: o neto escreve num arquivo versionado até morrer, e o checkout tem de estar limpo.
+- **RF26** (`cenarios.md:117`):
+  - um vermelho por termo: passo 3, passo 9 e `time.md`;
+  - um verde por termo: 7, 8 e 10;
+  - a ausência de cada um dos três é vermelha: o comando da limpeza, a abertura de linha e o `recruit --replace` (`texto.md:59-60`).
+- **Prazo de quem espera** (`cenarios.md:15`): agora é comparado com 6 min mais 5 s.
+- **RF14** (`cenarios.md:62-63`): os três nomes do arquivo da mensagem são negados com `Fora do processo:`. O `techspec.md:50` nomeia as três formas, e o `-F -` entrou nos limites declarados (`techspec.md:69`).
+- **RF16** (`cenarios.md:88-89`, `tabela-de-guardioes.md:62-64`):
+  - o conjunto exato fica só no `guardioes.test.ts`;
+  - recusado sem o guardião e aceito com ele fica no `revisoes.test.ts`, pela `decidirCommit`.
+- **`tools/vitrine/x.ts` com `@SemEscopo(`** (`tabela-de-guardioes.md:71-72`): no índice e só no HEAD, sai com os quatro.
+- O resto do `techspec.md` §7c mudou só no texto.
+
+Bloqueantes:
+
+1. **`cenarios.md:15` com `techspec.md:116`: o caso novo do `abrir` não chega à cláusula. O erro vem da minha correção da rodada 6, que partiu de uma premissa errada.**
+   - O `abrir` não escolhe o número: recebe o número como argumento (`tools/processo/linhas.ts:4`, `abrir <n> <checkout>`; `:258`). A Tech Spec não muda isso.
+   - Por isso, "um segundo `abrir` termina com outro número" só prova que quem chama passou outro número.
+   - Suponha o `abrir` mutado: solta a trava antes de gravar e grava depois do `npm ci`, relendo o quadro sob a trava, como o §5(f) manda. O `abrir 2` paralelo termina e o quadro final tem a 1 e a 2. O caso continua verde.
+   - A corrida real é outra: um segundo `abrir 1` ou uma `partida 1` enquanto o primeiro `abrir 1` instala. Sem a linha gravada antes de soltar a trava, os dois passam pela checagem de linha ocupada (`linhas.ts:269`) e rodam dois `npm ci` no mesmo checkout (regra 80.7).
+   - **Correção exigida, em `cenarios.md:15` (`linhas.test.ts`), com o primeiro `abrir 1` preso no `npm ci` injetado por arquivo-sinal:**
+     - um segundo `abrir 1`, em processo paralelo, é recusado com a mensagem de linha em uso;
+     - o `npm ci` injetado roda uma vez só, contado pelo próprio comando injetado;
+     - uma `partida 1` no mesmo intervalo é recusada.
+   - A frase "outro número / duas linhas distintas" pode ficar como verde, mas não prova a cláusula.
+
+Recomendações:
+- **`cenarios.md:15`, reset antes de soltar a trava.**
+  - Com a ordem trocada, o caso depende de uma corrida: quem pega a trava confere o HEAD, enquanto quem a soltou abre o `git reset`.
+  - Para o mutado ficar vermelho sempre, quem pega a trava deve ler a ref direto do `.git`, sem abrir o `git`, logo que o `flock` retorna.
+- **`cenarios.md:15`, matar antes do reset.**
+  - O neto deve ignorar o SIGTERM e escrever até o SIGKILL. Assim, se o reset vier antes de matar, sobram 5 s de escrita depois dele, e a sujeira aparece sempre.
+  - Com um neto que morre no SIGTERM, a janela é de milissegundos e o vermelho do mutado fica por sorte.
+- **`texto.md:60`, o índice do `SKILL.md` aponta o 7, o 8 e o 10.** Nenhum caso afirma isso. Vale um verde no RF26: todo `passos/*.md` é citado pelo índice do `SKILL.md`. E um vermelho com um passo que o índice não cita.
+- **`cenarios.md:88`:** dizer explicitamente que os dois lados do RF16 no `revisoes.test.ts` são um `it.each` por caminho da tabela, e não só os exemplos depois de "entre elas".
+
+Arquivos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/texto.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/linhas.ts
+
+## test-engineer · 8ª rodada · REPROVADO · 2026-10-23 13:52:30 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Cenários exigidos (só o que mudou desde a rodada 7):
+- RF3, `abrir`: o segundo `abrir 1` e a `partida 1` são recusados enquanto o `npm ci` do primeiro `abrir 1` roda, e o `npm ci` roda uma vez só.
+- RF3, encontro no prazo: o processo que pega a trava lê o HEAD direto do `.git`, e o neto ignora o SIGTERM.
+- RF26: o índice do `SKILL.md` cita todos os passos.
+- RF16: os dois lados de cada caminho da tabela passam pela `decidirCommit`, num `it.each`.
+
+Cobertos:
+- **Seu bloqueante da rodada 7 está corrigido.** O caso agora chega à cláusula. Pensei no `abrir` mutado que solta a trava e só grava o quadro depois do `npm ci`. Nele, o segundo `abrir 1` passa pela checagem de linha ocupada (`linhas.ts:269`), e há duas saídas:
+  - se a árvore estiver limpa (`.processo/` é ignorado pelo git, `.gitignore:26`), roda um segundo `npm ci`, e a contagem fica em 2: vermelho;
+  - se o contador estiver dentro do checkout, a recusa vem da sujeira, com outra mensagem, e a asserção da mensagem de linha em uso fica vermelha.
+
+  O mutado que grava a linha livre antes do `npm ci` também fica vermelho: a `partida 1` passa e o `npm ci` roda duas vezes.
+- **Encontro no prazo.** Com o reset depois de soltar a trava, a leitura do HEAD direto do `.git` fica vermelha sempre, e não por sorte. Com o neto morto depois do reset, os 5 s de escrita no arquivo versionado sujam o checkout, e o "checkout está limpo" fica vermelho. As duas recomendações da rodada 7 estão aplicadas.
+- **RF26.** O índice tem vermelho e verde, e cada termo tem a sua amostra (o passo 3, o 9 e o `time.md` são vermelhos; o 7, o 8 e o 10 passam). A ausência de cada um dos três itens do passo 6 é vermelha.
+- **RF16.** O `it.each` por caminho está escrito, e o conjunto exato ficou só no `guardioes.test.ts`, sem duplicar.
+- **RF14.** As três formas do arquivo da mensagem (`-F msg.txt`, `-Fmsg.txt`, `--file=msg.txt`) estão negadas, e o `-F -` entrou nos limites declarados.
+
+Bloqueantes:
+1. **`techspec.md:116` com `cenarios.md:15`: depois do `npm ci`, a linha marcada ocupada não tem caso que prove a saída desse estado.** A cláusula nova cria um estado intermediário ("ocupada" durante o `npm ci`, que hoje não existe: `ocupada()` em `linhas.ts:245` olha só a tarefa e a correção). Ninguém prova que a linha sai dele.
+   - **Sucesso.** Pense no `abrir` mutado que nunca volta a pegar a trava para soltar a linha. O caso novo continua verde, porque todas as asserções dele acontecem enquanto o `npm ci` espera. Os testes de hoje também continuam verdes, porque o `andares()` usa `instalar: false` (`linhas.test.ts:211`) e não passa pelo `npm ci`. Na prática, toda linha aberta ficaria em uso para sempre.
+   - **Falha.** O `execFileSync('npm', ['ci'])` (`linhas.ts:277`) lança exceção quando a rede cai no meio da instalação. A Tech Spec não diz o que acontece com a linha nesse caso, e do jeito que está escrito ela fica presa. Também não está dito se o `abandonar` (RF6, `linhas.ts:393`, que exige `ocupada`) alcança uma linha nesse estado.
+   - **Correção exigida, em três partes:**
+     - (a) `techspec.md:116` diz o que acontece quando o `npm ci` falha: a linha sai do estado em uso, o `abrir` sai diferente de 0 e manda abrir de novo.
+     - (b) Em `cenarios.md:15` (`linhas.test.ts`): solto o arquivo-sinal, o primeiro `abrir 1` sai 0, e uma `partida 1` em seguida passa.
+     - (c) Com o `npm ci` injetado falhando: o `abrir 1` sai diferente de 0, e um novo `abrir 1` é aceito, ou o `abandonar 1` libera a linha, conforme o que a parte (a) definir.
+
+Recomendações:
+- **`cenarios.md:15`, a `partida 1` recusada.** Hoje ela só separa o mutado que grava a linha livre. Contra o mutado que grava depois do `npm ci`, ela é recusada de todo jeito, com "não está aberta" (`linhas.ts:286`). Vale começar com a linha 1 já no quadro e livre, aberta antes com `instalar: false`, para que a recusa também separe esse mutado. Vale também afirmar o texto da recusa.
+- **`cenarios.md:15`, o contador do `npm ci`.** Vale gravá-lo fora do checkout, ou dentro de `.processo/`, para que a recusa do segundo `abrir 1` não venha da sujeira da árvore.
+- **`cenarios.md:15`, a leitura da ref direto do `.git`.** O checkout da linha é um worktree: `.git` é um arquivo com `gitdir:`, e a ref da branch fica no diretório comum (ou no `packed-refs`). Vale dizer isso no caso, para quem escrever o teste não ler o caminho errado e afirmar sobre nada.
+
+Arquivos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/linhas.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/linhas.test.ts
+
+## test-engineer · 9ª rodada · REPROVADO · 2026-10-23 13:54:38 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos (rodada 9, só o que mudou)**
+- O `abrir` marca a linha ocupada, solta a trava para o `npm ci`, pega a trava de novo e marca a linha livre.
+- Com o `npm ci` falhando, o `abrir` tira a linha do quadro, sai diferente de 0 e manda abrir de novo.
+- A nova ordem do encontro vermelho ou fora do prazo: o grupo morre, a linha volta ao commit de antes do merge, e só então a trava é solta.
+- O `-Fx` e o `--file=x` lidos pelo `PreToolUse`, com o `-F -` entre os limites declarados.
+- Os modelos reais no RF12.
+- O conjunto exato de guardiões passa para o `guardioes.test.ts`.
+- O RF26 ampliado.
+
+**Cobertos**
+- **Linha ocupada durante o `npm ci`:** um segundo `abrir 1` em paralelo e uma `partida 1` são recusados com a mensagem de linha em uso. Uma `partida 2` termina enquanto o `abrir` espera. O `npm ci` roda uma vez só, contado num arquivo fora do checkout.
+- **Saída pelo sucesso:** o `abrir 1` sai 0 e uma `partida 1` logo depois passa.
+- **Saída pela falha:** o `abrir 1` sai diferente de 0 mandando abrir de novo, a linha 1 some do quadro, e um novo `abrir 1` é aceito.
+- **Ponto de partida:** a linha começa livre, aberta antes com `instalar: false`. A opção existe em `tools/processo/linhas.ts:252`.
+- **Ordem no encontro:** quem pega a trava lê a ref no disco (worktree, `gitdir:`, diretório comum ou `packed-refs`) e confere o commit de antes do merge e o neto morto. O neto ignora o SIGTERM e escreve até o SIGKILL, e o checkout fica limpo. O prazo de quem espera passa de 6 min mais 5 s.
+- **`-F`:** `-F msg.txt`, `-Fmsg.txt` e `--file=msg.txt` estão no RF14. O `-F -` está nos limites, igual nos dois documentos.
+- **RF12:** os quatro modelos existem (`criar-tasks/task-template.md`, `criar-tasks/tasks-template.md`, `validar/template.md` e o bloco do formato no §4 de `revisar-spec/SKILL.md`). Não sobrou nenhuma citação a `revisao-template.md` em `tasks/prd-harness/`.
+- **RF16:** o conjunto exato ficou na seção "O teste da tabela" de `tabela-de-guardioes.md`, em `guardioes.test.ts`. Os dois lados pela `decidirCommit` ficaram em `revisoes.test.ts`, sem buraco entre os dois.
+- **RF4 e RF26:** as mudanças só acrescentam casos, sem cláusula descoberta.
+
+**Bloqueantes**
+1. **Falta um caso para a volta à trava, e falta dizer o que acontece se ela demorar.**
+   - **Onde:** `tasks/prd-harness/techspec.md` §5(f), item "Quadro", e `tasks/prd-harness/cenarios.md` RF3.
+   - **O que está errado:** a cláusula nova "depois, pega a trava de novo e a grava livre" (e o "tira a linha do quadro" na falha) não tem caso que falhe se o `abrir` gravar sem a trava.
+   - **Por que o caso atual não basta:** o quadro final do RF3 não pega a mutação. Cada processo relê o quadro e grava só a própria linha, então o quadro termina certo com ou sem a trava. Só a espera denuncia a mutação.
+   - **O que a Tech Spec não diz:** o que o `abrir` faz quando essa segunda espera passa do prazo, já com o `npm ci` concluído ou falho. Se ele sai com "encontro em curso", a linha fica ocupada para sempre, e o próximo `abrir 1` é recusado como linha em uso. A linha fica presa sem caminho de saída.
+   - **Correção exigida:**
+     - No §5(f), dizer o que acontece nesse caso: o estado da linha, o código de saída e a instrução na saída. Esse caminho precisa deixar a linha recuperável sem editar o quadro à mão.
+     - No RF3, acrescentar um caso com prazo injetado: um encontro da linha 2 preso por arquivo-sinal segura a trava, e só então se solta o sinal do `npm ci` do `abrir 1`. O `abrir 1` precisa esperar e sair conforme o prazo, com o estado da linha 1 que o §5(f) definir. Sem a trava, ele sairia 0 na hora, e o caso fica vermelho.
+     - Repetir o mesmo caso com o `npm ci` falhando.
+
+**Recomendações**
+- No caso do `npm ci` falhando, afirmar também que a linha 2 do quadro ficou intacta depois de o `abrir 1` tirar a linha 1. Isso prova que "grava só a própria linha" vale também para a remoção.
+
+## test-engineer · 10ª rodada · APROVADO · 2026-10-23 13:56:17 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: APROVADO
+
+**Cenários exigidos** (da correção da rodada 9, mais as cláusulas novas do diff `8d89fe2..árvore` em `techspec.md` e `cenarios.md`):
+- O `abrir` volta à trava depois do `npm ci` e só então grava a linha 1 livre.
+- Se o `npm ci` falha, o `abrir` tira a linha 1 do quadro, também só com a trava.
+- Se essa espera passa do prazo, a linha fica ocupada e a saída manda `abandonar <n>` e abrir de novo.
+- Com o `npm ci` falhando, a linha 2 do quadro fica intacta (vinha da minha recomendação).
+- A ordem nova do encontro no vermelho ou no prazo: o grupo morre, a linha volta ao commit de antes do merge, e só então a trava é solta.
+- As formas do arquivo da mensagem no `PreToolUse`: `-F x`, `-Fx` e `--file=x`.
+
+**Cobertos:**
+- **Volta à trava** (`tasks/prd-harness/cenarios.md:15`, RF3, em `tools/processo/linhas.test.ts`). Um encontro da linha 2 fica preso por arquivo-sinal e segura a trava, e só então se solta o sinal do `npm ci`. O `abrir 1` não pode terminar enquanto o encontro segura a trava, e sai 0 quando ele termina. Um `abrir` que gravasse sem a trava terminaria logo depois do `npm ci`, então esse caso fica vermelho, que era o que faltava na rodada 9.
+- **`npm ci` falhando:** o `abrir 1` sai diferente de 0 e só tira a linha 1 depois que o encontro solta a trava. A linha 2 fica intacta, e um novo `abrir 1` é aceito.
+- **Prazo da espera** (`tasks/prd-harness/techspec.md:116`, §5(f), Quadro). Com prazo injetado menor que o encontro preso, o `abrir 1` sai diferente de 0 mandando `abandonar 1`. A linha 1 continua ocupada, e depois do `abandonar 1` um novo `abrir 1` é aceito. Duas implementações erradas ficam vermelhas: a que tira ou libera a linha no estouro (falha "continua ocupada") e a que espera sem prazo (o caso trava até o timeout do vitest).
+- **Ordem do encontro:** o processo que pega a trava lê a ref do HEAD direto do disco logo que o `flock` retorna, confere que já é o commit de antes do merge e confere pelo pid que o neto está morto.
+- **`-F`, `-Fx` e `--file=`:** estão no RF13 dos cenários. O `-F -` ficou nos limites declarados, que não pedem teste.
+- O resto do diff só reescreve frases e não traz cláusula nova.
+
+**Bloqueantes:** nenhum.
+
+**Recomendações:**
+1. Em `tasks/prd-harness/cenarios.md:15`, o "não termina enquanto o encontro segura a trava" (e o "tira a linha 1 só então") precisa de uma observação escrita. A sugestão: o `npm ci` injetado grava um marcador ao terminar. O teste espera o marcador, dá uma janela limitada ao `abrir 1`, confere que ele não saiu e que o quadro ainda tem a linha 1 ocupada, e só então solta o encontro. Do jeito que está escrito, quem implementar pode conferir isso logo depois do marcador. Aí uma versão sem trava ainda pode estar rodando, e o teste passa por sorte. Essa janela só serve para a versão errada mostrar que termina sozinha; o caso certo não depende dela, porque fica preso na trava de qualquer jeito.
+2. No caso do prazo, escrever que o encontro preso é solto antes do `abandonar 1`, porque o `abandonar` também pega a trava. Sem isso, quem implementar pode montar a sequência de um jeito que trava o próprio teste.
+3. Quando a tarefa de RF3 for escrita, a seção "Mutações" precisa de um bloco para cada cláusula nova do §5(f): gravar livre sem a trava, tirar a linha sem a trava, e liberar a linha quando o prazo da espera estoura.
+
+Arquivos conferidos:
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md`

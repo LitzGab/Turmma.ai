@@ -59,15 +59,17 @@ Além de `revisor-geral` e `test-engineer`:
 `tools/processo/harness/guardioes.test.ts`, com os literais escritos no teste, não lidos da constante:
 - todo arquivo versionado em `apps/**`, `packages/**`, `e2e/**`, `tools/guardas/**` e `tools/testes/**` sai com os
   quatro, salvo os que casam uma exceção; cada exceção casa ao menos um arquivo (exceção morta é vermelha)
-- um caso por exceção e um `it.each` por caminho de cada linha da tabela do RF16, com o conjunto exato de guardiões: sem o guardião da linha, recusado; com ele,
-  aceito; `tools/processo/linhas.ts` passa sem guardião com veto
+- um caso por exceção e um `it.each` por caminho de cada linha da tabela do RF16, com o conjunto exato de guardiões
+  (o conjunto vive só aqui; os dois lados, recusado sem o guardião e aceito com ele, ficam no `revisoes.test.ts`, pela
+  `decidirCommit`); `tools/processo/linhas.ts` sai sem guardião com veto
 - `it.each` dos quatro sufixos dentro de `componentes/ui/` e de `galeria/`: os quatro
 - um arquivo de `componentes/ui/` com `@SemEscopo(` no índice: os quatro; com ele só no HEAD: os quatro; sem ele nos
   dois: C I
 - citação, um caso por termo: `galeria/x.tsx` com "regra 70" segue P C, com "regra 10" soma T, com "LGPD" segue P C;
   `vite.config.ts` com "regra 20" soma P, com "regra 80" segue I; `tema.ts` com "regra 70" soma C, com "LGPD" soma P e com
   "Regra 80" soma I; sem citação, não soma; citava "regra 20" no HEAD e não cita no índice: soma P
-- `tools/vitrine/x.service.ts` sai com os quatro; `tools/processo/x.ts` citando "regra 20" sai com P
+- `tools/vitrine/x.service.ts` sai com os quatro; `tools/vitrine/x.ts` com `@SemEscopo(` no índice, e com ele só no
+  HEAD, sai com os quatro; `tools/processo/x.ts` citando "regra 20" sai com P
 - `componentes/ui/ia/AvisoFila.tsx` sai com P C I; `componentes/ui/sobrepostos/DialogoDeConfirmacao.tsx` sai com C I
 - `packages/nucleo/src/titular/leitura-do-titular.ts`, `apps/api/test/estrutura-isolamento.int.test.ts`,
   `e2e/aluno-tutor.spec.ts` e uma pasta nova inventada saem com os quatro
