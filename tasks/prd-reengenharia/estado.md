@@ -50,7 +50,12 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     commit de fechamento (o `validacao.md` da rodada 2 entra nele), pouso e push (recorte), `floor delete` das L1–L3, retro.
     Sugestão para a retro: o Validador não lê a esteira; a de `83cc03a` já estava vermelha antes da rodada 2
   - **Linha 2 encontrada** (23/10): `shared-sem-entrada-na-integracao` em `2e2a2e2` (test-engineer 2ª, infra-guardian 1ª,
-    revisor-geral 2ª, APROVADO), encontro em `dcd189f`, esteira `39903026138` rodando. **Espero só a linha 1** (knip, 1ª tentativa).
+    revisor-geral 2ª, APROVADO), encontro em `dcd189f`, esteira `39903026138` rodando.
+  - **Linha 1 encontrada** (23/10): `knip-exportacoes-na-esteira` em `eb515ae` (test-engineer 2ª, revisor-geral 2ª, APROVADO),
+    encontro em `107fd56` (último commit com código). **Espero: o `RELATÓRIO` do `Validador`, rodada 3, sobre `107fd56`**, e a
+    esteira de `107fd56` verde (`esteira.ts --fechamento`). Ninguém usa o compose enquanto ele valida
+  - **Devo, depois da validação e antes do fechamento:** `PEDIDO` ao `Arquiteto` (só docs): `onda-1b.md:166` e `24_task.md:95`
+    ainda citam `npx --no knip`, que a correção do knip mostrou não repassar `--include`
     A esteira de `d6eb2f0` (`39896375281`, só docs) teve também `e2e/casca.spec.ts:67` [celular] em 5117 ms (limite 5 s),
     que não caiu em `83cc03a` com o mesmo código: tratado como intermitente; se cair de novo em `dcd189f` ou depois, é correção
 - **Devo ainda:**

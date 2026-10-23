@@ -1,5 +1,102 @@
 # Validação — reengenharia (X5)
 
+## Rodada 2 — 23/10/2026 (revalidação)
+
+**Escopo:** funcionalidade completa, pelo recorte de 22/10/2026 (`prd.md` §11, D81). É a revalidação dos achados da
+rodada 1: o crítico 1, o maior 1, o RF31 e o RF33. O resto da rodada 1 não foi refeito.
+**Commit validado:** `d6eb2f0` (o último com código é o encontro `83cc03a`, que traz a correção `3c3d582`)
+**Veredito: APROVADA**
+
+O crítico 1 está resolvido. O `npm run lint` sai com 0 e a `catraca.test.ts` dá 18 de 18 verdes em `d6eb2f0`. Quando a
+entrada de `compose.ts` volta, três casos da catraca ficam vermelhos. O maior 1 também está resolvido: a cópia das quatro
+rodadas da 95.0 é literal, e o fecho `c88231a` teve rodada própria, registrada pelo hook. A pasta `.reengenharia/` saiu sem
+perder nada (RF31), e o relatório final compara com a linha de base só o que mediu (RF33). Conferi três números do
+relatório, e os três batem.
+
+O `node_modules` estava em dia com o `package-lock.json` (não precisei de `npm ci`). A árvore terminou limpa, como
+começou.
+
+### 1. RF a RF (só o que a rodada 1 deixou aberto)
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF11 | ATENDIDO | `eslint-suppressions.json` sem a entrada `tools/ci/compose.ts` (5 linhas a menos, nada mais no arquivo); `tools/guardas/catraca.test.ts:14`, `TETO.complexity` de 249 para 248, no mesmo commit (`3c3d582`) | `catraca.test.ts`: 18 de 18 verdes | Prova de mutação abaixo. A correção levou um segundo arquivo, que a rodada 1 não previu, e o documento da correção explica por quê (`tasks/correcoes/poda-supressao-orfa.md`, "Correção") |
+| RF31 | ATENDIDO | o guia já tinha sido conferido na rodada 1. Agora: `git ls-files .reengenharia` está vazio, e a tag `reengenharia/temporario` (`766dde4`) guarda os 41 arquivos. `saida-do-temporario.md` dá o destino de cada um: 23 migrados, 2 no código e 16 descartados, cada descarte com o motivo. A R64 (`DECISOES.md:138`) registra que o desenho do RF31 da `onda-6.md` foi revisto | Conferi os migrados contra a tag com `git diff reengenharia/temporario:.reengenharia/<f> HEAD:tasks/prd-reengenharia/<f>`. Nove são iguais. O `DECISOES.md` difere só pela linha da R64, e o `diagnostico/` está inteiro e sem diferença | Fora de `tasks/` e do `TODO.md`, `git grep '\.reengenharia'` acha só `.dockerignore:10` e `tools/ci/dockerfile.test.ts:128-130`. Os dois são código e ficam para a X6, com uma linha no `TODO.md` (menor abaixo). `docs/`, `ROADMAP.md`, `prd.md`, `techspec.md` e `tasks.md` foram reescritos para os caminhos novos |
+| RF32 | ATENDIDO (a esteira é conferida no fechamento) | — | `npm run lint`: sai com 0, e o `eslint`, o `tools/guardas/lint.ts` e o `guarda:camadas` estão verdes (1710 módulos); `catraca.test.ts` está verde | Nenhum teste apagado nem desligado em `65f7e3c..d6eb2f0`: o único arquivo de teste que mudou é a constante `TETO`. Os e2e e as invariantes das regras 10 e 70 seguem como a rodada 1 os deixou, porque o código de produção não mudou desde então |
+| RF33 | ATENDIDO | `tasks/prd-reengenharia/relatorio-final.md`. O §2 traz dez medidas contra a `LINHA-DE-BASE.md` §5, cada uma com o comando. O §3 diz o que não mediu (suíte, cobertura, JS de entrada, imagens) e por quê, e o §4 diz o que ficou pendente: antes do pouso, na X6 e no `TODO.md` | Refiz três medidas em `d6eb2f0`. (1) Com o `medicao/depcruise.cjs` da tag, que tem a regra `sem-ciclo`, o resultado é "no dependency violations found (1351 modules, 6242 dependencies)", igual ao relatório e com os 3 ciclos zerados. (2) `npm audit` dá 0/3/6: as altas são `brace-expansion`, `source-map-js` e `vite`, como o relatório diz. (3) `npm audit --omit=dev` dá 0/0/0 | A linha "Lint: vermelho em `5283042`" está certa para o commit que ela mede, e o texto diz que a correção entrou depois |
+
+As demais linhas da rodada 1 continuam valendo: RF1 a RF5, RF8 a RF10, RF12 a RF14, RF17 a RF19, RF21 e RF29 ATENDIDOS;
+RF30 saiu (D81); o resto é da X6. Desde `65f7e3c`, nenhum arquivo de `apps/`, `packages/`, `e2e/` ou `infra/` mudou.
+
+Prova de mutação (o arquivo voltou com `git checkout --`, e a árvore terminou limpa):
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF11, RF32 | a poda: `eslint-suppressions.json` voltou ao de `65f7e3c`, com a entrada `tools/ci/compose.ts` | `catraca.test.ts`: 3 vermelhos. "cita só as quatro regras de tamanho, e a soma por regra é o TETO" (`:42`); "nenhum arquivo ganhou supressão desde o HEAD" (`:46`, "complexity: 249 supressões, o TETO é 248"); e "npm run lint está verde com a linha de base" |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Pronto: tipagem, lint, guardas, unidade, integração, e2e e infra verdes | cumprido no que rodei; a suíte inteira e a esteira são conferidas no fechamento | `npm run lint`: 0; `catraca.test.ts`: 18/18 |
+| Pronto: `.reengenharia/` apagado, com o que importa migrado | cumprido | RF31; `saida-do-temporario.md`; tag `reengenharia/temporario` |
+| Pronto: relatório final | cumprido | RF33 |
+| Pronto: esteira verde no último commit com código (`83cc03a`) | conferida no fechamento pelo Orquestrador | não entra no veredito |
+| Os demais itens | como na rodada 1 | — |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck` | não rodou de novo. Desde a rodada 1, que deu 0 erros, só mudaram um JSON de supressões e uma constante de teste |
+| `npm run lint` | ✅ (sai com 0; `eslint .`, `tools/guardas/lint.ts` e `guarda:camadas` verdes) |
+| `npm run test` | não rodou inteiro. Rodou só a evidência: `tools/guardas/catraca.test.ts`, 18 de 18 |
+| `npm run test:e2e` | não se aplica a esta rodada (nenhum código de tela mudou) |
+| `npm run test:infra` | não se aplica a esta rodada |
+| Esteira do GitHub | conferida no fechamento (D78): não entra no veredito |
+| Revisões com veto registradas e aprovadas | ✅. Correção `poda-supressao-orfa`: `test-engineer` e `revisor-geral` na 1ª rodada, APROVADO. 95.0: rodadas 1 a 4 em `95_revisao-rodadas-1-a-4.md`, cópia idêntica pelo `diff` com `.processo/reengenharia/guia/REVISAO.md` do térreo; a 5ª rodada, sobre `c88231a`, foi registrada pelo hook, APROVADO |
+
+### 4. Achados
+
+**Críticos**
+- nenhum. O crítico 1 da rodada 1 está resolvido em `3c3d582`, com o encontro em `83cc03a`.
+
+**Maiores**
+- nenhum. O maior 1 da rodada 1 está resolvido em `5283042`. A seção "Rodadas fora do hook" de `95_task.md` explica por
+  que o hook numera a rodada do fecho como 1ª, e as seis recomendações dela têm destino no `TODO.md`, para a X6.
+
+**Menores**
+- `.dockerignore:10` e `tools/ci/dockerfile.test.ts:128-130` ainda citam a pasta apagada. Isso não faz mal, porque ela não
+  existe mais. O destino está no `TODO.md`: a próxima tarefa que tocar no Dockerfile, na X6.
+- `tasks/prd-reengenharia/saida-do-temporario.md:8` fala em "(42)" arquivos versionados, mas a tag tem 41, e as tabelas
+  somam 41 (23 + 2 + 16). Só o número do texto está errado.
+- `relatorio-final.md` §3 diz que "a revalidação" confere a suíte inteira e a cobertura. Isso é do portão completo e da
+  esteira do fechamento, conferidos pelo Orquestrador. O Validador não roda suíte inteira (D79).
+- Continuam da rodada 1, sem mudança: `techspec.md:3` ainda diz "Status: rascunho", e as subtarefas sem marca embaixo de
+  tarefas marcadas no `tasks.md` (por exemplo, 4.1 a 4.3, 93.1 a 93.3 e 97.1 a 97.3). Os dois são só texto.
+
+**Positivos**
+- A correção pegou o segundo arquivo que a catraca exigia (o `TETO`) e explicou isso no próprio documento, sem esperar a
+  validação mandar.
+- A saída da pasta temporária tem inventário arquivo a arquivo e uma tag para recuperar o que foi descartado.
+
+### 5. Conclusão
+
+APROVADA. O teste vermelho que reprovou a rodada 1 está verde, e a mutação da poda mostra que ele pega a volta da entrada.
+O registro da revisão da 95.0 está no andar, cópia literal. O RF31 e o RF33, que estavam para o fechamento, estão feitos e
+conferidos contra a tag e contra três medidas refeitas. Não há crítico nem maior. Os menores são texto, ou código sem efeito
+com destino na X6.
+
+Falta só o que é do Orquestrador no fechamento: a esteira verde em `83cc03a`, o último commit com código.
+
+### 6. Pendências herdadas
+
+- As da rodada 1 continuam: as lacunas da onda 0 vão para a X6 (R59, R60), com a AIA do Tutor para o Joaquim antes do
+  piloto; a rolagem da atividade do aluno vai para a X4; o dado da vitrine vai para o `TODO.md`; e o lint no encontro das
+  linhas vai para a X6, Etapa 9.
+- `.dockerignore` e `dockerfile.test.ts` param de citar `.reengenharia` na X6 (`TODO.md`).
+- `vite` 8.3.5 e `vitest` 5.0.5 antes do staging (`TODO.md`, pelo relatório final).
+
 ## Rodada 1 — 23/10/2026
 
 **Escopo:** funcionalidade completa, pelo recorte de 22/10/2026 (`prd.md` §11, D81, R43 a R63)
