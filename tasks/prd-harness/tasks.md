@@ -10,10 +10,10 @@ do Orquestrador, no fechamento, e não é tarefa.
 
 ## Lista
 
-- [ ] **1.0 — Os rótulos que o hook lê ficam provados nos modelos, e o papel chega ao Bash**
-  - [ ] 1.1 Teste do harness dos rótulos dos modelos (RF12)
-  - [ ] 1.2 Prova numa sessão real de que `CLAUDE_CODE_AGENT` chega ao Bash do papel e do subagente (§12)
-  - [ ] 1.3 Testes: rótulo tirado, revisor desconhecido
+- [x] **1.0 — Os rótulos que o hook lê ficam provados nos modelos, e o papel chega ao Bash**
+  - [x] 1.1 Teste do harness dos rótulos dos modelos (RF12)
+  - [x] 1.2 Prova numa sessão real de que `CLAUDE_CODE_AGENT` chega ao Bash do papel e do subagente (§12)
+  - [x] 1.3 Testes: rótulo tirado, revisor desconhecido
 
 - [ ] **2.0 — O `revisoes.ts` partido por responsabilidade, sem mudar comportamento**
   - [ ] 2.1 `documento-de-revisao.ts`, `caducidade.ts`, `comando-git.ts`, `portao.ts`; `revisoes.ts` só reexporta

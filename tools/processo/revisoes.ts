@@ -30,6 +30,13 @@ import type * as TS from 'typescript'
 
 export const REVISORES_COM_VETO = ['tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'infra-guardian', 'test-engineer', 'revisor-geral']
 export const REVISORES_SEM_VETO = ['llm-integrator', 'pedagogia-reviewer', 'frontend-reviewer']
+
+/**
+ * O rótulo que o hook procura no `N_task.md`, escrito em `.claude/skills/criar-tasks/task-template.md`. Os nomes que ele
+ * lista só contam se estiverem em `REVISORES_COM_VETO` ou `REVISORES_SEM_VETO`; `tools/processo/harness/rotulos.test.ts`
+ * confere o rótulo e os nomes do modelo.
+ */
+export const ROTULO_DOS_SUBAGENTES = '**Subagentes obrigatórios:**'
 const REVISORES = new Set([...REVISORES_COM_VETO, ...REVISORES_SEM_VETO])
 
 // Quem audita os testes além do código. Para os outros, mudança só em teste não caduca a rodada:
@@ -352,7 +359,7 @@ export function lerRevisoes(conteudoTarefa: string): Revisao[] {
 
 // Os marcados no documento, mais os que toda tarefa e toda correção têm, marcados ou não.
 export function revisoresObrigatorios(conteudoTarefa: string, tipo: TipoDocumento = 'tarefa'): string[] {
-  const linha = /\*\*Subagentes obrigatórios:\*\*(.*)/.exec(conteudoTarefa)?.[1] ?? ''
+  const linha = conteudoTarefa.split(ROTULO_DOS_SUBAGENTES)[1]?.split('\n')[0] ?? ''
   const marcados = [...linha.matchAll(/`([a-z-]+)`/g)].map((achado) => achado[1] ?? '').filter((nome) => REVISORES.has(nome))
   const sempre = tipo === 'tarefa' ? ['test-engineer', 'revisor-geral'] : tipo === 'correcao' ? ['test-engineer'] : []
   return [...new Set([...marcados, ...sempre])]
