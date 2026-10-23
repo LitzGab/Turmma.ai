@@ -31,11 +31,11 @@ do Orquestrador, no fechamento, e não é tarefa.
   - [ ] 4.3 A régua acha o prazo do caso retitulado (RF11)
   - [ ] 4.4 Testes: RF9 e RF11 do `cenarios.md`
 
-- [ ] **5.0 — O quadro das linhas sob uma trava só, com a linha solta por comando e a base gravada**
-  - [ ] 5.1 `abrir`, `partida`, `abandonar` e `encontro` pegam o mesmo `flock`, relêem e gravam só a própria linha
-  - [ ] 5.2 O `abrir` grava a linha e a base, e solta a trava antes do `npm ci`; o `conferir` compara com a base (RF10)
-  - [ ] 5.3 `linhas.ts abandonar <n>` (RF6)
-  - [ ] 5.4 Testes: as corridas do quadro com arquivo-sinal, RF6 e RF10 do `cenarios.md`
+- [x] **5.0 — O quadro das linhas sob uma trava só, com a linha solta por comando e a base gravada**
+  - [x] 5.1 `abrir`, `partida`, `abandonar` e `encontro` pegam o mesmo `flock`, relêem e gravam só a própria linha
+  - [x] 5.2 O `abrir` grava a linha e a base, e solta a trava antes do `npm ci`; o `conferir` compara com a base (RF10)
+  - [x] 5.3 `linhas.ts abandonar <n>` (RF6)
+  - [x] 5.4 Testes: as corridas do quadro com arquivo-sinal, RF6 e RF10 do `cenarios.md`
 
 - [ ] **6.0 — O encontro roda tipagem e lint e recusa o vermelho sem avançar a spec**
   - [ ] 6.1 Verificação no checkout da linha, depois do merge e antes do `--ff-only` (RF3)

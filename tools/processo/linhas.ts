@@ -2,6 +2,7 @@
 //
 //   node tools/processo/linhas.ts                          o quadro: quem faz o quê, o que está livre e o que parte agora
 //   node tools/processo/linhas.ts abrir <n> <checkout>     registra a linha n, no checkout do andar dela
+//   node tools/processo/linhas.ts abandonar <n>            solta a linha n: o que ela fazia deixa de ser dela
 //   node tools/processo/linhas.ts partida <n> <N>          leva a linha à ponta da spec e anota a tarefa N nela
 //   node tools/processo/linhas.ts partida <n> correcao:<slug>
 //   node tools/processo/linhas.ts encontro <n>             traz a spec para a linha, avança a spec e faz o push
@@ -13,10 +14,16 @@
 // `Mesa n`). O que cada linha faz fica em `.processo/linhas.json`, e não no `estado.md`: o Orquestrador limpa o
 // contexto a cada tarefa, as tarefas fecham intercaladas, e o que corre junto é conta, não memória.
 //
+// O quadro só muda sob uma trava (`flock` em `.processo/linhas.lock`, do andar da spec). Quem muda relê o quadro depois
+// de pegar a trava e grava só a própria linha: dois comandos de linhas diferentes, ao mesmo tempo, não se desfazem. O
+// `abrir` é o único que larga a trava no meio: ele grava a linha como ocupada, solta a trava para o `npm ci` (minutos) e
+// pega de novo para gravá-la livre.
+//
 // Existe porque uma spec de 16 tarefas levou 55 horas com uma tarefa por vez (F3), e o Joaquim pediu que as tarefas
 // que não se tocam corram juntas, quantas a máquina aguentar.
-import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { execFileSync, spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { lerDependencias, lerParalelismo, lerTarefas, PREFIXO_DA_BRANCH_DE_SPEC } from './estado.ts'
 
@@ -27,6 +34,9 @@ import { lerDependencias, lerParalelismo, lerTarefas, PREFIXO_DA_BRANCH_DE_SPEC 
  */
 export const MAXIMO_DE_LINHAS = 3
 export const CAMINHO_DO_QUADRO = '.processo/linhas.json'
+export const CAMINHO_DA_TRAVA = '.processo/linhas.lock'
+/** Quanto quem espera a trava espera antes de desistir com "encontro em curso". */
+export const PRAZO_DA_TRAVA_MS = 7 * 60 * 1000
 const SUFIXO_DA_LINHA = '--l'
 
 export function branchDaLinha(spec: string, numero: number): string {
@@ -161,6 +171,12 @@ export interface Linha {
   correcao: string | null
   /** Quando a linha partiu, em ISO: é o que a vigia compara com o porte da tarefa. */
   desde: string | null
+  /** A branch de onde a linha parte (a da spec), gravada ao abrir: é com ela que o `conferir` compara. */
+  base?: string
+  /** O `abrir` gravou a linha e o `npm ci` ainda roda: a linha está em uso, mas ainda não tem onde trabalhar. */
+  abrindo?: boolean
+  /** De qual `abrir` é a abertura em curso: a volta dele só mexe na linha se a marca do quadro for a dele. */
+  abertura?: string
 }
 
 export interface Quadro {
@@ -173,10 +189,24 @@ export function lerQuadro(raiz: string): Quadro | null {
   return existsSync(caminho) ? (JSON.parse(readFileSync(caminho, 'utf8')) as Quadro) : null
 }
 
+/** Grava por renomeação: quem lê o quadro sem a trava (o comando que só o mostra) nunca vê metade dele. */
 function gravarQuadro(raiz: string, quadro: Quadro): void {
   const caminho = join(raiz, CAMINHO_DO_QUADRO)
   mkdirSync(dirname(caminho), { recursive: true })
-  writeFileSync(caminho, `${JSON.stringify({ ...quadro, linhas: [...quadro.linhas].sort((a, b) => a.numero - b.numero) }, null, 2)}\n`)
+  const provisorio = `${caminho}.${String(process.pid)}.tmp`
+  writeFileSync(provisorio, `${JSON.stringify({ ...quadro, linhas: [...quadro.linhas].sort((a, b) => a.numero - b.numero) }, null, 2)}\n`)
+  renameSync(provisorio, caminho)
+}
+
+/**
+ * Muda uma linha, e só ela: relê o quadro do disco, entrega a linha que está lá a `mudar` e grava o que ele devolve
+ * (`null` tira a linha). Só se chama sob a trava; o quadro que o comando leu no começo pode ter mudado enquanto ele
+ * esperava a trava, e é o do disco que vale.
+ */
+function gravarLinha(raiz: string, spec: string, numero: number, mudar: (atual: Linha | undefined) => Linha | null): void {
+  const quadroDoDisco = lerQuadro(raiz) ?? { spec, linhas: [] }
+  const nova = mudar(quadroDoDisco.linhas.find((linha) => linha.numero === numero))
+  gravarQuadro(raiz, { spec, linhas: [...quadroDoDisco.linhas.filter((linha) => linha.numero !== numero), ...(nova === null ? [] : [nova])] })
 }
 
 export function lerPlano(raiz: string, funcionalidade: string): TarefaDoPlano[] {
@@ -242,20 +272,109 @@ function contextoDe(raiz: string): Contexto | string {
 }
 
 const emCursoNo = (quadro: Quadro) => quadro.linhas.flatMap((linha) => (linha.tarefa === null ? [] : [linha.tarefa]))
-const ocupada = (linha: Linha) => linha.tarefa !== null || linha.correcao !== null
+const comTrabalho = (linha: Linha) => linha.tarefa !== null || linha.correcao !== null
+const ocupada = (linha: Linha) => comTrabalho(linha) || linha.abrindo === true
 /** A linha 1 usa o par que o térreo sempre teve; as outras, um par com o número dela. */
 export const terminaisDa = (numero: number) => (numero === 1 ? 'Implementador e Mesa' : `Implementador ${String(numero)} e Mesa ${String(numero)}`)
-const oQueFaz = (linha: Linha) => (linha.tarefa !== null ? `tarefa ${String(linha.tarefa)}.0` : linha.correcao !== null ? `correção ${linha.correcao}` : 'ociosa')
+const oQueFaz = (linha: Linha) =>
+  linha.tarefa !== null ? `tarefa ${String(linha.tarefa)}.0` : linha.correcao !== null ? `correção ${linha.correcao}` : linha.abrindo === true ? 'abertura em curso' : 'ociosa'
+/** Por que a linha ocupada não aceita outro comando. A abertura não tem encontro a esperar: ela acaba sozinha, ou se abandona. */
+const recusaPorUso = (linha: Linha, depois: string) =>
+  linha.abrindo === true
+    ? `a linha ${String(linha.numero)} está em uso: a abertura dela ainda roda (npm ci). Se o abrir morreu, rode \`node tools/processo/linhas.ts abandonar ${String(linha.numero)}\` e abra de novo`
+    : `a linha ${String(linha.numero)} está com a ${oQueFaz(linha)}; ${depois}`
 
 export interface Opcoes {
   /** `npm ci` no checkout da linha, ao abrir. Desligado só no teste. */
   instalar?: boolean
+  /** O que roda no lugar do `npm ci`, por `sh -c` no checkout da linha. Só o teste o troca. */
+  comandoDeInstalacao?: string
   /** O push da branch da spec no encontro, e o da remoção das branches de linha ao fechar. Desligado só no teste. */
   push?: boolean
   agora?: Date
+  /** Quanto esperar a trava do quadro; o padrão é `PRAZO_DA_TRAVA_MS`. Só o teste o encurta. */
+  prazoDaTravaMs?: number
+  /**
+   * O ponto de injeção do encontro: roda por `sh -c` no checkout da linha, com a trava na mão, depois das conferências e
+   * antes do merge da spec. Saída diferente de 0 recusa o encontro sem mudar nada. É onde a verificação do encontro entra.
+   */
+  comandoSobATrava?: string
 }
 
-export function abrir(raiz: string, numero: number, checkoutDado: string, opcoes: Opcoes = {}): Resultado {
+/** As opções que o teste de processo passa pelo ambiente, porque ali o comando é outro processo. */
+export function opcoesDoAmbiente(ambiente: NodeJS.ProcessEnv): Opcoes {
+  const prazo = Number(ambiente['EDUCA_QUADRO_PRAZO_DA_TRAVA_MS'])
+  return {
+    ...(Number.isFinite(prazo) && prazo > 0 ? { prazoDaTravaMs: prazo } : {}),
+    ...(ambiente['EDUCA_COMANDO_DE_INSTALACAO'] === undefined ? {} : { comandoDeInstalacao: ambiente['EDUCA_COMANDO_DE_INSTALACAO'] }),
+    ...(ambiente['EDUCA_ENCONTRO_SOB_A_TRAVA'] === undefined ? {} : { comandoSobATrava: ambiente['EDUCA_ENCONTRO_SOB_A_TRAVA'] }),
+  }
+}
+
+const SAIDA_DE_PRAZO_DO_FLOCK = 99
+const ENCONTRO_EM_CURSO = `encontro em curso: outro comando de linhas está com o quadro (a trava ${CAMINHO_DA_TRAVA}). Tente de novo quando ele terminar.`
+
+const SEM_FLOCK = 'o flock não rodou nesta máquina, e sem ele o quadro não tem trava: instale o util-linux'
+
+interface Trava {
+  soltar: () => Promise<void>
+}
+
+/**
+ * A trava é um `flock` que fica de pé segurando o arquivo enquanto o `cat` espera a entrada padrão: soltar é fechá-la, e
+ * morrer (até com SIGKILL) fecha também, o que solta a trava sem ninguém limpar nada. O `flock` do kernel é o que o Node
+ * não tem. O arquivo da trava mora no `.processo/` da raiz do andar, que o git ignora.
+ */
+async function pegarTrava(raiz: string, prazoMs: number): Promise<Trava | 'prazo' | 'falhou'> {
+  const caminho = join(raiz, CAMINHO_DA_TRAVA)
+  mkdirSync(dirname(caminho), { recursive: true })
+  const filho = spawn('flock', ['-w', String(prazoMs / 1000), '-E', String(SAIDA_DE_PRAZO_DO_FLOCK), caminho, 'sh', '-c', 'echo travado; cat >/dev/null'], {
+    // O `flock` lê o prazo com a vírgula do idioma da máquina: "0.3" é inválido em português. Em C é sempre o ponto.
+    env: { ...process.env, LC_ALL: 'C' },
+    stdio: ['pipe', 'pipe', 'ignore'],
+  })
+  filho.stdin.on('error', () => undefined)
+  const acabou = new Promise<number | null>((fim) => filho.once('close', fim))
+  return new Promise((resolver) => {
+    filho.once('error', () => resolver('falhou'))
+    filho.stdout.once('data', () => resolver({ soltar: async () => { filho.stdin.end(); await acabou } }))
+    void acabou.then((codigo) => resolver(codigo === SAIDA_DE_PRAZO_DO_FLOCK ? 'prazo' : 'falhou'))
+  })
+}
+
+/** O texto de quem não conseguiu a trava, que é o mesmo em toda recusa. */
+const semATrava = (trava: 'prazo' | 'falhou'): Resultado => recusa(trava === 'prazo' ? ENCONTRO_EM_CURSO : SEM_FLOCK)
+
+/** Roda `corpo` com a trava do quadro na mão; quem não a consegue no prazo recebe a recusa "encontro em curso". */
+async function sobATrava<T>(raiz: string, opcoes: Opcoes, corpo: () => T | Promise<T>): Promise<T | Resultado> {
+  const trava = await pegarTrava(raiz, opcoes.prazoDaTravaMs ?? PRAZO_DA_TRAVA_MS)
+  if (typeof trava === 'string') return semATrava(trava)
+  try {
+    return await corpo()
+  } finally {
+    await trava.soltar()
+  }
+}
+
+/** Um comando de shell no checkout; o que ele escreve no erro sai no erro deste comando. `true` quando sai 0. */
+function rodarNoCheckout(checkout: string, comando: string): Promise<boolean> {
+  const filho = spawn('sh', ['-c', comando], { cwd: checkout, stdio: ['ignore', 'ignore', 'inherit'] })
+  return new Promise((resolver) => {
+    filho.once('error', () => resolver(false))
+    filho.once('close', (codigo) => resolver(codigo === 0))
+  })
+}
+
+interface Abertura {
+  spec: string
+  checkout: string
+  branch: string
+  /** A marca desta execução do `abrir` na linha do quadro. */
+  abertura: string
+}
+
+/** O começo do `abrir`, sob a trava: confere, prepara o checkout e grava a linha como em uso, com a base. */
+function prepararAbertura(raiz: string, numero: number, checkoutDado: string, opcoes: Opcoes): Resultado | Abertura {
   const contexto = contextoDe(raiz)
   if (typeof contexto === 'string') return recusa(contexto)
   const { spec, quadro } = contexto
@@ -266,7 +385,8 @@ export function abrir(raiz: string, numero: number, checkoutDado: string, opcoes
   if (branchDe(checkout) !== branch) return recusa(`${checkout} está na branch "${branchDe(checkout)}", e a linha ${String(numero)} é a ${branch}`)
   const comum = (pasta: string) => tenta(pasta, 'rev-parse', '--path-format=absolute', '--git-common-dir').saida
   if (comum(checkout) !== comum(raiz)) return recusa(`${checkout} não é um checkout deste repositório`)
-  if (quadro.linhas.some((linha) => linha.numero === numero && ocupada(linha))) return recusa(`a linha ${String(numero)} está no meio de um trabalho`)
+  const emUso = quadro.linhas.find((linha) => linha.numero === numero && ocupada(linha))
+  if (emUso) return recusa(recusaPorUso(emUso, 'o encontro dela vem antes'))
   if (sujeira(checkout).length > 0) return recusa(`${checkout} tem alteração na árvore:\n${sujeira(checkout).join('\n')}`)
   const ponta = tenta(checkout, 'merge', '--ff-only', spec)
   if (!ponta.ok) return recusa(`a branch ${branch} tem commit que a ${spec} não tem:\n${ponta.saida}`)
@@ -274,18 +394,48 @@ export function abrir(raiz: string, numero: number, checkoutDado: string, opcoes
   mkdirSync(join(checkout, '.processo'), { recursive: true })
   for (const copiado of ['portao.json', 'conteudo.json', 'linhas.json']) rmSync(join(checkout, '.processo', copiado), { force: true })
   writeFileSync(join(checkout, '.processo', 'ambiente'), `${String(numero)}\n`)
-  if (opcoes.instalar ?? true) execFileSync('npm', ['ci'], { cwd: checkout, stdio: ['ignore', 'ignore', 'inherit'] })
-  gravarQuadro(raiz, { spec, linhas: [...quadro.linhas.filter((linha) => linha.numero !== numero), { numero, checkout, tarefa: null, correcao: null, desde: null }] })
-  return { codigo: 0, texto: `Linha ${String(numero)} aberta em ${checkout}, na ${branch}, com o ambiente de teste ${String(numero)}. Terminais: ${terminaisDa(numero)}.` }
+  const desde = (opcoes.agora ?? new Date()).toISOString()
+  const abertura = randomUUID()
+  gravarLinha(raiz, spec, numero, () => ({ numero, checkout, tarefa: null, correcao: null, desde, base: spec, abrindo: true, abertura }))
+  return { spec, checkout, branch, abertura }
 }
 
-export function partida(raiz: string, numero: number, alvo: string, opcoes: Opcoes = {}): Resultado {
+/** O fim do `abrir`, com a trava de novo: a linha fica livre, ou sai do quadro se o `npm ci` falhou. */
+async function concluirAbertura(raiz: string, numero: number, aberta: Abertura, instalou: boolean, opcoes: Opcoes): Promise<Resultado> {
+  const trava = await pegarTrava(raiz, opcoes.prazoDaTravaMs ?? PRAZO_DA_TRAVA_MS)
+  if (typeof trava === 'string') {
+    const motivo = trava === 'prazo' ? ENCONTRO_EM_CURSO : SEM_FLOCK
+    return recusa([`${instalou ? '' : 'o npm ci falhou, e '}a linha ${String(numero)} ficou em uso: ${motivo}`, `Rode \`node tools/processo/linhas.ts abandonar ${String(numero)}\` e abra a linha de novo.`].join('\n'))
+  }
+  try {
+    let aindaAbrindo = true
+    gravarLinha(raiz, aberta.spec, numero, (atual) => {
+      aindaAbrindo = atual?.abertura === aberta.abertura
+      if (!aindaAbrindo) return atual ?? null
+      return instalou && atual !== undefined ? { ...atual, abrindo: false, desde: null } : null
+    })
+    if (!aindaAbrindo) return recusa(`a linha ${String(numero)} foi abandonada enquanto o npm ci rodava. Abra de novo.`)
+  } finally {
+    await trava.soltar()
+  }
+  if (!instalou) return recusa(`o npm ci falhou em ${aberta.checkout}; a linha ${String(numero)} saiu do quadro. Abra de novo.`)
+  return { codigo: 0, texto: `Linha ${String(numero)} aberta em ${aberta.checkout}, na ${aberta.branch}, com o ambiente de teste ${String(numero)}. Terminais: ${terminaisDa(numero)}.` }
+}
+
+export async function abrir(raiz: string, numero: number, checkoutDado: string, opcoes: Opcoes = {}): Promise<Resultado> {
+  const aberta = await sobATrava(raiz, opcoes, () => prepararAbertura(raiz, numero, checkoutDado, opcoes))
+  if ('codigo' in aberta) return aberta
+  const instalou = (opcoes.instalar ?? true) ? await rodarNoCheckout(aberta.checkout, opcoes.comandoDeInstalacao ?? 'npm ci') : true
+  return concluirAbertura(raiz, numero, aberta, instalou, opcoes)
+}
+
+function partidaSobATrava(raiz: string, numero: number, alvo: string, opcoes: Opcoes): Resultado {
   const contexto = contextoDe(raiz)
   if (typeof contexto === 'string') return recusa(contexto)
   const { spec, funcionalidade, quadro } = contexto
   const linha = quadro.linhas.find((candidata) => candidata.numero === numero)
   if (!linha) return recusa(`a linha ${String(numero)} não está aberta (linhas.ts abrir)`)
-  if (ocupada(linha)) return recusa(`a linha ${String(numero)} está com a ${oQueFaz(linha)}; o encontro dela vem antes`)
+  if (ocupada(linha)) return recusa(recusaPorUso(linha, 'o encontro dela vem antes'))
   const correcao = /^correcao:([a-z0-9-]+)$/.exec(alvo)?.[1] ?? null
   const tarefa = correcao === null && /^\d+(\.0)?$/.test(alvo) ? Number.parseInt(alvo, 10) : null
   if (correcao === null && tarefa === null) return recusa(`"${alvo}" não é tarefa (5 ou 5.0) nem correção (correcao:<slug>)`)
@@ -304,9 +454,37 @@ export function partida(raiz: string, numero: number, alvo: string, opcoes: Opco
   const ponta = tenta(linha.checkout, 'merge', '--ff-only', spec)
   if (!ponta.ok) return recusa(`a linha ${String(numero)} tem commit que a ${spec} não tem: falta o encontro dela.\n${ponta.saida}`)
   const desde = (opcoes.agora ?? new Date()).toISOString()
-  gravarQuadro(raiz, { spec, linhas: quadro.linhas.map((outra) => (outra.numero === numero ? { ...outra, tarefa, correcao, desde } : outra)) })
+  gravarLinha(raiz, spec, numero, (atual) => (atual === undefined ? null : { ...atual, tarefa, correcao, desde }))
   const oQue = tarefa !== null ? `tarefa ${String(tarefa)}.0 — ${titulo}\n  documento: tasks/prd-${funcionalidade}/${String(tarefa)}_task.md` : `correção ${correcao ?? ''}`
   return { codigo: 0, texto: `Linha ${String(numero)}: ${oQue}\n  checkout: ${linha.checkout}\n  terminais: ${terminaisDa(numero)}` }
+}
+
+export async function partida(raiz: string, numero: number, alvo: string, opcoes: Opcoes = {}): Promise<Resultado> {
+  return sobATrava(raiz, opcoes, () => partidaSobATrava(raiz, numero, alvo, opcoes))
+}
+
+/** Solta a linha: o que ela fazia deixa de ser dela. A branch e o checkout ficam como estão (RF6). */
+function abandonarSobATrava(raiz: string, numero: number): Resultado {
+  const contexto = contextoDe(raiz)
+  if (typeof contexto === 'string') return recusa(contexto)
+  const { spec, quadro } = contexto
+  const linha = quadro.linhas.find((candidata) => candidata.numero === numero)
+  if (!linha) return recusa(`a linha ${String(numero)} não está aberta (linhas.ts abrir)`)
+  if (!ocupada(linha)) return recusa(`a linha ${String(numero)} já está livre`)
+  const naAbertura = linha.abrindo === true
+  gravarLinha(raiz, spec, numero, (atual) => (atual === undefined || naAbertura ? null : { ...atual, tarefa: null, correcao: null, desde: null }))
+  if (naAbertura) return { codigo: 0, texto: `Linha ${String(numero)} tirada do quadro: a abertura dela não terminou. Abra de novo: linhas.ts abrir ${String(numero)} <checkout>.` }
+  return {
+    codigo: 0,
+    texto: [
+      `Linha ${String(numero)} solta: a ${oQueFaz(linha)} deixou de ser dela e volta a ser pendente.`,
+      `A branch ${branchDaLinha(spec, numero)} e o checkout ficam como estão: a próxima partida exige a árvore limpa e nenhum commit que a ${spec} não tenha.`,
+    ].join('\n'),
+  }
+}
+
+export async function abandonar(raiz: string, numero: number, opcoes: Opcoes = {}): Promise<Resultado> {
+  return sobATrava(raiz, opcoes, () => abandonarSobATrava(raiz, numero))
 }
 
 const MARCA_DE_CORRECAO = /\(correção [a-z0-9-]+\)/
@@ -370,13 +548,25 @@ export function conferirEntrega(checkout: string, base: string, tarefa: number |
 }
 
 /**
+ * Com o que o `conferir` compara: a base que o quadro gravou ao abrir as linhas (a branch da spec), e não sempre a
+ * `develop`. O andar de uma correção que nasceu da spec traz o quadro dela (o Maestri copia o que o git ignora), e é a
+ * spec que ele já tem a mais que a `develop`; o que nasceu da `develop` não tem quadro. No andar da própria spec, a base
+ * seria ela mesma, e o que se confere ali é o que a `develop` ainda não tem.
+ */
+function baseDoConferir(raiz: string, branch: string): string {
+  const quadro = lerQuadro(raiz)
+  if (quadro === null || quadro.spec === branch) return 'develop'
+  return quadro.linhas.find((linha) => linha.base !== undefined)?.base ?? quadro.spec
+}
+
+/**
  * A conferência de um checkout que não é linha: a correção avulsa, no andar dela, ou a correção feita na branch da spec.
  * O mesmo que o encontro confere, contra a branch do GitHub: os commits que a `develop` não tem, a árvore limpa e o push
  * feito.
  */
 export function conferir(raiz: string, opcoes: { emCurso?: boolean } = {}): Resultado {
   const branch = branchDe(raiz)
-  const entrega = conferirEntrega(raiz, 'develop', null, { naSpec: branch.startsWith(PREFIXO_DA_BRANCH_DE_SPEC) })
+  const entrega = conferirEntrega(raiz, baseDoConferir(raiz, branch), null, { naSpec: branch.startsWith(PREFIXO_DA_BRANCH_DE_SPEC) })
   if (entrega !== null) return recusa(entrega)
   const alterados = sujeira(raiz)
   if (alterados.length > 0 && !(opcoes.emCurso ?? false)) return recusa(`a árvore não está limpa: o commit não levou tudo.\n${alterados.join('\n')}`)
@@ -385,12 +575,12 @@ export function conferir(raiz: string, opcoes: { emCurso?: boolean } = {}): Resu
   return { codigo: 0, texto: `Conferido em ${branch}: marca e revisões em todo commit com código, ${alterados.length === 0 ? 'árvore limpa' : `árvore com ${String(alterados.length)} arquivo(s) da tarefa em curso`} e push feito.` }
 }
 
-export function encontro(raiz: string, numero: number, opcoes: Opcoes = {}): Resultado {
+async function encontroSobATrava(raiz: string, numero: number, opcoes: Opcoes): Promise<Resultado> {
   const contexto = contextoDe(raiz)
   if (typeof contexto === 'string') return recusa(contexto)
   const { spec, funcionalidade, quadro } = contexto
   const linha = quadro.linhas.find((candidata) => candidata.numero === numero)
-  if (!linha || !ocupada(linha)) return recusa(`a linha ${String(numero)} não tem trabalho em curso`)
+  if (!linha || !comTrabalho(linha)) return recusa(`a linha ${String(numero)} não tem trabalho em curso`)
   const { checkout } = linha
   const branch = branchDaLinha(spec, numero)
   if (branchDe(checkout) !== branch) return recusa(`${checkout} está na branch "${branchDe(checkout)}", e não na ${branch}`)
@@ -401,6 +591,9 @@ export function encontro(raiz: string, numero: number, opcoes: Opcoes = {}): Res
   // Documento a meio no andar da spec (o Arquiteto aplicando uma decisão) não impede o encontro; código, sim.
   const codigoNoAndar = sujeira(raiz).filter((item) => !soDocumento([item.slice(3)]))
   if (codigoNoAndar.length > 0) return recusa(`o andar da spec tem código alterado, e nele ninguém implementa:\n${codigoNoAndar.join('\n')}`)
+  if (opcoes.comandoSobATrava !== undefined && !(await rodarNoCheckout(checkout, opcoes.comandoSobATrava))) {
+    return recusa(`o comando sob a trava falhou na linha ${String(numero)}: nada mudou`)
+  }
   const commit = git(checkout, 'rev-parse', '--short', 'HEAD')
 
   const juncao = tenta(checkout, 'merge', '--no-edit', spec)
@@ -432,8 +625,7 @@ export function encontro(raiz: string, numero: number, opcoes: Opcoes = {}): Res
     git(raiz, 'commit', '-m', `Registra o estado de ${funcionalidade} depois da ${oQueFaz(linha)}`, '--', diario)
   }
   const enviado = (opcoes.push ?? true) ? tenta(raiz, 'push', 'origin', spec) : { ok: true, saida: '' }
-  const restante = { spec, linhas: quadro.linhas.map((outra) => (outra.numero === numero ? { ...outra, tarefa: null, correcao: null, desde: null } : outra)) }
-  gravarQuadro(raiz, restante)
+  gravarLinha(raiz, spec, numero, (atual) => (atual === undefined ? null : { ...atual, tarefa: null, correcao: null, desde: null }))
   return {
     codigo: enviado.ok ? 0 : 3,
     texto: [
@@ -445,7 +637,11 @@ export function encontro(raiz: string, numero: number, opcoes: Opcoes = {}): Res
   }
 }
 
-export function fechar(raiz: string, opcoes: Opcoes = {}): Resultado {
+export async function encontro(raiz: string, numero: number, opcoes: Opcoes = {}): Promise<Resultado> {
+  return sobATrava(raiz, opcoes, () => encontroSobATrava(raiz, numero, opcoes))
+}
+
+function fecharSobATrava(raiz: string, opcoes: Opcoes): Resultado {
   const contexto = contextoDe(raiz)
   if (typeof contexto === 'string') return recusa(contexto)
   const { spec, quadro } = contexto
@@ -460,6 +656,10 @@ export function fechar(raiz: string, opcoes: Opcoes = {}): Resultado {
   }
   rmSync(join(raiz, CAMINHO_DO_QUADRO), { force: true })
   return { codigo: 0, texto: linhas.join('\n') }
+}
+
+export async function fechar(raiz: string, opcoes: Opcoes = {}): Promise<Resultado> {
+  return sobATrava(raiz, opcoes, () => fecharSobATrava(raiz, opcoes))
 }
 
 const hora = (iso: string | null) => (iso === null ? '' : new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
@@ -493,24 +693,23 @@ export function quadro(raiz: string): Resultado {
   return { codigo: texto.startsWith('RECUSADO') ? 1 : 0, texto }
 }
 
-if (import.meta.filename === process.argv[1]) {
-  const raiz = process.cwd()
-  const [comando, primeiro = '', segundo = ''] = process.argv.slice(2)
+/** Os comandos que mudam o quadro rodam sob a trava, e por isso esperam; os outros respondem na hora. */
+async function executar(raiz: string, comando: string | undefined, primeiro: string, segundo: string): Promise<Resultado> {
+  const opcoes = opcoesDoAmbiente(process.env)
   const numero = Number(primeiro)
-  const resultado: Resultado =
-    comando === undefined
-      ? quadro(raiz)
-      : comando === 'abrir'
-        ? abrir(raiz, numero, segundo)
-        : comando === 'partida'
-          ? partida(raiz, numero, segundo)
-          : comando === 'encontro'
-            ? encontro(raiz, numero)
-            : comando === 'fechar'
-              ? fechar(raiz)
-              : comando === 'conferir'
-                ? conferir(raiz, { emCurso: primeiro === '--em-curso' })
-                : recusa(`comando desconhecido: ${comando}`)
+  if (comando === undefined) return quadro(raiz)
+  if (comando === 'abrir') return abrir(raiz, numero, segundo, opcoes)
+  if (comando === 'partida') return partida(raiz, numero, segundo, opcoes)
+  if (comando === 'abandonar') return abandonar(raiz, numero, opcoes)
+  if (comando === 'encontro') return encontro(raiz, numero, opcoes)
+  if (comando === 'fechar') return fechar(raiz, opcoes)
+  if (comando === 'conferir') return conferir(raiz, { emCurso: primeiro === '--em-curso' })
+  return recusa(`comando desconhecido: ${comando}`)
+}
+
+if (import.meta.filename === process.argv[1]) {
+  const [comando, primeiro = '', segundo = ''] = process.argv.slice(2)
+  const resultado = await executar(process.cwd(), comando, primeiro, segundo)
   process.stdout.write(`${resultado.texto}\n`)
   process.exitCode = resultado.codigo
 }
