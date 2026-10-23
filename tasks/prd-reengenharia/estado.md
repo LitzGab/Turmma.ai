@@ -49,6 +49,10 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     **revalidação** (rodada 3, `Validador` reiniciado; correção depois da validação). Depois `linhas.ts fechar`, `TODO.md`,
     commit de fechamento (o `validacao.md` da rodada 2 entra nele), pouso e push (recorte), `floor delete` das L1–L3, retro.
     Sugestão para a retro: o Validador não lê a esteira; a de `83cc03a` já estava vermelha antes da rodada 2
+  - **Linha 2 encontrada** (23/10): `shared-sem-entrada-na-integracao` em `2e2a2e2` (test-engineer 2ª, infra-guardian 1ª,
+    revisor-geral 2ª, APROVADO), encontro em `dcd189f`, esteira `39903026138` rodando. **Espero só a linha 1** (knip, 1ª tentativa).
+    A esteira de `d6eb2f0` (`39896375281`, só docs) teve também `e2e/casca.spec.ts:67` [celular] em 5117 ms (limite 5 s),
+    que não caiu em `83cc03a` com o mesmo código: tratado como intermitente; se cair de novo em `dcd189f` ou depois, é correção
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
