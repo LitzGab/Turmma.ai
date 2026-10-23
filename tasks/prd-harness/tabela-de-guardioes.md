@@ -17,7 +17,7 @@ Valem para todo arquivo que o hook classifica como código na sessão (as duas t
 configurações do §5e):
 - prefixo de caminho, sem glob; vale a entrada mais longa
 - nunca cai em exceção: arquivo `*.repository.ts`, `*.controller.ts`, `*.gateway.ts` ou `*.service.ts`, e arquivo que
-  contém `@SemEscopo(`; esses pedem os quatro onde estiverem
+  contém `@SemEscopo(` no HEAD ou no índice; esses pedem os quatro onde estiverem, linhas do RF16 inclusive
 - **a citação soma o guardião**: o arquivo cujo texto, no HEAD **ou** no índice, cita "regra 10" soma T; "regra 20" ou
   "LGPD" soma P; "regra 70" soma C; "regra 80" soma I. Sem diferença de maiúscula. Ler o HEAD impede que tirar a
   garantia junto com o comentário tire o guardião
@@ -59,13 +59,15 @@ Além de `revisor-geral` e `test-engineer`:
 `tools/processo/harness/guardioes.test.ts`, com os literais escritos no teste, não lidos da constante:
 - todo arquivo versionado em `apps/**`, `packages/**`, `e2e/**`, `tools/guardas/**` e `tools/testes/**` sai com os
   quatro, salvo os que casam uma exceção; cada exceção casa ao menos um arquivo (exceção morta é vermelha)
-- um caso por exceção e por linha da tabela do RF16, com um arquivo dela: sem o guardião da linha, recusado; com ele,
+- um caso por exceção e um `it.each` por caminho de cada linha da tabela do RF16, com o conjunto exato de guardiões: sem o guardião da linha, recusado; com ele,
   aceito; `tools/processo/linhas.ts` passa sem guardião com veto
 - `it.each` dos quatro sufixos dentro de `componentes/ui/` e de `galeria/`: os quatro
-- um arquivo de `componentes/ui/` com `@SemEscopo(` no índice: os quatro; o mesmo sem o decorador: C I
+- um arquivo de `componentes/ui/` com `@SemEscopo(` no índice: os quatro; com ele só no HEAD: os quatro; sem ele nos
+  dois: C I
 - citação, um caso por termo: `galeria/x.tsx` com "regra 70" segue P C, com "regra 10" soma T, com "LGPD" segue P C;
-  `vite.config.ts` com "regra 20" soma P, com "regra 80" segue I; `tema.ts` com "regra 70" soma C e com "Regra 80" soma
-  I; sem citação, não soma; citava "regra 20" no HEAD e não cita no índice: soma P
+  `vite.config.ts` com "regra 20" soma P, com "regra 80" segue I; `tema.ts` com "regra 70" soma C, com "LGPD" soma P e com
+  "Regra 80" soma I; sem citação, não soma; citava "regra 20" no HEAD e não cita no índice: soma P
+- `tools/vitrine/x.service.ts` sai com os quatro; `tools/processo/x.ts` citando "regra 20" sai com P
 - `componentes/ui/ia/AvisoFila.tsx` sai com P C I; `componentes/ui/sobrepostos/DialogoDeConfirmacao.tsx` sai com C I
 - `packages/nucleo/src/titular/leitura-do-titular.ts`, `apps/api/test/estrutura-isolamento.int.test.ts`,
   `e2e/aluno-tutor.spec.ts` e uma pasta nova inventada saem com os quatro

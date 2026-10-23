@@ -144,6 +144,36 @@ rodada 2 contra o texto. Nenhum bloqueante muda desenho ou critério do PRD.
 - `cenarios.md`: os três termos do prazo da mutação, as corridas do quadro com arquivo-sinal, os operadores do RF5, os
   casos da terceira camada, o `prepare`, o RF17 fora de `src`, a versão gravada dos guardiões e a `status`
 
+## Rodada 4 — 23/10/2026
+
+**Veredito: REPROVADA**
+
+| Revisor | Veredito | Bloqueantes |
+|---|---|---|
+| `tenancy-guardian` | APROVADO | — |
+| `privacy-guardian` | APROVADO | — |
+| `conformidade-reviewer` | APROVADO | — |
+| `infra-guardian` | REPROVADO | 1: no prazo do encontro, a verificação não morre por grupo de processo antes de a trava ser solta |
+| `test-engineer` | REPROVADO | 3: o piso de 60 s e o prazo declarado no caso sem prova; um arquivo por linha do RF16 não prova linha de vários caminhos nem de vários guardiões; `@SemEscopo(` no HEAD, citação no resto de `tools/` e o `abrir` sem a trava sem caso |
+| `revisor-geral` | REPROVADO | 1: o passo 6 manda ler outros passos em toda tarefa, e o orçamento do RF26 não conta isso |
+
+### Correções feitas, sem mudar desenho
+- §5(f): a verificação do encontro roda em grupo de processo próprio, morto como o da mutação antes de soltar a trava;
+  quem espera a trava tem prazo de 7 min; o `abrir` solta a trava antes do `npm ci`
+- §5(a): o `PreToolUse` lê o arquivo do `-F`; o Orquestrador nomeado no limite da linha `Fora do processo:`
+- §5(b): o texto alinhado com a tabela (`tools/guardas/` e `tools/testes/` no padrão)
+- `texto.md`: o `passos/6-tarefa.md` traz o comando da limpeza e a abertura de linha, sem mandar ler outro passo
+- tabela e cenários: `testTimeout` injetado abaixo do piso; prazo declarado no caso; `it.each` por caminho de cada linha
+  do RF16 com o conjunto exato; `@SemEscopo(` só no HEAD; citação em `tools/processo/`; "LGPD" em `tema.ts`;
+  `tools/vitrine/x.service.ts`; o `abrir` com `npm ci` preso; o neto do encontro morto; `Fora do processo:` no `-F`
+
+### Recomendações (para as tarefas)
+- Soma por número de decisão (D45, D47, D55 a D59, D64) e "Sem mutação" com o `conformidade-reviewer` em arquivo que
+  pede C (conformidade); a tarefa que edita regra ou papel de um guardião o marca; o `/validar` lista os commits
+  `Fora do processo:` com código (conformidade)
+- `.dockerignore`, `.nvmrc` e `package-lock.json` fora do §5(e) de propósito: entrar muda a lista fechada do RF16 e da
+  D53, e fica para a retro (infra, revisor-geral)
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -170,3 +200,9 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-23 13:32:35 | 2026-10-23 13:35:46 | `infra-guardian` | 3 | REPROVADO | a725462c0080e1c95 |
 | 2026-10-23 13:32:23 | 2026-10-23 13:35:59 | `privacy-guardian` | 3 | REPROVADO | ab62b6cefba59496a |
 | 2026-10-23 13:32:50 | 2026-10-23 13:37:33 | `revisor-geral` | 3 | REPROVADO | a2a3c0d4f547f18d7 |
+| 2026-10-23 13:40:32 | 2026-10-23 13:41:24 | `conformidade-reviewer` | 4 | APROVADO | aa90d7e2f49f52bb9 |
+| 2026-10-23 13:40:27 | 2026-10-23 13:41:27 | `privacy-guardian` | 4 | APROVADO | ab9e5608dc8fd1edd |
+| 2026-10-23 13:40:23 | 2026-10-23 13:41:35 | `tenancy-guardian` | 4 | APROVADO | aca25c3d4796b71fc |
+| 2026-10-23 13:40:37 | 2026-10-23 13:41:54 | `infra-guardian` | 4 | REPROVADO | af0676cf2d3da0ba3 |
+| 2026-10-23 13:40:49 | 2026-10-23 13:43:05 | `revisor-geral` | 4 | REPROVADO | afc3f38aefa6ddef1 |
+| 2026-10-23 13:40:43 | 2026-10-23 13:43:20 | `test-engineer` | 4 | REPROVADO | a85fd6816e1aa7503 |

@@ -1353,3 +1353,303 @@ Arquivos lidos:
 - /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/achados/revisao-spec.md
 - /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/docs/decisoes.md
 [… 3 linhas cortadas]
+
+## conformidade-reviewer · 4ª rodada · APROVADO · 2026-10-23 13:41:24 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: APROVADO
+
+Caminhos de escrita em Nota: a X7 não cria nenhum. A aprovação do lote é o que hoje faz as vezes de Nota, e os três caminhos que a gravam mudam de cobertura assim:
+- `correcao.repository.ts` pede os quatro guardiões, pelo padrão e pelo sufixo.
+- O seed `e2e/__fixtures__/governanca.ts` pede os quatro.
+- `tools/vitrine/escola.ts` pede P C.
+
+Todos com autor humano? sim. A trava `confirmada_por` e o gatilho do banco não são tocados pela spec.
+
+Decisão autônoma sobre aluno: ausente. O desenho não põe IA no caminho do aluno (`techspec.md` §3 e §7b).
+
+Aprovação registrada: ok. `componentes/ui/` pede C I e `ui/ia/` pede P C I (`tabela-de-guardioes.md:30-31`). `estilos.css` agora pede C (`:32`), e `galeria/` pede P C (`:34`).
+
+Supervisão do tutor: ok. A faixa do Tutor, a onça e o contador ficam em `componentes/ui/`, que pede C. `e2e/**` pede os quatro.
+
+Autonomia declarada e visível: sim. `packages/shared/src/time/` e as áreas da web caem no padrão dos quatro.
+
+**O bloqueante da rodada 3 foi corrigido.** O pedido era um caso para "regra 70" e "regra 10" na soma por citação. O que mudou (`tabela-de-guardioes.md:21-23` e `:66-68`, com `cenarios.md:79-80`):
+- A regra da citação vale agora para todo arquivo classificado como código. Ela lê o HEAD e o índice, e não diferencia maiúscula.
+- `tema.ts` com "regra 70" soma C. Como `tema.ts` não pede nenhum guardião, uma mutação que tire "regra 70" do mapa fica vermelha. O caso `galeria/x.tsx` com "regra 70" não serve de prova, porque a galeria já tem C; o de `tema.ts` é o que prova.
+- `galeria/x.tsx` com "regra 10" soma T.
+- O lado que passa existe: sem citação, não soma.
+- Citava no HEAD e não cita no índice: soma.
+- O RF15 exige bloco de mutação para cada regra de casamento.
+
+**As recomendações da rodada 3 que entraram:**
+- galeria com P C e `estilos.css` com C
+- as entradas do hook e os aplicadores da tabela com os quatro (`tabela-de-guardioes.md:45`), inclusive `harness/guardioes.test.ts`
+- o RF21 compara "O que verificar" e o formato dos guardiões com a versão gravada de hoje (`cenarios.md:104`, `texto.md:60-61`)
+
+**O resto do diff, conferido contra a regra 70:**
+- `Fora do processo:` passa a ser recusado em qualquer sessão do Claude Code (`techspec.md:52`).
+- O limite da esteira, que não sabe quem escreveu a linha, está declarado (`techspec.md:74-76`) e tem caso (`cenarios.md:72`).
+- Nada nesse trecho afrouxa veto nem cobrança da regra 70.
+- A regra 70 continua sem `paths:` e com os itens no texto (`texto.md:27-28`).
+
+Bloqueantes: nenhum
+
+Recomendações:
+- **Texto do §5(b).** `techspec.md:79` diz "Código em `apps/`, `packages/` e `e2e/` pede os quatro" e omite `tools/guardas/` e `tools/testes/`, que estão na tabela (`tabela-de-guardioes.md:9-10`). A tabela é a fonte, mas convém alinhar o texto.
+- **"LGPD" sem caso que prove a soma.** O único caso é `galeria/x.tsx`, que já pede P (`tabela-de-guardioes.md:66`), então uma mutação que tire "LGPD" do mapa passa. Bastaria `tema.ts` com "LGPD" somando P. Isso é da regra 20; fica para o `privacy-guardian`.
+- **Soma por número de decisão** (repito da rodada 3): "D45", "D47", "D55" a "D59" e "D64" poderiam somar C, como "regra 70" soma.
+- **RF17 sem mutação** (repito): nos arquivos que pedem C, a linha "Sem mutação" deveria precisar também da concordância do `conformidade-reviewer`.
+- **Tarefa que edita guardião ou regra marca o guardião** (repito): a tarefa que mexe em `.claude/rules/70-conformidade-cne.md` ou em `.claude/agents/conformidade-reviewer.md` deve marcar o `conformidade-reviewer`, porque documento não chama guardião pelo caminho.
+- **Commits `Fora do processo:`** (repito): o `/validar` poderia listar os que levam código de produto antes do pouso.
+
+Arquivos citados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/texto.md
+
+## privacy-guardian · 4ª rodada · APROVADO · 2026-10-23 13:41:27 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: APROVADO
+
+Esta é a rodada 4 da revisão da spec. Conferi o diff `fc40b52..29e5104` em `tasks/prd-harness` e o bloqueante da minha rodada 3. Não reauditei o que não mudou.
+
+**O bloqueante da rodada 3 foi corrigido nos três pontos:**
+- **`infra/` pede I P.** A linha está em `tabela-de-guardioes.md:37`, na seção do código. Como `infra/` está em `PASTAS_DE_CODIGO` (`tools/processo/revisoes.ts:41`), a regra vale em qualquer sessão, não só em sessão de papel. Isso cobre `infra/Caddyfile:9`, que impede a borda de gravar requisição no log (regra 20, item 9), e os quatro alertas dos prazos do titular em `infra/grafana/alertas/`.
+- **`tools/ci/borda.test.ts` pede I P** (`tabela-de-guardioes.md:51`).
+- **Os casos de teste estão nos dois lados.** Em `cenarios.md:89-90`, `infra/Caddyfile` e `tools/ci/borda.test.ts` sem `privacy-guardian` são recusados, e `infra/k6/x.js` com `infra-guardian` e `privacy-guardian` passa. Além disso, `tabela-de-guardioes.md:62` pede para toda exceção um caso que recusa sem o guardião e aceita com ele.
+
+**As recomendações da rodada 3 também foram atendidas:**
+- **A citação lê o texto no HEAD e no índice.** Está em `tabela-de-guardioes.md:21-23`, e o caso "citava regra 20 no HEAD e não cita no índice: soma P" está em `:68`. A regra também passa a valer para as linhas do RF16 (`:16-17`), e "LGPD" soma P como "regra 20".
+- **`componentes/ui/ia/` pede P C I** (`:31`). Como caso de teste, `AvisoFila.tsx` sai com P C I (`:69`).
+- **`.github/` pede I P e `playwright.config.ts` pede P** (`:52-53`).
+- **`tools/ia/` pede P C** (`:48`).
+
+**O resto do diff não abre furo de dado pessoal:**
+- **`.processo/limpeza.json`** continua só com `{pedida, feita}` (§3).
+- **`texto.md`** mantém fixa a lista "O que verificar" e o formato da resposta dos guardiões com veto.
+- **A regra 20** continua carregando sempre, e os itens dela não saem do texto.
+- **A linha `Fora do processo:`** carrega só um motivo, sem dado de pessoa.
+
+```
+VEREDITO: APROVADO
+Campos pessoais tocados: nenhum (sem tabela, rota nem IA; fora do git só .processo/limpeza.json com {pedida, feita})
+Fora da tabela de dados do docs/lgpd.md: nada
+Autorização por objeto: não se aplica (sem rota); o que a cobra é a tabela do RF15/RF16, que agora pede P em todo o código de produto, em infra/, em tools/guardas/, em borda.test.ts, em .github/, em playwright.config.ts, em tools/ia/ e em tools/vitrine/
+Logs: limpos no desenho; o log do hook leva caminho e nome de revisor, e o UserPromptSubmit não grava o texto
+Auditoria: não se aplica (nenhuma ação auditável nasce na X7)
+Envio externo: nenhum novo; o --censo baixa só o reporter JSON da própria esteira, sem trace nem anexo, por 7 dias
+Seed/fixture: sintético; e2e/__fixtures__ e apps/web/src/__fixtures__ pedem os quatro guardiões, galeria/ e tools/vitrine/ pedem P C
+Bloqueantes: nenhum
+Recomendações:
+- techspec.md, §5(b) (linha que começa em "Código em apps/, packages/ e e2e/"): o diff tirou tools/guardas/ dessa lista, mas tabela-de-guardioes.md:9-10 mantém tools/guardas/** e tools/testes/** no padrão dos quatro. Hoje quem decide é a tabela, e o caso de cenarios.md:88 (tools/guardas/index.mjs sem privacy-guardian: recusado) prova isso. Mesmo assim, alinhar o texto, para quem implementa pelo §5(b) não deixar as guardas da regra 20 fora do padrão.
+- cenarios.md:89-90: infra/Caddyfile aparece só na seção do RF16 ("em sessão de papel"), mas infra/ está em PASTAS_DE_CODIGO e na tabela do código. Pôr o caso também na lista do RF15 (tabela-de-guardioes.md:70-71), para não parecer que a regra só vale com papel.
+- Mantida das rodadas 1 a 3: o Joaquim confirmar que .claude/rules/20-lgpd-menores.md, .claude/agents/privacy-guardian.md e docs/lgpd.md continuam mudando como documento, sem a minha rodada.
+```
+
+**Pergunta de fechamento:** a X7 não toca o caminho do titular. `packages/nucleo/src/titular/` e o resto do código de produto continuam pedindo os quatro guardiões, e o teste da tabela prova isso com `titular/leitura-do-titular.ts` (`tabela-de-guardioes.md:70`). O pedido da secretaria continua respondido pelo código que já existe, e a X7 não abre caminho para mudar esse código sem a minha rodada.
+
+Arquivos lidos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/texto.md (diff)
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/achados/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/revisoes.ts (linha 41)
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/infra/Caddyfile
+
+## tenancy-guardian · 4ª rodada · APROVADO · 2026-10-23 13:41:35 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: APROVADO
+
+Tabelas verificadas: a X7 não cria nenhuma tabela (Tech Spec §3 diz "Nenhuma tabela"). Na rodada 4 olhei o diff `fc40b52..29e5104`. As exceções em `tabela-de-guardioes.md:26-37` estão iguais às da rodada 3, que eu já tinha conferido contra o código. A seção RF16 (`:45`) agora dá os quatro guardiões aos aplicadores e às entradas do hook: `guardioes-por-caminho.ts`, `portao.ts`, `caducidade.ts`, `documento-de-revisao.ts`, `revisoes.ts`, `hook-revisoes.ts`, `comando-git.ts`, `hook-git.ts`, `git-hooks/`, `harness/guardioes.test.ts`, `conferir-entregas.ts` e `.claude/settings*.json`. Isso fecha a recomendação da rodada 3.
+
+Queries verificadas: a spec não cria nenhuma query nem rota (§4, §6). Conferi as três regras de casamento da tabela (`tabela-de-guardioes.md:19-23`) contra as linhas do teste (`:64-68`). Para cada uma, removi a regra mentalmente e vi qual caso quebra:
+- **Os quatro sufixos que nunca caem em exceção:** se a regra sair, o `it.each` dentro de `componentes/ui/` (que daria C I) e de `galeria/` (que daria P C) fica vermelho (`:64`).
+- **`@SemEscopo(`:** se o gatilho sair, o caso positivo em `componentes/ui/` fica vermelho. O caso negativo, sem o decorador e com resultado C I, impede um "sempre os quatro" trivial (`:65`).
+- **"regra 10" soma T:** se a regra sair ou for ligada ao guardião errado, `galeria/x.tsx` fica vermelho, porque a linha de `galeria/` não tem T (`:66`).
+- **"regra 70" soma C:** `tema.ts` prova, porque a linha dele não tem guardião nenhum.
+- **Leitura do HEAD:** o caso "citava no HEAD e não cita no índice" prova.
+- **Maiúsculas e minúsculas:** o caso `"Regra 80"` prova.
+
+`cenarios.md:80` exige um bloco de mutação por regra de casamento.
+
+Teste de isolamento: não se aplica, porque a spec não cria módulo de produto. O teste da tabela que cobra o `tenancy-guardian` está presente e é efetivo.
+
+Bloqueantes: nenhum. A correção exigida na rodada 3 foi feita (`tabela-de-guardioes.md:64-68`, `cenarios.md:79-82`).
+
+Recomendações:
+- `techspec.md:79`: o diff tirou `tools/guardas/` da frase do padrão, que agora diz só "apps/, packages/ e e2e/". `tools/testes/` também não está nela. A tabela (`tabela-de-guardioes.md:9-10`) e o teste (`:60`) continuam garantindo os quatro, então não bloqueia. Mas a Tech Spec diverge do anexo, e quem implementar lendo só a §5(b) pode cair em "o resto de `tools/`", que hoje dá "nenhum" para as guardas de tenant (`regras-tenant.mjs`, `escopo-dos-repositories.ts`). Alinhar a frase.
+- `cenarios.md:88`: `tools/guardas/index.mjs` aparece entre as linhas da tabela do RF16, mas está no padrão do código. Tirar dali ou dizer que o caso é do padrão.
+- `tabela-de-guardioes.md:66`: o termo "LGPD" só tem caso em `galeria/`, que já tem P. Com isso, tirar "LGPD" do casamento deixa a suíte verde. É matéria do `privacy-guardian`: trocar por um arquivo sem P, como `tema.ts` com "LGPD" somando P.
+- `tabela-de-guardioes.md:19-20`: dizer se o `@SemEscopo(` é lido no HEAD e no índice, como a citação. Também falta um caso de `@SemEscopo(` ou de sufixo numa linha do RF16, por exemplo `tools/vitrine/x.service.ts`, pedindo os quatro.
+
+Arquivos auditados:
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/achados/revisao-spec.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/revisoes.ts`
+
+## infra-guardian · 4ª rodada · REPROVADO · 2026-10-23 13:41:54 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+Caminho quente tocado: nenhum no produto. A spec mexe só no processo. A tabela dos RF15 e RF16 decide quem audita login, tutor, sala, prova, fila, IA e migration.
+Rate limit: não se aplica, porque a spec não cria rota.
+Fila e prioridade: ok. `tools/ci/` passou a pedir I (`tabela-de-guardioes.md:50`), e `tools/testes/**` entrou no padrão dos quatro (`:10`, `:60`).
+Concorrência: corrida em `tasks/prd-harness/techspec.md:117`, quando o encontro estoura o prazo (bloqueante 1). O "busca, verifica, grava" do quadro está resolvido em `techspec.md:115`.
+Índice e paginação: ok na cobertura. `componentes/ui/` pede C I, então a `Tabela.tsx` recebe o I.
+Degradação de IA: não se aplica à spec. `ui/ia/` pede P C I, e o caso do `AvisoFila.tsx` está em `tabela-de-guardioes.md:69`.
+Migration: não se aplica.
+Métrica e alerta: ok.
+
+Correções da rodada 3:
+
+| Rodada 3 | Situação |
+|---|---|
+| 1. `componentes/ui/` e a soma pela regra 80 | Feita. C I em `tabela-de-guardioes.md:30`, P C I em `:31`, e a citação de "regra 80" soma I em `:22`, lida no HEAD e no índice. Os casos do `AvisoFila.tsx` e do `DialogoDeConfirmacao.tsx` estão em `:69`, e o caso de "Regra 80" em maiúscula está em `:67` |
+| 2. `tools/ci/` e `tools/testes/` | Feita. `tools/ci/` pede I e `tools/testes/` cai no padrão. O teste da tabela tem um caso por linha (`:63`) e o RF16 tem os dois lados (`cenarios.md`, RF16) |
+| 3. Trava do quadro | Feita. Os quatro comandos pegam o mesmo `flock` na raiz do andar, relêem o quadro e gravam só a própria linha (`techspec.md:115`). Os casos de `partida 2` e de `abandonar 3` durante o encontro estão em `cenarios.md:15` e `:18`, com arquivo-sinal no lugar de `sleep` |
+| Recomendação da §7c (de onde sai o prazo) | Feita (`techspec.md:149`) |
+
+Bloqueantes:
+
+1. **`techspec.md:117` e `cenarios.md:15`: o prazo do encontro não diz o que acontece com a verificação que estourou.**
+   - O que a spec diz: o encontro tem prazo de 3 min, ou 6 com `npm ci`. Estourar é tratado como vermelho: a linha volta ao commit de antes do merge e o `flock` é solto.
+   - O que falta: a spec não manda matar a verificação. Hoje o `encontro` chama processos com `execFileSync` (`tools/processo/linhas.ts:18`, `:277`). O `timeout` do `execFileSync` mata só o filho direto, com SIGTERM. Netos do `npm ci`, do `tsc` e do `eslint` continuam rodando no checkout da linha.
+   - Como a corrida acontece:
+     1. O `npm ci` trava por rede.
+     2. O encontro estoura o prazo, a linha volta ao commit de antes e a trava é solta.
+     3. O Implementador refaz o merge, e o encontro seguinte da mesma linha roda outro `npm ci` no mesmo `node_modules`, junto com o órfão.
+     4. Resultado: instalação corrompida e lint vermelho que não é da tarefa. É o caso de "job repetido" do item 6. A §7c já resolve exatamente isso para a mutação (`techspec.md:149`), mas o encontro ficou de fora.
+   - **Correção exigida:**
+     - Na §5(f), a verificação do encontro roda em grupo de processo próprio. No prazo, SIGTERM no grupo e, 5 s depois, SIGKILL. A linha só volta ao commit de antes, e a trava só é solta, depois de o grupo morrer.
+     - Caso novo no RF3 de `cenarios.md`: o comando injetado abre um neto e o prazo estoura. O teste confere pelo pid que o neto morreu antes de o `flock` ser solto.
+
+Recomendações:
+- `techspec.md:115`: escrever quanto vale o prazo de quem espera a trava. Também deixar dito que o `abrir` segura a trava durante o próprio `npm ci` (`linhas.ts:277`), ou que o solta antes de instalar. Sem isso, uma `partida` pode esperar uma instalação inteira.
+- `.dockerignore` e `.nvmrc` ainda caem em "documento" no §5(e) (`techspec.md:97`). Somá-los à lista do RF16 com I, já que o `dockerfile.test.ts` os lê.
+
+Arquivos citados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/linhas.ts
+
+## revisor-geral · 4ª rodada · REPROVADO · 2026-10-23 13:43:05 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+Escopo: respeitado
+Aderência à Tech Spec: há divergência em um ponto. O orçamento do RF26 em `texto.md` não mede o que o Orquestrador lê a cada tarefa.
+Portão local: não se aplica. É revisão de spec, sem código. O `conferir` responde "nunca passou nesta árvore", como nas rodadas 2 e 3.
+
+**Os bloqueantes da rodada 3:**
+- **1. `Fora do processo:` está corrigido.**
+  - O §5(a) (`techspec.md:52-53`) recusa a linha em qualquer sessão do Claude Code, Orquestrador inclusive, e isso fecha a pergunta sobre a `decidirCommit` sem papel. O PRD §4 já proíbe o Orquestrador de commitar código, então a regra é mais estrita sem divergir.
+  - O limite está declarado (`techspec.md:75-76`) e afirmado como tal em `cenarios.md:72`.
+  - `am`, `revert`, o `pre-push` furado por script, "não na `develop`" e `origin/develop..HEAD` entraram.
+- **2. O orçamento do RF26 ficou corrigido pela metade.** O passo 6 vai para `passos/6-tarefa.md`, e a conta só cita arquivos que existem. Medi hoje: cabeçalho e passos 1, 2 e 5 dão 5,7 KB, o `protocolo.md` 7,9 KB e o passo 6 6,9 KB, perto de 21 KB, abaixo de 24 KB. A seção Skills vai para `time.md`, e a base fixa está definida. Sobra o furo abaixo.
+
+**Bloqueantes:**
+
+1. **`texto.md:56-58` e `cenarios.md:114` (RF26): o orçamento soma três arquivos, mas o passo 6 manda ler outros passos em toda tarefa.**
+   - O passo 6 de hoje (`.claude/skills/seguir/SKILL.md:207-208` e `236-238`) diz "Abra a que ele pedir (passo 3…)" e "agende a limpeza (passo 9) como último comando do turno".
+   - O comando da limpeza (`nohup setsid sh -c 'sleep 25; maestri routine run …'`) está no passo 9 (`SKILL.md:~444`). O Orquestrador limpa o contexto a cada tarefa, então relê o `passos/9-*.md` (3,8 KB) em toda tarefa. Na linha nova também lê o passo 3 (4,3 KB) e o `time.md` (4 KB).
+   - Com o passo 9, a leitura real fica perto de 25,6 KB, acima do teto. O teste do RF26 fica verde medindo um conjunto que não é o lido. É a mesma conta que não fecha da rodada 3, agora escondida por referência entre passos.
+   - **Correção exigida, uma de duas:**
+     - o teste soma o `passos/6-tarefa.md` mais todo `passos/*.md` e o `time.md` que ele cita, com o mesmo teto;
+     - ou o `6-tarefa.md` traz na própria página o que usa em toda tarefa (o comando da limpeza, a abertura de linha), e o teste fica vermelho quando ele cita outro passo.
+
+     Escrever a escolha no `texto.md` e o caso vermelho correspondente no `cenarios.md:114`.
+
+**Recomendações:**
+- **Orquestrador no limite (`techspec.md:75`).** Nomear o Orquestrador no limite. Para ele o `commit-msg` sai 0 sempre, então um script basta para a linha `Fora do processo:` passar nas três camadas. Hoje o texto diz só "um papel que escapou do hook". Foi pedido na rodada 3.
+- **`-F` no `PreToolUse` (`techspec.md:51-56`).** Dizer que o `PreToolUse` lê o arquivo do `-F` para tirar a mensagem. Sem isso, a dica de `-F` faz o commit com `(tarefa N.0)` dentro do arquivo cair como "código sem tarefa", porque hoje a marca é lida só do comando (`revisoes.ts:927-935`).
+- **Lista do §5(e).** `package-lock.json` e `.dockerignore` continuam fora (rodada 3). Registrar que ficam de fora de propósito, ou incluir.
+- **Árvore em edição.** A árvore tem edições não commitadas para a rodada 5. Em `techspec.md`, na linha do Quadro do §5(f), "o `abrir` solta a trava antes do `npm ci"` fecha com aspas no lugar da crase.
+
+Arquivos lidos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/prd.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/texto.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/achados/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/.claude/skills/seguir/SKILL.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/revisoes.ts
+
+## test-engineer · 4ª rodada · REPROVADO · 2026-10-23 13:43:20 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Auditei a árvore como está agora. Ela já passou do `29e5104`: a Mesa está aplicando as correções da rodada 4 de outros revisores em `cenarios.md`, `tabela-de-guardioes.md` e `techspec.md`, sem commit. Uma dessas edições fecha um furo que eu ia apontar: "LGPD" no `tema.ts` agora soma P. Duas outras abrem cláusulas novas, que entram no bloqueante 3.
+
+**Cenários exigidos:** os mesmos da rodada 3, mais as correções que pedi:
+- os três termos do prazo da mutação
+- as regras de casamento, cada uma com caso
+- o RF16 linha a linha, dos dois lados
+- a classificação da terceira camada e a marca de correção
+
+Domínio escolar e isolamento de escola não se aplicam: nada lê dado de escola.
+
+**Cobertos:**
+- **Bloqueante 1 da rodada 3 (RF4), resolvido em parte.** Em `cenarios.md:16`:
+  - "3 ×" está provado: limpa de 30 s e mutado que falha em 80 s dá `vermelho`. Sem o termo, o prazo cai para 60 s.
+  - O `testTimeout` está provado: limpa de 1 s, 120 s e falha em 90 s.
+  - O teto está provado: limpa de 4 min, mutado de 11 min dá `recusada`.
+  - Os casos (a) a (c) usam o prazo injetado de 2 s.
+  - O que falta está no bloqueante 1 abaixo.
+- **Bloqueante 2 (regras de casamento), resolvido.** Em `tabela-de-guardioes.md:64-69`:
+  - `it.each` dos quatro sufixos em `componentes/ui/` e em `galeria/`
+  - `@SemEscopo(` dos dois lados
+  - um caso por termo de citação: "regra 10" e "LGPD" somam guardião, "regra 70" e "regra 80" também, inclusive em maiúscula
+  - HEAD contra índice
+  - os literais ficam escritos no teste
+- **Bloqueante 3 (RF16), resolvido em parte.** Os dois lados por linha e `linhas.ts` sem guardião com veto estão em `cenarios.md:87-93`. Falta o caso por caminho, no bloqueante 2 abaixo.
+- **Bloqueante 4 (terceira camada), resolvido.** Em `cenarios.md:64-73` saem 1:
+  - `tools/guardas/x.mjs` sem marca
+  - `.github/workflows/ci.yml` sem marca
+  - `Fora do processo:` com motivo vazio
+
+  E saem 0 o histórico de `correcao/x` e o limite conhecido, afirmado como tal.
+- **Recomendações da rodada 3, todas feitas:**
+  - o arquivo-sinal no RF3
+  - `git -c user.name=x commit` e `GIT_AUTHOR_DATE=x` no lado que passa
+  - os operadores do RF5
+  - o `vite.config.ts` no RF17
+  - o `prepare`
+  - a versão gravada dos guardiões no RF21
+  - a `status` no RF24
+- **Edição em curso, também coberta:** o neto do encontro morto antes de soltar o `flock` (`cenarios.md:15`) e `infra/` sem papel (`cenarios.md:92-93`).
+
+**Bloqueantes:**
+
+1. **`cenarios.md:16`, RF4: o piso de 60 s continua sem prova, e "ou o do caso" não tem caso.**
+   - **O piso.** O `testTimeout` do projeto é 60 s (`vitest.config.ts:19`), igual ao piso. Nos dois casos do piso (limpa de 1 s com falha em 5 s, e o caso (e)), tirar o piso não muda nada: o `testTimeout` de 60 s dá o mesmo prazo. Errei na rodada 3 ao dar o piso como provado.
+     - Correção exigida: o caso do piso declara um `testTimeout` injetado abaixo da falha. Por exemplo: limpa de 1 s, `testTimeout` de 2 s e mutado que falha em 5 s dá `vermelho`.
+   - **"Ou o do caso".** `techspec.md:150` diz que o prazo é "o `testTimeout` do projeto (ou o do caso)". Ler o prazo declarado no próprio `it(...)` é outro mecanismo, e apagá-lo não deixa nenhum teste vermelho.
+     - Correção exigida: projeto com 5 s, o caso citado com 120 s e mutado que falha em 90 s dá `vermelho`.
+
+2. **`tabela-de-guardioes.md:62` e `cenarios.md:87-91`, RF16: um arquivo por linha não prova uma linha que tem vários caminhos nem vários guardiões.**
+   - **Vários caminhos.** A linha dos aplicadores (`tabela-de-guardioes.md:45`) tem doze caminhos. O caso usa `hook-git.ts`. Se a implementação tirar `guardioes-por-caminho.ts` ou `caducidade.ts` da lista, esses arquivos caem em "o resto de `tools/`", sem guardião nenhum, e nenhum teste fica vermelho. É a tabela reduzindo a si mesma, o furo que a linha existe para fechar. O mesmo vale para as outras linhas com mais de um caminho: `eslint`, `ouro` e `ouro-retido`, `compose.yaml` e `.env.example`.
+   - **Vários guardiões.** O caso "`hook-git.ts` sem os quatro" continua recusado se a linha encolher para só T. A linha `eslint.config.mjs`, testada só sem T, aceita perder P, C e I.
+   - Correção exigida: um `it.each` por caminho de cada linha da tabela do RF16, com `guardioesDoCaminho` igual ao conjunto exato, escrito como literal. É o que a tabela do código já faz com "sai com P C I".
+
+3. **Cláusulas novas sem caso:**
+   - **`tabela-de-guardioes.md:20`.** `@SemEscopo(` agora vale "no HEAD ou no índice", mas o único caso (`:65`) é o do índice. Correção exigida: um arquivo de `componentes/ui/` que tinha `@SemEscopo(` no HEAD e não tem no índice sai com os quatro.
+   - **`tabela-de-guardioes.md:55`.** "O resto de `tools/`" pede "nenhum, salvo pela citação", mas todo caso de citação está numa exceção do código. Correção exigida: `tools/processo/x.ts` citando "regra 20" pede P. O outro lado já existe: `linhas.ts` sem guardião passa.
+   - **`techspec.md:116`.** "O `abrir` solta a trava antes do `npm ci`" não tem caso. Correção exigida, em `linhas.test.ts`: o `abrir` com um `npm ci` injetado preso por arquivo-sinal, e uma `partida` de outra linha que termina enquanto ele espera.
+
+**Recomendações:**
+- **`techspec.md:115`.** O prazo de 7 min de quem espera a trava deve ser injetado no teste "encontro em curso" (`cenarios.md:15`), como o da mutação. Sem isso, o caso leva sete minutos.
+- **`techspec.md:116`.** O texto termina em `` `npm ci" ``: a crase não fecha, há uma aspa no lugar.
+- **`cenarios.md:59` e `techspec.md:51`.** Falta o caso `git commit -F msg.txt` com `Fora do processo:` dentro do arquivo, numa sessão sem papel, o Orquestrador por exemplo. Ou o `PreToolUse` lê o arquivo e nega, ou o caso entra nos limites declarados. Hoje "em qualquer sessão" vale só para `-m`.
+- **`cenarios.md:59-62`.** "Qualquer um deles sem papel" passa, mas `Fora do processo:` é negado também sem papel. Vale tirar essa linha do "qualquer um deles", para o teste não nascer contraditório.
+
+Arquivos citados:
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md`
+- `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/vitest.config.ts`

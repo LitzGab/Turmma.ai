@@ -1,7 +1,7 @@
 # Tech Spec — Harness (X7)
 
 **PRD:** `tasks/prd-harness/prd.md`
-**Status:** rascunho (rodada 3 da revisão da spec)
+**Status:** rascunho (rodada 5 da revisão da spec)
 
 Respostas do Joaquim, 23/10/2026: `core.hooksPath` pelo `prepare`; as paradas do §9; o ensaio do RF31 é o item
 "(X5, RF31)" do `TODO.md`; e, na revisão da spec, RF2, RF14, RF15, RF16 e a cópia congelada fora. Anexos:
@@ -11,28 +11,28 @@ Respostas do Joaquim, 23/10/2026: `core.hooksPath` pelo `prepare`; as paradas do
 
 Quatro trilhas. **(1)** Testes de contrato e do harness, e o `revisoes.ts` partido só por mover. **(2)** O código das
 retrospectivas (RF1 a RF11), em linhas. **(3)** O hook novo (RF14 a RF18), um comportamento por tarefa, sobre o §5(a).
-**(4)** O texto e o Maestri (RF20 a RF29), por último, já descrevendo o hook novo. Fecha com o ensaio (RF31).
+**(4)** O texto e o Maestri (RF20 a RF29), por último. Fecha com o ensaio (RF31).
 
 ## 2. Módulos afetados
 
 | Módulo | Novo ou alterado | O quê |
 |---|---|---|
-| `.github/workflows/ci.yml` | alterado | `concurrency` (§5f); `pull_request` para a `develop`; relatório JSON do e2e no verde; a terceira camada do RF14 |
+| `.github/workflows/ci.yml` | alterado | §5(f), RF19 e a terceira camada (§5a) |
 | `tools/processo/esteira.ts` | alterado | RF2 (§5f), `--event push`, `--censo` (RF9) |
 | `tools/processo/linhas.ts` | alterado | RF3 (§5f), `abandonar <n>` (RF6), base de `conferir` (RF10) |
 | `tools/processo/mutacoes.ts` | alterado | RF4 (§7c), `--faltando` (RF5), RF17 (§5d) |
-| `tools/processo/portao-local.ts` | alterado | RF7 e RF8, a sequência em função testável; imprime o `--faltando` e os guardiões |
-| `tools/ci/duracao-do-e2e.ts` | alterado | caso retitulado (RF11) |
+| `tools/processo/portao-local.ts` | alterado | RF7, RF8; imprime o `--faltando` e os guardiões |
+| `tools/ci/duracao-do-e2e.ts` | alterado | RF11 |
 | `tools/ci/conferir-entregas.ts` | novo | a terceira camada do RF14 (§5a) |
-| `tools/processo/revisoes.ts` | partido | `documento-de-revisao.ts`, `caducidade.ts`, `comando-git.ts`, `portao.ts`; o `revisoes.ts` só reexporta, e `estado.ts` e `esteira.ts` deixam de importá-lo (RF13); sai o `(mvp:)` (RF18) |
-| `tools/processo/guardioes-por-caminho.ts` | novo | a tabela do RF15 e do RF16 |
+| `tools/processo/revisoes.ts` | partido | `documento-de-revisao.ts`, `caducidade.ts`, `comando-git.ts`, `portao.ts`; o `revisoes.ts` só reexporta, sem importação do `estado.ts` e do `esteira.ts` (RF13); RF18 |
+| `tools/processo/guardioes-por-caminho.ts` | novo | RF15, RF16 |
 | `tools/processo/hook-git.ts`, `tools/processo/git-hooks/` | novos | `commit-msg` e `pre-push` (RF14) |
 | `tools/processo/harness/*.test.ts` | novos | um arquivo por aspecto (RF12, RF20 a RF26, RF30) |
 | `tools/processo/estado.ts`, `vigia.ts` | alterados | RF20, RF27, RF28 |
 | `tools/guardas/regras-ia.mjs` | alterado | a pasta isenta é `packages/nucleo/src/ia/adaptador-*.ts` (RF24) |
-| `.claude/settings*.json`, `.claude/hooks/` | alterados | RF29; o início de sessão confere o `core.hooksPath` e grava a limpeza |
+| `.claude/settings*.json`, `.claude/hooks/` | alterados | RF29; o início de sessão confere o `core.hooksPath` e grava `feita` |
 | `package.json` | alterado | `"prepare": "git config core.hooksPath tools/processo/git-hooks"` |
-| `CLAUDE.md`, `.claude/rules/`, `.claude/skills/`, `.claude/agents/`, `docs/` | alterados e novos | RF20 a RF25, RF28 e o socorro do hook (`texto.md`) |
+| `CLAUDE.md`, `.claude/rules/`, `.claude/skills/`, `.claude/agents/`, `docs/` | alterados e novos | RF20 a RF25, RF28, o socorro (`texto.md`) |
 
 ## 3. Modelo de dados
 
@@ -40,15 +40,14 @@ Nenhuma tabela. Fora do git: `.processo/limpeza.json` (`{ "pedida": ISO, "feita"
 
 ## 4. API
 
-Nenhuma rota. Comandos novos: `esteira.ts --censo [branch]`, `linhas.ts abandonar <n>`,
-`mutacoes.ts --faltando <documento>` e `hook-git.ts commit-msg <arquivo>` e `pre-push`, em `tools/processo/`; e
-`npm run ci:conferir-entregas`.
+Nenhuma rota. Comandos novos em `tools/processo/`: `esteira.ts --censo [branch]`, `linhas.ts abandonar <n>`,
+`mutacoes.ts --faltando <documento>`, `hook-git.ts commit-msg <arquivo>` e `pre-push`; e `npm run ci:conferir-entregas`.
 
 ## 5. Fluxo
 
 **(a) Uma decisão, duas entradas.** A decisão inteira do `portao` de hoje vira uma função pura em `portao.ts`,
 `decidirCommit({ mensagem, arquivos, conteudoDe, raiz, papel })`: a marca, o documento, os obrigatórios (§5b), as pastas
-(§5e), o `avaliarPortao` e a conferência das mutações. O `PreToolUse` a chama com a mensagem tirada do comando e o
+(§5e), o `avaliarPortao` e a conferência das mutações. O `PreToolUse` a chama com a mensagem do comando ou do arquivo do `-F` e o
 conteúdo da árvore, e recusa `Fora do processo:` em qualquer sessão do Claude Code, Orquestrador inclusive: a
 linha é só do terminal do Joaquim. Em sessão de papel, nega nos argumentos do git `--no-verify` ou abreviação aceita, `-n` em
 `commit` (sozinho ou combinado) e `core.hookspath` em qualquer caixa; e as formas de mexer no ambiente (`VAR=`,
@@ -73,11 +72,12 @@ fura também o `pre-push`), `commit-tree`, `update-ref`, `rebase`, `cherry-pick`
 classificação da `decidirCommit` (código de produto mais a lista do §5e), o merge por `--remerge-diff`. Commit de
 código passa com `(tarefa N.0)` ou `(correção <slug>)` e a linha `Revisões:`, ou com `Fora do processo: <motivo>`;
 senão sai 1 com o hash. Intervalo vazio sai 0. A esteira não sabe quem escreveu a linha: um papel que escapou do hook
-por script passa com ela. Andar anterior à X7 fica sem hook nativo até o merge da `develop`, e o início de sessão avisa.
+ou o Orquestrador, por script, passam com ela. Andar anterior à X7 fica sem hook nativo até o merge da `develop`, e o início de sessão avisa.
 
 **(b) Quem é obrigatório (RF15).** `obrigatorios = união(marcados, guardioesDoCaminho(arquivos, conteudoDe))`. Código
-em `apps/`, `packages/` e `e2e/` pede os quatro, e a citação de uma regra soma o guardião dela; as exceções, com motivo, e as regras de casamento estão
-em `tabela-de-guardioes.md` (decisão do Joaquim na rodada 2). O teto de três da D79 vale para o que o Arquiteto marca.
+em `apps/`, `packages/`, `e2e/`, `tools/guardas/` e `tools/testes/` pede os quatro, e a citação de uma regra soma o
+guardião dela; as exceções, com motivo, e as regras de casamento estão
+em `tabela-de-guardioes.md` (decisão do Joaquim na rodada 2). O teto de três da D79 vale para a marcação.
 O portão imprime a lista unida para a Mesa.
 
 **(c) O hook sem cópia congelada.** Julga o hook da árvore. Toda tarefa que mexe em `tools/processo/` roda o
@@ -112,9 +112,11 @@ regra, AIA e o resto de `docs/` continuam documento.
 - **Retitulado (RF11):** sem o título no HEAD, vale o caso cujo corpo sem o título é idêntico; corpo mudado, ou dois
   corpos iguais, não herdam prazo
 - **Quadro (RF3, RF6):** `abrir`, `partida`, `abandonar` e `encontro` pegam o mesmo `flock`, no `.processo/` da raiz
-  do andar, relêem o quadro com a trava e gravam só a própria linha; quem espera tem prazo e sai com "encontro em curso"
+  do andar, relêem o quadro com a trava e gravam só a própria linha; quem espera tem prazo de 7 min e sai com "encontro em curso";
+  o `abrir` solta a trava antes do `npm ci`
 - **Encontro (RF3):** tipagem e lint no checkout da linha, depois do `merge --no-edit` da spec e antes do `--ff-only`,
-  com prazo de 3 min, ou 6 com `npm ci` quando o lock mudou. No vermelho ou no prazo: a linha volta ao commit de antes do
+  com prazo de 3 min, ou 6 com `npm ci` quando o lock mudou, em grupo de processo próprio, morto como o da mutação
+  (§7c) antes de a trava ser solta. No vermelho ou no prazo: a linha volta ao commit de antes do
   merge, a spec não anda, sem push, linha ocupada, código de saída próprio, e a saída diz que a correção refaz o merge
 
 **(g) A limpeza (RF27).** O `nohup` grava `pedida`. O início de sessão com `source: clear`, sem `CLAUDE_CODE_AGENT`, no
