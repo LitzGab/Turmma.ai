@@ -23,15 +23,12 @@
       para 244; a 2.0 vira só mover. Ele recomenda esta | (B) a 2.0 refatora as quatro, e o corpo muda | (C) afrouxar a catraca
       para aceitar supressão movida, o que enfraquece a guarda. A árvore está intacta, sem commit
     - **Triagem do `Arquiteto` (~16:10):** é detalhe, opção (A); a catraca e o RF13 ficam intactos. O registro está no §2 da Tech
-      Spec, em `0ed2f7d`. A 2.0 **espera a correção `complexidade-revisoes`** (linha 2). Depois, `PEDIDO de retomada` da 2.0: trazer
+      Spec, em `0ed2f7d`. A correção `complexidade-revisoes` entrou em `df55c2f` (spec em `754d79c`). **Desde ~16:00 corre a 2ª retomada da 2.0**,
+      com o pedido de trazer
       a `spec/harness` (`git merge spec/harness`), levar os corpos novos aos módulos, cada auxiliar junto de quem a chama, sem
       supressão nova (aí o `catraca.test.ts` fica verde), e escrever a linha em "Divergências resolvidas". A árvore da linha 1
       fica guardada, sem commit
-  - linha 2 (`Implementador 2`/`Mesa 2`): **correção `complexidade-revisoes`** desde ~16:15, a partir da `spec/harness` em `0ed2f7d`,
-    1ª tentativa. Escopo do Arquiteto: baixar `lerSecao`, `arquivosDoCommit`, `pastaDoCommit` e `portao` a complexidade ≤10 no
-    próprio `revisoes.ts`, só extraindo auxiliares; podar o `eslint-suppressions.json`; levar o `TETO.complexity` de 248 para 244
-    no `catraca.test.ts`, que é o teste que reproduz. Prova: o `revisoes.test.ts` e o `hook-portao.test.ts` verdes sem
-    alteração, e uma mutação por função. Guardiões: test-engineer e revisor-geral. A 6.0 só parte depois do encontro da 2.0
+  - linha 2: ociosa desde ~16:00 (a correção `complexidade-revisoes` se encontrou). A 6.0 só parte depois do encontro da 2.0
   - linha 3: ociosa desde ~15:50. A 8.0 entrou com a `encontro-8` (`473c2ce`), sem conflito com o `67dad69`. Quase tudo agora
     espera a 2.0
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
@@ -52,7 +49,11 @@
     Isso precisa estar na Tech Spec antes de a 11.0 partir
   - O terminal do Arquiteto tinha, desde as 14:03, este texto na caixa, sem enviar: "pode seguir com a correção da tabela".
     Ele não tinha pergunta aberta. O reinício apagou o texto, que fica guardado aqui e foi dito ao Joaquim
-- **Devo ainda:** A fila da esteira foi perguntada ao Joaquim (cancelar as das branches de linha?), sem resposta;
+- **Devo ainda:** **o encontro da linha 1** (`linhas.ts encontro 1`): a 2.0 chegou SUCESSO em `4fcf89d`, às ~16:25 (test-engineer e
+  revisor-geral aprovaram na 2ª rodada, três divergências no `2_task.md` e sobras no `TODO.md`). Adiei o encontro porque o
+  Arquiteto tinha, sem commit no andar da spec, o `tasks.md` e o `achados/indice.md`, que o commit da 2.0 também muda. Rodo
+  logo depois do RELATÓRIO dele. Também espero o `RELATÓRIO de Arquiteto` com a tarefa 21.0 (skills de projeto, decisão A do Joaquim às ~16:10). Depois,
+  o quadro passa a mostrá-la. A fila da esteira foi perguntada ao Joaquim (cancelar as das branches de linha?), sem resposta;
   não é parada. O §12 já está em `a691e02`.   Da correção do `casca`, nada: esteira da `develop` VERDE em `47887fc` (`39966758971`). Notar ao Arquiteto, se servir: o lote 5/7 do e2e passou dos 45 min do job na correção do
   `casca` (19 min de compose e 26 de teste, 187 casos), o que pesa no M1 (censo de prazo e a oitava fatia)
 - **Base:** `spec/harness` em `6076f23` (encontro da 5.0). Às 14:52 (17:52Z) as quatro esteiras da spec (`39996137914`,
@@ -68,9 +69,19 @@
 | 1.0 | `ae688d8` | Sonnet 5.5 | test-engineer 2, revisor-geral 2 (aprovado nas duas) | premissa do §12 medida: no subagente `CLAUDE_CODE_AGENT` é o papel do terminal; levar ao Arquiteto antes da 11.0 |
 | 7.0 | `f775960` | Sonnet 5.5 | infra-guardian 2, revisor-geral 2, test-engineer 2 (os três reprovaram na 1ª) | push do encontro falhou (TLS) e foi refeito |
 | 8.0 | `eccbfaa` + `473c2ce` (encontro-8) | Sonnet 5.5 | infra-guardian 2, test-engineer 2, revisor-geral 2; a correção: revisor-geral 1, test-engineer 1 | 5 divergências de detalhe (RF7/RF8) na Tech Spec; CONFLITO no `cenarios.md` no encontro |
+| correção complexidade-revisoes | `df55c2f` | Sonnet 5.5 | test-engineer 1, revisor-geral 1 | antes da 2.0, por triagem do Arquiteto (2ª divergência); TETO 248→244 |
 | 5.0 | `9b676fc` | Sonnet 5.5 | infra-guardian 2, test-engineer 2, revisor-geral 2 (os três reprovaram na 1ª) | |
 
 ## Esperando o Joaquim
+## 23/10/2026 ~16:10 — X7 escopo (skills de projeto)
+Decisão: a X7 ganha uma tarefa que ensina aos agentes o jeito de construir o Turmma, que a Etapa 9.1 da MISSAO pedia
+("incorpore os padrões finais") e nenhuma das 20 tarefas cobre? Hoje nenhuma skill, papel nem o `CLAUDE.md` aponta o
+`docs/guia-do-desenvolvedor.md`, onde estão as receitas
+Opções: (A) a tarefa 21.0 na X7, depois da 19.0 | (B) uma spec própria (X8) | (C) só apontar o guia no `executar-task`
+Recomendo: A
+**Respondida em 23/10 ~16:10 pelo Joaquim, no terminal do Orquestrador: "vai na opcao A".** Condição combinada: as
+receitas ficam num lugar só, sem cópia do guia; a skill é curta, com os arquivos de exemplo reais, e tem teste de
+caminhos na esteira. Pedido ao `Arquiteto` (PRD, Tech Spec, `cenarios.md`, `tasks.md`, `21_task.md`)
 ## 23/10/2026 ~14:45 — X7 tarefa 2.0 (BLOQUEIO do Arquiteto)
 Decisão: o RF13 ("testes atuais do hook verdes sem alteração") ganha a exceção do caso "sem o compilador instalado", ou a partição do `revisoes.ts` sai?
 Contexto: o caso `revisoes.test.ts:942` copia só o `revisoes.ts` para fora do repo, e ali a reexportação do §2 não resolve. O §2 e o RF13 juntos ficam impossíveis. Divergência em "Agora"; `prd.md` RF13, `techspec.md` §2
