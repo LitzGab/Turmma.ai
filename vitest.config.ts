@@ -25,9 +25,14 @@ const integracao = {
 // dependência (a `dist-es` do SDK S3, que o Node nem consegue importar) que não a de produção.
 const condicoes = ['source', ...defaultServerConditions.filter((condicao) => condicao !== 'module')]
 
+// O `globalSetup` da integração e da infra roda no runner do Vitest, que resolve pelo environment `__vitest__`, e o Vitest 5
+// dá a ele as condições padrão, sem herdar `resolve` nem `ssr.resolve` do topo. Sem a condição `source` ali, o `globalSetup`
+// que carrega `packages/nucleo` resolve `@educa/shared` para o `dist`, que só existe onde alguém construiu (a esteira não
+// constrói). `tools/ci/resolucao-do-shared.test.ts` prova a resolução.
 export default defineConfig({
   resolve: { conditions: condicoes },
   ssr: { resolve: { conditions: condicoes } },
+  environments: { __vitest__: { resolve: { conditions: condicoes } } },
   test: {
     projects: [
       {
