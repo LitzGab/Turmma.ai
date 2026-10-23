@@ -1,5 +1,5 @@
 import { type ChildProcess, execFileSync, spawn } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -11,19 +11,26 @@ import {
   CAMINHO_DA_TRAVA,
   CAMINHO_DO_QUADRO,
   conferir,
+  CODIGO_DA_VERIFICACAO,
+  COMANDO_DA_VERIFICACAO,
   conferirEntrega,
   distribuir,
   ehDoTronco,
-  encontro,
+  encontro as encontroDeVerdade,
+  ESPERA_ATE_SIGKILL_MS,
   fechar,
   lerArquivosPrevistos,
   lerPlano,
   lerQuadro,
   marcarTarefaFeita,
   MAXIMO_DE_LINHAS,
+  type Opcoes,
   opcoesDoAmbiente,
   partida,
   PRAZO_DA_TRAVA_MS,
+  PRAZO_DA_VERIFICACAO_COM_NPM_CI_MS,
+  PRAZO_DA_VERIFICACAO_MS,
+  prazoDaVerificacao,
   porQueNaoJuntas,
   quadro,
   seSobrepoem,
@@ -32,6 +39,13 @@ import {
   type TarefaDoPlano,
 } from './linhas.ts'
 import { arquivosAlterados } from './revisoes.ts'
+
+/**
+ * O encontro dos testes. Num repositório de brinquedo não há `npm run typecheck`, e por isso a verificação é injetada: o
+ * que passa, `true`, quando o caso não é sobre ela. Quem prova a verificação passa a sua em `comandoSobATrava`, e a
+ * padrão tem o caso próprio (`COMANDO_DA_VERIFICACAO`).
+ */
+const encontro = (raiz: string, numero: number, opcoes: Opcoes = {}) => encontroDeVerdade(raiz, numero, { comandoSobATrava: 'true', ...opcoes })
 
 // Tarefas da mesma spec ao mesmo tempo. O que este arquivo prova é o que custaria caro errado: duas tarefas que se
 // tocam correndo juntas, um encontro que leva à spec um commit sem revisão, e um conflito resolvido calado.
@@ -670,8 +684,8 @@ describe('partida, encontro e fechamento, em repositórios de verdade', () => {
     })
 
     /** O comando como o Orquestrador o roda: `node tools/processo/linhas.ts …` no andar da spec, em outro processo. */
-    function rodar(raiz: string, argumentos: string[], ambiente: Record<string, string> = {}) {
-      const filho = spawn(process.execPath, [CLI, ...argumentos], { cwd: raiz, env: { ...process.env, ...ambiente }, stdio: ['ignore', 'pipe', 'pipe'] })
+    function rodar(raiz: string, argumentos: string[], ambiente: Record<string, string | undefined> = {}) {
+      const filho = spawn(process.execPath, [CLI, ...argumentos], { cwd: raiz, env: { ...process.env, EDUCA_ENCONTRO_SOB_A_TRAVA: 'true', ...ambiente }, stdio: ['ignore', 'pipe', 'pipe'] })
       filhos.push(filho)
       let texto = ''
       const estado: { saida: Saida | null } = { saida: null }
@@ -682,7 +696,7 @@ describe('partida, encontro e fechamento, em repositórios de verdade', () => {
           resolver(estado.saida)
         }),
       )
-      return { terminou, jaSaiu: () => estado.saida !== null }
+      return { terminou, jaSaiu: () => estado.saida !== null, sinal: (sinal: NodeJS.Signals) => filho.kill(sinal) }
     }
 
     const dormir = (ms: number) => new Promise<void>((resolver) => setTimeout(resolver, ms))
@@ -972,27 +986,368 @@ describe('partida, encontro e fechamento, em repositórios de verdade', () => {
       expect(existsSync(join(spec, CAMINHO_DO_QUADRO))).toBe(false)
     })
 
-    it('o comando sob a trava do encontro que falha recusa sem mudar nada, e roda no checkout da linha', async () => {
-      const { base, spec, git, checkouts } = await comDuasEntregas()
-      const antes = git(spec, 'rev-parse', 'HEAD')
-      const ondeRodou = join(base, 'onde-rodou.txt')
-      const recusado = await encontro(spec, 1, { push: false, comandoSobATrava: `pwd -P > '${ondeRodou}'; exit 3` })
-      expect(readFileSync(ondeRodou, 'utf8').trim()).toBe(realpathSync(checkouts.get(1) ?? ''))
-      expect([recusado.codigo, recusado.texto]).toEqual([1, expect.stringMatching(/o comando sob a trava falhou na linha 1: nada mudou/) as string])
-      expect(git(spec, 'rev-parse', 'HEAD')).toBe(antes)
-      expect(linhaDoQuadro(spec, 1)?.tarefa).toBe(2)
+    describe('RF3: o encontro verifica o merge antes de avançar a spec', () => {
+      const git2 = (...argumentos: string[]) => execFileSync('git', argumentos, { encoding: 'utf8', stdio: 'pipe' }).trim()
+      const naOrigem = (base: string) => git2('--git-dir', join(base, 'origem.git'), 'rev-parse', 'spec/exemplo')
+      /** A verificação que o lint do exemplo faria: vermelha quando o marcador está nos dois arquivos, que só juntos o têm. */
+      const MARCADOR_NOS_DOIS = "if grep -qs MARCA apps/web/a.ts && grep -qs MARCA apps/web/b.ts; then exit 1; fi"
+      const processoVivo = (pid: string) => {
+        try {
+          // `Z` é o que morreu e ainda não foi recolhido: já não escreve em nada.
+          return !readFileSync(`/proc/${pid}/stat`, 'utf8').split(') ')[1]?.startsWith('Z')
+        } catch {
+          return false
+        }
+      }
+
+      it('duas linhas verdes que juntas quebram o lint: código próprio, a spec não anda, a linha volta, sem push, linha ocupada', async () => {
+        const { base, spec, git, checkouts, entregar } = await andaresComOrigem()
+        const l2 = checkouts.get(2) ?? ''
+        await partida(spec, 1, '2')
+        await partida(spec, 2, '3')
+        entregar(1, 2, { 'apps/web/a.ts': 'MARCA a\n' })
+        entregar(2, 3, { 'apps/web/b.ts': 'MARCA b\n' })
+        const primeiro = await encontro(spec, 1, { comandoSobATrava: MARCADOR_NOS_DOIS })
+        expect(primeiro.codigo, primeiro.texto).toBe(0)
+        const [specDepoisDoPrimeiro, antes] = [git(spec, 'rev-parse', 'HEAD'), git(l2, 'rev-parse', 'HEAD')]
+        expect(naOrigem(base)).toBe(specDepoisDoPrimeiro)
+
+        const vermelho = await encontro(spec, 2, { comandoSobATrava: MARCADOR_NOS_DOIS })
+        expect(vermelho.codigo).toBe(CODIGO_DA_VERIFICACAO)
+        expect(CODIGO_DA_VERIFICACAO).toBe(5)
+        expect(git(spec, 'rev-parse', 'HEAD')).toBe(specDepoisDoPrimeiro)
+        expect(naOrigem(base)).toBe(specDepoisDoPrimeiro)
+        expect(git(l2, 'rev-parse', 'HEAD')).toBe(antes)
+        expect(git(l2, 'status', '--porcelain')).toBe('')
+        expect(existsSync(join(l2, 'apps/web/a.ts'))).toBe(false)
+        // A linha segue ocupada pela tarefa dela: o conserto é dela.
+        expect(linhaDoQuadro(spec, 2)).toMatchObject({ tarefa: 3 })
+        expect(textoDoQuadro(spec)).toContain('linha 2: tarefa 3.0')
+        expect(vermelho.texto).toContain(`a linha 2 voltou ao commit ${antes.slice(0, 7)}, de antes do merge`)
+        expect(vermelho.texto).toContain('a spec/exemplo não andou e não houve push')
+        expect(vermelho.texto).toContain('slug encontro-3')
+        expect(vermelho.texto).toContain('o Implementador 2 roda `git merge spec/exemplo`')
+        expect(vermelho.texto).toContain(`Comando: ${MARCADOR_NOS_DOIS}`)
+        expect(vermelho.texto).toMatch(/a tipagem ou o lint .* falhou/)
+      })
+
+      it('as duas verdes que juntas passam: a verificação roda no checkout da linha, depois do merge, e a spec avança por --ff-only', async () => {
+        const { spec, git, checkouts, entregar } = await andaresComOrigem()
+        const l2 = checkouts.get(2) ?? ''
+        await partida(spec, 1, '2')
+        await partida(spec, 2, '3')
+        entregar(1, 2, { 'apps/web/a.ts': 'a\n' })
+        entregar(2, 3, { 'apps/web/b.ts': 'b\n' })
+        // Só o checkout da linha 2, com o merge feito, tem os dois arquivos: o cwd e a ordem estão neste comando.
+        const comandoDaLinha2 = 'test -e apps/web/a.ts && test -e apps/web/b.ts'
+        expect((await encontro(spec, 1)).codigo).toBe(0)
+        const passou = await encontro(spec, 2, { comandoSobATrava: comandoDaLinha2 })
+        expect(passou.codigo, passou.texto).toBe(0)
+        expect(passou.texto).toContain(`Verificação do merge: passou (${comandoDaLinha2}), com prazo de 180 s.`)
+        expect(git(spec, 'rev-parse', 'HEAD')).toBe(git(l2, 'rev-parse', 'HEAD'))
+        expect(git(spec, 'log', '--merges', '--format=%s', '-1')).toMatch(/^Merge branch 'spec\/exemplo' into spec\/exemplo--l2/)
+        expect(linhaDoQuadro(spec, 2)).toMatchObject({ tarefa: null })
+      })
+
+      describe('o npm ci, quando o lock mudou', () => {
+        /** O `npm ci` e a verificação injetados contam a vez e a ordem num arquivo fora do checkout. */
+        const comandos = (base: string, instalar = 'true') => {
+          const registro = join(base, 'ordem.txt')
+          return {
+            lido: () => (existsSync(registro) ? readFileSync(registro, 'utf8').split('\n').filter((linha) => linha !== '') : []),
+            comandoDeInstalacao: `echo npm-ci >> '${registro}'; ${instalar}`,
+            comandoSobATrava: `echo verificacao >> '${registro}'`,
+          }
+        }
+
+        it('lock alterado pela spec: o npm ci roda antes da verificação, com o prazo de 6 min; lock igual: não roda, com o de 3', async () => {
+          const { base, spec, entregar } = await andaresComOrigem()
+          await partida(spec, 1, '2')
+          await partida(spec, 2, '3')
+          entregar(1, 2, { 'apps/web/a.ts': 'a\n', 'package-lock.json': '{"versao":1}\n' })
+          entregar(2, 3, { 'apps/web/b.ts': 'b\n' })
+          const { lido, ...injetados } = comandos(base)
+          // Na linha 1 o lock é dela, e a spec não traz nada dele: a árvore dela já tem o que o lock manda.
+          const semLock = await encontro(spec, 1, injetados)
+          expect(semLock.codigo, semLock.texto).toBe(0)
+          expect(lido()).toEqual(['verificacao'])
+          expect(semLock.texto).toContain('com prazo de 180 s')
+          // Na linha 2 a spec traz o lock da linha 1: o ambiente da linha 2 não o tem.
+          const comLock = await encontro(spec, 2, injetados)
+          expect(comLock.codigo, comLock.texto).toBe(0)
+          expect(lido()).toEqual(['verificacao', 'npm-ci', 'verificacao'])
+          expect(comLock.texto).toContain('com prazo de 360 s')
+          expect(comLock.texto).toContain(`Verificação do merge: passou ((${injetados.comandoDeInstalacao}) && (${injetados.comandoSobATrava}))`)
+        })
+
+        it('lock da própria linha e código novo da spec: a árvore dela já tem o lock, e o npm ci não roda', async () => {
+          const { base, spec, entregar } = await andaresComOrigem()
+          await partida(spec, 1, '2')
+          await partida(spec, 2, '3')
+          entregar(1, 2, { 'apps/web/a.ts': 'a\n' })
+          entregar(2, 3, { 'apps/web/b.ts': 'b\n', 'package-lock.json': '{"versao":1}\n' })
+          const { lido, ...injetados } = comandos(base)
+          expect((await encontro(spec, 1, injetados)).codigo).toBe(0)
+          // A spec traz o a.ts da linha 1 e nenhum lock: o merge muda a árvore, e o lock fica como o da linha 2 o deixou.
+          const comCodigo = await encontro(spec, 2, injetados)
+          expect(comCodigo.codigo, comCodigo.texto).toBe(0)
+          expect(lido()).toEqual(['verificacao', 'verificacao'])
+        })
+
+        it('o npm ci que falha é vermelho, e a verificação nem roda: a linha volta e a spec não anda', async () => {
+          const { base, spec, git, checkouts, entregar } = await andaresComOrigem()
+          const l2 = checkouts.get(2) ?? ''
+          await partida(spec, 1, '2')
+          await partida(spec, 2, '3')
+          entregar(1, 2, { 'apps/web/a.ts': 'a\n', 'package-lock.json': '{"versao":1}\n' })
+          entregar(2, 3, { 'apps/web/b.ts': 'b\n' })
+          const { lido, ...injetados } = comandos(base, 'exit 1')
+          expect((await encontro(spec, 1, injetados)).codigo).toBe(0)
+          const [specAntes, linhaAntes] = [git(spec, 'rev-parse', 'HEAD'), git(l2, 'rev-parse', 'HEAD')]
+          const vermelho = await encontro(spec, 2, injetados)
+          expect(vermelho.codigo).toBe(CODIGO_DA_VERIFICACAO)
+          expect(vermelho.texto).toContain('o npm ci, se o lock mudou')
+          expect(lido()).toEqual(['verificacao', 'npm-ci'])
+          expect(git(spec, 'rev-parse', 'HEAD')).toBe(specAntes)
+          expect(git(l2, 'rev-parse', 'HEAD')).toBe(linhaAntes)
+        })
+      })
+
+      describe('o comando padrão, com um npm de mentira no PATH que conta o que recebeu', () => {
+        /** O `npm` do PATH: grava os argumentos que recebeu e sai 1 no que `falha` diz. Nenhum `npm` de verdade roda. */
+        function npmDeMentira(base: string, falha = '') {
+          const bin = join(base, 'bin')
+          const registro = join(base, 'npm.txt')
+          mkdirSync(bin)
+          writeFileSync(join(bin, 'npm'), `#!/bin/sh\necho "$*" >> '${registro}'\n[ "$*" != '${falha}' ]\n`, { mode: 0o755 })
+          return { bin, lido: () => (existsSync(registro) ? readFileSync(registro, 'utf8').split('\n').filter((linha) => linha !== '') : []) }
+        }
+        async function comNpm<T>(bin: string, corpo: () => Promise<T>): Promise<T> {
+          const antes = process.env['PATH']
+          process.env['PATH'] = `${bin}:${antes ?? ''}`
+          try {
+            return await corpo()
+          } finally {
+            if (antes === undefined) delete process.env['PATH']
+            else process.env['PATH'] = antes
+          }
+        }
+
+        it('sem lock novo: npm run typecheck e npm run lint, nessa ordem, e o encontro avança', async () => {
+          const { base, spec, git, entregar } = await andaresComOrigem([1])
+          await partida(spec, 1, '2')
+          entregar(1, 2, { 'apps/web/a.ts': 'a\n' })
+          const { bin, lido } = npmDeMentira(base)
+          expect(COMANDO_DA_VERIFICACAO).toBe('npm run typecheck && npm run lint')
+          const passou = await comNpm(bin, () => encontroDeVerdade(spec, 1, { push: false }))
+          expect(passou.codigo, passou.texto).toBe(0)
+          expect(lido()).toEqual(['run typecheck', 'run lint'])
+          expect(passou.texto).toContain(`Verificação do merge: passou (${COMANDO_DA_VERIFICACAO}), com prazo de 180 s.`)
+          expect(git(spec, 'log', '-1', '--format=%s', '--', 'apps/web/a.ts')).toBe('Entrega (tarefa 2.0)')
+        })
+
+        it('com o lock novo da spec: npm ci antes, e o lint vermelho recusa o encontro depois da tipagem', async () => {
+          const { base, spec, git, checkouts, entregar } = await andaresComOrigem()
+          const l2 = checkouts.get(2) ?? ''
+          await partida(spec, 1, '2')
+          await partida(spec, 2, '3')
+          entregar(1, 2, { 'apps/web/a.ts': 'a\n', 'package-lock.json': '{"versao":1}\n' })
+          entregar(2, 3, { 'apps/web/b.ts': 'b\n' })
+          const { bin, lido } = npmDeMentira(base, 'run lint')
+          expect((await comNpm(bin, () => encontro(spec, 1))).codigo).toBe(0)
+          const [specAntes, linhaAntes] = [git(spec, 'rev-parse', 'HEAD'), git(l2, 'rev-parse', 'HEAD')]
+          const vermelho = await comNpm(bin, () => encontroDeVerdade(spec, 2, { push: false }))
+          expect(vermelho.codigo, vermelho.texto).toBe(CODIGO_DA_VERIFICACAO)
+          expect(lido()).toEqual(['ci', 'run typecheck', 'run lint'])
+          expect(vermelho.texto).toContain(`Comando: (npm ci) && (${COMANDO_DA_VERIFICACAO})`)
+          expect(git(spec, 'rev-parse', 'HEAD')).toBe(specAntes)
+          expect(git(l2, 'rev-parse', 'HEAD')).toBe(linhaAntes)
+        })
+      })
+
+      it('verificação acima do prazo injetado é tratada como vermelha: o SIGTERM vem primeiro e o grupo que o atende sai sem esperar o SIGKILL', async () => {
+        const { base, spec, git, checkouts, entregar } = await andaresComOrigem()
+        const l1 = checkouts.get(1) ?? ''
+        await partida(spec, 1, '2')
+        entregar(1, 2, { 'apps/web/a.ts': 'a\n' })
+        const [specAntes, antes] = [git(spec, 'rev-parse', 'HEAD'), git(l1, 'rev-parse', 'HEAD')]
+        const termo = join(base, 'termo.txt')
+        const ouvintes = ['SIGINT', 'SIGTERM', 'SIGHUP'].map((sinal) => process.listenerCount(sinal))
+        const comeco = Date.now()
+        // Atender o SIGTERM leva 300 ms: a espera até o SIGKILL (10 s) tem de esperar por ele, e não o dispensar.
+        const lenta = await encontro(spec, 1, {
+          comandoSobATrava: `trap "sleep 0.3; echo atendi > '${termo}'; exit 0" TERM; sleep 8 & wait`,
+          prazoDaVerificacaoMs: 400,
+          esperaAteSigkillMs: 10_000,
+        })
+        expect(Date.now() - comeco).toBeLessThan(8_000)
+        expect(lenta.codigo, lenta.texto).toBe(CODIGO_DA_VERIFICACAO)
+        expect(lenta.texto).toContain('a verificação passou de 0.4 s e foi morta: vale como vermelha')
+        expect(readFileSync(termo, 'utf8')).toBe('atendi\n')
+        expect(git(spec, 'rev-parse', 'HEAD')).toBe(specAntes)
+        expect(git(l1, 'rev-parse', 'HEAD')).toBe(antes)
+        expect(linhaDoQuadro(spec, 1)).toMatchObject({ tarefa: 2 })
+        // Os ouvintes de sinal só existem durante a verificação.
+        expect(['SIGINT', 'SIGTERM', 'SIGHUP'].map((sinal) => process.listenerCount(sinal))).toEqual(ouvintes)
+      })
+
+      it('a linha de correção que não passa diz o slug dela', async () => {
+        const { spec, checkouts, entregar } = await andaresComOrigem([1])
+        await partida(spec, 1, 'correcao:fuso')
+        entregar(1, 0, { 'apps/web/fuso.ts': 'f\n' }, '(correção fuso)')
+        expect(checkouts.get(1)).toBeDefined()
+        const vermelho = await encontro(spec, 1, { comandoSobATrava: 'exit 1' })
+        expect(vermelho.codigo, vermelho.texto).toBe(CODIGO_DA_VERIFICACAO)
+        expect(vermelho.texto).toContain('slug encontro-fuso')
+        expect(vermelho.texto).toContain('(correção fuso)')
+      })
+
+      it('o reset que falha não esconde: a saída diz que a linha não voltou e o comando para desfazer', async () => {
+        const { spec, git, checkouts, entregar } = await andaresComOrigem()
+        const l1 = checkouts.get(1) ?? ''
+        await partida(spec, 1, '2')
+        entregar(1, 2, { 'apps/web/a.ts': 'a\n' })
+        const antes = git(l1, 'rev-parse', 'HEAD')
+        // O `index.lock` da árvore da linha faz o `git reset --hard` falhar.
+        const trava = join(git(l1, 'rev-parse', '--absolute-git-dir'), 'index.lock')
+        const preso = await encontro(spec, 1, { comandoSobATrava: `: > '${trava}'; exit 1` })
+        rmSync(trava, { force: true })
+        expect(preso.codigo).toBe(CODIGO_DA_VERIFICACAO)
+        expect(preso.texto).toContain('A LINHA NÃO VOLTOU')
+        expect(preso.texto).toContain(`git reset --hard ${antes}`)
+        expect(preso.texto).not.toContain('Nada avançou')
+      })
+
+      describe('a ordem: o grupo morre, a linha volta, e só então a trava se solta', () => {
+        /**
+         * A verificação abre um neto que ignora o SIGTERM e escreve no arquivo versionado até o SIGKILL. `termina` é o que o
+         * líder faz depois de o neto estar de pé: `exit 1` é o vermelho, `sleep 60` é o que passa do prazo.
+         */
+        function verificacaoComNeto(base: string, termina: string, alvo = 'versionado.txt') {
+          const pid = join(base, 'neto.pid')
+          // Desiste sozinho em uns 30 s: o neto que sobra de um caso que falhou não gira para sempre.
+          const neto = `trap "" TERM; echo $$ > '${pid}'; n=0; while [ $n -lt 1500 ]; do echo x >> '${alvo}'; sleep 0.02; n=$((n+1)); done`
+          return { pid, comando: `echo saida-da-verificacao-$((40+2)); echo erro-da-verificacao-$((50+3)) >&2; sh -c '${neto}' & while [ ! -e '${pid}' ]; do sleep 0.02; done; ${termina}` }
+        }
+
+        /** Quem pega a trava logo que o encontro a solta, e só lê o disco: a ref do HEAD da linha e o estado do neto. */
+        function espiaDaTrava(base: string, spec: string, checkout: string, pid: string) {
+          const programa = join(base, 'espia.mjs')
+          const saida = join(base, 'espia.json')
+          writeFileSync(
+            programa,
+            [
+              "import { existsSync, readFileSync, writeFileSync } from 'node:fs'",
+              "import { join, resolve } from 'node:path'",
+              'const [checkout, ramo, pid, saida] = process.argv.slice(2)',
+              // O checkout é um worktree: `.git` é um arquivo com `gitdir:`, e a ref da branch fica no diretório comum.
+              "const gitdir = readFileSync(join(checkout, '.git'), 'utf8').trim().replace(/^gitdir: /, '')",
+              "const comum = resolve(gitdir, readFileSync(join(gitdir, 'commondir'), 'utf8').trim())",
+              "const solto = join(comum, 'refs/heads', ramo)",
+              'const ref = existsSync(solto)',
+              "  ? readFileSync(solto, 'utf8').trim()",
+              "  : readFileSync(join(comum, 'packed-refs'), 'utf8').split('\\n').find((linha) => linha.endsWith(` refs/heads/${ramo}`)).split(' ')[0]",
+              "let estado = 'sumiu'",
+              "try { estado = readFileSync(`/proc/${readFileSync(pid, 'utf8').trim()}/stat`, 'utf8').split(') ')[1].split(' ')[0] } catch {}",
+              'writeFileSync(saida, JSON.stringify({ ref, estado }))',
+            ].join('\n'),
+          )
+          const filho = spawn('flock', [join(spec, CAMINHO_DA_TRAVA), process.execPath, programa, checkout, branchDaLinha('spec/exemplo', 1), pid, saida], { stdio: 'ignore' })
+          filhos.push(filho)
+          const terminou = new Promise<{ ref: string; estado: string }>((resolver) => filho.once('close', () => resolver(JSON.parse(readFileSync(saida, 'utf8')) as { ref: string; estado: string })))
+          return { terminou }
+        }
+
+        for (const [nome, termina, ambiente, limiteMs] of [
+          // Com a espera de 400 ms até o SIGKILL, e não os 5 s do padrão, o vermelho acaba em uns 500 ms.
+          ['vermelho', 'exit 1', {}, 3_500],
+          ['prazo', 'sleep 60', { EDUCA_ENCONTRO_PRAZO_DA_VERIFICACAO_MS: '3000' }, 7_500],
+        ] as const) {
+          it(`${nome}: quem pega a trava lê a ref já no commit de antes do merge, o neto morto e o checkout limpo`, async () => {
+            const { base, spec, git, checkouts, entregar } = await andaresComOrigem()
+            const l1 = checkouts.get(1) ?? ''
+            await partida(spec, 1, '2')
+            entregar(1, 2, { 'apps/web/a.ts': 'a\n', 'versionado.txt': 'v\n' })
+            const antes = git(l1, 'rev-parse', 'HEAD')
+            const { pid, comando } = verificacaoComNeto(base, termina)
+            const encontroDaLinha1 = rodar(spec, ['encontro', '1'], { EDUCA_ENCONTRO_SOB_A_TRAVA: comando, EDUCA_ENCONTRO_ESPERA_ATE_SIGKILL_MS: '400', ...ambiente })
+            await aguardarArquivo(pid)
+            const comeco = Date.now()
+            // A trava está com o encontro; este espera nela, e só lê o disco quando a pega.
+            const espia = espiaDaTrava(base, spec, l1, pid)
+            // A espia tem de pegar a trava enquanto o encontro a segura; se ele já saiu, o teste não provaria a ordem.
+            expect(encontroDaLinha1.jaSaiu()).toBe(false)
+            const saida = await encontroDaLinha1.terminou
+            expect(saida.codigo, saida.texto).toBe(CODIGO_DA_VERIFICACAO)
+            expect(Date.now() - comeco).toBeLessThan(limiteMs)
+            // O que a verificação escreve vai para o erro do encontro: quem lê vê o que quebrou. O 42 só existe na saída dela.
+            expect(saida.texto).toContain('saida-da-verificacao-42')
+            expect(saida.texto).toContain('erro-da-verificacao-53')
+            const visto = await espia.terminou
+            expect(visto.ref).toBe(antes)
+            expect(['sumiu', 'Z']).toContain(visto.estado)
+            expect(processoVivo(readFileSync(pid, 'utf8').trim())).toBe(false)
+            // Matar veio antes de voltar: o neto escrevia no arquivo versionado até o SIGKILL, e o reset veio depois.
+            expect(git(l1, 'status', '--porcelain')).toBe('')
+            expect(readFileSync(join(l1, 'versionado.txt'), 'utf8')).toBe('v\n')
+          })
+        }
+
+        it('a verificação que passa e deixa um neto de pé também não o deixa: o grupo morre, e a spec avança', async () => {
+          const { base, spec, git, checkouts, entregar } = await andaresComOrigem()
+          const l1 = checkouts.get(1) ?? ''
+          await partida(spec, 1, '2')
+          entregar(1, 2, { 'apps/web/a.ts': 'a\n' })
+          const { pid, comando } = verificacaoComNeto(base, 'exit 0', join(base, 'neto.log'))
+          const passou = await encontro(spec, 1, { comandoSobATrava: comando, esperaAteSigkillMs: 400, push: false })
+          expect(passou.codigo, passou.texto).toBe(0)
+          expect(processoVivo(readFileSync(pid, 'utf8').trim())).toBe(false)
+          expect(git(spec, 'rev-parse', 'HEAD')).toBe(git(l1, 'rev-parse', 'HEAD'))
+        })
+
+        for (const sinal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
+        it(`o encontro que recebe ${sinal} mata o grupo, volta a linha e sai com o código da verificação`, async () => {
+          const { base, spec, git, checkouts, entregar } = await andaresComOrigem()
+          const l1 = checkouts.get(1) ?? ''
+          await partida(spec, 1, '2')
+          entregar(1, 2, { 'apps/web/a.ts': 'a\n', 'versionado.txt': 'v\n' })
+          const antes = git(l1, 'rev-parse', 'HEAD')
+          const { pid, comando } = verificacaoComNeto(base, 'sleep 60')
+          const encontroDaLinha1 = rodar(spec, ['encontro', '1'], { EDUCA_ENCONTRO_SOB_A_TRAVA: comando, EDUCA_ENCONTRO_ESPERA_ATE_SIGKILL_MS: '400' })
+          await aguardarArquivo(pid)
+          encontroDaLinha1.sinal(sinal)
+          const saida = await encontroDaLinha1.terminou
+          expect([saida.codigo, saida.texto]).toEqual([CODIGO_DA_VERIFICACAO, expect.stringContaining('recebeu um sinal de fim') as string])
+          expect(processoVivo(readFileSync(pid, 'utf8').trim())).toBe(false)
+          expect(git(l1, 'rev-parse', 'HEAD')).toBe(antes)
+          expect(git(l1, 'status', '--porcelain')).toBe('')
+          expect(linhaDoQuadro(spec, 1)).toMatchObject({ tarefa: 2 })
+        })
+        }
+      })
+
+      it('o prazo da verificação é de 3 min, ou 6 com o npm ci, e quem espera a trava espera mais que isso e o SIGKILL', () => {
+        expect([PRAZO_DA_VERIFICACAO_MS, PRAZO_DA_VERIFICACAO_COM_NPM_CI_MS, ESPERA_ATE_SIGKILL_MS]).toEqual([3 * 60_000, 6 * 60_000, 5_000])
+        expect([prazoDaVerificacao(false), prazoDaVerificacao(true)]).toEqual([PRAZO_DA_VERIFICACAO_MS, PRAZO_DA_VERIFICACAO_COM_NPM_CI_MS])
+        expect([prazoDaVerificacao(false, { prazoDaVerificacaoMs: 400 }), prazoDaVerificacao(true, { prazoDaVerificacaoMs: 400 })]).toEqual([400, 400])
+        expect(PRAZO_DA_TRAVA_MS).toBeGreaterThan(PRAZO_DA_VERIFICACAO_COM_NPM_CI_MS + ESPERA_ATE_SIGKILL_MS)
+      })
     })
 
     it('o prazo da trava é o de 7 min, e o ambiente só o troca por um número', () => {
       expect(PRAZO_DA_TRAVA_MS).toBe(7 * 60 * 1000)
-      expect(opcoesDoAmbiente({ EDUCA_QUADRO_PRAZO_DA_TRAVA_MS: '300', EDUCA_COMANDO_DE_INSTALACAO: 'true', EDUCA_ENCONTRO_SOB_A_TRAVA: 'false' })).toEqual({
-        prazoDaTravaMs: 300,
-        comandoDeInstalacao: 'true',
-        comandoSobATrava: 'false',
-      })
-      expect(opcoesDoAmbiente({ EDUCA_QUADRO_PRAZO_DA_TRAVA_MS: 'logo' })).toEqual({})
-      expect(opcoesDoAmbiente({ EDUCA_QUADRO_PRAZO_DA_TRAVA_MS: '0' })).toEqual({})
-      expect(opcoesDoAmbiente({ EDUCA_QUADRO_PRAZO_DA_TRAVA_MS: 'Infinity' })).toEqual({})
+      expect(
+        opcoesDoAmbiente({
+          EDUCA_QUADRO_PRAZO_DA_TRAVA_MS: '300',
+          EDUCA_ENCONTRO_PRAZO_DA_VERIFICACAO_MS: '400',
+          EDUCA_ENCONTRO_ESPERA_ATE_SIGKILL_MS: '500',
+          EDUCA_COMANDO_DE_INSTALACAO: 'true',
+          EDUCA_ENCONTRO_SOB_A_TRAVA: 'false',
+        }),
+      ).toEqual({ prazoDaTravaMs: 300, prazoDaVerificacaoMs: 400, esperaAteSigkillMs: 500, comandoDeInstalacao: 'true', comandoSobATrava: 'false' })
+      for (const nome of ['EDUCA_QUADRO_PRAZO_DA_TRAVA_MS', 'EDUCA_ENCONTRO_PRAZO_DA_VERIFICACAO_MS', 'EDUCA_ENCONTRO_ESPERA_ATE_SIGKILL_MS']) {
+        for (const valor of ['logo', '0', '-5', 'Infinity']) expect(opcoesDoAmbiente({ [nome]: valor }), `${nome}=${valor}`).toEqual({})
+      }
       expect(CAMINHO_DA_TRAVA).toBe('.processo/linhas.lock')
     })
 

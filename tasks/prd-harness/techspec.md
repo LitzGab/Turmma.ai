@@ -161,7 +161,21 @@ regra, AIA e o resto de `docs/` continuam documento.
   com a `base` do quadro (sem ela, com a `spec` do quadro); no andar da própria spec, ou sem quadro, com a `develop`
 - **Encontro (RF3):** tipagem e lint no checkout da linha, depois do `merge --no-edit` da spec e antes do `--ff-only`,
   com prazo de 3 min, ou 6 com `npm ci` quando o lock mudou, em grupo de processo próprio. No vermelho ou no prazo, nesta ordem: o
-  grupo morre como o da mutação (§7c), a linha volta ao commit de antes do merge, a trava é solta; a spec não anda, sem push, linha ocupada, código de saída próprio, e a saída diz que a correção refaz o merge
+  grupo morre como o da mutação (§7c), a linha volta ao commit de antes do merge, a trava é solta; a spec não anda, sem push, linha ocupada, código de saída próprio, e a saída diz que a correção refaz o merge. No código (6.0): a verificação é
+  `Opcoes.comandoSobATrava` (`EDUCA_ENCONTRO_SOB_A_TRAVA`), no lugar de `npm run typecheck && npm run lint`, e roda
+  **depois** do merge (o ponto de injeção da 5.0, que ficava antes, passou para cá). Se o `package-lock.json` difere entre o
+  commit de antes do merge e o de agora, o comando vira `(npm ci) && (verificação)`, com o `npm ci` de
+  `Opcoes.comandoDeInstalacao`, e o prazo único passa de 3 para 6 min (`prazoDaVerificacao`, `prazoDaVerificacaoMs`,
+  `EDUCA_ENCONTRO_PRAZO_DA_VERIFICACAO_MS`; só o teste os troca). O comando roda por `sh -c` em grupo de processo próprio
+  (`detached`: o pgid é o do `sh`), com a saída no erro do encontro. Quando ele acaba (passou, vermelho ou prazo), e
+  também quando o encontro recebe SIGINT, SIGTERM ou SIGHUP (que valem como vermelho), o grupo inteiro morre: SIGTERM e,
+  `esperaAteSigkillMs` depois (5 s; `EDUCA_ENCONTRO_ESPERA_ATE_SIGKILL_MS`), SIGKILL, e o encontro espera o grupo sumir antes de
+  tocar na árvore. Só então vem o `git reset --hard <commit de antes do merge>` e a trava se solta (ao devolver o
+  `Resultado`). Saída 5 (`CODIGO_DA_VERIFICACAO`), que não toca o quadro: a linha segue com a tarefa. Se o reset falha, a
+  saída diz “A LINHA NÃO VOLTOU” com o comando para desfazer. Verde ou vermelho, a saída diz o comando que rodou, e por
+  isso a verificação trocada pelo ambiente não passa calada. O prazo de 7 min de quem espera a trava ficou como estava
+  (já passa de 6 min mais os 5 s do SIGKILL). `linhas.ts` tem a sua `sinalAoGrupo` e a sua `matarGrupo`, e não importa as
+  do `mutacoes.ts`: aquele arquivo roda copiado fora da pasta e só pode importar `node:`
 
 **(g) A limpeza (RF27).** O `nohup` grava `pedida`. O início de sessão com `source: clear`, sem `CLAUDE_CODE_AGENT`, no
 térreo, grava `feita`. A vigia acorda o Orquestrador quando a `pedida` passa de 10 minutos sem `feita` depois dela.
