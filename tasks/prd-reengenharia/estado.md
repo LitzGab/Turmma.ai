@@ -27,14 +27,14 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 - **Construção começou às 20:01 de 21/10/2026**, sem palavra do Joaquim depois do aviso das 19:07.
   Três linhas abertas (`spec/reengenharia--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **35.0**, pequena (`ops/` só com terminal; casos de uso em `operacao/`, paginação em `http/`), desde 21:14, 1ª tentativa; prazo de 2 h 23:14. Pares reiniciados no checkout da l1
+  - linha 1 (`Implementador` e `Mesa`, `…--l1`): **96.0**, grande (subpasta por recurso em `estrutura/`, `operacao/`, `sala/`, `atividade/`; pasta com mais de 25 arquivos reprova), desde 21:40, 1ª tentativa; prazo de 4 h 01:40. Pares reiniciados no checkout da l1
   - **guia (95.0) publicado** pelo `Arquiteto` em `202cb47` (RELATÓRIO às 18:18). Fica para o commit do fim da spec: a
     lista "Conferir depois das pastas" e repor as linhas que ele tirou do guia (dependency-cruiser e complexidade da
     12.0/13.0, API por pastas da 33–35/96, `lerEntrada` da 16.0) quando 12.0, 13.0, 16.0/17.0 e as pastas entrarem
   - `Arquiteto`: **ocioso** desde 18:18. O lote retido da 3.0 já foi medido (`3b44efe`) e a lacuna declarada (R60,
     `2fe1d73`): não há pedido pendente para ele até os caminhos da 12.0/13.0/24.0/25.0
   - linha 2 (`Implementador 2` e `Mesa 2`, `…--l2`): **ociosa** desde 19:18
-  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **ociosa**. Fila em série: 35.0 → 96.0 → 12.0
+  - linha 3 (`Implementador 3` e `Mesa 3`, `…--l3`): **ociosa**. Fila em série: 96.0 → 12.0 (antes da 12.0, pedir ao `Arquiteto` a conferência dos caminhos)
 - **Devo ainda:**
   - **no fechamento, `TODO.md`:** a linha que a Mesa pediu na correção `porta-unica-so-import` (`.test.tsx`/`.spec.ts` em
     `arquivosDeCodigo`), ver `tasks/correcoes/2026-10-22-porta-unica-so-import.md` na l1
@@ -60,7 +60,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
     Arquiteto (R41). A 92.0 é a parada da Etapa 9
   - retro: `linhas.ts abandonar <n>`; sugestão-fantasma na caixa; merge de outra linha numa linha quebra o encontro
     (`7f6ed10`); `MAESTRI_CLI` do ambiente aponta para montagem velha (usar `/tmp/.mount_MaestrKFhlcN/…`); `esteira.ts` conta execução cancelada como vermelha
-- **Base:** `spec/reengenharia` em `a52a276` (encontro da 34.0, 21:12). Esteira: `49e69b8` (`39870706377`) VERDE; `8d4479f` (`39874879850`) rodando; `a52a276` (`39877768470`) na fila. Vigia ligada
+- **Base:** `spec/reengenharia` em `b01a142` (encontro da 35.0, 21:38). Esteira: `8d4479f` (`39874879850`) VERDE; `a52a276` (`39877768470`) rodando; `b01a142` (`39879299569`) na fila. Vigia ligada
 
 ## Etapas da missão
 | Etapa | Situação | Onde |
@@ -109,6 +109,7 @@ respondida pelo Joaquim em 20/10/2026). Este arquivo é o `ESTADO.md` da missão
 | 17.0 | `e7426f9` | Sonnet | 2 (tenancy-guardian, privacy-guardian, test-engineer, revisor-geral aprovados na 2ª) | linha 1, grande, 19:18–20:15; sem tela |
 | 33.0 | `c8e369e` | Sonnet | 2 (infra-guardian e test-engineer na 1ª; revisor-geral na 2ª) | linha 1, grande, 20:18–20:55; sem tela; 3 divergências no 33_task.md (commit único; `token-do-convite.ts` fica por causa do e2e, exceção em onda-2.md e 12_task.md; script fora do repo) |
 | 34.0 | `af6fdb7` | Sonnet | 2 (tenancy-guardian, test-engineer, revisor-geral aprovados na 2ª) | linha 1, grande, 20:58–21:12; sem tela |
+| 35.0 | `17e5608` | Sonnet | 2 (tenancy-guardian na 1ª; test-engineer e revisor-geral aprovados na 1ª e na 2ª) | linha 1, pequena, 21:14–21:38; sem tela |
 
 ## Esperando o Joaquim
 ## 22/10/2026 08:15 — X5 medida independente do riscoAVida (lote retido) ⛔
