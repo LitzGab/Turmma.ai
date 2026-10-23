@@ -22,6 +22,9 @@ retrospectivas (RF1 a RF11), em linhas. **(3)** O hook novo (RF14 a RF18), um co
 | `tools/processo/linhas.ts` | alterado | RF3 (§5f), `abandonar <n>` (RF6), base de `conferir` (RF10) |
 | `tools/processo/mutacoes.ts` | alterado | RF4 (§7c), `--faltando` (RF5), RF17 (§5d) |
 | `tools/processo/portao-local.ts` | alterado | RF7, RF8; imprime o `--faltando` e os guardiões |
+| `tools/processo/sequencia-do-portao.ts` | novo | RF7, RF8: a função pura que monta a sequência de comandos do portão (suítes, ambiente e dois `stop` dos despachantes e workers). **Onde o `stop` protege:** o do alvo, antes da integração, é redundância do `down --volumes` do `globalSetup` (a integração do alvo já começa do banco limpo, e o código antigo já a rodava assim); o que fica sem outra proteção é a corrida de integração das mutações, que roda sem banco limpo depois de o e2e do alvo (`--manter-ambiente`) deixar o ambiente completo de pé, e por isso a sequência termina num `stop` quando alguma mutação cita teste de integração |
+| `tools/ci/etapas-de-guarda.ts`, `tools/ci/dependencias.ts`, `tools/ci/verificar.ts` | alterados e novo | RF8: `GUARDAS_DA_ESTEIRA` e `ETAPAS_DE_GUARDA` são a lista que o `ci:verificar` e o portão leem; `guarda:dependencias` roda as mesmas etapas por `dependencias.ts`, e não um texto redigitado no `package.json` |
+| `tools/ci/compose.ts` | alterado | RF7: `servicosDeJob`, os despachantes e workers lidos do `infra/compose.yml` |
 | `tools/ci/duracao-do-e2e.ts` | alterado | RF11 |
 | `tools/ci/conferir-entregas.ts` | novo | a terceira camada do RF14 (§5a) |
 | `tools/processo/revisoes.ts` | partido | `documento-de-revisao.ts`, `caducidade.ts`, `comando-git.ts`, `portao.ts`; o `revisoes.ts` só reexporta, sem importação do `estado.ts` e do `esteira.ts` (RF13); RF18 |

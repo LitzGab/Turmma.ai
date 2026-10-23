@@ -559,11 +559,27 @@ describe('as ligações que nenhuma função sozinha prova', () => {
 
   it('o portão da tarefa passa a variável só ao e2e e reprova pela duração antes das mutações', () => {
     const portao = ler('tools/processo/portao-local.ts')
-    expect(portao).toMatch(/daTarefa && comando\.includes\('tools\/ci\/e2e\.ts'\) \? \{ \.\.\.ambiente, \[VARIAVEL_DO_RELATORIO_DO_E2E\]: relatorioDoE2e \}/)
+    expect(portao).toMatch(/daTarefa && passo\.comando\.includes\('tools\/ci\/e2e\.ts'\) \? \{ \.\.\.ambiente, \[VARIAVEL_DO_RELATORIO_DO_E2E\]: relatorioDoE2e \}/)
     expect(portao).toMatch(/daTarefa && alvos\.e2e\.length > 0 \? motivoDaDuracaoDoE2e\(raiz, relatorioDoE2e\) : null/)
     // É a chamada que entrega a variável ao e2e, e o relatório da corrida anterior que sai antes dela: sem um dos dois o portão lê relatório velho.
-    expect(portao).toContain('rodar(comando, ambienteDoComando(comando, suite))')
+    expect(portao).toContain('rodar(passo.comando, ambienteDoPasso(passo))')
     expect(portao).toMatch(/if \(daTarefa\) \{\n {2}rmSync\(relatorioDoE2e, \{ force: true \}\)/)
-    expect(portao.indexOf('motivoDaDuracaoDoE2e(raiz, relatorioDoE2e)')).toBeLessThan(portao.indexOf('const documento = daTarefa ? documentoDasMutacoes()'))
+    expect(portao.indexOf('motivoDaDuracaoDoE2e(raiz, relatorioDoE2e)')).toBeLessThan(portao.indexOf('conferirMutacoesDoDocumento(raiz'))
+  })
+
+  it('o portão liga a sequência pura às suítes, aos serviços de job e às mutações de integração', () => {
+    // `portao-local.ts` executa ao ser importado e não tem teste de unidade: o que ele entrega a `sequencia-do-portao.ts` só é
+    // provado pelo texto. A ordem e o conteúdo da sequência são provados em `tools/processo/portao-local.test.ts`.
+    const portao = ler('tools/processo/portao-local.ts')
+    expect(portao).toContain("const suites = suitesDoPortao({ daTarefa, e2e: argumentos.includes('--e2e'), infra: argumentos.includes('--infra') })")
+    expect(portao).toContain("const textoDoDocumento = documento ? readFileSync(join(raiz, documento), 'utf8') : null")
+    expect(portao).toContain('const mutacoesDeIntegracao = textoDoDocumento !== null && mutacaoDeIntegracao(lerMutacoes(textoDoDocumento).mutacoes)')
+    expect(portao).toContain(
+      "const sequencia = sequenciaDoPortao(suites, { alvos, docker: ['docker', ...ARGUMENTOS_COMPOSE], servicosDeJob: servicosDeJob(), mutacoesDeIntegracao })",
+    )
+    expect(portao).toContain('if (documento && textoDoDocumento !== null) {')
+    // O `stop` das mutações é um passo da sequência: ela e a leitura do documento vêm antes de qualquer mutação.
+    expect(portao.indexOf('const mutacoesDeIntegracao')).toBeLessThan(portao.indexOf('const sequencia = sequenciaDoPortao'))
+    expect(portao.indexOf('const sequencia = sequenciaDoPortao')).toBeLessThan(portao.indexOf('conferirMutacoesDoDocumento(raiz'))
   })
 })

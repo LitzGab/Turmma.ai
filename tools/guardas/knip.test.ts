@@ -104,9 +104,12 @@ describe('knip: a trava de dependência declarada onde é usada, sem sobra', () 
     expect(rodarNaFixture('import-que-nao-resolve')).toEqual({ codigo: 1, achados: ['unresolved: ./nao-existe.ts'] })
   }, 30_000)
 
-  it('o `guarda:dependencias` do package.json roda o npm audit e depois o knip, com os mesmos argumentos da etapa', () => {
+  it('o `guarda:dependencias` do package.json roda as etapas da esteira, e não um texto redigitado (RF8, 8.0)', () => {
+    // Até a 8.0 o script repetia o `npm audit` e o knip com os argumentos escritos no `package.json`, e este teste os mantinha
+    // iguais aos da etapa. Agora o script chama `tools/ci/dependencias.ts`, que roda `ETAPAS_DE_DEPENDENCIAS`; o que ele chama
+    // e em que ordem está provado em `tools/ci/scripts.test.ts`.
     const { scripts } = JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 'utf8')) as { scripts: Record<string, string> }
-    expect(scripts['guarda:dependencias']).toBe(`npm audit --audit-level=high --omit=dev && knip ${ARGUMENTOS_DO_KNIP.join(' ')}`)
+    expect(scripts['guarda:dependencias']).toBe('node tools/ci/dependencias.ts')
   })
 
   it('o `ignore` do knip.json é só as fixtures de violação, e as exceções de nome são as de fora do npm', () => {

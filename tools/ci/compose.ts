@@ -266,6 +266,16 @@ export function imagensDosServicos(conteudoCompose: string): Map<string, string>
   return imagens
 }
 
+/**
+ * Os serviços que consomem job: os despachantes e os workers, em todas as réplicas que o compose declara. O portão local
+ * os derruba antes da integração (`tools/processo/sequencia-do-portao.ts`): com um deles de pé, o job que o teste
+ * enfileirou é consumido por ele, e o teste não vê o efeito. Lidos do compose, e não escritos à mão: réplica nova entra
+ * sozinha.
+ */
+export function servicosDeJob(conteudoCompose: string = readFileSync(join(raizRepositorio, COMPOSE), 'utf8')): string[] {
+  return [...imagensDosServicos(conteudoCompose).keys()].filter((servico) => /^(despachante|worker)(-|$)/.test(servico))
+}
+
 /** O texto do arquivo das imagens do ambiente N: cada serviço que o compose constrói, com a etiqueta `teste-N`. */
 export function conteudoDasImagensDoAmbiente(numero: number, conteudoCompose: string = readFileSync(join(raizRepositorio, COMPOSE), 'utf8')): string {
   const construidas = [...imagensDosServicos(conteudoCompose)].filter(([, imagem]) => IMAGEM_CONSTRUIDA.test(imagem))

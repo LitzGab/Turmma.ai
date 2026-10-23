@@ -46,10 +46,10 @@ do Orquestrador, no fechamento, e não é tarefa.
   - [ ] 7.1 Corrida limpa medida, prazo da mutada, grupo de processo (RF4, §7c)
   - [ ] 7.2 Testes: RF4 do `cenarios.md`, com relógio injetado
 
-- [ ] **8.0 — O portão derruba os workers e chama as guardas pelas etapas da esteira**
-  - [ ] 8.1 A sequência do portão em função testável, com os workers derrubados antes da integração (RF7)
-  - [ ] 8.2 Portão e `ci:verificar` pela mesma lista de `etapas-de-guarda.ts` (RF8)
-  - [ ] 8.3 Testes: RF7 e RF8 do `cenarios.md`
+- [x] **8.0 — O portão derruba os workers e chama as guardas pelas etapas da esteira**
+  - [x] 8.1 A sequência do portão em função testável, com os workers derrubados antes da integração (RF7)
+  - [x] 8.2 Portão e `ci:verificar` pela mesma lista de `etapas-de-guarda.ts` (RF8)
+  - [x] 8.3 Testes: RF7 e RF8 do `cenarios.md`
 
 - [ ] **9.0 — Tarefa de código sem mutação não recebe carimbo**
   - [ ] 9.1 `mutacoes.ts --faltando` (RF5)

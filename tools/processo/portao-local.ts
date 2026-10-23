@@ -14,10 +14,11 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { ARGUMENTOS_COMPOSE, servicosDeJob } from '../ci/compose.ts'
 import { arquivoDoRelatorioDoE2e, motivoDaDuracaoDoE2e, VARIAVEL_DO_RELATORIO_DO_E2E } from '../ci/duracao-do-e2e.ts'
 import { e2eDosLiteraisRemovidos } from '../ci/e2e-que-cita-literal.ts'
 import { garantirFilaDeCarga } from '../ci/fila-de-carga.ts'
-import { avaliarMutacoes, conferirMutacoesDoDocumento, rodarCalado, type CarimboDasMutacoes } from './mutacoes.ts'
+import { avaliarMutacoes, conferirMutacoesDoDocumento, lerMutacoes, rodarCalado, type CarimboDasMutacoes } from './mutacoes.ts'
 import {
   alteracoesDeCodigo,
   alvosDoPortao,
@@ -31,10 +32,10 @@ import {
   lerRevisoes,
   revisoresObrigatorios,
   SUITES_DO_PORTAO_COMPLETO,
-  SUITES_DO_PORTAO_DA_TAREFA,
   suitesExigidas,
   tipoDoDocumento,
 } from './revisoes.ts'
+import { mutacaoDeIntegracao, sequenciaDoPortao, suitesDoPortao, type PassoDoPortao } from './sequencia-do-portao.ts'
 
 const raiz = process.env['CLAUDE_PROJECT_DIR'] ?? process.cwd()
 const argumentos = process.argv.slice(2)
@@ -42,16 +43,6 @@ const argumentos = process.argv.slice(2)
 function rodar(comando: string, ambiente: NodeJS.ProcessEnv = process.env): boolean {
   process.stdout.write(`\n▶ ${comando}\n`)
   return spawnSync(comando, { cwd: raiz, shell: '/bin/sh', stdio: 'inherit', env: ambiente }).status === 0
-}
-
-/**
- * Só o `test`, a primeira suíte que sobe o compose de teste, começa do banco limpo, como a esteira
- * (`comandosDaSubidaDeTeste`, em `tools/ci/compose.ts`). O e2e e o infra vêm depois e reusam o que ela subiu: com a
- * variável neles, o `globalSetup` do infra derrubaria o ambiente que o `test:e2e --manter-ambiente` deixou de pé. Por
- * isso ela sai também do ambiente herdado, e não só deixa de ser posta.
- */
-function ambienteDaSuite(suite: string): NodeJS.ProcessEnv {
-  return { ...process.env, EDUCA_BANCO_NOVO: suite === 'test' ? '1' : undefined }
 }
 
 if (argumentos[0] === 'conferir') {
@@ -123,27 +114,7 @@ function documentoDasMutacoes(): string | null {
 const citados = daTarefa ? e2eDosLiteraisRemovidos(raiz) : []
 for (const citado of citados) process.stdout.write(`▶ ${citado.arquivo} entra nos alvos: cita ${citado.literais.map((literal) => `"${literal}"`).join(', ')}, que o diff tirou de apps/web/src\n`)
 const alvos = alvosDoPortao([...arquivosAlterados(raiz), ...extras, ...citados.map((citado) => citado.arquivo)])
-const suites = daTarefa
-  ? [...SUITES_DO_PORTAO_DA_TAREFA]
-  : ['typecheck', 'lint', 'segredo', 'dependencias', 'test', ...(argumentos.includes('--e2e') ? ['e2e'] : []), ...(argumentos.includes('--infra') ? ['infra'] : [])]
-
-/** Os comandos de cada suíte. Lista vazia é suíte sem nada a rodar: o alvo de uma tarefa que não alterou teste nenhum. */
-function comandoDaSuite(suite: string): string[] {
-  if (suite === 'unidade') return ['npm run test:unidade']
-  // As duas guardas da esteira que não são teste: o gitleaks e o `npm audit`. Segundos, e pegam na tarefa o que só a
-  // esteira do pouso pegaria.
-  if (suite === 'segredo') return ['npm run guarda:segredo']
-  if (suite === 'dependencias') return ['npm run guarda:dependencias']
-  if (suite === 'e2e') return ['npm run test:e2e']
-  if (suite === 'infra') return ['npm run test:infra']
-  if (suite !== 'alvo') return [`npm run ${suite}`]
-  // A mesma ordem do portão completo: a integração sobe o compose com o banco limpo, e o e2e e o infra o reusam.
-  return [
-    ...(alvos.integracao.length > 0 ? [`npx vitest run --project integracao ${alvos.integracao.join(' ')}`] : []),
-    ...(alvos.e2e.length > 0 ? [`node tools/ci/e2e.ts --manter-ambiente ${alvos.e2e.join(' ')}`] : []),
-    ...(alvos.infra.length > 0 ? [`npx vitest run --project infra ${alvos.infra.join(' ')}`] : []),
-  ]
-}
+const suites = suitesDoPortao({ daTarefa, e2e: argumentos.includes('--e2e'), infra: argumentos.includes('--infra') })
 
 // A duração dos casos de e2e que o portão da tarefa roda: o Playwright deixa o relatório neste arquivo, e o portão o lê
 // depois da corrida verde (`tools/ci/duracao-do-e2e.ts`). O de uma corrida anterior sai antes: relatório velho não mede nada.
@@ -152,19 +123,25 @@ if (daTarefa) {
   rmSync(relatorioDoE2e, { force: true })
   mkdirSync(dirname(relatorioDoE2e), { recursive: true })
 }
-/** O ambiente do comando: o da suíte e, no e2e da tarefa, o arquivo onde o Playwright grava a duração dos casos. */
-function ambienteDoComando(comando: string, suite: string): NodeJS.ProcessEnv {
-  const ambiente = ambienteDaSuite(comando.includes('--project integracao') ? 'test' : suite)
-  return daTarefa && comando.includes('tools/ci/e2e.ts') ? { ...ambiente, [VARIAVEL_DO_RELATORIO_DO_E2E]: relatorioDoE2e } : ambiente
+/**
+ * O ambiente do comando: o do banco que ele começa (`PassoDoPortao.bancoNovo`) e, no e2e da tarefa, o arquivo onde o
+ * Playwright grava a duração dos casos. A variável sai também do ambiente herdado, e não só deixa de ser posta.
+ */
+function ambienteDoPasso(passo: PassoDoPortao): NodeJS.ProcessEnv {
+  const ambiente = { ...process.env, EDUCA_BANCO_NOVO: passo.bancoNovo ? '1' : undefined }
+  return daTarefa && passo.comando.includes('tools/ci/e2e.ts') ? { ...ambiente, [VARIAVEL_DO_RELATORIO_DO_E2E]: relatorioDoE2e } : ambiente
 }
 
 // Com node_modules anterior ao lock (um pull que trouxe dependência nova), o typecheck falha com TS2307
 // sem dizer que falta instalar.
 const dependencias = rodar('[ -f node_modules/.package-lock.json ] && [ ! package-lock.json -nt node_modules/.package-lock.json ] || npm ci')
-// Só o primeiro comando que sobe o compose começa do banco limpo (`ambienteDaSuite`): no alvo, é a integração.
-const falhou = !dependencias
-  ? 'dependências'
-  : suites.find((suite) => !comandoDaSuite(suite).every((comando) => rodar(comando, ambienteDoComando(comando, suite))))
+// A sequência vem de `sequencia-do-portao.ts`: a ordem dos comandos e o `stop` dos workers antes da integração têm teste lá.
+// O documento e o texto das mutações são lidos aqui, e não depois das suítes: a sequência também derruba os workers antes das mutações de integração.
+const documento = daTarefa ? documentoDasMutacoes() : null
+const textoDoDocumento = documento ? readFileSync(join(raiz, documento), 'utf8') : null
+const mutacoesDeIntegracao = textoDoDocumento !== null && mutacaoDeIntegracao(lerMutacoes(textoDoDocumento).mutacoes)
+const sequencia = sequenciaDoPortao(suites, { alvos, docker: ['docker', ...ARGUMENTOS_COMPOSE], servicosDeJob: servicosDeJob(), mutacoesDeIntegracao })
+const falhou = !dependencias ? 'dependências' : sequencia.find((passo) => !rodar(passo.comando, ambienteDoPasso(passo)))?.suite
 
 if (falhou) {
   process.stdout.write(`\n✗ portão local vermelho em ${falhou}. Nenhum carimbo gravado.\n`)
@@ -179,9 +156,8 @@ if (duracaoDoE2e !== null) {
 // As mutações do documento, depois das suítes: só com os testes verdes um teste vermelho quer dizer que a cláusula tem
 // quem a prove. Cada uma é aplicada, o teste citado roda, tem de cair, e o arquivo volta ao que era.
 let carimboDasMutacoes: CarimboDasMutacoes | undefined
-const documento = daTarefa ? documentoDasMutacoes() : null
-if (documento) {
-  const conferencia = conferirMutacoesDoDocumento(raiz, documento, readFileSync(join(raiz, documento), 'utf8'), rodarCalado(raiz), (texto) => process.stdout.write(texto))
+if (documento && textoDoDocumento !== null) {
+  const conferencia = conferirMutacoesDoDocumento(raiz, documento, textoDoDocumento, rodarCalado(raiz), (texto) => process.stdout.write(texto))
   if ('vermelho' in conferencia) {
     process.stdout.write(`\n✗ portão local vermelho nas mutações de ${documento}: ${conferencia.vermelho}. Nenhum carimbo gravado.\n`)
     process.exit(1)

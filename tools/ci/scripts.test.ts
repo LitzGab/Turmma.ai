@@ -4,8 +4,14 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { parseEnv } from 'node:util'
 import { afterEach, describe, expect, it } from 'vitest'
-import { argumentosGitleaks, ARGUMENTOS_DO_KNIP, IMAGEM_GITLEAKS } from './etapas-de-guarda.ts'
-import { raizRepositorio } from './executar.ts'
+import {
+  ETAPAS_DE_DEPENDENCIAS,
+  ETAPAS_DE_GUARDA,
+  etapasSemGuardaNoPortao,
+  GUARDAS_DA_ESTEIRA,
+  IMAGEM_GITLEAKS,
+} from './etapas-de-guarda.ts'
+import { raizRepositorio, type Etapa } from './executar.ts'
 
 // Os scripts reais da esteira, com `npm`, `npx` e `docker` trocados por imitações que só
 // registram a chamada. Prova que cada `ci:*` roda o teste, não engole a falha e derruba o
@@ -62,6 +68,11 @@ function rodarScript(script: string, falharQuandoContem: string | null, argument
   return { codigo: resultado.status, chamadas: readFileSync(registro, 'utf8').trim().split('\n').filter(Boolean) }
 }
 
+/** A linha que o `npm`, o `npx` ou o `docker` de imitação registra para a etapa. */
+function chamadaDa(etapa: Etapa): string {
+  return `${etapa.comando} ${etapa.argumentos.join(' ')}`
+}
+
 function indiceDe(chamadas: string[], trecho: string): number {
   return chamadas.findIndex((chamada) => chamada.includes(trecho))
 }
@@ -97,17 +108,45 @@ function afirmarDespejoCarimbado(chamadas: string[], derrubou = true): void {
 }
 
 describe('scripts ci:* reais', () => {
-  it('ci:verificar roda tipos, lint com guardas, gitleaks, npm audit, knip e unidade, e sai verde só se todos passarem', () => {
+  it('ci:verificar roda tipos, lint, as guardas da lista e a unidade, e sai verde só se todos passarem', () => {
     const verde = rodarScript('verificar.ts', null)
     expect(verde.codigo).toBe(0)
-    expect(verde.chamadas).toEqual([
-      'npm run typecheck',
-      'npm run lint',
-      `docker ${argumentosGitleaks(raizRepositorio).join(' ')}`,
+    // As guardas vêm de `ETAPAS_DE_GUARDA`, a lista que o portão local também lê (RF8): guarda posta direto no
+    // `verificar.ts`, fora dela, acrescenta uma chamada que esta lista não tem, e o teste fica vermelho.
+    expect(verde.chamadas).toEqual(['npm run typecheck', 'npm run lint', ...ETAPAS_DE_GUARDA.map(chamadaDa), 'npm run test:unidade'])
+  })
+
+  it('as guardas da esteira são o gitleaks, o npm audit e o knip, nesta ordem', () => {
+    // O que a lista contém, escrito à mão: lista esvaziada deixaria o teste acima verde, com a esteira sem guarda nenhuma.
+    expect(ETAPAS_DE_GUARDA.map(chamadaDa)).toEqual([
+      expect.stringContaining(`docker run --rm --network none`),
       'npm audit --audit-level=high --omit=dev',
-      `npx --no -- knip ${ARGUMENTOS_DO_KNIP.join(' ')}`,
-      'npm run test:unidade',
+      'npx --no -- knip --include dependencies,unlisted,binaries,unresolved',
     ])
+  })
+
+  it('RF8: o portão local cobre todas as etapas do ci:verificar, e uma guarda a mais só nele fica sem cobertura', () => {
+    expect(etapasSemGuardaNoPortao(ETAPAS_DE_GUARDA)).toEqual([])
+    const aMais: Etapa = { nome: 'guarda nova', comando: 'npm', argumentos: ['run', 'guarda:nova'] }
+    expect(etapasSemGuardaNoPortao([...ETAPAS_DE_GUARDA, aMais])).toEqual([aMais])
+    // A cobertura é da etapa que a lista tem, não de uma de mesmo texto.
+    expect(etapasSemGuardaNoPortao([{ ...(ETAPAS_DE_GUARDA[0] as Etapa) }])).toHaveLength(1)
+  })
+
+  it('RF8: o script do portão de cada guarda existe no package.json e roda as etapas da lista', () => {
+    const scripts = (JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts
+    expect(GUARDAS_DA_ESTEIRA.map((guarda) => [guarda.suite, guarda.script, scripts[guarda.script]])).toEqual([
+      ['segredo', 'guarda:segredo', 'node tools/ci/segredo.ts'],
+      ['dependencias', 'guarda:dependencias', 'node tools/ci/dependencias.ts'],
+    ])
+    // O script de dependências roda as etapas da esteira, e não um texto redigitado: as mesmas chamadas, na mesma ordem.
+    const dependencias = rodarScript('dependencias.ts', null)
+    expect(dependencias.codigo).toBe(0)
+    expect(dependencias.chamadas).toEqual(ETAPAS_DE_DEPENDENCIAS.map(chamadaDa))
+    expect(rodarScript('dependencias.ts', 'npm audit').codigo).not.toBe(0)
+    expect(rodarScript('dependencias.ts', 'knip').codigo).not.toBe(0)
+    // E o do segredo roda o gitleaks da imagem fixada pela esteira.
+    expect(rodarScript('segredo.ts', null).chamadas[0]).toContain(IMAGEM_GITLEAKS)
   })
 
   it.each(['npm run lint', IMAGEM_GITLEAKS, 'npm audit --audit-level=high --omit=dev', 'npx --no -- knip', 'npm run test:unidade'])(
