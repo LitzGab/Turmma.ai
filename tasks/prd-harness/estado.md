@@ -11,8 +11,13 @@
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador`/`Mesa`): **3.0** (pequeno), 1ª tentativa, desde ~16:35
-  - linha 2 (`Implementador 2`/`Mesa 2`): **6.0** (grande), 1ª tentativa, desde ~16:35
+  - linha 1 (`Implementador`/`Mesa`): **correção `2026-10-23-agentes-suspensao-intermitente`**, desde ~16:45: a esteira
+    `39996698191` (em `a691e02`, commit só de documento) caiu no e2e 1/7, `e2e/agentes.spec.ts:230` (`chromebook`,
+    `locator.click` estourou 90 s); a `develop` está verde. Guardiões: `conformidade-reviewer`, `frontend-reviewer`.
+    Depois dela, a **4.0** (pequeno) parte na linha 1
+  - linha 2 (`Implementador 2`/`Mesa 2`): **correção `encontro-6`**, desde ~17:15: a 6.0 terminou (`8dce7e7`, infra-guardian,
+    revisor-geral e test-engineer APROVADOS na 2ª rodada), e o encontro deu CONFLITO em `tasks/prd-harness/cenarios.md`.
+    Guardião: `infra-guardian`. Depois dela, o encontro da linha 2 de novo
   - linha 3 (`Implementador 3`/`Mesa 3`): **9.0** (grande), 1ª tentativa, desde ~16:35
   - a 10.0 e a 15.0 também estão liberadas e partem nas primeiras linhas que se encontrarem
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
@@ -22,10 +27,14 @@
     `revisao-spec.md`, rodadas 11 a 13
   - a fila da esteira: perguntei ao Joaquim se cancelo as execuções das branches de linha, e ele não respondeu. Não é parada,
     e a 3.0 (RF1) resolve isso
+  - nota ao Arquiteto, no próximo pedido: o `tasks.md:26` ainda cita `gh run list --event push`, e a 3.0 passou a ler por
+    evento (push e `workflow_dispatch`); está em "Divergências resolvidas", na Tech Spec §5(f) e no `cenarios.md`
+  - nota ao Arquiteto, no próximo pedido: o encontro novo da 6.0 tem a saída de código 5 (começa por `VERIFICAÇÃO RECUSADA`),
+    que pede a mesma correção do CONFLITO, e o `/seguir` (passo 6) ainda não a cita (aviso do Implementador 2)
   - nota ao Arquiteto, se servir: o lote 5/7 do e2e passou dos 45 min do job na correção do `casca`, o que pesa no M1
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `874fd35` (encontro da 2.0); esteira `40011033628` rodando nele
+- **Base:** `spec/harness` em `690e0b4` (encontro da 3.0); a fila da esteira tem oito execuções na fila (`queued`)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -36,6 +45,7 @@
 | correção complexidade-revisoes | `df55c2f` | Sonnet 5.5 | test-engineer 1, revisor-geral 1 | antes da 2.0, por triagem do Arquiteto (2ª divergência); TETO 248→244 |
 | 2.0 | `4fcf89d` | Sonnet 5.5 | test-engineer 2, revisor-geral 2 | duas DIVERGÊNCIAS: o RF13, com BLOQUEIO, que o Joaquim resolveu com A; e a catraca, que o Arquiteto triou como detalhe A, com a correção complexidade-revisoes antes. Três divergências no `2_task.md` e sobras no `TODO.md` |
 | 5.0 | `9b676fc` | Sonnet 5.5 | infra-guardian 2, test-engineer 2, revisor-geral 2 (os três reprovaram na 1ª) | |
+| 3.0 | `201e9b3` | Sonnet 5.5 | infra-guardian 2, privacy-guardian 2, test-engineer 2, revisor-geral 2 | `gh run list` lê por evento (push e `workflow_dispatch`), não só `--event push`; o `tasks.md:26` ainda cita o antigo |
 
 ## Esperando o Joaquim
 ## 23/10/2026 ~16:10 — X7 escopo (skills de projeto)
@@ -56,6 +66,8 @@ Recomendo: A. A mudança é de duas linhas, o mesmo comportamento continua prova
 e no `cenarios.md`, 2.4 no `2_task.md`); depois, retomada da 2.0
 Segue sem depender: a 5.0 (linha 2) e a 7.0 (linha 3), que não tocam o `revisoes.ts` nem dependem da 2.0. Ficam paradas a 2.0 e, atrás dela, a 3.0, a 4.0, a 9.0 à 14.0 e a 15.0
 ## O que falhou
+- 23/10 ~17:12: CONFLITO no encontro da 6.0, em `cenarios.md`, o mesmo arquivo do `encontro-8`. Virou a correção
+  `encontro-6` na linha 2
 - 23/10 ~15:25: CONFLITO no encontro da 8.0, em `cenarios.md`. A 8.0 registrou divergências de detalhe no RF7 e no RF8, e a spec
   já tinha mudado o mesmo arquivo. Virou a correção `encontro-8` na linha 3
 - 23/10 14:49: o push do encontro da 7.0 falhou (`TLS connect error ... unexpected eof`). Refiz `git push origin spec/harness`, que passou
