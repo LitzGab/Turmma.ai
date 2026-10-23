@@ -1786,3 +1786,27 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   rodada): em `apps/api/src/operacao/escola/escola.repository.test.ts`, um `.test.tsx` ou `.spec.ts` que citasse o módulo seria
   acusado como código. Alinhar com o filtro das outras guardas, e conferir os três testes que usam a função, na próxima tarefa que
   mexer nela (`tasks/correcoes/2026-10-22-porta-unica-so-import.md`, linhas 110 e 115). (dono: Joaquim)
+- [ ] **(X5, esteira) `e2e/casca.spec.ts:67` [celular] passa do prazo do dado, e dois e2e do `celular` caíram uma vez na `develop`.**
+      O caso "com dado: versão e componentes… em até 5 s" mede o tempo até o dado na tela contra `PRAZO_DO_DADO_MS = 5_000`
+      (`casca.spec.ts:10`, asserção em `:73`) e caiu duas vezes na esteira: 5117 ms em `d6eb2f0` (`39896375281`, spec da X5,
+      commit só de documento) e 5018 ms na `develop`, no pouso `5566974` (`39907941527`); antes, 151 ms acima em `a0f1974`. Não é
+      código da X5: o mesmo código passou nas execuções vizinhas. Na mesma execução da `develop` caíram uma vez cada, e passaram
+      na reexecução, `e2e/areas.spec.ts:647` (a guarda sem o `/v1/eu`) e `e2e/troca-de-escola.spec.ts:156` (W13, o seletor), os
+      dois no `celular`. **A correção do `casca` parte depois da retrospectiva da X5** (`tasks/prd-reengenharia/retro.md`),
+      como `/corrigir` própria; os outros dois entram nela se caírem de novo, ou no censo de prazo do e2e (item "(X3,
+      retrospectiva) Código de processo", M1). (dono: Orquestrador)
+- [ ] **(X5, retrospectiva) Código de processo que a X5 pediu** (`tasks/prd-reengenharia/retro.md`, P4 e M1 a M7). **Destino que o
+      Joaquim deu em 23/10/2026: antes da primeira tarefa da próxima spec**, numa correção própria, com teste e revisão, junto das
+      M1 a M3 da X3 (item "(X3, retrospectiva) Código de processo", acima); a correção do `casca.spec.ts:67` parte antes dela. (P4)
+      `.github/workflows/ci.yml` com `concurrency: { group: esteira-${{ github.ref }}, cancel-in-progress }` só em `spec/**` e
+      `correcao/**` (44 de 91 execuções da spec canceladas à mão); entra com a M1, porque é ela que impede o cancelamento de virar
+      vermelho, e com o caso em `tools/ci/esteira.test.ts`. (M1) `tools/processo/esteira.ts`: `cancelled` é `superada`, e o veredito
+      é o da execução concluída mais nova, com os jobs vermelhos no texto (o knip da 24.0 ficou ~2 h 20 vermelho sem ninguém ver).
+      (M2) `tools/processo/linhas.ts encontro` roda `npm run typecheck` e `npm run lint` depois do merge e recusa o encontro
+      vermelho (o crítico da validação: a supressão órfã do encontro da 13.0 com a 90.0). (M3) `tools/processo/mutacoes.ts` com
+      timeout por mutação, e o estouro conta como mutação recusada, não como vermelho (19.0: 41 min de `flock`). (M4) `mutacoes.ts
+      --faltando`: as linhas acrescentadas de produção com condição (`if`, `&&`, `||`, `??`, `?:`, `case`, `where`, expressão
+      regular) que nenhum bloco alcança, impressas pelo portão para o Implementador declarar o bloco ou o motivo antes da Mesa (grupo
+      A: 10 reprovações). (M5) `linhas.ts abandonar <n>`. (M6) o portão para o despachante e os workers do compose de teste antes da
+      integração. (M7) o portão chama as guardas pelas etapas de `tools/ci/etapas-de-guarda.ts`, as mesmas do `ci:verificar`.
+      (dono: Orquestrador)

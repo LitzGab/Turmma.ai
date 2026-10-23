@@ -115,6 +115,10 @@ infere o porte pela contagem de guardiões e avisa que inferiu.
   documento. E **toda tarefa que muda uma tela que o `docs/interface.md` descreve leva a subtarefa da
   Parte A daquela tela**: o critério de pronto da spec não tem dono. Na X3 a busca por "Seu time" foi só
   nos textos de tela (2.3), e só a 2.0 tinha a subtarefa do `interface.md`; a validação achou os dois
+- **Tarefa que cria guarda (regra de lint, teste estrutural, trava) leva duas linhas fixas na tabela
+  de testes**: "quem contorna é acusado", uma por forma (reexportação, `import()`, o caminho como
+  texto), e "a guarda reprova quando o alvo dela não existe". Na X5, a 9.0 e a 12.0 somaram oito
+  reprovações por escape e por cerca que se calava
 - **Uma linha da tabela de testes, um comportamento.** O que a célula junta com ponto e vírgula se
   perde: na X3, "100 ou mais", "decidir tira o item" e "vínculo encerrado tira a página" estavam numa
   célula com outros, ninguém escreveu o teste, e três dos oito achados da validação foram eles

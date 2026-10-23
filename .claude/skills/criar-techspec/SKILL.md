@@ -89,6 +89,15 @@ são exatamente os quatro lugares onde este produto pode morrer:
 
 Se a funcionalidade chama modelo, uma quarta: **perfis de IA e custo estimado**.
 
+Se a funcionalidade **classifica texto livre** contra um alvo (risco à vida, julgamento de texto de
+aluno, pedido de resposta pronta), a seção de conformidade diz também: (a) o **lote retido** que mede o
+alvo, escrito em contexto limpo antes dos padrões e nunca lido por quem os escreve, com piso nas
+categorias que não podem disparar; (b) o que o padrão de texto cobre sozinho e o que o modelo soma, com
+a AIA e o `llm-integrator` já na revisão da spec: padrão sozinho é piso, não alvo; (c) a sonda de
+frases novas que o `test-engineer` usa na revisão. Na X5 o `ouro` foi lido para escrever os padrões, 75
+de 75 viraram 23 de 75 no lote retido, e a 2.0, a 3.0 e a 93.0 somaram 21 reprovações, cada rodada
+fechando um furo e abrindo outro, até a decisão de a regra decidir e o modelo somar.
+
 ### 6. Mapear conformidade
 
 Cada decisão contra `.claude/rules/`. Desvio precisa de justificativa escrita e alternativa

@@ -100,6 +100,12 @@ fazer, e as dos guardiões marcados:
   linha que interessa e confirme que o cenário chega nela.
 - **A asserção olha o resultado, ou a forma do código?** Asserção sobre texto de arquivo, nome de
   função ou lista vazia passa igual se a regra ler o campo errado. Compare o que o usuário obtém.
+- **Guarda nova (regra de lint, teste estrutural, trava de pasta) tem fixture de quem a contorna, e
+  falha quando o alvo some?** Para cada forma de escrever o mesmo que a regra conhece (reexportação,
+  `import *`, `import()` e `require`, o caminho como texto em outra posição, alias), uma fixture e o
+  teste vermelho; a cerca sobre arquivo que mudou de lugar reprova, e não se cala; o `ignore` da
+  configuração tem caso que prova que não esconde o real. Na X5, a 9.0 levou cinco reprovações, uma
+  forma de escape por rodada, e a 12.0 três, com cercas que paravam de vigiar sem teste falhar.
 - **Algum comentário, docblock ou nota da tarefa afirma o que o código não faz?** Quatro
   reprovações no F1, três delas no mesmo docblock em rodadas seguidas. Neste repositório a regra
   do módulo mora no comentário: quem lê "e só elas" conclui que o caso está barrado, e o próximo a
@@ -115,7 +121,10 @@ fazer, e as dos guardiões marcados:
   descreve (a Tech Spec, o `cenarios.md`, o documento da seção 11), procure o termo antigo em todos de
   uma vez, com `grep`, e não um por rodada. Na X1, sete reprovações do `revisor-geral` foram decisão
   que só estava no `N_task.md`, ou a coluna citando seção que não a dizia; na 1.0, três rodadas
-  seguidas, um documento por vez.
+  seguidas, um documento por vez. Subtarefa que pede uma busca ou um commit à parte só fica `[x]` com
+  a prova no documento: a saída do `grep` dos nomes antigos (vazia, ou cada linha justificada) e o hash
+  do commit de caracterização. Na X5, a 36.0 e a 97.0 marcaram a busca feita com caminho velho no
+  `README` e numa AIA, e a 48.0 marcou a caracterização sem o commit.
 - **Qual peça que já existe faz isto?** Sete recomendações entre o F1 e a A0 foram código que refazia
   o que o repositório já tinha: o hash do token de convite, o formato do apelido, a conferência de
   senha na vez, um módulo importando o service de outro. Procure em `apps/api/src/sessao/` e em
