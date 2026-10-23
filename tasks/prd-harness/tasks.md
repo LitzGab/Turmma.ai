@@ -3,10 +3,11 @@
 **PRD:** `prd.md` · **Tech Spec:** `techspec.md` · **Anexos:** `tabela-de-guardioes.md`, `cenarios.md`, `texto.md`
 <!-- Quantas estão concluídas não se escreve aqui: `node tools/processo/estado.ts` conta pela lista. -->
 
-Vinte tarefas, no teto da `criar-tasks` e dentro do aceite do Joaquim para esta spec (de 18 a 24, PRD). A ordem segue a
+Vinte e uma tarefas, dentro do aceite do Joaquim para esta spec (de 18 a 24, PRD). A 21.0 entrou em 23/10/2026, pela
+decisão dele (opção A: as receitas na X7, e não numa X8 nem só um apontamento no `executar-task`). A ordem segue a
 Tech Spec §1: contrato e partição do hook primeiro (1.0 e 2.0); o código das retrospectivas em linhas (3.0 a 9.0); o
-hook novo, um comportamento por tarefa (10.0 a 14.0); o texto e o Maestri por último (15.0 a 20.0). O ensaio do RF31 é
-do Orquestrador, no fechamento, e não é tarefa.
+hook novo, um comportamento por tarefa (10.0 a 14.0); o texto e o Maestri por último (15.0 a 20.0), e as receitas
+depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e não é tarefa.
 
 ## Lista
 
@@ -112,6 +113,12 @@ do Orquestrador, no fechamento, e não é tarefa.
   - [ ] 20.3 `UserPromptSubmit` (RF29)
   - [ ] 20.4 Testes: RF27 a RF29 do `cenarios.md`
 
+- [ ] **21.0 — Uma skill de projeto aponta as receitas do guia, e a esteira prova que os caminhos existem**
+  - [ ] 21.1 `.claude/skills/receitas-de-codigo/SKILL.md`: uma linha por receita do guia, com seção, exemplo e travas (RF32)
+  - [ ] 21.2 O `executar-task`, o modelo da Tech Spec e o mapa do `CLAUDE.md` apontam para ela; o guia diz que é apontado
+  - [ ] 21.3 A extração de caminhos da 16.0 num módulo, sem mudar o que devolve, se ela ficou dentro do teste
+  - [ ] 21.4 Testes: RF32 do `cenarios.md`
+
 ## Dependências e paralelismo
 
 | Tarefa | Depende de | Pode correr em paralelo com |
@@ -135,7 +142,8 @@ do Orquestrador, no fechamento, e não é tarefa.
 | 17.0 | 4.0, 6.0, 14.0 | — |
 | 18.0 | 17.0 | — |
 | 19.0 | 15.0, 18.0 | — |
-| 20.0 | 11.0, 17.0 | 16.0 |
+| 20.0 | 11.0, 17.0 | 16.0, 21.0 |
+| 21.0 | 16.0, 18.0, 19.0 | 20.0 |
 
 ## Subagentes por tarefa
 
@@ -154,6 +162,7 @@ Marcados pelo Arquiteto, até três guardiões com veto (D79); `test-engineer` e
 | 16.0, 18.0 | `tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer` (as duas editam texto dos guardiões) |
 | 17.0 | `conformidade-reviewer` |
 | 20.0 | `infra-guardian`, `privacy-guardian` |
+| 21.0 | `tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer` (a skill aponta as receitas do isolamento, do dado pessoal e da IA) |
 
 ## Critério de pronto da funcionalidade
 
@@ -163,7 +172,7 @@ papéis e `docs/decisoes.md`; toda regra aponta a checagem que a garante; a P4 e
 feitas, cada uma com o teste que a prova; as perguntas "Para a Etapa 9" estão aplicadas; a base fixa está medida antes e
 depois. Em detalhe:
 
-- os 31 RF do PRD com a prova da coluna "Como se prova", e os casos do `cenarios.md` verdes
+- os 32 RF do PRD com a prova da coluna "Como se prova", e os casos do `cenarios.md` verdes
 - o ensaio do RF31: uma correção do `TODO.md` ("(X5, RF31)", `.reengenharia` no `.dockerignore`) de ponta a ponta no
   fluxo novo, com os quatro papéis subindo por `claude --agent`, e um commit sem revisão por `/usr/bin/git` recusado no
   mesmo andar, registrado no `estado.md`

@@ -11,7 +11,7 @@ Respostas do Joaquim, 23/10/2026: `core.hooksPath` pelo `prepare`; as paradas do
 
 Quatro trilhas. **(1)** Testes de contrato e o `revisoes.ts` partido só por mover. **(2)** O código das
 retrospectivas (RF1 a RF11), em linhas. **(3)** O hook novo (RF14 a RF18), um comportamento por tarefa, sobre o §5(a).
-**(4)** O texto e o Maestri (RF20 a RF29), por último. Fecha com o ensaio (RF31).
+**(4)** O texto e o Maestri (RF20 a RF29), por último, e as receitas (RF32, §9). Fecha com o ensaio (RF31).
 
 ## 2. Módulos afetados
 
@@ -30,7 +30,10 @@ retrospectivas (RF1 a RF11), em linhas. **(3)** O hook novo (RF14 a RF18), um co
 | `tools/processo/revisoes.ts` | partido | `documento-de-revisao.ts`, `caducidade.ts`, `comando-git.ts`, `portao.ts`; o `revisoes.ts` só reexporta, sem importação do `estado.ts` e do `esteira.ts` (RF13); RF18. **Antes da partição** (divergência da 2.0, 23/10/2026): a catraca do X5 (`tools/guardas/catraca.ts`, RF11 do X5) não deixa arquivo novo nascer com supressão, e para o git a partição não é rename. Por isso uma correção, antes da 2.0, baixa a complexidade de `lerSecao` (17), `arquivosDoCommit` (18), `pastaDoCommit` (15) e `portao` (17) a 10 ou menos, no próprio `revisoes.ts`, só extraindo funções auxiliares, sem mudar comportamento, e baixa o `TETO.complexity` do `catraca.test.ts` de 248 para 244. A 2.0 continua só movendo, e cada auxiliar vai para o módulo de quem a chama. A catraca não é afrouxada |
 | `tools/processo/guardioes-por-caminho.ts` | novo | RF15, RF16 |
 | `tools/processo/hook-git.ts`, `tools/processo/git-hooks/` | novos | `commit-msg` e `pre-push` (RF14) |
-| `tools/processo/harness/*.test.ts` | novos | um arquivo por aspecto (RF12, RF20 a RF26, RF30) |
+| `tools/processo/harness/*.test.ts` | novos | um arquivo por aspecto (RF12, RF20 a RF26, RF30, RF32) |
+| `.claude/skills/receitas-de-codigo/SKILL.md` | novo | RF32 (§9): a skill de projeto que aponta as receitas do guia; o `executar-task`, o `criar-techspec/template.md` e o mapa do `CLAUDE.md` apontam para ela ou para o guia |
+| `tools/processo/harness/caminhos.ts` | novo, se a extração da 16.0 ficou dentro do teste | RF24, RF32: a extração de caminhos da 16.0, movida sem mudar o que devolve, importada pelos dois testes |
+| `docs/guia-do-desenvolvedor.md` | alterado | RF32: uma linha no topo dizendo que a skill aponta para cá e que o teste confere as duas |
 | `tools/processo/estado.ts`, `vigia.ts` | alterados | RF20, RF27, RF28 |
 | `tools/guardas/regras-ia.mjs` | alterado | a pasta isenta é `packages/nucleo/src/ia/adaptador-*.ts` (RF24) |
 | `.claude/settings*.json`, `.claude/hooks/` | alterados | RF29; o início de sessão confere `core.hooksPath` e grava `feita` |
@@ -167,6 +170,29 @@ conflito na primeira linha depois do frontmatter), o destino de cada seção do 
 `paths:` da 00, 40, 60 e 80 (a 10, a 20 e a 70 sempre carregadas, sem perder item), as contradições com o
 lugar que fica, o `/seguir` partido em `passos/` e as paradas que viram aviso (D79 revista). Sai a `status`; o
 `separar-achados.ts` espera o ok do Gabriel.
+
+**Receitas (RF32, decisão do Joaquim, 23/10/2026).** A receita mora no `docs/guia-do-desenvolvedor.md` (§5 as receitas,
+§7 as travas); a skill `.claude/skills/receitas-de-codigo/SKILL.md` só aponta. Frontmatter com `name` e uma `description`
+que contém as palavras dos seis assuntos (`endpoint`, `tabela`, `job`, `IA`, `tela`, `isolamento`), que é como o
+Claude Code a carrega pelo assunto. O arquivo inteiro, frontmatter inclusive, até 60 linhas e 6.000 B, sem código (nem cerca ` ``` ` ou `~~~`, nem bloco
+recuado de quatro espaços), é uma tabela com uma linha por `### 5.x` do guia: o número da seção; o exemplo, um caminho a
+partir da raiz que está na linha que contém `Exemplo:` naquela seção; e as travas que pegam a receita, cada uma com o texto exato da
+célula da coluna "Trava" da tabela da §7, crases inclusive, separadas por `;`. Fora da tabela, três frases: ler a seção antes de escrever; o que se afasta da receita
+vai à seção 11 da Tech Spec com o motivo (D81); e quem muda o exemplo no guia muda a linha da skill no mesmo commit (a conferência do
+exemplo é o que garante esta). A
+seção `## 1. Contexto` do `executar-task` e o §2 do `criar-techspec/template.md` citam a skill; o mapa do `CLAUDE.md` cita o guia, e o
+topo do guia cita a skill.
+
+**O que conta como caminho, no `receitas.test.ts`:** dos tokens que a extração da 16.0 devolve (entre crases, entre aspas
+ou com `./`), sem mudar o que ela devolve nem o que a 16.0 confere (ela devolve o token cru, com `<...>`, `*` e a `/` final, e
+cada teste filtra o seu), só o que começa por uma destas pastas: `apps/`,
+`packages/`, `tools/`, `e2e/`, `infra/`, `docs/`, `.claude/`.
+O resto não é conferido: fragmento relativo (`componentes/dialogos.tsx`, `turma.ts`), nome de regra de lint
+(`guardas/log-sem-dado-pessoal`), rota (`/v1/disciplinas`), glob sem pasta (`*.controller.ts`), `<modulo>.module.ts`.
+Caminho com placeholder `<...>` confere a pasta antes dele; com `*`, casa ao menos um arquivo; o resto existe.
+`tools/processo/harness/receitas.test.ts` confere os caminhos da skill e das §5, §6 e §7 do guia, que toda `### 5.x`
+tem linha e toda linha aponta seção que existe, com exemplo e ao menos uma trava, e o texto presente nos quatro
+apontamentos. Os casos estão no `cenarios.md`, RF32.
 
 ## 10. Testes
 

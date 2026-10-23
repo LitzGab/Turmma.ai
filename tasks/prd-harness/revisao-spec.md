@@ -205,6 +205,36 @@ toca o que eles auditam.
 - A janela do "não termina enquanto o encontro segura a trava", soltar o encontro antes do `abandonar`, e um bloco de
   mutação por cláusula do §5(f) (test-engineer, rodada 10): na 5.0
 
+## Rodadas 11 a 13 — 23/10/2026 (RF32 e tarefa 21.0)
+
+**Veredito: APROVADA** (rodada 13 da spec; na coluna, a rodada de cada revisor, como o hook conta)
+
+O Joaquim acrescentou o RF32 e a tarefa 21.0 em 23/10/2026 ~16:10 (opção A, no terminal do Orquestrador): uma skill de
+projeto curta que aponta as receitas do `docs/guia-do-desenvolvedor.md`, sem copiar o guia. Revisão só do acréscimo,
+com o `test-engineer` e o `revisor-geral`; nada do que entrou toca o hook, a tabela de guardiões nem o que os outros
+quatro auditaram.
+
+| Revisor | Rodada | Veredito |
+|---|---|---|
+| `test-engineer` | 11 | REPROVADO: o verde de hoje impossível sem dizer o que é caminho; placeholder, linha sem exemplo ou trava, código por `~~~` e recuo, e quatro cláusulas sem vermelho; contagem que não pegava conferência vazia |
+| `revisor-geral` | 6 | REPROVADO: o mesmo critério de caminho ausente |
+| `test-engineer` | 12 | APROVADO |
+| `revisor-geral` | 7 | REPROVADO: o critério, dito "da extração da 16.0", quebrava a 16.0 |
+| `revisor-geral` | 8 | APROVADO |
+
+### Correções feitas, sem mudar desenho
+- §9: "O que conta como caminho", só no `receitas.test.ts`, como filtro sobre o token cru da extração da 16.0, que não
+  muda; lista fechada de pastas; placeholder e glob; o exemplo na linha que contém `Exemplo:`; a trava pela célula exata
+  da §7, separadas por `;`; o teto conta o arquivo inteiro
+- §2: a skill, os apontamentos e o `caminhos.ts`
+- cenários RF32: os dois lados de cada cláusula, as três formas de código, um caso por assunto da `description`, e a
+  contagem por seção do guia e na skill
+
+### Recomendação para fora deste recorte
+- A 16.0, sozinha e de antes do RF32, confere aspas e crases em `tools/guardas/`, cujas fixtures de teste não existem, e
+  o `arquiteto.md` cita caminhos com `…`. Vale fechar a fronteira no `16_task.md` antes de ela começar (`revisor-geral`,
+  rodadas 7 e 8)
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -245,3 +275,8 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-23 13:50:56 | 2026-10-23 13:52:30 | `test-engineer` | 8 | REPROVADO | a787f9f319c24d294 |
 | 2026-10-23 13:53:44 | 2026-10-23 13:54:38 | `test-engineer` | 9 | REPROVADO | adf15f950ff8974ae |
 | 2026-10-23 13:55:26 | 2026-10-23 13:56:17 | `test-engineer` | 10 | APROVADO | a9680fa1e325eb3c9 |
+| 2026-10-23 16:14:00 | 2026-10-23 16:16:28 | `revisor-geral` | 6 | REPROVADO | a86e238a809151ad7 |
+| 2026-10-23 16:13:54 | 2026-10-23 16:16:28 | `test-engineer` | 11 | REPROVADO | a3ba4f63e12749115 |
+| 2026-10-23 16:18:01 | 2026-10-23 16:19:41 | `revisor-geral` | 7 | REPROVADO | aed000674d6a6503d |
+| 2026-10-23 16:17:55 | 2026-10-23 16:20:03 | `test-engineer` | 12 | APROVADO | af3a006fe604a5ffe |
+| 2026-10-23 16:20:25 | 2026-10-23 16:22:23 | `revisor-geral` | 8 | APROVADO | a9472460e8b5ac387 |
