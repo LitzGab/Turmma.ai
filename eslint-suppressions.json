@@ -1129,11 +1129,6 @@
       "count": 2
     }
   },
-  "tools/processo/revisoes.ts": {
-    "complexity": {
-      "count": 4
-    }
-  },
   "tools/processo/separar-achados.ts": {
     "complexity": {
       "count": 1

@@ -492,18 +492,28 @@ function lerSecao(linhas: string[], nome: RegExp): LeituraDaSecao {
     if (!achado?.[1] || !nome.test(achado[1])) continue
     const naMesmaLinha = limpar(achado[2] ?? '')
     if (naMesmaLinha) return comTexto(naMesmaLinha)
-    const corpo: string[] = []
-    for (const proxima of linhas.slice(i + 1)) {
-      if (CABECALHO_DE_SECAO.test(proxima)) break
-      if (proxima.trim()) corpo.push(proxima)
-      // Linha em branco encerra só o parágrafo solto; a lista pode ter itens separados por branco.
-      else if (corpo.length > 0 && !ITEM.test(corpo[0] ?? '')) break
-    }
-    const util = corpo.filter((linha) => !CERCA.test(linha))
-    const escolhida = limpar(util.find((linha) => ITEM.test(linha)) ?? util[0] ?? '')
-    return escolhida ? comTexto(escolhida) : { presente: true, item: null, declarouNada: false }
+    return lerOCorpoDaSecao(corpoDaSecao(linhas, i))
   }
   return AUSENTE
+}
+
+/** As linhas debaixo do cabeçalho da seção que começa em `inicio`, até o próximo cabeçalho. */
+function corpoDaSecao(linhas: string[], inicio: number): string[] {
+  const corpo: string[] = []
+  for (const proxima of linhas.slice(inicio + 1)) {
+    if (CABECALHO_DE_SECAO.test(proxima)) break
+    if (proxima.trim()) corpo.push(proxima)
+    // Linha em branco encerra só o parágrafo solto; a lista pode ter itens separados por branco.
+    else if (corpo.length > 0 && !ITEM.test(corpo[0] ?? '')) break
+  }
+  return corpo
+}
+
+/** O primeiro item do corpo, ou a primeira linha de texto fora da cerca; corpo sem texto aproveitável é seção vazia. */
+function lerOCorpoDaSecao(corpo: string[]): LeituraDaSecao {
+  const util = corpo.filter((linha) => !CERCA.test(linha))
+  const escolhida = limpar(util.find((linha) => ITEM.test(linha)) ?? util[0] ?? '')
+  return escolhida ? comTexto(escolhida) : { presente: true, item: null, declarouNada: false }
 }
 
 function lerAsDuasSecoes(mensagemFinal: string): { bloqueantes: LeituraDaSecao; recomendacoes: LeituraDaSecao } {
@@ -909,25 +919,30 @@ const semAspas = (token: string) => token.replace(/^["']|["']$/g, '')
 // `git add -A`, `git commit -a`. O que já estava no índice entra por `preparados`.
 export function arquivosDoCommit(comando: string, raiz: string, alterados: string[], preparados: string[]): string[] {
   const levados = new Set(preparados)
-  const todos = () => alterados.forEach((arquivo) => levados.add(arquivo))
-  for (const achado of comando.matchAll(/git(?:\s+-[Cc]\s+\S+)*\s+add\b([^;&|\n]*)/g)) {
-    for (const bruto of (achado[1] ?? '').trim().split(/\s+/).filter(Boolean)) {
-      const token = semAspas(bruto)
-      if (['-A', '--all', '.', ':/', '-u', '--update'].includes(token)) todos()
-      if (token.startsWith('-')) continue
-      const relativo = token.startsWith(`${raiz}/`) ? token.slice(raiz.length + 1) : token.replace(/^\.\//, '')
-      const pasta = relativo.replace(/\/$/, '')
-      alterados.filter((arquivo) => arquivo === pasta || arquivo.startsWith(`${pasta}/`)).forEach((arquivo) => levados.add(arquivo))
-    }
-  }
-  for (const achado of comando.matchAll(/git(?:\s+-[Cc]\s+\S+)*\s+commit\b([^;&|\n]*)/g)) {
-    for (const token of (achado[1] ?? '').trim().split(/\s+/)) {
-      if (!token.startsWith('-')) break
-      if (token === '--all' || (/^-[a-zA-Z]+$/.test(token) && token.includes('a'))) todos()
-      if (/^-[a-zA-Z]*[mF]$/.test(token) || token === '--message' || token === '--file' || token.startsWith('--message=')) break
-    }
-  }
+  for (const achado of comando.matchAll(/git(?:\s+-[Cc]\s+\S+)*\s+add\b([^;&|\n]*)/g)) levarOQueOAddPrepara(achado[1] ?? '', raiz, alterados, levados)
+  for (const achado of comando.matchAll(/git(?:\s+-[Cc]\s+\S+)*\s+commit\b([^;&|\n]*)/g)) levarOQueOCommitDaTodos(achado[1] ?? '', alterados, levados)
   return [...levados]
+}
+
+/** Os caminhos de um `git add`: `-A`, `.` e afins levam tudo; uma pasta leva o que há debaixo dela. */
+function levarOQueOAddPrepara(argumentos: string, raiz: string, alterados: string[], levados: Set<string>): void {
+  for (const bruto of argumentos.trim().split(/\s+/).filter(Boolean)) {
+    const token = semAspas(bruto)
+    if (['-A', '--all', '.', ':/', '-u', '--update'].includes(token)) alterados.forEach((arquivo) => levados.add(arquivo))
+    if (token.startsWith('-')) continue
+    const relativo = token.startsWith(`${raiz}/`) ? token.slice(raiz.length + 1) : token.replace(/^\.\//, '')
+    const pasta = relativo.replace(/\/$/, '')
+    alterados.filter((arquivo) => arquivo === pasta || arquivo.startsWith(`${pasta}/`)).forEach((arquivo) => levados.add(arquivo))
+  }
+}
+
+/** As opções de um `git commit`, até a mensagem: `-a` e `--all` levam tudo o que está alterado. */
+function levarOQueOCommitDaTodos(argumentos: string, alterados: string[], levados: Set<string>): void {
+  for (const token of argumentos.trim().split(/\s+/)) {
+    if (!token.startsWith('-')) break
+    if (token === '--all' || (/^-[a-zA-Z]+$/.test(token) && token.includes('a'))) alterados.forEach((arquivo) => levados.add(arquivo))
+    if (/^-[a-zA-Z]*[mF]$/.test(token) || token === '--message' || token === '--file' || token.startsWith('--message=')) break
+  }
 }
 
 export function documentoDoCommit(comando: string, raiz: string, arquivos: string[]): { caminho: string } | { erro: string } | null {
@@ -1052,6 +1067,19 @@ function expandirCaminho(bruto: string, variaveis: Map<string, string>): string 
   return /[$`]/.test(texto) ? null : texto
 }
 
+/** O que os trechos antes do commit atribuem a variáveis (`F=/x`) e os caminhos dos `cd`, na ordem em que aparecem. */
+function variaveisECaminhosDosTrechos(trechos: string[]): { variaveis: Map<string, string>; caminhos: string[] } {
+  const variaveis = new Map<string, string>()
+  const caminhos: string[] = []
+  for (const trecho of trechos) {
+    const atribuicao = /^([A-Za-z_][A-Za-z0-9_]*)=(\S*)$/.exec(trecho)
+    if (atribuicao?.[1]) variaveis.set(atribuicao[1], semAspas(atribuicao[2] ?? ''))
+    const cd = new RegExp(`^cd\\s+(${CAMINHO})$`).exec(trecho)
+    if (cd?.[1]) caminhos.push(cd[1])
+  }
+  return { variaveis, caminhos }
+}
+
 /**
  * A pasta em que o `git commit` roda: o diretório do comando, mais cada `cd` antes dele, mais o `-C` do próprio commit.
  * `indeterminado` quando um desses caminhos depende de variável que o comando não atribui: aí o hook não sabe em que
@@ -1060,15 +1088,8 @@ function expandirCaminho(bruto: string, variaveis: Map<string, string>): string 
 export function pastaDoCommit(comando: string, raiz: string, cwd?: string, padrao: RegExp = GIT_COMMIT): { pasta: string } | { indeterminado: string } | null {
   const antes = trechosAntesDoCommit(comando, padrao)
   if (!antes) return null
-  const variaveis = new Map<string, string>()
   let pasta = cwd && existsSync(cwd) ? cwd : raiz
-  const caminhos: string[] = []
-  for (const trecho of antes.trechos) {
-    const atribuicao = /^([A-Za-z_][A-Za-z0-9_]*)=(\S*)$/.exec(trecho)
-    if (atribuicao?.[1]) variaveis.set(atribuicao[1], semAspas(atribuicao[2] ?? ''))
-    const cd = new RegExp(`^cd\\s+(${CAMINHO})$`).exec(trecho)
-    if (cd?.[1]) caminhos.push(cd[1])
-  }
+  const { variaveis, caminhos } = variaveisECaminhosDosTrechos(antes.trechos)
   for (const opcao of antes.opcoes.matchAll(new RegExp(String.raw`-C\s+(${CAMINHO})`, 'g'))) caminhos.push(opcao[1] ?? '')
   for (const bruto of caminhos) {
     const caminho = expandirCaminho(bruto, variaveis)
@@ -1155,6 +1176,72 @@ export function pushDoTime(comando: string, raiz: string, cwd: string | undefine
   )
 }
 
+/** O bloqueio do que o comando faz antes do `git commit`, ou de a árvore do commit não ser conhecida; `null` quando nenhum dos dois acontece. */
+function bloqueioAntesDaArvore(comando: string, raizDaSessao: string, cwd: string | undefined): string | null {
+  const estranho = antesDoCommit(comando)
+  if (estranho !== null) {
+    return (
+      `Commit bloqueado: o comando faz outra coisa antes do \`git commit\` (${estranho}). O hook confere a árvore antes de o comando rodar, e o que ` +
+      'este comando criar ou alterar entraria no commit sem ter sido conferido. Faça as alterações num comando, e o `git add` com o `git commit` em ' +
+      'outro. Se o `git commit` está só dentro de um texto (uma mensagem para outro agente, o conteúdo de um arquivo), grave o texto num arquivo em ' +
+      'vez de escrevê-lo no comando.'
+    )
+  }
+  const onde = pastaDoCommit(comando, raizDaSessao, cwd)
+  if (onde && 'indeterminado' in onde) {
+    return (
+      `Commit bloqueado: o hook não sabe em que árvore este commit acontece, porque o caminho ${onde.indeterminado} depende de uma variável que o ` +
+      'comando não define. Escreva o caminho por extenso, ou atribua a variável no próprio comando (`F=/caminho; git -C "$F" commit …`).'
+    )
+  }
+  return null
+}
+
+/** O commit que não cita documento: passa quando não leva código, vale pelo `(mvp: …)` na fatia do MVP, e bloqueia nos outros casos. */
+function bloqueioDoCommitSemDocumento(comando: string, raiz: string, arquivos: string[]): string | null {
+  const codigo = arquivosDoCommit(comando, raiz, arquivos, arquivosPreparados(raiz)).filter((arquivo) =>
+    PASTAS_DE_CODIGO.some((pasta) => arquivo.startsWith(pasta)),
+  )
+  if (codigo.length === 0) return null
+  if (marcadorDoMvp(comando) !== null) {
+    return avaliarCommitDoMvp({
+      branch: branchAtual(raiz),
+      carimbo: lerCarimbo(raiz),
+      alteracoes: alteracoesDeCodigo(raiz, arquivos),
+      instantaneo: lerInstantaneos(raiz)[CHAVE_DO_PORTAO],
+    })
+  }
+  return (
+    `Commit bloqueado: ele leva código (${codigo.slice(0, 3).join(', ')}${codigo.length > 3 ? ', …' : ''}) sem "(tarefa N.0)" nem "(correção <slug>)". ` +
+    'Código entra por tarefa ou por correção, que passam pelos revisores (o Orquestrador conduz, com /seguir). ' +
+    `Na fatia do MVP de apresentação (D77), em branch ${PREFIXO_DAS_BRANCHES_DO_MVP}…, o marcador é "(mvp: <resumo>)", com o portão local carimbado.`
+  )
+}
+
+/** As revisões, o portão carimbado e a conferência a mais do documento que o commit cita. */
+function bloqueioDoDocumento(
+  comando: string,
+  raiz: string,
+  arquivos: string[],
+  caminho: string,
+  conferencia: ConferenciaDoDocumento,
+): string | null {
+  const conteudo = readFileSync(join(raiz, caminho), 'utf8')
+  const { bloqueios } = avaliarPortao({
+    obrigatorios: revisoresObrigatorios(conteudo, tipoDoDocumento(caminho)),
+    revisoes: lerRevisoes(conteudo),
+    alteracoes: alteracoesDeCodigo(raiz, arquivos),
+    carimbo: lerCarimbo(raiz),
+    mensagemCommit: comando,
+    documento: caminho,
+    instantaneos: lerInstantaneos(raiz),
+  })
+  const aMais = conferencia(lerCarimbo(raiz), caminho, conteudo)
+  if (aMais !== null) bloqueios.push(aMais)
+  if (bloqueios.length === 0) return null
+  return `Commit bloqueado: revisões de ${caminho} incompletas.\n- ${bloqueios.join('\n- ')}`
+}
+
 export function portao(
   entrada: EntradaHook,
   raizDaSessao: string,
@@ -1165,57 +1252,12 @@ export function portao(
   const push = pushDoTime(comando, raizDaSessao, entrada.cwd, papel)
   if (push !== null) return push
   if (!ehCommit(comando)) return null
-  const estranho = antesDoCommit(comando)
-  if (estranho !== null) {
-    return (
-      `Commit bloqueado: o comando faz outra coisa antes do \`git commit\` (${estranho}). O hook confere a árvore antes de o comando rodar, e o que ` +
-      'este comando criar ou alterar entraria no commit sem ter sido conferido. Faça as alterações num comando, e o `git add` com o `git commit` em ' +
-      'outro. Se o `git commit` está só dentro de um texto (uma mensagem para outro agente, o conteúdo de um arquivo), grave o texto num arquivo em ' +
-      'vez de escrevê-lo no comando.'
-    )
-  }
-  const onde = pastaDoCommit(comando, raizDaSessao, entrada.cwd)
-  if (onde && 'indeterminado' in onde) {
-    return (
-      `Commit bloqueado: o hook não sabe em que árvore este commit acontece, porque o caminho ${onde.indeterminado} depende de uma variável que o ` +
-      'comando não define. Escreva o caminho por extenso, ou atribua a variável no próprio comando (`F=/caminho; git -C "$F" commit …`).'
-    )
-  }
+  const antes = bloqueioAntesDaArvore(comando, raizDaSessao, entrada.cwd)
+  if (antes !== null) return antes
   const raiz = arvoreDoCommit(comando, raizDaSessao, entrada.cwd)
   const arquivos = arquivosAlterados(raiz)
   const documento = documentoDoCommit(comando, raiz, arquivos)
-  if (!documento) {
-    const codigo = arquivosDoCommit(comando, raiz, arquivos, arquivosPreparados(raiz)).filter((arquivo) =>
-      PASTAS_DE_CODIGO.some((pasta) => arquivo.startsWith(pasta)),
-    )
-    if (codigo.length === 0) return null
-    if (marcadorDoMvp(comando) !== null) {
-      return avaliarCommitDoMvp({
-        branch: branchAtual(raiz),
-        carimbo: lerCarimbo(raiz),
-        alteracoes: alteracoesDeCodigo(raiz, arquivos),
-        instantaneo: lerInstantaneos(raiz)[CHAVE_DO_PORTAO],
-      })
-    }
-    return (
-      `Commit bloqueado: ele leva código (${codigo.slice(0, 3).join(', ')}${codigo.length > 3 ? ', …' : ''}) sem "(tarefa N.0)" nem "(correção <slug>)". ` +
-      'Código entra por tarefa ou por correção, que passam pelos revisores (o Orquestrador conduz, com /seguir). ' +
-      `Na fatia do MVP de apresentação (D77), em branch ${PREFIXO_DAS_BRANCHES_DO_MVP}…, o marcador é "(mvp: <resumo>)", com o portão local carimbado.`
-    )
-  }
+  if (!documento) return bloqueioDoCommitSemDocumento(comando, raiz, arquivos)
   if ('erro' in documento) return documento.erro
-  const conteudo = readFileSync(join(raiz, documento.caminho), 'utf8')
-  const { bloqueios } = avaliarPortao({
-    obrigatorios: revisoresObrigatorios(conteudo, tipoDoDocumento(documento.caminho)),
-    revisoes: lerRevisoes(conteudo),
-    alteracoes: alteracoesDeCodigo(raiz, arquivos),
-    carimbo: lerCarimbo(raiz),
-    mensagemCommit: comando,
-    documento: documento.caminho,
-    instantaneos: lerInstantaneos(raiz),
-  })
-  const aMais = conferencia(lerCarimbo(raiz), documento.caminho, conteudo)
-  if (aMais !== null) bloqueios.push(aMais)
-  if (bloqueios.length === 0) return null
-  return `Commit bloqueado: revisões de ${documento.caminho} incompletas.\n- ${bloqueios.join('\n- ')}`
+  return bloqueioDoDocumento(comando, raiz, arquivos, documento.caminho, conferencia)
 }
