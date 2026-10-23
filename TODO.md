@@ -1772,6 +1772,13 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   repositories da sessão; a exceção do `operacao/token-do-convite.ts` ao "só pelo `index.ts`"; as regras de camada que não
   valem para teste; as cercas que a linha do dependency-cruiser não cita; o exemplo `estrutura/turma/` sem os testes ao
   lado; e o `erro-tipado` sem `packages/shared/src`. Na X6, quando a Etapa 11 reescrever a documentação. (dono: Joaquim)
+- [ ] **(X5, relatório final) `vite` 8.3.0 com alta no `npm audit`, e `vitest` 5.0.0 com moderada** (`tasks/prd-reengenharia/relatorio-final.md`
+  §2): correção sem versão maior, em 8.3.5 e 5.0.5. A trava (`guarda:dependencias`) olha só produção, e por isso não
+  acusa; mas a imagem `web` roda `vite preview` (`tasks/prd-reengenharia/medidas-da-onda-5.md`). Subir antes do staging,
+  numa correção com o portão. (dono: Joaquim)
+- [ ] **(X5, validação 1) O encontro das linhas rodar o `eslint .` depois do merge** (X6, Etapa 9): a supressão órfã de
+  `tools/ci/compose.ts` nasceu de duas tarefas verdes, cada uma no seu portão (13.0 e 90.0), e só a validação a viu.
+  (dono: Joaquim)
 - [ ] **(X5, RF31) `.dockerignore` e `tools/ci/dockerfile.test.ts:128-130` ainda citam `.reengenharia`**, a pasta que o
   fechamento da X5 apagou (R64). A linha não faz mal (ignora uma pasta que não existe), e tirá-la é código, com o teste junto:
   na próxima tarefa que tocar o Dockerfile ou o `.dockerignore` (onda 5, na X6). (dono: Joaquim)
