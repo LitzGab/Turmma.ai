@@ -1,7 +1,7 @@
 import { ErroDeDominio, inatividadeDoPapel } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaEu, type RespostaEu } from '@educa/shared'
 import type { EuRepository } from './eu.repository.js'
-import type { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
+import type { ResolucaoDeTenantRepository } from '../tenant/resolucao-de-tenant.repository.js'
 
 /**
  * Quem está na sessão, no contrato de `GET /v1/eu`: a inatividade é a do papel na escola da sessão, e `acessos`, os

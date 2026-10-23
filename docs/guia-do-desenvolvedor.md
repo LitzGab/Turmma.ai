@@ -370,7 +370,7 @@ vínculo, do repository, ele quebra?** Se não quebra, ele não testa nada.
 **Onde fica a integração da API.** Em dois lugares, e nos dois há teste que sobe a API com o `subirApi`:
 - **Ao lado do módulo** (`apps/api/src/<modulo>/x.int.test.ts`): o do service e do repository, e muitas vezes também
   o HTTP. Por exemplo, `atividade/atividade-isolamento.int.test.ts` e `tutor/tutor.int.test.ts` sobem a API, e
-  `sessao/convite.repository.int.test.ts` testa o repository sem HTTP.
+  `sessao/convite/convite.repository.int.test.ts` testa o repository sem HTTP.
 - **`apps/api/test/`:** o que cruza mais de um módulo (`virada-do-ano`, `ciclo-de-vida`), o `arquitetura.test.ts`, e os
   HTTP de módulos que já os guardavam lá (`sessao-matricula`, `estrutura`). A sessão usa os dois lugares.
 

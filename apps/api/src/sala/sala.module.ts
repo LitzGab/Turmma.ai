@@ -2,7 +2,7 @@ import { medidorGlobal, type Banco, type LoggerBase, type Meter } from '@educa/n
 import { Module, type DynamicModule } from '@nestjs/common'
 import type { Redis } from 'ioredis'
 import { BANCO } from '../banco.module.js'
-import { AcessoDaSala } from '../sessao/acesso-da-sala.js'
+import { AcessoDaSala } from '../sessao/index.js'
 import { CLIENTE_REDIS_LOGIN, ContadorDeTentativas, ContadorEmJanela, HashDeSenha, SemaforoDeHash } from '../credencial/index.js'
 import { AcessoDaTurmaController } from './acesso-da-turma.controller.js'
 import { AcessoDaTurmaService } from './acesso-da-turma.service.js'

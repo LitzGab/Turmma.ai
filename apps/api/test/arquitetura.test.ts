@@ -7,7 +7,7 @@ import { getTableName, is } from 'drizzle-orm'
 import { PgTable } from 'drizzle-orm/pg-core'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import type { IncomingMessage } from 'node:http'
-import { join, relative, sep } from 'node:path'
+import { basename, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { AppModule } from '../src/app.module.js'
@@ -40,6 +40,7 @@ function arquivosDoRepositorio(): Arquivo[] {
   )
 }
 
+const ARQUIVO_DA_RESOLUCAO = 'resolucao-de-tenant.repository.ts'
 /** Cita a classe ou o arquivo dela: importação, reexportação ou `import()` dinâmico. */
 const USO_DA_RESOLUCAO = /\bResolucaoDeTenantRepository\b|resolucao-de-tenant\.repository/
 
@@ -59,7 +60,10 @@ describe('arquitetura: a resolução de tenant fica dentro do módulo de sessão
   it('a varredura enxerga o código: acha a própria classe dentro do módulo de sessão', () => {
     const arquivos = arquivosDoRepositorio()
     expect(arquivos.length).toBeGreaterThan(100)
-    expect(arquivos.filter((arquivo) => USO_DA_RESOLUCAO.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toContain('apps/api/src/sessao/resolucao-de-tenant.repository.ts')
+    // O arquivo da classe é achado pelo nome, dentro do módulo de sessão: a regra é "dentro de sessao/", e não a subpasta onde ele mora (34.0).
+    const daClasse = arquivos.filter((arquivo) => USO_DA_RESOLUCAO.test(arquivo.texto) && basename(arquivo.caminho) === ARQUIVO_DA_RESOLUCAO).map((arquivo) => arquivo.caminho)
+    expect(daClasse).toHaveLength(1)
+    expect(daClasse[0]?.startsWith(MODULO_SESSAO)).toBe(true)
   })
 
   it('nenhum arquivo fora de apps/api/src/sessao importa ou cita a ResolucaoDeTenantRepository', () => {
@@ -72,7 +76,7 @@ describe('arquitetura: a resolução de tenant fica dentro do módulo de sessão
       { caminho: 'apps/api/src/sistema/atalho.ts', texto: "export * from '../sessao/resolucao-de-tenant.repository.js'" },
       { caminho: 'apps/worker/src/expurgo.ts', texto: "const modulo = await import('../../api/src/sessao/resolucao-de-tenant.repository.js')" },
     ]
-    const dentro = { caminho: 'apps/api/src/sessao/login.service.ts', texto: "import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'" }
+    const dentro = { caminho: 'apps/api/src/sessao/login/login.service.ts', texto: "import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'" }
     expect(usosForaDoModuloSessao([...fora, dentro])).toEqual(fora.map((arquivo) => arquivo.caminho))
   })
 })
@@ -111,9 +115,10 @@ describe('arquitetura: a conta global só pelo módulo sessao e pelo ciclo de vi
     // A varredura enxerga o código: acha o próprio arquivo da classe.
     expect(arquivos.filter((arquivo) => USO_DA_CONTA_GLOBAL.test(arquivo.texto)).map((arquivo) => arquivo.caminho)).toContain(ARQUIVO_DA_CONTA_GLOBAL)
     expect(usosDaContaGlobalForaDosCaminhos(arquivos)).toEqual([])
-    expect(quemUsaAContaGlobal(arquivos).sort()).toEqual([
-      'apps/api/src/sessao/redefinicao-de-mfa.ts',
-      'apps/api/src/sessao/resolucao-de-tenant.repository.int.test.ts',
+    // Dentro do módulo de sessão, os dois são achados pelo nome (a pasta de cada um é do desenho da 34.0, não da regra).
+    const usos = quemUsaAContaGlobal(arquivos).sort()
+    expect(usos.filter((caminho) => caminho.startsWith(MODULO_SESSAO)).map((caminho) => basename(caminho))).toEqual(['redefinicao-de-mfa.ts', 'resolucao-de-tenant.repository.int.test.ts'])
+    expect(usos.filter((caminho) => !caminho.startsWith(MODULO_SESSAO))).toEqual([
       'packages/nucleo/src/ciclo-de-vida/ciclo-de-vida.repository.test.ts',
       'packages/nucleo/src/ciclo-de-vida/ciclo-de-vida.service.ts',
     ])
@@ -127,7 +132,7 @@ describe('arquitetura: a conta global só pelo módulo sessao e pelo ciclo de vi
       { caminho: 'apps/worker/src/processadores/expurgar.ts', texto: "import * as global from '@educa/nucleo/conta-global'" },
     ]
     const dentro = [
-      { caminho: 'apps/api/src/sessao/redefinicao-de-mfa.ts', texto: "import { ContaGlobalRepository } from '@educa/nucleo/conta-global'" },
+      { caminho: 'apps/api/src/sessao/mfa/redefinicao-de-mfa.ts', texto: "import { ContaGlobalRepository } from '@educa/nucleo/conta-global'" },
       { caminho: 'packages/nucleo/src/ciclo-de-vida/ciclo-de-vida.service.ts', texto: "import { ContaGlobalRepository } from './conta-global.repository.js'" },
     ]
     // Citar a classe num comentário, ou um texto que só contém "conta-global", fora dos dois caminhos, não é usá-la.
@@ -155,7 +160,7 @@ describe('arquitetura: a conta global só pelo módulo sessao e pelo ciclo de vi
   it('nem o barrel de credencial/ exporta a ResolucaoDeTenantRepository nem a ContaGlobalRepository, com o nome dela ou outro (33.0)', async () => {
     const credencial = await import('../src/credencial/index.js')
     const { ContaGlobalRepository } = await import('@educa/nucleo/conta-global')
-    const { ResolucaoDeTenantRepository } = await import('../src/sessao/resolucao-de-tenant.repository.js')
+    const { ResolucaoDeTenantRepository } = await import('../src/sessao/tenant/resolucao-de-tenant.repository.js')
     // O barrel é lido de verdade: sem isto, um import que falhasse em silêncio deixaria as duas conferências abaixo verdes.
     expect(Object.keys(credencial)).toContain('HashDeSenha')
     for (const [nome, classe] of [
@@ -164,6 +169,28 @@ describe('arquitetura: a conta global só pelo módulo sessao e pelo ciclo de vi
     ] as const) {
       expect(Object.keys(credencial), nome).not.toContain(nome)
       expect(Object.values(credencial), nome).not.toContain(classe)
+    }
+  })
+
+  it('nem o barrel de sessao/ exporta a ResolucaoDeTenantRepository nem a ContaGlobalRepository, com o nome dela ou outro, e a tenant/ só entra pelo AcessoDaSala e pelas sessões sintéticas (34.0)', async () => {
+    const sessao = await import('../src/sessao/index.js')
+    const { ContaGlobalRepository } = await import('@educa/nucleo/conta-global')
+    const { ResolucaoDeTenantRepository } = await import('../src/sessao/tenant/resolucao-de-tenant.repository.js')
+    const { AcessoDaSala } = await import('../src/sessao/tenant/acesso-da-sala.js')
+    // O barrel é lido de verdade: sem isto, um import que falhasse em silêncio deixaria as conferências abaixo verdes.
+    expect(Object.keys(sessao)).toContain('SessaoModule')
+    expect(Object.values(sessao)).toContain(AcessoDaSala)
+    // O índice reexporta por nome (nunca `export *`), e da `tenant/` só entram os dois arquivos que o resto da API usa.
+    const textoDoIndice = semComentarios(readFileSync(join(RAIZ, 'apps/api/src/sessao/index.ts'), 'utf8'))
+    expect(textoDoIndice).not.toMatch(/export\s+(type\s+)?\*/)
+    expect([...new Set([...textoDoIndice.matchAll(/from ['"]\.\/tenant\/([^'"]+)['"]/g)].map((achado) => achado[1]))].sort()).toEqual(['acesso-da-sala.js', 'sessoes-sinteticas.js'])
+    // O depcruise não vê o reexport em dois passos (`export * from './tenant/index.js'`): o que o módulo traz em execução é que vale.
+    for (const [nome, classe] of [
+      ['ResolucaoDeTenantRepository', ResolucaoDeTenantRepository],
+      ['ContaGlobalRepository', ContaGlobalRepository],
+    ] as const) {
+      expect(Object.keys(sessao), nome).not.toContain(nome)
+      expect(Object.values(sessao), nome).not.toContain(classe)
     }
   })
 })
@@ -1445,7 +1472,7 @@ describe('arquitetura: o módulo de sessão não depende da operação, e o arqu
 describe('arquitetura: só o controller e o módulo importam o login.service (X5, 11.0)', () => {
   /** Provisório: a regra definitiva é a do depcruise, da 12.0, que então substitui estes `it`. */
   const IMPORTA_O_LOGIN_SERVICE = /\blogin\.service\.js['"]/
-  const ARQUIVO_DO_LOGIN_SERVICE = 'apps/api/src/sessao/login.service.ts'
+  const ARQUIVO_DO_LOGIN_SERVICE = 'apps/api/src/sessao/login/login.service.ts'
 
   /** Quem, fora de teste, importa, reexporta ou carrega por `import()` o `login.service` (ele não cita a si mesmo). */
   const quemImportaOLoginService = (arquivos: readonly Arquivo[]): string[] =>
@@ -1458,18 +1485,18 @@ describe('arquitetura: só o controller e o módulo importam o login.service (X5
   it('fora de teste, só o login-email.controller.ts e o sessao.module.ts o importam', () => {
     const arquivos = arquivosDoRepositorio()
     expect(arquivos.filter((arquivo) => arquivo.caminho === ARQUIVO_DO_LOGIN_SERVICE)).toHaveLength(1)
-    expect(quemImportaOLoginService(arquivos)).toEqual(['apps/api/src/sessao/login-email.controller.ts', 'apps/api/src/sessao/sessao.module.ts'])
+    expect(quemImportaOLoginService(arquivos)).toEqual(['apps/api/src/sessao/login/login-email.controller.ts', 'apps/api/src/sessao/sessao.module.ts'])
   })
 
   it('a varredura reprova quem mais o importa, reexporta ou carrega por import dinâmico, e deixa o teste e o comentário passarem', () => {
     const fora = [
-      { caminho: 'apps/api/src/sessao/conclusao-de-login.ts', texto: "import { hashDoRefresh } from './login.service.js'" },
+      { caminho: 'apps/api/src/sessao/conclusao/conclusao-de-login.ts', texto: "import { hashDoRefresh } from './login.service.js'" },
       { caminho: 'apps/api/src/operacao/sessao.service.ts', texto: "export * from '../sessao/login.service.js'" },
       { caminho: 'apps/worker/src/atalho.ts', texto: "const modulo = await import('../../api/src/sessao/login.service.js')" },
     ]
     const inocentes = [
-      { caminho: 'apps/api/src/sessao/login.service.test.ts', texto: "import * as loginService from './login.service.js'" },
-      { caminho: 'apps/api/src/sessao/convite.service.ts', texto: "/** Antes vinha do './login.service.js'. */\n// e do 'login.service'" },
+      { caminho: 'apps/api/src/sessao/login/login.service.test.ts', texto: "import * as loginService from './login.service.js'" },
+      { caminho: 'apps/api/src/sessao/convite/convite.service.ts', texto: "/** Antes vinha do './login.service.js'. */\n// e do 'login.service'" },
     ]
     expect(quemImportaOLoginService([...fora, ...inocentes])).toEqual(fora.map((arquivo) => arquivo.caminho).sort())
   })

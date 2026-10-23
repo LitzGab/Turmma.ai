@@ -14,7 +14,7 @@ import { urlDoBancoDeTeste } from '../../../tools/testes/integracao.setup.ts'
 import { AppModule } from '../src/app.module.js'
 import { configurarAplicacao } from '../src/configurar-app.js'
 import { executarOpsSessaoSintetica, type BancoDoComando } from '../src/ops/sessao-sintetica.js'
-import { MOTIVO_SESSAO_SINTETICA_FORA_DO_LOCAL } from '../src/sessao/sessoes-sinteticas.js'
+import { MOTIVO_SESSAO_SINTETICA_FORA_DO_LOCAL } from '../src/sessao/index.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 

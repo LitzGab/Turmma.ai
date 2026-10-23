@@ -12,12 +12,12 @@ import {
 } from '@educa/nucleo'
 import { CodigoDeErro, JANELA_DE_RENOVACAO_SIMULTANEA_MS, type RespostaRenovacao } from '@educa/shared'
 import { randomBytes, randomUUID } from 'node:crypto'
-import { COOKIE_SESSAO, lerCookie, serializarCookie } from '../credencial/cookies.js'
-import { BYTES_DO_REFRESH, hashDoRefresh } from '../credencial/identificadores-do-login.js'
-import { ipParaRegistro, type OrigemDaRequisicao } from '../credencial/origem-da-requisicao.js'
-import { RegistroDeAcessoRepository } from '../credencial/registro-de-acesso.repository.js'
-import { ResolucaoDeTenantRepository, type SessaoParaRenovar } from './resolucao-de-tenant.repository.js'
-import { EscritaDeSessaoRepository } from '../credencial/escrita-de-sessao.repository.js'
+import { COOKIE_SESSAO, lerCookie, serializarCookie } from '../../credencial/cookies.js'
+import { BYTES_DO_REFRESH, hashDoRefresh } from '../../credencial/identificadores-do-login.js'
+import { ipParaRegistro, type OrigemDaRequisicao } from '../../credencial/origem-da-requisicao.js'
+import { RegistroDeAcessoRepository } from '../../credencial/registro-de-acesso.repository.js'
+import { ResolucaoDeTenantRepository, type SessaoParaRenovar } from '../tenant/resolucao-de-tenant.repository.js'
+import { EscritaDeSessaoRepository } from '../../credencial/escrita-de-sessao.repository.js'
 
 /**
  * Até quantos segundos depois da rotação o cookie anterior, com o token novo já usado, é outra aba que renovou junto

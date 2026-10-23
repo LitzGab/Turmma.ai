@@ -4,8 +4,8 @@ import { and, eq, isNull, sql } from 'drizzle-orm'
 import { randomUUID } from 'node:crypto'
 import pg from 'pg'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { urlDoBancoDeTeste } from '../../../../tools/testes/integracao.setup.ts'
-import { BancadaDeSessoes } from '../../test/sessao-de-teste.js'
+import { urlDoBancoDeTeste } from '../../../../../tools/testes/integracao.setup.ts'
+import { BancadaDeSessoes } from '../../../test/sessao-de-teste.js'
 import { ResolucaoDeTenantRepository } from './resolucao-de-tenant.repository.js'
 
 interface NoDoPlano {

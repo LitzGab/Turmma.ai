@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { AcessoDaEscolaRepository } from '../credencial/index.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import { ContagensDePrivacidadeRepository, type ContagensDoAtendimento } from './contagens-de-privacidade.repository.js'
-import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
+import type { ConferenciaDoAutor } from '../sessao/index.js'
 
 /**
  * A privacidade de uma escola vista pela operação (F3, RF17; Tech Spec do F3, seções 6 e 7; regra 20, item 10):

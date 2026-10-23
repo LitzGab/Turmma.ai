@@ -1,6 +1,6 @@
 import { ErroDeDominio, type Banco } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaSalaAberta, type PedidoAbrirSala, type RespostaSalaAberta } from '@educa/shared'
-import type { AcessoDaSala, GuardaDoCodigo } from '../sessao/acesso-da-sala.js'
+import type { AcessoDaSala, GuardaDoCodigo } from '../sessao/index.js'
 import { entradaDaSala } from './entrada-da-sala.js'
 import { ListaLivreRepository } from './lista-livre.repository.js'
 

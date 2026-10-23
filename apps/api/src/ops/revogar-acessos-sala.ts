@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { AcessoDaTurmaRepository } from '../sala/acesso-da-turma.repository.js'
 import { AcessoDaEscolaRepository } from '../credencial/index.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
-import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
+import type { ConferenciaDoAutor } from '../sessao/index.js'
 
 const registro = new RegistroDeAuditoria()
 

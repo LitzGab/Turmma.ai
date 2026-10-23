@@ -3,7 +3,7 @@ import { CodigoDeErro, PAPEIS_DE_USUARIO, type PapelDeUsuario } from '@educa/sha
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { criarSessoesSinteticas, emissorDeTokenSintetico, QUANTIDADE_MAXIMA_DE_SESSOES_SINTETICAS } from '../sessao/sessoes-sinteticas.js'
+import { criarSessoesSinteticas, emissorDeTokenSintetico, QUANTIDADE_MAXIMA_DE_SESSOES_SINTETICAS } from '../sessao/index.js'
 import { urlDoBancoDeOperacao } from './uso.js'
 
 /**

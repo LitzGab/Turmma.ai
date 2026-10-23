@@ -1,7 +1,7 @@
 import { ErroDeDominio, erroDoPostgresEm, METRICAS, type Banco, type Meter } from '@educa/nucleo'
 import { CodigoDeErro, esquemaRespostaReivindicacao, type PedidoReivindicarSala, type RespostaReivindicacao } from '@educa/shared'
 import { TurmaRepository } from '../estrutura/turma.repository.js'
-import type { AcessoDaSala } from '../sessao/acesso-da-sala.js'
+import type { AcessoDaSala } from '../sessao/index.js'
 import { baldeDaEscola, type HashDeSenha, type SemaforoDeHash } from '../credencial/index.js'
 import type { LimitesDaSala } from './limites-da-sala.js'
 import { ListaLivreRepository } from './lista-livre.repository.js'

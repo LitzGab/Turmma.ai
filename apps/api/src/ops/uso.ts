@@ -16,7 +16,7 @@ import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
 import { abrirBancoDeOperacao, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
-import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
+import type { ConferenciaDoAutor } from '../sessao/index.js'
 
 // Mora em `comando.ts` desde a A0; reexportado para quem já o importava daqui (`ops:sessao-sintetica`).
 export { urlDoBancoDeOperacao } from './comando.js'

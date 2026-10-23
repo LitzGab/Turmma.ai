@@ -1,8 +1,7 @@
 import { METRICAS } from '@educa/nucleo'
-import { CodigoDeErro } from '@educa/shared'
+import { CodigoDeErro, JANELA_DE_RENOVACAO_SIMULTANEA_MS } from '@educa/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
-import { JANELA_DE_RENOVACAO_SIMULTANEA_MS } from '../src/sessao/renovacao.service.js'
 import { chamar, cookieDaResposta, cookieDeRenovacao, estadoDaSessao, hashDoCookie, registrosDeAcesso, renovar, subirApi, type ApiDeTeste, type RespostaHttp } from './api-com-sessao.js'
 import { BancadaDeSessoes, type SessaoDeTeste } from './sessao-de-teste.js'
 

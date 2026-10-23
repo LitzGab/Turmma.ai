@@ -7,7 +7,7 @@ import { composeOuFalha, aguardarSaudavel } from '../../../tools/testes/compose.
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { travarRedis } from '../../../tools/testes/redis-travado.ts'
 import { CLIENTE_REDIS_LOGIN, ConsumoDeDesafio, ContadorDeTentativas, ContadorEmJanela, EmissorDeDesafio, HashDeSenha, PREFIXO_FALHAS_POR_IP_NA_ESCOLA, SeguroDoLogin, SemaforoDeHash, verificarDesafio } from '../src/credencial/index.js'
-import { ESCOLA_DESCONHECIDA } from '../src/sessao/matricula.service.js'
+import { ESCOLA_DESCONHECIDA } from '../src/sessao/index.js'
 import { comoAWebNo503, subirApi, type ApiDeTeste } from './api-com-sessao.js'
 import { configuracaoDeTeste } from './configuracao-de-teste.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'

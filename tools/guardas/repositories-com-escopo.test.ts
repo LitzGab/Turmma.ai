@@ -62,7 +62,7 @@ describe('o analisador enxerga o código real', () => {
 
   it('acha os repositories de sessao/ e de fila/, e são dezenas', () => {
     const caminhos = repositories.map((fonte) => fonte.caminho)
-    expect(caminhos).toContain('apps/api/src/sessao/alunos-ativos.repository.ts')
+    expect(caminhos).toContain('apps/api/src/sessao/atividade/alunos-ativos.repository.ts')
     expect(caminhos).toContain('packages/nucleo/src/fila/job-registro.repository.ts')
     expect(repositories.length).toBeGreaterThan(60)
   })
@@ -78,7 +78,7 @@ describe('o analisador enxerga o código real', () => {
   })
 
   it('AlunosAtivosRepository.contar é o caso conhecido: toca o banco e prova o escopo pelo contexto', () => {
-    const fonte = repositories.find((candidato) => candidato.caminho === 'apps/api/src/sessao/alunos-ativos.repository.ts')
+    const fonte = repositories.find((candidato) => candidato.caminho === 'apps/api/src/sessao/atividade/alunos-ativos.repository.ts')
     expect(fonte).toBeDefined()
     const contar = analisarFonte(fonte as ArquivoFonte).metodos.find((metodo) => metodo.nome === 'contar')
     expect(contar).toMatchObject({ classe: 'AlunosAtivosRepository', tocaBanco: true, prova: 'contexto' })

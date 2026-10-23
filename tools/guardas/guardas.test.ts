@@ -102,6 +102,19 @@ describe('a entrada do controller passa pelo pipe (no-restricted-syntax, D81)', 
     expect(await lintar(eslint, fixture, 'apps/api/src/modulo-que-ainda-nao-existe/x.controller.ts', regras)).toEqual(marcasDeViolacao(fixture))
   })
 
+  it('o controller em subpasta do módulo é barrado como o da raiz: sessao/login/x.controller.ts e operacao/casos-de-uso/x.controller.ts (34.0)', async () => {
+    const fixture = 'entrada-sem-esquema.ts'
+    const linhas = lerFixture(fixture).split('\n')
+    const comRequisicao = new Set(linhas.flatMap((linha, indice) => (/@(Req|Request)\(/.test(linha) ? [indice + 1] : []).map(String)))
+    const semRequisicao = marcasDeViolacao(fixture).filter((marca) => !comRequisicao.has(marca.split(' ')[0] ?? ''))
+    // O `@Req()` passa em `sessao/` e `operacao/`, a qualquer profundidade (o segundo bloco do `eslint.config.mjs`).
+    for (const caminho of ['apps/api/src/sessao/login/x.controller.ts', 'apps/api/src/operacao/casos-de-uso/x.controller.ts']) {
+      expect(await lintar(eslint, fixture, caminho, regras), caminho).toEqual(semRequisicao)
+    }
+    // Em módulo que não lê a requisição, a subpasta barra tudo, inclusive o `@Req()` (o primeiro bloco, `apps/api/src/**`).
+    expect(await lintar(eslint, fixture, 'apps/api/src/estrutura/turma/x.controller.ts', regras)).toEqual(marcasDeViolacao(fixture))
+  })
+
   it('o jeito certo passa: o pipe no parâmetro, o IdPipe com e sem invalidAsUndefined, o errorCode, @UploadedFile() e @Res()', async () => {
     for (const modulo of MODULOS_MIGRADOS) {
       expect(await lintar(eslint, 'entrada-com-esquema.ts', `apps/api/src/${modulo}/x.controller.ts`, regras), modulo).toEqual([])

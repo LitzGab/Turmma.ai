@@ -20,7 +20,7 @@ import { parseArgs } from 'node:util'
 import { z } from 'zod'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import { RedeEEscolaRepository, type Criada } from './escola.repository.js'
-import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
+import type { ConferenciaDoAutor } from '../sessao/index.js'
 
 // O que é comum aos comandos do operador mora em `comando.ts`; reexportado aqui para quem já o importava daqui.
 export { abrirBancoDeOperacao, ArgumentoInvalido, lerOperador, type BancoDoComando, type SaidaDoComando }

@@ -3,7 +3,7 @@ import { esquemaNomeDigitado, FORMATO_OPERADOR } from '@educa/shared'
 import { open, type FileHandle } from 'node:fs/promises'
 import { z } from 'zod'
 import { OperadorRepository } from '../operacao/operador.repository.js'
-import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
+import type { ConferenciaDoAutor } from '../sessao/index.js'
 
 /**
  * O que os comandos do operador (`ops:escola`, `ops:redefinir-mfa`, `ops:convite-coordenador`, `ops:revogar-convite`,

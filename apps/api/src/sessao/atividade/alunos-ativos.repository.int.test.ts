@@ -1,7 +1,7 @@
 import { executarNoContexto } from '@educa/nucleo'
 import { randomUUID } from 'node:crypto'
 import { afterAll, describe, expect, it } from 'vitest'
-import { BancadaDeSessoes } from '../../test/sessao-de-teste.js'
+import { BancadaDeSessoes } from '../../../test/sessao-de-teste.js'
 import { AlunosAtivosRepository } from './alunos-ativos.repository.js'
 
 /** Hash sintético: a contagem não confere senha. */

@@ -18,7 +18,7 @@ import { configurarAplicacao } from '../src/configurar-app.js'
 import { executarOpsConviteCoordenador } from '../src/ops/convite-coordenador.js'
 import { executarOpsRevogarConvite } from '../src/ops/revogar-convite.js'
 import { CifraDoSegredo, CLIENTE_REDIS_LOGIN, gerarSegredo, HashDeSenha } from '../src/credencial/index.js'
-import { criarConviteDeCoordenador } from '../src/sessao/convite.service.js'
+import { criarConviteDeCoordenador } from '../src/sessao/index.js'
 import { configuracaoDeTeste, MONTAGEM_DE_TESTE } from './configuracao-de-teste.js'
 import { BancadaDeSessoes } from './sessao-de-teste.js'
 

@@ -4,7 +4,7 @@ import { rm } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
-import { criarConviteDeCoordenador, type PedidoDeConvite } from '../sessao/convite.service.js'
+import { criarConviteDeCoordenador, type PedidoDeConvite } from '../sessao/index.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, criarArquivoDoToken, esquemaNome, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 
 /**

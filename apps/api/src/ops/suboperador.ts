@@ -18,7 +18,7 @@ import { z } from 'zod'
 import { AcessoDaEscolaRepository } from '../credencial/index.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 import { OperacaoPrivacidadeRepository } from './operacao-privacidade.repository.js'
-import type { ConferenciaDoAutor } from '../sessao/conferencia-do-autor.js'
+import type { ConferenciaDoAutor } from '../sessao/index.js'
 
 const registro = new RegistroDeAuditoria()
 

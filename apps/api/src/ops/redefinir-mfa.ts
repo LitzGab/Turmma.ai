@@ -3,7 +3,7 @@ import { CodigoDeErro } from '@educa/shared'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { redefinirMfaPeloOperador } from '../sessao/redefinicao-de-mfa.js'
+import { redefinirMfaPeloOperador } from '../sessao/index.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 
 /**

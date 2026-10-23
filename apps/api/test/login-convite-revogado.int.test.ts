@@ -1,6 +1,6 @@
 import { CodigoDeErro } from '@educa/shared'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { revogarConvitePeloOperador } from '../src/sessao/convite.service.js'
+import { revogarConvitePeloOperador } from '../src/sessao/index.js'
 import { CenarioDeAtivacao, SENHA_DA_CONTA, SENHA_ERRADA, type ContaDeTeste, type ConviteDeTeste } from './ativacao-de-teste.js'
 import { esperarErro, pedir, type Resposta } from './painel-de-teste.js'
 import { autorDaBancada } from './sessao-de-teste.js'

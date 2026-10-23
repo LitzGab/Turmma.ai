@@ -201,7 +201,7 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       categorias antes de subir o erro. Desde a 5.0, a falha pode vir de uma pessoa só em `pessoa_desativada`, e então as
       outras categorias deixam de rodar toda noite. Tratar a separação entre linha de falha e linha de interrupção junto com
       isso, antes do piloto, e não depois (`infra-guardian` da 3.0, 2ª rodada e da 5.0, 3ª rodada, e `revisor-geral` da 5.0)
-- [ ] **Ordem das travas entre convidar e eliminar (F3, 5.0):** o `convidar` (`apps/api/src/sessao/convite.service.ts`) trava a conta antes do usuário, e o `CicloDeVidaService` trava o usuário antes da conta. Se a coordenação convida de volta, pelo mesmo e-mail, quem o expurgo está eliminando no mesmo instante, sai deadlock (40P01): nada se corrompe, o expurgo grava `false` e tenta de novo, e o convite é refeito. Alinhar a ordem, ou responder `INDISPONIVEL_TENTE_DE_NOVO` no 40P01 (`infra-guardian` e `test-engineer` da 5.0)
+- [ ] **Ordem das travas entre convidar e eliminar (F3, 5.0):** o `convidar` (`apps/api/src/sessao/convite/convite.service.ts`) trava a conta antes do usuário, e o `CicloDeVidaService` trava o usuário antes da conta. Se a coordenação convida de volta, pelo mesmo e-mail, quem o expurgo está eliminando no mesmo instante, sai deadlock (40P01): nada se corrompe, o expurgo grava `false` e tenta de novo, e o convite é refeito. Alinhar a ordem, ou responder `INDISPONIVEL_TENTE_DE_NOVO` no 40P01 (`infra-guardian` e `test-engineer` da 5.0)
 - [ ] **Tempo do lote de 100 pessoas (F3, 5.0):** o «tempo do lote» da 5.0 mediu só a cascata do `trabalho_do_aluno`. Medir o lote de `pessoa_desativada` inteiro (a escolha mais as 100 eliminações, uma transação cada) contra a janela letiva e o `statement_timeout`, com volume de Tutor na escola, antes do piloto (`infra-guardian` da 5.0)
 - [ ] **Medição do expurgo depois de o catálogo crescer (F3, 5.0):** `apps/worker/src/medicao-do-expurgo.ts` conta as noites contra o `CATEGORIAS_DO_EXPURGO` atual, que passou de 7 para 12. Num ambiente com noites gravadas com 7, as duas noites anteriores ao deploy contam como incompletas e `expurgo.noites_incompletas` fica em 2 por cerca de um dia e meio. Sem efeito hoje (não há staging); pôr um parágrafo no runbook quando houver (`revisor-geral` da 5.0)
 - [ ] **`NAO_ENCONTRADO` do `ops:incidente` sem a posição da seção (F3, 9.0):** o comando responde `NAO_ENCONTRADO: escola não encontrada`
@@ -477,7 +477,7 @@ para o staging".
 - [ ] **Prender o `AcessoDaSala` ao `sala` no teste de arquitetura** (`privacy-guardian` na 5.0): ele sai do
       `SessaoModule` global, e só o `SalaModule` deve injetá-lo, porque abre contexto de escola sem usuário. A 5.0
       exigia o `arquitetura.test.ts` sem mudar; a asserção entra na próxima tarefa que tocar o teste, e prende também o
-      `anoLetivoId` de `naEscolaSemUsuario` a `sessao/acesso-da-sala.ts`, o único caminho que põe o ano no contexto sem
+      `anoLetivoId` de `naEscolaSemUsuario` a `sessao/tenant/acesso-da-sala.ts`, o único caminho que põe o ano no contexto sem
       usuário (`privacy-guardian`, 2ª rodada) (dono: Joaquim)
 - [ ] **Alinhar os pacotes `@nestjs/*` na mesma versão** (`infra-guardian` na correção
       `2026-10-06-audit-proxy-addr-e-multer`): o `@nestjs/platform-express` subiu para 12.1.2 para fechar o aviso do
@@ -875,7 +875,7 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
 - [ ] `apps/api/src/operacao/painel.service.ts:62` (`naEscola`): o mesmo caminho morto que a correção
       `2026-09-25-acabamento-da-a0b` tirou do segundo fator, `contextoAtual() ?? { requisicaoId: randomUUID() }`. Aqui a
       linha é escrita depois da gravação, então a falha fechada vai no começo do caso de uso, não no log. O mesmo vale para
-      `refazerConviteDaCoordenacao` (`apps/api/src/sessao/convite.service.ts`), que só o painel chama; no gerar e no
+      `refazerConviteDaCoordenacao` (`apps/api/src/sessao/convite/convite.service.ts`), que só o painel chama; no gerar e no
       revogar o fallback é vivo, porque os comandos `ops:*` rodam sem requisição (`tenancy-guardian` da correção). Destino:
       próxima tarefa que tocar `painel.service.ts` ou `convite.service.ts`
 - [ ] Contador `banco.conexao_descartada{causa}`, separando erro de consulta e erro da conexão: hoje o descarte não
@@ -937,7 +937,7 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       segurança da borda, com o `infra-guardian`
 - [ ] O formato do token opaco de 43 caracteres base64url está em dois lugares: `esquemaTokenDeLink`
       (`packages/shared/src/sessao/token.ts`: convite da coordenação, link da sala e, desde a 14.0 da A1, o convite de
-      professor) e o `FORMATO_DO_REFRESH` (`apps/api/src/sessao/renovacao.service.ts` e
+      professor) e o `FORMATO_DO_REFRESH` (`apps/api/src/sessao/renovacao/renovacao.service.ts` e
       `apps/api/src/operacao/sessao.service.ts`). Unificar os dois da API no mesmo formato (`revisor-geral` da 4.0 da A1).
       A 14.0 fez a parte do convite de professor; o refresh é da API de sessão, fora de uma tarefa de tela. Destino:
       correção própria
@@ -1731,3 +1731,5 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   em `professores.controller.ts`, `operacao/sessao.controller.ts`, `operacao/painel.controller.ts` e `sala/acesso-da-turma.controller.ts`,
   e o `esquemaPedidoSemCorpoOuAusente` de `packages/shared` (atividade). Unificar na próxima tarefa que mexa nesses controllers;
   quatro arquivos de outros módulos não cabiam na 17.0
+- [ ] **(X5, 34.0) O `sessao/index.ts` exporta o que só os testes de `apps/api/test` usam** (`tenancy-guardian`): `ConviteRepository`, `ContaExternaRepository`, `CookieOidc`, `CHAVE_DA_TRAVA_DO_CONVITE_DA_ESCOLA` e `ESCOLA_DESCONHECIDA`. A 34.3 manda o índice trazer o que `apps/api/{src,test}` usam, e é assim que está. A regra do `dependency-cruiser` da 12.0 pode barrar o uso desses fora de `apps/api/test`, ou os testes passam a importar pelo arquivo
+- [ ] **(X5, 34.0) Três restos de texto e de reexport depois da `sessao/index.ts`** (`test-engineer` e `revisor-geral`, 2ª rodada): (1) o comentário de `apps/api/test/arquitetura.test.ts` (conferência do índice) ainda cita `export * from './tenant/index.js'`, arquivo que não existe; (2) `renovacao/renovacao.service.ts` reexporta `JANELA_DE_RENOVACAO_SIMULTANEA_MS` só para `renovacao.service.test.ts`: importar de `@educa/shared` no teste e apagar o reexport, na tarefa que mexer em `renovacao.service.ts`; (3) `tasks/prd-reengenharia/34_task.md`, tabela de testes, diz "as mutações 1 a 5", e com o bloco de aspas duplas são seis

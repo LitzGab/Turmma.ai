@@ -2,7 +2,7 @@ import { ErroDeDominio, executarNoContexto } from '@educa/nucleo'
 import { CodigoDeErro } from '@educa/shared'
 import { createHash, randomUUID } from 'node:crypto'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { BancadaDeSessoes } from '../../test/sessao-de-teste.js'
+import { BancadaDeSessoes } from '../../../test/sessao-de-teste.js'
 import { ConviteRepository } from './convite.repository.js'
 
 interface EstadoDoConvite {

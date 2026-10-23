@@ -1,6 +1,6 @@
 import { avisoEspacado, METRICAS, sessaoDaRequisicao, type Banco, type Meter } from '@educa/nucleo'
 import { Logger } from '@nestjs/common'
-import { EscritaDeSessaoRepository } from '../credencial/escrita-de-sessao.repository.js'
+import { EscritaDeSessaoRepository } from '../../credencial/escrita-de-sessao.repository.js'
 
 /**
  * A atividade da pessoa na sessão da requisição: move `ultimo_uso_em`, que é o que a inatividade confere (Tech Spec,

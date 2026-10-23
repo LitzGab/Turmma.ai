@@ -3,7 +3,7 @@ import { CodigoDeErro } from '@educa/shared'
 import { pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 import { z } from 'zod'
-import { revogarConvitePeloOperador } from '../sessao/convite.service.js'
+import { revogarConvitePeloOperador } from '../sessao/index.js'
 import { abrirBancoDeOperacao, ArgumentoInvalido, autorDoComando, lerOperador, OperadorRecusado, type BancoDoComando, type SaidaDoComando } from './comando.js'
 
 /**

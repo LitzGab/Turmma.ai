@@ -8,12 +8,12 @@ import {
   type RespostaListaDeProfessores,
 } from '@educa/shared'
 import { paginarPor } from '../estrutura/entrada.js'
-import { cadastrarProfessor, refazerConviteDeProfessor, revogarConviteDeProfessor } from '../sessao/convite-de-professor.service.js'
+import { cadastrarProfessor, refazerConviteDeProfessor, revogarConviteDeProfessor } from '../sessao/index.js'
 import { ProfessoresRepository } from './professores.repository.js'
 
 /**
  * Os professores da escola pela coordenação (A1, tarefa 3.0, RF6): cadastrar, listar, e refazer e revogar o convite. A
- * escrita é o caso de uso do convite de professor, em `sessao/convite-de-professor.service.ts` (`cadastrarProfessor`,
+ * escrita é o caso de uso do convite de professor, em `sessao/convite/convite-de-professor.service.ts` (`cadastrarProfessor`,
  * `refazerConviteDeProfessor`, `revogarConviteDeProfessor`), que é quem alcança a conta global; aqui ficam a lista e os
  * contratos de saída.
  *
