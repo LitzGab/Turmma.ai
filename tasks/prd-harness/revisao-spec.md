@@ -65,6 +65,52 @@
   `tools/ia/**` com conformidade; o `separar-achados` só sai com o ok do Gabriel; a trava do U11-12 no RF13; o RF26 como
   teste de orçamento
 
+## Rodada 2 — 23/10/2026
+
+**Veredito: REPROVADA**
+
+As correções da rodada 1 foram conferidas e valem (cópia congelada fora, `decidirCommit`, RF2 na Tech Spec, RF3 no
+checkout da linha, `concurrency`, censo, RF4, lista do RF21, destinos do `CLAUDE.md`, D53 com `commit-msg`). O que
+sobra é a tabela, que cada guardião achou furada de novo, e cenários de um lado só.
+
+| Revisor | Veredito | Bloqueantes |
+|---|---|---|
+| `tenancy-guardian` | REPROVADO | 4: `auditoria/`, `retencao/`, `limite/`, `erro/` do núcleo e `shared/sistema/` sem T; `apps/*/test/` sem linha; guardas da regra 10 fora de `regras-tenant` (`camadas.cjs`, `tabelas-do-nucleo.mjs`, `index.mjs`, `repositories-com-escopo.test.ts`) |
+| `privacy-guardian` | REPROVADO | 2: `contexto/`, `config/`, `fila/`, `limite/` do núcleo, `shared/erros` e `sistema`, `api/sistema` e raiz, `web/componentes` sem P; `tools/guardas/` inteiro e `eslint.config.mjs` sem P |
+| `conformidade-reviewer` | REPROVADO | 2: `titular/`, `retencao/`, `ciclo-de-vida/`, `privacidade/` (api e shared), `Faixa.tsx` e `onca/` sem C; `e2e/` dos fluxos da regra 70 e o seed `e2e/__fixtures__/governanca.ts` sem C |
+| `infra-guardian` | REPROVADO | 7: web (`api/`, `sessao/`, `areas/`, `pedidos/`, `sino/`), `shared` (`sistema`, `erros`, `estrutura`, ...), núcleo (`retencao`, `titular`, `ciclo-de-vida`, `auditoria`, `erro`) e api (`entrega`, `governanca`, `privacidade`, `professores`) sem I; `apps/*/test/`; o RF2 do PRD contradiz a Tech Spec; dois encontros do RF3 ao mesmo tempo, sem trava |
+| `test-engineer` | REPROVADO | 10: RF4 com o vocabulário trocado e sem o mutado lento; RF2 sem sucessora rodando; RF9 sem a escolha da execução; merge e `pre-push` de um lado só; terceira camada sem histórico real de spec e sem o commit do Joaquim; RF17 sem caso direto na `decidirCommit`; isenção da guarda de IA sem cenário; `compose.yaml` e `.env.example` na tabela e fora do §5(e); testes de fora de `src` |
+| `revisor-geral` | REPROVADO | 2: a terceira camada reaproveita o `conferirEntrega`, que falha em histórico normal de spec; `compose.yaml` e `.env.example` nunca chegam à tabela |
+
+### Correções exigidas
+
+**Que mudam desenho ou critério do PRD (parada do Joaquim):**
+- RF15: a tabela fina não converge; cada rodada acha pasta nova. Inverter o padrão (todo código pede os quatro, e a
+  exceção é escrita) ou seguir somando linhas
+- RF2 do PRD: "cancelada não é vermelha" contradiz a Tech Spec; o critério passa a "superada só com push mais novo na
+  mesma branch; sem sucessora, vermelha" (infra 6)
+- RF14: o commit de código do Joaquim, sem papel, em `spec/**` ou `correcao/**`, passa no hook e fica vermelho na
+  terceira camada (test-engineer 6)
+- RF16 e D53: `compose.yaml` e `.env.example` entram na lista fechada, ou saem da tabela (test-engineer 9, revisor-geral 2)
+
+**Que corrijo sem mudar desenho:**
+- §5(a): a terceira camada com regra própria, commit a commit de `develop..HEAD`, a mesma classificação da
+  `decidirCommit`, merge por `--remerge-diff`, intervalo vazio sai 0, `fetch-depth: 0` (revisor-geral 1)
+- §5(a): a negação do `PreToolUse` casa os argumentos do git e as formas de mexer no ambiente, não qualquer `grep`; `GIT_CONFIG_*` nos limites (revisor-geral)
+- §5(f), RF3: o encontro inteiro sob `flock`, relendo o quadro com a trava; prazo próprio com `npm ci`; a saída diz
+  para refazer o merge (infra 7, revisor-geral)
+- §7c, RF4: prazo = o maior entre 3 × a corrida limpa e o prazo do teste, com piso de 60 s; vocabulário do
+  `mutacoes.ts` (test-engineer 1, infra)
+- `cenarios.md`: RF2 com sucessora rodando, jobs da superada fora, as duas funções, `cancelled` no lugar de `timed_out`;
+  RF9 com vermelha mais nova e artefato expirado; merge limpo de papel e merge com marca passando; `pre-push` sem papel
+  passando; terceira camada com histórico real de spec e marca sem `Revisões:`; RF17 direto na `decidirCommit`;
+  isenção da guarda de IA dos dois lados (test-engineer 2 a 8)
+- `texto.md`: o conflito de skill na primeira linha depois do frontmatter; as skills que decidem a marcação, nomeadas;
+  o bloco "Formato" de cada guardião não muda; o `README` do `ouro` na lista do RF21; uma definição do orçamento do
+  RF26; o passo do RF9 no `/seguir` (revisor-geral, conformidade)
+- §5(c): o socorro perde o que não foi commitado, e o conserto é commitado pelo Joaquim fora de sessão de papel
+- O censo sobe só o reporter JSON, sem trace nem anexo (privacy)
+
 ## Revisões
 
 Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
@@ -79,3 +125,9 @@ atual, com APROVADO quando o revisor tem veto.
 | 2026-10-23 11:47:52 | 2026-10-23 11:53:11 | `infra-guardian` | 1 | REPROVADO | a44f1980ee4a73c5a |
 | 2026-10-23 11:47:28 | 2026-10-23 11:53:52 | `test-engineer` | 1 | REPROVADO | a589526a80b1e6cd2 |
 | 2026-10-23 11:47:33 | 2026-10-23 11:56:26 | `revisor-geral` | 1 | REPROVADO | a0f77096cdd87302b |
+| 2026-10-23 13:02:07 | 2026-10-23 13:04:52 | `tenancy-guardian` | 2 | REPROVADO | af6f6902273a52732 |
+| 2026-10-23 13:02:13 | 2026-10-23 13:06:07 | `privacy-guardian` | 2 | REPROVADO | a25987c2dae713e62 |
+| 2026-10-23 13:02:20 | 2026-10-23 13:06:40 | `conformidade-reviewer` | 2 | REPROVADO | a04081cc664806784 |
+| 2026-10-23 13:02:27 | 2026-10-23 13:06:46 | `infra-guardian` | 2 | REPROVADO | ac40d49e57fe8286e |
+| 2026-10-23 13:02:34 | 2026-10-23 13:08:12 | `test-engineer` | 2 | REPROVADO | abbbf7801aaeb881d |
+| 2026-10-23 13:02:40 | 2026-10-23 13:08:37 | `revisor-geral` | 2 | REPROVADO | a0542617ee93340d2 |

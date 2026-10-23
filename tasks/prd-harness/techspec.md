@@ -1,200 +1,179 @@
 # Tech Spec — Harness (X7)
 
 **PRD:** `tasks/prd-harness/prd.md`
-**Status:** rascunho
+**Status:** rascunho (rodada 3 da revisão da spec)
 
 Respostas do Joaquim, 23/10/2026: `core.hooksPath` pelo `prepare`; as paradas do §9; o ensaio do RF31 é o item
-"(X5, RF31)" do `TODO.md`.
+"(X5, RF31)" do `TODO.md`; e, na revisão da spec, RF2, RF14, RF15, RF16 e a cópia congelada fora. Anexos:
+`tabela-de-guardioes.md`, `cenarios.md` (os testes) e `texto.md` (RF20 a RF25).
 
 ## 1. Resumo da abordagem
 
-Quatro trilhas, nesta ordem. **(1)** O hook se protege antes de mudar: passa a rodar de uma cópia congelada, ganha os
-testes de contrato e do harness, e o `revisoes.ts` é partido só por mover. **(2)** O código de processo das
-retrospectivas (RF1 a RF11), em arquivos que não se tocam, corre em linhas. **(3)** O comportamento novo do hook (RF14 a
-RF18), depois da partição, um por tarefa. **(4)** O texto e o Maestri (RF20 a RF29), por último, para já descrever o
-hook novo. Fecha com o hook descongelado e o ensaio (RF31). Sem dependência nova.
+Quatro trilhas. **(1)** Testes de contrato e do harness, e o `revisoes.ts` partido só por mover. **(2)** O código das
+retrospectivas (RF1 a RF11), em linhas. **(3)** O hook novo (RF14 a RF18), um comportamento por tarefa, sobre o §5(a).
+**(4)** O texto e o Maestri (RF20 a RF29), por último, já descrevendo o hook novo. Fecha com o ensaio (RF31).
 
 ## 2. Módulos afetados
 
 | Módulo | Novo ou alterado | O quê |
 |---|---|---|
-| `.github/workflows/ci.yml` | alterado | `concurrency` (RF1); `pull_request` com `branches: [develop]` (RF19) |
-| `tools/processo/esteira.ts` | alterado | `cancelled` vira `superada`, e o veredito é o da concluída mais nova (RF2); `--censo` (RF9) |
-| `tools/processo/linhas.ts` | alterado | `encontro` com tipagem e lint (RF3); `abandonar <n>` (RF6); `conferir` contra a base da branch (RF10) |
-| `tools/processo/mutacoes.ts` | alterado | prazo por mutação (RF4); `--faltando` (RF5); a exigência do RF17 |
-| `tools/processo/portao-local.ts` | alterado | para os workers do compose de teste (RF7); guardas por `tools/ci/etapas-de-guarda.ts` (RF8); imprime o `--faltando` |
+| `.github/workflows/ci.yml` | alterado | `concurrency` (§5f); `pull_request` para a `develop`; relatório JSON do e2e no verde; a terceira camada do RF14 |
+| `tools/processo/esteira.ts` | alterado | RF2 (§5f), `--event push`, `--censo` (RF9) |
+| `tools/processo/linhas.ts` | alterado | RF3 (§5f), `abandonar <n>` (RF6), base de `conferir` (RF10) |
+| `tools/processo/mutacoes.ts` | alterado | RF4 (§7c), `--faltando` (RF5), RF17 (§5d) |
+| `tools/processo/portao-local.ts` | alterado | RF7 e RF8, a sequência em função testável; imprime o `--faltando` e os guardiões |
 | `tools/ci/duracao-do-e2e.ts` | alterado | caso retitulado (RF11) |
-| `tools/processo/revisoes.ts` | partido | `documento-de-revisao.ts`, `caducidade.ts`, `comando-git.ts`, `portao.ts`; o `revisoes.ts` vira só reexportação (RF13); sai o `(mvp:)` (RF18) |
-| `tools/processo/guardioes-por-caminho.ts` | novo | a tabela do RF15 |
+| `tools/ci/conferir-entregas.ts` | novo | a terceira camada do RF14 (§5a) |
+| `tools/processo/revisoes.ts` | partido | `documento-de-revisao.ts`, `caducidade.ts`, `comando-git.ts`, `portao.ts`; o `revisoes.ts` só reexporta, e `estado.ts` e `esteira.ts` deixam de importá-lo (RF13); sai o `(mvp:)` (RF18) |
+| `tools/processo/guardioes-por-caminho.ts` | novo | a tabela do RF15 e do RF16 |
 | `tools/processo/hook-git.ts`, `tools/processo/git-hooks/` | novos | `commit-msg` e `pre-push` (RF14) |
-| `tools/processo/hook.sh`, `tools/processo/congelar-hook.ts` | novos | a entrada do hook, que prefere a cópia congelada (§5c) |
-| `tools/processo/harness.test.ts` | novo | contrato dos modelos, orçamento, caminhos citados e metadados (RF12, RF20, RF21, RF24, RF25, RF30) |
-| `tools/processo/separar-achados.ts` e o teste dele | removidos | código morto: nenhum `achados-revisoes.md` existe (U11-10) |
-| `tools/processo/estado.ts` | alterado | lê as decisões em aberto do documento novo (RF20) |
-| `tools/processo/vigia.ts` | alterado | limpeza perdida (RF27); exemplo real do `maestri list` (RF28) |
-| `tools/guardas/regras-ia.mjs` | alterado | a pasta isenta é a real, `packages/nucleo/src/ia/adaptador-*.ts` (RF24) |
-| `.claude/settings.json`, `.claude/hooks/` | alterados | entrada por `hook.sh`; `UserPromptSubmit` (RF29); o início de sessão confere o `core.hooksPath` e grava a limpeza |
+| `tools/processo/harness/*.test.ts` | novos | um arquivo por aspecto, para correr em paralelo (RF12, RF20 a RF26, RF30) |
+| `tools/processo/estado.ts`, `vigia.ts` | alterados | decisões em aberto no documento novo (RF20); limpeza e `maestri list` (RF27, RF28) |
+| `tools/guardas/regras-ia.mjs` | alterado | a pasta isenta é `packages/nucleo/src/ia/adaptador-*.ts` (RF24) |
+| `.claude/settings*.json`, `.claude/hooks/` | alterados | `UserPromptSubmit` (RF29); o início de sessão confere o `core.hooksPath` e grava a limpeza |
 | `package.json` | alterado | `"prepare": "git config core.hooksPath tools/processo/git-hooks"` |
-| `CLAUDE.md`, `.claude/rules/`, `docs/decisoes.md`, `docs/decisoes-em-aberto.md` | alterados e novo | RF20, RF25 |
-| `.claude/skills/`, `.claude/agents/` | alterados | RF21 a RF24; saem `status` e `frontend-design` (§9) |
-| `docs/processo-licoes.md`, `docs/processo-sem-maestri.md` | novos | RF22, RF28 |
+| `CLAUDE.md`, `.claude/rules/`, `.claude/skills/`, `.claude/agents/`, `docs/` | alterados e novos | RF20 a RF25, RF28 e o socorro do hook (`texto.md`) |
 
 ## 3. Modelo de dados
 
-Nenhuma tabela; fora do git, `.processo/hook-congelado/` (§5c) e `.processo/limpeza.json` (RF27). Sem IA (§8).
+Nenhuma tabela. Fora do git: `.processo/limpeza.json` (`{ "pedida": ISO, "feita": ISO }`, nada mais). Sem IA (o §8 não se aplica).
 
 ## 4. API
 
 Nenhuma rota. Comandos novos: `esteira.ts --censo [branch]`, `linhas.ts abandonar <n>`,
-`mutacoes.ts --faltando <documento>`, `hook-git.ts commit-msg <arquivo>` e `pre-push`, e
-`congelar-hook.ts [--descongelar]`, todos em `tools/processo/`.
+`mutacoes.ts --faltando <documento>` e `hook-git.ts commit-msg <arquivo>` e `pre-push`, em `tools/processo/`; e
+`npm run ci:conferir-entregas`.
 
 ## 5. Fluxo
 
-**(a) Commit em sessão de papel.** O `PreToolUse` continua na frente, com a mensagem de hoje. Ele passa a negar, em
-sessão de papel, o comando que contém `--no-verify`, `commit -n` (ou `-n` combinado com outras letras) ou
-`core.hooksPath`. Depois o git roda o `commit-msg`:
+**(a) Uma decisão, duas entradas.** A decisão inteira do `portao` de hoje vira uma função pura em `portao.ts`,
+`decidirCommit({ mensagem, arquivos, conteudoDe, raiz, papel })`: a marca, o documento, os obrigatórios (§5b), as pastas
+(§5e), o `avaliarPortao` e a conferência das mutações. O `PreToolUse` a chama com a mensagem tirada do comando e o
+conteúdo da árvore. Em sessão de papel, nega nos argumentos do git `--no-verify` ou abreviação aceita, `-n` em
+`commit` (sozinho ou combinado) e `core.hookspath` em qualquer caixa; e as formas de mexer no ambiente (`VAR=`,
+`unset`, `env -u`) com `CLAUDE_CODE_AGENT` ou `GIT_CONFIG_`. `grep` e `printenv` passam. Termo só na mensagem: a recusa
+sugere `-F`. O `commit-msg`:
 
 ```sh
-case "$CLAUDE_CODE_AGENT" in arquiteto|implementador|mesa-de-revisao|validador) ;; *) exit 0 ;; esac
-exec sh "$(git rev-parse --show-toplevel)/tools/processo/hook.sh" git commit-msg "$1"
+[ -n "$CLAUDE_CODE_AGENT" ] || exit 0
+exec node "$(git rev-parse --show-toplevel)/tools/processo/hook-git.ts" commit-msg "$1"
 ```
 
-O `hook-git.ts` lê a mensagem do arquivo e os arquivos do índice (`git diff --cached --name-only`; com merge em curso,
-o que diverge dos dois lados, como `arquivosAlterados` faz hoje). Daí aplica o mesmo `avaliarPortao`; erro de carga recusa o commit. Fora de sessão de papel o script sai antes do node, e um hook quebrado não
-trava o Joaquim. O `pre-push` lê as refs da entrada padrão e recusa o push de papel para a `develop`, a `release` ou o
-`main`. O merge que o `linhas.ts encontro` faz roda na sessão do Orquestrador, que não tem papel, e passa.
+O `hook-git.ts` recusa papel fora de `PAPEIS_DO_TIME` e a linha `Fora do processo:`. Lê a mensagem do arquivo, os arquivos de
+`git diff --cached --name-only --no-renames` (com merge em curso, o que diverge dos dois lados, como hoje) e o conteúdo
+do índice (`git show :<arquivo>`). Erro de carga recusa; fora de sessão de papel o script sai antes do node. O
+`pre-push` lê as refs da entrada padrão e recusa o push de papel para `develop`, `release` ou `main`. O merge do
+encontro, sem papel, passa; o de papel passa pela decisão.
 
-**(b) Quem é obrigatório.** `obrigatorios = união(marcados na tarefa, guardioesDoCaminho(arquivos do commit))`, sem
-contar os arquivos de teste (`*.test.*`, `e2e/**`). Primeira tabela, que os guardiões revisam na revisão da spec:
+**Limites declarados (RF14).** A máquina não barra `env -u CLAUDE_CODE_AGENT` ou `--no-verify` dentro de script,
+`commit-tree`, `update-ref`, `rebase`, `cherry-pick`, nem o Edit em `git-hooks/` ou `.git/config`. A terceira camada é
+o job `verificar`, em push de `spec/**` e `correcao/**`, com `fetch-depth: 0`: `ci:conferir-entregas` olha commit a
+commit de `develop..HEAD`, com a classificação da `decidirCommit` (código de produto mais a lista do §5e), o merge por
+`--remerge-diff`. Commit de código passa com `(tarefa N.0)` ou `(correção <slug>)` e a linha `Revisões:`, ou com
+`Fora do processo: <motivo>` (o Joaquim); senão sai 1 com o hash. Intervalo vazio sai 0. Andar anterior à X7 fica sem hook nativo até o merge da
+`develop`, e o início de sessão avisa.
 
-| Caminho | Guardião |
-|---|---|
-| `packages/nucleo/drizzle/**`, `packages/nucleo/src/db/schema/**` | tenancy, privacy, infra |
-| `**/*.repository.ts`, `**/*.controller.ts` | tenancy |
-| `packages/nucleo/src/{titular,retencao,log,auditoria}/**`, `apps/api/src/privacidade/**` | privacy |
-| `apps/api/src/{tutor,entrega,atividade,governanca,ia}/**`, `packages/nucleo/src/ia/**` | conformidade |
-| `packages/nucleo/src/{fila,limite,redis}/**`, `apps/{worker,despachante,realtime}/src/**`, `apps/api/src/{sessao,credencial,sala}/**`, `infra/**` | infra |
+**(b) Quem é obrigatório (RF15).** `obrigatorios = união(marcados, guardioesDoCaminho(arquivos))`. Código em
+`apps/`, `packages/`, `e2e/` e `tools/guardas/` pede os quatro; as exceções, com motivo, e as regras de casamento estão
+em `tabela-de-guardioes.md` (decisão do Joaquim na rodada 2). O teto de três da D79 vale para o que o Arquiteto marca.
+O portão imprime a lista unida para a Mesa.
 
-O teto de três da D79 vale para o que o Arquiteto marca, e o `criar-tasks` cita esta tabela em vez de repeti-la.
+**(c) O hook sem cópia congelada.** Julga o hook da árvore. Toda tarefa que mexe em `tools/processo/` roda o
+`hook-portao.test.ts` com o comando real do `settings.json`. Se ele quebrar, o papel conserta pelo Edit, que não passa
+pelo hook, ou o Joaquim roda no terminal dele o socorro de `docs/processo-sem-maestri.md`
+(`git -C <checkout> checkout origin/develop -- tools/processo .claude/settings.json`), que perde o não commitado e
+não apaga os arquivos novos da branch; o conserto, ele commita fora de sessão de papel.
 
-**(c) O hook congelado.** O `settings.json` passa a chamar `sh "$CLAUDE_PROJECT_DIR/tools/processo/hook.sh" portao` (e
-`registrar`), mantendo o `|| { …; exit 2; }`. O `hook.sh` roda `.processo/hook-congelado/hook-revisoes.ts` quando ele
-existe e, senão, o da árvore. A 1.0 cria os dois; depois dela, o Orquestrador congela o andar e cada linha ao abri-la (só
-enquanto o `estado.md` da X7 disser). A tarefa que fecha o hook
-descongela, e o ensaio roda no hook da árvore. Os andares de outras specs não têm a pasta e seguem iguais.
+**(d) O RF17.** A fonte é o diff da árvore contra a base, não o documento. É produção o arquivo de `apps/*/src/**` ou
+`packages/*/src/**` que não é teste nem `.d.ts`. Com produção alterada, o portão falha sem bloco ` ```mutacao ` no
+documento e sem a linha `**Sem mutação:** <motivo>` (motivo vazio recusado). O documento é achado pela marca da tarefa,
+não por conter bloco, e a mesma exigência vale na `decidirCommit`: carimbo de outro portão não passa. O `--faltando`
+olha as linhas acrescentadas com `if`, `&&`, `||`, `??`, `? :` de valor, `case`, `.where(` ou expressão regular, fora
+de teste; trata como alcançada a linha cujo texto um bloco do mesmo arquivo cita; e só imprime.
 
-**(d) O RF17.** Em `mutacoes.ts`, um arquivo de produção é um de `apps/*/src/**` ou `packages/*/src/**` que não é teste
-nem `.d.ts`. Se o documento traz algum desses sem nenhum bloco ` ```mutacao ` e sem a linha
-`**Sem mutação:** <motivo>`, o portão falha e não grava o carimbo. O `--faltando` olha as linhas acrescentadas contra a
-base com `if`, `&&`, `||`, `??`, `? :`, `case`, `.where(` ou uma expressão regular, e trata como alcançada a linha cujo
-trecho algum bloco cita. O portão só imprime a lista; quem barra é o RF17.
+**(e) O RF16.** `PASTAS_DE_CODIGO` vale para toda sessão. Em sessão de papel somam-se `tools/`, `.github/`,
+`.claude/settings*.json`, `.claude/hooks/`, `docs/aia/ouro/`, `docs/aia/ouro-retido/`, `package.json`, `compose.yaml`, `.env.example`,
+`eslint.config.mjs`, `eslint-suppressions.json`, `vitest.config.ts`, `playwright.config.ts`, `tsconfig*.json`,
+`knip.json`, `.gitleaks.toml` e `.size-limit.json`. Os guardiões de cada um estão na tabela. Skill, papel,
+regra, AIA e o resto de `docs/` continuam documento.
 
-**(e) O RF16.** `PASTAS_DE_CODIGO` continua valendo para toda sessão. Para sessão de papel, soma-se `tools/`,
-`.github/`, `eslint.config.mjs`, `.claude/settings.json` e `.claude/hooks/`. Skill, papel, regra e `docs/` continuam
-documento.
+**(f) Esteira, censo e encontro.**
+- **`concurrency`:** em `spec/**` e `correcao/**`, o grupo é a ref, com `cancel-in-progress: true`. No `pull_request`,
+  é `pr-<número>`. Em `develop`, `release`, `main` e `workflow_dispatch`, é o `run_id`, que nunca cancela nem enfileira.
+  Sem `pull_request_target` nem segredo, com `permissions: contents: read`
+- **Veredito (RF2):** só é `superada` a cancelada com execução mais nova na mesma branch, de evento `push`; a cancelada
+  sem sucessora é vermelha e cita o job. O veredito sai da mais nova cujo código é o do HEAD; commit só de documento vale
+  pelo de código, como hoje
+- **Censo (RF9):** o `ci.yml` sobe só o reporter JSON de cada fatia, sem trace nem anexo, também no verde, por 7 dias.
+  O `--censo` baixa as fatias da última execução verde e reaproveita `prazosDosCasos`; fatia faltando ou artefato
+  expirado sai 2 e diz qual
+- **Retitulado (RF11):** sem o título no HEAD, vale o caso cujo corpo sem o título é idêntico; corpo mudado, ou dois
+  corpos iguais, não herdam prazo
+- **Encontro (RF3):** inteiro sob `flock` em `.processo/`, relendo o quadro com a trava; o segundo espera. Tipagem e lint
+  no checkout da linha, depois do `merge --no-edit` da spec e antes do `--ff-only`: ~80 s, ou ~4 min com `npm ci`
+  quando o lock mudou. No vermelho: a linha volta ao commit de antes do merge, a spec não anda, sem push, linha
+  ocupada, código de saída próprio, e a saída diz que a correção refaz o merge
 
-**(f) Os censos e a esteira.** O `--censo` lê o JSON do relatório do Playwright, que a esteira já grava como artefato
-(`relatoriosDoPlaywright`), da última execução verde da branch, e reaproveita `prazosDosCasos`. No retitulado (RF11),
-quando o título não aparece no HEAD, vale o caso do HEAD cujo corpo sem o título é idêntico. O `encontro` roda
-`npm run typecheck` e `npm run lint` no checkout da spec depois do merge e antes do push. Se der vermelho, desfaz o
-merge (`git merge --abort` ou `reset` para o HEAD anterior) e recusa.
+**(g) A limpeza (RF27).** O `nohup` grava `pedida`. O início de sessão com `source: clear`, sem `CLAUDE_CODE_AGENT`, no
+térreo, grava `feita`. A vigia acorda o Orquestrador quando a `pedida` passa de 10 minutos sem `feita` depois dela.
 
-**(g) A limpeza do Orquestrador.** O comando do `nohup` grava `pedida`. O início de sessão com `source: clear` grava
-`feita`. A vigia acorda o Orquestrador quando a `pedida` passa de 10 minutos sem uma `feita` depois dela.
-
-**(h) A mensagem colada (RF29).** Um hook `UserPromptSubmit`: no terminal do Orquestrador, o texto que começa com
-`/seguir ` e chegou como texto recebe o contexto "leia `.claude/skills/seguir/SKILL.md` e siga com esta entrada".
+**(h) A mensagem colada (RF29).** Hook `UserPromptSubmit`, só em sessão sem `CLAUDE_CODE_AGENT`. Olha o prefixo
+`/seguir ` e devolve o contexto "leia `.claude/skills/seguir/SKILL.md` e siga com esta entrada". Não grava o texto.
 
 ## 6. Isolamento
 
-Nada lê dado de escola. O RF15 cobra o `tenancy-guardian` pelo caminho.
+Nada lê dado de escola; o RF15 cobra o `tenancy-guardian` pelo caminho.
 
 ## 7. Dado pessoal
 
-Nenhum campo; o log do hook leva caminho de arquivo e nome de revisor.
+Nenhum campo. O log do hook leva caminho e nome de revisor; achado cita `arquivo:linha`, nunca o valor.
 
 ## 7b. Conformidade CNE
 
-Sem IA no caminho do aluno. O RF15 cobra o `conformidade-reviewer` pelo caminho.
+Sem IA no caminho do aluno. O RF15 e o RF16 cobram o `conformidade-reviewer`, e no `ouro`.
 
 ## 7c. Carga e falha
 
-Fora do caminho quente do produto. As falhas que importam são do processo:
+Fora do caminho quente. As falhas do processo:
 
 | Falha | O que acontece |
 |---|---|
-| O hook nativo não carrega | o commit é recusado; o Joaquim não é afetado (§5a) |
-| `core.hooksPath` ausente | o início de sessão avisa e roda o `prepare`; o `PreToolUse` segue barrando |
+| O hook nativo não carrega | commit de papel recusado; o Joaquim não é afetado (§5a) |
+| `core.hooksPath` ausente | o início de sessão avisa; o `PreToolUse` segue barrando |
+| O hook da árvore quebra | o socorro do §5(c) |
 | `gh` fora | `esteira.ts` sai 2, como hoje |
-| A mutação trava | prazo de 3 × o do teste, até 10 min; recusada, o processo morto e o `flock` solto |
-| Lint vermelho no encontro | a spec não anda; a linha recebe correção |
+| A mutação trava | corrida limpa medida, teto de 10 min; a mutada tem o maior entre 3 × a medida, o prazo do teste e 60 s, até 10 min. Grupo de processo próprio, SIGTERM e, 5 s depois, SIGKILL; o bloco fica `recusada`, o arquivo volta e o `flock` é solto |
+| Lint vermelho no encontro | §5(f) |
 
-## 9. Frontend, skills e papéis
+## 9. Frontend, skills, regras e papéis
 
-**Skills de terceiro, como aviso (RF23):**
-
-| Skill | Decisão | Motivo |
-|---|---|---|
-| `frontend-design` | sai | pede ousadia estética; a pele está fechada (D80) e a regra 50 corta o resto |
-| `supabase-postgres-best-practices`, `vercel-react-best-practices`, `lgpd-brasil` | ficam, com o conflito escrito no `SKILL.md` delas e reaplicado por um teste do harness depois de `npx skills update` | o resto vale |
-| as outras oito | ficam | sem conflito |
-
-Sai também a `status`, que o `estado.ts` substitui, e a frase do `CLAUDE.md` de que a identidade visual está em aberto.
-
-**A forma do texto.** O `CLAUDE.md` fica com o produto, as seis regras, o mapa e uma linha por decisão, só com número
-e título. "Conflitos já resolvidos" vai para o topo de `docs/decisoes.md`, e "Decisões em aberto" para
-`docs/decisoes-em-aberto.md`. Limite da base fixa: 40.000 B.
-
-As regras ganham `paths:`:
-
-| Regra | `paths:` |
-|---|---|
-| 00 | `apps/**`, `packages/**`, `infra/**` |
-| 40 | `**/*.test.ts`, `**/*.test.tsx`, `e2e/**`, `tools/**` |
-| 60 | `apps/**`, `packages/**` |
-| 80 | `apps/**`, `packages/nucleo/**`, `infra/**`, `.github/**` |
-
-Mandam ler as quatro, por extenso: `criar-prd`, `criar-techspec`, `revisar-spec`, `criar-tasks`, `validar` e `retro`.
-
-O `/seguir` fica com os passos 1, 2, 5 e 6 e um índice. Os passos 3, 4, 7, 8, 9 e 10 vão para
-`.claude/skills/seguir/passos/`, lidos ao entrar em cada um. A meta é que o Orquestrador leia até 20 KB por tarefa,
-contra os 41 KB de hoje. A autoconferência do `executar-task` vira até doze perguntas de uma linha no
-`task-template.md`. Os incidentes, com data e origem, vão para `docs/processo-licoes.md`.
-
-**As paradas (revisão da D79 de 23/10/2026).** Proposta de retrospectiva que muda só skill, papel ou modelo de
-documento passa a ser aviso: o Arquiteto mostra e aplica depois de 30 minutos sem objeção. Ressalva menor da validação
-vai para o `TODO.md` com dono e não segura o pouso (passo 7 do `/seguir` e skill `retro`).
+Sem tela. O texto (RF20 a RF25) está em `texto.md`: cada skill de terceiro (sai a `frontend-design`; cinco ficam com o
+conflito na primeira linha depois do frontmatter), o destino de cada seção do `CLAUDE.md` (base fixa até 40.000 B), os
+`paths:` da 00, 40, 60 e 80 (a 10, a 20 e a 70 continuam sempre carregadas, sem perder item), as contradições com o
+lugar que fica, o `/seguir` partido em `passos/` e as paradas que viram aviso (D79 revista). Sai a `status`; o
+`separar-achados.ts` espera o ok do Gabriel.
 
 ## 10. Testes
 
-| Camada | O que será testado |
-|---|---|
-| Unidade | `esteira.test.ts`: cancelada sobre vermelha, `concurrency` e `pull_request` lidos do `ci.yml`, censo com relatório de exemplo. `linhas.test.ts`: encontro vermelho recusado e a spec parada, `abandonar`, base de `conferir`. `mutacoes.test.ts`: o prazo, o `--faltando` e o RF17 com e sem exceção. `duracao-do-e2e.test.ts`: retitulado. `revisoes.test.ts` intacto na partição; casos novos de guardião por caminho, pastas do papel e `(mvp:)` recusado. `harness.test.ts` (§2) |
-| Integração | `hook-git.int.test.ts`, contra um git de verdade num repositório temporário: as formas (`git`, `/usr/bin/git`, `env X=1 git`, `sh -c`, script, merge), com e sem `CLAUDE_CODE_AGENT`, com o node quebrado, e o push para a `develop`. `hook-portao.test.ts` estendido ao `hook.sh` |
-| E2E e isolamento | não se aplicam; o ensaio do RF31 é o fim a fim |
-
-Toda regra nova, inclusive do portão, tem bloco de mutação.
+Os cenários, dos dois lados, estão em `cenarios.md`. Toda regra nova tem bloco de mutação. O `hook-git.int.test.ts`
+roda sem o `globalSetup` do compose, e o portão o inclui quando `tools/processo/` muda. Cada checagem do harness tem
+amostra quebrada e contagem mínima. Os rótulos vêm das constantes do hook e do `estado.ts`.
 
 ## 11. Conformidade com as regras
 
-Sem desvio. As regras 10, 20 e 70 continuam carregando sempre, e o RF15 cobra os guardiões delas pelo caminho. A regra
-40 ganha a trava do RF17. A 00 e a 80 não são tocadas: o código fica em `tools/`, fora do caminho quente.
+Sem desvio. A 10, a 20 e a 70 seguem sempre carregadas, cobradas pelo caminho (RF15); a 00, a 40, a 60 e a 80 ganham
+`paths:`, com o RF17 na 40 e a nota da 80.5.
 
 ## 12. Premissas não verificadas
 
-- ⚠️ NÃO VERIFICADO: o Claude Code passa o `CLAUDE_CODE_AGENT` ao ambiente do Bash do papel e dos subagentes. O
-  `pushDoTime` já depende disso, mas não há teste que o prove. A 1.0 prova numa sessão real antes de o hook nativo
-  depender da variável
-- ⚠️ NÃO VERIFICADO: a regra com `paths:` carrega quando um subagente lê o arquivo, e o glob aceita `{a,b}`. Se não
-  aceitar, uma linha por padrão
-- ⚠️ NÃO VERIFICADO: o `prompt` do `UserPromptSubmit` traz o texto colado já expandido. Sem isso, o RF29 fica só no
-  aviso do início de sessão, como hoje
-- ⚠️ NÃO VERIFICADO: o `source` do `SessionStart` distingue `clear`
+- ⚠️ NÃO VERIFICADO: o `CLAUDE_CODE_AGENT` chega ao Bash do papel e dos subagentes. A 1.0 prova numa sessão real antes
+  de o hook nativo depender dele
+- ⚠️ NÃO VERIFICADO: a regra com `paths:` carrega quando um subagente lê o arquivo; a saída está no §9
+- ⚠️ NÃO VERIFICADO: o `prompt` do `UserPromptSubmit` traz o texto colado expandido, e o `source` do `SessionStart`
+  distingue `clear`. A tarefa prova; se não valer, o RF29 e o RF27 ficam no aviso de início de sessão
 
 ## 13. Riscos técnicos
 
-- **Um `exit 2` errado trava o time.** A defesa é a cópia congelada, o `hook-portao.test.ts` e o `Edit`, que não passa
-  pelo hook
-- **A união de guardiões aumenta as rodadas.** A tabela é revisada na revisão da spec e medida na X4
-- **O texto curto perde instrução.** Nada sai sem destino (RF22), e o ensaio roda o `/seguir` novo
+- Um `exit 2` errado trava o time: a defesa é o `hook-portao.test.ts`, o Edit e o socorro (§5c)
+- Os quatro guardiões em quase toda tarefa sobem o custo: rodam juntos, e a X4 mede
+- O texto curto perde instrução: nada sai sem destino (RF22), e o ensaio roda o `/seguir` novo

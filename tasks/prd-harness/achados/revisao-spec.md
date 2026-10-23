@@ -447,3 +447,455 @@ Arquivos lidos:
 - `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/revisoes.ts`
 - `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/esteira.ts`
 - `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/.github/workflows/ci.yml`
+
+## tenancy-guardian · 2ª rodada · REPROVADO · 2026-10-23 13:04:52 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Tabelas verificadas: a X7 não cria nenhuma tabela (Tech Spec §3). Comparei cada linha de `tabela-de-guardioes.md` com o `ls` de `apps/{api,realtime,worker,despachante,web}/src`, `packages/{nucleo,shared}/src` e `packages/nucleo/drizzle`. Toda pasta de primeiro nível tem linha. As correções que pedi na rodada 1 estão feitas: `contexto`, `identidade`, `permissao`, `entrada`, `uso`, `db`, `titular`, realtime, worker e os contratos de `shared` em `sala` e `professores` agora pedem T. O `--no-renames` entrou no §5(a). A lista "O que verificar" não muda e os itens da regra 10 não saem do texto (`texto.md`).
+
+Queries verificadas: procurei `drizzle-orm`, `` sql` ``, `escolaId`/`escola_id`, `exigirEscolaDoContexto` e `@SemEscopo(` nas pastas que a tabela não manda para T. Achei query com escopo, `@SemEscopo`, contexto montado a partir do token e contrato que recusa `escolaId` em `nucleo/src/auditoria`, `retencao`, `limite` e `erro`, em `shared/src/sistema`, em `apps/*/test` e em `tools/guardas`.
+
+Teste de isolamento: não se aplica a esta spec, porque ela não cria módulo de produto. O teste do RF15 (`cenarios.md` B) não acusa nenhum dos furos abaixo. Ele confere "uma linha, os guardiões dela", então passa com a tabela errada. E só olha `apps/*/src` e `packages/*/src`.
+
+Bloqueantes:
+
+1. **Linhas 56 e 62 da tabela, e §5(b): há repositories que não pedem o `tenancy-guardian`.**
+   - `src/auditoria/` está como P C. Ali, `auditoria.repository.ts:40-45` lê com `where escolaId` tirado do contexto, e `insercao-de-auditoria.repository.ts:30` grava a escola vinda do contexto.
+   - `src/retencao/` está só como P. Ali, `expurgo-da-escola.repository.ts:370,459,494` faz `delete`/`update` em SQL cru com `escola_id`. Há também `@SemEscopo` em `expurgo-de-acesso.repository.ts:218,234` e em `expurgo-de-jobs.repository.ts:65`.
+   - Pelo §5(b), o casamento é "por prefixo, sem glob". Então esses repositories passam sem a minha rodada. Isso contradiz o critério do próprio RF15 no PRD ("Repository alterado sem `tenancy-guardian` marcado: recusado").
+   - Na mesma situação: `src/limite/` (linha 58, só I), onde `guarda-limite.ts:121-122` monta o contexto da escola a partir de `token.escolaId`; e `src/erro/` (linha 62, só P), onde `filtro-global.ts:14-16` é o ponto único que transforma 403 em 404 (item 5).
+   - **Correção exigida:**
+     - Somar T a `auditoria/`, `retencao/`, `limite/` e `erro/`.
+     - Declarar no §5(b) que `*.repository.ts`, `*.controller.ts` e `*.gateway.ts` em `apps/**` ou `packages/**` sempre somam T, seja qual for o prefixo.
+     - Em `cenarios.md` B/RF15, um teste que percorre todo arquivo existente que seja `*.repository.ts` ou contenha `@SemEscopo(` ou `exigirEscolaDoContexto` e afirma que T está nos guardiões dele.
+
+2. **Linha 75 da tabela: `shared/src/sistema/` está como "nenhum".**
+   - `sistema/jobs-sinteticos.ts:8-19` é o corpo estrito que recusa `escolaId` (regra 10, item 3).
+   - `sistema/definicoes-de-job.ts:79` impõe que todo `dados` de job seja estrito, o que barra `escolaId` entrando pela porta dos fundos.
+   - `sistema/contexto.ts:9-17` é o contrato do `escolaId`/`anoLetivoId` do contexto.
+   - Um commit que tire o `.strict()` daqui passa sem T (item 3 da minha lista).
+   - **Correção exigida:** `sistema/` pede T (`erros/` e a raiz podem continuar "nenhum"), e um caso em `cenarios.md` B/RF15: `packages/shared/src/sistema/x.ts` sem T é recusado.
+
+3. **§5(b), linhas 7-8 da tabela e RF15 do PRD: `apps/*/test/` não tem classificação.**
+   - São 91 arquivos em `api/test`, 16 em `worker/test`, 3 em `realtime/test` e 6 em `despachante/test`. A regra "teste segue a pasta" não alcança essas pastas, e o teste de "pasta sem linha" não as vê, então ficam como "nenhum" sem que ninguém escreva isso.
+   - É ali que estão as provas da regra 10:
+     - `estrutura-isolamento.int.test.ts:74-112`, com o 404 cruzado;
+     - `material-isolamento`, `operacao-isolamento`, `acesso-da-escola`, `troca-de-escola` e `contexto.int.test.ts`;
+     - `arquitetura.test.ts:174-178`, que fixa os três `@SemEscopo` do painel, as cercas de tenant e o "repository lê a escola do contexto".
+   - Um commit que afrouxe o 404 ou aceite um quarto `@SemEscopo` passa sem T (itens 4, 5 e 8).
+   - **Correção exigida:**
+     - Linhas para `apps/api/test/` (T P C I), `apps/worker/test/` (T P I), `apps/realtime/test/` (T P I) e `apps/despachante/test/` (T I).
+     - O teste do harness passa a cobrir toda pasta de primeiro nível de `apps/*` e `packages/*`, não só `src`. Isso inclui `packages/nucleo/drizzle.config.ts`.
+     - Casos em `cenarios.md`: pasta nova em `apps/api/test` sem linha fica vermelha; `apps/api/test/x-isolamento.int.test.ts` exige T.
+
+4. **Linhas 82 e 87 da tabela (RF16): as guardas da regra 10 fora dos dois arquivos listados caem em "o resto de `tools/`: nenhum".**
+   - `tools/guardas/camadas.cjs:100,145-148`: "query no controller" e as cercas de tenant.
+   - `tools/guardas/tabelas-do-nucleo.mjs`: a lista que `regras-tenant.mjs` lê. Tirar uma tabela da lista desliga a guarda para ela.
+   - `tools/guardas/index.mjs:6,87,103`: liga `tabelaSoNoRepository` e define os arquivos em que ela vale.
+   - `tools/guardas/repositories-com-escopo.test.ts`: a prova do `escopo-dos-repositories.ts`, por exemplo a linha 170, "escolaId por parâmetro não é prova".
+   - `tools/guardas/definicoes-de-job.test.ts:37`.
+   - **Correção exigida:** T para esses cinco arquivos na seção RF16, e um caso em `cenarios.md` B/RF16: `tools/guardas/camadas.cjs` sem `tenancy-guardian` é recusado.
+
+Recomendações:
+- `e2e/**` não convoca ninguém, mas `e2e/acesso-da-turma.spec.ts` e `e2e/entrar-na-escola.spec.ts` têm caso entre escolas. Vale exigir T no e2e que tenha cenário de outra escola.
+- `tools/guardas/catraca.ts` é o que barra supressão de regra que não é de tamanho em `eslint-suppressions.json`. Afrouxá-la permite suprimir a guarda de tenant sem T. Somar T a esse arquivo ou declarar que o `revisor-geral` cobre isso.
+- Continua a premissa do §12: se o `CLAUDE_CODE_AGENT` não chegar ao Bash do papel, o RF15 fica só no `PreToolUse`.
+
+Arquivos auditados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+
+## privacy-guardian · 2ª rodada · REPROVADO · 2026-10-23 13:06:07 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Campos pessoais tocados:** nenhum. Sem tabela nova, sem rota nova e sem IA (Tech Spec §3, §4, §7). O único arquivo novo é `.processo/limpeza.json`, que fica fora do git e guarda só `{pedida, feita}` (§3).
+
+**Fora da tabela de dados do docs/lgpd.md:** nada.
+
+**Autorização por objeto:** não se aplica, porque a spec não cria rota. A cobrança vem da tabela do RF15, e ainda há buraco nela (bloqueante 1).
+
+**Logs:** limpos no desenho.
+- O log do hook leva só caminho e nome de revisor, e o achado cita `arquivo:linha`, nunca o valor (§7).
+- O `UserPromptSubmit` não grava o texto (§5h), e o teste do RF29 em `cenarios.md` prova isso ("o hook não grava arquivo").
+
+**Auditoria:** não se aplica, porque nenhuma ação auditável nasce na X7.
+
+**Envio externo:** nenhum novo. O `--censo` só baixa da própria esteira o JSON do Playwright (§5f).
+
+**Seed/fixture:** sintético (PRD §8). `apps/web/src/__fixtures__/` agora pede minha rodada. `e2e/__fixtures__/` continua sem pedir (recomendação).
+
+**Correções da rodada 1, conferidas:**
+- **Bloqueante 1:** feito em quase todas as linhas que listei (`ia`, `tutor`, `assistente`, `processadores`, `storage`, `artefato`, `material`, `convite`, `sessao`, `credencial`, `identidade`, `permissao`, `erro`, `telemetria`, `ciclo-de-vida`, `estrutura`, `sala`, `realtime`, `ops`, `operacao` e `shared`).
+- **Bloqueante 2:** feito em parte. `guardioes-por-caminho.ts` pede os quatro guardiões, `regras-log.mjs` e `regras-erro.mjs` pedem `privacy`, e `regras-tenant.mjs` e `regras-ia.mjs` pedem os guardiões delas. Mas o `eslint.config.mjs`, que eu exigi com `privacy`, ficou em "nenhum" (bloqueante 2 abaixo).
+- **Recomendações da rodada 1:** `limpeza.json`, `UserPromptSubmit` e §7 foram feitos.
+
+**Bloqueantes:**
+
+1. **`tabela-de-guardioes.md`, linhas que ainda não pedem `privacy` (Tech Spec §5b, RF15).** Conferi pasta a pasta no código. Estas linhas guardam dado de pessoa, log, storage, convite, erro, envio externo ou o gatilho de auditoria, e não me chamam:
+   - **`packages/nucleo` → `src/contexto/` (só T).** `contexto.ts` é "o que identifica a requisição em toda linha de log e em todo erro. Só ids" (regra 20.9). Um campo `nome` posto ali entra em todo log sem a minha rodada.
+   - **`packages/nucleo` → `src/config/` (só I).** `config-ia.ts` decide se o provedor de IA conta como local (`enderecoDaNossaRede`, `LLM_PROCESSAMENTO_LOCAL`). Também obriga o `IA_PROVEDOR_ID`, que é o registro de para onde foi o dado do aluno (art. 18, VII; regra 20.13). Afrouxar isso apaga o registro de envio externo.
+   - **`packages/nucleo` → `src/fila/` (T I).** O `enfileirador.ts` faz o `safeParse` estrito que barra nome e resposta no dado do job.
+   - **`packages/nucleo` → `src/limite/` (só I).** `chaves.ts` guarda o IP no Redis com retenção curta (o próprio arquivo cita a regra 20). O balde `rl:busca-titular` é a defesa contra varredura de nomes.
+   - **`packages/shared/src` → `erros/` e `sistema/` ("nenhum").** Retiro a concessão que fiz na rodada 1, porque o código a desmente:
+     - `erros/codigo-de-erro.ts` define `RespostaDeErro`, o corpo de erro "sem campo livre: nem stack, nem valor de campo" (regra 20.11 e 20.6).
+     - `sistema/definicoes-de-job.ts` tem os esquemas de dado de todo job ("payload só id").
+     - `sistema/contexto.ts` é o DTO de saída estrito de `GET /v1/sistema/contexto`.
+     - `sistema/realtime.ts` guarda a regra de que o JWT nunca vai na URL.
+   - **`apps/api/src` → `sistema/` e arquivos da raiz (T I).**
+     - `sistema/contexto.controller.ts` é onde esse DTO de saída é aplicado (`esquemaRespostaContexto.parse`).
+     - `configurar-app.ts` liga o `FiltroGlobalDeErro` e o logger. O `main.ts` liga `registrarErrosDoProcesso`.
+     - Incoerência: no realtime, o mesmo arquivo pede `privacy`.
+   - **`apps/web/src` → `componentes/` ("nenhum").** Ali estão:
+     - `link-do-convite.ts`: token no fragmento, nunca enviado ao servidor (regra 20.8).
+     - `copia-unica.tsx` e `DialogoDoConvite.tsx`: o link aparece uma vez só.
+     - `baixar-por-url.ts`: URL assinada fora do histórico e da tela, com `noreferrer` (regra 20.7).
+     - `meus-dados/`: o pedido do titular.
+     - `pedidos/atualizacao-dos-pedidos.ts`: a leitura da coordenação grava auditoria, e por isso nunca relê sozinha (regra 20.10).
+     
+     Basta trocar o `#` por `?token=` para o token ir parar em log de borda e no `Referer`, sem rodada minha.
+   - **`apps/web/src/areas/` (sem linha própria).** `areas/navegacao.ts` e qualquer subpasta nova cai na raiz ("nenhum"). O teste de pasta nova olha só o primeiro nível, então uma futura `areas/rede/` nasce sem guardião.
+
+   **Correção exigida:** acrescentar `privacy` a `nucleo/src/contexto/`, `src/config/`, `src/fila/`, `src/limite/`, `shared/src/erros/`, `shared/src/sistema/`, `api/src/sistema/` e à raiz de `apps/api/src`. Dar a `apps/web/src/componentes/` a linha `privacy`; `componentes/ui/` pode seguir "nenhum", e `ui/ia/` segue `conformidade`. Dar a `apps/web/src/areas/` uma linha própria (P C) que valha para subpasta nova. Em `cenarios.md` (RF15), um caso por linha nova com bloco de mutação, por exemplo `packages/nucleo/src/contexto/contexto.ts` alterado sem `privacy-guardian`: recusado.
+
+2. **`tabela-de-guardioes.md`, seção RF16 (Tech Spec §5e), linha "o resto de `tools/` … e as configurações do portão → nenhum".** A exigência explícita da rodada 1 (`eslint.config.mjs` → `privacy`) não foi feita. A linha também contradiz o RF16 do PRD, que pede "o guardião da regra que a guarda … protege". Com a tabela como está, sem a minha rodada é possível:
+   - desligar a guarda de log tirando `log-sem-dado-pessoal` de `tools/guardas/index.mjs` (plugin `guardas` e `REGRAS_DE_LOG`) ou do `eslint.config.mjs`;
+   - afrouxar `tools/guardas/catraca.ts`, que impede o `eslint-suppressions.json` de suprimir regra que não é de tamanho;
+   - mexer em `tools/guardas/definicoes-de-job.test.ts`, o teste "o payload de um job é só id (regra 20, item 9)", e em `tools/guardas/guardas.test.ts` e `tools/guardas/__fixtures__/`, que provam as guardas.
+   
+   **Correção exigida:** `tools/guardas/` inteiro → `privacy`, mantendo as linhas mais longas de T e C já escritas. `eslint.config.mjs` e `eslint-suppressions.json` → T P C. Em `cenarios.md` (RF16), um caso para `eslint.config.mjs` e um para `tools/guardas/index.mjs` sem `privacy-guardian`: recusado.
+
+**Recomendações:**
+- **Aplicador da tabela.** `decidirCommit` (`portao.ts`) e `caducidade.ts` aplicam a união `marcados ∪ guardioesDoCaminho`. Mudar essa união anula a tabela sem tocá-la, e pela tabela atual isso pede só `revisor-geral` e `test-engineer`. Vale pô-los na mesma linha de `guardioes-por-caminho.ts`, ou declarar o limite no §5a.
+- **`e2e/__fixtures__/`.** É a semente real do banco de teste e da `tools/vitrine/` (nomes, matrículas, e-mail `.invalid`), e `e2e/**` não convoca ninguém. Vale pedir `privacy` para essa subpasta, ou uma guarda barata na esteira contra CPF, telefone e e-mail fora de `.invalid` em `e2e/__fixtures__/` e `apps/web/src/galeria/dados.ts`.
+- **`apps/despachante/src` (T I).** Leva o dado do job do banco ao Redis e só loga id. Hoje está ok; `privacy` ali é barato.
+- **§5f, censo.** O repositório é público, e o JSON do Playwright vai subir também no verde. Escrever que o artefato é só o reporter JSON, sem trace, captura nem anexo.
+- **Mantida da rodada 1:** decisão do Joaquim sobre `.claude/rules/20-lgpd-menores.md`, `.claude/agents/privacy-guardian.md` e `docs/lgpd.md` mudarem como documento, sem rodada.
+
+Arquivos lidos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/prd.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/revisao-spec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/achados/revisao-spec.md
+
+## conformidade-reviewer · 2ª rodada · REPROVADO · 2026-10-23 13:06:40 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Caminhos de escrita em Nota: a X7 não cria nenhum. Hoje o equivalente de Nota é a aprovação do lote: `correcao.repository.ts:282` grava `validacao_do_lote`, que tem `confirmada_por NOT NULL` e uma constraint trigger (`packages/nucleo/drizzle/0023_mvp_restricoes.sql:82`). Existe também um caminho de seed por SQL direto: `e2e/__fixtures__/governanca.ts:126-151`, chamado pela vitrine em `tools/vitrine/escola.ts:7,248`. Ele grava `correcao`, `validacao_do_lote` com a professora em `confirmada_por` e marca a `entrega` como aprovada. Todos com autor humano? sim. Quem garante isso é o banco, e o banco já pede a minha rodada (`drizzle/` e `src/db/` estão na tabela com C). O seed em si fica fora dela (bloqueante 2).
+Decisão autônoma sobre aluno: ausente. A spec não põe IA no caminho do aluno.
+Aprovação registrada: ok no produto. Falta a cobrança pelo caminho em `packages/nucleo/src/titular/`, que garante que saída de IA não aprovada não chega ao aluno (bloqueante 1).
+Supervisão do tutor: lacuna em `apps/web/src/componentes/ui/Faixa.tsx` e `componentes/ui/onca/` (bloqueante 1) e nos e2e do tutor (bloqueante 2).
+Autonomia declarada e visível: sim. `packages/shared/src/time/` e `apps/web/src/areas/coordenacao/` agora pedem C.
+
+**Correções da rodada 1, conferidas**
+- **Bloqueante 1 da rodada 1: feita.** Têm C agora: `drizzle/`, `src/db/`, `shared` (assistente, atividade, governanca, permissao, time, tutor), `assistente/`, `artefato/`, `auditoria/`, as três áreas da web e `ui/ia/`. O teste é "uma linha por entrada" (`cenarios.md:63`).
+- **Bloqueante 2 da rodada 1: feita para unidade e integração**, porque teste e fixture agora seguem a pasta (`techspec.md:75`, `cenarios.md:65`). Não está feita para o e2e (bloqueante 2 abaixo).
+- **Bloqueante 3 da rodada 1: feita.** `docs/aia/ouro/` e `ouro-retido/` pedem C (`tabela-de-guardioes.md:85`, `techspec.md:92`), com caso por caminho (`cenarios.md:71`).
+- **Recomendações da rodada 1 que foram atendidas:** as paradas (`texto.md:60-62`, D79 revista em `docs/decisoes.md`), o C em `tools/ia/` e `regras-ia.mjs`, e a regra 70 sempre carregada sem perder item (`texto.md:27`).
+
+**Bloqueantes**
+
+1. **`tabela-de-guardioes.md:27, 57, 61, 62, 74 e 48`. Código que hoje impõe a regra 70 continua sem pedir C, e com isso o §7b (`techspec.md:130`) e o PRD §8b ficam falsos.** Conferi no código:
+   - **`packages/nucleo/src/titular/`, linha 61 da tabela (só T P).**
+     - `leitura-do-titular.ts:24-32`: a versão da coordenação nunca traz a conversa do professor com o Assistente (item 8 da regra). A correção de lote não aprovado sai só como estado (item 3).
+     - `compartilhamento.ts:35-43`: a foto do professor não separa quem usou IA de quem não usou (D64, itens 8 e 9).
+     - `eliminacao-do-titular.repository.ts:98-102`: o que a IA gerou continua ligado a quem aprovou (item 6).
+   - **`apps/api/src/privacidade/`, linha 27 (T P).** `titulares.repository.ts:198`: a prévia do professor não mostra uso de IA (D64).
+   - **`packages/shared/src/privacidade/`, linha 74 (T P).** `arquivo.ts:16,81` e `titular.ts:133-162`, os mesmos contratos.
+   - **`packages/nucleo/src/retencao/`, linha 62 (só P).** `expurgo-da-escola.repository.ts:339-340`: a execução de agente e a autoria do artefato ficam, para a auditoria continuar respondendo (item 6).
+   - **`packages/nucleo/src/ciclo-de-vida/`, linha 57 (T P).** A eliminação de pessoa anula `decidida_por` pela FK, e "quem aprovou" passa a depender da auditoria (item 6).
+   - **`apps/web/src/componentes/`, linha 48 ("nenhum").**
+     - `ui/Faixa.tsx:10-13`: o aviso fixo, que não fecha, de que o professor acompanha o Tutor (D8, item 4).
+     - `ui/onca/CabecaOnca.tsx:27-35`: o avatar dos agentes, sem expressão, sem nome e sem animação (D58, itens 4a e 4b).
+
+   Hoje um commit que deixa a coordenação ler a conversa do professor pelo arquivo do titular, que apaga `execucao_agente` no expurgo, que deixa a faixa do Tutor ser fechada ou que anima a onça passa sem a minha rodada.
+
+   **Correção exigida:**
+   - Acrescentar C a `packages/nucleo/src/titular/`, `src/retencao/`, `src/ciclo-de-vida/`, `apps/api/src/privacidade/` e `packages/shared/src/privacidade/`.
+   - Criar linhas próprias com C para `apps/web/src/componentes/ui/Faixa.tsx` e `componentes/ui/onca/`.
+   - Ajustar o §7b e o PRD §8b ao que a tabela de fato cobre.
+   - Incluir em `guardioes.test.ts` um caso por linha nova, por exemplo "`packages/nucleo/src/titular/leitura-do-titular.ts` alterado sem `conformidade-reviewer`: recusado".
+
+2. **`tabela-de-guardioes.md:8`, `techspec.md:75` e `cenarios.md:65`: "`e2e/**` não convoca" tira de mim os e2e que provam a regra 70 e o seed da escola cheia.**
+   - A regra 40 exige e2e de "aprovação de entrega de agente" e de "tutor recusando entregar resposta". Esses fluxos estão em:
+     - `e2e/professor-aprovar.spec.ts`, `professor-entregas.spec.ts`, `professor-tutor.spec.ts`, `professor-artefato.spec.ts` e `professor-conversa.spec.ts`
+     - `aluno-tutor.spec.ts` e `aluno-atividade.spec.ts`
+     - `agentes.spec.ts`, `governanca.spec.ts`, `analista.spec.ts`, `a2-assistente.spec.ts` e `a3-a4-professor.spec.ts`
+     - `pecas-ia.spec.ts` e `pecas-marca-onca.spec.ts`
+   - `e2e/__fixtures__/governanca.ts` é o seed que grava `validacao_do_lote` e a entrega aprovada por SQL direto.
+   - É o mesmo furo do bloqueante 2 da rodada 1: um commit só de teste afrouxa a prova da regra sem a minha rodada.
+
+   **Correção exigida:** dar ao `e2e/` uma classificação na tabela. Pode ser por prefixo de arquivo, com C nos specs acima e em `e2e/__fixtures__/{governanca,a2,a3,assistente}.ts`, ou `e2e/` inteiro com C. E incluir o caso "`e2e/aluno-tutor.spec.ts` alterado sem `conformidade-reviewer`: recusado". Tirar "`e2e/x.spec.ts` não exige nenhum" de `cenarios.md:65`, ou restringir esse caso a um spec fora da lista.
+
+**Recomendações**
+- **Teste contra desatualização** (repito da rodada 1, e ele teria achado o bloqueante 1). Em `guardioes.test.ts`: todo arquivo de `apps/*/src` e `packages/*/src` que cita "regra 70", D47, D55, D56, D57, D58, D64 ou D45 precisa casar com uma linha que tenha C. A classificação por pasta de primeiro nível não pega subpasta nova dentro de uma pasta "nenhum".
+- **Ouro.** `docs/aia/ouro/README.md:3-4` manda o Arquiteto commitar com `(ouro: <política>)`, e o RF16 passa a exigir tarefa ou correção. Pôr essa contradição na lista do RF21 (`texto.md:40-52`), com o README passando a `(correção …)` e a minha rodada. Também um caso explícito "`docs/aia/ouro/x.json` sem `conformidade-reviewer`: recusado".
+- **Realtime.** `apps/realtime/src/` tem só T P I. Quando o modo sala ao vivo do Tutor entrar ali, ele não me chama. Ou entra C já, ou a tabela anota que o gateway do Tutor nasce com linha própria.
+- **Web, peças com D59 e item 7.** `apps/web/src/api/` (`atividades-do-aluno.ts:53`, item 3) e `componentes/pedidos/textos.ts:13` (item 7) poderiam ter C. As peças da casca que aplicam D59 (`CascaDaEscola.tsx`, `MenuDaPessoa.tsx`, `ui/sobrepostos/DialogoDeConfirmacao.tsx`, `ui/Contador.tsx`) idem.
+- **Erros.** `packages/shared/src/erros/codigo-de-erro.ts:59-66` (D33, D56, item 3) poderia ter C.
+- **RF20 e RF25.** O teste só prova o conjunto {10, 20, 70}. Acrescentar a contagem dos itens da regra 70 (1 a 9, com 2a, 4a a 4d e 6a) e a tabela da classificação. E a tarefa da X7 que edita `.claude/rules/70-conformidade-cne.md` marca `conformidade-reviewer`, porque regra é documento e o caminho não me chama.
+- **RF21.** A deduplicação preserva "O que verificar" (`texto.md:57-58`), mas não diz nada do bloco "Formato" de cada guardião. Declarar que ele também não muda.
+- **Paradas.** `texto.md:60-62` diz "as skills que decidem a marcação" sem nomeá-las. Escrever quais (`criar-tasks`, `revisar-tarefa`, `revisar-spec`).
+- **Vitrine.** `tools/vitrine/` está em "o resto de `tools/`: nenhum" (`tabela-de-guardioes.md:87`), mas monta a escola cheia, que é o dado das fotos de tela que eu audito. Pode ter C junto com o fixture do bloqueante 2.
+
+Arquivos citados:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/texto.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/packages/nucleo/src/titular/leitura-do-titular.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/packages/nucleo/src/titular/compartilhamento.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/packages/nucleo/src/retencao/expurgo-da-escola.repository.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/api/src/privacidade/titulares.repository.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/web/src/componentes/ui/Faixa.tsx
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/apps/web/src/componentes/ui/onca/CabecaOnca.tsx
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/e2e/__fixtures__/governanca.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/docs/aia/ouro/README.md
+
+## infra-guardian · 2ª rodada · REPROVADO · 2026-10-23 13:06:46 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+Caminho quente tocado: nenhum no produto. A tabela do RF15 decide quem audita login, tutor, sala, prova, fila, IA e migration, e conferi cada linha dela no código real.
+Rate limit: não se aplica (a spec não cria rota). A tabela, porém, deixa sem `infra-guardian` o limite por minuto e o limite de IA (bloqueantes 2 e 4).
+Fila e prioridade: problema. O registro de filas e de prioridade de job (`packages/shared/src/sistema/`) está classificado como "nenhum".
+Concorrência: corrida no encontro, em `tools/processo/linhas.ts:388-436` combinado com a Tech Spec §5(f), RF3.
+Índice e paginação: faltando na cobertura. Pastas com repository em tabela que cresce com aluno ficam sem `infra-guardian`.
+Degradação de IA: não se aplica.
+Migration: não se aplica. `drizzle/` e `src/db/` têm o `infra-guardian`.
+Métrica e alerta: ok. O censo do RF9 foi corrigido.
+
+**Correções da rodada 1:**
+
+| Rodada 1 | Situação |
+|---|---|
+| 1. Tabela completa | Feita na forma, com erros de classificação (bloqueantes 1 a 5) |
+| 2. Grupo do `concurrency` | Feita |
+| 3. RF2, cancelada por prazo | Feita na Tech Spec; o PRD ainda diz o contrário (bloqueante 6) |
+| 4. Censo | Feita |
+| 5. Prazo da mutação | Feita |
+| 6. Cópia congelada | Saiu |
+
+Bloqueantes:
+
+1. **Front-end sem `infra-guardian`** (`tasks/prd-harness/tabela-de-guardioes.md:44`, `:46`, `:48`). O lado cliente da regra 80 fica sem guardião:
+   - `areas/aluno/` (P C) tem `fila-de-respostas.ts` e `respostas.ts`, o reenvio de resposta da regra 80.6, e o cliente do Tutor.
+   - `areas/professor/turmas/TurmaHoje.tsx` relê os sinais da sala em intervalo fixo, e `assistente/Time.tsx` faz o mesmo com as entregas.
+   - `areas/coordenacao/material` relê a cada 1,5 s.
+   - `api/cliente-de-consultas.ts` (só P) define o `retry` e o `retryDelay` fixo de 1 s de toda consulta. Quando a API volta, isso é a escola inteira repetindo pedido no mesmo segundo.
+   - `componentes/pedidos/atualizacao-dos-pedidos.ts` (`setInterval` de 15 s) e `componentes/sino/` estão em "nenhum".
+   - `sessao/`, o login do cliente, só tem P.
+
+   **Correção:** I em `apps/web/src/api/`, `sessao/`, `areas/aluno/`, `areas/professor/`, `areas/coordenacao/`, `componentes/pedidos/` e `componentes/sino/`. No `cenarios.md`, RF15, um caso em que `apps/web/src/areas/aluno/fila-de-respostas.ts` exige o I.
+
+2. **`packages/shared` sem I** (`tabela-de-guardioes.md:73-75`).
+   - `sistema/` está em "nenhum", mas `sistema/jobs.ts` define `FILAS` e `sistema/definicoes-de-job.ts` define a fila, a retentativa, o `prazoMs` e o `naoUrgente` de cada job. Mudar um job de lote para a fila `interativa` passa sem mim (item 3).
+   - `erros/` está em "nenhum", mas guarda os códigos e textos que o aluno vê quando algo falha (`IA_INDISPONIVEL`, `IA_TEMPO_ESGOTADO`, `LIMITE_DIARIO_DO_TUTOR`, `LIMITE_EXCEDIDO`, item 4).
+   - Sem I também: `estrutura/paginacao.ts` (`TAMANHO_MAXIMO_DA_PAGINA`), `privacidade/titular.ts` (`LIMITE_DA_BUSCA_DE_TITULARES_POR_MINUTO`), `sessao/`, `sala/`, `tutor/` e `atividade/prova.ts`.
+
+   **Correção:** I em `sistema/`, `erros/`, `estrutura/`, `privacidade/`, `sessao/`, `sala/`, `tutor/` e `atividade/` do shared.
+
+3. **`packages/nucleo` com concorrência e trabalho em lote sem I** (`tabela-de-guardioes.md:56`, `:57`, `:61`, `:62`).
+   - `retencao/` (só P): expurgo em lote com transação, escrito para caber no `statement_timeout` de 2 s (`expurgo-da-escola.repository.ts:156`).
+   - `titular/` (T P): a eliminação usa `FOR UPDATE` contra o mesmo job rodando duas vezes (`eliminacao-do-titular.repository.ts:49-59`), `troca-de-nome.ts` trabalha em faixas medidas contra o `statement_timeout`, e há o `armazem-s3.ts`.
+   - `ciclo-de-vida/` (T P): `conta-global.repository.ts:46` usa `FOR UPDATE`, com deletes em transação.
+   - `auditoria/` (P C): grava e lista numa tabela que cresce a cada acesso.
+   - `erro/mapear-erro-postgres.ts` traduz o `query_canceled` do `statement_timeout` em erro tipado.
+
+   **Correção:** I nessas cinco pastas.
+
+4. **`apps/api/src` com pastas sem I** (`tabela-de-guardioes.md:19`, `:21`, `:27`, `:28`).
+   - `entrega/` (T P C): aprovação em transação (`entrega.service.ts:51`). O clique duplo em aprovar é caso nomeado da regra 80.7.
+   - `governanca/` (T P C): `analista.service.ts:63` conta o pedido no `LimiteDePedidosDeIa` e agenda o job `resumo_do_analista`.
+   - `privacidade/` (T P): idempotência por `onConflictDoNothing` na `chaveEnvio` (`pedidos.repository.ts:98`) e listagem paginada.
+   - `professores/` (T P C): listagem paginada (`professores.repository.ts:32`).
+
+   **Correção:** I nas quatro.
+
+5. **`apps/*/test/` sem classificação** (`tabela-de-guardioes.md:7-9`; Tech Spec §5(b), `techspec.md:74-75`). "Teste segue a pasta" só resolve dentro de `src/`. Os testes que provam limite e concorrência ficam fora da tabela e fora do teste de pasta nova:
+   - API: `semaforo-de-login`, `ataque-de-senha`, `limite`, `limites-da-sala`, `salas-reivindicar`, `ativacao-sob-trava`, `segundo-fator-operador-concorrencia`.
+   - Worker: `reexecucao`, `prazo-do-job`.
+   - Despachante: `redis-fora`, `vagas`.
+
+   Apagar ou enfraquecer um deles passa sem a minha rodada (item 11). O `packages/nucleo/drizzle.config.ts` também não casa com `drizzle/`.
+
+   **Correção:**
+   - Classificar `apps/api/test/` e `apps/worker/test/` com T P C I, `apps/realtime/test/` com T P I e `apps/despachante/test/` com T I.
+   - Classificar `packages/nucleo/drizzle.config.ts` com I.
+   - O teste de pasta sem linha passa a cobrir também as entradas de primeiro nível de `apps/*/` e `packages/*/` fora de `src/`.
+
+6. **O PRD ainda diz o contrário da Tech Spec no RF2** (`tasks/prd-harness/prd.md:48`). O texto "Cancelada não é vermelha: vale a execução concluída mais nova" contradiz a Tech Spec §5(f) (`techspec.md:101-102`). Ele traz de volta o bloqueante 3 da rodada 1: a execução cancelada por prazo, sem sucessora, herda o verde da anterior, e o Validador confere contra o PRD.
+
+   **Correção:** reescrever o RF2 do PRD. Só é "superada" a cancelada que tem execução `push` mais nova na mesma branch. A cancelada sem sucessora é vermelha e cita o job. A coluna de verificação ganha o caso "cancelada por prazo, sem sucessora: vermelha". Isso muda critério do PRD, então é parada do Joaquim.
+
+7. **Corrida no encontro do RF3** (Tech Spec §5(f), `techspec.md:109-112`; `tools/processo/linhas.ts:391` e `:435-436`). O encontro lê o quadro no início (`contextoDe`) e o grava no fim (`gravarQuadro`), sem trava. O RF3 coloca uns 80 s de verificação, mais o `npm ci` quando o lock muda, entre o merge e o `--ff-only`. Com três linhas, dois encontros nessa janela dão o padrão "busca, verifica, grava" sem trava:
+   - o segundo `--ff-only` falha;
+   - a gravação do quadro parte de uma leitura velha e pode marcar como ocupada, de novo, a linha que o outro encontro acabou de liberar.
+
+   **Correção:**
+   - O encontro roda inteiro sob trava exclusiva (`flock` em `.processo/`), do merge até a gravação do quadro, e relê o quadro já com a trava.
+[… 15 linhas cortadas]
+
+## test-engineer · 2ª rodada · REPROVADO · 2026-10-23 13:08:12 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+
+**Cenários exigidos:**
+- **Esteira**
+  - RF1 e RF19: o grupo e o `cancel-in-progress` avaliados ref a ref.
+  - RF2: superada, cancelada sem sucessora, prazo estourado, sucessora rodando, e os jobs citados.
+  - RF9: o limiar e a escolha da execução.
+- **Linhas:** RF3, RF6 e RF10.
+- **Mutações:**
+  - RF4: prazo, neto, restauração, teto, e o mutado que falha devagar.
+  - RF5.
+  - RF17, no portão e na `decidirCommit`.
+- **Portão:** RF7 e RF8.
+- **Hook:**
+  - RF12, RF13 e RF18.
+  - RF14: formas, índice contra árvore, merge de papel dos dois lados, `pre-push` dos dois lados, a negação do `PreToolUse` e a terceira camada com histórico real de spec.
+  - RF15: linha a linha, pela `decidirCommit`, com os testes de fora de `src`.
+  - RF16: caminho a caminho, coerente com a tabela.
+- **Guarda de IA:** a mudança da pasta isenta (RF24).
+- **Texto:** RF20 a RF26 e RF30, com amostra quebrada e contagem mínima.
+- **Maestri:** RF27, RF28 e RF29.
+- **PRD §7:** os sete casos de borda.
+- **Domínio escolar e isolamento:** não se aplicam (§6).
+- **Concorrência:** não há operação nova que corra duas vezes ao mesmo tempo (o `comTrava` e o `flock` já existem).
+
+**Cobertos (rodada 1 conferida):**
+- O bloqueante 1 foi resolvido: RF7, RF8, RF23, RF27, RF28 e RF29 têm teste, e os dois lados de cada um estão em `cenarios.md:18-19,93,104-110`.
+- Também resolvidos:
+  - 6: as formas contra o git real, índice contra árvore e os limites declarados.
+  - 7: a negação do `PreToolUse`, com os casos que passam.
+  - 8: a cópia congelada saiu.
+  - 9: RF16 com `package.json` e as configurações do portão.
+  - 10: amostra quebrada e contagem mínima.
+  - 11: RF3 no checkout da linha, com o comando injetado.
+- RF10 e RF11 agora têm os dois lados.
+- RF15 é testado pela `decidirCommit`, com união de marcados e caminho, pasta nova e linha que não casa.
+- O RF4 agora exige que o neto morra (pid conferido) e que a corrida limpa acima do teto falhe.
+- A seção D (Maestri) tem os dois lados.
+- Os bloqueantes 2, 3, 4 e 5 ficaram pela metade. O que falta está nos itens 1, 2, 5 e 6 abaixo.
+- O §5(c) se sustenta: `hook-portao.test.ts` está no projeto `unidade` (`vitest.config.ts:41-53`), então roda em todo portão.
+
+**Bloqueantes:**
+
+1. **`cenarios.md:15`, RF4: o caso que passa usa o vocabulário errado, e falta o mutado lento.**
+   - Em `mutacoes.ts:185-186`, `recusada` quer dizer bloco recusado, com o portão vermelho. O que passa é `vermelho`.
+   - O cenário diz que o mutado que falha rápido fica "recusada como hoje" e que o que passa fica "aceita". Escrito assim, o teste afirma o contrário da regra.
+   - Correção, nos termos do código:
+     - falha rápida: `vermelho`;
+     - mutado que passa: `verde`;
+     - estouro de prazo: `recusada`.
+   - Falta também o mutado que falha devagar. Com prazo de 3 × a corrida limpa e sem piso (`techspec.md:142`), um teste que só fica vermelho depois de um `expect.poll` ou de um `waitFor` vira `recusada`. Isso depende da folga da máquina.
+   - Correção exigida:
+     - o prazo passa a ser o maior entre 3 × a corrida limpa e o timeout do próprio teste ou projeto;
+     - novo caso, com relógio injetado: corrida limpa de 1 s e mutado que falha em 5 s, dentro do piso, dá `vermelho`.
+
+2. **`cenarios.md:13`, RF2: dois casos que exigi na rodada 1 não entraram.**
+   - O caso (d) usa uma sucessora concluída. Com ele, a regra errada "só é superada por execução já concluída" passa no teste. Hoje `situacaoDaTarefa` (`esteira.ts:57-60`) devolve vermelha nesse cenário.
+   - Exigido:
+     - cancelada mais velha com a mais nova da mesma branch ainda rodando dá `rodando`;
+     - os jobs da superada não aparecem em `jobsVermelhos`;
+     - o caso (d) é afirmado em `situacaoDaTarefa` e também em `situacaoDoFechamento`.
+
+3. **`cenarios.md:20`, RF9: a escolha da execução não tem teste.**
+   - O §5(f) (`techspec.md:105`) diz que o censo lê "a última execução verde".
+   - Exigido: uma vermelha mais nova que a verde, e o censo lê a verde.
+
+4. **`cenarios.md:41,50`, RF14: o merge de papel só tem o lado que recusa.**
+   - A regra errada "recusa todo merge de papel" passa no teste.
+   - A cláusula nova, que lista só o que diverge dos dois lados, não tem prova. Sem ela, um merge limpo que traz código fica recusado.
+   - Exigido, contra o git real:
+     - merge limpo de papel, sem marca: passa;
+     - merge com conflito resolvido por papel, com marca, revisões e carimbo: passa.
+
+5. **`cenarios.md:42,47`, RF14 `pre-push`: o lado sem papel não tem teste (meu bloqueante 3 da rodada 1).**
+   - Se o `pre-push` não tiver a guarda `[ -n "$CLAUDE_CODE_AGENT" ] || exit 0`, o pouso do Orquestrador para a `develop` trava e nenhum teste acusa.
+   - Exigido: sem `CLAUDE_CODE_AGENT`, `git push origin HEAD:develop` passa.
+
+6. **`cenarios.md:58-60`, terceira camada: o caso que passa não é um histórico real de spec.**
+   - O `conferirEntrega` (`linhas.ts:345-369`) com `naSpec` exige que o último commit com código seja a correção. Se for reaproveitado como está, todo push de `spec/**` fica vermelho.
+   - Ainda assim o teste "histórico com marca: sai 0" passa, se a amostra for de correção.
+[… 72 linhas cortadas]
+
+## revisor-geral · 2ª rodada · REPROVADO · 2026-10-23 13:08:37 · `tasks/prd-harness/revisao-spec.md`
+
+VEREDITO: REPROVADO
+Escopo: respeitado
+Aderência à Tech Spec: divergência em §5(a), na terceira camada do RF14, e entre §5(e) e `tabela-de-guardioes.md`
+Portão local: não se aplica. É revisão de spec e não há código; o `conferir` responde "nunca passou nesta árvore".
+
+Os oito bloqueantes da rodada 1 foram corrigidos:
+- 1, a cópia congelada: saiu por decisão do Joaquim (PRD §6, Tech Spec §5c).
+- 2, o encontro do RF3: agora roda no checkout da linha, antes do `--ff-only` (§5f).
+- 3, o veredito do RF2: só conta como `superada` a cancelada com push mais novo na mesma branch, e a cancelada sem sucessora é vermelha.
+- 4, a decisão do commit: virou uma função só, a `decidirCommit`, com o índice lido por `git show :<arquivo>` e a lista `PAPEIS_DO_TIME`.
+- 5, a lista do RF21: está em `texto.md:40-52`, com as quatro contradições do U11-6.
+- 6, os destinos: cada seção do `CLAUDE.md` e os seis conflitos de skill têm lugar escrito.
+- 7, `.claude/settings*.json`: corrigido.
+- 8, `commit-msg` no lugar do `pre-commit`: escrito na D53, com o motivo.
+
+O §8 da Tech Spec continua faltando de propósito: no modelo ele é "Uso de IA", e o §3 diz que não se aplica.
+
+Bloqueantes:
+
+1. **A terceira camada do RF14 reaproveita uma função que não serve para ela.** Está em `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md:26` e `:67-70`, e em `cenarios.md:58-60`. A Tech Spec diz que o `ci:conferir-entregas` "aplica o `conferirEntrega` a cada commit desde a base com a develop". Essa função (`tools/processo/linhas.ts:345-371`) falha num histórico normal de spec, nos dois modos:
+   - Com `naSpec`, ela exige que o último commit com código seja uma correção (`:369`). Toda spec cujo último commit é de tarefa fica vermelha.
+   - Sem `naSpec`, com `tarefa` nula, só aceita a marca de correção (`:357`). Todo commit `(tarefa N.0)` é recusado.
+   - Com o intervalo vazio, ela devolve `'nenhum commit novo'`, que conta como erro (`:349`).
+   - Para ela, código é tudo que não é `.md` nem `tasks/` (`linhas.ts:314`). O hook usa `PASTAS_DE_CODIGO` mais a lista do §5(e). Então a esteira ficaria vermelha com commits que o hook aceitou como documento: `skills-lock.json`, `.gitignore`, `mockups/` e os `docs/*.json` fora do `ouro`.
+
+   **Correção exigida:** escrever a regra no §5(a), com estes pontos:
+   - A conferência é commit a commit, de `develop..HEAD`.
+   - Código é a mesma classificação da `decidirCommit`.
+   - É preciso decidir se a lista do RF16, que vale só em sessão de papel, conta como código para a esteira, que não sabe qual era a sessão.
+   - Vale qualquer `(tarefa N.0)` ou `(correção <slug>)`, desde que haja a linha `Revisões:`.
+   - O merge é julgado por `--remerge-diff`.
+   - Intervalo vazio sai 0.
+   - Não se exige "último commit é correção" nem "falta o commit da tarefa".
+
+   E acrescentar em `cenarios.md` três casos:
+   - merge limpo do encontro, sem marca: sai 0;
+   - merge com conflito resolvido em código, sem marca: sai 1;
+   - commit só de `skills-lock.json`: sai 0.
+
+2. **`compose.yaml` e `.env.example` estão na tabela, mas nunca chegam a ela.** `tabela-de-guardioes.md:86` manda os dois ao `infra-guardian`. Só que nenhum deles está em `PASTAS_DE_CODIGO` (`revisoes.ts:41`) nem na lista do §5(e) (`techspec.md:91-94`). Na prática são documento: o commit passa sem tarefa e sem guardião, e essa linha da tabela nunca dispara. É exatamente o que o `infra-guardian` exigiu na rodada 1 (bloqueante 1, "Ambiente").
+
+   **Correção exigida:** uma das duas.
+   - Pôr os dois na lista do §5(e). Como a lista do PRD RF16 e a da D53 revista são fechadas, alinhar também esses dois textos, com o ok do Joaquim.
+   - Ou tirar os dois da tabela e escrever que eles ficam sem guardião pelo caminho.
+
+Recomendações:
+- **`texto.md:8` e §9:** "o conflito na primeira linha do `SKILL.md`" quebra o frontmatter. Ele precisa começar na linha 1 com `---`, e o RF30 ficaria vermelho. Escrever "primeira linha depois do frontmatter".
+- **§5(a), negação no `PreToolUse`:**
+  - "Contém `CLAUDE_CODE_AGENT`" e "contém `--no-verify`" negam também `grep` e `printenv` em sessão de papel, inclusive para quem mantém o próprio hook. E isso é mais amplo do que `cenarios.md:53-56` lista. Casar só os argumentos do git e as formas de mexer no ambiente (`VAR=`, `unset`, `env -u`).
+  - Acrescentar `GIT_CONFIG_*` aos limites declarados.
+- **§5(f), RF3 no vermelho:** depois de a linha voltar ao commit de antes do merge, a quebra só aparece de novo depois de um novo `git merge <spec>`. A saída do encontro precisa dizer isso, como o caminho do conflito já diz (`linhas.ts:421-422`). Senão a correção passa verde na linha e o encontro fica vermelho de novo.
+- **`cenarios.md:13`, caso (b) do RF2:** `timed_out` no job não acontece nesta esteira. O `ci.yml:105` registra que o e2e travado sai `cancelled`. O caso real é o (a); o (b) pode sair ou usar `cancelled`.
+- **§5(c), o socorro:**
+  - O `checkout origin/develop -- tools/processo` descarta em silêncio o que não foi commitado.
+  - Ele deixa na árvore o `hook-git.ts`, o `portao.ts` e a pasta `git-hooks/`, que só existem na branch. O `commit-msg` pode continuar quebrado depois do socorro.
+  - Escrever que, nesse caso, quem commita o conserto é o Joaquim, fora de sessão de papel.
+- **RF26:** o orçamento de 20 KB tem duas definições. `texto.md:55` diz `SKILL.md` com `protocolo.md`; `cenarios.md:96` diz os bytes que o passo de tarefa manda ler, o que inclui o arquivo do passo. Além disso, o `protocolo.md` (7,9 KB) recebe a seção Skills do `CLAUDE.md`, perto de 4 KB.
+- **RF9:** "o `/seguir` diz quando" não tem passo nomeado em `texto.md`.
+- **RF10:** não está escrito como a base da correção é descoberta.
+- **RF23 e RF24:** a tabela de auditoria das skills de processo e o critério de saída de cada papel não têm destino na Tech Spec.
+- **`tabela-de-guardioes.md:81`:** a `decidirCommit`, em `portao.ts`, e a `REVISORES_COM_VETO` também podem anular a tabela. Considerar a mesma linha T P C I para elas.
+- **Código fora da tabela:** `apps/*/test/`, `packages/nucleo/drizzle.config.ts` e `apps/web/vite.config.ts` são código e não têm linha. Escrever "nenhum" para eles.
+- **Tabela de formas do RF14:** falta o merge limpo de outra linha feito por papel (R61).
+
+Arquivos lidos:
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/techspec.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/prd.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/texto.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/tabela-de-guardioes.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tasks/prd-harness/cenarios.md
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/linhas.ts
+- /home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness/tools/processo/revisoes.ts

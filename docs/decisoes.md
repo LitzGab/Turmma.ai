@@ -471,12 +471,17 @@ saiu com 5.393 palavras para um teto de 2.000. Os vetos, o commit direto no `mai
 como portão (D31) continuam.
 
 Revista em 23/10/2026, na X7 (`harness`), pelo Joaquim no terminal do Arquiteto: (1) em sessão de papel
-do time, commit que altera `tools/`, `.github/`, `eslint.config.mjs`, `.claude/settings*.json` ou
-`.claude/hooks/` passa a exigir tarefa ou correção, `revisor-geral`, `test-engineer` e carimbo, como o
-código de produto; skill, papel e regra continuam documento. (2) A trava do commit ganha uma segunda
-camada, o git hook nativo (`pre-commit` e `pre-push`), que vale para qualquer forma de chamar o git em
-sessão de papel; o hook do Claude Code fica como a mensagem na frente, e o commit do Joaquim fora de
-sessão de papel continua livre. (3) O histórico de `achados/` continua no git. Motivo: o diagnóstico do
+do time, commit que altera `tools/`, `.github/`, `.claude/settings*.json`, `.claude/hooks/`,
+`docs/aia/ouro*/`, `package.json`, `compose.yaml`, `.env.example` ou uma configuração que decide o portão (lint, vitest, Playwright,
+`tsconfig`, knip, gitleaks, tamanho) passa a exigir tarefa ou correção, `revisor-geral`, `test-engineer`,
+o guardião da regra que a guarda ou o corpus protege, e carimbo, como o código de produto; skill, papel
+e regra continuam documento. (2) A trava do commit ganha uma segunda camada, o git hook nativo
+(`commit-msg`, que é o que recebe a mensagem com a marca da tarefa, e `pre-push`), instalado por
+`core.hooksPath` pelo `prepare`; o hook do Claude Code fica como a mensagem na frente, e o commit do
+Joaquim fora de sessão de papel continua livre. O que a máquina não barra (tirar o papel do ambiente,
+`--no-verify` dentro de script, `commit-tree`, `rebase`) fica escrito, e a esteira recusa, em `spec/**`
+e `correcao/**`, o commit com código sem marca nem linha `Revisões:`; o código do Joaquim nessas branches leva a
+linha `Fora do processo: <motivo>`, que o hook recusa vinda de sessão de papel. (3) O histórico de `achados/` continua no git. Motivo: o diagnóstico do
 harness (U11-3, U11-5) mostrou que `/usr/bin/git commit`, `env … git commit` e `sh -c '…'` passam sem
 revisão, e que o código que impõe as regras (as guardas e o próprio hook) entrava sem revisor; o
 `achados/` é o rastro de auditoria do processo, e a retrospectiva lê dele depois do pouso (U11-15).
@@ -1256,16 +1261,19 @@ quanto tempo de spec as linhas tiram, e se o comando vazio da rotina de fato nã
 desfazer sem mexer em código: não autorizar paralelo no `tasks.md`.
 Revista em 23/10/2026, na X7 (`harness`), pelo Joaquim no terminal do Arquiteto: (1) o commit exige a
 rodada de cada guardião com veto que o caminho alterado pede, por uma tabela no código do hook, somada à
-marcação da tarefa; o teto de três guardiões vale para o que o Arquiteto marca. (2) Tarefa ou correção
+marcação da tarefa: código em `apps/`, `packages/`, `e2e/` e `tools/guardas/` pede os quatro, e o que pede menos é
+exceção escrita com motivo (a tabela fina por pasta não convergiu em duas rodadas de revisão); o teto de três
+guardiões vale para o que o Arquiteto marca. (2) Tarefa ou correção
 que altera código de produção (`apps/*/src`, `packages/*/src`) sem nenhum bloco de mutação e sem a linha
 "Sem mutação: <motivo>" não recebe carimbo, e o portão lista antes da Mesa as condições novas que nenhum
 bloco alcança. Motivo: sem o rótulo certo, os guardiões de tenant e de privacidade sumiam sem erro
 (U11-4), e zero mutações passava o portão (U11-8); a cláusula sem mutação foi a reprovação que mais
 voltou, 10 vezes na X5, sem mudar com quatro specs de texto. (3) Mais dois avisos no lugar de parada, na
 lista da D78: a proposta da retrospectiva que muda só skill, papel ou modelo de documento (o Arquiteto mostra
-e aplica depois de 30 minutos sem objeção; código de processo, regra e decisão continuam parada), e a
+e aplica depois de 30 minutos sem objeção; código de processo, regra, decisão, a lista de um guardião com
+veto e as skills que decidem a marcação de guardião continuam parada), e a
 ressalva menor da validação, que vai para o `TODO.md` com dono e não segura o pouso (crítica e maior
-continuam parada). Motivo: nas últimas retrospectivas o Joaquim escolheu sempre o que o Arquiteto
+continuam parada, e achado das regras 10, 20 e 70 nunca é menor). Motivo: nas últimas retrospectivas o Joaquim escolheu sempre o que o Arquiteto
 recomendou, e a parada só custou espera.
 
 **D80 — A pele do produto é o sistema Turmma do mockup de outubro: cor por família, borda de 2 px
