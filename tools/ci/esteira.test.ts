@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 import { FATIAS_DO_E2E } from '../processo/esteira.ts'
+import { branchDaLinha } from '../processo/linhas.ts'
 import { ARQUIVO_DO_CENSO_DO_E2E, PREFIXO_DO_ARTEFATO_DO_CENSO, VARIAVEL_DO_RELATORIO_DO_E2E } from './duracao-do-e2e.ts'
 import { raizRepositorio } from './executar.ts'
 import { FRACAO_DE_FOLGA_DO_E2E, minutosEstimadosDoE2e, tetoDoE2e } from './prazo-do-e2e.ts'
@@ -200,12 +201,33 @@ function push(ref: string, execucao = 100): ContextoDoGithub {
   return { event_name: 'push', ref, run_id: execucao, event: {} }
 }
 
+/**
+ * O filtro de branch do `on.push` com a regra do GitHub: os padrões valem na ordem, o positivo inclui e o `!` exclui o que
+ * já tinha entrado. `*` não passa a barra, `**` passa. Só essa gramática: padrão com outro caractere especial lança, e
+ * quem o usar decide, pelo teste, o que ele quer dizer.
+ */
+function disparaNoPush(branch: string, padroes: string[]): boolean {
+  let entra = false
+  for (const padrao of padroes) {
+    const nega = padrao.startsWith('!')
+    const corpo = nega ? padrao.slice(1) : padrao
+    if (/[?+[\]]/.test(corpo)) throw new Error(`padrão fora da gramática do teste: ${padrao}`)
+    const expressao = corpo
+      .split('**')
+      .map((parte) => parte.split('*').map((trecho) => trecho.replace(/[.\\^$|(){}]/g, '\\$&')).join('[^/]*'))
+      .join('.*')
+    if (new RegExp(`^${expressao}$`).test(branch)) entra = !nega
+  }
+  return entra
+}
+
 describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
-  it('roda em todo push nas branches integradoras e nas de spec e de correção, no pull request para a develop e na execução manual, e em nenhum outro evento', () => {
+  it('roda em todo push nas branches integradoras e nas de spec (menos as de linha) e de correção, no pull request para a develop e na execução manual, e em nenhum outro evento', () => {
     // O trabalho acontece na branch da spec, que entra na `develop` por pouso (D78). A esteira de cada push dela é o
     // portão completo de cada tarefa, sem espera (D79): sem `spec/**` e `correcao/**` aqui, o que uma tarefa quebra
-    // fora dos testes que alterou só apareceria no fim da spec, e a D52 e a regra 40 contam com isso.
-    expect(workflow.on.push?.branches).toEqual(['develop', 'release', 'main', 'spec/**', 'correcao/**'])
+    // fora dos testes que alterou só apareceria no fim da spec, e a D52 e a regra 40 contam com isso. A branch de linha
+    // (`!spec/**--l*`) é a exceção: o que ela traz roda no push da spec, no encontro (o caso dela está logo abaixo).
+    expect(workflow.on.push?.branches).toEqual(['develop', 'release', 'main', 'spec/**', '!spec/**--l*', 'correcao/**'])
     // O PR para a `develop` (D23 revista em 23/10/2026, RF19): só ele, com os tipos padrão. `pull_request_target` roda com
     // permissão de escrita e segredo sobre o código de quem abriu o PR, e por isso nunca entra.
     expect(workflow.on.pull_request).toEqual({ branches: ['develop'] })
@@ -213,8 +235,32 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
     expect(textoWorkflow).not.toMatch(/pull_request_target/)
   })
 
+  it('a branch de linha (spec/<func>--l<n>) não dispara a esteira no push, e a da spec e a da correção disparam', () => {
+    // A linha entra na spec no encontro (`tools/processo/linhas.ts`), e é o push da spec que o Orquestrador lê. Rodar também o da
+    // linha repete as seis suítes e disputa os runners com a que importa (X7: 34 das 83 execuções, até 4 h 26 do push ao veredito).
+    const padroes = workflow.on.push?.branches ?? []
+    // Os nomes vêm do gerador de `linhas.ts`, e não escritos à mão: se o sufixo mudar, o teste acompanha.
+    const linhas = [
+      branchDaLinha('spec/harness', 1),
+      branchDaLinha('spec/harness', 12),
+      branchDaLinha('spec/harness', 0),
+      branchDaLinha('spec/telas-do-aluno', 3),
+      branchDaLinha('spec/a/b', 2),
+    ]
+    for (const branch of linhas) {
+      expect(branch, 'o gerador devolve branch de linha de spec').toMatch(/^spec\/.+--l\d+$/)
+      expect(disparaNoPush(branch, padroes), branch).toBe(false)
+    }
+    for (const branch of ['spec/harness', 'spec/telas-do-aluno-e-primeiro-acesso', 'correcao/2026-10-24-esteira', 'develop', 'release', 'main']) {
+      expect(disparaNoPush(branch, padroes), branch).toBe(true)
+    }
+    // Fora de todos os padrões, a branch nunca dispara, com ou sem o sufixo.
+    expect(disparaNoPush('feature/x--l1', padroes)).toBe(false)
+    expect(disparaNoPush('spec-x--l1', padroes)).toBe(false)
+  })
+
   it('o grupo de concorrência cancela a execução superada só em spec/** e correcao/**, uma por branch', () => {
-    for (const ref of ['refs/heads/spec/harness--l1', 'refs/heads/spec/x', 'refs/heads/correcao/2026-10-23-casca']) {
+    for (const ref of ['refs/heads/spec/harness', 'refs/heads/spec/x', 'refs/heads/correcao/2026-10-23-casca']) {
       expect(concorrenciaPara(push(ref)), ref).toEqual({ grupo: ref, cancela: true })
       // Dois pushes seguidos na mesma branch caem no mesmo grupo: é isso que cancela o primeiro.
       expect(concorrenciaPara(push(ref, 1)).grupo).toBe(concorrenciaPara(push(ref, 2)).grupo)
@@ -469,7 +515,7 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
     const condicao = passo.if
     expect(condicao, 'o passo tem condição').toBeTypeOf('string')
     const roda = (contexto: ContextoDoGithub): boolean => verdadeiro(avaliarExpressao(`\${{ ${String(condicao)} }}`, contexto))
-    for (const ref of ['refs/heads/spec/harness--l1', 'refs/heads/spec/x', 'refs/heads/correcao/2026-10-23-casca']) {
+    for (const ref of ['refs/heads/spec/harness', 'refs/heads/spec/x', 'refs/heads/correcao/2026-10-23-casca']) {
       expect(roda(push(ref)), ref).toBe(true)
     }
     // A execução manual numa branch de trabalho também confere: é a reexecução do push.

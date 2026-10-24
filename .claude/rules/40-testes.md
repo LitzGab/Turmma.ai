@@ -136,9 +136,13 @@ vermelho e o hook recusa o commit. `node tools/processo/mutacoes.ts --faltando <
 novas com condição que nenhum bloco alcança, também as do código de `tools/` (fora teste, `.d.ts`, as pastas `test/`, `tests/`,
 `__tests__/`, `__fixtures__/` e `fixtures/`, e o que não é código); só informa, e a exigência acima segue só com `apps/*/src` e `packages/*/src`.
 
-**A esteira**, em todo push. Cada commit de tarefa vai para o GitHub logo depois de feito, na branch
+**A esteira**, em todo push da spec e da correção. Cada commit de tarefa vai para o GitHub logo depois de feito, na branch
 da linha, e **a da spec** (`spec/<funcionalidade>`) recebe a soma das linhas no encontro
-(`tools/processo/linhas.ts`, D79). Cada push dispara tudo: `npm run typecheck`, `npm run lint`,
+(`tools/processo/linhas.ts`, D79). O push da branch de linha (`spec/<funcionalidade>--l<n>`) **não** dispara a esteira: ela
+repetiria o que a da spec roda no encontro e disputaria os mesmos runners (na X7, 34 das 83 execuções eram das linhas, e o veredito
+chegou a levar 4 h 26). O repositório é público e a branch de linha continua indo ao GitHub: o gitleaks do portão da tarefa, antes do
+commit, é a única checagem de segredo do commit da linha até o encontro, e por isso o `segredo` não sai das suítes do portão local.
+O push da spec dispara tudo: `npm run typecheck`, `npm run lint`,
 as duas guardas, `npm run test`, `npm run test:e2e` e `npm run test:infra` (D52). Ninguém espera por
 ela: o Orquestrador lê o veredito ao fechar a tarefa seguinte (`tools/processo/esteira.ts`), e vermelho
 vira correção antes de a linha andar. A spec só fecha com a esteira verde no último commit que alterou

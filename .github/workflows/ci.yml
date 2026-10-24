@@ -1,8 +1,10 @@
 # Esteira da Turmma. Enquanto não há staging (D31), ela é o portão das branches integradoras. Cada
 # spec roda na branch dela e entra na `develop` por pouso (D78), e a esteira roda sozinha em todo push
 # da branch (D79): cada commit de tarefa passa pelas suítes inteiras aqui, sem ninguém esperar, e
-# `tools/processo/esteira.ts` lê o veredito ao fechar a tarefa seguinte. Roda também no push da
-# `develop`; `release` e `main` recebem por merge, e o Joaquim gerencia esse caminho. E roda no pull request para a
+# `tools/processo/esteira.ts` lê o veredito ao fechar a tarefa seguinte. A branch de linha (`spec/<func>--l<n>`) não
+# dispara: ela entra na spec no encontro, e rodar as duas repetia as suítes e disputava os runners com a que o
+# Orquestrador lê. Roda também no push da `develop`; `release` e `main` recebem por merge, e o Joaquim gerencia esse
+# caminho. E roda no pull request para a
 # `develop` (D23, revista em 23/10/2026), com a mesma permissão de leitura e sem segredo: é a esteira de quem revisa o PR.
 # Push novo em `spec/**` e `correcao/**` cancela a execução anterior da mesma branch, e o push novo no PR cancela a do PR;
 # na `develop`, `release`, `main` e na execução manual o grupo é o `run_id`, que nunca cancela nem enfileira ninguém.
@@ -13,7 +15,7 @@ name: esteira
 
 on:
   push:
-    branches: [develop, release, main, 'spec/**', 'correcao/**']
+    branches: [develop, release, main, 'spec/**', '!spec/**--l*', 'correcao/**']
   pull_request:
     branches: [develop]
   # Execução manual: para reexecutar um commit sem precisar de outro push.
