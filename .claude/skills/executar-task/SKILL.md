@@ -25,6 +25,8 @@ Leia, nesta ordem:
 3. O teste que a seção "Como testar" manda copiar, **antes** de escrever o seu: copiar o padrão que
    funciona é o que evita horas de tentativa
 4. `docs/glossario.md`, para todo nome novo que a tarefa cria no código, no banco ou na tela
+5. A skill `receitas-de-codigo`, quando a tarefa cria endpoint, tabela, job, chamada de IA, tela ou teste de isolamento: ela
+   aponta a seção do guia, o exemplo real e as travas
 
 O que é o produto está no `CLAUDE.md`, que já está no seu contexto. O `estado.md` da pasta é o diário
 do Orquestrador: não é seu, nem para ler nem para editar.

@@ -113,11 +113,11 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [ ] 20.3 `UserPromptSubmit` (RF29)
   - [ ] 20.4 Testes: RF27 a RF29 do `cenarios.md`
 
-- [ ] **21.0 — Uma skill de projeto aponta as receitas do guia, e a esteira prova que os caminhos existem**
-  - [ ] 21.1 `.claude/skills/receitas-de-codigo/SKILL.md`: uma linha por receita do guia, com seção, exemplo e travas (RF32)
-  - [ ] 21.2 O `executar-task`, o modelo da Tech Spec e o mapa do `CLAUDE.md` apontam para ela; o guia diz que é apontado
-  - [ ] 21.3 A extração de caminhos da 16.0 num módulo, sem mudar o que devolve, se ela ficou dentro do teste
-  - [ ] 21.4 Testes: RF32 do `cenarios.md`
+- [x] **21.0 — Uma skill de projeto aponta as receitas do guia, e a esteira prova que os caminhos existem**
+  - [x] 21.1 `.claude/skills/receitas-de-codigo/SKILL.md`: uma linha por receita do guia, com seção, exemplo e travas (RF32)
+  - [x] 21.2 O `executar-task`, o modelo da Tech Spec e o mapa do `CLAUDE.md` apontam para ela; o guia diz que é apontado
+  - [x] 21.3 A extração de caminhos da 16.0 num módulo, sem mudar o que devolve, se ela ficou dentro do teste
+  - [x] 21.4 Testes: RF32 do `cenarios.md`
 
 ## Dependências e paralelismo
 

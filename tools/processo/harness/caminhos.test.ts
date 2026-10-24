@@ -6,63 +6,20 @@
 // guarda isentava um lugar vazio e vigiava o lugar onde os adaptadores estão de fato.
 //
 // A fronteira do que se confere: `.claude/agents/*.md`, `.claude/rules/*.md` e `tools/guardas/` sem os `*.test.ts` e sem
-// `__fixtures__/` (as amostras erradas de propósito). A extração devolve o token cru, e cada conferência filtra o seu: a 21.0 a
-// reaproveita para a skill de receitas, com outro filtro. Limites declarados: caminho escrito com espaço, ou partido em duas
-// crases, não é extraído; o `./` solto no fim de uma frase leva o ponto junto (`./apps/x.ts.`) e vira falso vermelho (a saída é pôr o
-// caminho entre crases); o que o texto cita sem pasta da raiz (`componentes/dialogos.tsx`, `guardas/log-sem-dado-pessoal`, uma
-// rota) não é conferido; e o teste prova que o caminho existe, não que o texto em volta ainda diz a verdade sobre ele.
-import { existsSync, globSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+// `__fixtures__/` (as amostras erradas de propósito). A extração mora em `caminhos.ts` e devolve o token cru; cada conferência
+// filtra o seu, e a 21.0 a reaproveita para a skill de receitas, com outro filtro. Os limites da extração estão lá; o teste prova
+// que o caminho existe, não que o texto em volta ainda diz a verdade sobre ele.
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
+import { ehCaminho, ehPasta, extrairCaminhos, PASTAS_DA_RAIZ, problemaDoCaminho } from './caminhos.ts'
 
 const RAIZ = join(import.meta.dirname, '..', '..', '..')
 
-/** As pastas da raiz que fazem de um token um caminho (Tech Spec §9). O resto não é conferido. */
-export const PASTAS_DA_RAIZ = ['apps/', 'packages/', 'tools/', 'e2e/', 'infra/', 'docs/', '.claude/']
 const PASTAS_DOS_PAPEIS = ['.claude/agents', '.claude/rules']
 const PASTA_DAS_GUARDAS = 'tools/guardas'
 const MINIMO_DE_CAMINHOS = 100
-
-/** Placeholder: `<modulo>`, a reticência e `${x}`. A pasta antes dele é o que se confere. */
-const PLACEHOLDER = /<[^>]*>|…|\$\{[^}]*\}/
-
-/** Os tokens crus que o texto cita como caminho: entre crases, entre aspas ou começando por `./`, sem espaço dentro. */
-export function extrairCaminhos(texto: string): string[] {
-  const achados = [
-    ...[...texto.matchAll(/`([^`\s]+)`/g)].map((achado) => achado[1] ?? ''),
-    ...[...texto.matchAll(/(["'])([^"'`\s]+)\1/g)].map((achado) => achado[2] ?? ''),
-    ...[...texto.matchAll(/(?<![\w./`'"-])(\.\/[^\s`'",;)\]]+)/g)].map((achado) => achado[1] ?? ''),
-  ]
-  return [...new Set(achados)]
-}
-
-/** O token começa, sem o `./`, por uma das pastas da raiz. */
-export const ehCaminho = (token: string): boolean => {
-  const semPonto = token.replace(/^\.\//, '')
-  return PASTAS_DA_RAIZ.some((pasta) => semPonto.startsWith(pasta))
-}
-
-const ehPasta = (caminho: string): boolean => {
-  try {
-    return statSync(caminho).isDirectory()
-  } catch {
-    return false
-  }
-}
-
-/** Uma frase se o caminho não existe sob `raiz`; `null` se existe. Sem o `:<linha>` e o `#<âncora>`. */
-export function problemaDoCaminho(token: string, raiz: string): string | null {
-  const caminho = token.replace(/^\.\//, '').replace(/#.*$/, '').replace(/:\d+(?:-\d+)?$/, '')
-  const placeholder = PLACEHOLDER.exec(caminho)
-  if (placeholder !== null) {
-    const antes = caminho.slice(0, placeholder.index)
-    const pasta = antes.endsWith('/') ? antes : dirname(antes)
-    return ehPasta(join(raiz, pasta)) ? null : `a pasta ${pasta} não existe`
-  }
-  if (caminho.includes('*')) return globSync(caminho, { cwd: raiz }).length > 0 ? null : 'o padrão não casa com nenhum arquivo'
-  return existsSync(join(raiz, caminho)) ? null : 'não existe'
-}
 
 /** Os arquivos de uma pasta, relativos à raiz; a pasta que não existe devolve lista vazia. */
 function arquivosDe(raiz: string, pasta: string, recursivo: boolean): string[] {
