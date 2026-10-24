@@ -14,10 +14,9 @@
   - linha 1 (`Implementador`/`Mesa`): **11.0** (grande), 1ª tentativa, retomada às ~21:10 (sessões novas) depois da correção
     `2026-10-23-audit-multer` (`ea6b093`, overrides do multer 2.5.0; infra-guardian e test-engineer APROVADO na 1ª; sem
     encontro próprio, segue com o da 11.0)
-  - linha 2 (`Implementador 2`/`Mesa 2`): **15.0** (grande), 1ª tentativa, desde ~20:35; retomada às ~21:10 com
-    `git merge --ff-only ea6b093`, portão e Mesa
+  - linha 2: **ociosa** desde ~21:25 (a 15.0 se encontrou em `5ce1632`; spec em `76b3b71`)
   - linha 3: **ociosa** desde ~21:15 (a correção `entrar-renovacao-concorrente` se encontrou em `8795cf8`, com o `ea6b093`;
-    spec em `415e97a`). Nada parte: o quadro prende tudo atrás da 11.0, da 13.0 e da 15.0
+    spec em `415e97a`). Nada parte: com a 15.0 feita, o quadro prende tudo atrás da 11.0 (a 12.0 e a 13.0 não correm junto com ela)
   - o `ea6b093` já está na spec (veio no encontro da linha 3)
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Devo ainda:**
@@ -39,7 +38,7 @@
     fila parado 2 s), mas falha em 20 s com o erro certo (relatório da correção `agentes-suspensao-intermitente`)
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `415e97a` (encontro da correção da linha 3); esteira `40046051490` correndo. Antes: `ae839fc` (encontro da 10.0),
+- **Base:** `spec/harness` em `76b3b71` (encontro da 15.0); esteira `40046467544` correndo (a `40046051490`, em `415e97a`, deve ser cancelada por ela). Antes: `ae839fc` (encontro da 10.0),
   com as esteiras `40026244263` (em `0068e5d`) e `40039836142`. Com a 4.0, o `esteira.ts` pula a cancelada e lê a última concluída. As três anteriores (`40017905038`,
   `40018797893`, `40021941702`) foram **canceladas** pelo push seguinte, não reprovadas: o `esteira.ts` lê cancelada como
   VERMELHA. Não abri correção. Sem esteira concluída na spec desde `a691e02`
@@ -59,6 +58,8 @@
 | correção agentes-suspensao-intermitente | `dc11702` | Sonnet 5.5 | conformidade-reviewer 1, frontend-reviewer 1, test-engineer 1 | esteira vermelha em `a691e02`; causa: Redis de fila parado 2 s, a fixture esperava só o sucesso da ativação do MFA; não era a suspensão |
 | 4.0 | `5341e20` + `bd292fb` (correção zod) | Sonnet 5.5 | infra-guardian 2, privacy-guardian 2, test-engineer 2, revisor-geral 2; a correção: infra-guardian 1, revisor-geral 1, test-engineer 1 | DIVERGÊNCIA `portão` (zod <4.6.6, GHSA-mrhx-c7xc-m3w5) virou a correção `zod-4-6-7-audit` na linha; três recomendações para o TODO.md |
 | 10.0 | `d76ef01` + `995ff72` (correção zod) + `02386f8` (correção vite) | Sonnet 5.5 | infra-guardian 4, test-engineer 4, revisor-geral 4; as correções: infra-guardian 1, test-engineer 1 (+ revisor-geral 1 na do zod) | ESCALADA na r2 → diagnóstico do Arquiteto (gramática do leitor do shell, techspec §5(a)); BLOQUEIO na r3 do test-engineer (`--attr-source`), Joaquim destravou com A; duas DIVERGÊNCIAS `portão` de `npm audit` |
+| correção `entrar-renovacao-concorrente` (linha 3) | `8795cf8` | Sonnet 5.5 | test-engineer 1, infra-guardian 1, privacy-guardian 1 | esteira `40006927589`; DIVERGÊNCIA `portão` (multer) → esperou a `audit-multer`; tolerância de 250 ms, 80 corridas verdes |
+| 15.0 | `5ce1632` (+ `ea6b093`, correção multer, por ff) | Sonnet 5.5 | infra-guardian 1, conformidade-reviewer 1, test-engineer 2, revisor-geral 2 | DIVERGÊNCIA `portão` (multer) → esperou a `audit-multer` da linha 1; base fixa 75.218 → 34,4 KB |
 
 ## Esperando o Joaquim
 ## 23/10/2026 ~19:10 — X7 tarefa 10.0 (limite: 3 reprovações do test-engineer)
