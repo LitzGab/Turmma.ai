@@ -11,35 +11,23 @@
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador`/`Mesa`): **13.0** (grande), 1ª tentativa, desde ~22:20
-  - linha 2: **ociosa** desde ~21:25 (a 15.0 se encontrou em `5ce1632`)
-  - linha 3: **ociosa** desde ~21:15 (a correção `entrar-renovacao-concorrente` se encontrou em `8795cf8`, com o `ea6b093`;
-    spec em `415e97a`). Nada mais parte: o resto espera a 13.0 ou a 14.0
-  - o `ea6b093` já está na spec (veio no encontro da linha 3)
+  - linha 1 (`Implementador`/`Mesa`): **14.0** (grande), 1ª tentativa, desde ~23:12
+  - linhas 2 e 3: **ociosas**. Nada mais parte: a 16.0 e a 17.0 esperam a 14.0
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Devo ainda:**
   - no fechamento, levar ao `TODO.md` as três "Recomendações sem aplicar" do `4_task.md` (destino TODO.md)
-  - nota ao Arquiteto, no próximo pedido: as recomendações de texto da 10.0 (`techspec.md:94` e `:97`, `cenarios.md:73`,
-    `--super-prefix`) ficam com ele (estão em "Recomendações sem aplicar" do `10_task.md`); e o hook só lê a linha `Revisões:`
-    em commit com `-F`, não com vários `-m` (aviso do Implementador 2)
-  - **pedido ao `Arquiteto` (~22:20), no andar da spec, com a linha 1 correndo:** ajustar o `14_task.md` (a 14.1 importa a lista do
-    §5(e) de `portao.ts`, `ehCodigoParaAEsteira`, sem cópia; recomendação do revisor-geral na 12.0) e fechar a fronteira do `16_task.md`
-    (item abaixo), e receber as notas abaixo. Espero o `RELATÓRIO` dele antes de partir a 14.0 e a 16.0
-  - **antes de partir a 16.0:** pedir ao `Arquiteto` que feche a fronteira no `16_task.md`. Hoje a 16.0 confere aspas em
-    `tools/guardas/`, onde há fixtures que não existem, e o `arquiteto.md` tem caminhos com reticências. Ver o
-    `revisao-spec.md`, rodadas 11 a 13
+  - no fechamento, levar ao `TODO.md` (ou ao `/retro`) o lote 5/7 do e2e, que passou dos 45 min do job na correção do
+    `casca`: o Arquiteto não abriu tarefa, porque o RF2 já marca de vermelho o prazo estourado, com o nome do job
   - a fila da esteira: perguntei ao Joaquim se cancelo as execuções das branches de linha, e ele não respondeu. Não é parada,
     e a 3.0 (RF1) resolve isso
-  - nota ao Arquiteto, no próximo pedido: o `tasks.md:26` ainda cita `gh run list --event push`, e a 3.0 passou a ler por
-    evento (push e `workflow_dispatch`); está em "Divergências resolvidas", na Tech Spec §5(f) e no `cenarios.md`
-  - nota ao Arquiteto, no próximo pedido: o encontro novo da 6.0 tem a saída de código 5 (começa por `VERIFICAÇÃO RECUSADA`),
-    que pede a mesma correção do CONFLITO, e o `/seguir` (passo 6) ainda não a cita (aviso do Implementador 2)
-  - nota ao Arquiteto, se servir: o lote 5/7 do e2e passou dos 45 min do job na correção do `casca`, o que pesa no M1
   - para o `/retro`: na fixture `casca.ts`, o passo seguinte (código do MFA na entrada) tem a mesma causa possível (Redis de
     fila parado 2 s), mas falha em 20 s com o erro certo (relatório da correção `agentes-suspensao-intermitente`)
+  - **feito (RELATÓRIO do Arquiteto, 22:26, `d1cd361`):** a 14.1 importa a lista do §5(e) via `ehCodigoParaAEsteira`; a fronteira
+    do `16_task.md` fechada (fora `*.test.ts` e `__fixtures__` de `tools/guardas`, reticência vale como placeholder, mínimo de
+    100 caminhos); as notas da 10.0, do `tasks.md:26`, da saída 5 do encontro (17.2) e do `-F` (18.4a) aplicadas
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `ca159fa` (encontro da 12.0); esteira `40049333195` correndo. Antes: `f6d13ea` (encontro da 11.0), esteira `40046467544` (em `76b3b71`). Antes: `ae839fc` (encontro da 10.0),
+- **Base:** `spec/harness` em `822cec2` (encontro da 13.0); esteira `40052965683` correndo. Antes: `ca159fa` (encontro da 12.0), esteira `40049333195`. Antes: `f6d13ea` (encontro da 11.0), esteira `40046467544` (em `76b3b71`). Antes: `ae839fc` (encontro da 10.0),
   com as esteiras `40026244263` (em `0068e5d`) e `40039836142`. Com a 4.0, o `esteira.ts` pula a cancelada e lê a última concluída. As três anteriores (`40017905038`,
   `40018797893`, `40021941702`) foram **canceladas** pelo push seguinte, não reprovadas: o `esteira.ts` lê cancelada como
   VERMELHA. Não abri correção. Sem esteira concluída na spec desde `a691e02`
@@ -63,6 +51,7 @@
 | 15.0 | `5ce1632` (+ `ea6b093`, correção multer, por ff) | Sonnet 5.5 | infra-guardian 1, conformidade-reviewer 1, test-engineer 2, revisor-geral 2 | DIVERGÊNCIA `portão` (multer) → esperou a `audit-multer` da linha 1; base fixa 75.218 → 34,4 KB |
 | 11.0 | `6e701d4` (+ `ea6b093`, correção `audit-multer`) | Sonnet 5.5 | infra-guardian 1, test-engineer 2, revisor-geral 2 (correção: infra-guardian 1, test-engineer 1) | DIVERGÊNCIA `portão` (multer GHSA-q7qp-rjg7-q26m) → correção `2026-10-23-audit-multer` na linha, overrides do multer 2.5.0; 53 mutações; item novo no `TODO.md` "(X7, tarefa 11.0)" |
 | 12.0 | `fbe056f` | Sonnet 5.5 | privacy-guardian 2, infra-guardian 3, revisor-geral 2, test-engineer 2 | 56 mutações; duas entradas novas no `TODO.md`; a 14.1 deve importar a lista do §5(e) de `portao.ts` (levado ao Arquiteto) |
+| 13.0 | `3649e27` | Sonnet 5.5 | tenancy-guardian 2, privacy-guardian 2, conformidade-reviewer 2, test-engineer 2, revisor-geral 2 | |
 
 ## Esperando o Joaquim
 ## 23/10/2026 ~19:10 — X7 tarefa 10.0 (limite: 3 reprovações do test-engineer)
