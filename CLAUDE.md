@@ -55,7 +55,7 @@ não confiar, a escola não compra.
 
 Uma linha por decisão: número e título. O texto completo, com o motivo e as revisões, está em
 `docs/decisoes.md`. **Leia a decisão lá antes de citá-la, de discuti-la de novo ou de implementar
-algo que dependa dela.** Nova decisão ou revisão entra lá e aqui, pelo `/registrar-decisao`.
+algo que dependa dela.** Nova decisão ou revisão entra lá e aqui, pela skill `registrar-decisao`.
 
 | D | Decisão |
 |---|---|

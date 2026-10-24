@@ -35,7 +35,7 @@ Funcionalidade alvo: `$ARGUMENTS`
 - `docs/negocio.md` — se a funcionalidade mexe com preço, consumo de IA, governança ou
   demonstração
 - Se o PRD depende de uma **decisão em aberto** (`docs/decisoes-em-aberto.md`) (lista de agentes, teto do
-  tutor, cobrança), PARE e sugira `/descobrir <tema>` antes. Não feche essa decisão dentro
+  tutor, cobrança), PARE e sugira a skill `descobrir` com o tema antes. Não feche essa decisão dentro
   do PRD
 - Se a funcionalidade toca dado de pessoa ou IA sobre aluno: `docs/lgpd.md` e
   `docs/regulacao.md`

@@ -58,6 +58,11 @@ sessenta turmas ao mesmo tempo?"**.
 5. **API, realtime e worker não guardam estado em memória** que outra instância precise.
    Sessão, sala ao vivo e rate limit ficam em Redis. Com duas instâncias, qualquer
    requisição pode cair em qualquer uma.
+   Nota (24/10/2026): hoje a **sessão é lida do Postgres**, sem cache; sala e rate limit é que estão no Redis. A
+   medida da N2 da X5 decide se o texto da regra passa a dizer "Postgres, medido" ou se a sessão ganha cache, e tem
+   dois limites no cenário `rajada`: p95 de `sessao.leitura.duracao` até 50 ms **e** espera do pool de conexões até
+   100 ms (R40, `tasks/prd-reengenharia/DECISOES.md`); as duas métricas saem de `observarPoolDoBanco` e da leitura de
+   sessão (`apps/api/src/main.ts`). Até lá o que vale é "nada em memória do processo".
    Checagem: só a revisão garante (`infra-guardian`).
 
 6. **Resposta de prova nunca se perde.** Salva no servidor a cada item, com gravação

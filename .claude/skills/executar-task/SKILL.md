@@ -21,7 +21,7 @@ Leia, nesta ordem:
 2. O que a seção "Contexto necessário" dele aponta: as seções da `techspec.md`, os requisitos do
    `prd.md`, as regras de `.claude/rules/` (cada uma explica o porquê, e o porquê é o que permite
    decidir os casos que a regra não previu) e o código. A Tech Spec inteira, só quando o documento
-   não aponta seção: a do F3 passava de cem mil caracteres, e lê-la toda é começar com a janela cheia
+   não aponta seção: lê-la toda é começar com a janela cheia
 3. O teste que a seção "Como testar" manda copiar, **antes** de escrever o seu: copiar o padrão que
    funciona é o que evita horas de tentativa
 4. `docs/glossario.md`, para todo nome novo que a tarefa cria no código, no banco ou na tela
@@ -40,112 +40,38 @@ com `Motivo: desenho`, a seção da Tech Spec e o que o plano pede (o formato es
 arquitetura sozinho: a Tech Spec foi escrita por alguém que olhou o sistema inteiro, e você
 está vendo um pedaço.
 
-<critical>Divergência se registra; critério de aceite não se baixa. Seis reprovações no F1 foram
-implementação que se afastou da spec ou da subtarefa sem dizer — e em duas delas a saída foi
-**editar o documento para acomodar o resultado**: a linha do cenário de carga reescrita depois da
-medição, e o limite de dois grupos do k6 desligado. Baixar a régua é decisão de quem é dono da
-tarefa, nunca de quem implementa. O que diverge vai para a seção "Divergências resolvidas nesta
-tarefa" do `N_task.md`, com o motivo, e, antes dos revisores, entra na `techspec.md`, no
-`cenarios.md` e no documento que a seção 11 aponta, com o texto do código. Editar `.md` não caduca
-rodada nem carimbo, com uma exceção: o `docs/runbook.md`, que a guarda `alerta-tem-runbook` lê, conta
-como código e caduca os dois (`DOCUMENTO_QUE_UMA_SUITE_LE`, em `tools/processo/revisoes.ts`). O
-maior do `/validar` da A0b foram seis decisões de tarefa que só estavam no `N_task.md`.</critical>
+<critical>Divergência se registra; critério de aceite não se baixa. Baixar a régua é decisão de quem é dono da
+tarefa, nunca de quem implementa, e a saída nunca é **editar o documento para acomodar o resultado** (reescrever a
+linha de um cenário depois da medição, desligar um limite). O que diverge vai para a seção "Divergências resolvidas
+nesta tarefa" do `N_task.md`, com o motivo, e, antes dos revisores, entra na `techspec.md`, no `cenarios.md` e no
+documento que a seção 11 aponta, com o texto do código. Editar `.md` não caduca rodada nem carimbo, com uma exceção: o
+`docs/runbook.md`, que a guarda `alerta-tem-runbook` lê, conta como código e caduca os dois
+(`DOCUMENTO_QUE_UMA_SUITE_LE`, em `tools/processo/revisoes.ts`).</critical>
 
 ### Autoconferência antes de codar
 
-O `test-engineer` é quem mais reprova (38% das rodadas no F0 e no começo do F1), e cada
-reprovação custa uma rodada nova. Responda no plano, por escrito, as perguntas que ele vai
-fazer, e as dos guardiões marcados:
+O `test-engineer` é quem mais reprova, e cada reprovação custa uma rodada nova. Responda no plano, por escrito, as
+doze perguntas da seção "Autoconferência" do `N_task.md`. Documento criado antes de 24/10/2026 pode não a ter: use a
+do modelo, `.claude/skills/criar-tasks/task-template.md`. O caso que originou cada pergunta está em
+`docs/processo-licoes.md`.
 
-- **Declare a mutação de cada cláusula; quem a prova é o portão.** Liste cada cláusula que o diff
-  acrescenta — condição de `where`, `if` de guarda, `catch` que traduz erro, restrição ou índice de
-  migration, trava de clique, cada termo de uma condição composta (`a && b && c` são três); e, na
-  tela, a condição que mostra ou esconde um pedaço do JSX (`{confirmado && <Selo />}`, o vazio do
-  filtro), cada efeito (o foco devolvido, a medida gravada com `style.setProperty`, a guarda dele) e
-  o id dentro de uma `queryKey` —, inclusive as que a tabela de testes não cita, as cópias da mesma regra em outro arquivo e as que
-  entram depois, para atender um revisor. Cada uma ganha um bloco na seção "Mutações" do `N_task.md`:
+A primeira pergunta tem formato próprio, que o portão lê: cada cláusula do diff ganha um bloco na seção "Mutações".
 
-  ````
-  ```mutacao
-  arquivo: apps/api/src/<módulo>/<nome>.repository.ts
-  teste: apps/api/test/<nome>.int.test.ts › <nome do caso>
-    .where(and(
-  -   eq(tabela.escolaId, escolaId),
-      eq(tabela.id, id),
-  ```
-  ````
+````
+```mutacao
+arquivo: apps/api/src/<módulo>/<nome>.repository.ts
+teste: apps/api/test/<nome>.int.test.ts › <nome do caso>
+  .where(and(
+-   eq(tabela.escolaId, escolaId),
+    eq(tabela.id, id),
+```
+````
 
-  Linha que começa com `-` sai, com `+` entra, e com espaço é contexto: fica, e serve para o trecho
-  existir uma vez só no arquivo. Cláusula que só vale no celular (o ramo de toque, o menu de baixo)
-  acrescenta ao cabeçalho a linha `projeto: celular`; ela só vale para teste de e2e, e sem ela o caso
-  roda no `chromebook`, onde essa cláusula não é alcançada. O portão da tarefa aplica cada bloco, roda
-  o teste citado, exige vermelho e restaura (`tools/processo/mutacoes.ts`). Bloco cujo teste continua
-  verde reprova o portão: falta o teste, e não o bloco. Trava se prova pelo efeito (dois registros), não pela espera. No F3,
-  17 reprovações foram cláusula sem teste que falhe sem ela, e em cinco a seção afirmava um vermelho
-  que não acontecia. Na X3, as oito reprovações deste tipo foram cláusula de tela, das três formas
-  acima.
-- **O texto que você põe na tela já aparece nela?** O sino em `main` (X3, 1.0) e o rótulo "Gabarito"
-  do interruptor (X3, 6.0) quebraram e2e que contavam o texto na página inteira, fora do diff, e a
-  esteira ficou vermelha em seis execuções; o portão só puxa os specs que citam texto **removido**.
-  Procure o texto novo em `e2e/` (`grep -rln '<texto>' e2e/`) e rode isolados os specs que o contam
-  (`toHaveCount`, `nth`).
-- **O cenário tem o segundo dado que torna a cláusula observável?** Foi a maior causa técnica de
-  reprovação no F1, catorze vezes: a regra está no código, mas o teste tem uma turma só, uma escola
-  só, um estado só, ou o valor padrão só — e apagar a cláusula não deixa nada vermelho. Se o
-  repository filtra por turma, o teste precisa de aluno em **duas** turmas; se filtra por estado,
-  de vínculo em cada estado; se lê `inatividadeMin`, de escola com valor **diferente** do padrão.
-- **Alguma checagem anterior responde antes da regra sob teste?** Cinco reprovações no F1 foram
-  teste verde pelo motivo errado: a rota caía em `exigirAnoEmCurso()`, ou o e-mail não achava
-  ninguém, e a cláusula que o teste dizia provar nunca era alcançada. Percorra o caminho até a
-  linha que interessa e confirme que o cenário chega nela.
-- **A asserção olha o resultado, ou a forma do código?** Asserção sobre texto de arquivo, nome de
-  função ou lista vazia passa igual se a regra ler o campo errado. Compare o que o usuário obtém.
-- **Guarda nova (regra de lint, teste estrutural, trava de pasta) tem fixture de quem a contorna, e
-  falha quando o alvo some?** Para cada forma de escrever o mesmo que a regra conhece (reexportação,
-  `import *`, `import()` e `require`, o caminho como texto em outra posição, alias), uma fixture e o
-  teste vermelho; a cerca sobre arquivo que mudou de lugar reprova, e não se cala; o `ignore` da
-  configuração tem caso que prova que não esconde o real. Na X5, a 9.0 levou cinco reprovações, uma
-  forma de escape por rodada, e a 12.0 três, com cercas que paravam de vigiar sem teste falhar.
-- **Algum comentário, docblock ou nota da tarefa afirma o que o código não faz?** Quatro
-  reprovações no F1, três delas no mesmo docblock em rodadas seguidas. Neste repositório a regra
-  do módulo mora no comentário: quem lê "e só elas" conclui que o caso está barrado, e o próximo a
-  mexer "corrige" o código pelo comentário.
-- **A divergência que você vai registrar cria ou muda uma regra?** Uma trava nova, um subcomando a
-  mais sob a mesma conferência, uma gravação nova numa rota sem sessão. Três reprovações na A0 (3.0,
-  5.0, 6.0) foram divergência registrada sem o cenário que a prova, e numa delas sem a pergunta de
-  carga: a tentativa segurada passou a gravar no banco a cada requisição anônima. Antes do código, a
-  divergência ganha a sua linha na tabela de testes e a resposta do guardião que ela toca (quem chama
-  sem autenticação, quantas vezes por segundo, o que grava a cada vez).
-- **A coluna "Onde está na spec" diz a verdade?** Antes da primeira rodada, abra cada lugar que ela
-  cita e ache lá a decisão, com a palavra do código. Se a decisão muda algo que mais de um documento
-  descreve (a Tech Spec, o `cenarios.md`, o documento da seção 11), procure o termo antigo em todos de
-  uma vez, com `grep`, e não um por rodada. Na X1, sete reprovações do `revisor-geral` foram decisão
-  que só estava no `N_task.md`, ou a coluna citando seção que não a dizia; na 1.0, três rodadas
-  seguidas, um documento por vez. Subtarefa que pede uma busca ou um commit à parte só fica `[x]` com
-  a prova no documento: a saída do `grep` dos nomes antigos (vazia, ou cada linha justificada) e o hash
-  do commit de caracterização. Na X5, a 36.0 e a 97.0 marcaram a busca feita com caminho velho no
-  `README` e numa AIA, e a 48.0 marcou a caracterização sem o commit.
-- **Qual peça que já existe faz isto?** Sete recomendações entre o F1 e a A0 foram código que refazia
-  o que o repositório já tinha: o hash do token de convite, o formato do apelido, a conferência de
-  senha na vez, um módulo importando o service de outro. Procure em `apps/api/src/sessao/` e em
-  `packages/nucleo/` antes de escrever. Reaproveite importando; se a peça está no lugar errado para
-  dois módulos, mova-a para arquivo próprio ou para o `nucleo`, nesta tarefa, e não copie.
-- Toda operação que pode acontecer duas vezes ao mesmo tempo tem teste com as duas chamadas
-  **em paralelo** (`Promise.all`), não em sequência?
-- **Corrida entre duas operações diferentes, ou resposta que chega fora de ordem, tem a ordem
-  forçada no teste.** No banco, `GatilhoDeParada` e `esperarNaTrava`
-  (`apps/api/test/gatilho-de-parada.ts`), como o C5 e o C11 da A1. Na tela, a resposta segurada
-  com `page.route` ou o relógio parado com `page.clock.pauseAt`, como o teste da correção
-  `2026-10-03-decididos-continuam-marcados`. `Promise.all` solto prova a ordem que sair, e vira
-  intermitente no banco carregado da esteira: 4.0, 7.0, 11.0, 14.0 e o W6 da 16.0, na A1.
-- O teste de isolamento quebraria sem a cláusula de escopo do repository?
-- Os casos de borda do `N_task.md` têm cada um o seu teste?
-- Leia a seção "O que verificar" de cada guardião marcado (`.claude/agents/<nome>.md`) e diga
-  onde o plano atende cada item que se aplica.
-- Se `tasks/prd-<func>/achados/indice.md` existe, leia: é uma linha por rodada com o que os
-  revisores já exigiram nas tarefas anteriores. Não repita o mesmo erro. Abra o bloco inteiro
-  (`achados/<N>_task.md`, no cabeçalho com o mesmo fim) só das linhas que tocam o que você vai
-  mexer — o corpo todo passa de 600 KB por funcionalidade e não cabe na janela.
+Linha que começa com `-` sai, com `+` entra, e com espaço é contexto: fica, e serve para o trecho existir uma vez só
+no arquivo. Cláusula que só vale no celular (o ramo de toque, o menu de baixo) acrescenta ao cabeçalho a linha
+`projeto: celular`; ela só vale para teste de e2e, e sem ela o caso roda no `chromebook`, onde essa cláusula não é
+alcançada. O portão da tarefa aplica cada bloco, roda o teste citado, exige vermelho e restaura
+(`tools/processo/mutacoes.ts`).
 
 ## 3. Implementar
 
@@ -160,9 +86,8 @@ fazer, e as dos guardiões marcados:
 ## 4. Portão da tarefa
 
 <critical>O portão não é ferramenta de depuração. Enquanto um teste seu não passa, rode SÓ ele,
-quantas vezes precisar; o portão roda uma vez, com os testes da tarefa já verdes. Na 6.0 do F3 a
-tarefa foi escrita em 6 minutos e levou cinco horas, porque cada tentativa de acertar um e2e rodou o
-portão inteiro, de uns 30 minutos.</critical>
+quantas vezes precisar; o portão roda uma vez, com os testes da tarefa já verdes: ele leva uns 30 minutos,
+e cada tentativa de acertar um e2e por ele soma isso.</critical>
 
 ### Enquanto implementa: o teste isolado
 
@@ -174,16 +99,15 @@ flock /tmp/educa-carga.lock npx playwright test e2e/<arquivo>.spec.ts           
 ```
 
 **A fila de carga é do comando.** Cada linha tem o seu ambiente, mas a máquina é uma só: o e2e de duas
-linhas ao mesmo tempo estoura os 30 s (X2, carga de 9 a 24). O `portao-local.ts` e o `tools/ci/e2e.ts`
+linhas ao mesmo tempo estoura os 30 s. O `portao-local.ts` e o `tools/ci/e2e.ts`
 tomam o `flock /tmp/educa-carga.lock` sozinhos (`tools/ci/fila-de-carga.ts`): quem chega espera a vez e
 avisa que está esperando, e você não digita `flock` neles. Só o `npx playwright test` direto, que não
 passa por eles, continua com `flock /tmp/educa-carga.lock` na frente. **Nunca escreva laço de espera
-com `pgrep`**: o padrão casa com a linha de comando do próprio laço, e o laço não sai. Na X2 foram
-cinco, perto de 4 h de linha parada.
+com `pgrep`**: o padrão casa com a linha de comando do próprio laço, e o laço não sai.
 
 **O portão mede os casos de e2e que a tarefa alterou.** Caso de e2e cujas linhas o diff tocou e que passa de **metade do prazo** dele na máquina
-deixa o portão vermelho, antes das mutações e sem carimbo: o runner da esteira leva perto do dobro e o prazo é 30 s, o que dá **15 s**
-(X1: casos de 19 a 29 s aqui; X2: quatro dos sete casos de prazo já passavam de 15 s). O caso que já declarava `test.slow()` (90 s) ou
+deixa o portão vermelho, antes das mutações e sem carimbo: o runner da esteira leva perto do dobro e o prazo é 30 s, o que dá **15 s**.
+O caso que já declarava `test.slow()` (90 s) ou
 `test.setTimeout(n)` no HEAD é medido contra a metade desse prazo, também quando muda de arquivo; o prazo que você põe agora **não conta**
 (`test.slow()` num caso novo, ou num que o HEAD tinha sem prazo, mede 15 s do mesmo jeito), e só `test.slow()` e `test.setTimeout(n)`
 de corpo de caso são lidos. O caso lento que você não tocou não conta, e a mensagem diz arquivo, linha, projeto, segundos e limite. Olhe a duração que o `list` do Playwright já imprime no e2e isolado, e encurte antes do portão (semeie o dado
@@ -193,14 +117,13 @@ outra, por isso confira o isolado com folga (uns 12 s para o de 15 s), e não no
 
 **O portão roda também o e2e que cita um texto que a sua tarefa tirou da web.** Texto removido de `apps/web/src` (um título, um
 rótulo, um aviso, um `data-testid`) que algum `e2e/*.spec.ts` ainda cita, sem diferenciar maiúscula, põe esse spec nos alvos, mesmo
-que você não o tenha alterado; o portão escreve `▶ e2e/<arquivo> entra nos alvos: cita "<texto>"`. Foi o que faltou na X2: o W12 da
-casca ("Governança") e o sino da 6.0 ("Refazer o convite de") quebraram fora do diff, na esteira. Rode esse spec isolado antes do
+que você não o tenha alterado; o portão escreve `▶ e2e/<arquivo> entra nos alvos: cita "<texto>"`. Rode esse spec isolado antes do
 portão e **atualize o texto no e2e**: o spec entra para rodar, e o caso lento que já estava lá não é cobrado de você (a duração só vale
 para o caso que o diff tocou). Limites: o portão não acha (i) o spec que cita só um **pedaço** do texto removido (tirar "Governança da
 escola" não puxa o spec que procura `/governança/i`), (ii) o texto de JSX que continua na linha de baixo começando em minúscula, nem o
 template que atravessa linhas, e (iii) o texto citado só num ajudante de `e2e/__fixtures__/`, que não puxa os specs que o importam. Ao
 contrário, o texto só conta como tirado quando **nenhum** `apps/web/src/**/*.{ts,tsx}` (menos os `.test`) ainda o tem: o que sai de um arquivo e
-continua em outro não puxa spec (antes de 19/10/2026 puxava, e "Tentar de novo" levou 53 dos 68 specs ao portão da 3.0 da telas-do-professor); o
+continua em outro não puxa spec; o
 spec que o procurava justamente na tela trocada cai na esteira. Troca de texto da tela: procure você mesmo, com `grep -rn` em `e2e/`, o pedaço que o e2e usa.
 
 Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
@@ -270,9 +193,8 @@ grep -rln "<um vizinho que já existia: a rota irmã, a métrica irmã, o arquiv
 ```
 
 Se entrar na lista parece contrariar a regra que o teste cita, não atualize: é `DIVERGÊNCIA`, com
-`Motivo: desenho`. No F3, a 11.0, a 13.0, a 14.0 e a 15.0 deixaram três listas vermelhas
-(`apps/api/test/retencao.int.test.ts`, `apps/api/src/assistente/assistente.int.test.ts` e
-`infra/test/metricas.int.test.ts`), que só apareceram com a suíte inteira, quatro tarefas depois.
+`Motivo: desenho`. Os que costumam ficar vermelhos: `apps/api/test/retencao.int.test.ts`,
+`apps/api/src/assistente/assistente.int.test.ts` e `infra/test/metricas.int.test.ts`.
 
 O e2e inteiro e a suíte de infra inteira **não** rodam no portão da tarefa. Rodam na esteira do
 GitHub, que o push do seu commit dispara e ninguém espera (D79): o que a tarefa quebrar fora dos alvos
@@ -282,8 +204,7 @@ da tarefa só é provada pelos testes que estão entre os alvos.
 Spec de e2e criado ou alterado roda também repetido, com os trabalhadores da esteira, sobre o
 ambiente de pé: `flock /tmp/educa-carga.lock npx playwright test <specs da tarefa> --repeat-each 3 --workers 2`
 (o `npx playwright test` direto: o `tools/ci/e2e.ts` ainda não repassa essas opções e roda a suíte inteira). A máquina roda o
-e2e com 6 trabalhadores e a esteira com 2. O W6 da 16.0 da A1 passou em três portões locais e caiu na
-esteira por uma ordem de entrega que só a máquina lenta produziu.
+e2e com 6 trabalhadores e a esteira com 2: uma ordem de entrega que só a máquina lenta produz passa em portão local.
 
 **O hook bloqueia o commit sem carimbo mais novo que a última alteração.** Mexeu em qualquer arquivo
 depois do portão, rode de novo: agora custa minutos.
@@ -384,13 +305,13 @@ Só depois de tudo verde e de a Mesa responder "APROVADO por todos":
   `Implementa reivindicação de nome pelo link da sala (tarefa 4.0)`, com a linha
   `Revisões: <revisor> <veredito> (<n>ª rodada), ...` no corpo. Um commit por tarefa, nunca
   `--amend` em commit existente, nunca `--no-verify`.
-  **O arquivo existe antes do comando do commit.** O hook lê a árvore antes de o comando rodar: não
-  crie nem altere arquivo no mesmo Bash que faz o `git add` e o `git commit`.
+  **A mensagem vai num arquivo, por `git commit -F <arquivo>`.** O hook procura `Revisões:` no começo de uma
+  linha, e vários `-m` a deixam no meio do comando. Escreva a mensagem antes (na pasta de rascunho da sessão, ou
+  em `.processo/`) e passe o caminho: o arquivo existe antes do comando do commit (`protocolo.md`, item 4).
   Antes do commit, `git diff --cached --name-only` confere com a lista dos arquivos da tarefa (um
   `git add` que falha num caminho errado não prepara nada daquele comando). Depois do commit e antes
   do push, `git show --stat HEAD` e `git status --short`: nada da tarefa pode ter ficado de fora. Se
-  ficou e o commit ainda não foi enviado, `git reset --soft HEAD~1`, prepare de novo e refaça. Na
-  15.0 da A1, o commit saiu parcial e só foi refeito porque alguém olhou
+  ficou e o commit ainda não foi enviado, `git reset --soft HEAD~1`, prepare de novo e refaça
 - **Commit bloqueado pelo hook:** a mensagem diz qual revisor falta, reprovou ou caducou.
   Resolva o que ela aponta, pedindo à Mesa a rodada que falta. Não contorne: o hook também bloqueia
   commit que leva código de `apps/`, `packages/`, `infra/` ou `e2e/` sem `(tarefa N.0)` nem

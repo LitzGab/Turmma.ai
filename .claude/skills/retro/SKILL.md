@@ -42,7 +42,7 @@ Rodadas por tarefa: média <n>, pior <tarefa> com <n>
 Rodadas que caducaram sem reprovação (revisor aprovou e teve de rodar de novo): <n>
 Correções fora de tarefa: <n>
 Duração: primeira tarefa → último commit, e mediana por tarefa (intervalo entre commits)
-Ressalvas do /validar: <n críticos, n maiores>
+Ressalvas da validação: <n críticos, n maiores>
 ```
 
 Compare com a retrospectiva anterior (`tasks/prd-*/retro.md` mais recente), se houver.
@@ -104,7 +104,7 @@ Proposta que afrouxa a regra 10, a 20 ou a 70 não existe (aviso crítico acima)
 ## 6. Salvar
 
 `tasks/prd-$ARGUMENTS/retro.md`, com as medidas, os grupos, as propostas e o que foi aceito ou
-recusado (com o motivo), marcando as que foram aviso. O `/criar-tasks` da próxima funcionalidade lê esse arquivo.
+recusado (com o motivo), marcando as que foram aviso. O `criar-tasks` da próxima funcionalidade lê esse arquivo.
 
 Commit na `develop`, no térreo, depois do pouso da funcionalidade (D78), sem push (o push é do
 Orquestrador): `Faz a retrospectiva de <funcionalidade> e ajusta o processo`,

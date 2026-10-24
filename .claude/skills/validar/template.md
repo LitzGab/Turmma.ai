@@ -59,4 +59,4 @@ Por que o veredito é este e, se não for APROVADA, o caminho até ela.
 ### 6. Pendências herdadas
 
 O que fica para depois sem bloquear, com o destino de cada uma (próxima funcionalidade que
-mexer no assunto, `TODO.md`, `/descobrir`, `/registrar-decisao`).
+mexer no assunto, `TODO.md`, `descobrir`, `registrar-decisao`).

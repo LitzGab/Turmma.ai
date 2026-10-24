@@ -289,6 +289,36 @@ Orquestrador o leva ao `TODO.md` no fechamento. Se mesmo assim o veredito vier c
 20 e 70, ele escreve o aceite com "aceitas por Orquestrador (aviso da D79)", que é o que o `estado.ts` lê. Os commits `Fora do processo:`
 com código da spec saem na seção 6 do relatório (`validador.md`, seção 5, e `validar/SKILL.md`, passo 3).
 
+**Um fato num lugar só (18.0, 24/10/2026).** Cada contradição do `texto.md` ficou onde está dito abaixo; nos outros lugares a frase
+saiu ou aponta para lá. Esteira "uma vez por spec" × "em todo push": a D79, com `(revista pela D79)` nas D53 e D78 do
+`docs/decisoes.md`, e o `corrigir` diz que a esteira roda em todo push e que o Orquestrador lê o veredito. "`test-engineer`
+primeiro" × revisores juntos: o passo 2 do `revisar-tarefa`. `vigia`: a tabela dela ("a tabela acima é tudo o que a vigia faz"),
+com o arquivo de cada passo do `/seguir`. `/corrigir`, `/retro`, `/validar` e as outras como comando × `user-invocable: false`:
+`/seguir` é o único comando, e o resto é nome de skill, sem a barra, nos papéis, nas skills, no `CLAUDE.md`, no `ROADMAP.md` e em
+seis documentos de `docs/`. Identidade visual "em aberto" × D80: a D80, com uma frase no conflito "Pele do produto" do topo do
+`docs/decisoes.md`, e a `descobrir` sem o exemplo. Pasta de adaptadores: já na 16.0. **Tabela natureza → guardião**: a tabela por
+natureza fica **uma só**, em `criar-tasks/SKILL.md` ("Subagentes obrigatórios por natureza da tarefa", que ganhou "indicador de
+professor" na linha da `conformidade-reviewer`); o `revisar-spec` e o `revisar-tarefa` apontam para ela, e o que o caminho pede
+fica em `guardioes-por-caminho.ts`, descrito em `tabela-de-guardioes.md`. "O arquivo existe antes do commit": o protocolo (item 4)
+e a recusa do hook; o `executar-task` e o `corrigir` apontam para lá. A mensagem do commit vai num arquivo, por
+`git commit -F <arquivo>` (18.4a), porque o hook procura `Revisões:` no começo de uma linha e vários `-m` a deixam no meio do
+comando. Regra 80, item 5: nota datada de 24/10/2026 (a sessão é lida do Postgres; a N2 da X5 decide, com dois limites: p95 de
+`sessao.leitura.duracao` até 50 ms e espera do pool até 100 ms), sem mudar a linha `Checagem:`. `docs/aia/ouro/README.md`: já
+manda `(correção <slug>)` com o `conformidade-reviewer` (14.0).
+
+**Os blocos repetidos entre revisores (18.3).** A seção "Severidade e rodada nova" é igual nos seis revisores com veto
+(`REPROVADO só com…`) e, em outra família, igual nos três sem veto (`AJUSTES NECESSÁRIOS só com…`); o que era só do `revisor-geral`
+(invadir escopo, divergir da spec em silêncio, carimbo, "o bloqueante do `test-engineer` não é seu") foi para a seção
+`## O que é bloqueante só para você`. O bloco "Quando o prompt traz fotos da tela" tem três parágrafos nos quatro que o têm
+(`privacy-guardian`, `conformidade-reviewer`, `revisor-geral`, `pedagogia-reviewer`): o começo e o fim são iguais, e o do meio
+é do papel. A lista "O que verificar" e o formato da resposta dos quatro guardiões com veto não mudam: a gravação de
+24/10/2026 está em `tools/processo/harness/__fixtures__/revisores-antes/` e o `revisores.test.ts` compara byte a byte. Os
+`frontend-reviewer`, `pedagogia-reviewer` e `llm-integrator` mudaram só a frase "para a validação e a retro".
+
+**O `executar-task` sem diário (18.4).** Os 26 casos datados foram para `docs/processo-licoes.md` (data, origem, o que
+aconteceu, onde a regra ficou); a autoconferência virou 12 perguntas numeradas na seção `## Autoconferência` do
+`task-template.md`; o arquivo tem 342 linhas, com limite de 499 no `revisores.test.ts`.
+
 **Receitas (RF32, decisão do Joaquim, 23/10/2026).** A receita mora no `docs/guia-do-desenvolvedor.md` (§5 as receitas,
 §7 as travas); a skill `.claude/skills/receitas-de-codigo/SKILL.md` só aponta. Frontmatter com `name` e uma `description`
 que contém as palavras dos seis assuntos (`endpoint`, `tabela`, `job`, `IA`, `tela`, `isolamento`), que é como o

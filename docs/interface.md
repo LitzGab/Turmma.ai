@@ -108,7 +108,7 @@ existe e onde nasce o que falta: a **X1** troca a pele e a casca com os itens de
   dele primeiro, o que a coordenação vê dele é agregado, e o nominal só abre com auditoria. A tela
   diz isso em português comum. Nasce no F12; a conta já tem "Meus dados", do F3
 - **Lugar sem tela não aparece** (D73, que continua valendo). **Projetos** e **Fixados** só entram
-  se o `/descobrir` do P05 aceitar
+  se o `descobrir` do P05 aceitar
 
 ### 1.1 Chat e ferramenta são o mesmo motor (D18)
 
@@ -170,7 +170,7 @@ entra no catálogo daqui para frente. As ferramentas do roteiro, nas quatro cate
 
 O mockup propõe mais oito: planejamento do período, projeto, plano de recuperação, mapa mental,
 roteiro de experimento, avaliação diagnóstica, proposta de redação e importar prova (P22). **Elas
-não estão no roteiro**: cada uma passa por `/descobrir` antes do F7, e a tela mostra só as que
+não estão no roteiro**: cada uma passa por `descobrir` antes do F7, e a tela mostra só as que
 existem.
 
 Toda ferramenta produz um **artefato** que fica na biblioteca, ligado à turma e ao

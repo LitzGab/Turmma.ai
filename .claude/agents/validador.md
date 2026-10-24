@@ -128,7 +128,7 @@ node tools/processo/portao-local.ts --tarefa
   para não se perder. As recomendações estão resumidas em `achados/indice.md`, na pasta da
   funcionalidade, uma linha por rodada, com o texto inteiro em `achados/<documento>.md`. Escrito
   pelo hook.
-- A Tech Spec passou por `/revisar-spec` (existe `revisao-spec.md` com veredito APROVADA)?
+- A Tech Spec passou pela revisão da spec, `revisar-spec` (existe `revisao-spec.md` com veredito APROVADA)?
   Funcionalidade especificada depois de 15/09/2026 sem isso é achado maior.
 - Commit depois de 15/09/2026 que levou código sem `(tarefa N.0)` nem `(correção <slug>)`, salvo os de
   `Fora do processo:` (abaixo), é achado maior: código que não passou por revisor.

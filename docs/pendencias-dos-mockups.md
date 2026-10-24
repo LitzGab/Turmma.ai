@@ -15,8 +15,8 @@
 >   miniaturas), P28 (a turma aberta com Visão Geral e Alunos: `professor/Turma.tsx`) e P10 (o
 >   aluno vê diagnóstico, e não existe nota: D46).
 > - **Não entregues, com o destino:** P06 (uma conversa só por professora, sem Histórico: F7), P11
->   e o resto do P28 (antes do PRD do F6; Recursos e Mural por `/descobrir`), P13 e P25 (a grade
->   e a página em duas colunas: F7). Os itens de `/descobrir` continuam como estavam.
+>   e o resto do P28 (antes do PRD do F6; Recursos e Mural por `descobrir`), P13 e P25 (a grade
+>   e a página em duas colunas: F7). Os itens de `descobrir` continuam como estavam.
 
 > Em 19 e 20/09/2026 o Gabriel revisou, em oito rodadas, os mockups da interface inteira. Eles
 > estão na pasta **`mockups/`** (como rodar: `mockups/README.md`), que entrou na `develop` em
@@ -28,8 +28,8 @@
 >
 > Este documento lista uma a uma, com o que o **produto** precisa para cada coisa funcionar:
 > tela, API e domínio, dado, regra, teste, e por onde ela entra no processo. Nada aqui é decisão
-> registrada. O que for decisão entra por `/registrar-decisao`, com o aceite do Joaquim; o que for
-> funcionalidade nova entra por `/descobrir`, não por PRD (`CLAUDE.md`, "Decisões em aberto").
+> registrada. O que for decisão entra pela skill `registrar-decisao`, com o aceite do Joaquim; o que for
+> funcionalidade nova entra por `descobrir`, não por PRD (`CLAUDE.md`, "Decisões em aberto").
 >
 > **Em 23/09/2026 fecharam os itens que travavam a A1 e a A2** (`docs/decisoes.md`): P01 (D32,
 > D9 e D60 revistas), P02, P03 e P31 (D72), P04 (D73) e a regra e as categorias do P22 (D74). No
@@ -43,8 +43,8 @@
 
 | Tipo | O que é | Por onde entra |
 |---|---|---|
-| **DECISÃO** | contradiz ou afina uma decisão D<n> já registrada | `/registrar-decisao`, como revisão da D<n>; Joaquim ratifica |
-| **NOVO** | não existe em nenhuma fase do `ROADMAP.md` | `/descobrir <tema>`, e só depois vira escopo de fase |
+| **DECISÃO** | contradiz ou afina uma decisão D<n> já registrada | a skill `registrar-decisao`, como revisão da D<n>; Joaquim ratifica |
+| **NOVO** | não existe em nenhuma fase do `ROADMAP.md` | `descobrir <tema>`, e só depois vira escopo de fase |
 | **AJUSTE** | a fase existe; muda o que ela entrega ou como aparece | entra no PRD da fase (ou da fatia A1 a A5) |
 | **FRONT** | só tela, peça ou orçamento de front | Tech Spec da A1 e `docs/interface.md` |
 
@@ -62,10 +62,10 @@ Os itens marcados **fechado** viraram decisão em 23/09/2026; os outros continua
 | P02 | Pele do produto: ChatGPT em branco, preto e laranja | DECISÃO | `interface.md` seções 8 e 9 | **fechado** (D72) |
 | P03 | Padrão de espaço: aba sem título, tela que cabe na janela | FRONT | `interface.md` 6, 9.3 e 11 | **fechado** (D72) |
 | P04 | Navegação do professor | DECISÃO | `interface.md` seção 1, D69 | **fechado** (D73) |
-| P05 | Projetos | NOVO | modelo de dados, LGPD, D5, F7 | `/descobrir` |
+| P05 | Projetos | NOVO | modelo de dados, LGPD, D5, F7 | `descobrir` |
 | P06 | Histórico real de conversas | AJUSTE | F7, modelo de dados (entidade que falta), LGPD | PRD da A2 |
-| P07 | Anexar documento na conversa | NOVO | D5, D55, D62, F4, F7 | `/descobrir` |
-| P08 | Faltas e a chamada do professor | NOVO | modelo de dados, LGPD, F6 | `/descobrir` |
+| P07 | Anexar documento na conversa | NOVO | D5, D55, D62, F4, F7 | `descobrir` |
+| P08 | Faltas e a chamada do professor | NOVO | modelo de dados, LGPD, F6 | `descobrir` |
 | P09 | Configurações da pessoa | NOVO (casca) | F1, F3, F7, F9, F12, F13 | PRD da A1 (só a casca) |
 | P10 | "Nota" do aluno na sala | AJUSTE | D46, F6, F17, regra 70 item 1 | PRD da A3 |
 | P11 | A sala de aula, uma carteira por aluno (hoje subaba de Alunos, P28) | DECISÃO + AJUSTE | D69, F6, AIA do diagnóstico | PRD da A3 |
@@ -79,13 +79,13 @@ Os itens marcados **fechado** viraram decisão em 23/09/2026; os outros continua
 | P19 | Coordenação › Agentes por função | AJUSTE | F12, A5 | PRD da A5 |
 | P20 | Peças novas do 21st.dev e licenças a conferir | FRONT | `interface.md` 10.1 e 10.2 | antes de o código entrar |
 | P21 | O que o mockup faz e o produto não pode copiar | FRONT | regras 10, 20, 40, 50 | sempre |
-| P22 | Catálogo de ferramentas: a regra "ferramenta ou chat" e oito ferramentas novas | NOVO + DECISÃO | D67, F7, `interface.md` 1.2, regra 60 item 8, D5, D55, D57, D66 | a regra e as categorias: **fechado** (D74); as oito, `/descobrir` |
+| P22 | Catálogo de ferramentas: a regra "ferramenta ou chat" e oito ferramentas novas | NOVO + DECISÃO | D67, F7, `interface.md` 1.2, regra 60 item 8, D5, D55, D57, D66 | a regra e as categorias: **fechado** (D74); as oito, `descobrir` |
 | P23 | Ferramenta é dado: um motor de formulário, não uma tela por ferramenta | FRONT + arquitetura | D18, F7, Tech Spec da A2, regra 30 | Tech Spec da A2 |
 | P24 | "O resto é só pedir": o que o chat faz sem ferramenta | AJUSTE | D18, F7, regra 20 item 12, D68 | PRD da A2 |
 | P25 | Página da ferramenta em duas colunas: formulário e "o que sai" | FRONT | `interface.md` 1.2 e 11 | PRD da A2 |
-| P26 | Ranking de participação na turma | DECISÃO | `interface.md` 10.2, D57, D59, D66, P08 | `/descobrir`; fora do MVP até lá |
+| P26 | Ranking de participação na turma | DECISÃO | `interface.md` 10.2, D57, D59, D66, P08 | `descobrir`; fora do MVP até lá |
 | P27 | Convidar alunos: link, WhatsApp e código da turma | AJUSTE | D3, D4, F2, regra 20 item 8, regra 80 item 1 | PRD da A1 (D71 revista) |
-| P28 | A turma aberta com nove abas, no modelo da Teachy; Recursos e Mural | DECISÃO + NOVO | D69, D8, D45, D64, regra 70 item 3, F6, F7 | PRD da A3; Recursos e Mural por `/descobrir` |
+| P28 | A turma aberta com nove abas, no modelo da Teachy; Recursos e Mural | DECISÃO + NOVO | D69, D8, D45, D64, regra 70 item 3, F6, F7 | PRD da A3; Recursos e Mural por `descobrir` |
 | P29 | Seu time em formato de conversa | AJUSTE | F11, D14, P14 | PRD da A1 |
 | P30 | Seletor de escola como espaço de trabalho | FRONT + tenancy | regra 10, P12 | PRD da A1 |
 | P31 | Segunda pele: Ferramentas e Turmas copiadas da Teachy | DECISÃO | P02, P03, P17, `interface.md` 9, regra 50 | **fechado** (D72: a pele do P02 em tudo) |
@@ -243,10 +243,10 @@ instruções e os arquivos. No mockup funciona criar, fixar, conversar dentro e 
 - **Arquivo de projeto é material.** Só entra com titularidade e licença declaradas (D5), preso
   à escola (regra 10): professor de duas escolas não leva arquivo de uma para a outra. O modelo já
   prevê `FonteMaterial.titularidade = professor`, mas hoje exige `autorizacaoDoc` e
-  `autorizadoPor` da escola. **Pergunta para o `/descobrir`:** o professor sobe material próprio
+  `autorizadoPor` da escola. **Pergunta para o `descobrir`:** o professor sobe material próprio
   sem a coordenação autorizar fonte por fonte? A mesma pergunta vale para o anexo (P07).
   **23/09/2026:** para a base de material da escola, a D75 respondeu que não — ela só recebe o que
-  a coordenação sobe. Se o arquivo de projeto fica fora dessa base, é pergunta do `/descobrir`
+  a coordenação sobe. Se o arquivo de projeto fica fora dessa base, é pergunta do `descobrir`
 - **IA.** Instruções e arquivos entram no contexto de toda conversa do projeto: recuperação por
   trecho, nunca o arquivo inteiro; limite de tamanho nas instruções; tudo pela porta, com perfil e
   orçamento (regra 30, D14). **Instrução é texto livre do professor**: pode conter nome de aluno,
@@ -259,7 +259,7 @@ instruções e os arquivos. No mockup funciona criar, fixar, conversar dentro e 
 - **Teste.** Isolamento entre escolas; coordenação não alcança projeto; mover conversa entre
   projetos; apagar projeto não apaga o artefato que já está na biblioteca (a decidir)
 
-**Onde entra.** Não existe fase. `/descobrir projetos`; provavelmente estende o F7, depois do MVP
+**Onde entra.** Não existe fase. `descobrir projetos`; provavelmente estende o F7, depois do MVP
 de apresentação. Se for aparecer na demonstração, a fatia honesta é: criar, fixar e conversar
 dentro, **sem arquivos**. **Dono:** Gabriel e Joaquim.
 
@@ -319,7 +319,7 @@ anexo vale só para aquela conversa e **não entra na base de material da escola
   verificação de tipo real do arquivo; imagem usa o perfil `visao`
 - **Custo.** Conta no orçamento de IA da escola (D14, D39)
 
-**Onde entra.** `/descobrir anexo-na-conversa`. Proposta: fora do MVP de apresentação.
+**Onde entra.** `descobrir anexo-na-conversa`. Proposta: fora do MVP de apresentação.
 **Dono:** Gabriel e Joaquim.
 
 ### P08 — Faltas · NOVO
@@ -588,13 +588,13 @@ perfil de modelo na regra 30; fonte citada com página; teste de regra de negóc
 | **Proposta de redação** | tema, comando, textos motivadores e **rubrica por competência** | texto motivador só do material licenciado ou de fonte aberta, com a referência (D5); nunca da web sem rótulo (D68). A correção continua sendo do professor (D55) |
 | **Importar prova** | PDF ou Word vira prova editável, questão a questão | é **ingestão** (F4): declaração de origem obrigatória (D5), prova de sistema de ensino sem licença é recusada; o arquivo original guarda com a escola; se a prova tiver nome ou resposta de aluno, não entra (regra 20). Imagem dentro da questão precisa vir inteira: é o caso difícil do parser |
 
-**Onde entra.** A regra e as categorias: `/registrar-decisao`, antes do PRD da A2 (o catálogo aparece na
-demonstração). As oito novas: `/descobrir ferramentas-novas`, uma a uma, e só então entram no F7 — **nenhuma
+**Onde entra.** A regra e as categorias: a skill `registrar-decisao`, antes do PRD da A2 (o catálogo aparece na
+demonstração). As oito novas: `descobrir ferramentas-novas`, uma a uma, e só então entram no F7 — **nenhuma
 entra no MVP de apresentação sem decisão**; na A2 a tela pode mostrar só as que existem. **Dono:**
 Gabriel decide o catálogo; Joaquim ratifica e estima.
 
 **Fechado em 23/09/2026, em parte:** a regra e as quatro categorias viraram a **D74**. As oito
-ferramentas novas continuam em `/descobrir`, uma a uma, antes do F7.
+ferramentas novas continuam em `descobrir`, uma a uma, antes do F7.
 
 ### P23 — Ferramenta é dado: um motor de formulário, não uma tela por ferramenta · FRONT + arquitetura
 
@@ -722,7 +722,7 @@ O mockup trocou a palavra por "participação" e só pontua fato registrado.
 As abas Atividades e Frequência já mostram, sem ordenar ninguém: quem não entregou e quem faltou,
 em ordem de chamada.
 
-**Onde entra.** `/descobrir ranking-de-participacao`, com o Joaquim e com a AIA dos sinais (D60). Até
+**Onde entra.** `descobrir ranking-de-participacao`, com o Joaquim e com a AIA dos sinais (D60). Até
 lá fica fora do MVP de apresentação e do F6. **Dono:** Gabriel e Joaquim.
 
 ### P27 — Convidar alunos: link, WhatsApp e código da turma · AJUSTE (D3, F2)
@@ -787,7 +787,7 @@ continue sendo só dele.
   mesmos do P11
 
 **Onde entra.** A estrutura e as abas que já têm fase: PRD da A3 e do F6. **Recursos** e **Mural**:
-`/descobrir` de cada um, fora do MVP até lá. **Dono:** Joaquim; Recursos e Mural, Gabriel e Joaquim.
+`descobrir` de cada um, fora do MVP até lá. **Dono:** Joaquim; Recursos e Mural, Gabriel e Joaquim.
 
 ### P29 — Seu time em formato de conversa · AJUSTE (F11)
 
@@ -862,7 +862,7 @@ dress do caminho. O Gabriel precisa ser avisado: a oitava rodada pedia o contrá
    ferramenta) já é a D74
 3. **Antes do PRD da A3:** P10, P11, P28 (a estrutura da turma aberta) e os limiares dos indicadores
 4. **Antes do PRD da A5:** P19
-5. **Só depois de `/descobrir`:** P05, P07, P08, P26, Recursos e Mural (P28) e as **oito ferramentas
+5. **Só depois de `descobrir`:** P05, P07, P08, P26, Recursos e Mural (P28) e as **oito ferramentas
    novas** do P22. Nada disso entra no
    MVP de apresentação sem decisão; o Planejamento do período e o Projeto ainda dependem do F8, e o
    Plano de recuperação, do F6

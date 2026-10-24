@@ -6,7 +6,7 @@ user-invocable: false
 ---
 
 Você corrige **um** defeito que não pertence a nenhuma tarefa pendente: um teste intermitente,
-um bug que a esteira pegou, uma ressalva do `/validar`, um problema achado em uso.
+um bug que a esteira pegou, uma ressalva da validação, um problema achado em uso.
 
 Quem roda isto é o Implementador, a pedido do Orquestrador (`/seguir`, D78): na branch da spec em
 curso, quando o defeito é dela, ou num andar próprio, `correcao/<AAAA-MM-DD>-<slug>`, quando é avulso.
@@ -89,7 +89,7 @@ revisão, com o documento da correção, e ela chama o `test-engineer` e os guar
 "Subagentes obrigatórios" do documento, no passo 1 ou assim que passar do limite: é dessa linha que o
 hook tira quem cobra. Na A1, duas correções
 passaram do limite sem ele (`decididos-continuam-marcados`, com 7 arquivos, e `e2e-em-fatias`, com
-11, a N5 do `/validar`).
+11, a N5 da validação).
 
 Antes de pedir cada rodada, rode
 `node tools/processo/portao-local.ts conferir tasks/correcoes/<AAAA-MM-DD>-<slug>.md`. Se der
@@ -99,16 +99,14 @@ conferência de um comando.
 
 ## 6. Commit e push
 
-Na branch do andar (D78). A esteira não é conferida a cada commit: ela roda na branch antes do pouso
-(`/seguir`, passo 8), e a correção que nasce de esteira vermelha é a que a fecha. Como a esteira só
-roda no fim, a falha pode ser de qualquer tarefa: escreva na "Causa" de qual foi.
+Na branch do andar (D78). A esteira roda em todo push de `spec/**` e de `correcao/**` (D79), e quem lê o
+veredito é o Orquestrador, não você: a correção que nasce de esteira vermelha é a que a fecha. A falha
+pode ser de qualquer tarefa anterior: escreva na "Causa" de qual foi.
 
 - stage só os arquivos da correção, o documento e, se o hook os escreveu,
   `tasks/correcoes/achados/<slug>.md` e `tasks/correcoes/achados/indice.md`. O índice é da pasta:
   linha de outro documento que tenha entrado enquanto esta correção corria vai junto, e é assim
   mesmo — ele só é acrescentado, e tirar a linha à mão perderia o registro dela;
-- **o arquivo existe antes do comando do commit**: o hook lê a árvore antes de o comando rodar, então
-  não crie nem altere arquivo no mesmo Bash do `git add` e do `git commit`;
 - antes do commit, `git diff --cached --name-only` confere com a lista dos arquivos da correção (um
   `git add` que falha num caminho errado não prepara nada daquele comando); depois do commit e antes
   do push, `git show --stat HEAD` e `git status --short`: se algo ficou de fora e o commit ainda não
@@ -117,7 +115,9 @@ roda no fim, a falha pode ser de qualquer tarefa: escreva na "Causa" de qual foi
 - veio um `achados-revisoes.md` de volta num merge? `node tools/processo/separar-achados.ts` antes
   do commit, e então prepare a deleção dele e a pasta `achados/` inteira, que é mais do que os
   arquivos desta correção;
-- mensagem `Corrige <o quê> (correção <AAAA-MM-DD>-<slug>)`, com a linha `Revisões:` no corpo;
+- a mensagem é `Corrige <o quê> (correção <AAAA-MM-DD>-<slug>)`, com a linha `Revisões:` no corpo, e vai
+  **num arquivo**, por `git commit -F <arquivo>`: o hook procura `Revisões:` no começo de uma linha, e vários
+  `-m` a deixam no meio do comando. O arquivo existe antes do comando do commit (`protocolo.md`, item 4);
 - `git push -u origin HEAD`, para a branch do andar. Nunca para a `develop`: o pouso é do Joaquim.
 
 ## 7. Relatório

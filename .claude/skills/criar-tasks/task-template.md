@@ -78,13 +78,64 @@ quê.
   (`coordenacao`, `professora` ou `aluno`), o endereço, o clique que leva ao estado (`text=<aba>`) e o
   mockup de referência, se houver. É a lista que o Implementador e a Mesa fotografam (`tools/vitrine/`)
 
+## Autoconferência
+
+Quem implementa responde cada pergunta **por escrito, no plano**, antes de codar (`executar-task`, passo 2). Pergunta que
+não se aplica à tarefa: diga por quê, em meia linha. O `test-engineer` é quem mais reprova, e cada reprovação custa uma
+rodada nova; o caso que originou cada pergunta está em `docs/processo-licoes.md`.
+
+1. **Qual é a mutação de cada cláusula?** Liste cada cláusula que o diff acrescenta — condição de `where`, `if` de guarda,
+   `catch` que traduz erro, restrição ou índice de migration, trava de clique, cada termo de uma condição composta
+   (`a && b && c` são três) — e, na tela, a condição que mostra ou esconde um pedaço do JSX, cada efeito (o foco devolvido,
+   a medida gravada com `style.setProperty`, a guarda dele) e o id dentro de uma `queryKey`. Inclua as cópias da mesma regra
+   em outro arquivo e as que entram depois, para atender um revisor. Cada uma ganha um bloco na seção "Mutações"; bloco cujo
+   teste continua verde reprova o portão: falta o teste, e não o bloco. Trava se prova pelo efeito (dois registros), não
+   pela espera.
+2. **O texto que você põe na tela já aparece nela?** Procure o texto novo em `e2e/` (`grep -rln '<texto>' e2e/`) e rode
+   isolados os specs que o contam (`toHaveCount`, `nth`): o portão só puxa os specs que citam texto **removido**.
+3. **O cenário tem o segundo dado que torna a cláusula observável?** Se o repository filtra por turma, aluno em **duas**
+   turmas; se filtra por estado, vínculo em cada estado; se lê `inatividadeMin`, escola com valor **diferente** do padrão.
+   Apagar a cláusula tem de deixar algo vermelho.
+4. **Alguma checagem anterior responde antes da regra sob teste?** A rota cai em `exigirAnoEmCurso()`, o e-mail não acha
+   ninguém: o teste fica verde pelo motivo errado. Percorra o caminho até a linha que interessa e confirme que o cenário
+   chega nela.
+5. **A asserção olha o resultado, ou a forma do código?** Asserção sobre texto de arquivo, nome de função ou lista vazia
+   passa igual se a regra ler o campo errado. Compare o que o usuário obtém.
+6. **A guarda nova (regra de lint, teste estrutural, trava de pasta) tem fixture de quem a contorna, e falha quando o alvo
+   some?** Uma fixture e o teste vermelho para cada forma de escrever o mesmo que a regra conhece (reexportação,
+   `import *`, `import()` e `require`, o caminho como texto em outra posição, alias). A cerca sobre arquivo que mudou de
+   lugar reprova, e não se cala; o `ignore` da configuração tem caso que prova que não esconde o real.
+7. **Algum comentário, docblock ou nota da tarefa afirma o que o código não faz?** Neste repositório a regra do módulo mora
+   no comentário: quem lê "e só elas" conclui que o caso está barrado, e o próximo a mexer "corrige" o código pelo comentário.
+8. **A divergência que você vai registrar cria ou muda uma regra, e a coluna "Onde está na spec" diz a verdade?** Uma trava
+   nova, um subcomando a mais sob a mesma conferência, uma gravação nova numa rota sem sessão: antes do código, a
+   divergência ganha a sua linha na tabela de testes e a resposta do guardião que ela toca (quem chama sem autenticação,
+   quantas vezes por segundo, o que grava a cada vez). Antes da primeira rodada, abra cada lugar que a coluna cita e ache lá
+   a decisão, com a palavra do código; se a decisão muda algo que mais de um documento descreve, procure o termo antigo em
+   todos de uma vez, com `grep`. Subtarefa de busca ou de commit à parte só fica `[x]` com a prova no documento: a saída do
+   `grep` (vazia, ou cada linha justificada) e o hash do commit de caracterização.
+9. **Qual peça que já existe faz isto?** Procure em `apps/api/src/sessao/` e em `packages/nucleo/` antes de escrever.
+   Reaproveite importando; se a peça está no lugar errado para dois módulos, mova-a para arquivo próprio ou para o
+   `nucleo`, nesta tarefa, e não copie.
+10. **A operação que pode acontecer duas vezes ao mesmo tempo tem teste com as duas chamadas em paralelo (`Promise.all`), e
+    a corrida entre duas operações diferentes, ou a resposta que chega fora de ordem, tem a ordem forçada?** No banco,
+    `GatilhoDeParada` e `esperarNaTrava` (`apps/api/test/gatilho-de-parada.ts`); na tela, a resposta segurada com
+    `page.route` ou o relógio parado com `page.clock.pauseAt`, como a correção `2026-10-03-decididos-continuam-marcados`.
+    `Promise.all` solto prova a ordem que sair, e vira intermitente no banco carregado da esteira.
+11. **O teste de isolamento quebraria sem a cláusula de escopo do repository, e cada caso de borda do documento tem o seu
+    teste?** Remova mentalmente a cláusula e pergunte se algo ficaria vermelho.
+12. **Onde o plano atende cada item de "O que verificar" dos guardiões marcados (`.claude/agents/<nome>.md`), e o que o
+    `achados/indice.md` já diz?** Se `tasks/prd-<funcionalidade>/achados/indice.md` existe, leia: é uma linha por rodada com
+    o que os revisores já exigiram. Abra o bloco inteiro (`achados/<N>_task.md`) só das linhas que tocam o que você vai
+    mexer; o corpo todo passa de 600 KB por funcionalidade e não cabe na janela.
+
 ## Fora do escopo desta tarefa
 
 O que pertence a outra tarefa e não deve ser implementado aqui.
 
 ## Divergências resolvidas nesta tarefa
 
-Preenchida por quem implementa (`/executar-task`, passo 2). Uma linha por decisão que se afasta da
+Preenchida por quem implementa (`executar-task`, passo 2). Uma linha por decisão que se afasta da
 Tech Spec, do `cenarios.md` ou da subtarefa. A coluna "Onde está na spec" é preenchida **antes dos
 revisores**: divergência sem ela está só na tarefa, e o `revisor-geral` reprova (foram quatro
 reprovações na A1). Sem nenhuma, escreva "nenhuma".
@@ -94,7 +145,7 @@ reprovações na A1). Sem nenhuma, escreva "nenhuma".
 
 ## Mutações
 
-Preenchida por quem implementa (`/executar-task`, passo 2): um bloco por cláusula que o diff
+Preenchida por quem implementa (`executar-task`, passo 2): um bloco por cláusula que o diff
 acrescenta, inclusive as que a tabela de testes não cita e as cópias da mesma regra em outro arquivo.
 O portão da tarefa aplica cada bloco, roda o teste citado e exige vermelho. Linha com `-` sai, com
 `+` entra, com espaço é contexto. Cláusula que só vale no celular leva a linha `projeto: celular` depois de
@@ -111,7 +162,7 @@ teste: [caminho do teste] › [nome do caso]
 
 Recomendação de revisor que não foi aplicada, com destino: `TODO.md`, a tarefa que toca o arquivo,
 ou recusada com o motivo. Destino `TODO.md` é a linha já escrita no `TODO.md`, no commit da tarefa, e
-não promessa. "Anularia as aprovações" não é motivo (`/executar-task`, passo 5). Sem nenhuma, escreva
+não promessa. "Anularia as aprovações" não é motivo (`executar-task`, passo 5). Sem nenhuma, escreva
 "nenhuma".
 
 | Revisor e rodada | Recomendação | Destino ou motivo |

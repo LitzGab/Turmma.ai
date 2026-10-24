@@ -48,7 +48,7 @@ premissa do §12 cair, também nos revisores. A regra 40 passa a dizer o RF17.
 | `/corrigir`, `/retro`, `/revisar-spec` como comando × `user-invocable: false` | `/seguir` é o único comando |
 | identidade visual "em aberto" × D80 | D80 |
 | pasta de adaptadores da regra 30, do `llm-integrator` e da guarda | `packages/nucleo/src/ia/adaptador-*.ts` |
-| tabela natureza → guardião em seis lugares | `tabela-de-guardioes.md` e o código |
+| tabela natureza → guardião em seis lugares | a tabela por natureza fica só em `criar-tasks/SKILL.md`; o caminho, em `guardioes-por-caminho.ts` e `tabela-de-guardioes.md` |
 | "o arquivo existe antes do commit" em três skills | a mensagem do hook e o protocolo |
 | regra 80.5 (sessão no Redis) × o código | nota na regra, até a N2 |
 | `docs/aia/ouro/README.md` manda commitar com `(ouro: <política>)` × RF16 | o README passa a `(correção <slug>)` com o `conformidade-reviewer` |

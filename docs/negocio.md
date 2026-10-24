@@ -3,7 +3,7 @@
 > Este documento guarda o contexto comercial que orienta prioridade de produto. **Não é
 > leitura obrigatória para implementar uma tarefa.** É leitura obrigatória para escrever PRD
 > de funcionalidade que mexe com preço, consumo de IA, governança ou demonstração, e para
-> `/descobrir` quando a decisão tem custo.
+> `descobrir` quando a decisão tem custo.
 >
 > Fonte: o mapa do projeto, a call de 12/09/2026 entre Gabriel e Joaquim, o benchmark de
 > concorrentes e as decisões até 13/09/2026. Os números de mercado são do levantamento

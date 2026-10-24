@@ -942,7 +942,7 @@ O caso morto pelo estouro de `timeout-minutes` não deixa traço finalizado; aí
 serviços no próprio job.
 
 Vermelho de e2e que não reproduz na máquina segura a tarefa seguinte (regra 40, D52): trate como
-defeito por `/corrigir`, com a causa achada no traço, e não repetindo a execução até passar. Para
+defeito pela correção (`corrigir`), com a causa achada no traço, e não repetindo a execução até passar. Para
 repetir só a fatia na máquina: `node tools/ci/e2e.ts --shard=<i>/7`, que sobe o compose limpo como a
 esteira. A fatia começa com o banco vazio e roda só a parte dela: caso que passa na suíte inteira e
 falha na fatia depende de outro spec ter rodado antes, e isso é o defeito.

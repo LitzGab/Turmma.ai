@@ -11,7 +11,7 @@ Arquiteto, no andar da spec (D78): ele chama os revisores como subagentes, e o h
 Este comando existe porque erro de desenho é o mais caro do processo: uma Tech Spec que esquece
 o escopo de ano letivo, manda log com nome de aluno ou põe trabalho demorado dentro do request
 vira vinte tarefas construídas em cima do erro. Hoje a primeira auditoria independente da spec
-aconteceria só no `/validar`, no fim. Aqui ela acontece quando corrigir é editar um parágrafo.
+aconteceria só na validação, no fim. Aqui ela acontece quando corrigir é editar um parágrafo.
 
 <critical>Os revisores leem documento, não código: ainda não há código desta funcionalidade.
 Eles auditam o desenho contra as regras e cobram o que a Tech Spec deixou implícito.</critical>
@@ -38,19 +38,12 @@ Funcionalidade alvo: `$ARGUMENTS`
 
 ## 2. Escolher os revisores
 
-Pela natureza da funcionalidade, com a mesma tabela do `/criar-tasks`:
+O `test-engineer` sempre: a estratégia de testes prova cada RF? Cada caso de borda do PRD tem teste previsto?
+Concorrência com teste em paralelo? Cada rota nova tem cenário na escola sem ano letivo em curso e, se lê vínculo ou
+turma, com um vínculo encerrado e outro aberto?
 
-| Se a spec... | Revisor |
-|---|---|
-| sempre | `test-engineer`: a estratégia de testes prova cada RF? Cada caso de borda do PRD tem teste previsto? Concorrência com teste em paralelo? Cada rota nova tem cenário na escola sem ano letivo em curso e, se lê vínculo ou turma, com um vínculo encerrado e outro aberto? |
-| cria tabela, repository, query ou endpoint com dado de escola | `tenancy-guardian` |
-| toca dado de pessoa, log, storage, exportação ou envio externo | `privacy-guardian` |
-| envolve nota, correção, tutor, autonomia de agente, decisão sobre aluno ou indicador de professor | `conformidade-reviewer` |
-| mexe em login, tutor, sala, prova, fila, gateway de IA, migration grande, deploy ou ambiente | `infra-guardian` |
-| chama modelo | `llm-integrator` |
-| tem tela | `frontend-reviewer` |
-
-Na dúvida, inclua.
+Os demais, pela natureza da funcionalidade inteira, vêm da tabela "Subagentes obrigatórios por natureza da tarefa" do
+`criar-tasks` (a única que existe): leia-a lá, e leia "a tarefa" como "a spec". Na dúvida, inclua.
 
 ## 3. Disparar, todos em paralelo
 

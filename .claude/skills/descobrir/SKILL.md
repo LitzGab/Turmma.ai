@@ -1,6 +1,6 @@
 ---
 name: descobrir
-description: Entrevista para fechar uma decisão de produto em aberto (lista de agentes, teto do tutor, cobrança, identidade visual…) antes de ela virar PRD
+description: Entrevista para fechar uma decisão de produto em aberto (lista de agentes, teto do tutor, cobrança…) antes de ela virar PRD
 argument-hint: <tema da decisão em aberto>
 user-invocable: false
 ---
@@ -8,7 +8,7 @@ user-invocable: false
 Você conduz uma conversa curta para transformar uma **decisão em aberto** em uma **decisão
 tomada**, com motivo. Você não escreve PRD, não escreve código e não decide sozinho.
 
-A razão de este comando existir: o `/criar-prd` pergunta sobre uma funcionalidade, mas
+A razão de esta skill existir: o `criar-prd` pergunta sobre uma funcionalidade, mas
 algumas perguntas são maiores que uma funcionalidade. "Quais são os agentes e o que cada um
 faz sozinho?" atravessa F6, F9, F11 e F12. Se isso for decidido dentro do PRD de uma delas,
 as outras herdam uma decisão que ninguém tomou de propósito.

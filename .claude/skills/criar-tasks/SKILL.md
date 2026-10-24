@@ -21,7 +21,7 @@ Funcionalidade alvo: `$ARGUMENTS`
 
 `tasks/prd-$ARGUMENTS/prd.md`, `tasks/prd-$ARGUMENTS/techspec.md` e `.claude/rules/`. Leia por extenso as regras 00 (`00-arquitetura.md`), 40 (`40-testes.md`), 60 (`60-dominio.md`) e 80 (`80-infra-e-carga.md`), de `.claude/rules/`: têm `paths:` e não carregam sozinhas aqui (a 10, a 20 e a 70 já estão no contexto).
 
-`tasks/prd-$ARGUMENTS/revisao-spec.md` com veredito **APROVADA** (`/revisar-spec`). Sem ele, volte à
+`tasks/prd-$ARGUMENTS/revisao-spec.md` com veredito **APROVADA** (`revisar-spec`). Sem ele, volte à
 skill `revisar-spec`: erro na Tech Spec contamina todas as tarefas, e é o momento
 mais barato de achá-lo.
 
@@ -71,11 +71,14 @@ Cada uma dessas pode ser demonstrada, testada e auditada sozinha.
 
 ## Subagentes obrigatórios por natureza da tarefa
 
+Esta é a única tabela por natureza: `revisar-spec` e `revisar-tarefa` apontam para cá. O que o **caminho** do arquivo
+pede, o hook soma sozinho (`tools/processo/guardioes-por-caminho.ts`, descrito em `tasks/prd-harness/tabela-de-guardioes.md`).
+
 | Se a tarefa... | Marque |
 |---|---|
 | cria migration, repository, query ou endpoint com dado de escola | `tenancy-guardian` (veto) |
 | toca dado de aluno, responsável, log, storage, exportação ou envio externo | `privacy-guardian` (veto) |
-| envolve nota, correção, tutor, autonomia de agente ou decisão sobre aluno | `conformidade-reviewer` (veto) |
+| envolve nota, correção, tutor, autonomia de agente, decisão sobre aluno ou indicador de professor | `conformidade-reviewer` (veto) |
 | mexe em login, tutor, modo sala, prova online, fila, gateway de IA, migration em tabela grande, deploy ou ambiente | `infra-guardian` (veto) |
 | chama modelo ou cria agente | `llm-integrator` |
 | gera ou corrige conteúdo pedagógico | `pedagogia-reviewer` |
@@ -109,7 +112,7 @@ infere o porte pela contagem de guardiões e avisa que inferiu.
 - Testes são subtarefas dentro da tarefa, nunca uma tarefa separada no fim
 - Cada desvio da seção 11 da Tech Spec vira subtarefa de documento na tarefa que o cria: a exceção ao
   `escolaId` no `docs/modelo-de-dados.md`, o módulo global no `docs/arquitetura.md`. Na A0 os dois
-  ficaram de fora, e um deles foi o único achado maior do `/validar`
+  ficaram de fora, e um deles foi o único achado maior da validação
 - **Tarefa que tira, move ou renomeia um lugar leva a busca pelo nome antigo** em `apps/web/src`,
   `e2e/` e `docs/` (`grep -rn '<nome antigo>'`), com cada ocorrência trocada ou justificada no
   documento. E **toda tarefa que muda uma tela que o `docs/interface.md` descreve leva a subtarefa da

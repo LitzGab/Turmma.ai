@@ -23,12 +23,10 @@ Documento: `$ARGUMENTS`
 
 1. Leia o documento: a linha "Subagentes obrigatórios" e a seção "Revisões".
 2. **Em correção, confira a linha "Subagentes obrigatórios" contra os arquivos alterados**
-   (`git status --short`), pela tabela de `.claude/skills/criar-tasks/SKILL.md`: migration,
-   repository, query ou endpoint com dado de escola pede `tenancy-guardian`; dado de pessoa, log,
-   storage ou envio externo pede `privacy-guardian`; nota, correção, tutor ou autonomia pede
-   `conformidade-reviewer`; login, fila, gateway de IA, migration grande ou ambiente pede
-   `infra-guardian`; mais de 5 arquivos fora de `tasks/`, ou `.github/`, `tools/ci/` e
-   `tools/processo/`, pede `revisor-geral`. Faltou um: é `DEVOLUÇÃO`, dizendo qual acrescentar.
+   (`git status --short`): a natureza de cada arquivo está na tabela de `.claude/skills/criar-tasks/SKILL.md`
+   e o caminho, em `tools/processo/guardioes-por-caminho.ts`. Mais de 5 arquivos fora de `tasks/`, ou
+   `.github/`, `tools/ci/` e `tools/processo/`, pede `revisor-geral`. Faltou um: é `DEVOLUÇÃO`, dizendo
+   qual acrescentar.
    **Correção no meio de uma tarefa:** o documento da correção traz a seção "Fora desta correção",
    com os arquivos da tarefa em curso. Eles não contam aqui, não entram em "Arquivos alterados" do
    prompt, e o prompt diz ao revisor que as outras mudanças da árvore são da tarefa em curso e não
@@ -71,7 +69,8 @@ Documento: `$ARGUMENTS`
 mais arquivo: as mutações do documento foram provadas pelo portão (`tools/processo/mutacoes.ts`), e
 por isso ele lê a mesma árvore que os outros, ao mesmo tempo. Uma rodada de revisor leva de um a
 quatro minutos; o que custa é o ciclo de correção. O objetivo de cada rodada é sair com **todos** os
-achados de uma vez.
+achados de uma vez. Esta é a única regra da ordem (D79): não existe `test-engineer` primeiro, nem
+revisor que espere outro aprovar.
 
 ### Em tarefa com tela: fotografe antes de chamar os outros
 

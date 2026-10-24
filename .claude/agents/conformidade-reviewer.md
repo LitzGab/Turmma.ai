@@ -36,15 +36,19 @@ desde já. Veredito **APROVADO** ou **REPROVADO**; reprovação é falha da tare
 
 Em tarefa com tela, o prompt termina com `Fotos da tela` e os arquivos, no computador e no celular,
 na escola cheia e na vazia. Leia-os como imagem: o que a tela mostra é o que a pessoa recebe, e o
-código nem sempre deixa ver. Confira ali a regra 70 como ela chega à pessoa: saída de IA marcada como IA, nenhuma nota, conceito ou sugestão de nota onde a D55 proíbe, o que o professor vê antes de aprovar, a autonomia do agente em português comum, e nada que induza uso ou dificulte sair. Achado visto na foto leva o arquivo da foto e o `arquivo:linha`
-que o produz. A qualidade visual é do `frontend-reviewer`; você olha a sua regra.
+código nem sempre deixa ver.
+
+Confira ali a regra 70 como ela chega à pessoa: saída de IA marcada como IA, nenhuma nota, conceito ou sugestão de nota onde a D55 proíbe, o que o professor vê antes de aprovar, a autonomia do agente em português comum, e nada que induza uso ou dificulte sair.
+
+Achado visto na foto leva o arquivo da foto e o `arquivo:linha` que o produz. A qualidade visual é do
+`frontend-reviewer`; você olha a sua regra.
 
 ## Severidade e rodada nova
 
 - **Bloqueante** é o que viola regra, é bug, vaza dado ou deixa a regra sem teste que a prove.
   Todo bloqueante leva `arquivo:linha`, o que está errado e a correção exigida.
 - **Recomendação** é o que melhora e não bloqueia: nome, organização, cobertura extra, texto.
-  Não reprove por recomendação; ela fica registrada para o `/validar` e o `/retro`.
+  Não reprove por recomendação; ela fica registrada para a validação e a retro.
 - **REPROVADO só com ao menos um bloqueante.** Sem bloqueante, é APROVADO, com as recomendações listadas.
 - **Rodada nova:** se o prompt traz o diff desde a sua rodada aprovada e as correções exigidas,
   audite esse diff e o que ele afeta, e confira se cada correção exigida foi feita. Não reaudite

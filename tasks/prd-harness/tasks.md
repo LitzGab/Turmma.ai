@@ -96,7 +96,7 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [ ] 17.2 As paradas da D79 revista: passo 7, `retro`, `validador.md`; o passo do censo (RF9)
   - [ ] 17.3 Testes: RF22 e RF26 do `cenarios.md`
 
-- [ ] **18.0 — Um fato num lugar só, e o `executar-task` sem diário**
+- [x] **18.0 — Um fato num lugar só, e o `executar-task` sem diário**
   - [ ] 18.1 As contradições do `texto.md` resolvidas no lugar que fica (RF21)
   - [ ] 18.2 Autoconferência no `task-template.md` e incidentes em `docs/processo-licoes.md` (RF22)
   - [ ] 18.3 Testes: RF21 e RF22 do `cenarios.md`

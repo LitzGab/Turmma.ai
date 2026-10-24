@@ -26,8 +26,8 @@ terminais da fase, antes de concluir qualquer coisa. Não releia o que não mudo
 
 Nunca interrompa agente que está trabalhando, e nunca edite arquivo que ele está editando.
 
-**Só a primeira linha se resolve daqui.** Para qualquer outra, o procedimento é o do `/seguir`: o
-comando de cada terminal e o reinício estão no passo 3 de `.claude/skills/seguir/SKILL.md`, o que
-fazer com cada resposta, no passo 6, e a parada, no passo 7. Se esse texto não está no seu contexto
+**A tabela acima é tudo o que a vigia faz.** Para o que ela não diz, o procedimento é o do `/seguir`: o
+comando de cada terminal e o reinício estão no passo 3 (`.claude/skills/seguir/passos/3-time-e-andar.md`), o que
+fazer com cada resposta, no passo 6 (`passos/6-tarefa.md`), e a parada, no passo 7 (`passos/7-paradas.md`). Se esse texto não está no seu contexto
 (sessão nova, ou compactada desde o último `/seguir`), leia o arquivo antes de agir; não aja de
 memória.

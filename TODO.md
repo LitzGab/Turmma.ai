@@ -1902,3 +1902,12 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X7, 17.0) Levar ao `/retro` da X7 a folga de 68 B do orçamento de leitura por tarefa** (`SKILL.md` + `protocolo.md` +
       `passos/6-tarefa.md` = 23.932 B de 24.000): o próximo acréscimo num dos três precisa tirar texto de outro lugar deles (dono:
       Arquiteto; origem: `17_task.md`, test-engineer 2ª rodada)
+- [ ] **(X7, 18.0) Tirar o `(ouro: <política>)` de `docs/aia/ouro-retido/README.md:4`**: a pasta vizinha `docs/aia/ouro/` já manda
+      `(correção <slug>)` com o `conformidade-reviewer` (14.0, RF16), e este README continua mandando o marcador que não existe mais
+      (dono: Arquiteto, num commit só de `docs/`; origem: `18_task.md`, test-engineer 1ª rodada)
+- [ ] **(X7, 18.0) Corrigir o caminho na nota da regra 80, item 5** (`.claude/rules/80-infra-e-carga.md`): `sessao.leitura.duracao` é medida em
+      `packages/nucleo/src/identidade/guarda-sessao.ts` (nome em `packages/nucleo/src/telemetria/metricas.ts`), e só `observarPoolDoBanco`
+      está no `apps/api/src/main.ts`; faz-se junto com o fechamento da N2 da X5 (dono: Arquiteto; origem: `18_task.md`, revisor-geral 2ª rodada)
+- [ ] **(X7, 18.0) Tirar o `pedagogia-reviewer` da frase "só a frase 'para a validação e a retro'"** no parágrafo 18.3 do §9 da `techspec.md`
+      (ele também ganhou o bloco das fotos em três parágrafos); entra com a próxima edição do §9, na 19.0 (dono: Arquiteto; origem:
+      `18_task.md`, revisor-geral 2ª rodada)

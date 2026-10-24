@@ -134,7 +134,7 @@ teste de hoje que aceita esse caso é o único que muda, e o documento da tarefa
 | RF | Vermelho | Verde |
 |---|---|---|
 | RF20 | base fixa acima de 40.000 B; regra sempre carregada diferente de {10, 20, 70}; menos itens numerados na 10, na 20 ou na 70 do que na medida de hoje | a medida de hoje gravada como "antes" |
-| RF21 | dois blocos que deveriam ser idênticos entre revisores diferindo; "O que verificar" ou o formato de um guardião com veto diferente da versão gravada de hoje | os blocos iguais |
+| RF21 | dois blocos que deveriam ser idênticos entre revisores diferindo (a severidade nas duas famílias, `REPROVADO` nos seis com veto e `AJUSTES NECESSÁRIOS` nos três sem veto; o bloco das fotos em três parágrafos, com o começo e o fim iguais e o meio de cada papel); "O que verificar" ou o formato de um guardião com veto diferente da versão gravada de hoje; guardião ausente da amostra | os blocos iguais; a seção própria do `revisor-geral` (`## O que é bloqueante só para você`) fora da comparação |
 | RF22 | `seguir/SKILL.md` ou `executar-task/SKILL.md` com 500 linhas ou mais (e, na 17.0, cada `passos/*.md`); um `passos/*.md` citado que não existe; um passo do `/seguir` sem arquivo, ou com título de outro número; marca de um passo perdida | os dez passos, cada um no arquivo do seu número |
 | RF23 | skill de terceiro da lista sem a linha de conflito depois do frontmatter, ou diferente de `docs/skills-de-terceiros.md` (acusa, não reaplica); `frontend-design` no `skills-lock.json` | as cinco com a linha |
 | RF24 | caminho citado em papel, regra ou guarda que não existe (amostra: `apps/api/src/inexistente.ts`); papel sem a seção de critério de saída; a skill `status` ainda citada | os caminhos de hoje, com contagem mínima |

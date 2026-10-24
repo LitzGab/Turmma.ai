@@ -88,7 +88,7 @@ seções 8 e 9). Valem como eliminatórios, independentemente da nota das amostr
   entra na esteira: a regra 30 proíbe teste automatizado chamando provedor pago
 - O script da avaliação e as saídas brutas ficam versionados, sem chave de API
 - A revisão das saídas pedagógicas é feita por uma pessoa com o `pedagogia-reviewer`
-- O resultado vira `/registrar-decisao` revisando D37 com o principal e a reserva
+- O resultado vira a skill `registrar-decisao` revisando D37 com o principal e a reserva
 
 ## 5. Quando
 

@@ -92,7 +92,7 @@ Se o agente mexeu em outro arquivo, desfaça essa mudança e reporte.
      (`git log origin/develop..HEAD -i --grep='^Fora do processo:' --format='%h %s' -- apps packages infra e2e tools`).
      Diga ao Joaquim no pedido de pouso que há código que não passou por revisor, e quais commits;
    - recomendação para uma funcionalidade futura: fica na seção 6 do `validacao.md`, e
-     `/criar-techspec` daquela funcionalidade precisa lê-la.
+     `criar-techspec` daquela funcionalidade precisa lê-la.
 5. Commit na branch da spec, com push: `Valida <funcionalidade> contra o PRD e fecha F? no
    roadmap`, só com `validacao.md`, `ROADMAP.md`, `techspec.md`, `TODO.md` e o `estado.md`.
 6. Peça o pouso: é parada do Joaquim (`/seguir`, passos 7 e 8). Depois do pouso e da esteira da

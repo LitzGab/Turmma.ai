@@ -49,10 +49,10 @@ ficaram (D23). O commit direto no `main` caiu em 19/09/2026, com a terceira pess
 21/09/2026 o fluxo foi fixado: **o trabalho acontece na `develop`**, `release` e `main` recebem por
 merge que o Joaquim gerencia, o Gabriel abre branch própria e integra na `develop`, e a esteira roda
 nas três (D23 revista). Em 15/09/2026 o processo foi enxugado onde repetia trabalho, sem tirar revisão:
-`test-engineer` primeiro, caducidade pelo que o revisor audita, portão local com carimbo,
+`test-engineer` primeiro (revisto pela D79: os revisores rodam juntos), caducidade pelo que o revisor audita, portão local com carimbo,
 `revisor-geral` no lugar da autorrevisão, `/revisar-spec`, `/corrigir` e `/retro` (D53). Em 08/10/2026
 o processo passou a rodar no Maestri (D78): cada spec num andar com a branch `spec/<funcionalidade>`,
-que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando, `/seguir`;
+que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso (revista pela D79: em todo push); um comando, `/seguir`;
 e a Mesa de revisão chamando os revisores. O hook, os vetos e o portão local não mudaram. **Papel de
 agente vem de `.claude/agents/`, nunca de responsabilidade do Maestri:** com ela o agente nasce fora
 da raiz e nenhum hook dispara. Em 11/10/2026, com o F3 medido, o processo foi revisto para tempo
@@ -102,7 +102,9 @@ original nosso, gerado por `tools/demonstracao/` (D75, D5).
 cópia da Teachy (P31) e, em outubro de 2026, o sistema que o Gabriel desenhou no estilo do Duolingo.
 Fica **uma só**, a de outubro, em todas as telas (D80): a técnica é tomada, a marca não (mascote,
 cores, ícones e fonte são nossos), e a mecânica de uso compulsivo fica de fora por lei (D59). Onde o
-mockup afrouxa uma proteção que o produto já tem, vale o produto.
+mockup afrouxa uma proteção que o produto já tem, vale o produto. A identidade visual (paleta,
+tipografia, ícones, mascote) **não está em aberto**: a D80 a fechou, e texto de skill, de regra ou de
+documento que a dê como pendente perde para ela.
 
 **Vigiar a navegação do aluno.** Pedido em 19/09/2026: alertar o professor quando o aluno sai
 do sistema para usar outra IA, e medir tempo ocioso. Ficou: saída da aba só durante a prova,
@@ -302,7 +304,7 @@ a D31, quando o staging existir.
 
 Revista em 08/10/2026 pela D78: o trabalho de uma spec deixa a `develop` e passa a acontecer num andar
 do Maestri, na branch `spec/<funcionalidade>`, que só entra na `develop` por pouso, com a palavra do
-Joaquim; a esteira roda uma vez por spec, na branch, antes do pouso. Decisão, retrospectiva e
+Joaquim; a esteira roda uma vez por spec, na branch, antes do pouso (revisto pela D79: em todo push). Decisão, retrospectiva e
 documento que não é de spec continuam na `develop`. O merge para `release` e `main` não muda.
 
 Revista em 23/10/2026, na X7 (`harness`), pelo Joaquim no terminal do Arquiteto: a esteira roda também
@@ -574,7 +576,7 @@ em infra. A esteira continua segurando o erro antes do staging (D31).
 
 **D53 — O processo de construção é enxugado onde repetia trabalho, sem tirar revisão.**
 Na tarefa, o `test-engineer` revisa primeiro e sozinho, e os outros revisores entram em paralelo
-depois que ele aprova. A aprovação caduca pelo que o revisor audita: mudança só em arquivo de teste
+depois que ele aprova (revisto pela D79: todos rodam juntos). A aprovação caduca pelo que o revisor audita: mudança só em arquivo de teste
 caduca só `test-engineer` e `revisor-geral`. A rodada nova recebe o diff desde a anterior e as
 correções exigidas. O portão local grava um carimbo que o hook exige antes do commit, e o
 `revisor-geral` o confere em vez de rodar tudo de novo. A autorrevisão do `/executar-review` vira o
@@ -1110,7 +1112,7 @@ pelo Joaquim em 08/10/2026)*
 Revisa a D23 (onde o trabalho acontece e quando a esteira roda) e a D53 (quem chama os revisores e
 quais comandos existem). O que muda: (1) **cada spec roda num andar do Maestri**, com a branch
 `spec/<funcionalidade>`, do PRD à validação, e só entra na `develop` por pouso, com a palavra do
-Joaquim; correção avulsa vai em `correcao/<slug>`. (2) **A esteira roda uma vez por spec**, na
+Joaquim; correção avulsa vai em `correcao/<slug>`. (2) **A esteira roda uma vez por spec** (revisto pela D79: em todo push), na
 branch, antes do pouso, e de novo na `develop` depois dele; por tarefa valem o portão local
 carimbado e os revisores (regra 40 atualizada). (3) **Um comando, `/seguir`**: o Orquestrador
 calcula a fase por `tools/processo/estado.ts` e conduz até a próxima parada; os outros comandos
@@ -1143,7 +1145,7 @@ de espera por tarefa; e o implementador, em Opus, era 63% do consumo do plano. A
 repositório e nenhum hook dispara, por isso o papel vem de `.claude/agents/`; e o Maestri copia o
 andar sem as pastas `dist`, por isso todo andar novo roda `npm ci`.
 Revisão: os modelos do Implementador e dos revisores se decidem pelos números da retrospectiva do F3
-(rodadas e reprovações por modelo); a esteira uma vez por spec volta à mesa na primeira vez em que
+(rodadas e reprovações por modelo); a esteira uma vez por spec (revista pela D79: em todo push) volta à mesa na primeira vez em que
 uma falha no fim custar mais do que as esperas que ela poupou, e antes da primeira escola real.
 
 Revista em 09/10/2026, pelo Joaquim, com os números da primeira noite (tarefas 5.0 e 6.0 do F3): o
@@ -1153,7 +1155,7 @@ minutos e passou cinco horas rodando o portão inteiro a cada tentativa de acert
 muda: (a) **na tarefa e na correção roda o portão da tarefa** — tipos, lint, a unidade inteira e só
 os testes de integração, de e2e e de infra que a árvore alterou —, e **o portão completo roda uma vez
 por spec**, antes da validação, seguido da esteira; teste que não passa se roda isolado, nunca pelo
-portão. (b) O `test-engineer` continua sozinho e primeiro, porque muta arquivo e usa o banco de teste
+portão. (b) O `test-engineer` continua sozinho e primeiro (revisto pela D79: todos rodam juntos), porque muta arquivo e usa o banco de teste
 enquanto revisa, mas **os outros revisores rodam logo depois dele mesmo quando ele reprova**, para
 cada rodada sair com todos os achados. (c) **Uma ordem de correção só**, com os bloqueantes e as
 recomendações baratas juntos; não há mais ciclo só para aplicar recomendação depois de tudo aprovado.

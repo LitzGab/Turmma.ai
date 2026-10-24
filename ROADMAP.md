@@ -758,7 +758,7 @@ os destaques, e as notas aprovadas saem num arquivo que o sistema de gestão imp
 
 A produção do Turmma passa a rodar em **VM própria** (máquina AM5 com Proxmox, operada pelo
 Joaquim), em vez de nascer no provedor da D42 — decisão de 14/10/2026 que **revisa D31 e
-D42** (registro com `/registrar-decisao` pendente; homologação em aberto, pode nem existir).
+D42** (registro pela skill `registrar-decisao` pendente; homologação em aberto, pode nem existir).
 Três fatias: **1.** a VM de produção — compose de sempre, só a borda exposta pelo túnel da
 Cloudflare com Access, deploy e rollback ensaiados, dado sintético enquanto o portão não
 abre (regra 20); **2.** backup diário fora da VM, snapshot antes de deploy e restauração
