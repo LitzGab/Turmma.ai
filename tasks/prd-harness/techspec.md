@@ -319,6 +319,23 @@ manda `(correção <slug>)` com o `conformidade-reviewer` (14.0).
 aconteceu, onde a regra ficou); a autoconferência virou 12 perguntas numeradas na seção `## Autoconferência` do
 `task-template.md`; o arquivo tem 342 linhas, com limite de 499 no `revisores.test.ts`.
 
+**Skills, papéis e metadados (19.0, 24/10/2026).** A auditoria das 26 skills (as 14 do processo e as 12 de terceiros, antes de
+saírem duas) é a seção 2 do `docs/processo-licoes.md`; as lições do `executar-task` são a seção 1, e o `revisores.test.ts` só lê
+lição dali (a tabela da seção 2 não tem data). Saem a `frontend-design` (pasta e `skills-lock.json`) e a `status` (pasta, a lista do
+`seguir/time.md` e o comentário do `estado.ts`). **Onde a citação da `status` se procura:** `.claude/agents/*.md`, `.claude/rules/*.md`,
+`.claude/settings.json`, todo `.md` das skills nossas (as que não estão no `skills-lock.json`), `.claude/hooks/*`, o `CLAUDE.md` e os `.ts` de
+`tools/processo/` que não são teste (o `estado.ts` a citava); a forma procurada é `` `status` `` entre crases, `/status` e `skills/status`.
+Ficam fora a skill de terceiros, que pode falar de `status` de uma API, e o `docs/`, porque a auditoria das skills e o
+`docs/skills-de-terceiros.md` falam da skill que saiu; o `grep` da subtarefa 19.3 sobre o resto da árvore é feito à mão, nesta tarefa. As cinco de terceiros levam o conflito na linha imediatamente depois do frontmatter,
+igual ao `docs/skills-de-terceiros.md`; linha em branco antes dela já é vermelho. Cada papel do time ganha `## Critério de saída`
+com os itens `- **Terminou quando:**` e `- **Entrega:**`. O teste é `tools/processo/harness/metadados.test.ts`. **`tools` no papel
+(RF30):** os quatro papéis do time (`arquiteto`, `implementador`, `mesa-de-revisao`, `validador`) não declaram `tools`, porque
+herdam as ferramentas do terminal que os inicia (`claude --agent <papel>`), e uma lista fechada neles tiraria do terminal o MCP e as
+ferramentas adiadas; por isso só os papéis de revisão, que são subagentes, precisam de `tools`, e o do time precisa de `name`, `model`
+e do critério de saída. **Dois defeitos que o teste achou no repositório de hoje e a tarefa corrigiu:** a `description` do
+`test-engineer` não era YAML válido (`sempre: na criação`; agora entre aspas), e o `paths:` da regra 30 tinha `**/agentes/**`, que não casa
+com pasta nenhuma (saiu; nenhuma outra regra mudou o que carrega).
+
 **Receitas (RF32, decisão do Joaquim, 23/10/2026).** A receita mora no `docs/guia-do-desenvolvedor.md` (§5 as receitas,
 §7 as travas); a skill `.claude/skills/receitas-de-codigo/SKILL.md` só aponta. Frontmatter com `name` e uma `description`
 que contém as palavras dos seis assuntos (`endpoint`, `tabela`, `job`, `IA`, `tela`, `isolamento`), que é como o

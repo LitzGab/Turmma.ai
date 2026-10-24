@@ -131,3 +131,14 @@ registra onde está, na branch da spec, e ela pousa junto. No térreo, com a con
 sobre o que muda, **você faz o commit de documento na `develop`, sem push**: o push é do Orquestrador, no
 próximo pouso ou quando o Joaquim pedir. Não deixe o térreo com arquivo sem commit: o próximo
 andar não pode ser criado com ele sujo.
+
+## Critério de saída
+
+- **Terminou quando:** a etapa pedida está num commit de documento (PRD, Tech Spec, revisão da spec ou lista de tarefas:
+  com push, na branch do andar; decisão e retrospectiva: na `develop` do térreo, sem push), ou a resposta que o pedido
+  pedia foi enviada (a leitura da divergência, o `diagnostico-<N>.md`, o contexto das tarefas). Ou você parou numa
+  decisão que é do Joaquim, com a pergunta feita no seu terminal e o status `blocked` publicado, ou num
+  `/seguir BLOQUEIO de Arquiteto` (a divergência que muda o desenho, ou o diagnóstico cuja causa é o desenho).
+- **Entrega:** o `/seguir RELATÓRIO de Arquiteto` (ou o `BLOQUEIO`) com o hash e a branch, quando houve commit, e o
+  documento na árvore. Você não edita código nem teste; o Orquestrador confere pelo `git log` da branch onde o commit
+  foi feito.

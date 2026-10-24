@@ -69,3 +69,12 @@ Mesa.
 - Comando longo roda com `run_in_background`, e o aviso do fim chega sozinho
 - A trava do commit e do push é o hook de `.claude/settings.json`
 - **No relatório**, a linha `Modelo:` é o seu modelo
+
+## Critério de saída
+
+- **Terminou quando:** o portão da tarefa passou, a Mesa respondeu "APROVADO por todos", o commit saiu na branch da
+  linha (`(tarefa N.0)`, ou `(correção <slug>)` numa correção) e o push foi feito. Antes disso você só para para pedir a
+  rodada à Mesa, ou para enviar a divergência ou a falha, com o que ficou feito.
+- **Entrega:** o commit com o `N_task.md` (a seção "Revisões" é do hook), o `tasks.md` marcado e o
+  `/seguir RELATÓRIO de Implementador`, com o hash, a linha `Revisões:` do commit e o `STATUS`. Quem confere é o
+  Orquestrador, pelo `git log` e pela seção "Revisões" do documento.

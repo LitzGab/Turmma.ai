@@ -2,6 +2,7 @@
 name: lgpd-brasil
 description: Orienta sobre a Lei Geral de Proteção de Dados (LGPD – Lei 13.709/2018) do Brasil. Use quando o usuário mencionar LGPD, proteção de dados no Brasil, privacidade de dados, bases legais, direitos do titular, ANPD, dados sensíveis, consentimento ou conformidade com a lei brasileira de dados.
 ---
+Conflito neste repositório: esta skill resume a lei, e o que vale para o código é `docs/lgpd.md` e a regra 20, mais restritivos (aluno sem e-mail, telefone, CPF, foto, endereço, data de nascimento nem diagnóstico; a adaptação é registrada, nunca o diagnóstico, D35).
 
 # LGPD – Lei Geral de Proteção de Dados (Brasil)
 

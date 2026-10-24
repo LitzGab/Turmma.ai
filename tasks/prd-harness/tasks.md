@@ -101,11 +101,11 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [ ] 18.2 Autoconferência no `task-template.md` e incidentes em `docs/processo-licoes.md` (RF22)
   - [ ] 18.3 Testes: RF21 e RF22 do `cenarios.md`
 
-- [ ] **19.0 — Skills de terceiro, papéis e metadados auditados e provados na esteira**
-  - [ ] 19.1 Auditoria das skills; conflito depois do frontmatter; sai `frontend-design` e `status` (RF23)
-  - [ ] 19.2 Critério de saída nos quatro papéis do time (RF24)
-  - [ ] 19.3 Teste do harness dos metadados (RF30)
-  - [ ] 19.4 Testes: RF23, RF24 e RF30 do `cenarios.md`
+- [x] **19.0 — Skills de terceiro, papéis e metadados auditados e provados na esteira**
+  - [x] 19.1 Auditoria das skills; conflito depois do frontmatter; sai `frontend-design` e `status` (RF23)
+  - [x] 19.2 Critério de saída nos quatro papéis do time (RF24)
+  - [x] 19.3 Teste do harness dos metadados (RF30)
+  - [x] 19.4 Testes: RF23, RF24 e RF30 do `cenarios.md`
 
 - [ ] **20.0 — A limpeza vigiada, o modo sem Maestri e a mensagem colada**
   - [ ] 20.1 `limpeza.json` e a vigia (RF27)

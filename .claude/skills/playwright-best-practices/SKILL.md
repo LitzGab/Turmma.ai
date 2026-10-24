@@ -6,6 +6,7 @@ metadata:
   author: currents.dev
   version: "1.2"
 ---
+Conflito neste repositório: viewport de celular, toque e rede móvel se aplicam (D51), e toda tela roda nos projetos `chromebook` e `celular`; geolocalização, permissões de aparelho, PWA instalável e app nativo não se aplicam (regra 50, item 2).
 
 # Playwright Best Practices
 

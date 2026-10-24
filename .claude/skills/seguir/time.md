@@ -5,7 +5,7 @@
 **Do processo** (nossas, em `.claude/skills/`): o comando é um só, **`/seguir`** (D78). O
 Orquestrador lê a fase em `tools/processo/estado.ts`, monta o time no Maestri e conduz até a próxima
 decisão que é do Joaquim. As outras são procedimento interno dos agentes, na ordem em que entram:
-`status`, `descobrir`, `registrar-decisao`, `criar-prd`, `criar-techspec`, `revisar-spec`,
+`descobrir`, `registrar-decisao`, `criar-prd`, `criar-techspec`, `revisar-spec`,
 `criar-tasks`, `executar-task`, `revisar-tarefa`, `corrigir`, `validar`, `retro`; e `vigia`, a
 rotina de 30 minutos do Orquestrador. Como os agentes conversam está em
 `.claude/skills/seguir/protocolo.md`.
@@ -30,7 +30,7 @@ código sem `(tarefa N.0)` nem `(correção <slug>)` (D53).
 **Técnicas** (de terceiros, instaladas via skills.sh, versões em `skills-lock.json`):
 `nestjs-best-practices`, `drizzle-orm-patterns`, `supabase-postgres-best-practices`,
 `bullmq-specialist`, `vercel-react-best-practices`, `tanstack-query-best-practices`,
-`tailwind-design-system`, `frontend-design`, `accessibility`, `vitest`,
+`tailwind-design-system`, `accessibility`, `vitest`,
 `playwright-best-practices`, `lgpd-brasil`. Atualizar com `npx skills update -p`, e ler o
 diff antes de commitar: skill vira instrução para o Claude.
 

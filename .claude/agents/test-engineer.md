@@ -1,6 +1,6 @@
 ---
 name: test-engineer
-description: Define e audita os cenários de teste que provam a regra de negócio. Acionar sempre: na criação das tarefas, na revisão de spec, e como revisor de toda tarefa e correção.
+description: "Define e audita os cenários de teste que provam a regra de negócio. Acionar sempre: na criação das tarefas, na revisão de spec, e como revisor de toda tarefa e correção."
 tools: Read, Grep, Glob, Bash
 model: opus
 ---

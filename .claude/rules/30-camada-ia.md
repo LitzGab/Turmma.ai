@@ -2,7 +2,6 @@
 paths:
   - "apps/*/src/ia/**"
   - "packages/*/src/ia/**"
-  - "**/agentes/**"
   - "**/prompts/**"
   - "**/tutor/**"
 ---

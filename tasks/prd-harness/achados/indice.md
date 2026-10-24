@@ -170,3 +170,8 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-24 01:16:20 | `test-engineer` | 1ª | APROVADO | `18_task` | `revisores.test.ts:260`, `:270` e `:279`. As três mutações do tipo `=== 'x'` (executar-task, lições e modelo ausentes) ficam vermelhas por exceção:… |
 | 2026-10-24 01:23:10 | `revisor-geral` | 2ª | APROVADO | `18_task` | `.claude/rules/80-infra-e-carga.md:65`: a nota diz que as duas métricas saem de `observarPoolDoBanco` e da leitura de sessão em `apps/api/src/main.ts`. Só… |
 | 2026-10-24 01:23:21 | `test-engineer` | 2ª | APROVADO | `18_task` | O apontamento ficou só no caminho. A conferência do `executar-task` (`revisores.test.ts:265`) não exige mais a palavra "Autoconferência". Se o `SKILL.md` citar… |
+| 2026-10-24 01:50:48 | `privacy-guardian` | 1ª | APROVADO | `19_task` | A linha de conflito da `lgpd-brasil` (em `/home/joaquimdp/Documentos/git/.maestri/floors/educaia--specharness--l1/.claude/skills/lgpd-brasil/SKILL.md:5` e em… |
+| 2026-10-24 01:51:24 | `test-engineer` | 1ª | REPROVADO | `19_task` | O `.git` da linha RF30 não tem teste. |
+| 2026-10-24 01:52:12 | `revisor-geral` | 1ª | REPROVADO | `19_task` | `tasks/prd-harness/19_task.md:83`: a quarta divergência (onde a `status` conta como "citada") não está na Tech Spec nem no `cenarios.md`. |
+| 2026-10-24 02:01:27 | `revisor-geral` | 2ª | APROVADO | `19_task` | Cabeçalho desatualizado: `tools/processo/harness/metadados.test.ts:12` ainda diz "(papel, skill nossa, hook, `CLAUDE.md`, código do processo)", sem a regra e… |
+| 2026-10-24 02:01:45 | `test-engineer` | 2ª | APROVADO | `19_task` | `metadados.test.ts:748`: comparar a mensagem exata, como faz a linha 732 (`toEqual([\`${REGRAS}/00-a.md: o padrão "/HEAD" de paths não casa com nenhum… |

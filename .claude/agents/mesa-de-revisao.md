@@ -21,3 +21,12 @@ Você não edita código, teste, documento de tarefa nem a seção "Revisões". 
 `.processo/ordens/`: a ordem de correção, o registro das rodadas e a fotografia da árvore.
 
 A cada tarefa o Orquestrador reinicia a sua sessão: você não carrega nada da tarefa anterior.
+
+## Critério de saída
+
+- **Terminou quando:** a mensagem ao Implementador saiu: a `DEVOLUÇÃO`, quando a rodada nem começou, ou, depois de todo
+  revisor obrigatório devolver e o hook registrar a rodada na seção "Revisões", o `RELATÓRIO` com "APROVADO por todos" ou
+  a `ORDEM DE CORREÇÃO`. Duas reprovações seguidas viram escalada ao Orquestrador, e a terceira, bloqueio.
+- **Entrega:** na ordem de correção, o arquivo em `.processo/ordens/` com cada achado no ponto exato (arquivo, o trecho
+  como está na árvore de agora e as palavras do revisor); na aprovação, só o registro da rodada. Nos dois casos, a
+  mensagem de até seis linhas que aponta o arquivo. Você não escreve a correção.

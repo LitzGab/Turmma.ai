@@ -39,3 +39,46 @@ origem é a spec (pasta `tasks/prd-<nome>/`) e a tarefa.
 | 2026-10-10 | F3 (`lgpd-e-titular`), 11.0, 13.0, 14.0 e 15.0 | Deixaram três listas fechadas vermelhas (`apps/api/test/retencao.int.test.ts`, `apps/api/src/assistente/assistente.int.test.ts`, `infra/test/metricas.int.test.ts`), que só apareceram com a suíte inteira, quatro tarefas depois | `executar-task`, passo 4, "Lista fechada" |
 | 2026-10-02 | A1 (`apresentacao-escola`), 16.0, W6 | Passou em três portões locais e caiu na esteira por uma ordem de entrega que só a máquina lenta produziu (a máquina roda o e2e com 6 trabalhadores e a esteira com 2) | `executar-task`, passo 4: spec de e2e novo roda também com `--repeat-each 3 --workers 2` |
 | 2026-10-02 | A1 (`apresentacao-escola`), 15.0 | O commit saiu parcial e só foi refeito porque alguém olhou | `executar-task`, passo 7: `git diff --cached --name-only` antes e `git show --stat HEAD` depois |
+
+## 2. A auditoria das skills (X7, 19.0, 24/10/2026)
+
+Seis perguntas por skill: o **objetivo** (a uma frase), o **escopo** (onde ela vale), o **conflito** com regra ou decisão, a
+**redundância** com outra skill ou com um arquivo de código, a **desatualização** (contra a versão do que o repositório usa) e a
+**decisão**. Onde a skill é de terceiros, o texto do conflito está em `docs/skills-de-terceiros.md`, e a primeira linha depois do
+frontmatter do `SKILL.md` o repete (`tools/processo/harness/metadados.test.ts` confere). "Nenhum" quer dizer que olhei e não achei.
+
+### As do processo (nossas)
+
+| Skill | Objetivo | Escopo | Conflito | Redundância | Desatualização | Decisão |
+|---|---|---|---|---|---|---|
+| `seguir` | O único comando: o Orquestrador lê o estado e conduz até a próxima decisão do Joaquim | Orquestrador, térreo | Nenhum | O índice é dela; cada passo mora em `passos/` | Partida em 17.0; 24.000 B é o teto de `seguir.test.ts` | Fica |
+| `vigia` | A rotina de 30 minutos: olha o time e só age se alguém está preso | Orquestrador | Nenhum | Nenhuma: o quadro é `tools/processo/vigia.ts` | A tabela dela diz o arquivo de cada passo do `/seguir` (18.0) | Fica |
+| `descobrir` | Entrevista que fecha uma decisão em aberto antes de virar PRD | Arquiteto | Nenhum | Nenhuma | O exemplo de identidade visual saiu (D80, 18.0) | Fica |
+| `registrar-decisao` | Escreve a D<n> em `docs/decisoes.md` e no índice do `CLAUDE.md` | Arquiteto | Nenhum | Nenhuma | Nenhuma | Fica |
+| `criar-prd` | O PRD de uma funcionalidade | Arquiteto | Nenhum | Nenhuma | Nenhuma | Fica |
+| `criar-techspec` | A Tech Spec, a partir do PRD | Arquiteto | Nenhum | Nenhuma | Nenhuma | Fica |
+| `revisar-spec` | Audita PRD e Tech Spec com os guardiões antes das tarefas | Arquiteto | Nenhum | A tabela natureza → guardião é só a do `criar-tasks` (18.0) | Nenhuma | Fica |
+| `criar-tasks` | A lista de tarefas, a partir do PRD e da Tech Spec | Arquiteto | Nenhum | Dona da tabela natureza → guardião | A autoconferência subiu para 12 perguntas (18.0) | Fica |
+| `executar-task` | O procedimento do Implementador, uma tarefa por vez | Implementador | Nenhum | Os 26 casos datados foram para a seção 1 deste documento (18.0) | 342 linhas, com limite de 499 | Fica |
+| `revisar-tarefa` | A rodada da Mesa e a ordem de correção | Mesa de revisão | Nenhum | O passo 2 é o único lugar que diz a ordem dos revisores (18.0) | Nenhuma | Fica |
+| `corrigir` | Corrige um defeito fora de uma tarefa, com teste que reproduz | Implementador | Nenhum | Nenhuma | Diz que a esteira roda em todo push (D79) | Fica |
+| `validar` | A validação independente, RF a RF | Validador | Nenhum | Nenhuma | A ressalva menor da D79 revista (17.0) | Fica |
+| `retro` | Transforma o histórico de revisões em mudança de processo | Arquiteto | Nenhum | Nenhuma | O aviso da D79 (17.0) | Fica |
+| `status` | Dizia onde o projeto está e o próximo passo | Orquestrador | Nenhum | Total: `tools/processo/estado.ts` calcula a fase, e o `/seguir` roda o `estado.ts` direto | A skill lia o mesmo `estado.ts` e acrescentava só o formato do relatório | **Sai** (19.0), com toda citação dela |
+
+### As de terceiros
+
+| Skill | Objetivo | Escopo | Conflito | Redundância | Desatualização | Decisão |
+|---|---|---|---|---|---|---|
+| `frontend-design` | Direção estética ousada para tela nova | Tela | Com a regra 50 (Chromebook fraco, professora com quarenta minutos) e a D80 (a pele está fechada) | Nenhuma | Nenhuma | **Sai** (19.0), pasta e `skills-lock.json` |
+| `supabase-postgres-best-practices` | Boas práticas de Postgres | Schema, migration, consulta | RLS no lugar do repository (regra 10) | Parcial com a `drizzle-orm-patterns` | Mantida pela Supabase | Fica, com o conflito na primeira linha |
+| `vercel-react-best-practices` | Desempenho de React | Web | Escrita para Next.js; somos SPA com Vite (regra 50) | Nenhuma | Nenhuma | Fica, com o conflito na primeira linha |
+| `playwright-best-practices` | Escrever e depurar teste de Playwright | `e2e/` | Geolocalização, PWA e app nativo não se aplicam (regra 50); toque e celular se aplicam (D51) | Parcial com a `accessibility` (axe-core) | `@playwright/test` 1.63 no repositório; a skill é 1.2 | Fica, com o conflito na primeira linha |
+| `lgpd-brasil` | Resume a LGPD | Dado pessoal | A regra 20 e `docs/lgpd.md` são mais restritivos | Parcial com `docs/lgpd.md` | Resume a lei de 2018; o ECA Digital (2026) não está nela, e está em `docs/regulacao.md` | Fica, com o conflito na primeira linha |
+| `nestjs-best-practices` | Boas práticas de NestJS | `apps/api` | A estrutura de `docs/arquitetura.md` prevalece | Nenhuma | Nest 12 no repositório; a skill é 1.2.0 | Fica, com o conflito na primeira linha |
+| `drizzle-orm-patterns` | Schema, consulta e migration com Drizzle | `packages/nucleo` | Nenhum | Parcial com a `supabase-postgres-best-practices` | Drizzle 0.45 no repositório; a skill não diz a versão | Fica |
+| `bullmq-specialist` | Fila com BullMQ | Worker | Nenhum | Nenhuma | BullMQ 6.3 no repositório; a skill não diz a versão | Fica |
+| `tanstack-query-best-practices` | Cache e mutação no React Query | `apps/web` | Nenhum | Nenhuma | TanStack Query 5 no repositório; a skill não diz a versão | Fica |
+| `tailwind-design-system` | Sistema de design em Tailwind | `apps/web` | Nenhum | Nenhuma | Fala de Tailwind 4, que é o do repositório | Fica |
+| `accessibility` | Acessibilidade pela WCAG 2.2 | `apps/web` | Nenhum | Parcial com a `playwright-best-practices` (axe-core) | WCAG 2.2 é a vigente | Fica |
+| `vitest` | Teste de unidade com Vitest | Todos os pacotes | Nenhum | Nenhuma | Escrita para o Vitest 5, que é o do repositório | Fica |

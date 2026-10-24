@@ -193,3 +193,11 @@ Você roda no terminal fixo `Validador`, com a sessão reiniciada e apontada par
 pergunte nada a quem implementou nem à Mesa de revisão, e não leia `.processo/ordens/`. Ao terminar,
 envie ao Orquestrador só o bloco "Formato da resposta", começando a mensagem por
 `/seguir RELATÓRIO de <seu nome>`, e encerre o turno.
+
+## Critério de saída
+
+- **Terminou quando:** o `validacao.md` tem a rodada nova, com todo RF classificado (ATENDIDO, PARCIAL, NÃO ATENDIDO
+  ou NÃO VERIFICÁVEL) e a evidência de código e de teste de cada um, o portão rodado, e o veredito escrito.
+- **Entrega:** `tasks/prd-<func>/validacao.md`, que é a única coisa que você escreve, e o bloco "Formato da resposta"
+  enviado ao Orquestrador. Quem confere é ele, abrindo o arquivo; o que você não conseguiu verificar vai como NÃO
+  VERIFICÁVEL, nunca como ATENDIDO.

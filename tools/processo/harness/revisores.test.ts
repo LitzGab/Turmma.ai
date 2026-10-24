@@ -214,9 +214,17 @@ const totalDeLinhas = (texto: string): number => texto.trimEnd().split('\n').len
 const LINHA_DE_LICAO = /^\|/
 const DATA_DA_LICAO = /^(?:até )?\d{4}-\d{2}-\d{2}(?: e \d{4}-\d{2}-\d{2})?$/
 
+/** As lições são a seção 1 do documento; a 2 (19.0) é a auditoria das skills, que tem outras colunas e não tem data. Sem a seção 1, o corte sai vazio ou sem tabela, e a conferência acusa o mínimo de lições. */
+function soAsLicoes(documento: string): string {
+  const linhas = documento.split('\n')
+  const inicio = linhas.findIndex((linha) => linha.startsWith('## 1. '))
+  const fim = linhas.findIndex((linha, i) => i > inicio && linha.startsWith('## '))
+  return linhas.slice(inicio, fim === -1 ? undefined : fim).join('\n')
+}
+
 /** As linhas de dado da tabela de lições (menos o cabeçalho e o traço), em colunas. */
 function linhasDeLicao(texto: string): string[][] {
-  return texto
+  return soAsLicoes(texto)
     .split('\n')
     .filter((linha) => LINHA_DE_LICAO.test(linha))
     .map((linha) =>
@@ -515,6 +523,20 @@ describe('RF22: o executar-task sem diário de incidentes', () => {
   it('o documento de lições encurtado abaixo do mínimo: vermelho', () => {
     const amostra = estragar(hoje, LICOES, (texto) => texto.split('\n').filter((linha) => !/^\| (?:até )?2026-10/.test(linha)).join('\n'))
     expect(conferirExecutarTask(amostra).falhas.some((falha) => falha.includes('lições, e a conferência espera ao menos'))).toBe(true)
+  })
+
+  it('a seção 1 conta inteira quando é a última do arquivo, e a auditoria das skills não soma lição', () => {
+    const documento = hoje[LICOES] ?? ''
+    const soASecao1 = documento.slice(0, documento.indexOf('\n## 2. ')).trimEnd()
+    expect(soASecao1.length, 'a amostra precisa cortar a seção 2').toBeLessThan(documento.length)
+    expect(conferirLicoes(soASecao1).licoes).toBe(conferirLicoes(documento).licoes)
+  })
+
+  it('a auditoria das skills (seção 2) não conta como lição, e sem a seção 1 não há lição nenhuma', () => {
+    const lidas = conferirLicoes(hoje[LICOES] ?? '')
+    expect(lidas.falhas).toEqual([])
+    const semASecao1 = estragar(hoje, LICOES, (texto) => texto.replace('## 1. O que saiu', '## Um. O que saiu'))
+    expect(conferirExecutarTask(semASecao1).falhas.some((falha) => falha.includes('0 lições'))).toBe(true)
   })
 
   it('treze perguntas na autoconferência: vermelho; doze: verde', () => {

@@ -1,5 +1,5 @@
-// Onde uma funcionalidade está no processo, calculado dos arquivos. É a fonte única da fase: o `/seguir`, o hook de
-// início de sessão e o `/status` leem daqui, em vez de cada um inferir do seu jeito.
+// Onde uma funcionalidade está no processo, calculado dos arquivos. É a fonte única da fase: o `/seguir` e o hook de
+// início de sessão leem daqui, em vez de cada um inferir do seu jeito.
 //
 //   node tools/processo/estado.ts [funcionalidade]            relatório em texto
 //   node tools/processo/estado.ts [funcionalidade] --json     o mesmo, para o orquestrador

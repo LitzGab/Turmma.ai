@@ -15,14 +15,14 @@ daqui. A partir da 19.0, um teste do harness acusa a linha que sumiu ou que dife
 | `supabase-postgres-best-practices` | Conflito neste repositório: esta skill recomenda RLS, mas o escopo de tenant é aplicado no repository, a partir do token (regra 10); RLS pode entrar como segunda camada de defesa, nunca no lugar do repository. |
 | `vercel-react-best-practices` | Conflito neste repositório: esta skill é escrita para Next.js e somos SPA com Vite (regra 50); ignore Server Components, Server Actions e tudo que depende de servidor Next, e valem as regras de bundle, re-render e carregamento, ainda mais no Chromebook fraco. |
 | `playwright-best-practices` | Conflito neste repositório: viewport de celular, toque e rede móvel se aplicam (D51), e toda tela roda nos projetos `chromebook` e `celular`; geolocalização, permissões de aparelho, PWA instalável e app nativo não se aplicam (regra 50, item 2). |
-| `lgpd-brasil` | Conflito neste repositório: esta skill resume a lei, e o que vale para o código é `docs/lgpd.md` e a regra 20, mais restritivos (aluno sem e-mail, sem CPF, sem foto). |
+| `lgpd-brasil` | Conflito neste repositório: esta skill resume a lei, e o que vale para o código é `docs/lgpd.md` e a regra 20, mais restritivos (aluno sem e-mail, telefone, CPF, foto, endereço, data de nascimento nem diagnóstico; a adaptação é registrada, nunca o diagnóstico, D35). |
 | `nestjs-best-practices` | Conflito neste repositório: a organização em controller, service, repository e DTO de `docs/arquitetura.md` prevalece sobre qualquer outra estrutura que esta skill sugira. |
 
-## O que sai
+## O que saiu
 
 | Skill | Motivo |
 |---|---|
-| `frontend-design` | Pedia ousadia estética; o limite aqui é Chromebook fraco, acessibilidade e a professora com quarenta minutos de intervalo (regra 50), e a pele está fechada (D80). Fonte pesada, animação e efeito que custam CPU ficam de fora. Sai na tarefa 19.0 |
+| `frontend-design` | Pedia ousadia estética; o limite aqui é Chromebook fraco, acessibilidade e a professora com quarenta minutos de intervalo (regra 50), e a pele está fechada (D80). Fonte pesada, animação e efeito que custam CPU ficam de fora. Saiu na tarefa 19.0 (pasta e `skills-lock.json`) |
 
 ## O que fica sem conflito
 

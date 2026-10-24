@@ -6,6 +6,7 @@ metadata:
   author: Kadajett
   version: "1.2.0"
 ---
+Conflito neste repositório: a organização em controller, service, repository e DTO de `docs/arquitetura.md` prevalece sobre qualquer outra estrutura que esta skill sugira.
 
 # NestJS Best Practices
 

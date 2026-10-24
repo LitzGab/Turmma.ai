@@ -6,6 +6,7 @@ metadata:
   author: vercel
   version: "1.0.0"
 ---
+Conflito neste repositório: esta skill é escrita para Next.js e somos SPA com Vite (regra 50); ignore Server Components, Server Actions e tudo que depende de servidor Next, e valem as regras de bundle, re-render e carregamento, ainda mais no Chromebook fraco.
 
 # Vercel React Best Practices
 

@@ -9,6 +9,7 @@ metadata:
   date: January 2026
   abstract: Comprehensive Postgres performance optimization guide for developers using Supabase and Postgres. Contains performance rules across 8 categories, prioritized by impact from critical (query performance, connection management) to incremental (advanced features). Each rule includes detailed explanations, incorrect vs. correct SQL examples, query plan analysis, and specific performance metrics to guide automated optimization and code generation.
 ---
+Conflito neste repositório: esta skill recomenda RLS, mas o escopo de tenant é aplicado no repository, a partir do token (regra 10); RLS pode entrar como segunda camada de defesa, nunca no lugar do repository.
 
 # Supabase Postgres Best Practices
 
