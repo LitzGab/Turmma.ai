@@ -11,6 +11,13 @@ const ROTA_EU = '**/v1/eu'
 const ROTA_SESSAO = '**/v1/sessao'
 /** O Chromebook com CPU ×4 e rede Fast 3G carrega a página e ainda faz o hash da senha no servidor. */
 const PRAZO_DA_ENTRADA_MS = 20_000
+/**
+ * O início de uma renovação (`request`) e o fim da anterior (`requestfinished`) chegam ao teste por duas abas, cada uma com a
+ * sua sessão do CDP, e são datados na entrega, não no navegador: com a trava, a folga entre uma e a outra medida aqui foi de 1 a
+ * 7 ms em 40 corridas, e a esteira (run 40006927589, 23/10/2026) pegou −1 ms. Sem a trava a sobreposição é de ~1 s (a espera de `ROTA_RENOVAR`
+ * no caso), então 250 ms separa o relógio da corrida real com folga dos dois lados.
+ */
+const TOLERANCIA_DO_RELOGIO_MS = 250
 
 const envelope = (codigo: keyof typeof MENSAGENS_DE_ERRO) => ({
   erro: { codigo, mensagem: 'mensagem da API que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' },
@@ -210,7 +217,7 @@ test.describe('entrada da equipe por e-mail e senha', () => {
     const ordenadas = [...janelas].sort((a, b) => a.inicio - b.inicio)
     for (const [posicao, janela] of ordenadas.entries()) {
       const anterior = ordenadas[posicao - 1]
-      if (anterior) expect(janela.inicio, 'duas renovações ao mesmo tempo').toBeGreaterThanOrEqual(anterior.fim)
+      if (anterior) expect(janela.inicio, 'duas renovações ao mesmo tempo').toBeGreaterThanOrEqual(anterior.fim - TOLERANCIA_DO_RELOGIO_MS)
     }
     for (const aba of [abaB, abaC]) await expect(aba).not.toHaveURL(/\/entrar$/)
   })
