@@ -1889,6 +1889,11 @@ pede. (dono: Orquestrador)
       outro leitor); (3) o `kill` só ao portão, sem o supervisor, só devolve a fonte quando o teste acaba ou estoura (até 10 min):
       fechar pede o portão assíncrono; (4) os blocos de mutação antigos de `7_task.md`, `5_task.md` e o do `aviso-de-sessao.sh` em
       `20_task.md` ficaram sem reescrever (dono: Arquiteto; origem: `tasks/correcoes/2026-10-24-processo-seguro.md`, infra-guardian)
+- [ ] **(X7, correção M5) Três testes com prazo apertado na esteira** `40128021627` (24/10/2026, tentativa 1 vermelha, tentativa 2
+      verde, sem mudança de código entre as duas; a M5 não toca nenhum deles): (1) `infra/test/jobs.int.test.ts` › "SIGTERM no worker
+      no meio do job: ele termina o job antes de sair, com código 0" (`expected 'running 0' to be 'exited 0'`); (2)
+      `e2e/pecas-galeria.spec.ts:16` [celular] e (3) `e2e/pecas-ia.spec.ts:443` [celular], os dois com o axe, no prazo de 30 s. Ver se
+      reaparecem; se sim, correção com a causa (dono: Orquestrador, que vigia a esteira)
 - [ ] **(X7, retro, M6) A citação por número de decisão soma o `conformidade-reviewer`**: nas "Regras de casamento" de
       `tools/processo/guardioes-por-caminho.ts`, o arquivo de exceção que cita D45, D47, D55 a D59 ou D64 soma o
       `conformidade-reviewer`, como a citação da regra 70 já soma (revisão da spec da X7, rodada 4)
