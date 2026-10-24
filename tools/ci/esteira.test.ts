@@ -299,7 +299,9 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
       // O e2e passa a fatia dele, e o total do `--shard` é o tamanho da matriz: `/3` com quatro fatias rodaria a quarta
       // fatia de três, que não existe, e a de `/5` deixaria um quinto da suíte sem rodar.
       const argumentos = nome === 'e2e' ? ` -- --shard=${EXPRESSAO_DA_FATIA}/${String(fatiasDoE2e().length)}` : ''
-      expect(comandos).toEqual(['npm ci', `npm run ci:${nome}${argumentos}`])
+      // O `verificar` confere também as entregas (RF14, terceira camada), antes das suítes; o teste dele está abaixo.
+      const antes = nome === 'verificar' ? ['npm run ci:conferir-entregas'] : []
+      expect(comandos).toEqual(['npm ci', ...antes, `npm run ci:${nome}${argumentos}`])
       expect(scripts[`ci:${nome}`]).toMatch(/^node tools\/ci\/[a-z0-9]+\.ts$/)
     }
   })
@@ -450,6 +452,37 @@ describe('esteira do GitHub (.github/workflows/ci.yml)', () => {
   it('o verificar baixa o histórico inteiro, para o gitleaks varrer todo commit e não só o último', () => {
     const checkout = workflow.jobs['verificar']?.steps.find((passo) => passo.uses?.startsWith('actions/checkout@'))
     expect(checkout?.with?.['fetch-depth']).toBe(0)
+  })
+
+  it('o verificar confere as entregas só em spec/** e correcao/**, com o histórico inteiro, e não na develop nem no pull request', () => {
+    const passos = workflow.jobs['verificar']?.steps ?? []
+    const indice = passos.findIndex((passo) => passo.run?.trim() === 'npm run ci:conferir-entregas')
+    expect(indice).toBeGreaterThanOrEqual(0)
+    const passo = passos[indice] as Passo
+    // O script é o do `package.json`, e o histórico que ele lê (`origin/develop..HEAD`) vem do checkout inteiro.
+    expect(scripts['ci:conferir-entregas']).toBe('node tools/ci/conferir-entregas.ts')
+    const checkout = passos.find((candidato) => candidato.uses?.startsWith('actions/checkout@'))
+    expect(checkout?.with?.['fetch-depth']).toBe(0)
+    expect(passos.indexOf(checkout as Passo)).toBeLessThan(indice)
+    // Antes das suítes: o vermelho das entregas não espera os minutos delas.
+    expect(indice).toBeLessThan(passos.findIndex((candidato) => candidato.run?.trim() === 'npm run ci:verificar'))
+    const condicao = passo.if
+    expect(condicao, 'o passo tem condição').toBeTypeOf('string')
+    const roda = (contexto: ContextoDoGithub): boolean => verdadeiro(avaliarExpressao(`\${{ ${String(condicao)} }}`, contexto))
+    for (const ref of ['refs/heads/spec/harness--l1', 'refs/heads/spec/x', 'refs/heads/correcao/2026-10-23-casca']) {
+      expect(roda(push(ref)), ref).toBe(true)
+    }
+    // A execução manual numa branch de trabalho também confere: é a reexecução do push.
+    expect(roda({ ...push('refs/heads/spec/x'), event_name: 'workflow_dispatch' })).toBe(true)
+    for (const ref of ['refs/heads/develop', 'refs/heads/release', 'refs/heads/main', 'refs/heads/spec-x', 'refs/heads/feature/spec/x', 'refs/heads/correcoes/x']) {
+      expect(roda(push(ref)), ref).toBe(false)
+    }
+    // No pull request a ref é a do merge, e o intervalo contra a `develop` seria o do próprio PR.
+    expect(roda({ event_name: 'pull_request', ref: 'refs/pull/7/merge', run_id: 1, event: { pull_request: { number: 7 } } })).toBe(false)
+    // Nenhum outro job o chama.
+    for (const [nome, job] of Object.entries(workflow.jobs)) {
+      if (nome !== 'verificar') expect(job.steps.filter((outro) => outro.run?.includes('conferir-entregas'))).toEqual([])
+    }
   })
 
   it('o checkout não deixa o token do GitHub gravado no repositório clonado', () => {

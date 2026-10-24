@@ -118,6 +118,18 @@ ou Orquestrador, por script, passam. Andar anterior à X7 fica sem hook nativo a
 `core.hooksPath` que o `prepare` grava fica na config comum, que todos os worktrees compartilham (o valor está "certo" e a pasta não existe). O aviso vale
 onde o `contexto-inicial.sh` da X7 já está e o `core.hooksPath` falta ou aponta outro lugar.
 
+No código (12.0): `tools/ci/conferir-entregas.ts` (`npm run ci:conferir-entregas`) lê `git rev-list origin/develop..HEAD` e, de cada commit, os
+arquivos de `git show --remerge-diff --no-renames --format= --name-only -z` (nome inteiro, o rename conta os dois lados, e o merge só pelo que
+resolveu, inclusive o conflito resolvido ficando com um lado). A classificação é `ehCodigoParaAEsteira`, em `portao.ts`: `PASTAS_DE_CODIGO` mais a
+lista do §5(e) (`PASTAS_DE_PROCESSO`, `ARQUIVOS_DE_PROCESSO` pelo nome inteiro, e `PADROES_DE_PROCESSO` para `.claude/settings*.json` e `tsconfig*.json`
+da raiz). A lista nasce aqui e não na 14.0, porque a esteira a conta em todo commit, sem saber quem o fez; a 14.0 a importa para a `decidirCommit`, só
+em sessão de papel. A marca é lida no **título**, com as regexps que o hook e o `linhas.ts` já usavam (`MARCA_DE_CORRECAO` e `MARCA_DE_TAREFA`, movidas para
+o `comando-git.ts`), e a linha `Revisões:` tem de ter texto, no corpo. `Fora do processo:` usa a regexp do hook (`LINHA_FORA_DO_PROCESSO`, qualquer
+caixa) e vale com motivo depois dos dois pontos, em qualquer linha da mensagem (a mensagem do `commit-tree` chega sem a limpeza do `git commit`). Sai 0, 1 com o
+hash inteiro de cada commit que não confere (todos de uma vez) e **2 sem a `origin/develop`**: o intervalo seria vazio e sairia 0, e quem não pôde conferir não
+passa. No `ci.yml`, o passo vem depois do `npm ci` e antes de `ci:verificar`, com `if: startsWith(github.ref, 'refs/heads/spec/') || startsWith(github.ref, 'refs/heads/correcao/')`
+(sem expressão entre chaves, e o teste da esteira a avalia ref a ref): roda também na execução manual dessas branches, e não no pull request, onde a ref é a do merge.
+
 **(b) Quem é obrigatório (RF15).** `obrigatorios = união(marcados, guardioesDoCaminho(arquivos, conteudoDe))`. Código
 em `apps/`, `packages/`, `e2e/`, `tools/guardas/` e `tools/testes/` pede os quatro, e a citação de uma regra soma o
 guardião dela; as exceções, com motivo, e as regras de casamento estão

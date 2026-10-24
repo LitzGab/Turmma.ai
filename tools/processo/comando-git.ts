@@ -43,17 +43,21 @@ function levarTodosSeCommitA(argumentos: string, alterados: string[], levados: S
   }
 }
 
+/** As duas marcas que dizem que o commit é de tarefa ou de correção. Quem as lê (o hook, o `linhas.ts`, a esteira) lê estas. */
+export const MARCA_DE_CORRECAO = /\(correção ([a-z0-9-]+)\)/
+export const MARCA_DE_TAREFA = /\(tarefa (\d+)\.0\)/
+
 /**
  * O documento que a marca da mensagem cita: `(correção <slug>)` ou `(tarefa N.0)`. A mensagem é o texto inteiro do commit,
  * o do comando mais o do arquivo de `-F`, e no git hook nativo é só a mensagem. `null` quando não há marca.
  */
 export function documentoDaMensagem(mensagem: string, raiz: string, arquivos: string[]): { caminho: string } | { erro: string } | null {
-  const correcao = /\(correção ([a-z0-9-]+)\)/.exec(mensagem)?.[1]
+  const correcao = MARCA_DE_CORRECAO.exec(mensagem)?.[1]
   if (correcao) {
     const caminho = join('tasks', 'correcoes', `${correcao}.md`)
     return existsSync(join(raiz, caminho)) ? { caminho } : { erro: `A correção ${correcao} não tem ${caminho}. Crie o documento com /corrigir.` }
   }
-  const numero = /\(tarefa (\d+)\.0\)/.exec(mensagem)?.[1]
+  const numero = MARCA_DE_TAREFA.exec(mensagem)?.[1]
   if (!numero) return null
   const pastaTasks = join(raiz, 'tasks')
   const candidatas = existsSync(pastaTasks)

@@ -395,7 +395,47 @@ function ehCommitDoMvp(entrada: EntradaDoCommit, alterados: string[]): boolean {
 
 export const TERMO_FORA_DO_PROCESSO = 'Fora do processo:'
 /** A linha da mensagem que dispensa a marca no commit do Joaquim (`techspec.md` §5a). */
-const LINHA_FORA_DO_PROCESSO = /^Fora do processo:/im
+export const LINHA_FORA_DO_PROCESSO = /^Fora do processo:/im
+
+/**
+ * Além de `PASTAS_DE_CODIGO`, o que o §5(e) da Tech Spec conta como código de processo: pastas, e os arquivos de
+ * configuração do portão. A esteira (`tools/ci/conferir-entregas.ts`) não sabe se quem commitou era papel, e por isso conta
+ * estes em todo commit; a `decidirCommit` só os cobrará em sessão de papel (14.0).
+ */
+export const PASTAS_DE_PROCESSO = [
+  'tools/',
+  '.github/',
+  '.claude/hooks/',
+  'docs/aia/ouro/',
+  'docs/aia/ouro-retido/',
+]
+/** Os arquivos de configuração da raiz do §5(e), pelo nome inteiro. `.claude/settings*.json` e `tsconfig*.json` são `PADROES_DE_PROCESSO`. */
+export const ARQUIVOS_DE_PROCESSO = [
+  'package.json',
+  'compose.yaml',
+  '.env.example',
+  'eslint.config.mjs',
+  'eslint-suppressions.json',
+  'vitest.config.ts',
+  'playwright.config.ts',
+  'knip.json',
+  '.gitleaks.toml',
+  '.size-limit.json',
+]
+export const PADROES_DE_PROCESSO = [
+  /^\.claude\/settings[^/]*\.json$/,
+  /^tsconfig[^/]*\.json$/,
+]
+
+/** O arquivo é código para a esteira: de produto (`PASTAS_DE_CODIGO`) ou de processo (§5e), em qualquer sessão. */
+export function ehCodigoParaAEsteira(arquivo: string): boolean {
+  return (
+    PASTAS_DE_CODIGO.some((pasta) => arquivo.startsWith(pasta)) ||
+    PASTAS_DE_PROCESSO.some((pasta) => arquivo.startsWith(pasta)) ||
+    ARQUIVOS_DE_PROCESSO.includes(arquivo) ||
+    PADROES_DE_PROCESSO.some((padrao) => padrao.test(arquivo))
+  )
+}
 
 /**
  * O bloqueio da linha `Fora do processo:` em qualquer sessão do Claude Code, o Orquestrador inclusive: ela é só do

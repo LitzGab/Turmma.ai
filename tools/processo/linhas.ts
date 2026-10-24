@@ -29,6 +29,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
+import { MARCA_DE_CORRECAO, MARCA_DE_TAREFA } from './comando-git.ts'
 import { lerDependencias, lerParalelismo, lerTarefas, PREFIXO_DA_BRANCH_DE_SPEC } from './estado.ts'
 
 /**
@@ -578,8 +579,6 @@ export async function abandonar(raiz: string, numero: number, opcoes: Opcoes = {
   return sobATrava(raiz, opcoes, () => abandonarSobATrava(raiz, numero))
 }
 
-const MARCA_DE_CORRECAO = /\(correção [a-z0-9-]+\)/
-const MARCA_DE_TAREFA = /\(tarefa \d+\.0\)/
 const soDocumento = (arquivos: string[]) => arquivos.every((arquivo) => arquivo.startsWith('tasks/') || arquivo.endsWith('.md'))
 
 /**

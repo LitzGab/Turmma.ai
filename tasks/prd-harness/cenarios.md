@@ -90,6 +90,10 @@ conferência a mais, documento ilegível, revisor obrigatório sem rodada), com 
   `.github/workflows/ci.yml`; `Fora do processo:` com motivo vazio
 - limite conhecido, afirmado como tal: commit de papel feito com `env -u CLAUDE_CODE_AGENT` e `Fora do processo: x` sai 0
 - o `ci.yml` chama em `spec/**` e `correcao/**`, com `fetch-depth: 0`, e não na `develop`
+- acrescentados na 12.0 (divergência 3 do `12_task.md`): sai 0 com `FORA DO PROCESSO: x` em outra caixa; sai 1 com o merge que resolveu o conflito ficando
+  com um lado só, a `Revisões:` vazia ou só no título, a marca só no corpo, `Fora do processo:` no meio de uma linha, o nome com acento e espaço, o rename
+  de código para documento e o commit de `commit-tree` sem marca (e com o motivo só de espaços); sai 2 sem a `origin/develop`. `ehCodigoParaAEsteira` tem
+  um caminho por entrada da lista do §5(e) e os que ela não cobre, com a âncora dos dois padrões
 
 **Instalação** (`tools/processo/harness/instalacao.test.ts`). O `prepare` do `package.json` aponta `tools/processo/git-hooks`; os dois scripts são executáveis, saem antes do node sem papel e chamam o `hook-git.ts` da árvore em que o git roda; o projeto `processo` do Vitest coleta só o teste do hook, sem `globalSetup`.
 

@@ -1874,3 +1874,16 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       `mutacoes.ts`): a regex aceita `ERR_MODULE_NOT_FOUND`, e a falta de qualquer outro módulo também passaria, então exigir o
       nome do módulo; e `modulo.replace('.', '\\.')` só escapa o primeiro ponto (a lista tem nomes com um ponto só, mas
       `replaceAll` não custa). Mexer no teste caduca `test-engineer` e `revisor-geral`. (dono: Arquiteto, na `retro` da X7)
+- [ ] **(X7, tarefa 12.0) `tools/ci/conferir-entregas.ts`: o `catch` do `rev-list` mistura dois casos.** Qualquer falha do
+      `git rev-list origin/develop..HEAD` sai 2 com "não achei origin/develop neste checkout": a `origin/develop` ausente (checkout
+      raso) e uma falha do próprio git (objeto corrompido, `git` fora do `PATH`) têm a mesma mensagem. Continua fechando na falha, que é o
+      que importa. Um `git rev-parse --verify origin/develop` antes do `rev-list` separaria os dois, com mensagem e teste novos; mexer no
+      script caduca os quatro revisores. A 12.0 chegou a tê-lo e o tirou: com o ref ausente o `rev-list` já falha, e a linha era redundante.
+      (dono: Arquiteto, na `retro` da X7; origem: `12_task.md`, "Recomendações sem aplicar")
+- [ ] **(X7, tarefa 12.0) `tools/ci/conferir-entregas.ts` e o merge com mais de dois pais, e a linha "remerge CONFLICT".** (i) Não há
+      teste de merge octopus: o `git show --remerge-diff --name-only` talvez não liste nada nele, e um octopus com código resolvido à
+      mão passaria sem marca. Falta o experimento com o git (versão 2.56 aqui), e, se for o caso, ou código que trate o merge de mais de dois
+      pais ou o limite escrito na Tech Spec §5(a); (ii) o item (ii) de `TODO.md:967`, a linha `remerge CONFLICT` que o
+      `--remerge-diff --name-only` pode imprimir num conflito que não é de conteúdo (modify/delete, por exemplo), vale também aqui: a linha
+      seria lida como nome de arquivo, e não é código. Juntar os dois quando o Arquiteto decidir, na tarefa futura que mexer no
+      `--remerge-diff` (dono: Arquiteto; origem: `12_task.md`, "Recomendações sem aplicar")

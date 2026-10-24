@@ -44,6 +44,11 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # A terceira camada do RF14 (`tools/ci/conferir-entregas.ts`): o que escapou do hook de commit aparece aqui, como o commit
+      # de código sem marca nem `Revisões:`. Só nas branches de trabalho; na `develop` o que chega já foi conferido no pouso.
+      # A condição lê só `github.ref`, sem expressão entre chaves, e o teste da esteira a avalia ref a ref.
+      - if: startsWith(github.ref, 'refs/heads/spec/') || startsWith(github.ref, 'refs/heads/correcao/')
+        run: npm run ci:conferir-entregas
       - run: npm run ci:verificar
 
   integracao:

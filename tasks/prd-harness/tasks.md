@@ -67,7 +67,7 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [ ] 11.2 O início de sessão confere o `core.hooksPath`
   - [ ] 11.3 Testes: formas contra um git real (RF14) e a instalação
 
-- [ ] **12.0 — A esteira recusa o commit de código sem marca em spec e correção**
+- [x] **12.0 — A esteira recusa o commit de código sem marca em spec e correção**
   - [ ] 12.1 `tools/ci/conferir-entregas.ts` e o job `verificar` (§5a)
   - [ ] 12.2 Testes: terceira camada do `cenarios.md`
 
