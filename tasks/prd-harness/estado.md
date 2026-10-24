@@ -16,10 +16,9 @@
     encontro próprio, segue com o da 11.0)
   - linha 2 (`Implementador 2`/`Mesa 2`): **15.0** (grande), 1ª tentativa, desde ~20:35; retomada às ~21:10 com
     `git merge --ff-only ea6b093`, portão e Mesa
-  - linha 3 (`Implementador 3`/`Mesa 3`): **correção `2026-10-23-entrar-renovacao-concorrente`**, desde ~20:30 (esteira
-    `40006927589` em `754d79c`, e2e `e2e/entrar.spec.ts:181`; guardiões `infra-guardian`, `privacy-guardian`); retomada às
-    ~21:10 com `git merge --ff-only ea6b093`, portão e Mesa
-  - as três linhas levam o `ea6b093`; o encontro de cada uma o acha já na spec depois do primeiro
+  - linha 3: **ociosa** desde ~21:15 (a correção `entrar-renovacao-concorrente` se encontrou em `8795cf8`, com o `ea6b093`;
+    spec em `415e97a`). Nada parte: o quadro prende tudo atrás da 11.0, da 13.0 e da 15.0
+  - o `ea6b093` já está na spec (veio no encontro da linha 3)
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Devo ainda:**
   - no fechamento, levar ao `TODO.md` as três "Recomendações sem aplicar" do `4_task.md` (destino TODO.md)
@@ -40,8 +39,8 @@
     fila parado 2 s), mas falha em 20 s com o erro certo (relatório da correção `agentes-suspensao-intermitente`)
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `ae839fc` (encontro da 10.0); esteiras `40026244263` (em `0068e5d`) e `40039836142` correndo. Com a
-  4.0, o `esteira.ts` pula a cancelada e lê a última concluída. As três anteriores (`40017905038`,
+- **Base:** `spec/harness` em `415e97a` (encontro da correção da linha 3); esteira `40046051490` correndo. Antes: `ae839fc` (encontro da 10.0),
+  com as esteiras `40026244263` (em `0068e5d`) e `40039836142`. Com a 4.0, o `esteira.ts` pula a cancelada e lê a última concluída. As três anteriores (`40017905038`,
   `40018797893`, `40021941702`) foram **canceladas** pelo push seguinte, não reprovadas: o `esteira.ts` lê cancelada como
   VERMELHA. Não abri correção. Sem esteira concluída na spec desde `a691e02`
 
