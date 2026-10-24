@@ -1873,7 +1873,8 @@ pede. (dono: Orquestrador)
       e a D79 em `docs/decisoes.md` (pela `registrar-decisao`); e a frase nova da regra 40 ("A esteira") pode citar, no formato
       "Checagem:", o teste que prova que o `segredo` é suíte exigida do portão local, que a correção não localizou (dono: Arquiteto;
       origem: `tasks/correcoes/2026-10-24-esteira-sem-branch-de-linha.md`)
-- [ ] **(X7, retro, M5) Correção "processo seguro"**: (1) `.processo/limpeza.json` ancorado no térreo, no comando dos passos 6 e 9
+- [x] **(X7, retro, M5) Correção "processo seguro"** (feito em 24/10/2026, correção `2026-10-24-processo-seguro`,
+      `e9794ef`): (1) `.processo/limpeza.json` ancorado no térreo, no comando dos passos 6 e 9
       (pelo `git rev-parse --git-common-dir`) e no `contexto-inicial.sh` (pelo `$CLAUDE_PROJECT_DIR`), e o `vigia.ts` com motivo
       legível para o JSON que não é objeto (`null`, `[]`, texto), com os blocos de "Mutações" de `20_task.md` que mudam; (2) Ctrl-C
       no portão devolve o arquivo mutado (hoje o `finally` não roda) e SIGTERM ao grupo também no `close` do teste que deixa neto
@@ -1882,6 +1883,12 @@ pede. (dono: Orquestrador)
       (5) o CLI de `linhas.ts` escreve na saída quando `EDUCA_ENCONTRO_SOB_A_TRAVA` ou `EDUCA_COMANDO_DE_INSTALACAO` está ligada, e a
       marca `abertura` sai junto com `abrindo: false` (5.0); (6) o teste "o SIGINT no supervisor leva o grupo do teste junto"
       (`mutacoes.test.ts`) sem a corrida que o deixou vermelho em `d76ef01` (esperava 124, veio 255)
+- [ ] **(X7, correção M5) O que a M5 deixou**: (1) o supervisor da mutação devolve a fonte sempre, mesmo que alguém a tenha
+      editado no meio: restaurar só se o conteúdo atual for o mutado (ou o hash do mutado em `--restaurar`); (2) `restaurarOArquivo`
+      usa `writeFileSync`, e um leitor que abra a fonte nesse instante pode pegá-la pela metade (vale quando o portão rodar junto com
+      outro leitor); (3) o `kill` só ao portão, sem o supervisor, só devolve a fonte quando o teste acaba ou estoura (até 10 min):
+      fechar pede o portão assíncrono; (4) os blocos de mutação antigos de `7_task.md`, `5_task.md` e o do `aviso-de-sessao.sh` em
+      `20_task.md` ficaram sem reescrever (dono: Arquiteto; origem: `tasks/correcoes/2026-10-24-processo-seguro.md`, infra-guardian)
 - [ ] **(X7, retro, M6) A citação por número de decisão soma o `conformidade-reviewer`**: nas "Regras de casamento" de
       `tools/processo/guardioes-por-caminho.ts`, o arquivo de exceção que cita D45, D47, D55 a D59 ou D64 soma o
       `conformidade-reviewer`, como a citação da regra 70 já soma (revisão da spec da X7, rodada 4)
