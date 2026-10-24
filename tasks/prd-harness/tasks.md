@@ -23,7 +23,7 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
 
 - [x] **3.0 — A esteira cancela a superada sozinha e não chama a cancelada de vermelha à toa**
   - [x] 3.1 `concurrency` e `pull_request` para a `develop` no `ci.yml` (RF1, RF19)
-  - [x] 3.2 Veredito com superada e `--event push` no `esteira.ts` (RF2)
+  - [x] 3.2 Veredito com superada e leitura por evento (`push` e `workflow_dispatch`) no `esteira.ts` (RF2)
   - [x] 3.3 Testes: os casos de RF1, RF2 e RF19 do `cenarios.md`
 
 - [x] **4.0 — O censo do prazo do e2e e o caso retitulado**

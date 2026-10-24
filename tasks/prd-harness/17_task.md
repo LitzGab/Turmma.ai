@@ -25,7 +25,8 @@ o passo 6 traz na própria página o que usa em toda tarefa; e as paradas da D79
 - [ ] 17.1 — `SKILL.md` fica com o cabeçalho, um índice que cita cada `passos/*.md` e diz quando entrar nele, e os passos
   1, 2 e 5; os passos 3, 4, 6, 7, 8, 9, 10 e "O `estado.md`" vão para `.claude/skills/seguir/passos/`
 - [ ] 17.2 — `passos/6-tarefa.md` autossuficiente: sem o que repete o protocolo; com o comando da limpeza, a abertura de
-  linha e o reinício do par com `recruit --replace`; sem mandar ler o passo 3, o 9 nem o `time.md`
+  linha, o reinício do par com `recruit --replace` e as saídas do encontro, inclusive a de código 5 (`VERIFICAÇÃO
+  RECUSADA`, da 6.0), que pede a mesma correção na linha que o `CONFLITO`; sem mandar ler o passo 3, o 9 nem o `time.md`
 - [ ] 17.3 — Paradas: viram aviso a proposta da retro que muda só skill, papel ou modelo de documento (salvo a que mexe na
   lista de um guardião com veto ou em `criar-tasks`, `revisar-tarefa`, `revisar-spec`) e a ressalva menor da validação;
   achado das regras 10, 20 e 70 nunca é menor. No `passos/7-…`, na `retro/SKILL.md` e no `validador.md`
@@ -53,7 +54,7 @@ o passo 6 traz na própria página o que usa em toda tarefa; e as paradas da D79
 | RF26: um dos três ausente | unidade | vermelho, um caso por arquivo |
 | RF26: `6-tarefa.md` que manda ler o passo 3 / o passo 9 / o `time.md` | unidade | vermelho, um caso por termo |
 | RF26: citar o passo 7 / o 8 / o 10 | unidade | verde, um caso por termo |
-| RF26: `6-tarefa.md` sem o comando da limpeza / sem a abertura de linha / sem `recruit --replace` | unidade | vermelho, um caso por ausência |
+| RF26: `6-tarefa.md` sem o comando da limpeza / sem a abertura de linha / sem `recruit --replace` / sem `VERIFICAÇÃO RECUSADA` | unidade | vermelho, um caso por ausência |
 | RF26: um `passos/*.md` que o índice do `SKILL.md` não cita | unidade | vermelho; todos citados, verde |
 | RF26: o repositório depois da tarefa | unidade | abaixo do teto |
 | RF22: `seguir/SKILL.md` com 500 linhas ou mais | unidade | vermelho |

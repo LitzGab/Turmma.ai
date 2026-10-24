@@ -23,18 +23,28 @@ regra ou guarda cita caminho que não existe; e a guarda de SDK de IA olha a pas
 ## Subtarefas
 
 - [ ] 16.1 — Em cada regra, a checagem de cada item, pelo nome do teste, da guarda ou do revisor, ou "só a revisão garante"
-- [ ] 16.2 — `tools/processo/harness/caminhos.test.ts`: todo caminho entre crases em `.claude/agents/`, `.claude/rules/`
-  e `tools/guardas/` existe (glob casa ao menos um arquivo)
+- [ ] 16.2 — `tools/processo/harness/caminhos.test.ts`: os caminhos citados existem, na fronteira abaixo
 - [ ] 16.3 — `tools/processo/harness/checagens.test.ts`: a checagem que cada regra cita existe
 - [ ] 16.4 — `regras-ia.mjs`: a pasta isenta é `packages/nucleo/src/ia/adaptador-*.ts`; a regra 30 e o `llm-integrator`
   dizem a mesma pasta
 - [ ] 16.5 — Testes
 
+## A fronteira do que se confere
+
+- **Onde:** `.claude/agents/*.md`, `.claude/rules/*.md` e `tools/guardas/` fora `*.test.ts` e `__fixtures__/` (amostras)
+- **Extração:** token sem espaço entre crases, entre aspas ou começando por `./`, numa função exportada que devolve o token
+  cru; a 21.0 a reaproveita com o filtro dela (§9)
+- **É caminho** o que, sem o `./`, começa por uma das pastas da §9 (`apps/`, `packages/`, `tools/`, `e2e/`, `infra/`,
+  `docs/`, `.claude/`). O resto não é conferido
+- **Confere:** sem o sufixo `:<linha>` ou `#<âncora>`; com `<...>`, `…` ou `${...}`, a pasta antes dele existe; com `*`,
+  casa ao menos um arquivo; o resto existe
+- **Hoje:** 121 caminhos; só os quatro de `apps/api/src/ia/adapters` faltam (16.4). Mínimo: 100, e um em cada pasta
+
 ## Arquivos previstos
 
 | Arquivo | Novo ou alterado |
 |---|---|
-| `.claude/rules/00-arquitetura.md`, `.claude/rules/10-multitenancy.md`, `.claude/rules/20-lgpd-menores.md`, `.claude/rules/30-camada-ia.md`, `.claude/rules/40-testes.md`, `.claude/rules/50-frontend.md`, `.claude/rules/60-dominio.md`, `.claude/rules/70-conformidade-cne.md`, `.claude/rules/80-infra-e-carga.md` | alterados |
+| `.claude/rules/*.md`, as nove (00 a 80) | alterados |
 | `.claude/agents/llm-integrator.md` | alterado |
 | `tools/guardas/regras-ia.mjs` | alterado |
 | `tools/guardas/guardas.test.ts` | alterado |
@@ -47,6 +57,8 @@ regra ou guarda cita caminho que não existe; e a guarda de SDK de IA olha a pas
 |---|---|---|
 | RF24: amostra que cita `apps/api/src/inexistente.ts` | unidade | vermelho |
 | RF24: os caminhos de hoje | unidade | verde, com contagem mínima |
+| fronteira: caminho inexistente num `x.test.ts` e em `__fixtures__/` de `tools/guardas/` da amostra | unidade | verde (fora da fronteira) |
+| fronteira: `e2e/__fixtures__/…` e `apps/<x>/y.ts` com a pasta presente; `e2e/inexistente/…` | unidade | verde; vermelho |
 | RF25: regra que cita checagem que não existe | unidade | vermelho |
 | RF25: regra que diz "só a revisão garante" | unidade | verde |
 | RF25: item sem checagem nem a frase | unidade | vermelho |

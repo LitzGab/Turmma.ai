@@ -18,7 +18,7 @@ retrospectivas (RF1 a RF11), em linhas. **(3)** O hook novo (RF14 a RF18), um co
 | Módulo | Novo ou alterado | O quê |
 |---|---|---|
 | `.github/workflows/ci.yml` | alterado | §5(f), RF19, terceira camada (§5a) |
-| `tools/processo/esteira.ts` | alterado | RF2 (§5f), `--event push`, `--censo` (RF9) |
+| `tools/processo/esteira.ts` | alterado | RF2 (§5f), leitura por evento (`push` e `workflow_dispatch`), `--censo` (RF9) |
 | `tools/processo/linhas.ts` | alterado | RF3 (§5f), `abandonar <n>` (RF6), base de `conferir` (RF10) |
 | `tools/processo/mutacoes.ts` | alterado | RF4 (§7c), `--faltando` (RF5), RF17 (§5d) |
 | `tools/processo/portao-local.ts` | alterado | RF7, RF8; imprime o `--faltando` e os guardiões |
@@ -85,17 +85,18 @@ A linha `Fora do processo:` não é da `decidirCommit`: `bloqueioDoForaDoProcess
 qualquer lugar, porque dentro de `-m "…"` não se separa linha de menção; sem distinguir maiúscula, para a esteira (12.0)
 não aceitar o que o hook deixou passar. O desvio (`desvioDoHook`) lê o comando por palavras do shell (aspas, `;`, `&&`,
 `|`, quebra de linha), vê o git atrás de caminho absoluto, atribuição, `env`, `command`, `exec`, `nohup` e `time`, e pula as
-opções do git antes do subcomando (`-C`, `-c`, `--git-dir`, `--work-tree`, `--namespace`, `--config-env`, `--attr-source`, `--shallow-file`, `--super-prefix`: as de `handle_options` do `git.c`, que levam o argumento na palavra seguinte). `-n` é
+opções do git antes do subcomando (`-C`, `-c`, `--git-dir`, `--work-tree`, `--namespace`, `--config-env`, `--attr-source`, `--shallow-file`, `--super-prefix`: as de `handle_options` do `git.c`, que levam o argumento na palavra seguinte; a `--super-prefix` é de git antigo, e o 2.56 não a aceita). `-n` é
 `--no-verify` só no `commit`; `export` e `unset` da variável do papel entram junto de `VAR=` e `env -u`. Fica fora, e é
 limite declarado: `sh -c`, script, substituição de comando e `xargs`.
 
 Fechado na ordem de correção da rodada 1: a barra invertida fora das aspas (`--no-verif\y`, `commi\t`, antes da quebra de linha) e `$'--no-verify'` saem como no shell, e o alias do git (`-c alias.*`, `--config-env alias.*`, `config alias.*`) é negado, porque é o jeito mais curto de chamar `commit -n` sem dizê-lo. Limites a mais: o octal ou hexadecimal dentro de `$'…'` (`$'\055\055no-verify'`) não é decodificado; um alias que já estava no config de antes não é visto (`git ci -m x`); e aspas duplas em número ímpar dentro de `-m "$(cat <<EOF …)"` desalinham a leitura e dão negação falsa, cuja saída é a mensagem em arquivo (`git commit -F`). O arquivo de `-F` só é lido se for arquivo regular (uma pasta, `/dev/stdin` ou um fifo prenderiam o hook).
 
 **A gramática do leitor é fechada (diagnóstico da 10.0).** O leitor do bash não fica completo, e a lista de limites não
-cresce forma a forma. Ele decodifica exatamente isto, e nada mais: aspas simples; aspas duplas e `$"…"`, com `\"` e `\\`
+cresce forma a forma. Ele lê exatamente isto, e nada mais. Decodifica: aspas simples; aspas duplas e `$"…"`, com `\"` e `\\`
 dentro; `$'…'` com `\'` e `\\` dentro (o resto do escape fica cru); a barra invertida fora das aspas e antes da quebra
-de linha; os separadores `;`, `&`, `|`, parênteses e quebra de linha; e os pedaços colados numa palavra só, com qualquer
-um destes no começo, no meio ou no fim (`--no-verif$'y'`, `-$'n'`). Do git, lê as seis opções antes do subcomando, nas
+de linha; e os pedaços colados numa palavra só, com qualquer um destes no começo, no meio ou no fim (`--no-verif$'y'`,
+`-$'n'`). Reconhece, sem decodificar, os separadores `;`, `&`, `|`, parênteses e quebra de linha. A barra antes da quebra
+de linha sai também dentro de aspas simples, o que só dá negação a mais. Do git, lê as nove opções antes do subcomando, nas
 formas com espaço e com `=` (`--config-env=…`), e nega `alias.*` e `core.hooksPath` nas três formas de gravar
 configuração: `-c k=v`, `--config-env k=V` ou `--config-env=k=V`, e `git config k`. **Todo o resto é limite, por
 categoria:** expansão de parâmetro (`$X`, `${X}`), de chaves (`{y,}`), de til, glob, substituição de comando e
