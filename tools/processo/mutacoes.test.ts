@@ -1,11 +1,13 @@
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
+import { VARIAVEL_DO_RELATORIO_DO_E2E } from '../ci/duracao-do-e2e.ts'
 import {
   aplicarMutacao,
+  casoFalhouNoRelatorio,
   avaliarMutacoes,
   comandoDoTeste,
   condicoesDaLinha,
@@ -23,6 +25,7 @@ import {
   MARCA_DO_SUPERVISOR,
   pedeReconstrucao,
   prazoDaMutada,
+  prepararRelatorio,
   PROJETOS_DO_E2E,
   reconstruirDepoisDasMutacoes,
   relatorioDoFaltando,
@@ -295,6 +298,37 @@ describe('conferir as mutações: o teste tem de cair sem a cláusula, e o arqui
     )
     expect(resultados.map((resultado) => resultado.veredito)).toEqual(['recusada', 'recusada', 'recusada'])
     expect(corridas).toBe(0)
+  })
+
+  it('vermelho por erro de carga (sintaxe, módulo que não carrega, nenhum caso rodou) é recusado com o motivo, e o arquivo volta', () => {
+    const raiz = arvore()
+    const avisos: string[] = []
+    let corridas = 0
+    const resultados = conferirMutacoes(
+      raiz,
+      [mutacao()],
+      () => {
+        corridas += 1
+        return corridas === 1 ? true : 'carga'
+      },
+      (texto) => avisos.push(texto),
+    )
+    expect(resultados.map((resultado) => resultado.veredito)).toEqual(['recusada'])
+    expect(resultados[0]?.motivo).toMatch(/erro de carga/)
+    expect(resultados[0]?.motivo).toMatch(/nenhum caso/)
+    // O motivo não diz só "sintaxe": preparo que lançou e ambiente que não subiu caem aqui também.
+    expect(resultados[0]?.motivo).toMatch(/preparo/)
+    expect(resultados[0]?.motivo).toMatch(/ambiente/)
+    expect(avisos.join('')).toMatch(/^✗ .*erro de carga/)
+    expect(avisos.join('')).not.toContain('✓')
+    expect(fonte(raiz)).toBe(REPOSITORIO)
+  })
+
+  it('o erro de carga na corrida limpa não é a mutação provada nem o teste verde: é o teste que não passa', () => {
+    const raiz = arvore()
+    const resultados = conferirMutacoes(raiz, [mutacao()], () => 'carga')
+    expect(resultados.map((resultado) => resultado.veredito)).toEqual(['recusada'])
+    expect(resultados[0]?.motivo).toMatch(/não passa sem a mutação/)
   })
 
   it('restaura o arquivo mesmo quando a corrida do teste estoura', () => {
@@ -1285,6 +1319,24 @@ describe('o portão confere as mutações do documento, e a web reconstruída é
     expect(malformado.corridas).toEqual([])
   })
 
+  it('mutação que deixa o teste vermelho por erro de carga reprova o portão: sem carimbo', () => {
+    const raiz = arvore()
+    const avisos: string[] = []
+    let corridas = 0
+    const resultado = conferirMutacoesDoDocumento(
+      raiz,
+      documento,
+      texto(deRepositorio),
+      () => {
+        corridas += 1
+        return corridas === 1 ? true : 'carga'
+      },
+      (aviso) => avisos.push(aviso),
+    )
+    expect(resultado).toEqual({ vermelho: '1 de 1 mutações não deixaram o teste vermelho ou foram recusadas' })
+    expect(avisos.join('')).toContain('erro de carga')
+  })
+
   it('todas vermelhas e sem tela: o carimbo, sem reconstruir nada', () => {
     const raiz = arvore()
     const { resultado, corridas, avisos } = conferir(raiz, texto(deRepositorio), true)
@@ -1357,5 +1409,162 @@ describe('o portão confere as mutações do documento, e a web reconstruída é
     com(true, deTela, outra, deRepositorio)
     expect(corridas).toHaveLength(1)
     expect(corridas[0]).toContain('--grep=outro caso')
+  })
+})
+
+describe('o relatório da corrida: só o caso que rodou e falhou prova a cláusula', () => {
+  const RAIZ = fileURLToPath(new URL('../..', import.meta.url))
+  // As pastas que os casos criam saem no fim de cada um, o symlink de `node_modules` junto (o `rmSync` não segue link).
+  const criadas: string[] = []
+  const temporaria = (prefixo: string): string => {
+    const dir = mkdtempSync(join(tmpdir(), prefixo))
+    criadas.push(dir)
+    return dir
+  }
+  afterEach(() => {
+    for (const dir of criadas.splice(0)) rmSync(dir, { recursive: true, force: true })
+  })
+  // As formas abaixo são as que o Vitest 5 e o Playwright 1.63 gravaram em 24/10/2026 (cortadas ao que a leitura usa).
+  const vitest = (falhos: number, suitesFalhas: number, total = falhos) => JSON.stringify({ numTotalTests: total, numFailedTests: falhos, numFailedTestSuites: suitesFalhas, success: false })
+  const playwright = (inesperados: number, erros: number) => JSON.stringify({ stats: { expected: 1, unexpected: inesperados, skipped: 0, flaky: 0 }, errors: Array.from({ length: erros }, () => ({ message: 'x' })) })
+
+  describe('casoFalhouNoRelatorio', () => {
+    it('vitest: um caso que falhou é a asserção; o arquivo que não carrega tem suite falha e nenhum caso', () => {
+      expect(casoFalhouNoRelatorio('vitest', vitest(2, 1, 3))).toBe(true)
+      // sintaxe e módulo que não existe: numFailedTests 0 e numFailedTestSuites 1
+      expect(casoFalhouNoRelatorio('vitest', vitest(0, 1, 0))).toBe(false)
+      // nenhum arquivo achado
+      expect(casoFalhouNoRelatorio('vitest', vitest(0, 0, 0))).toBe(false)
+    })
+
+    it('playwright: caso inesperado é a asserção; a sintaxe tem errors preenchido e nenhum caso inesperado', () => {
+      expect(casoFalhouNoRelatorio('playwright', playwright(1, 0))).toBe(true)
+      expect(casoFalhouNoRelatorio('playwright', playwright(0, 2))).toBe(false)
+      // um caso caiu e houve também erro global: o caso que caiu basta
+      expect(casoFalhouNoRelatorio('playwright', playwright(1, 1))).toBe(true)
+    })
+
+    it('relatório que não existe, vazio, ilegível ou de outra forma não prova caso nenhum', () => {
+      for (const leitor of ['vitest', 'playwright'] as const) {
+        expect(casoFalhouNoRelatorio(leitor, null)).toBe(false)
+        expect(casoFalhouNoRelatorio(leitor, '')).toBe(false)
+        expect(casoFalhouNoRelatorio(leitor, '{"truncado')).toBe(false)
+        expect(casoFalhouNoRelatorio(leitor, 'null')).toBe(false)
+        expect(casoFalhouNoRelatorio(leitor, '[]')).toBe(false)
+        expect(casoFalhouNoRelatorio(leitor, '{}')).toBe(false)
+      }
+      // a forma de um não vale no outro
+      expect(casoFalhouNoRelatorio('vitest', playwright(1, 0))).toBe(false)
+      expect(casoFalhouNoRelatorio('playwright', vitest(2, 1))).toBe(false)
+      // contagem que não é número
+      expect(casoFalhouNoRelatorio('vitest', '{"numFailedTests":"2"}')).toBe(false)
+    })
+  })
+
+  describe('prepararRelatorio: o que cada corrida recebe para gravar o relatório', () => {
+    it('vitest: o repórter json e o arquivo, depois de tudo o que o comando já tinha, inclusive o -t do caso', () => {
+      const comando = ['npx', 'vitest', 'run', '--project', 'unidade', 'a.test.ts', '-t', 'o caso']
+      expect(prepararRelatorio(comando, '/tmp/r.json')).toEqual({ comando: [...comando, '--reporter=json', '--outputFile=/tmp/r.json'], env: {}, leitor: 'vitest' })
+    })
+
+    it('playwright direto e e2e.ts: o comando não muda, o arquivo vai na variável que o playwright.config.ts já lê', () => {
+      for (const comando of [['npx', 'playwright', 'test', 'e2e/a.spec.ts', '--project=chromebook'], ['node', 'tools/ci/e2e.ts', '--manter-ambiente', 'e2e/a.spec.ts', '--project=celular']]) {
+        expect(prepararRelatorio(comando, '/tmp/r.json')).toEqual({ comando, env: { [VARIAVEL_DO_RELATORIO_DO_E2E]: '/tmp/r.json' }, leitor: 'playwright' })
+      }
+    })
+
+    it('comando de outro programa não tem relatório: vale o código de saída', () => {
+      expect(prepararRelatorio(['sh', '-c', 'exit 1'], '/tmp/r.json')).toBeNull()
+      expect(prepararRelatorio(['npx', 'tsc'], '/tmp/r.json')).toBeNull()
+    })
+
+    it('todo comando que comandoDoTeste monta tem relatório', () => {
+      const casos: Mutacao[] = [
+        mutacao({ teste: 'a/b.test.ts', caso: 'um caso' }),
+        mutacao({ teste: 'a/b.int.test.ts' }),
+        mutacao({ teste: 'e2e/a.spec.ts', arquivo: 'e2e/__fixtures__/f.ts' }),
+        mutacao({ teste: 'e2e/a.spec.ts', arquivo: 'apps/web/src/T.tsx', projeto: 'celular' }),
+      ]
+      for (const alvo of casos) expect(prepararRelatorio(comandoDoTeste(alvo) ?? [], '/tmp/r.json')).not.toBeNull()
+    })
+  })
+
+  describe('rodarCalado lê o relatório de um teste que caiu', () => {
+    /** O "teste" é um `sh` que grava o que o teste mandar no arquivo que a corrida pediu e sai com o código dado. */
+    function corrida(script: string, leitor: 'vitest' | 'playwright' = 'vitest') {
+      const arquivos: string[] = []
+      const rodar = rodarCalado(temporaria('relatorio-'), {
+        preparar: (comando, arquivo) => {
+          arquivos.push(arquivo)
+          return { comando, env: { RELATORIO: arquivo }, leitor }
+        },
+      })
+      return { resultado: rodar(['sh', '-c', script], 30_000), arquivos }
+    }
+
+    it('saiu 1 com um caso que falhou no relatório: caiu (false); sem caso nenhum, ou sem relatório: carga', () => {
+      expect(corrida(`printf '%s' '${vitest(1, 1)}' > "$RELATORIO"; exit 1`).resultado).toBe(false)
+      expect(corrida(`printf '%s' '${vitest(0, 1, 0)}' > "$RELATORIO"; exit 1`).resultado).toBe('carga')
+      expect(corrida('exit 1').resultado).toBe('carga')
+      expect(corrida(`printf '%s' '${playwright(1, 0)}' > "$RELATORIO"; exit 1`, 'playwright').resultado).toBe(false)
+      expect(corrida(`printf '%s' '${playwright(0, 2)}' > "$RELATORIO"; exit 1`, 'playwright').resultado).toBe('carga')
+    })
+
+    it('passou (0) é verdadeiro, qualquer que seja o relatório; e o prazo estourado segue sendo estourou', () => {
+      expect(corrida(`printf '%s' '${vitest(0, 0, 0)}' > "$RELATORIO"; exit 0`).resultado).toBe(true)
+      const rodar = rodarCalado(temporaria('relatorio-'), { preparar: (comando, arquivo) => ({ comando, env: { RELATORIO: arquivo }, leitor: 'vitest' }) })
+      expect(rodar(['sh', '-c', 'sleep 30'], 500)).toBe('estourou')
+    })
+
+    it('a pasta do relatório não sobra depois da corrida', () => {
+      const { arquivos } = corrida(`printf '%s' '${vitest(1, 1)}' > "$RELATORIO"; exit 1`)
+      expect(arquivos).toHaveLength(1)
+      expect(existsSync(dirname(arquivos[0] ?? ''))).toBe(false)
+    })
+
+    it('comando sem relatório: o código de saída decide, como antes', () => {
+      const rodar = rodarCalado(temporaria('relatorio-'))
+      expect(rodar(['sh', '-c', 'exit 3'], 30_000)).toBe(false)
+      expect(rodar(['sh', '-c', 'exit 0'], 30_000)).toBe(true)
+    })
+  })
+
+  describe('com o Vitest e o Playwright de verdade', () => {
+    function pasta(arquivos: Record<string, string>): string {
+      const dir = temporaria('relatorio-real-')
+      for (const [nome, conteudo] of Object.entries(arquivos)) writeFileSync(join(dir, nome), conteudo)
+      return dir
+    }
+
+    it('vitest: a asserção que falha cai; sintaxe, módulo que não existe e arquivo que não existe são carga', () => {
+      const dir = pasta({
+        'passa.test.ts': "it('passa', () => { expect(1).toBe(1) })\n",
+        'asserta.test.ts': "it('passa', () => { expect(1).toBe(1) })\nit('cai', () => { expect(1).toBe(2) })\n",
+        'sintaxe.test.ts': "it('x', () => { const = })\n",
+        'modulo.test.ts': "import './nao-existe.ts'\nit('x', () => {})\n",
+      })
+      const rodar = rodarCalado(RAIZ)
+      const comando = (arquivo: string) => ['npx', 'vitest', 'run', '--root', dir, '--globals', arquivo]
+      expect(rodar(comando('passa.test.ts'))).toBe(true)
+      expect(rodar(comando('asserta.test.ts'))).toBe(false)
+      expect(rodar(comando('sintaxe.test.ts'))).toBe('carga')
+      expect(rodar(comando('modulo.test.ts'))).toBe('carga')
+      expect(rodar(comando('nao-existe.test.ts'))).toBe('carga')
+    }, 120_000)
+
+    it('playwright, com a configuração que lê a mesma variável do playwright.config.ts: asserção cai, sintaxe é carga', () => {
+      const dir = pasta({
+        'pw.config.ts': `import { relatoriosDoPlaywright } from ${JSON.stringify(join(RAIZ, 'tools/ci/duracao-do-e2e.ts'))}\nexport default { testDir: '.', reporter: relatoriosDoPlaywright(false, process.env[${JSON.stringify(VARIAVEL_DO_RELATORIO_DO_E2E)}]) }\n`,
+        'passa.spec.ts': "import { test, expect } from '@playwright/test'\ntest('passa', () => { expect(1).toBe(1) })\n",
+        'asserta.spec.ts': "import { test, expect } from '@playwright/test'\ntest('cai', () => { expect(1).toBe(2) })\n",
+        'sintaxe.spec.ts': "import { test } from '@playwright/test'\ntest('x', () => { const = })\n",
+      })
+      symlinkSync(join(RAIZ, 'node_modules'), join(dir, 'node_modules'))
+      const rodar = rodarCalado(RAIZ)
+      const comando = (arquivo: string) => ['npx', 'playwright', 'test', '-c', join(dir, 'pw.config.ts'), join(dir, arquivo)]
+      expect(rodar(comando('passa.spec.ts'))).toBe(true)
+      expect(rodar(comando('asserta.spec.ts'))).toBe(false)
+      expect(rodar(comando('sintaxe.spec.ts'))).toBe('carga')
+    }, 120_000)
   })
 })

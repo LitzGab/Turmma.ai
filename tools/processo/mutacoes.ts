@@ -20,12 +20,22 @@
 // é contexto, que fica e serve para o trecho existir uma vez só no arquivo. O espaço do começo e do fim de cada linha
 // não conta. Em `teste:`, o nome do caso depois de ` › ` é opcional: sem ele roda o arquivo inteiro.
 //
+// O vermelho que vale é o de um caso que rodou e falhou. Mutação que deixa o arquivo com erro de sintaxe, ou o módulo sem
+// carregar, derruba o teste sem que caso nenhum rode, e o código de saída é o mesmo: a corrida lê o relatório do Vitest ou do
+// Playwright e recusa essa mutação com o motivo (M2 da retrospectiva da X7). O caso que roda e lança também conta: é um caso
+// que caiu.
+//
+// "Nenhum caso falhou" inclui mais que sintaxe: o `beforeAll` que lança (o Vitest pode deixar `numFailedTests` em 0, com os casos
+// pulados) e o ambiente que não subiu antes de o teste rodar (o compose do `tools/ci/e2e.ts`, sem relatório) caem como erro de carga
+// também. O portão fica vermelho, o que está certo, e o motivo diz isso; a mutação de produção que só quebra o preparo de um teste
+// de integração precisa de um trecho que ainda deixe um caso rodar e falhar.
+//
 // Uma terceira linha de cabeçalho, `projeto: celular`, é opcional e só vale para teste de e2e: diz em que projeto do
 // Playwright o caso roda. Sem ela é o `chromebook`. A cláusula que só existe no celular (o ramo de toque, o menu de baixo)
 // não é alcançada no computador, e o teste ficaria verde sem ela; o bloco diz onde ela se prova.
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -203,10 +213,11 @@ const TESTTIMEOUT_PADRAO_DO_VITEST_MS = 5_000
 const TIMEOUT_PADRAO_DO_E2E_MS = 30_000
 
 /**
- * O que a corrida devolve: `true` passou, `false` caiu, `'estourou'` foi morta no prazo. O relógio de quem chama também
- * decide (um `rodar` que não sabe medir só devolve `false`), e a corrida que levou mais que o prazo conta como estourada.
+ * O que a corrida devolve: `true` passou, `false` caiu porque um caso falhou, `'estourou'` foi morta no prazo e `'carga'` caiu
+ * sem caso nenhum falhar (erro de sintaxe, módulo que não carrega, nenhum caso rodou). O relógio de quem chama também decide
+ * (um `rodar` que não sabe medir só devolve `false`), e a corrida que levou mais que o prazo conta como estourada.
  */
-export type Rodar = (comando: string[], prazoMs?: number) => boolean | 'estourou'
+export type Rodar = (comando: string[], prazoMs?: number) => boolean | 'estourou' | 'carga'
 
 export interface OpcoesDaConferencia {
   /** O relógio, em ms. Injetado, a corrida de 61 s não espera 61 s. */
@@ -332,7 +343,7 @@ export function conferirMutacoes(
     }
     const testTimeout = (opcoes.testTimeoutMs ?? ((alvo: Mutacao) => testTimeoutDaMutacao(raiz, alvo)))(mutacao)
     const prazo = calcularPrazo(limpa.ms, testTimeout)
-    let corridaMutada: boolean | 'estourou'
+    let corridaMutada: ReturnType<Rodar>
     let mutadaMs: number
     try {
       writeFileSync(caminho, aplicada.mutado)
@@ -345,6 +356,10 @@ export function conferirMutacoes(
     if (corridaMutada === 'estourou' || mutadaMs > prazo) {
       recusar(
         `o teste passou do prazo de ${segundos(prazo)} com a cláusula fora (o maior entre 3 × a corrida limpa de ${segundos(limpa.ms)}, o testTimeout de ${segundos(testTimeout)} e ${segundos(PISO_DO_PRAZO_MS)}, até ${TETO_EM_TEXTO}): foi morto, com o grupo de processo, e o arquivo voltou ao que era`,
+      )
+    } else if (corridaMutada === 'carga') {
+      recusar(
+        'o teste ficou vermelho por erro de carga, e não por um caso que falhou (sintaxe, módulo que não carrega, preparo do teste que lançou, ambiente que não subiu ou nenhum caso rodou): a mutação não prova a cláusula. Troque o trecho por código válido, que o arquivo de teste consiga carregar e rodar',
       )
     } else if (corridaMutada) {
       avisar(`✗ ${rotulo}: o teste continuou verde sem a cláusula. Falta o teste que falhe sem ela.\n`)
@@ -429,20 +444,102 @@ function copiaDoSupervisor(): string {
   return copia
 }
 
+/** Quem lê o relatório: o formato do Vitest (`--reporter=json`) e o do Playwright (repórter `json`). */
+export type LeitorDoRelatorio = 'vitest' | 'playwright'
+
+/**
+ * A variável que o `playwright.config.ts` lê para gravar o relatório `json` (`VARIAVEL_DO_RELATORIO_DO_E2E`, em
+ * `tools/ci/duracao-do-e2e.ts`). Repetida aqui porque este arquivo só pode importar módulos `node:` (ver `copiaDoSupervisor`);
+ * `mutacoes.test.ts` prova que as duas são a mesma.
+ */
+const VARIAVEL_DO_RELATORIO_DO_PLAYWRIGHT = 'EDUCA_RELATORIO_DO_E2E'
+
+export interface RelatorioPreparado {
+  /** O comando que roda, já com o que grava o relatório. */
+  comando: string[]
+  /** O que a corrida acrescenta ao ambiente do teste. */
+  env: Record<string, string>
+  leitor: LeitorDoRelatorio
+}
+
+/**
+ * O que cada tipo de corrida recebe para gravar o relatório em `arquivo`. O Vitest ganha o repórter `json` na linha de comando
+ * (a saída da corrida é descartada, então trocar o repórter dele não tira nada de ninguém); o Playwright, que perderia a lista
+ * se o repórter fosse trocado, grava pela variável que a configuração dele já lê. `null`: comando que não é de teste do
+ * repositório, e então vale o código de saída.
+ *
+ * O relatório do Vitest guarda o nome de cada caso e a mensagem de cada asserção que falhou. Só dado sintético entra nos testes
+ * (regra 20, item 17), e é isso que o mantém inofensivo; a pasta temporária de `rodarCalado`, apagada no fim da corrida, existe
+ * também para esse conteúdo não ficar no disco depois dela.
+ */
+export function prepararRelatorio(comando: string[], arquivo: string): RelatorioPreparado | null {
+  const [programa, segundo] = comando
+  if (programa === 'npx' && segundo === 'vitest') return { comando: [...comando, '--reporter=json', `--outputFile=${arquivo}`], env: {}, leitor: 'vitest' }
+  const playwright = (programa === 'npx' && segundo === 'playwright') || (programa === 'node' && segundo === 'tools/ci/e2e.ts')
+  return playwright ? { comando, env: { [VARIAVEL_DO_RELATORIO_DO_PLAYWRIGHT]: arquivo }, leitor: 'playwright' } : null
+}
+
+/** O número que está no caminho do JSON, ou 0 se o caminho não existe ou não termina num número. */
+function contagemNoJson(relatorio: unknown, ...caminho: string[]): number {
+  let atual = relatorio
+  for (const chave of caminho) {
+    if (typeof atual !== 'object' || atual === null) return 0
+    atual = (atual as Record<string, unknown>)[chave]
+  }
+  return typeof atual === 'number' ? atual : 0
+}
+
+/**
+ * O relatório mostra ao menos um caso que rodou e falhou? É o que separa o vermelho que prova a cláusula do que só mostra que
+ * o arquivo não carregou: no Vitest, `numFailedTests` (a sintaxe e o módulo que falta deixam 0, com `numFailedTestSuites` 1); no
+ * Playwright, `stats.unexpected` (a sintaxe deixa 0, com `errors` preenchido). Relatório ausente, ilegível ou de outra forma
+ * não prova nada.
+ */
+export function casoFalhouNoRelatorio(leitor: LeitorDoRelatorio, texto: string | null): boolean {
+  if (texto === null) return false
+  let relatorio: unknown
+  try {
+    relatorio = JSON.parse(texto)
+  } catch {
+    return false
+  }
+  return (leitor === 'vitest' ? contagemNoJson(relatorio, 'numFailedTests') : contagemNoJson(relatorio, 'stats', 'unexpected')) > 0
+}
+
+/** O que a corrida diz, dado o código de saída do supervisor e o relatório que o teste gravou (se gravou). */
+function veredictoDaCorrida(status: number | null, relatorio: RelatorioPreparado | null, arquivo: string): ReturnType<Rodar> {
+  if (status === SAIDA_DO_PRAZO) return 'estourou'
+  if (status === 0) return true
+  if (relatorio === null) return false
+  return casoFalhouNoRelatorio(relatorio.leitor, existsSync(arquivo) ? readFileSync(arquivo, 'utf8') : null) ? false : 'carga'
+}
+
 /**
  * Roda o comando calado: a saída de dezenas de corridas esconderia a linha que importa. Cada corrida é um supervisor
  * (a cópia deste arquivo, chamada com `--supervisionar-corrida`) que dá ao teste o grupo de processo e o prazo.
+ *
+ * O teste que sai com erro tem o relatório lido: se nenhum caso falhou nele, a corrida devolve `'carga'`, e não `false`.
+ * `preparar` é injetado só pelo teste, que não tem Vitest nem Playwright para chamar.
  */
-export function rodarCalado(raiz: string, opcoes: { esperaAteSigkillMs?: number } = {}): Rodar {
+export function rodarCalado(
+  raiz: string,
+  opcoes: { esperaAteSigkillMs?: number; preparar?: (comando: string[], arquivo: string) => RelatorioPreparado | null } = {},
+): Rodar {
   const supervisor = copiaDoSupervisor()
   return (comando, prazoMs = TETO_DA_CORRIDA_MS) => {
-    const resultado = spawnSync(
-      process.execPath,
-      [...process.execArgv, supervisor, MARCA_DO_SUPERVISOR, String(prazoMs), String(opcoes.esperaAteSigkillMs ?? ESPERA_ATE_SIGKILL_MS), '--', ...comando],
-      { cwd: raiz, stdio: 'ignore', env: { ...process.env, EDUCA_BANCO_NOVO: undefined } },
-    )
-    if (resultado.status === SAIDA_DO_PRAZO) return 'estourou'
-    return resultado.status === 0
+    const pasta = mkdtempSync(join(tmpdir(), 'educa-corrida-'))
+    try {
+      const arquivo = join(pasta, 'relatorio.json')
+      const relatorio = (opcoes.preparar ?? prepararRelatorio)(comando, arquivo)
+      const resultado = spawnSync(
+        process.execPath,
+        [...process.execArgv, supervisor, MARCA_DO_SUPERVISOR, String(prazoMs), String(opcoes.esperaAteSigkillMs ?? ESPERA_ATE_SIGKILL_MS), '--', ...(relatorio?.comando ?? comando)],
+        { cwd: raiz, stdio: 'ignore', env: { ...process.env, ...relatorio?.env, EDUCA_BANCO_NOVO: undefined } },
+      )
+      return veredictoDaCorrida(resultado.status, relatorio, arquivo)
+    } finally {
+      rmSync(pasta, { recursive: true, force: true })
+    }
   }
 }
 

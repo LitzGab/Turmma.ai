@@ -125,7 +125,8 @@ que o diff tirou de `apps/web/src` (`tools/ci/e2e-que-cita-literal.ts`); o caso 
 diff tocou, e só ele, fica vermelho se passar de **metade do prazo** dele na máquina: o runner leva perto do dobro e o prazo
 é 30 s, ou o que o caso já declarava no HEAD com `test.slow()` ou `test.setTimeout()` (`tools/ci/duracao-do-e2e.ts`). Depois vêm as **mutações**
 que o documento declara: aplica cada uma, roda o teste citado, exige vermelho e restaura
-(`tools/processo/mutacoes.ts`). Grava o carimbo que o hook exige antes do commit (D53). Leva minutos.
+(`tools/processo/mutacoes.ts`). O vermelho que vale é o de um caso que rodou e falhou: a mutação que deixa o teste
+vermelho por erro de carga (sintaxe, módulo que não carrega, nenhum caso rodou) é recusada com o motivo. Grava o carimbo que o hook exige antes do commit (D53). Leva minutos.
 Enquanto um teste não passa, ele se roda isolado; o portão não é ferramenta de depuração.
 
 **Código de produção sem mutação não recebe carimbo (RF17).** Tarefa ou correção que altera arquivo de
