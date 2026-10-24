@@ -628,6 +628,30 @@ describe('hooks sobre um repositório de verdade', () => {
     // Cinco processos do portão em série: com a máquina carregada passam dos 5 s do padrão.
   }, 30_000)
 
+  it('o portão da tarefa, rodado como processo, fica vermelho quando as mutações do documento não passam, e não grava carimbo (M5 da retro da X7)', () => {
+    const { documento, raiz, portaoDaTarefa, semLinha } = arvoreDoPortaoDaTarefa()
+    // Um bloco cujo teste não existe é recusado sem rodar nada (nem o `npx`): a mutação não prova a cláusula, e o portão tem de reprovar.
+    const bloco = ['```mutacao', 'arquivo: apps/api/src/pedidos.ts', 'teste: tools/processo/nao-existe.test.ts', '- export const f', '+ export const g', '```'].join('\n')
+    writeFileSync(join(raiz, documento), `${semLinha}\n## Mutações\n\n${bloco}\n`)
+
+    const vermelho = portaoDaTarefa(documento)
+    expect(vermelho.status).toBe(1)
+    expect(vermelho.stdout).toContain('▶ mutações de tasks/prd-exemplo/9_task.md (1)')
+    expect(vermelho.stdout).toMatch(/✗ portão local vermelho nas mutações de tasks\/prd-exemplo\/9_task\.md: 1 de 1 mutações não deixaram o teste vermelho ou foram recusadas\. Nenhum carimbo gravado\./)
+    // As suítes rodaram antes (as mutações vêm depois delas), e mesmo assim nada foi carimbado.
+    expect(existsSync(join(raiz, 'suite-rodou'))).toBe(true)
+    expect(lerCarimbo(raiz)).toBeNull()
+    // E o arquivo de produção voltou ao que era.
+    expect(readFileSync(join(raiz, 'apps/api/src/pedidos.ts'), 'utf8')).toBe('export const f = (x: number) => { if (x) return 1 }\n')
+    // Bloco malformado é o outro vermelho do mesmo ramo: o motivo vem do leitor, sem rodar nada.
+    const semTeste = ['```mutacao', 'arquivo: apps/api/src/pedidos.ts', '- export const f', '```'].join('\n')
+    writeFileSync(join(raiz, documento), `${semLinha}\n## Mutações\n\n${bloco}\n\n${semTeste}\n`)
+    const malformado = portaoDaTarefa(documento)
+    expect(malformado.status).toBe(1)
+    expect(malformado.stdout).toMatch(/✗ portão local vermelho nas mutações de tasks\/prd-exemplo\/9_task\.md: mutação 2: falta a linha "teste:"\. Nenhum carimbo gravado\./)
+    expect(lerCarimbo(raiz)).toBeNull()
+  }, 30_000)
+
   it('o conferir e o revisores veem a produção sem bloco como o hook vê, e o documento pedido por outro caminho é o mesmo (RF17)', () => {
     const { documento, raiz, portaoDaTarefa, subcomando, semLinha, comLinha } = arvoreDoPortaoDaTarefa()
 
@@ -1668,6 +1692,18 @@ describe('o desvio do hook do git em sessão de papel (RF14)', () => {
     { etiqueta: 'alias por config-env', comando: 'git --config-env alias.c=VAR c -m x', motivo: /define um alias do git/ },
     { etiqueta: 'alias por config-env com igual', comando: 'V="commit -n" git --config-env=alias.c=V c -m x', motivo: /define um alias do git/ },
     { etiqueta: 'hookspath por config-env com igual', comando: 'git --config-env=core.hooksPath=V commit -m x', motivo: /core\.hooksPath/ },
+    { etiqueta: 'hookspath: desarmar o caminho', comando: 'git config --unset core.hooksPath', motivo: /mexe no core\.hooksPath/ },
+    { etiqueta: 'hookspath: acrescentar um segundo caminho', comando: 'git config --add core.hooksPath /tmp/x', motivo: /mexe no core\.hooksPath/ },
+    { etiqueta: 'hookspath: o --get com uma ação de escrita junto', comando: 'git config --get --unset core.hooksPath', motivo: /mexe no core\.hooksPath/ },
+    { etiqueta: 'hookspath: o --get que leva um valor, que pode ser a escrita', comando: 'git config --get core.hooksPath /tmp/x', motivo: /mexe no core\.hooksPath/ },
+    // O `git config` para de ler opções na primeira palavra que não é opção: com a chave antes, a ação vira o valor e o comando GRAVA.
+    { etiqueta: 'hookspath: a chave antes do --get grava o valor --get', comando: 'git config core.hooksPath --get', motivo: /mexe no core\.hooksPath/ },
+    { etiqueta: 'hookspath: o escopo antes e a chave antes do --get', comando: 'git config --local core.hooksPath --get', motivo: /mexe no core\.hooksPath/ },
+    { etiqueta: 'hookspath: a chave antes do --get-all, com o --show-origin', comando: 'git config --show-origin core.hooksPath --get-all', motivo: /mexe no core\.hooksPath/ },
+    { etiqueta: 'hookspath: o escopo depois da chave vira o valor', comando: 'git config --get core.hooksPath --local', motivo: /mexe no core\.hooksPath/ },
+    { etiqueta: 'hookspath: o --get com a chave repetida como valor', comando: 'git config --get core.hooksPath core.hooksPath', motivo: /mexe no core\.hooksPath/ },
+    { etiqueta: 'hookspath: ler e depois escrever no mesmo comando', comando: 'git config --get core.hooksPath && git config core.hooksPath /tmp/x', motivo: /mexe no core\.hooksPath/ },
+    { etiqueta: 'hookspath: a leitura com um c que o troca', comando: 'git -c core.hooksPath=/tmp/x config --get core.hooksPath', motivo: /troca o core\.hooksPath/ },
     { etiqueta: 'alias por c junto do config', comando: 'git -c alias.x=y config --list', motivo: /define um alias do git/ },
     { etiqueta: 'alias por config', comando: 'git config alias.ci "commit -n"', motivo: /define um alias do git/ },
     { etiqueta: 'alias por config global', comando: 'git config --global alias.ci "commit -n"', motivo: /define um alias do git/ },
@@ -1686,6 +1722,11 @@ describe('o desvio do hook do git em sessão de papel (RF14)', () => {
     { etiqueta: 'git com atribuição de outra variável', comando: 'GIT_AUTHOR_DATE=x git commit -m "x"' },
     { etiqueta: 'git com env de outra variável', comando: 'env FOO=1 git status' },
     { etiqueta: 'git config de outra chave', comando: 'git config user.name x' },
+    // M5 da retro da X7: ler o caminho dos hooks não o troca (o `contexto-inicial.sh` e quem confere o checkout leem a chave).
+    { etiqueta: 'leitura do hooksPath por --get', comando: 'git config --get core.hooksPath' },
+    { etiqueta: 'leitura do hooksPath por --get-all, em minúsculas', comando: 'git config --get-all core.hookspath' },
+    { etiqueta: 'leitura do hooksPath com escopo', comando: 'git config --global --get core.hooksPath' },
+    { etiqueta: 'leitura do hooksPath com o escopo entre a ação e a chave', comando: 'git config --get --local core.hooksPath' },
     { etiqueta: 'grep na variável do papel', comando: 'grep CLAUDE_CODE_AGENT .claude/settings.json' },
     { etiqueta: 'printenv da variável do papel', comando: 'printenv CLAUDE_CODE_AGENT' },
     { etiqueta: 'unset de outra variável', comando: 'unset FOO' },

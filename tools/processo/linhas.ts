@@ -347,6 +347,19 @@ export function opcoesDoAmbiente(ambiente: NodeJS.ProcessEnv): Opcoes {
   }
 }
 
+/**
+ * Os pontos de injeção do teste trocam o que o comando faz de verdade (o `npm ci` do `abrir`, a verificação do encontro). Ligados
+ * por engano no ambiente de quem opera, o encontro passaria sem verificar nada: o CLI diz, uma linha por variável, e `null`
+ * quando nenhuma está definida (M5 da retro da X7).
+ */
+export function avisoDoAmbiente(ambiente: NodeJS.ProcessEnv): string | null {
+  const avisos = [
+    ambiente['EDUCA_ENCONTRO_SOB_A_TRAVA'] === undefined ? null : 'aviso: EDUCA_ENCONTRO_SOB_A_TRAVA está ligada neste ambiente: o encontro roda esse comando no lugar da verificação de verdade. Fora de teste, desligue-a (unset).',
+    ambiente['EDUCA_COMANDO_DE_INSTALACAO'] === undefined ? null : 'aviso: EDUCA_COMANDO_DE_INSTALACAO está ligada neste ambiente: o abrir roda esse comando no lugar do npm ci. Fora de teste, desligue-a (unset).',
+  ].filter((aviso) => aviso !== null)
+  return avisos.length === 0 ? null : avisos.join('\n')
+}
+
 const SAIDA_DE_PRAZO_DO_FLOCK = 99
 const ENCONTRO_EM_CURSO = `encontro em curso: outro comando de linhas está com o quadro (a trava ${CAMINHO_DA_TRAVA}). Tente de novo quando ele terminar.`
 
@@ -514,7 +527,11 @@ async function concluirAbertura(raiz: string, numero: number, aberta: Abertura, 
     gravarLinha(raiz, aberta.spec, numero, (atual) => {
       aindaAbrindo = atual?.abertura === aberta.abertura
       if (!aindaAbrindo) return atual ?? null
-      return instalou && atual !== undefined ? { ...atual, abrindo: false, desde: null } : null
+      if (!instalou || atual === undefined) return null
+      // A marca é da abertura em curso: a linha livre não a leva, e a próxima abertura grava a sua.
+      const livre: Linha = { ...atual, abrindo: false, desde: null }
+      delete livre.abertura
+      return livre
     })
     if (!aindaAbrindo) return recusa(`a linha ${String(numero)} foi abandonada enquanto o npm ci rodava. Abra de novo.`)
   } finally {
@@ -862,6 +879,8 @@ async function executar(raiz: string, comando: string | undefined, primeiro: str
 
 if (import.meta.filename === process.argv[1]) {
   const [comando, primeiro = '', segundo = ''] = process.argv.slice(2)
+  const aviso = avisoDoAmbiente(process.env)
+  if (aviso !== null) process.stderr.write(`${aviso}\n`)
   const resultado = await executar(process.cwd(), comando, primeiro, segundo)
   process.stdout.write(`${resultado.texto}\n`)
   process.exitCode = resultado.codigo

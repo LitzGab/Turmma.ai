@@ -7,6 +7,7 @@ import { ULTIMO_AMBIENTE_DE_TESTE } from '../ci/compose.ts'
 import {
   abandonar,
   abrir,
+  avisoDoAmbiente,
   branchDaLinha,
   CAMINHO_DA_TRAVA,
   CAMINHO_DO_QUADRO,
@@ -826,6 +827,32 @@ describe('partida, encontro e fechamento, em repositórios de verdade', () => {
       expect((await rodar(spec, ['partida', '1', '2']).terminou).codigo).toBe(0)
     })
 
+    it('a abertura que termina deixa a linha livre sem a marca dela: a marca só vale enquanto a abertura corre (M5 da retro da X7)', async () => {
+      const { spec, checkouts } = await andaresComOrigem()
+      const l1 = checkouts.get(1) ?? ''
+      const preso = rodar(spec, ['abrir', '1', l1], { EDUCA_COMANDO_DE_INSTALACAO: 'true' })
+      expect((await preso.terminou).codigo).toBe(0)
+      expect(linhaDoQuadro(spec, 1)).toMatchObject({ abrindo: false, tarefa: null, desde: null })
+      expect(linhaDoQuadro(spec, 1)).not.toHaveProperty('abertura')
+      expect(readFileSync(join(spec, CAMINHO_DO_QUADRO), 'utf8')).not.toContain('abertura')
+    })
+
+    it('o CLI diz na saída quando um ponto de injeção está ligado, e não diz nada quando não está (M5 da retro da X7)', async () => {
+      const raiz = mkdtempSync(join(tmpdir(), 'linhas-aviso-'))
+      try {
+        const desligado = { EDUCA_ENCONTRO_SOB_A_TRAVA: undefined, EDUCA_COMANDO_DE_INSTALACAO: undefined }
+        expect((await rodar(raiz, [], desligado).terminou).texto).not.toContain('EDUCA_')
+        const daTrava = (await rodar(raiz, [], { ...desligado, EDUCA_ENCONTRO_SOB_A_TRAVA: 'true' }).terminou).texto
+        expect(daTrava).toContain('EDUCA_ENCONTRO_SOB_A_TRAVA')
+        expect(daTrava).not.toContain('EDUCA_COMANDO_DE_INSTALACAO')
+        const daInstalacao = (await rodar(raiz, [], { ...desligado, EDUCA_COMANDO_DE_INSTALACAO: 'true' }).terminou).texto
+        expect(daInstalacao).toContain('EDUCA_COMANDO_DE_INSTALACAO')
+        expect(daInstalacao).not.toContain('EDUCA_ENCONTRO_SOB_A_TRAVA')
+      } finally {
+        rmSync(raiz, { recursive: true, force: true })
+      }
+    })
+
     it('o npm ci que falha tira a linha do quadro e manda abrir de novo, sem tocar nas outras', async () => {
       const { spec, checkouts } = await andaresComOrigem()
       const l1 = checkouts.get(1) ?? ''
@@ -1349,6 +1376,19 @@ describe('partida, encontro e fechamento, em repositórios de verdade', () => {
         for (const valor of ['logo', '0', '-5', 'Infinity']) expect(opcoesDoAmbiente({ [nome]: valor }), `${nome}=${valor}`).toEqual({})
       }
       expect(CAMINHO_DA_TRAVA).toBe('.processo/linhas.lock')
+    })
+
+    it('avisoDoAmbiente: um aviso por ponto de injeção ligado, com o nome dele, e nenhum quando nenhum está', () => {
+      expect(avisoDoAmbiente({})).toBeNull()
+      expect(avisoDoAmbiente({ EDUCA_QUADRO_PRAZO_DA_TRAVA_MS: '300' })).toBeNull()
+      expect(avisoDoAmbiente({ EDUCA_ENCONTRO_SOB_A_TRAVA: 'true' })).toMatch(/^aviso: EDUCA_ENCONTRO_SOB_A_TRAVA está ligada.*no lugar d[ao] .*verificação/)
+      expect(avisoDoAmbiente({ EDUCA_COMANDO_DE_INSTALACAO: 'true' })).toMatch(/^aviso: EDUCA_COMANDO_DE_INSTALACAO está ligada.*no lugar do npm ci/)
+      const dois = avisoDoAmbiente({ EDUCA_ENCONTRO_SOB_A_TRAVA: 'true', EDUCA_COMANDO_DE_INSTALACAO: 'true' }) ?? ''
+      expect(dois.split('\n')).toHaveLength(2)
+      expect(dois).toContain('EDUCA_ENCONTRO_SOB_A_TRAVA')
+      expect(dois).toContain('EDUCA_COMANDO_DE_INSTALACAO')
+      // Variável vazia também troca o comando (`sh -c ''` passa): ligada é "definida", como o `opcoesDoAmbiente` lê.
+      expect(avisoDoAmbiente({ EDUCA_ENCONTRO_SOB_A_TRAVA: '' })).toContain('EDUCA_ENCONTRO_SOB_A_TRAVA')
     })
 
     describe('RF10: o conferir compara com a base gravada, e não sempre com a develop', () => {

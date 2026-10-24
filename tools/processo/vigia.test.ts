@@ -2,8 +2,8 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterAll, describe, expect, it } from 'vitest'
-import { comLimpeza, decidir, estaTrabalhando, LIMPEZA_DEMORA_MS, limpezaPerdida, nomesDoTime, SEM_OLHAR_MS } from './vigia.ts'
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
+import { comLimpeza, comLimpezaDoArquivo, decidir, estaTrabalhando, LIMPEZA_DEMORA_MS, limpezaPerdida, nomesDoTime, SEM_OLHAR_MS } from './vigia.ts'
 
 // A vigia que não acorda o modelo à toa. O erro caro é o contrário: ficar calada com o time parado. Por isso todo
 // caso de dúvida acorda.
@@ -176,6 +176,46 @@ describe('a limpeza pedida e não feita (RF27)', () => {
   })
 })
 
+describe('o limpeza.json que não é um objeto acorda, com o motivo dito (M5 da retro da X7)', () => {
+  const trabalhando = decidir({ Mesa: TRABALHANDO }, {}, agora)
+  const pedida = (minutos: number) => JSON.stringify({ pedida: ha(minutos) })
+
+  it('sem arquivo, ou com o objeto em dia, a decisão fica como estava', () => {
+    expect(comLimpezaDoArquivo(trabalhando, null, agora)).toEqual(trabalhando)
+    expect(comLimpezaDoArquivo(trabalhando, pedida(9), agora)).toEqual(trabalhando)
+    expect(comLimpezaDoArquivo(trabalhando, '{}', agora)).toEqual(trabalhando)
+  })
+
+  it('o objeto com a pedida de 11 minutos sem feita acorda, com o motivo da limpeza perdida', () => {
+    const acordada = comLimpezaDoArquivo(trabalhando, pedida(11), agora)
+    expect(acordada.acordar).toBe(true)
+    expect(acordada.motivo).toBe(`a limpeza pedida às ${ha(11)} não aconteceu`)
+  })
+
+  it.each([
+    { etiqueta: 'nulo', conteudo: 'null' },
+    { etiqueta: 'lista', conteudo: '[]' },
+    { etiqueta: 'lista com a pedida dentro', conteudo: `[${pedida(60)}]` },
+    { etiqueta: 'texto', conteudo: '"ontem"' },
+    { etiqueta: 'número', conteudo: '5' },
+    { etiqueta: 'verdadeiro', conteudo: 'true' },
+  ])('JSON válido que é $etiqueta: acorda com o time trabalhando, e o motivo diz que não é um objeto', ({ conteudo }) => {
+    const acordada = comLimpezaDoArquivo(trabalhando, conteudo, agora)
+    expect(acordada.acordar).toBe(true)
+    expect(acordada.motivo).toBe('.processo/limpeza.json não é um objeto: não dá para saber se a limpeza aconteceu')
+    // O relógio de quem trabalha continua guardado, como na limpeza perdida.
+    expect(acordada.visto).toEqual(trabalhando.visto)
+  })
+
+  it('o que não é JSON acorda, e o motivo diz que não é JSON', () => {
+    for (const conteudo of ['{ isto não é json', '', '[1, 2']) {
+      const acordada = comLimpezaDoArquivo(trabalhando, conteudo, agora)
+      expect(acordada.acordar, conteudo).toBe(true)
+      expect(acordada.motivo).toBe('.processo/limpeza.json não é JSON: não dá para saber se a limpeza aconteceu')
+    }
+  })
+})
+
 describe('a vigia como a rotina a roda (RF27)', () => {
   const pastas: string[] = []
   afterAll(() => {
@@ -219,6 +259,13 @@ describe('a vigia como a rotina a roda (RF27)', () => {
 
   it('com o time trabalhando e a limpeza pedida há 11 minutos sem feita, imprime /vigia', () => {
     expect(rodar(montar({ pedida: haMinutos(11) }))).toBe('/vigia\n')
+  })
+
+  it.each(['null', '[]', '"texto"', '5'])('limpeza.json que é JSON mas não é um objeto (%s) acorda, e não cala', (conteudo) => {
+    const raiz = montar(null)
+    mkdirSync(join(raiz, '.processo'))
+    writeFileSync(join(raiz, '.processo/limpeza.json'), conteudo)
+    expect(rodar(raiz)).toBe('/vigia\n')
   })
 
   it('limpeza.json que não se lê acorda: na dúvida, acorda', () => {
@@ -288,6 +335,20 @@ describe('o início de sessão grava a limpeza feita (RF27)', () => {
     }
   })
 
+  it('a feita vai para o .processo do térreo (CLAUDE_PROJECT_DIR), mesmo com o hook chamado de outra pasta (M5 da retro da X7)', () => {
+    const raiz = terreo()
+    const fora = mkdtempSync(join(tmpdir(), 'hook-de-fora-'))
+    pastas.push(fora)
+    mkdirSync(join(raiz, '.processo'))
+    writeFileSync(join(raiz, '.processo/limpeza.json'), JSON.stringify({ pedida: '2026-10-24T10:00:00Z' }))
+    const ambiente: NodeJS.ProcessEnv = { ...ambienteGit, CLAUDE_PROJECT_DIR: raiz }
+    delete ambiente['CLAUDE_CODE_AGENT']
+    const resultado = spawnSync('bash', [join(RAIZ, '.claude/hooks/contexto-inicial.sh')], { cwd: fora, env: ambiente, input: JSON.stringify({ source: 'clear' }), encoding: 'utf8' })
+    expect(resultado.status).toBe(0)
+    expect(Object.keys(limpezaDe(raiz) ?? {}).sort()).toEqual(['feita', 'pedida'])
+    expect(existsSync(join(fora, '.processo'))).toBe(false)
+  })
+
   it('com papel: não grava', () => {
     const raiz = terreo()
     iniciar(raiz, 'clear', 'mesa-de-revisao')
@@ -328,9 +389,104 @@ describe('o comando da limpeza grava a pedida que a vigia lê (RF27)', () => {
     return (blocos[0] ?? '').trim()
   }
 
+  /** Roda o comando do passo em `cwd`, com um `maestri` falso (em `bin/` do térreo) que só anota o que recebeu. */
+  function rodarOComando(passo: string, terreo: string, cwd: string) {
+    const marca = join(terreo, 'disparou.txt')
+    mkdirSync(join(terreo, 'bin'), { recursive: true })
+    writeFileSync(join(terreo, 'bin/maestri'), `#!/bin/sh\necho "$@" > '${marca}'\n`)
+    chmodSync(join(terreo, 'bin/maestri'), 0o755)
+    // O `sleep 25` é a espera do turno acabar: aqui não há turno.
+    // O ambiente do git de quem roda o teste (dentro de um hook do git, `GIT_DIR` e `GIT_WORK_TREE` apontam o repositório real) não entra:
+    // o `git rev-parse` do comando responde pelo `cwd`, e a pedida não pode ir parar no `.processo` do térreo de verdade.
+    const resultado = spawnSync('sh', ['-c', comandoDo(passo).replace('sleep 25', 'sleep 0')], { cwd, env: { ...ambienteSemOGitDeFora(), PATH: `${join(terreo, 'bin')}:${process.env['PATH'] ?? ''}` }, encoding: 'utf8' })
+    return { resultado, marca }
+  }
+  const VARIAVEIS_DO_GIT_DE_FORA = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_OBJECT_DIRECTORY']
+  /** O ambiente do teste sem as variáveis que apontam um repositório: o `git` do comando e o do preparo respondem pelo `cwd`. */
+  function ambienteSemOGitDeFora(): NodeJS.ProcessEnv {
+    const herdado = Object.entries(process.env).filter(([nome]) => !VARIAVEIS_DO_GIT_DE_FORA.includes(nome))
+    return { ...Object.fromEntries(herdado), GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' }
+  }
+  const ambienteGit = ambienteSemOGitDeFora()
+  const git = (cwd: string, ...argumentos: string[]) => execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...argumentos], { cwd, env: ambienteGit, stdio: 'pipe' })
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+  const esperar = async (arquivo: string) => {
+    for (let tentativa = 0; tentativa < 50 && !existsSync(arquivo); tentativa++) await new Promise((resolver) => setTimeout(resolver, 100))
+  }
+
+  it.each(['6-tarefa.md', '9-vigia-e-contexto.md'])('%s: de dentro de um andar (worktree), a pedida vai para o térreo, que é onde a vigia lê, e não para o andar', async (passo) => {
+    const terreo = mkdtempSync(join(tmpdir(), 'comando-terreo-'))
+    const andar = `${terreo}-andar`
+    try {
+      git(terreo, 'init', '-q')
+      writeFileSync(join(terreo, 'README.md'), '# x\n')
+      git(terreo, 'add', 'README.md')
+      git(terreo, 'commit', '-q', '-m', 'raiz')
+      git(terreo, 'worktree', 'add', '-q', '-b', 'spec/x', andar)
+      mkdirSync(join(andar, 'pasta'))
+      // Do andar e de uma pasta dentro dele: o comando acha o térreo pelo git, e não pelo diretório em que o Bash está.
+      for (const cwd of [andar, join(andar, 'pasta')]) {
+        rmSync(join(terreo, '.processo'), { recursive: true, force: true })
+        const { resultado, marca } = rodarOComando(passo, terreo, cwd)
+        expect(resultado.status).toBe(0)
+        const limpeza = JSON.parse(readFileSync(join(terreo, '.processo/limpeza.json'), 'utf8')) as { pedida: string }
+        expect(Object.keys(limpeza)).toEqual(['pedida'])
+        expect(existsSync(join(andar, '.processo'))).toBe(false)
+        expect(existsSync(join(andar, 'pasta/.processo'))).toBe(false)
+        await esperar(marca)
+        expect(readFileSync(marca, 'utf8').trim()).toBe('routine run Limpa o Orquestrador')
+      }
+    } finally {
+      git(terreo, 'worktree', 'remove', '--force', andar)
+      rmSync(terreo, { recursive: true, force: true })
+    }
+  })
+
+  it.each(['6-tarefa.md', '9-vigia-e-contexto.md'])('%s: com GIT_DIR e GIT_WORK_TREE de outro repositório no ambiente de quem roda, a pedida vai para o térreo do teste', async (passo) => {
+    const terreo = mkdtempSync(join(tmpdir(), 'comando-git-de-fora-'))
+    const intruso = mkdtempSync(join(tmpdir(), 'comando-intruso-'))
+    try {
+      git(terreo, 'init', '-q')
+      git(intruso, 'init', '-q')
+      // Dentro de um hook do git o ambiente é este: o repositório "de verdade" é o do `GIT_DIR`, qualquer que seja o `cwd`.
+      vi.stubEnv('GIT_DIR', join(intruso, '.git'))
+      vi.stubEnv('GIT_WORK_TREE', intruso)
+      const { resultado } = rodarOComando(passo, terreo, terreo)
+      expect(resultado.status).toBe(0)
+      expect(existsSync(join(terreo, '.processo/limpeza.json'))).toBe(true)
+      expect(existsSync(join(intruso, '.processo'))).toBe(false)
+    } finally {
+      rmSync(terreo, { recursive: true, force: true })
+      rmSync(intruso, { recursive: true, force: true })
+    }
+  })
+
+  it.each(['6-tarefa.md', '9-vigia-e-contexto.md'])('%s: fora de um repositório não grava pedida em lugar nenhum, e a rotina é disparada mesmo assim', async (passo) => {
+    const raiz = mkdtempSync(join(tmpdir(), 'comando-sem-git-'))
+    try {
+      // Sem o git o caminho da âncora viraria `/../.processo`, a raiz do disco: um `mkdir` falso, na frente do PATH, diz se o comando chegou
+      // a tentar criá-lo (o `&&` depois do `git rev-parse` é o que o impede), sem que o teste escreva em lugar nenhum.
+      mkdirSync(join(raiz, 'bin'))
+      writeFileSync(join(raiz, 'bin/mkdir'), `#!/bin/sh\necho "$@" >> '${join(raiz, 'mkdir.log')}'\n`)
+      chmodSync(join(raiz, 'bin/mkdir'), 0o755)
+      const { resultado, marca } = rodarOComando(passo, raiz, raiz)
+      // A âncora é o git: sem ele não há onde gravar. O `/clear` não depende da pedida, e por isso a rotina segue.
+      expect(resultado.status).toBe(0)
+      expect(existsSync(join(raiz, 'mkdir.log'))).toBe(false)
+      expect(existsSync(join(raiz, '.processo'))).toBe(false)
+      await esperar(marca)
+      expect(readFileSync(marca, 'utf8').trim()).toBe('routine run Limpa o Orquestrador')
+    } finally {
+      rmSync(raiz, { recursive: true, force: true })
+    }
+  })
+
   it.each(['6-tarefa.md', '9-vigia-e-contexto.md'])('%s: roda no térreo, grava a pedida de agora e dispara a rotina', async (passo) => {
     const raiz = mkdtempSync(join(tmpdir(), 'comando-'))
     try {
+      git(raiz, 'init', '-q')
       mkdirSync(join(raiz, 'bin'))
       const marca = join(raiz, 'disparou.txt')
       writeFileSync(join(raiz, 'bin/maestri'), `#!/bin/sh\necho "$@" > '${marca}'\n`)

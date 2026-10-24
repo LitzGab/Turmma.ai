@@ -133,14 +133,14 @@ teste: tools/processo/vigia.test.ts › a limpeza perdida acorda mesmo com o tim
 ```mutacao
 arquivo: tools/processo/vigia.ts
 teste: tools/processo/vigia.test.ts › com o time trabalhando e a limpeza em dia, ou sem arquivo
--    const limpeza = existsSync(arquivoDaLimpeza) ? (JSON.parse(readFileSync(arquivoDaLimpeza, 'utf8')) as Limpeza) : {}
-+    const limpeza = JSON.parse(readFileSync(arquivoDaLimpeza, 'utf8')) as Limpeza
+-    const conteudoDaLimpeza = existsSync(arquivoDaLimpeza) ? readFileSync(arquivoDaLimpeza, 'utf8') : null
++    const conteudoDaLimpeza = readFileSync(arquivoDaLimpeza, 'utf8')
 ```
 
 ```mutacao
 arquivo: tools/processo/vigia.ts
 teste: tools/processo/vigia.test.ts › com o time trabalhando e a limpeza pedida há 11 minutos
--    decisao = comLimpeza(decidir(telas, visto, agora), limpeza, agora)
+-    decisao = comLimpezaDoArquivo(decidir(telas, visto, agora), conteudoDaLimpeza, agora)
 +    decisao = decidir(telas, visto, agora)
 ```
 
@@ -239,29 +239,29 @@ teste: tools/processo/harness/aviso-de-sessao.test.ts › aponta o hook que exis
 ```mutacao
 arquivo: .claude/skills/seguir/passos/6-tarefa.md
 teste: tools/processo/vigia.test.ts › 6-tarefa.md: roda
--   mkdir -p .processo; date -u +'{"pedida":"%FT%TZ"}' >.processo/limpeza.json; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
-+   date -u +'{"pedida":"%FT%TZ"}' >.processo/limpeza.json; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
+-   d="$(git rev-parse --git-common-dir)/../.processo" && mkdir -p "$d" && date -u +'{"pedida":"%FT%TZ"}' >"$d/limpeza.json"; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
++   d="$(git rev-parse --git-common-dir)/../.processo" && date -u +'{"pedida":"%FT%TZ"}' >"$d/limpeza.json"; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
 ```
 
 ```mutacao
 arquivo: .claude/skills/seguir/passos/6-tarefa.md
 teste: tools/processo/vigia.test.ts › 6-tarefa.md: roda
--   mkdir -p .processo; date -u +'{"pedida":"%FT%TZ"}' >.processo/limpeza.json; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
-+   mkdir -p .processo; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
+-   d="$(git rev-parse --git-common-dir)/../.processo" && mkdir -p "$d" && date -u +'{"pedida":"%FT%TZ"}' >"$d/limpeza.json"; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
++   d="$(git rev-parse --git-common-dir)/../.processo" && mkdir -p "$d"; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
 ```
 
 ```mutacao
 arquivo: .claude/skills/seguir/passos/9-vigia-e-contexto.md
 teste: tools/processo/vigia.test.ts › 9-vigia-e-contexto.md: roda
--mkdir -p .processo; date -u +'{"pedida":"%FT%TZ"}' >.processo/limpeza.json; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
-+date -u +'{"pedida":"%FT%TZ"}' >.processo/limpeza.json; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
+-d="$(git rev-parse --git-common-dir)/../.processo" && mkdir -p "$d" && date -u +'{"pedida":"%FT%TZ"}' >"$d/limpeza.json"; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
++d="$(git rev-parse --git-common-dir)/../.processo" && date -u +'{"pedida":"%FT%TZ"}' >"$d/limpeza.json"; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
 ```
 
 ```mutacao
 arquivo: .claude/skills/seguir/passos/9-vigia-e-contexto.md
 teste: tools/processo/vigia.test.ts › 9-vigia-e-contexto.md: roda
--mkdir -p .processo; date -u +'{"pedida":"%FT%TZ"}' >.processo/limpeza.json; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
-+mkdir -p .processo; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
+-d="$(git rev-parse --git-common-dir)/../.processo" && mkdir -p "$d" && date -u +'{"pedida":"%FT%TZ"}' >"$d/limpeza.json"; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
++d="$(git rev-parse --git-common-dir)/../.processo" && mkdir -p "$d"; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
 ```
 
 ## Recomendações sem aplicar

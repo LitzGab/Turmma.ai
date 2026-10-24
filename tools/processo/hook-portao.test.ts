@@ -156,6 +156,7 @@ describe('o hook nega o desvio do git hook e a linha Fora do processo (RF14)', (
     { etiqueta: 'hookspath por c', comando: 'git -c core.hooksPath=/dev/null commit -m "x"', motivo: /core\.hooksPath/ },
     { etiqueta: 'hookspath em maiúsculas', comando: 'git -c core.HOOKSPATH=x commit -m "x"', motivo: /core\.hooksPath/ },
     { etiqueta: 'hookspath por config', comando: 'git config core.hookspath /tmp/x', motivo: /core\.hooksPath/ },
+    { etiqueta: 'hookspath desarmado por config', comando: 'git config --unset core.hooksPath', motivo: /core\.hooksPath/ },
     { etiqueta: 'variável do papel vazia', comando: 'CLAUDE_CODE_AGENT= git commit -m "x"', motivo: /mexe em CLAUDE_CODE_AGENT/ },
     { etiqueta: 'unset do papel', comando: 'unset CLAUDE_CODE_AGENT', motivo: /mexe em CLAUDE_CODE_AGENT/ },
     { etiqueta: 'env que tira o papel', comando: 'env -u CLAUDE_CODE_AGENT git commit -m "x"', motivo: /mexe em CLAUDE_CODE_AGENT/ },
@@ -189,6 +190,7 @@ describe('o hook nega o desvio do git hook e a linha Fora do processo (RF14)', (
     { etiqueta: 'grep na variável do papel', comando: 'grep CLAUDE_CODE_AGENT .claude/settings.json' },
     { etiqueta: 'printenv da variável do papel', comando: 'printenv CLAUDE_CODE_AGENT' },
     { etiqueta: 'mensagem em arquivo com o desvio dentro', comando: 'git commit -F msg-com-desvio.txt' },
+    { etiqueta: 'leitura do hooksPath', comando: 'git config --get core.hooksPath' },
   ])('com papel, passa calado: $etiqueta', ({ comando }) => {
     const saida = rodar(portao(), copiaComGit(), comando, 'implementador')
     expect(saida.status).toBe(0)

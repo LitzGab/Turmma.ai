@@ -66,12 +66,11 @@ do Maestri:
    na caixa: envie o Enter (`maestri ask "<terminal>" --raw "\n"`).
 6. **Limpe o seu contexto e encerre o turno.** Com o pedido da última partida enviado e conferido,
    tudo o que você sabia já está no `estado.md` e no quadro. A rotina `Limpa o Orquestrador` digita o
-   `/clear` e pula o disparo se o seu terminal estiver ocupado. O comando, que grava `pedida` para a
-   vigia acusar a limpeza perdida, é o **último do turno**, num Bash comum, no térreo; depois você
-   encerra o turno em uma linha:
+   `/clear` e pula o disparo se o seu terminal estiver ocupado. O comando é o **último do turno**, num
+   Bash comum; depois você encerra o turno em uma linha:
 
    ```bash
-   mkdir -p .processo; date -u +'{"pedida":"%FT%TZ"}' >.processo/limpeza.json; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
+   d="$(git rev-parse --git-common-dir)/../.processo" && mkdir -p "$d" && date -u +'{"pedida":"%FT%TZ"}' >"$d/limpeza.json"; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
    ```
 
    Não limpe em `PEDIDO de retomada` nem em

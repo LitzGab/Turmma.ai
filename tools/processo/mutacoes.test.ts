@@ -1,8 +1,8 @@
 import { execFileSync, spawn, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { VARIAVEL_DO_RELATORIO_DO_E2E } from '../ci/duracao-do-e2e.ts'
 import {
@@ -1147,6 +1147,51 @@ describe('o supervisor da corrida, como processo de verdade', () => {
     }
   }, 40_000)
 
+  it('o teste que sai e deixa um neto vivo leva o grupo junto: o neto morre, e o código continua o do teste (M5 da retro da X7)', async () => {
+    const raiz = pasta()
+    const { neto } = arquivosDe(raiz)
+    try {
+      // O `sh` sai 0 na hora e o `sleep` fica no grupo: sem isso o neto segura o `flock` da fila de carga depois do teste que passou.
+      const passou = await supervisionado(['sh', '-c', `sleep 600 & echo $! > ${neto}; exit 0`], { prazoMs: 30_000, esperaMs: 500 })
+      expect(passou.codigo).toBe(0)
+      expect(await morreu(Number(readFileSync(neto, 'utf8')))).toBe(true)
+      rmSync(neto)
+      const caiu = await supervisionado(['sh', '-c', `sleep 600 & echo $! > ${neto}; exit 3`], { prazoMs: 30_000, esperaMs: 500 })
+      expect(caiu.codigo).toBe(1)
+      expect(await morreu(Number(readFileSync(neto, 'utf8')))).toBe(true)
+    } finally {
+      limpar(raiz)
+    }
+  }, 40_000)
+
+  it('o neto que ignora o SIGTERM no fim do teste também morre, pelo SIGKILL depois da espera, e o código continua o do teste', async () => {
+    const raiz = pasta()
+    const { neto } = arquivosDe(raiz)
+    try {
+      const { codigo, durouMs } = await supervisionado(['sh', '-c', `(trap '' TERM; sleep 600) & echo $! > ${neto}; exit 0`], { prazoMs: 30_000, esperaMs: 600 })
+      expect(codigo).toBe(0)
+      expect(durouMs).toBeLessThan(5_000)
+      expect(await morreu(Number(readFileSync(neto, 'utf8')))).toBe(true)
+    } finally {
+      limpar(raiz)
+    }
+  }, 40_000)
+
+  it('o sinal que chega no primeiro instante, mandado pelo próprio teste, já encontra o tratador: o grupo morre e o supervisor sai com o código do prazo (M5 da retro da X7)', async () => {
+    const raiz = pasta()
+    const { neto } = arquivosDe(raiz)
+    try {
+      // O `sh` manda o SIGINT ao supervisor no primeiro instante, logo depois de abrir o neto: o tratador tem de existir antes de o
+      // grupo existir, e não logo depois (a janela entre o `spawn` e o `process.on`, em que o sinal mata o supervisor e deixa o grupo vivo).
+      const { codigo } = await supervisionado(['sh', '-c', `sleep 600 & echo $! > ${neto}; kill -INT $PPID; wait`], { prazoMs: 60_000, esperaMs: 500 })
+      expect(codigo).toBe(SAIDA_DO_PRAZO)
+      // E o grupo do filho acabou: o neto que o `sh` abriu antes do sinal não sobrevive ao supervisor.
+      expect(await morreu(Number(readFileSync(neto, 'utf8')))).toBe(true)
+    } finally {
+      limpar(raiz)
+    }
+  }, 40_000)
+
   it('o arquivo chamado sem a marca não roda supervisor nenhum', () => {
     expect(spawnSync(process.execPath, [...process.execArgv, MUTACOES_TS], { timeout: 20_000 }).status).toBe(0)
   }, 40_000)
@@ -1160,6 +1205,79 @@ describe('o supervisor da corrida, como processo de verdade', () => {
     }
     expect(sinalAoGrupo(spawnSync('true').pid, 'SIGTERM')).toBe(false)
   })
+})
+
+describe('o Ctrl-C no portão devolve o arquivo mutado (M5 da retro da X7)', () => {
+  const FONTE = "const modo = 'normal'\n"
+  const mutacaoDaFonte: Mutacao = { arquivo: 'fonte.ts', teste: 'fonte.test.ts', caso: null, antes: ["const modo = 'normal'"], depois: ["const modo = 'trava'"] }
+
+  /** O que o portão faz com uma mutação, como processo: o "teste" passa com a fonte intacta e, mutada, dorme com um neto. */
+  function montar() {
+    const raiz = mkdtempSync(join(tmpdir(), 'ctrl-c-'))
+    writeFileSync(join(raiz, 'fonte.ts'), FONTE)
+    // Executável, como o hook de shell que o portão muta: devolver a fonte não pode tirar o bit.
+    chmodSync(join(raiz, 'fonte.ts'), 0o755)
+    writeFileSync(join(raiz, 'fonte.test.ts'), '// teste\n')
+    const neto = join(raiz, 'neto.pid')
+    const script = `if grep -q trava ${join(raiz, 'fonte.ts')}; then sleep 600 & echo $! > ${neto}; wait; fi`
+    const ponte = join(raiz, 'ponte.ts')
+    // `conferirMutacoes` e `rodarCalado` do arquivo vivo: o que o `portao-local.ts` chama, sem as suítes.
+    writeFileSync(
+      ponte,
+      [
+        `import { conferirMutacoes, rodarCalado } from ${JSON.stringify(pathToFileURL(MUTACOES_TS).href)}`,
+        `const real = rodarCalado(${JSON.stringify(raiz)})`,
+        `conferirMutacoes(${JSON.stringify(raiz)}, [${JSON.stringify(mutacaoDaFonte)}], (_comando, prazo, restaurar) => real(['sh', '-c', ${JSON.stringify(script)}], prazo, restaurar), () => undefined, { prazoDaMutada: () => 60_000, testTimeoutMs: () => 0 })`,
+      ].join('\n'),
+    )
+    return { raiz, neto, ponte }
+  }
+
+  async function esperarAte(condicao: () => boolean, ms: number): Promise<boolean> {
+    for (let tentativa = 0; tentativa < ms / 50 && !condicao(); tentativa += 1) await new Promise((resolver) => setTimeout(resolver, 50))
+    return condicao()
+  }
+
+  it('o caminho normal do rodarCalado com a restauração: a fonte volta como era, com o modo dela', () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'restaura-'))
+    try {
+      const fonte = join(raiz, 'fonte.sh')
+      writeFileSync(fonte, 'original\n')
+      chmodSync(fonte, 0o755)
+      // O que a mutada deixa no disco: o conteúdo muda, o modo não (o `writeFileSync` mantém o do arquivo que já existe).
+      writeFileSync(fonte, 'mutada\n')
+      expect(rodarCalado(raiz)(['sh', '-c', 'exit 0'], 30_000, { arquivo: fonte, original: 'original\n' })).toBe(true)
+      expect(readFileSync(fonte, 'utf8')).toBe('original\n')
+      expect(statSync(fonte).mode & 0o777).toBe(0o755)
+      // Fonte 0644 continua 0644: o supervisor não escolhe o modo.
+      chmodSync(fonte, 0o644)
+      writeFileSync(fonte, 'mutada\n')
+      expect(rodarCalado(raiz)(['sh', '-c', 'exit 1'], 30_000, { arquivo: fonte, original: 'original\n' })).toBe(false)
+      expect(statSync(fonte).mode & 0o777).toBe(0o644)
+      expect(readFileSync(fonte, 'utf8')).toBe('original\n')
+    } finally {
+      rmSync(raiz, { recursive: true, force: true })
+    }
+  }, 40_000)
+
+  it.each(['SIGINT', 'SIGHUP'] as const)('o %s no grupo do portão (o que o terminal manda): o supervisor mata o grupo do teste, devolve a fonte e o neto morre', async (sinal) => {
+    const { raiz, neto, ponte } = montar()
+    // O grupo próprio faz da ponte o "portão" e do supervisor um colega de grupo, como no terminal: o sinal vai a ambos, e não ao grupo do teste.
+    const portao = spawn(process.execPath, [...process.execArgv, ponte], { detached: true, stdio: 'ignore' })
+    try {
+      expect(await esperarAte(() => existsSync(neto) && readFileSync(neto, 'utf8').trim() !== '', 20_000)).toBe(true)
+      // A fonte está mutada enquanto o teste dorme: é o que o Ctrl-C encontra.
+      expect(readFileSync(join(raiz, 'fonte.ts'), 'utf8')).toContain('trava')
+      process.kill(-(portao.pid ?? 0), sinal)
+      expect(await esperarAte(() => readFileSync(join(raiz, 'fonte.ts'), 'utf8') === FONTE, 15_000)).toBe(true)
+      expect(statSync(join(raiz, 'fonte.ts')).mode & 0o777).toBe(0o755)
+      expect(await morreu(Number(readFileSync(neto, 'utf8')))).toBe(true)
+    } finally {
+      portao.kill('SIGKILL')
+      limpar(raiz)
+      rmSync(raiz, { recursive: true, force: true })
+    }
+  }, 60_000)
 })
 
 describe('rodar calado: a corrida pelo supervisor, e a mutada que trava até o prazo', () => {

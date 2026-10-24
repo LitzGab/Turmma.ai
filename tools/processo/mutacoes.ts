@@ -217,7 +217,17 @@ const TIMEOUT_PADRAO_DO_E2E_MS = 30_000
  * sem caso nenhum falhar (erro de sintaxe, módulo que não carrega, nenhum caso rodou). O relógio de quem chama também decide
  * (um `rodar` que não sabe medir só devolve `false`), e a corrida que levou mais que o prazo conta como estourada.
  */
-export type Rodar = (comando: string[], prazoMs?: number) => boolean | 'estourou' | 'carga'
+export type Rodar = (comando: string[], prazoMs?: number, restaurar?: Restauracao) => boolean | 'estourou' | 'carga'
+
+/**
+ * O arquivo que a mutada alterou e o que ele era: o supervisor o devolve quando o grupo do teste acaba, por qualquer caminho.
+ * O `finally` de `conferirMutacoes` não alcança o portão morto por Ctrl-C (o Node morre no sinal sem rodá-lo, preso no `spawnSync`),
+ * e o supervisor, que recebe o mesmo sinal do terminal, é quem fica de pé.
+ */
+export interface Restauracao {
+  arquivo: string
+  original: string
+}
 
 export interface OpcoesDaConferencia {
   /** O relógio, em ms. Injetado, a corrida de 61 s não espera 61 s. */
@@ -348,7 +358,7 @@ export function conferirMutacoes(
     try {
       writeFileSync(caminho, aplicada.mutado)
       const inicio = agora()
-      corridaMutada = rodar(comando, prazo)
+      corridaMutada = rodar(comando, prazo, { arquivo: caminho, original })
       mutadaMs = agora() - inicio
     } finally {
       writeFileSync(caminho, original)
@@ -390,41 +400,67 @@ export function sinalAoGrupo(grupo: number, sinal: NodeJS.Signals | 0): boolean 
  * O supervisor: roda o comando em grupo de processo próprio (`detached` é um `setsid`: o pgid é o do filho) e, passado o
  * prazo, manda SIGTERM ao grupo inteiro, e não só ao filho: o teste abre `npx`, `vitest`, `docker compose` e `sleep`, e o
  * `spawnSync` com `timeout` só alcançaria o primeiro, deixando o neto segurando o `flock`. Os containers que o `docker compose` subiu ficam fora do grupo, e este não os alcança (o `compose down` do ambiente é de quem o subiu). Se o grupo ainda
- * existe `esperaMs` depois, SIGKILL. Sai com 0 se o comando passou, 1 se caiu, `SAIDA_DO_PRAZO` se foi morto no prazo, e 127 se o
+ * existe `esperaMs` depois, SIGKILL. O mesmo vale quando o filho sai e deixa um neto vivo no grupo: o neto não sobrevive ao
+ * teste. Sai com 0 se o comando passou, 1 se caiu, `SAIDA_DO_PRAZO` se foi morto no prazo ou por sinal, e 127 se o
  * programa nem abriu. Não é exportado: só roda como processo, pelo `rodarCalado`.
  */
 function supervisionar(comando: string[], prazoMs: number, esperaMs: number): Promise<number> {
   return new Promise((resolver) => {
     const [programa = '', ...argumentos] = comando
-    const filho = spawn(programa, argumentos, { stdio: 'ignore', detached: true })
-    const grupo = filho.pid
-    if (grupo === undefined) {
-      filho.on('error', () => resolver(127))
-      return
-    }
+    // O pgid do grupo do teste só existe depois do `spawn`; os tratadores de sinal, registrados antes dele, o leem quando rodam.
+    const grupo: { id?: number | undefined } = {}
     let estourou = false
-    // O fim do grupo, e não só o do filho: o `sh` que sai deixa o neto, que ignora o SIGTERM, até o SIGKILL.
+    /** SIGTERM ao grupo e, passada a espera, SIGKILL: o fim do grupo, e não só o do filho (o `sh` que sai deixa o neto, que ignora o SIGTERM). */
+    const acabarOGrupo = (): Promise<void> =>
+      new Promise((acabou) => {
+        const dono = grupo.id
+        if (dono === undefined || !sinalAoGrupo(dono, 0)) return acabou()
+        sinalAoGrupo(dono, 'SIGTERM')
+        const limite = Date.now() + esperaMs
+        const espiar = setInterval(() => {
+          const vivo = sinalAoGrupo(dono, 0)
+          if (vivo && Date.now() < limite) return
+          clearInterval(espiar)
+          sinalAoGrupo(dono, 'SIGKILL')
+          acabou()
+        }, 25)
+      })
     const terminar = (): void => {
       // O prazo e um sinal podem chegar os dois: uma vez só, senão cada chamada abre outro `setInterval`.
       if (estourou) return
       estourou = true
-      sinalAoGrupo(grupo, 'SIGTERM')
-      const limite = Date.now() + esperaMs
-      const espiar = setInterval(() => {
-        const vivo = sinalAoGrupo(grupo, 0)
-        if (vivo && Date.now() < limite) return
-        clearInterval(espiar)
-        sinalAoGrupo(grupo, 'SIGKILL')
-        resolver(SAIDA_DO_PRAZO)
-      }, 25)
+      void acabarOGrupo().then(() => resolver(SAIDA_DO_PRAZO))
+    }
+    // Ctrl-C no portão não alcança o grupo do teste (outra sessão): o supervisor o leva junto. Os tratadores existem **antes** do
+    // filho: com o `process.on` depois do `spawn`, um sinal que chegasse entre os dois (máquina carregada) matava o supervisor sem
+    // tratador e deixava o grupo vivo.
+    for (const sinal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sinal, terminar)
+    const filho = spawn(programa, argumentos, { stdio: 'ignore', detached: true })
+    grupo.id = filho.pid
+    if (grupo.id === undefined) {
+      filho.on('error', () => resolver(127))
+      return
     }
     setTimeout(terminar, prazoMs)
-    // Ctrl-C no portão não alcança o grupo do teste (outra sessão): o supervisor o leva junto.
-    for (const sinal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sinal, terminar)
     filho.on('close', (codigo) => {
-      if (!estourou) resolver(codigo === 0 ? 0 : 1)
+      if (estourou) return
+      // O filho saiu, mas o grupo pode ter ficado com um neto: sem o fim dele, o neto segura o `flock` da fila de carga.
+      void acabarOGrupo().then(() => resolver(codigo === 0 ? 0 : 1))
     })
   })
+}
+
+/**
+ * Devolve a fonte que a mutada alterou: escreve a original (guardada pelo `rodarCalado`) sobre o arquivo e apaga a cópia. É um
+ * `writeFileSync` sobre o arquivo que já existe, e não um `copyFileSync`: este aplica ao destino o modo da cópia (0644) e tiraria
+ * o bit de execução do hook de shell que o portão muta.
+ */
+function restaurarOArquivo(destino: string, origem: string): void {
+  try {
+    writeFileSync(destino, readFileSync(origem))
+  } finally {
+    rmSync(origem, { force: true })
+  }
 }
 
 /**
@@ -526,14 +562,18 @@ export function rodarCalado(
   opcoes: { esperaAteSigkillMs?: number; preparar?: (comando: string[], arquivo: string) => RelatorioPreparado | null } = {},
 ): Rodar {
   const supervisor = copiaDoSupervisor()
-  return (comando, prazoMs = TETO_DA_CORRIDA_MS) => {
+  return (comando, prazoMs = TETO_DA_CORRIDA_MS, restaurar) => {
     const pasta = mkdtempSync(join(tmpdir(), 'educa-corrida-'))
     try {
       const arquivo = join(pasta, 'relatorio.json')
       const relatorio = (opcoes.preparar ?? prepararRelatorio)(comando, arquivo)
+      // A original vai para a pasta da corrida, e o supervisor a devolve ao arquivo quando o grupo do teste acaba.
+      const copiaDaOriginal = join(pasta, 'original')
+      if (restaurar) writeFileSync(copiaDaOriginal, restaurar.original)
+      const aRestaurar = restaurar ? ['--restaurar', restaurar.arquivo, copiaDaOriginal] : []
       const resultado = spawnSync(
         process.execPath,
-        [...process.execArgv, supervisor, MARCA_DO_SUPERVISOR, String(prazoMs), String(opcoes.esperaAteSigkillMs ?? ESPERA_ATE_SIGKILL_MS), '--', ...(relatorio?.comando ?? comando)],
+        [...process.execArgv, supervisor, MARCA_DO_SUPERVISOR, String(prazoMs), String(opcoes.esperaAteSigkillMs ?? ESPERA_ATE_SIGKILL_MS), ...aRestaurar, '--', ...(relatorio?.comando ?? comando)],
         { cwd: raiz, stdio: 'ignore', env: { ...process.env, ...relatorio?.env, EDUCA_BANCO_NOVO: undefined } },
       )
       return veredictoDaCorrida(resultado.status, relatorio, arquivo)
@@ -808,8 +848,15 @@ export function relatorioDoFaltando(faltando: readonly LinhaSemBloco[], document
 
 // Chamado como supervisor (`rodarCalado`), este arquivo não é módulo: roda o comando e sai com o código da corrida.
 if (process.argv[2] === MARCA_DO_SUPERVISOR) {
-  const [prazo = '0', espera = '0', , ...comando] = process.argv.slice(3)
-  process.exit(await supervisionar(comando, Number(prazo), Number(espera)))
+  // prazo, espera, [`--restaurar` destino origem], `--`, e o comando.
+  const argumentosDoSupervisor = process.argv.slice(3)
+  const separador = argumentosDoSupervisor.indexOf('--')
+  const [prazo = '0', espera = '0', ...opcoes] = argumentosDoSupervisor.slice(0, separador)
+  const comando = argumentosDoSupervisor.slice(separador + 1)
+  const codigo = await supervisionar(comando, Number(prazo), Number(espera))
+  // Com o grupo do teste já acabado: o teste não lê mais a fonte, e o portão (vivo ou morto por Ctrl-C) a encontra como era.
+  if (opcoes[0] === '--restaurar') restaurarOArquivo(opcoes[1] ?? '', opcoes[2] ?? '')
+  process.exit(codigo)
 }
 
 // `node tools/processo/mutacoes.ts --faltando <documento>`: só imprime, e sai 0 também quando a lista não vem.

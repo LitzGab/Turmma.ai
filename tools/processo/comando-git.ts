@@ -412,6 +412,21 @@ function ehNDoCommit(palavra: string): boolean {
   return (letras.split(LETRAS_DO_COMMIT_COM_ARGUMENTO)[0] ?? '').includes('n')
 }
 
+/** As opções de `git config` que só dizem de onde ler ou o que mostrar: não mudam o que o comando faz com a chave. */
+const ESCOPO_DE_LEITURA = new Set(['--local', '--global', '--system', '--worktree', '--show-origin', '--show-scope'])
+
+/**
+ * `git config --get core.hooksPath` (ou `--get-all`, com o escopo antes da chave): ler o caminho dos hooks não o troca, e o
+ * `contexto-inicial.sh` e quem confere o checkout precisam lê-lo. Só passa a ação de leitura **primeiro** e a chave **por
+ * último**: o `git config` para de ler opções na primeira palavra que não é opção, e `core.hooksPath --get` (ou
+ * `core.hooksPath --local`) grava o valor `--get`. Um valor, ou outra ação junto (`--unset`, `--add`), também é a escrita.
+ */
+function leSoOCaminhoDosHooks(resto: readonly string[]): boolean {
+  const palavras = resto.filter((palavra) => !ESCOPO_DE_LEITURA.has(palavra))
+  const [acao, chave] = palavras
+  return palavras.length === 2 && (acao === '--get' || acao === '--get-all') && /^core\.hookspath$/i.test(chave ?? '') && resto.at(-1) === chave
+}
+
 function defineAlias(chamada: ChamadaDoGit): boolean {
   const palavras = [...chamada.globais, ...(chamada.subcomando === 'config' ? chamada.resto : [])]
   return palavras.some((palavra) => DEFINICAO_DE_ALIAS.test(palavra))
@@ -419,7 +434,7 @@ function defineAlias(chamada: ChamadaDoGit): boolean {
 
 function desvioDoGit(chamada: ChamadaDoGit): string | null {
   if (chamada.globais.some((opcao) => CAMINHO_DOS_HOOKS.test(opcao))) return 'troca o core.hooksPath do git, que é onde estão os hooks do processo'
-  if (chamada.subcomando === 'config' && chamada.resto.some((argumento) => CAMINHO_DOS_HOOKS.test(argumento))) {
+  if (chamada.subcomando === 'config' && chamada.resto.some((argumento) => CAMINHO_DOS_HOOKS.test(argumento)) && !leSoOCaminhoDosHooks(chamada.resto)) {
     return 'mexe no core.hooksPath do git, que é onde estão os hooks do processo'
   }
   if (defineAlias(chamada)) return 'define um alias do git, que chama o commit sem que o comando diga se pula os hooks'

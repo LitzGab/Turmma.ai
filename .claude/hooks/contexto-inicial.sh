@@ -37,6 +37,7 @@ esac
 # A limpeza do Orquestrador aconteceu (RF27): `clear`, sem papel, no térreo (o checkout principal, e não um andar ou uma
 # linha). O comando que a pede grava `pedida` em .processo/limpeza.json; aqui entra `feita`, e a vigia acusa a `pedida` sem `feita`.
 # A dupla de `git rev-parse` só é igual no checkout principal, e vazia fora de um repositório: o `-n` não deixa gravar ali.
+# O `.processo` é o do CLAUDE_PROJECT_DIR, para onde o `cd` do começo já levou o hook: nunca o da pasta de quem o chamou.
 pasta_git="$(git rev-parse --git-dir 2>/dev/null)"
 if [ "$origem" = limpo ] && [ -z "${CLAUDE_CODE_AGENT:-}" ] && [ -n "$pasta_git" ] && [ "$pasta_git" = "$(git rev-parse --git-common-dir 2>/dev/null)" ]; then
   mkdir -p .processo && node -e '

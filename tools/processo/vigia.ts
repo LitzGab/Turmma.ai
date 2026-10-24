@@ -77,6 +77,23 @@ export function comLimpeza(decisao: Decisao, limpeza: Limpeza, agora: Date): Dec
   return { ...decisao, acordar: true, motivo: `a limpeza pedida às ${limpeza.pedida ?? ''} não aconteceu` }
 }
 
+/**
+ * Une à decisão o conteúdo de `.processo/limpeza.json` como está no disco (`null`: não há arquivo). O que não é JSON, e o JSON
+ * que não é um objeto (`null`, lista, texto, número), não diz se a limpeza aconteceu: acorda, com o motivo dito (M5 da retro da X7).
+ */
+export function comLimpezaDoArquivo(decisao: Decisao, conteudo: string | null, agora: Date): Decisao {
+  if (conteudo === null) return decisao
+  const ilegivel = (porque: string): Decisao => ({ ...decisao, acordar: true, motivo: `.processo/limpeza.json ${porque}: não dá para saber se a limpeza aconteceu` })
+  let lido: unknown
+  try {
+    lido = JSON.parse(conteudo)
+  } catch {
+    return ilegivel('não é JSON')
+  }
+  if (typeof lido !== 'object' || lido === null || Array.isArray(lido)) return ilegivel('não é um objeto')
+  return comLimpeza(decisao, lido as Limpeza, agora)
+}
+
 if (import.meta.filename === process.argv[1]) {
   const registro = join(import.meta.dirname, '..', '..', '.processo', 'vigia.json')
   const arquivoDaLimpeza = join(import.meta.dirname, '..', '..', '.processo', 'limpeza.json')
@@ -85,9 +102,9 @@ if (import.meta.filename === process.argv[1]) {
   try {
     const telas = Object.fromEntries(nomesDoTime(maestri('list')).map((nome) => [nome, maestri('check', nome)]))
     const visto = existsSync(registro) ? (JSON.parse(readFileSync(registro, 'utf8')) as Record<string, string>) : {}
-    const limpeza = existsSync(arquivoDaLimpeza) ? (JSON.parse(readFileSync(arquivoDaLimpeza, 'utf8')) as Limpeza) : {}
+    const conteudoDaLimpeza = existsSync(arquivoDaLimpeza) ? readFileSync(arquivoDaLimpeza, 'utf8') : null
     const agora = new Date()
-    decisao = comLimpeza(decidir(telas, visto, agora), limpeza, agora)
+    decisao = comLimpezaDoArquivo(decidir(telas, visto, agora), conteudoDaLimpeza, agora)
     mkdirSync(dirname(registro), { recursive: true })
     writeFileSync(registro, `${JSON.stringify(decisao.visto, null, 2)}\n`)
   } catch {
