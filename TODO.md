@@ -1894,9 +1894,15 @@ pede. (dono: Orquestrador)
       no meio do job: ele termina o job antes de sair, com código 0" (`expected 'running 0' to be 'exited 0'`); (2)
       `e2e/pecas-galeria.spec.ts:16` [celular] e (3) `e2e/pecas-ia.spec.ts:443` [celular], os dois com o axe, no prazo de 30 s. Ver se
       reaparecem; se sim, correção com a causa (dono: Orquestrador, que vigia a esteira)
-- [ ] **(X7, retro, M6) A citação por número de decisão soma o `conformidade-reviewer`**: nas "Regras de casamento" de
+- [x] **(X7, retro, M6) A citação por número de decisão soma o `conformidade-reviewer`** (feito em 24/10/2026, correção
+      `2026-10-24-decisao-soma-conformidade`, `bc50587`): nas "Regras de casamento" de
       `tools/processo/guardioes-por-caminho.ts`, o arquivo de exceção que cita D45, D47, D55 a D59 ou D64 soma o
       `conformidade-reviewer`, como a citação da regra 70 já soma (revisão da spec da X7, rodada 4)
+- [ ] **(X7, correção M6) As outras decisões que as regras traduzem também somam o guardião delas**: (1) as da regra 20 (D10,
+      D35, D62, D66) somam o `privacy-guardian` em arquivo de exceção, com a mesma forma do termo da M6 (D maiúsculo, sem letra,
+      dígito, `_` ou `#` colado); (2) D60, D66, D68 e D70, que a regra 70 também cita, entram no termo do `conformidade-reviewer`,
+      tirando D60 da lista "não soma" do teste. Muda o conjunto de guardiões de um arquivo, com teste e bloco de mutação (dono:
+      Arquiteto; origem: `tasks/correcoes/2026-10-24-decisao-soma-conformidade.md`, privacy-guardian e conformidade-reviewer 1ª)
 - [ ] **(X7, retro, M7) Correção "acabamento de texto da X7"**: (1) os comentários que dizem que a lógica do hook mora em
       `revisoes.ts` (`tools/ci/etapas-de-guarda.ts:119`, `tools/ci/e2e-que-cita-literal.ts:4`, `tools/processo/sequencia-do-portao.ts:80`,
       e o `executar-task/SKILL.md` com `MARCAS_DE_DIRETIVA` e `DOCUMENTO_QUE_UMA_SUITE_LE`), o cabeçalho de
