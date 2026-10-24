@@ -11,33 +11,21 @@
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador`/`Mesa`): **ociosa** desde ~17:45 (a correção `agentes-suspensao-intermitente` se encontrou
-    em `dc11702`)
-  - linha 2 (`Implementador 2`/`Mesa 2`): **10.0** (grande), 1ª tentativa, desde ~17:50 (a 6.0 se encontrou em `24b67f5`,
-    depois da correção `encontro-6-harness`, `e430451`)
-  - linha 2: a correção do zod (`zod-4-6-7-audit-linha-2`) fechou em `995ff72`, na linha. A 10.0 retomada às ~18:35; às ~18:55
-    **ESCALADA da Mesa 2**: revisor-geral e test-engineer reprovaram 2 vezes seguidas (infra-guardian aprovou). Ordem
-    `10_task-r2.md` (4 bloqueantes, 6 recomendações) ainda não enviada. Pedi ao `Arquiteto`, reiniciado no checkout da linha 2,
-    o diagnóstico (`.processo/ordens/diagnostico-10.md`). Com ele: `PEDIDO de retomada` ao Implementador 2 apontando
-    `10_task-r2.md` e o diagnóstico. A próxima reprovação do mesmo revisor é a 3ª: limite, parada
-    - ~19:00: diagnóstico pronto; retomada com a r2. ~19:10: **BLOQUEIO da Mesa 2**, 3ª reprovação seguida do test-engineer.
-      Parada respondida às ~19:15: opção A (as duas opções na lista, com caso em negados e mutação, e conferir as outras opções
-      globais do git com argumento separado). Destravado; retomada enviada; o ajuste ficou pronto (`--attr-source`,
-      `--shallow-file`, `--super-prefix`)
-    - ~20:15: nova DIVERGÊNCIA `portão` na 10.0: `npm audit` acusa high em vite 8.3.0–8.3.2 (direta), body-parser, brace-expansion,
-      source-map-js. Correção `2026-10-23-audit-vite-e-transitivas` na linha 2, par reiniciado, guardião `infra-guardian`. Com o
-      RELATÓRIO, `PEDIDO de retomada` da 10.0 (falta portão com carimbo e a rodada 4 da Mesa 2; contagem do test-engineer destravada)
-    - ~20:25: a correção fechou em `02386f8` (vite 8.3.5; infra-guardian e test-engineer 1; 6 moderados do esbuild/drizzle-kit ficam,
-      só saem com --force). Par reiniciado e `PEDIDO de retomada` da 10.0 enviado; espero o RELATÓRIO (rodada 4)
-    - as linhas 1 e 3 recebem a correção pela spec na partida seguinte (depois do encontro da 10.0)
-  - linha 3 (`Implementador 3`/`Mesa 3`): **ociosa** desde ~18:25 (a 4.0 se encontrou em `5341e20`)
-  - linhas 1 e 3 ociosas: nada parte até o encontro da 10.0 (11.0, 12.0 e 13.0 esperam a 10.0; a 15.0 não está autorizada
-    junto com a 10.0)
+  - linha 1 (`Implementador`/`Mesa`): **11.0** (grande), 1ª tentativa, retomada às ~21:10 (sessões novas) depois da correção
+    `2026-10-23-audit-multer` (`ea6b093`, overrides do multer 2.5.0; infra-guardian e test-engineer APROVADO na 1ª; sem
+    encontro próprio, segue com o da 11.0)
+  - linha 2 (`Implementador 2`/`Mesa 2`): **15.0** (grande), 1ª tentativa, desde ~20:35; retomada às ~21:10 com
+    `git merge --ff-only ea6b093`, portão e Mesa
+  - linha 3 (`Implementador 3`/`Mesa 3`): **correção `2026-10-23-entrar-renovacao-concorrente`**, desde ~20:30 (esteira
+    `40006927589` em `754d79c`, e2e `e2e/entrar.spec.ts:181`; guardiões `infra-guardian`, `privacy-guardian`); retomada às
+    ~21:10 com `git merge --ff-only ea6b093`, portão e Mesa
+  - as três linhas levam o `ea6b093`; o encontro de cada uma o acha já na spec depois do primeiro
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Devo ainda:**
   - no fechamento, levar ao `TODO.md` as três "Recomendações sem aplicar" do `4_task.md` (destino TODO.md)
-  - nota ao Arquiteto, no próximo pedido: o push de cada encontro cancela a esteira em curso na `spec/harness` e o
-    `esteira.ts` lê a cancelada como VERMELHA; com encontros a cada ~30 min, a spec não chega a ter esteira concluída
+  - nota ao Arquiteto, no próximo pedido: as recomendações de texto da 10.0 (`techspec.md:94` e `:97`, `cenarios.md:73`,
+    `--super-prefix`) ficam com ele (estão em "Recomendações sem aplicar" do `10_task.md`); e o hook só lê a linha `Revisões:`
+    em commit com `-F`, não com vários `-m` (aviso do Implementador 2)
   - **antes de partir a 16.0:** pedir ao `Arquiteto` que feche a fronteira no `16_task.md`. Hoje a 16.0 confere aspas em
     `tools/guardas/`, onde há fixtures que não existem, e o `arquiteto.md` tem caminhos com reticências. Ver o
     `revisao-spec.md`, rodadas 11 a 13
@@ -52,7 +40,8 @@
     fila parado 2 s), mas falha em 20 s com o erro certo (relatório da correção `agentes-suspensao-intermitente`)
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `0068e5d` (encontro da 4.0); esteira `40026244263` na fila. As três anteriores (`40017905038`,
+- **Base:** `spec/harness` em `ae839fc` (encontro da 10.0); esteiras `40026244263` (em `0068e5d`) e `40039836142` correndo. Com a
+  4.0, o `esteira.ts` pula a cancelada e lê a última concluída. As três anteriores (`40017905038`,
   `40018797893`, `40021941702`) foram **canceladas** pelo push seguinte, não reprovadas: o `esteira.ts` lê cancelada como
   VERMELHA. Não abri correção. Sem esteira concluída na spec desde `a691e02`
 
@@ -70,6 +59,7 @@
 | 6.0 | `8dce7e7` + `e430451` (encontro-6-harness) | Sonnet 5.5 | infra-guardian 2, revisor-geral 2, test-engineer 2; a correção: infra-guardian 1, revisor-geral 1, test-engineer 1 | CONFLITO no `cenarios.md` no encontro (3ª vez nesta spec); slug `encontro-6` já existia de outra spec; recomendação do infra-guardian virou item no `TODO.md` |
 | correção agentes-suspensao-intermitente | `dc11702` | Sonnet 5.5 | conformidade-reviewer 1, frontend-reviewer 1, test-engineer 1 | esteira vermelha em `a691e02`; causa: Redis de fila parado 2 s, a fixture esperava só o sucesso da ativação do MFA; não era a suspensão |
 | 4.0 | `5341e20` + `bd292fb` (correção zod) | Sonnet 5.5 | infra-guardian 2, privacy-guardian 2, test-engineer 2, revisor-geral 2; a correção: infra-guardian 1, revisor-geral 1, test-engineer 1 | DIVERGÊNCIA `portão` (zod <4.6.6, GHSA-mrhx-c7xc-m3w5) virou a correção `zod-4-6-7-audit` na linha; três recomendações para o TODO.md |
+| 10.0 | `d76ef01` + `995ff72` (correção zod) + `02386f8` (correção vite) | Sonnet 5.5 | infra-guardian 4, test-engineer 4, revisor-geral 4; as correções: infra-guardian 1, test-engineer 1 (+ revisor-geral 1 na do zod) | ESCALADA na r2 → diagnóstico do Arquiteto (gramática do leitor do shell, techspec §5(a)); BLOQUEIO na r3 do test-engineer (`--attr-source`), Joaquim destravou com A; duas DIVERGÊNCIAS `portão` de `npm audit` |
 
 ## Esperando o Joaquim
 ## 23/10/2026 ~19:10 — X7 tarefa 10.0 (limite: 3 reprovações do test-engineer)
@@ -107,6 +97,7 @@ Segue sem depender: a 5.0 (linha 2) e a 7.0 (linha 3), que não tocam o `revisoe
   já tinha mudado o mesmo arquivo. Virou a correção `encontro-8` na linha 3
 - 23/10 14:49: o push do encontro da 7.0 falhou (`TLS connect error ... unexpected eof`). Refiz `git push origin spec/harness`, que passou
 ## O que decidi sem perguntar
+- 23/10 ~20:50: DIVERGÊNCIA de portão da 11.0 (multer, GHSA-q7qp-rjg7-q26m) → correção `2026-10-23-audit-multer` na linha 1, antes de retomar a 11.0 (`/seguir` passo 6)
 - 23/10 ~17:50: DIVERGÊNCIA `portão` do Implementador 3 na 4.0 (aviso novo do `npm audit` para o zod). Virou correção na
   linha 3, no meio da tarefa, com o `infra-guardian` ditado, porque o zod valida a entrada HTTP inteira (D81)
 - 23/10 ~18:15: a mesma DIVERGÊNCIA `portão` na linha 2 (10.0). Correção própria na linha 2, com a mudança de `bd292fb`
