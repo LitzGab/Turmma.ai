@@ -25,11 +25,15 @@ que espera o turno acabar e dispara com você já parado. É o **último comando
 comum (não em segundo plano, que devolveria um aviso à sessão limpa):
 
 ```bash
-nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
+mkdir -p .processo; date -u +'{"pedida":"%FT%TZ"}' >.processo/limpeza.json; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
 ```
 
 Depois dele, encerre o turno em uma linha, sem rodar mais nada: se o turno durar mais de 25 segundos,
-a rotina encontra o terminal ocupado, pula, e a limpeza fica para a tarefa seguinte, sem mais dano.
+a rotina encontra o terminal ocupado e pula. O comando roda no térreo e grava `pedida` em
+`.processo/limpeza.json`; o início da sessão limpa (`source: clear`, sem papel, no térreo) acrescenta
+`feita`. **Pedida há mais de 10 minutos sem `feita` depois dela, a limpeza se perdeu e a vigia
+(`tools/processo/vigia.ts`) acorda você**, mesmo com o time trabalhando: grave o "Agora" e refaça o
+comando no fim do turno, que grava uma `pedida` nova.
 
 - **Quando:** depois de pedir uma tarefa nova (passo 6, item 6) ou a validação (passo 8), e depois
   do commit de fechamento. Nunca no meio de uma tarefa, nem com um pedido ainda

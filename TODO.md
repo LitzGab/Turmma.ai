@@ -1820,6 +1820,14 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 
 ## Da X7 (harness), fora dela
 
+- [ ] **(X7, 20.0) Ancorar o caminho de `.processo/limpeza.json` no térreo:** o comando de limpeza dos passos 6 e 9 grava em
+      `.processo` relativo ao diretório do Bash do Orquestrador, e o `contexto-inicial.sh` grava em relativo ao
+      `CLAUDE_PROJECT_DIR`. Ancorar os dois (o comando pelo `git rev-parse --git-common-dir`, o hook pelo
+      `$CLAUDE_PROJECT_DIR`) para a `pedida` não cair fora do térreo. Muda o comando dos dois passos, o do hook e quatro
+      blocos de "Mutações" de `20_task.md`. (dono: Arquiteto, na `retro` da X7)
+- [ ] **(X7, 20.0) `vigia.ts` e o `limpeza.json` que é JSON válido mas não é objeto** (`null`, `[]`, texto): o motivo sai
+      enganoso ou a vigia não acorda; mostrar a `pedida` ilegível no motivo. Pede teste e mutação novos. (dono: Arquiteto,
+      na `retro` da X7)
 - [ ] **(X7, Tech Spec §9) Remover `tools/processo/separar-achados.ts` e o teste dele**: o hook já separa os achados por
       documento desde a X5, e o script só serviu para a migração. Espera o ok do Gabriel (U11-10), porque ele roda o
       processo na branch dele. (dono: Joaquim, com o Gabriel)

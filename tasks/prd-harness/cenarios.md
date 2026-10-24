@@ -153,7 +153,8 @@ mínima do que achou (zero achados é vermelho).
   `pedida`: não. O início de sessão grava `feita` só com `source: clear`, sem papel, no térreo; com papel, com
   `source: startup` ou fora do térreo, não grava
 - **RF28** (`vigia.test.ts`): a saída real do `maestri list`, em `tools/processo/__fixtures__/`, é lida com os terminais
-  e os estados certos; `docs/processo-sem-maestri.md` existe e cita os quatro `claude --agent`
+  certos (a saída do `list` só traz nomes: o estado de trabalho vem da tela, do `maestri check`, e o teste da vigia inteira, com um
+  `maestri` falso, prova que o time trabalhando não acorda); `docs/processo-sem-maestri.md` existe e cita os quatro `claude --agent`
 - **RF29** (`tools/processo/harness/aviso-de-sessao.test.ts`): entrada com `/seguir ` sem papel: devolve o contexto; com
   papel, ou sem o prefixo: nada; o hook não grava arquivo
 

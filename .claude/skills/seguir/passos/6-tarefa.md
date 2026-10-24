@@ -28,8 +28,8 @@ do Maestri:
    maestri connect "Implementador <n>" "Mesa <n>"
    ```
 
-   No andar da spec ninguém implementa: quem precisa ver uma tarefa em curso (o `Arquiteto`, no
-   diagnóstico e na triagem) é apontado para o checkout da linha dela.
+   No andar da spec ninguém implementa: o `Arquiteto`, para ver uma tarefa em curso, é apontado
+   para o checkout da linha dela.
 2. **Partida**, para cada linha que parte: `(cd <andar> && node tools/processo/linhas.ts partida <n> <N>)`.
    Ela traz a linha à ponta da spec e recusa a tarefa que não corre junto com as em curso.
 3. **Porte e diário.** O Implementador roda em Sonnet em toda tarefa. O porte do documento
@@ -65,14 +65,14 @@ do Maestri:
 
    Depois, um `maestri check` no terminal, uma vez: o pedido tem de aparecer enviado, com ele
    trabalhando. Texto parado na caixa: envie o Enter (`maestri ask "<terminal>" --raw "\n"`).
-6. **Limpe o seu contexto e encerre o turno.** Com o pedido da última partida do turno enviado e
-   conferido, tudo o que você sabia já está no `estado.md` e no quadro. Quem digita o `/clear` é a
-   rotina `Limpa o Orquestrador`, e ela pula o disparo se o seu terminal estiver ocupado: o comando é o
-   **último do turno**, num Bash comum (não em segundo plano), e depois dele você encerra o turno em
-   uma linha, sem rodar mais nada:
+6. **Limpe o seu contexto e encerre o turno.** Com o pedido da última partida enviado e conferido,
+   tudo o que você sabia já está no `estado.md` e no quadro. A rotina `Limpa o Orquestrador` digita o
+   `/clear` e pula o disparo se o seu terminal estiver ocupado. O comando, que grava `pedida` para a
+   vigia acusar a limpeza perdida, é o **último do turno**, num Bash comum, no térreo; depois você
+   encerra o turno em uma linha:
 
    ```bash
-   nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
+   mkdir -p .processo; date -u +'{"pedida":"%FT%TZ"}' >.processo/limpeza.json; nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
    ```
 
    A resposta chega a uma sessão que só tem o diário. Não limpe em `PEDIDO de retomada` nem em

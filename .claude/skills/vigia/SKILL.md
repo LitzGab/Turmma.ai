@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 Você é o **Orquestrador**, e esta é a vigia. A rotina `Vigia do processo` roda a cada 30 minutos e
 só o acorda com `/vigia` quando ninguém do time trabalha, ou quando alguém trabalha há duas horas
-sem você olhar (`tools/processo/vigia.ts`, D79).
+sem você olhar, ou quando a limpeza do seu contexto se perdeu (`tools/processo/vigia.ts`, D79).
 
 Leia a seção "Agora" do `tasks/prd-<func>/estado.md` do andar ativo
 (`maestri floor list` dá o caminho, se você não o tem), rode o quadro, que diz o que cada linha faz
@@ -15,6 +15,7 @@ terminais da fase, antes de concluir qualquer coisa. Não releia o que não mudo
 
 | O que os terminais mostram | O que você faz |
 |---|---|
+| a vigia acordou por "a limpeza pedida … não aconteceu" (`.processo/limpeza.json`: `pedida` há mais de 10 minutos sem `feita`) | a rotina pulou a limpeza porque você estava ocupado: grave o "Agora" e refaça o comando do `/seguir` (passo 9) no fim do turno, que grava uma `pedida` nova |
 | alguém trabalhando, dentro do prazo | nada; responda em uma linha. `Implementador` parado com a `Mesa` dele trabalhando é o normal: ele espera a rodada |
 | todos parados no prompt, e você espera um relatório há mais de uma vigia | um `PEDIDO de estado` a quem deve o relatório. Não é pedido de trabalho: ele só responde onde está |
 | um `Implementador` trabalhando, mas a tarefa pequena passou de 2 horas, ou a grande de 4, sem a primeira rodada de revisão | um `PEDIDO de estado`. Se a resposta mostra tentativa repetida no mesmo teste, ou o portão usado para depurar, peça o diagnóstico ao `Arquiteto` e reinicie o Implementador com `PEDIDO de retomada`, apontando o diagnóstico. Registre no `estado.md` |

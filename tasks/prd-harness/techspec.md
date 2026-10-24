@@ -399,8 +399,13 @@ acrescentaram os testes que elas citam. O teste não prova que a checagem escolh
   sessão `claude -p`) que lê `apps/api/src/main.ts` recebe a regra 00 como bloco automático de instruções, em mensagem
   própria **depois** do resultado do `Read`; antes de ler, e depois de ler só o `README.md`, não a tem. Os revisores
   não precisam mandar ler as quatro regras, e a saída do §9 não se aplica
-- ⚠️ NÃO VERIFICADO: o `UserPromptSubmit` recebe o texto colado expandido, e o `SessionStart` distingue `clear`; se
-  não valer, o RF29 e o RF27 ficam no aviso de início de sessão
+- ⚠️ VERIFICADO EM PARTE pela 20.0 (`20_task.md`, "Divergências", 24/10/2026), numa sessão real (`claude -p`) com hooks que
+  gravam a entrada: o `UserPromptSubmit` recebe o JSON com o texto em `prompt`, literal, e o que o hook escreve no stdout
+  chega ao modelo como contexto; o `SessionStart` recebe o JSON com `source` (visto `startup`). **Não provado**, porque pede
+  sessão interativa: que o texto *colado* chega assim, sem ser expandido, e que `/clear` entrega `source: clear`. Os dois hooks
+  agem sobre o que o JSON diz; se algum não valer, o RF29 e a `feita` do RF27 não disparam, a `pedida` sem `feita` faz a vigia
+  acordar o Orquestrador, e o aviso de início de sessão (`contexto-inicial.sh`, que já lê `clear` e `compact`) continua sendo
+  a rede. O Joaquim vê isso no primeiro `/clear` do Orquestrador: `.processo/limpeza.json` ganha a `feita`
 
 ## 13. Riscos técnicos
 

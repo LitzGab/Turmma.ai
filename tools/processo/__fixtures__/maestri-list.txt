@@ -1,0 +1,6 @@
+You:
+  - name: "Implementador"
+
+Connected agents:
+  - name: "Claude Code"
+  - name: "Mesa"

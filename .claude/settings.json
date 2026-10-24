@@ -12,6 +12,16 @@
         ]
       }
     ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/aviso-de-sessao.sh\""
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "matcher": "^(tenancy-guardian|privacy-guardian|conformidade-reviewer|infra-guardian|test-engineer|revisor-geral|llm-integrator|pedagogia-reviewer|frontend-reviewer)$",

@@ -18,7 +18,8 @@ em que vai trabalhar: na construção, o de uma linha da spec, cada uma com o se
 e Mesa (D79). Sessão que passa de 400 mil tokens é compactada sozinha
 (`autoCompactWindow`, em `.claude/settings.json`), e `.claude/hooks/contexto-inicial.sh` diz a cada
 papel o que reler depois. O Orquestrador não espera por isso: limpa o próprio contexto a cada tarefa,
-e o que ele sabe da funcionalidade é o "Agora" do `estado.md` do andar.
+e o que ele sabe da funcionalidade é o "Agora" do `estado.md` do andar. Sem o Maestri, o time roda como
+está em `docs/processo-sem-maestri.md`.
 
 **Revisores** (em `.claude/agents/`, subagentes chamados pela Mesa de revisão): em toda tarefa,
 `test-engineer`, `revisor-geral` e os guardiões marcados, juntos. O hook `tools/processo/revisoes.ts`

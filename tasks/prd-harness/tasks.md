@@ -107,11 +107,11 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [x] 19.3 Teste do harness dos metadados (RF30)
   - [x] 19.4 Testes: RF23, RF24 e RF30 do `cenarios.md`
 
-- [ ] **20.0 — A limpeza vigiada, o modo sem Maestri e a mensagem colada**
-  - [ ] 20.1 `limpeza.json` e a vigia (RF27)
-  - [ ] 20.2 `docs/processo-sem-maestri.md` com o socorro, e a leitura do `maestri list` com saída real (RF28)
-  - [ ] 20.3 `UserPromptSubmit` (RF29)
-  - [ ] 20.4 Testes: RF27 a RF29 do `cenarios.md`
+- [x] **20.0 — A limpeza vigiada, o modo sem Maestri e a mensagem colada**
+  - [x] 20.1 `limpeza.json` e a vigia (RF27)
+  - [x] 20.2 `docs/processo-sem-maestri.md` com o socorro, e a leitura do `maestri list` com saída real (RF28)
+  - [x] 20.3 `UserPromptSubmit` (RF29)
+  - [x] 20.4 Testes: RF27 a RF29 do `cenarios.md`
 
 - [ ] **21.0 — Uma skill de projeto aponta as receitas do guia, e a esteira prova que os caminhos existem**
   - [ ] 21.1 `.claude/skills/receitas-de-codigo/SKILL.md`: uma linha por receita do guia, com seção, exemplo e travas (RF32)

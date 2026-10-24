@@ -34,6 +34,22 @@ case "$entrada" in
 esac
 [ "$origem" = inicio ] && exit 0
 
+# A limpeza do Orquestrador aconteceu (RF27): `clear`, sem papel, no térreo (o checkout principal, e não um andar ou uma
+# linha). O comando que a pede grava `pedida` em .processo/limpeza.json; aqui entra `feita`, e a vigia acusa a `pedida` sem `feita`.
+# A dupla de `git rev-parse` só é igual no checkout principal, e vazia fora de um repositório: o `-n` não deixa gravar ali.
+pasta_git="$(git rev-parse --git-dir 2>/dev/null)"
+if [ "$origem" = limpo ] && [ -z "${CLAUDE_CODE_AGENT:-}" ] && [ -n "$pasta_git" ] && [ "$pasta_git" = "$(git rev-parse --git-common-dir 2>/dev/null)" ]; then
+  mkdir -p .processo && node -e '
+const fs = require("fs")
+const arquivo = ".processo/limpeza.json"
+let limpeza = {}
+try { limpeza = JSON.parse(fs.readFileSync(arquivo, "utf8")) } catch {}
+if (typeof limpeza !== "object" || limpeza === null || Array.isArray(limpeza)) limpeza = {}
+limpeza.feita = new Date().toISOString()
+fs.writeFileSync(arquivo, JSON.stringify(limpeza, null, 2) + "\n")
+' 2>/dev/null
+fi
+
 # Sessão sem papel é a do Orquestrador (ou uma do Joaquim, que ignora o aviso). As mensagens do time chegam a
 # ele coladas, e texto colado não executa o /seguir: sem este aviso, a sessão limpa ou compactada seguiria de memória.
 if [ -z "${CLAUDE_CODE_AGENT:-}" ]; then

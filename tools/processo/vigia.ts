@@ -51,14 +51,43 @@ export function decidir(telas: Readonly<Record<string, string>>, visto: Readonly
     : { acordar: false, motivo: `${trabalhando.join(', ')} trabalhando`, visto: agoraVisto }
 }
 
+/** Quanto a limpeza do Orquestrador pode demorar depois de pedida: o `sleep 25` do comando, com folga larga. */
+export const LIMPEZA_DEMORA_MS = 10 * 60 * 1000
+
+/** `.processo/limpeza.json`: quando o Orquestrador pediu a limpeza do contexto dele e quando o início de sessão a viu feita (RF27). */
+export interface Limpeza {
+  pedida?: string
+  feita?: string
+}
+
+/**
+ * A rotina `Limpa o Orquestrador` pula o disparo se o terminal dele estiver ocupado, e ninguém vê. Pedida há mais de dez
+ * minutos sem uma `feita` igual ou depois dela, a limpeza se perdeu. Data que não se lê conta como perdida: na dúvida, acorda.
+ */
+export function limpezaPerdida(limpeza: Limpeza, agora: Date): boolean {
+  if (limpeza.pedida === undefined) return false
+  const pedida = Date.parse(limpeza.pedida)
+  if (Date.parse(limpeza.feita ?? '') >= pedida) return false
+  return !(agora.getTime() - pedida <= LIMPEZA_DEMORA_MS)
+}
+
+/** Une a limpeza perdida à decisão da vigia: ela acorda o Orquestrador mesmo com o time trabalhando. */
+export function comLimpeza(decisao: Decisao, limpeza: Limpeza, agora: Date): Decisao {
+  if (!limpezaPerdida(limpeza, agora)) return decisao
+  return { ...decisao, acordar: true, motivo: `a limpeza pedida às ${limpeza.pedida ?? ''} não aconteceu` }
+}
+
 if (import.meta.filename === process.argv[1]) {
   const registro = join(import.meta.dirname, '..', '..', '.processo', 'vigia.json')
+  const arquivoDaLimpeza = join(import.meta.dirname, '..', '..', '.processo', 'limpeza.json')
   const maestri = (...argumentos: string[]) => execFileSync('maestri', argumentos, { encoding: 'utf8', timeout: 15_000, stdio: ['ignore', 'pipe', 'ignore'] })
   let decisao: Decisao
   try {
     const telas = Object.fromEntries(nomesDoTime(maestri('list')).map((nome) => [nome, maestri('check', nome)]))
     const visto = existsSync(registro) ? (JSON.parse(readFileSync(registro, 'utf8')) as Record<string, string>) : {}
-    decisao = decidir(telas, visto, new Date())
+    const limpeza = existsSync(arquivoDaLimpeza) ? (JSON.parse(readFileSync(arquivoDaLimpeza, 'utf8')) as Limpeza) : {}
+    const agora = new Date()
+    decisao = comLimpeza(decidir(telas, visto, agora), limpeza, agora)
     mkdirSync(dirname(registro), { recursive: true })
     writeFileSync(registro, `${JSON.stringify(decisao.visto, null, 2)}\n`)
   } catch {
