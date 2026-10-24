@@ -241,8 +241,12 @@ regra, AIA e o resto de `docs/` continuam documento.
 **(g) A limpeza (RF27).** O `nohup` grava `pedida`. O início de sessão com `source: clear`, sem `CLAUDE_CODE_AGENT`, no
 térreo, grava `feita`. A vigia acorda o Orquestrador quando a `pedida` passa de 10 minutos sem `feita` depois dela.
 
-**(h) A mensagem colada (RF29).** Hook `UserPromptSubmit`, só em sessão sem `CLAUDE_CODE_AGENT`. Olha o prefixo
-`/seguir ` e devolve o contexto "leia `.claude/skills/seguir/SKILL.md` e siga com esta entrada". Não grava o texto.
+**(h) A mensagem colada (RF29).** Hook `UserPromptSubmit` (`.claude/hooks/aviso-de-sessao.sh`), só em sessão sem
+`CLAUDE_CODE_AGENT`. Olha o `/seguir ` no começo da entrada, depois de espaço ou quebra de linha e do embrulho opcional
+`<pasted_content id="…">` que o terminal põe no que se cola (`/^\s*(?:<pasted_content id="[\w-]+">\s*)?\/seguir /`); o
+`/seguir` no meio do texto não dispara, e `prompt` que não é texto também não. Devolve o contexto "leia
+`.claude/skills/seguir/SKILL.md` e siga com esta entrada". Não grava o texto (correção
+`tasks/correcoes/2026-10-24-aviso-mensagem-colada.md`).
 
 ## 6. Isolamento
 
@@ -401,11 +405,18 @@ acrescentaram os testes que elas citam. O teste não prova que a checagem escolh
   não precisam mandar ler as quatro regras, e a saída do §9 não se aplica
 - ⚠️ VERIFICADO EM PARTE pela 20.0 (`20_task.md`, "Divergências", 24/10/2026), numa sessão real (`claude -p`) com hooks que
   gravam a entrada: o `UserPromptSubmit` recebe o JSON com o texto em `prompt`, literal, e o que o hook escreve no stdout
-  chega ao modelo como contexto; o `SessionStart` recebe o JSON com `source` (visto `startup`). **Não provado**, porque pede
-  sessão interativa: que o texto *colado* chega assim, sem ser expandido, e que `/clear` entrega `source: clear`. Os dois hooks
-  agem sobre o que o JSON diz; se algum não valer, o RF29 e a `feita` do RF27 não disparam, a `pedida` sem `feita` faz a vigia
-  acordar o Orquestrador, e o aviso de início de sessão (`contexto-inicial.sh`, que já lê `clear` e `compact`) continua sendo
-  a rede. O Joaquim vê isso no primeiro `/clear` do Orquestrador: `.processo/limpeza.json` ganha a `feita`
+  chega ao modelo como contexto; o `SessionStart` recebe o JSON com `source` (visto `startup`). O texto *colado* não chega
+  como foi digitado: as transcrições do Orquestrador (`~/.claude/projects/-home-joaquimdp-Documentos-git-Educa-ia/*.jsonl`)
+  gravam a mensagem `/seguir` colada embrulhada, `<pasted_content id="…">`, quebra de linha (às vezes com linha em branco, e
+  às vezes com quebra antes do embrulho) e só então o `/seguir `. A expressão do hook (§5h, correção
+  `tasks/correcoes/2026-10-24-aviso-mensagem-colada.md`) casa com as 331 mensagens `/seguir` coladas que a validação mediu
+  em 24/10/2026 e com nenhuma das 35 coladas que não são `/seguir` (`validacao.md`, rodada 2, RF29). **Não provado**, porque
+  pede sessão interativa: que o `prompt` do `UserPromptSubmit` traz o texto como a transcrição o grava (o hook aceita a forma
+  pura e a embrulhada, e dispara nas duas), e que `/clear` entrega `source: clear`. Os dois hooks agem sobre o que o JSON diz;
+  se algum não valer, o RF29 e a `feita` do RF27 não disparam, a `pedida` sem `feita` faz a vigia acordar o Orquestrador, e o
+  aviso de início de sessão (`contexto-inicial.sh`, que já lê `clear` e `compact`) continua sendo a rede. O Joaquim vê isso
+  na primeira mensagem `/seguir` colada no térreo depois do pouso (o aviso chega) e no primeiro `/clear` do Orquestrador
+  (`.processo/limpeza.json` ganha a `feita`)
 
 ## 13. Riscos técnicos
 
