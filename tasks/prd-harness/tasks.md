@@ -62,7 +62,7 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [ ] 10.2 A negação em sessão de papel e a recusa de `Fora do processo:` (§5a)
   - [ ] 10.3 Testes: negação do `PreToolUse` do `cenarios.md`
 
-- [ ] **11.0 — O git hook nativo barra o commit e o push de papel por qualquer caminho**
+- [x] **11.0 — O git hook nativo barra o commit e o push de papel por qualquer caminho**
   - [ ] 11.1 `hook-git.ts`, `git-hooks/commit-msg` e `pre-push`, e o `prepare`
   - [ ] 11.2 O início de sessão confere o `core.hooksPath`
   - [ ] 11.3 Testes: formas contra um git real (RF14) e a instalação

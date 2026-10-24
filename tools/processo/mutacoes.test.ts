@@ -154,6 +154,9 @@ describe('o comando que roda o teste de uma mutação', () => {
     expect(tipoDoTeste('apps/web/src/Tela.test.tsx')).toBe('unidade')
     expect(tipoDoTeste('apps/api/test/x.int.test.ts')).toBe('integracao')
     expect(tipoDoTeste('infra/test/metricas.int.test.ts')).toBe('infra')
+    // O teste do git hook roda contra um git de verdade, sem compose: projeto próprio, e o resto de `tools/` fica na integração.
+    expect(tipoDoTeste('tools/processo/hook-git.int.test.ts')).toBe('processo')
+    expect(tipoDoTeste('tools/guardas/gitleaks.int.test.ts')).toBe('integracao')
     expect(tipoDoTeste('e2e/areas.spec.ts')).toBe('e2e')
     expect(tipoDoTeste('docs/lgpd.md')).toBeNull()
   })
@@ -161,6 +164,7 @@ describe('o comando que roda o teste de uma mutação', () => {
   it('unidade e integração rodam o arquivo no projeto dele, com o caso quando há', () => {
     expect(comandoDoTeste(mutacao({ caso: 'outra escola' }))).toEqual(['npx', 'vitest', 'run', '--project', 'integracao', 'apps/api/test/pedidos.int.test.ts', '-t', 'outra escola'])
     expect(comandoDoTeste(mutacao({ teste: 'apps/web/src/Tela.test.tsx' }))).toEqual(['npx', 'vitest', 'run', '--project', 'unidade', 'apps/web/src/Tela.test.tsx'])
+    expect(comandoDoTeste(mutacao({ teste: 'tools/processo/hook-git.int.test.ts', caso: 'o PATH sem node' }))).toEqual(['npx', 'vitest', 'run', '--project', 'processo', 'tools/processo/hook-git.int.test.ts', '-t', 'o PATH sem node'])
     expect(comandoDoTeste(mutacao({ teste: 'README.md' }))).toBeNull()
   })
 

@@ -73,6 +73,8 @@ function passosDoAlvo({ alvos, docker, servicosDeJob }: EntradaDaSequencia): Pas
       : []),
     ...(alvos.e2e.length > 0 ? [passo(`node tools/ci/e2e.ts --manter-ambiente ${alvos.e2e.join(' ')}`)] : []),
     ...(alvos.infra.length > 0 ? [passo(`npx vitest run --project infra ${alvos.infra.join(' ')}`)] : []),
+    // O git hook roda contra um git de verdade, num repositório temporário: não usa o compose, e por isso vai por último.
+    ...(alvos.processo.length > 0 ? [passo(`npx vitest run --project processo ${alvos.processo.join(' ')}`)] : []),
   ]
 }
 

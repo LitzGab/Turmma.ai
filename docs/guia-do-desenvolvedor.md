@@ -373,6 +373,7 @@ vínculo, do repository, ele quebra?** Se não quebra, ele não testa nada.
 | `unidade` | `x.test.ts`, ao lado do código | regra pura, sem banco. `.tsx` com `// @vitest-environment jsdom` | `npm run test:unidade` |
 | `integracao` | `x.int.test.ts`, em dois lugares (abaixo) | service, repository e HTTP com Postgres e Redis reais | `npm run test:integracao` |
 | `infra` | `infra/test/*.int.test.ts` | borda, métricas, alertas e jobs contra o compose inteiro | `npm run test:infra` |
+| `processo` | `tools/processo/**/*.int.test.ts` | o git hook nativo contra um git de verdade, num repositório temporário, sem compose | `npm run test:processo` |
 | e2e | `e2e/*.spec.ts` | o fluxo como a pessoa faz, em `chromebook` e `celular` | `npm run test:e2e` |
 
 **Onde fica a integração da API.** Em dois lugares, e nos dois há teste que sobe a API com o `subirApi`:

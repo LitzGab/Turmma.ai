@@ -11,6 +11,10 @@ const ignorados = ['**/node_modules/**', '**/dist/**', 'e2e/**', 'tools/ci/fixtu
 // ~21 da integração. Ficam num projeto próprio (D52): o portão da tarefa roda quando ela mexe em infra, e a
 // esteira roda sempre.
 const integracaoDeInfra = 'infra/**/*.int.test.ts'
+// Os de `tools/processo/` provam o git hook contra um git de verdade, num repositório temporário: não tocam banco, Redis nem
+// storage, e por isso não levam o `globalSetup` do compose (que custa uns 2 min só para subir). Projeto próprio: o portão da
+// tarefa o roda quando `tools/processo/` muda (`alvosDoPortao`) e a esteira roda sempre, no job que não sobe compose.
+const integracaoDoProcesso = 'tools/processo/**/*.int.test.ts'
 const integracao = {
   exclude: ignorados,
   globalSetup: ['tools/testes/integracao.setup.ts'],
@@ -59,7 +63,7 @@ export default defineConfig({
           ...integracao,
           name: 'integracao',
           include: ['**/*.int.test.ts'],
-          exclude: [...ignorados, integracaoDeInfra],
+          exclude: [...ignorados, integracaoDeInfra, integracaoDoProcesso],
         },
       },
       {
@@ -68,6 +72,17 @@ export default defineConfig({
           ...integracao,
           name: 'infra',
           include: [integracaoDeInfra],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'processo',
+          include: [integracaoDoProcesso],
+          exclude: ignorados,
+          // Cada caso faz commits e pushes de verdade, cada um com um `node` que carrega o hook: com a máquina carregada
+          // passa dos 5 s do padrão.
+          testTimeout: 60_000,
         },
       },
     ],

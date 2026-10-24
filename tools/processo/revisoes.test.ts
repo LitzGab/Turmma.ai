@@ -308,9 +308,31 @@ describe('portão do commit', () => {
       integracao: ['apps/worker/test/expurgo-da-escola.int.test.ts', 'packages/nucleo/src/retencao/retencao.int.test.ts'],
       e2e: ['e2e/privacidade.spec.ts'],
       infra: ['infra/alertas/expurgo.int.test.ts'],
+      processo: [],
     })
     // Teste de unidade não é alvo: a unidade roda inteira sempre.
-    expect(alvosDoPortao(['packages/shared/src/a.test.ts', 'apps/web/src/b.test.tsx'])).toEqual({ integracao: [], e2e: [], infra: [] })
+    expect(alvosDoPortao(['packages/shared/src/a.test.ts', 'apps/web/src/b.test.tsx'])).toEqual({ integracao: [], e2e: [], infra: [], processo: [] })
+  })
+
+  it('o teste do git hook entra nos alvos sempre que algo de tools/processo/ muda, e o teste do processo não vai para a integração com compose (RF14)', () => {
+    const doHook = 'tools/processo/hook-git.int.test.ts'
+    // Qualquer arquivo da pasta puxa o teste do hook, também o que não é teste e o script do git hook.
+    for (const arquivo of ['tools/processo/portao.ts', 'tools/processo/git-hooks/commit-msg', 'tools/processo/harness/rotulos.test.ts']) {
+      expect(alvosDoPortao([arquivo])).toEqual({ integracao: [], e2e: [], infra: [], processo: [doHook] })
+    }
+    // O que está fora da pasta, e o fixture de CI, não o puxa.
+    expect(alvosDoPortao(['tools/ci/verificar.ts', 'tools/guardas/gitleaks.int.test.ts', 'tools/ci/fixtures/x.int.test.ts', '.claude/hooks/contexto-inicial.sh']).processo).toEqual([])
+    // O outro teste de integração do processo vai para o mesmo projeto, e o do hook não repete quando ele mesmo mudou.
+    expect(alvosDoPortao([doHook, 'tools/processo/portao.ts', 'tools/processo/zeta.int.test.ts'])).toEqual({
+      integracao: [],
+      e2e: [],
+      infra: [],
+      processo: ['tools/processo/hook-git.int.test.ts', 'tools/processo/zeta.int.test.ts'],
+    })
+    // Sem repetir o do hook, e na ordem do nome, venha o outro por onde vier.
+    expect(alvosDoPortao(['tools/processo/zeta.int.test.ts']).processo).toEqual(['tools/processo/hook-git.int.test.ts', 'tools/processo/zeta.int.test.ts'])
+    // Os de `tools/` fora do processo continuam na integração com compose.
+    expect(alvosDoPortao(['tools/guardas/gitleaks.int.test.ts']).integracao).toEqual(['tools/guardas/gitleaks.int.test.ts'])
   })
 
   it('bloqueia correção feita enquanto a rodada corria, mesmo que o veredito tenha saído depois', () => {

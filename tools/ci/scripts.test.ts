@@ -108,12 +108,13 @@ function afirmarDespejoCarimbado(chamadas: string[], derrubou = true): void {
 }
 
 describe('scripts ci:* reais', () => {
-  it('ci:verificar roda tipos, lint, as guardas da lista e a unidade, e sai verde só se todos passarem', () => {
+  it('ci:verificar roda tipos, lint, as guardas da lista, a unidade e o git hook, e sai verde só se todos passarem', () => {
     const verde = rodarScript('verificar.ts', null)
     expect(verde.codigo).toBe(0)
     // As guardas vêm de `ETAPAS_DE_GUARDA`, a lista que o portão local também lê (RF8): guarda posta direto no
     // `verificar.ts`, fora dela, acrescenta uma chamada que esta lista não tem, e o teste fica vermelho.
-    expect(verde.chamadas).toEqual(['npm run typecheck', 'npm run lint', ...ETAPAS_DE_GUARDA.map(chamadaDa), 'npm run test:unidade'])
+    // O teste do git hook (RF14) roda aqui, e não na integração, porque não sobe o compose.
+    expect(verde.chamadas).toEqual(['npm run typecheck', 'npm run lint', ...ETAPAS_DE_GUARDA.map(chamadaDa), 'npm run test:unidade', 'npm run test:processo'])
   })
 
   it('as guardas da esteira são o gitleaks, o npm audit e o knip, nesta ordem', () => {
@@ -177,7 +178,7 @@ describe('scripts ci:* reais', () => {
   it('a esteira roda todo projeto do Vitest, e o `npm run test` do portão da tarefa só deixa de fora o de infra (D52)', async () => {
     const { default: configuracao } = await import('../../vitest.config.ts')
     const projetos = (configuracao.test?.projects ?? []).map((projeto) => (typeof projeto === 'object' && 'test' in projeto ? projeto.test?.name : undefined))
-    expect(projetos).toEqual(['unidade', 'integracao', 'infra'])
+    expect(projetos).toEqual(['unidade', 'integracao', 'infra', 'processo'])
 
     const scripts = (JSON.parse(readFileSync(join(raizRepositorio, 'package.json'), 'utf8')) as { scripts: Record<string, string> }).scripts
     const chamadasDaEsteira = ['verificar.ts', 'integracao.ts', 'infra.ts'].flatMap((script) => rodarScript(script, null).chamadas)
@@ -185,7 +186,7 @@ describe('scripts ci:* reais', () => {
       expect(scripts[`test:${String(projeto)}`]).toBe(`vitest run --project ${String(projeto)}`)
       expect(chamadasDaEsteira).toContain(`npm run test:${String(projeto)}`)
     }
-    expect(scripts['test']).toBe('vitest run --project unidade --project integracao')
+    expect(scripts['test']).toBe('vitest run --project unidade --project integracao --project processo')
   })
 
   it('ci:e2e roda o Playwright, sai vermelho quando ele falha e ainda derruba o compose', () => {

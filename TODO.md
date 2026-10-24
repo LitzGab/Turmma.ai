@@ -1866,3 +1866,11 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       de hoje passa", "de um módulo que sumiu: vermelho", "o arquivo que não existe: vermelho"), e não pelo nome inteiro; (5) o
       caso "módulo que sumiu" só tira `./caducidade.ts`, e se outro módulo sair de `REEXPORTADOS` nenhum teste fica vermelho
       (um `it.each` sobre os quatro). (dono: Arquiteto, na `retro` da X7)
+- [ ] **(X7, tarefa 11.0) Para a retrospectiva da X7**, recomendações da 11.0 que não viraram ordem: (1) o texto morto do
+      `.claude/hooks/contexto-inicial.sh:27`, "Checkout anterior à X7: traga a develop antes", nunca aparece onde se aplica: num
+      checkout anterior à X7 o `contexto-inicial.sh` que roda é o antigo, e o `core.hooksPath` gravado pelo `prepare` fica na config
+      comum, que os worktrees compartilham (a Tech Spec §5a já diz o que a máquina faz); tirar a frase muda o hook e caduca os três
+      revisores; (2) `hook-git.int.test.ts:184`, o caso dos módulos apagados (`it.each` de `portao.ts`, `comando-git.ts` e
+      `mutacoes.ts`): a regex aceita `ERR_MODULE_NOT_FOUND`, e a falta de qualquer outro módulo também passaria, então exigir o
+      nome do módulo; e `modulo.replace('.', '\\.')` só escapa o primeiro ponto (a lista tem nomes com um ponto só, mas
+      `replaceAll` não custa). Mexer no teste caduca `test-engineer` e `revisor-geral`. (dono: Arquiteto, na `retro` da X7)

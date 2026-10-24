@@ -30,6 +30,7 @@ retrospectivas (RF1 a RF11), em linhas. **(3)** O hook novo (RF14 a RF18), um co
 | `tools/processo/revisoes.ts` | partido | `documento-de-revisao.ts`, `caducidade.ts`, `comando-git.ts`, `portao.ts`; o `revisoes.ts` só reexporta, sem importação do `estado.ts` e do `esteira.ts` (RF13); RF18. **Antes da partição** (divergência da 2.0, 23/10/2026): a catraca do X5 (`tools/guardas/catraca.ts`, RF11 do X5) não deixa arquivo novo nascer com supressão, e para o git a partição não é rename. Por isso uma correção, antes da 2.0, baixa a complexidade de `lerSecao` (17), `arquivosDoCommit` (18), `pastaDoCommit` (15) e `portao` (17) a 10 ou menos, no próprio `revisoes.ts`, só extraindo funções auxiliares, sem mudar comportamento, e baixa o `TETO.complexity` do `catraca.test.ts` de 248 para 244. A 2.0 continua só movendo, e cada auxiliar vai para o módulo de quem a chama. A catraca não é afrouxada |
 | `tools/processo/guardioes-por-caminho.ts` | novo | RF15, RF16 |
 | `tools/processo/hook-git.ts`, `tools/processo/git-hooks/` | novos | `commit-msg` e `pre-push` (RF14) |
+| `vitest.config.ts`, `package.json`, `tools/ci/verificar.ts`, `tools/processo/portao.ts`, `tools/processo/sequencia-do-portao.ts`, `tools/processo/portao-local.ts`, `tools/processo/mutacoes.ts` | alterados | RF14 (11.0, divergência registrada em `11_task.md`): o `hook-git.int.test.ts` roda no projeto `processo` do Vitest, sem o `globalSetup` do compose. `npm run test` e `test:processo` o levam; o `ci:verificar` o roda (sem compose, e não na integração); `alvosDoPortao` o põe nos alvos quando `tools/processo/` muda, a sequência do portão o roda por último (`npx vitest run --project processo`), e `tipoDoTeste` o reconhece para as mutações |
 | `tools/processo/harness/*.test.ts` | novos | um arquivo por aspecto (RF12, RF20 a RF26, RF30, RF32) |
 | `.claude/skills/receitas-de-codigo/SKILL.md` | novo | RF32 (§9): a skill de projeto que aponta as receitas do guia; o `executar-task`, o `criar-techspec/template.md` e o mapa do `CLAUDE.md` apontam para ela ou para o guia |
 | `tools/processo/harness/caminhos.ts` | novo, se a extração da 16.0 ficou dentro do teste | RF24, RF32: a extração de caminhos da 16.0, movida sem mudar o que devolve, importada pelos dois testes |
@@ -107,12 +108,15 @@ A `decidirCommit` não é pura no sentido estrito: lê o disco da `raiz` para o 
 
 **Limites declarados (RF14).** A máquina não barra `env -u CLAUDE_CODE_AGENT` ou `--no-verify` dentro de script (que
 fura também o `pre-push`), `commit-tree`, `update-ref`, `rebase`, `cherry-pick`, `am`, `revert`, `-F -`, nem o Edit em
-`git-hooks/` ou `.git/config`. A terceira camada é o job `verificar`, em push de `spec/**` e `correcao/**` (não na
+`git-hooks/` ou `.git/config`, nem `git commit --amend` (proibido pelo protocolo, item 5: o índice não muda e o HEAD é o
+commit refeito, então a marca some sem o `commit-msg` ver código). A terceira camada é o job `verificar`, em push de `spec/**` e `correcao/**` (não na
 `develop`), com `fetch-depth: 0`: `ci:conferir-entregas` olha commit a commit de `origin/develop..HEAD`, com a
 classificação da `decidirCommit` (código de produto mais a lista do §5e), o merge por `--remerge-diff`. Commit de
 código passa com `(tarefa N.0)` ou `(correção <slug>)` e a linha `Revisões:`, ou com `Fora do processo: <motivo>`;
 senão sai 1 com o hash. Intervalo vazio sai 0. A esteira não sabe quem escreveu a linha: papel que escapou do hook
-ou Orquestrador, por script, passam. Andar anterior à X7 fica sem hook nativo até o merge da `develop`; o início de sessão avisa.
+ou Orquestrador, por script, passam. Andar anterior à X7 fica sem hook nativo até o merge da `develop`, e nada o avisa: o `contexto-inicial.sh` que roda ali é o antigo, e o
+`core.hooksPath` que o `prepare` grava fica na config comum, que todos os worktrees compartilham (o valor está "certo" e a pasta não existe). O aviso vale
+onde o `contexto-inicial.sh` da X7 já está e o `core.hooksPath` falta ou aponta outro lugar.
 
 **(b) Quem é obrigatório (RF15).** `obrigatorios = união(marcados, guardioesDoCaminho(arquivos, conteudoDe))`. Código
 em `apps/`, `packages/`, `e2e/`, `tools/guardas/` e `tools/testes/` pede os quatro, e a citação de uma regra soma o
@@ -277,7 +281,9 @@ apontamentos. Os casos estão no `cenarios.md`, RF32.
 ## 10. Testes
 
 Os cenários, dos dois lados, estão em `cenarios.md`. Toda regra nova tem bloco de mutação. O `hook-git.int.test.ts`
-roda sem o `globalSetup` do compose, e o portão o inclui quando `tools/processo/` muda. Cada checagem do harness tem
+roda sem o `globalSetup` do compose, e o portão o inclui quando `tools/processo/` muda: é o projeto `processo` do Vitest
+(`vitest.config.ts`), com `testTimeout` de 60 s porque cada caso faz commit e push de verdade. Entra no `npm run test` e no
+`ci:verificar`, e não no `ci:integracao`, que sobe o compose. Cada checagem do harness tem
 amostra quebrada e contagem mínima. Os rótulos vêm das constantes do hook e do `estado.ts`.
 
 ## 11. Conformidade com as regras

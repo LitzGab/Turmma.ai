@@ -1,0 +1,7 @@
+#!/bin/sh
+# O git hook nativo do commit (RF14, techspec.md §5a). Só age em sessão de papel do time: sem `CLAUDE_CODE_AGENT` sai antes
+# do node, e o commit do Joaquim e o do Orquestrador passam. Com papel, quem julga é o `hook-git.ts`, que aplica ao commit a
+# mesma decisão do `PreToolUse` (`decidirCommit`). Se o node não existe ou o `hook-git.ts` não carrega, o `exec` falha e o
+# commit é recusado: o hook fecha na falha.
+[ -n "$CLAUDE_CODE_AGENT" ] || exit 0
+exec node "$(git rev-parse --show-toplevel)/tools/processo/hook-git.ts" commit-msg "$1"

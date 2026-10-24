@@ -17,6 +17,16 @@ cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}" || exit 0
 
 node tools/processo/estado.ts --resumo 2>/dev/null < /dev/null || echo "Turmma — o estado não pôde ser lido; rode: node tools/processo/estado.ts"
 
+# O git hook nativo (RF14) só vale onde o `core.hooksPath` aponta a pasta dele: o `npm ci` o grava pelo `prepare`, e andar ou
+# linha aberto antes da X7 não o tem até a `develop` chegar nele. Sem isto, o commit de papel por `/usr/bin/git`, `env` ou
+# script só tem a terceira camada, a esteira.
+hooks="$(git config --get core.hooksPath 2>/dev/null || true)"
+if [ "$hooks" != "tools/processo/git-hooks" ]; then
+  echo
+  if [ -z "$hooks" ]; then atual="não está definido"; else atual="é \"$hooks\""; fi
+  echo "Aviso: o git hook nativo não está ligado neste checkout (core.hooksPath $atual). Rode: git config core.hooksPath tools/processo/git-hooks (é o que o \`npm ci\` faz pelo \`prepare\`). Checkout anterior à X7: traga a develop antes. Sem o hook, o commit e o push de papel por caminho absoluto, \`env\` ou script só são conferidos pela esteira."
+fi
+
 origem=inicio
 case "$entrada" in
   *'"source":"compact"'*|*'"source": "compact"'*) origem=compactado ;;

@@ -93,11 +93,20 @@ export interface AlvosDoPortao {
   integracao: string[]
   e2e: string[]
   infra: string[]
+  /** Os testes de `tools/processo/` que rodam contra um git de verdade, sem o compose (projeto `processo`, `vitest.config.ts`). */
+  processo: string[]
 }
+
+/** O teste do git hook (RF14): ele entra nos alvos sempre que algo de `tools/processo/` mudou, mesmo que ele próprio não tenha mudado. */
+export const TESTE_DO_GIT_HOOK = 'tools/processo/hook-git.int.test.ts'
 
 /**
  * Os testes que o portão da tarefa roda, tirados do que está alterado na árvore: o teste novo ou mexido é o que prova a
  * regra da tarefa. O resto do sistema fica para o portão completo, no fim da spec.
+ *
+ * Os testes de `tools/processo/` (`*.int.test.ts`) não são de integração com o compose: vão para o projeto `processo`. E o do
+ * git hook roda sempre que `tools/processo/` muda, porque ali moram o hook, o `PreToolUse` e as peças que os dois leem, e quem
+ * mexe numa delas quebra o outro sem alterar o teste dele (a 11.0 da X7).
  *
  * Na noite de 08/10/2026 o portão inteiro levou de 30 a 40 minutos e foi de 70% a quase 100% do tempo de cada tarefa:
  * a 6.0 foi escrita em 6 minutos e passou cinco horas rodando o portão inteiro a cada tentativa de acertar um e2e.
@@ -106,10 +115,20 @@ export function alvosDoPortao(arquivos: string[]): AlvosDoPortao {
   const fora = /(^|\/)(node_modules|dist)\/|^tools\/ci\/fixtures\//
   const validos = [...new Set(arquivos)].filter((arquivo) => !fora.test(arquivo)).sort()
   return {
-    integracao: validos.filter((arquivo) => /\.int\.test\.ts$/.test(arquivo) && !arquivo.startsWith('infra/') && !arquivo.startsWith('e2e/')),
+    integracao: validos.filter((arquivo) => /\.int\.test\.ts$/.test(arquivo) && !arquivo.startsWith('infra/') && !arquivo.startsWith('e2e/') && !ehDoProcesso(arquivo)),
     e2e: validos.filter((arquivo) => /^e2e\/.*\.spec\.ts$/.test(arquivo)),
     infra: validos.filter((arquivo) => /^infra\/.*\.int\.test\.ts$/.test(arquivo)),
+    processo: alvosDoProcesso(validos),
   }
+}
+
+const ehDoProcesso = (arquivo: string): boolean => arquivo.startsWith('tools/processo/')
+
+/** Os testes de `tools/processo/` que mudaram, mais o do git hook quando qualquer arquivo da pasta mudou. */
+function alvosDoProcesso(arquivos: string[]): string[] {
+  const doProcesso = arquivos.filter(ehDoProcesso)
+  const alterados = doProcesso.filter((arquivo) => /\.int\.test\.ts$/.test(arquivo))
+  return [...new Set([...alterados, ...(doProcesso.length > 0 ? [TESTE_DO_GIT_HOOK] : [])])].sort()
 }
 
 /**

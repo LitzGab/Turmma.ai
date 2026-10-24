@@ -151,11 +151,13 @@ export function aplicarMutacao(conteudo: string, mutacao: Mutacao): { mutado: st
   return { mutado: conteudo.slice(0, inicio) + novo + conteudo.slice(inicio + achado[0].length) }
 }
 
-export type TipoDeTeste = 'unidade' | 'integracao' | 'infra' | 'e2e'
+export type TipoDeTeste = 'unidade' | 'integracao' | 'infra' | 'processo' | 'e2e'
 
 export function tipoDoTeste(teste: string): TipoDeTeste | null {
   if (/^e2e\/.*\.spec\.ts$/.test(teste)) return 'e2e'
   if (/^infra\/.*\.int\.test\.ts$/.test(teste)) return 'infra'
+  // O teste do git hook roda contra um git de verdade e não sobe o compose: projeto próprio (`vitest.config.ts`).
+  if (/^tools\/processo\/.*\.int\.test\.ts$/.test(teste)) return 'processo'
   if (/\.int\.test\.ts$/.test(teste)) return 'integracao'
   if (/\.test\.tsx?$/.test(teste)) return 'unidade'
   return null
@@ -230,7 +232,7 @@ function numero(texto: string): number {
 /** O `testTimeout` que o projeto declara em `vitest.config.ts`, ou o padrão do Vitest. No e2e (ou sem teste), o `timeout` do Playwright. */
 export function testTimeoutDoProjeto(configuracao: string, tipo: TipoDeTeste | null): number {
   if (tipo === null || tipo === 'e2e') return TIMEOUT_PADRAO_DO_E2E_MS
-  // `unidade` não declara: a integração e a infra repartem o mesmo objeto, que declara.
+  // `unidade` não declara: a integração e a infra repartem o mesmo objeto, que declara, e o `processo` declara o mesmo valor.
   if (tipo === 'unidade') return TESTTIMEOUT_PADRAO_DO_VITEST_MS
   const [declarado] = [...configuracao.matchAll(/\btestTimeout:\s*([\d_]+)/g)].map((achado) => numero(achado[1] ?? '0'))
   return declarado ?? TESTTIMEOUT_PADRAO_DO_VITEST_MS

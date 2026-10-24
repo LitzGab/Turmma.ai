@@ -8,7 +8,7 @@ import { mutacaoDeIntegracao, passosDaSuite, sequenciaDoPortao, SUITES_DE_GUARDA
 // A sequência de comandos do portão local (RF7, RF8, 8.0). O `portao-local.ts` executa ao ser importado e não se testa
 // por aqui: tudo o que se decide sobre a ordem dos comandos mora em `sequencia-do-portao.ts`, que é pura.
 
-const SEM_ALVOS: AlvosDoPortao = { integracao: [], e2e: [], infra: [] }
+const SEM_ALVOS: AlvosDoPortao = { integracao: [], e2e: [], infra: [], processo: [] }
 const DOCKER = ['docker', ...ARGUMENTOS_COMPOSE]
 
 function entrada(alvos: Partial<AlvosDoPortao>, servicos: readonly string[] = servicosDeJob(), mutacoesDeIntegracao = false): EntradaDaSequencia {
@@ -138,6 +138,23 @@ describe('o banco limpo é só da primeira suíte que sobe o compose', () => {
 
   it.each(['typecheck', 'lint', 'unidade', 'e2e', 'infra', 'segredo', 'dependencias'])('a suíte %s não limpa o banco', (suite) => {
     expect(bancoNovoDe(suite)).toEqual([false])
+  })
+})
+
+describe('RF14: o teste do git hook roda sem o compose', () => {
+  const comandos = (alvos: Partial<AlvosDoPortao>): string[] => passosDaSuite('alvo', entrada(alvos)).map((passo) => passo.comando)
+
+  it('vai no projeto `processo`, sem `stop` nem banco limpo, mesmo com os outros alvos no portão', () => {
+    const sozinho = passosDaSuite('alvo', entrada({ processo: ['tools/processo/hook-git.int.test.ts'] }))
+    expect(sozinho.map((passo) => passo.comando)).toEqual(['npx vitest run --project processo tools/processo/hook-git.int.test.ts'])
+    expect(sozinho.map((passo) => passo.bancoNovo)).toEqual([false])
+    const junto = comandos({ integracao: ['apps/api/test/a.int.test.ts'], e2e: ['e2e/a.spec.ts'], infra: ['infra/a.int.test.ts'], processo: ['tools/processo/hook-git.int.test.ts'] })
+    expect(junto.filter((comando) => comando.includes(' stop '))).toHaveLength(1)
+    expect(junto.at(-1)).toBe('npx vitest run --project processo tools/processo/hook-git.int.test.ts')
+  })
+
+  it('sem alvo do processo, o projeto não é chamado', () => {
+    expect(comandos({ integracao: ['apps/api/test/a.int.test.ts'] }).some((comando) => comando.includes('--project processo'))).toBe(false)
   })
 })
 

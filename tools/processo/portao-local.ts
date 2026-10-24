@@ -187,7 +187,7 @@ if (documento && textoDoDocumento !== null) {
 }
 
 // Carimba o conteúdo do início, que é o que as suítes provaram, ou recusa se alguém editou no meio da corrida.
-const todosOsAlvos = [...alvos.integracao, ...alvos.e2e, ...alvos.infra]
+const todosOsAlvos = [...alvos.integracao, ...alvos.e2e, ...alvos.infra, ...alvos.processo]
 const recusa = carimbarSeNadaMudou(
   raiz,
   daTarefa ? { inicio, suites, alvos: todosOsAlvos, ...(documento ? { documento } : {}), ...(carimboDasMutacoes ? { mutacoes: carimboDasMutacoes } : {}) } : { inicio, suites },

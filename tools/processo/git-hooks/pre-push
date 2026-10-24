@@ -1,0 +1,5 @@
+#!/bin/sh
+# O git hook nativo do push (RF14, techspec.md §5a). Só age em sessão de papel do time. O `hook-git.ts` lê as refs da entrada
+# padrão, que o `exec` repassa, e recusa o push de papel para `develop`, `release` ou `main`. Mesma falha fechada do `commit-msg`.
+[ -n "$CLAUDE_CODE_AGENT" ] || exit 0
+exec node "$(git rev-parse --show-toplevel)/tools/processo/hook-git.ts" pre-push

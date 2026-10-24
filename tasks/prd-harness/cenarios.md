@@ -53,7 +53,15 @@ passa a ser o `caducidade.ts`, onde a função mora, com as asserções iguais (
 | commit com `(tarefa N.0)`, revisões válidas e carimbo | passa |
 | push de `spec/x` | passa |
 | sem papel: código sem marca; `PATH` sem `node`; merge do encontro; `git push origin HEAD:develop` | passa |
-| `env -u CLAUDE_CODE_AGENT git commit`, `commit-tree`, `rebase` | passa no hook; a terceira camada acusa |
+| `env -u CLAUDE_CODE_AGENT git commit`, `commit-tree`, `rebase`, `git commit --amend` (o índice não muda, e o HEAD é o commit refeito: a marca some e o `commit-msg` não vê código) | passa no hook; a terceira camada acusa. O `--amend` é proibido pelo protocolo (item 5), e a máquina não o barra |
+| mover o código para um documento (`git mv apps/x.ts docs/x.md`) | recusado: o rename conta o arquivo que sai |
+| código com acento e espaço no nome | recusado, pelo nome inteiro |
+| `(tarefa N.0)` com o documento fora do índice | recusado: "não achei … para conferir as revisões" |
+| produção (`apps/*/src`) sem bloco de mutação nem a linha `Sem mutação`; e com a linha e o carimbo do documento | recusado; passa |
+| `git push` com `develop` e `release`; `git push origin :main`; `git push --all` | recusados, com os destinos em ordem; vale a ref remota |
+| `hook-git.ts` direto: sem papel, com papel vazio, modo desconhecido, `commit-msg` sem arquivo, mensagem inexistente | passa; passa; recusa; recusa; recusa ("falhou ao carregar") |
+
+"Código ruim no índice e bom no disco" é provado com o **documento da tarefa**, o único conteúdo que a `decidirCommit` lê do índice: a rodada que falta chega ao disco depois do `git add`, e o commit é recusado; a que reprova chega depois do `git add` de um documento aprovado, e o commit passa.
 
 **RF14, negação no `PreToolUse`** (`hook-portao.test.ts`, com o comando do `settings.json`). Negados em sessão de
 papel: `--no-verify`, `--no-verif`, `--no-ver`; `commit -n`, `-nm "x"`, `-anm "x"`; `-c core.hooksPath=/dev/null`,
@@ -83,9 +91,9 @@ conferência a mais, documento ilegível, revisor obrigatório sem rodada), com 
 - limite conhecido, afirmado como tal: commit de papel feito com `env -u CLAUDE_CODE_AGENT` e `Fora do processo: x` sai 0
 - o `ci.yml` chama em `spec/**` e `correcao/**`, com `fetch-depth: 0`, e não na `develop`
 
-**Instalação.** O `prepare` do `package.json` aponta `tools/processo/git-hooks` (teste lê o arquivo).
+**Instalação** (`tools/processo/harness/instalacao.test.ts`). O `prepare` do `package.json` aponta `tools/processo/git-hooks`; os dois scripts são executáveis, saem antes do node sem papel e chamam o `hook-git.ts` da árvore em que o git roda; o projeto `processo` do Vitest coleta só o teste do hook, sem `globalSetup`.
 
-**Início de sessão.** Com `core.hooksPath` ausente, o aviso sai; com ele certo, não sai.
+**Início de sessão.** Em qualquer sessão (a do Orquestrador e a do Joaquim também, e não só a de papel), com `core.hooksPath` ausente ou diferente de `tools/processo/git-hooks` o aviso sai; com ele certo, não sai.
 
 **RF15** (`tools/processo/harness/guardioes.test.ts` e `revisoes.test.ts`, pela `decidirCommit`): todos os casos de
 `tabela-de-guardioes.md`, seção "O teste da tabela", cada regra de casamento com bloco de mutação; repository alterado sem `tenancy-guardian` marcado e sem rodada
