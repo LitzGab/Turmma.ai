@@ -113,12 +113,18 @@ const ENTRADAS: readonly Entrada[] = [
 const SUFIXOS_QUE_NUNCA_SAO_EXCECAO = ['.repository.ts', '.controller.ts', '.gateway.ts', '.service.ts']
 const SEM_ESCOPO = '@SemEscopo('
 
-/** A citação de uma regra soma o guardião dela. Sem diferença de maiúscula. */
+/**
+ * A citação de uma regra soma o guardião dela. Sem diferença de maiúscula. A citação de uma das decisões do item M6 da retro da X7
+ * (D45, D47, D55 a D59 e D64) soma o `conformidade-reviewer`, como a citação da regra 70; a regra 70 cita outras (D60, D66, D68, D70),
+ * que não somam ainda. A decisão se escreve com o D maiúsculo, como nos documentos, e sem letra, dígito, `_` ou `#` antes, nem
+ * letra, dígito ou `_` depois (hash e cor `#D45` não são decisão; D450 não é D45).
+ */
 const CITACOES: readonly { termo: RegExp; guardiao: Guardiao }[] = [
   { termo: /regra\s+10(?!\d)/i, guardiao: T },
   { termo: /regra\s+20(?!\d)/i, guardiao: P },
   { termo: /lgpd/i, guardiao: P },
   { termo: /regra\s+70(?!\d)/i, guardiao: C },
+  { termo: /(?<![\w#])D(?:45|47|55|56|57|58|59|64)(?!\w)/, guardiao: C },
   { termo: /regra\s+80(?!\d)/i, guardiao: I },
 ]
 

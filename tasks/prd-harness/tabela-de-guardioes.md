@@ -19,7 +19,10 @@ configurações do §5e):
 - nunca cai em exceção: arquivo `*.repository.ts`, `*.controller.ts`, `*.gateway.ts` ou `*.service.ts`, e arquivo que
   contém `@SemEscopo(` no HEAD ou no índice; esses pedem os quatro onde estiverem, linhas do RF16 inclusive
 - **a citação soma o guardião**: o arquivo cujo texto, no HEAD **ou** no índice, cita "regra 10" soma T; "regra 20" ou
-  "LGPD" soma P; "regra 70" soma C; "regra 80" soma I. Sem diferença de maiúscula. Ler o HEAD impede que tirar a
+  "LGPD" soma P; "regra 70" soma C; "regra 80" soma I. Sem diferença de maiúscula. Cada decisão do item M6 da
+  retro da X7 (D45, D47, D55 a D59 e D64; a regra 70 cita outras, que ainda não somam) soma C como a regra 70, escrita com o D
+  maiúsculo e sem letra, dígito, `_` ou `#` colado antes, nem letra, dígito ou `_` colado depois (D450, `#D45`, `AD45` e `D45_`
+  não são decisão). Ler o HEAD impede que tirar a
   garantia junto com o comentário tire o guardião
 - a união com os marcados vale sempre: a exceção nunca tira quem o Arquiteto marcou
 
@@ -69,7 +72,9 @@ Além de `revisor-geral` e `test-engineer`:
   dois: C I
 - citação, um caso por termo: `galeria/x.tsx` com "regra 70" segue P C, com "regra 10" soma T, com "LGPD" segue P C;
   `vite.config.ts` com "regra 20" soma P, com "regra 80" segue I; `tema.ts` com "regra 70" soma C, com "LGPD" soma P e com
-  "Regra 80" soma I; sem citação, não soma; citava "regra 20" no HEAD e não cita no índice: soma P
+  "Regra 80" soma I; sem citação, não soma; citava "regra 20" no HEAD e não cita no índice: soma P; cada uma das oito decisões
+  soma C em `tema.ts`, em `vite.config.ts` (C I), em `tools/processo/x.ts` e em `package.json`; D44, D46, D60, D450, `#D45`
+  e `d45` não somam; citada só no HEAD, ou só no índice, soma
 - `tools/vitrine/x.service.ts` sai com os quatro; `tools/vitrine/x.ts` com `@SemEscopo(` no índice, e com ele só no
   HEAD, sai com os quatro; `tools/processo/x.ts` citando "regra 20" sai com P
 - `componentes/ui/ia/AvisoFila.tsx` sai com P C I; `componentes/ui/sobrepostos/DialogoDeConfirmacao.tsx` sai com C I

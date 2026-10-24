@@ -140,7 +140,9 @@ No código (13.0): `tools/processo/guardioes-por-caminho.ts` não importa módul
 `conteudoDe(arquivo, onde: 'head' | 'indice')`. Só é código aqui o arquivo que casa uma entrada: as cinco pastas do padrão e as exceções do código
 (`infra/` é uma delas, com `infra-guardian` e `privacy-guardian`); documento e o resto de `tools/` não pedem ninguém, nem citando a regra, até a 14.0 somar as
 linhas do RF16. O padrão devolve os quatro sem ler o arquivo; só a exceção lê o texto, nos dois lados, para o sufixo, o `@SemEscopo(` e a citação (`regra\s+10`,
-`20`, `70` e `80` sem outro dígito depois, e `lgpd`, sem diferença de maiúscula). A `decidirCommit` une os marcados e os de toda tarefa com os do caminho
+`20`, `70` e `80` sem outro dígito depois, e `lgpd`, sem diferença de maiúscula; e as decisões do item M6 da retro (D45, D47, D55 a D59 e D64),
+com o D maiúsculo e sem letra, dígito, `_` ou `#` colado antes, nem letra, dígito ou `_` colado depois, que somam o `conformidade-reviewer` como a
+regra 70). A `decidirCommit` une os marcados e os de toda tarefa com os do caminho
 dos **arquivos que o commit leva** (`entrada.arquivos`), e não dos alterados da árvore: o guardião do que fica fora do commit é cobrado no commit que o levar
 (`obrigatoriosDoCommit`, em `portao.ts`). O `conteudoDe` do `PreToolUse` lê o disco como índice e o HEAD pelo git (`conteudoDoHead`, em `comando-git.ts`); o do git
 hook lê o índice e o HEAD pelo git. O `portao-local.ts` imprime `Revisores obrigatórios: …` (`linhaDosObrigatorios`) na primeira linha do subcomando `revisores`, que

@@ -176,6 +176,46 @@ describe('a citação soma o guardião da regra', () => {
     expect(pede(tema, textos('// regra 40, regra 50'))).toEqual([])
   })
 
+  it.each(['D45', 'D47', 'D55', 'D56', 'D57', 'D58', 'D59', 'D64'])('a decisão %s soma o conformidade-reviewer, como a regra 70', (decisao) => {
+    expect(pede('apps/web/src/tema.ts', textos(`// ${decisao}\nexport const a = 1\n`))).toEqual([C])
+    expect(pede('apps/web/vite.config.ts', textos(`// ${decisao}\n`))).toEqual([C, I])
+    expect(pede('tools/processo/x.ts', textos(`// ${decisao}\n`))).toEqual([C])
+    expect(pede('package.json', textos(`// ${decisao}\n`))).toEqual([C])
+    // O padrão já pede os quatro; a citação não muda a resposta.
+    expect(pede('apps/api/src/x.ts', textos(`// ${decisao}\n`))).toEqual(OS_QUATRO)
+  })
+
+  it('a decisão citada no meio de uma frase, de uma lista ou de uma faixa soma o conformidade-reviewer', () => {
+    const tema = 'apps/web/src/tema.ts'
+    expect(pede(tema, textos('// pela D58, D59 e D8'))).toEqual([C])
+    expect(pede(tema, textos('// (D45 revista)'))).toEqual([C])
+    expect(pede(tema, textos('// D55 a D59'))).toEqual([C])
+    expect(pede(tema, textos('// D55–D59'))).toEqual([C])
+    expect(pede(tema, textos('// ver D64.'))).toEqual([C])
+  })
+
+  it('a decisão que a regra 70 não cita, e o número que é prefixo, sufixo ou parte de outro, não soma', () => {
+    const tema = 'apps/web/src/tema.ts'
+    for (const fora of ['D4', 'D5', 'D6', 'D8', 'D44', 'D46', 'D48', 'D54', 'D60', 'D63', 'D65', 'D80', 'D450', 'D455', 'D470', 'D559', 'D640', 'D645']) {
+      expect(pede(tema, textos(`// ${fora}`))).toEqual([])
+    }
+    // Colado a letra, dígito ou `#`: hash e cor hexadecimal curta (`#D45`) não são decisão; o `_` vale dos dois lados (`ID_D58`, `D45_`).
+    for (const parte of ['AD45', '1D45', 'xD64', '#D45', '#D55', 'ID_D58', 'D45x', 'D45_']) expect(pede(tema, textos(`// ${parte}`))).toEqual([])
+    // Só a escrita da decisão (D maiúsculo) vale, como nos documentos.
+    expect(pede(tema, textos('// d45 d55 d64'))).toEqual([])
+  })
+
+  it('a decisão citada só no HEAD, ou só no índice, soma o conformidade-reviewer', () => {
+    expect(pede('apps/web/src/tema.ts', textos('export const a = 1\n', '// D55\n'))).toEqual([C])
+    expect(pede('apps/web/src/tema.ts', textos('// D55\n', 'export const a = 1\n'))).toEqual([C])
+    expect(pede('apps/web/src/tema.ts', textos(null, '// D57\n'))).toEqual([C])
+  })
+
+  it('a decisão soma junto com as outras citações, na ordem dos quatro', () => {
+    expect(pede('apps/web/src/tema.ts', textos('// D55\n// regra 80\n// regra 20\n// regra 10\n'))).toEqual(OS_QUATRO)
+    expect(pede('apps/web/vite.config.ts', textos('// D64 e regra 20\n'))).toEqual([P, C, I])
+  })
+
   it('citava "regra 20" no HEAD e não cita no índice: soma P; citando só no índice, também', () => {
     expect(pede('apps/web/src/tema.ts', textos('export const a = 1\n', '// regra 20\n'))).toEqual([P])
     expect(pede('apps/web/src/tema.ts', textos('// regra 20\n', 'export const a = 1\n'))).toEqual([P])
