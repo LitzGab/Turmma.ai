@@ -16,6 +16,13 @@ venda e não recebe dado real. Depois dele as fases seguem na ordem de antes, e 
 **completa** a fatia que já existir em vez de começar do zero. Concluído em 05/10/2026: a A2 a
 A5 numa fatia só, pela D77 (`13eab64`).
 
+**O texto de cada fase diz só o que falta** (reconciliação de 24/10/2026). Cada fase pendente foi conferida
+contra o código, e o que o MVP, as X e a X5 já entregaram está em "Já existe". As duas tabelas de empréstimo
+(do MVP e das X) saíram, porque estavam desatualizadas. Na mesma conferência, o F8 (`calendario-do-professor`)
+entrou no F2, porque depende inteiro da grade; o F10 (`modo-sala-tempo-real`) entrou no F9, porque a
+infraestrutura e os sinais já existem e o modo casa nasce com a política por turma do F9; e a fila do F11
+e o gateway do F5 passaram para a X6, que já tem o desenho (42.0, 47.0, 49.0 e 50.0).
+
 A ordem abaixo existe por um motivo diferente: reduzir retrabalho. Construir a base
 institucional depois dos agentes significaria refazer os agentes, porque eles dependem do
 contexto que a base fornece. Não é ordem de lançamento, é ordem de construção.
@@ -60,8 +67,8 @@ Monorepo, Docker Compose (Postgres, Redis de fila e Redis de cache, SeaweedFS), 
 Playwright, esteira de typecheck/lint/test, log estruturado **sem dado pessoal**, erro
 tipado. API, realtime e worker como processos separados e sem estado. Filas com prioridade
 e limite por escola, com entrega pelo menos uma vez e chave de idempotência obrigatória no
-processador (D49). Rate limit por usuário e por escola. Métrica básica. Tudo local: o
-staging nasce depois (D31). Ver `docs/infra.md`.
+processador (D49). Rate limit por usuário e por escola. Métrica básica. Tudo local: a
+produção nasce depois, na VM (D31). Ver `docs/infra.md`.
 
 **Pronto quando:** `docker compose up` sobe tudo, um e2e verde toca API e web, e a esteira
 do GitHub fica verde no mesmo commit.
@@ -261,23 +268,6 @@ revista, D34). O histórico que o feed precisa nasce do próprio roteiro, não d
 uma escola vazia; e teste prova que a coordenação não vê indicador nominal de professor sem
 deixar auditoria, nem adoção nominal em lugar nenhum.
 
-### O que cada fase empresta ao MVP, e o que fica para quando ela for completada
-
-| Fase | Entra no MVP | Fica para depois |
-|---|---|---|
-| F2 | disciplinas e turmas na tela, lista de nomes por turma, alocação, convite do professor, reivindicação com aprovação | grade horária e calendário importados, Classroom (D48), reset de senha pelo coordenador, planilha suja em escala |
-| F3 | nada, porque o dado é sintético | tudo. Continua sem poder ser a última |
-| F4 | upload pela coordenação com licença, extração, trechos com página, busca, recusa sem licença | classificação BNCC completa, versionamento, reprocessamento, painel, adaptadores |
-| F5 | porta, dois adaptadores (o falso e o OpenAI-compatível, que atende o Ollama e o `llama-server` pelo `/v1`), perfis, consumo em tokens, validação de schema | gateway com limitador, prioridade, reserva e degradação; orçamento, teto e custo em reais (o `custo_micros` fica em zero); consumo de IA no painel da operação (D76); pacote do tutor; soberania (D62); avaliação de modelos |
-| F6 | atividade objetiva online, correção, diagnóstico, aprovação com registro, Turmas com Visão Geral e Alunos | prova resiliente, outros modos, rubrica e correção cega de discursiva, saída da aba (D70), as outras abas da turma aberta (P11, P28), relatório em texto da correção |
-| F7 | Assistente de ensino, atividade e prova objetiva, plano de aula, Adaptação, artefato salvo, PDF | simulado ENEM, rubrica, apresentação, material didático, PPTX e XLSX, biblioteca e histórico completos, busca na web (D68) |
-| F9 | Tutor socrático, página citada, identidade, mensagem fixa, trava, memória (a rota) | modo casa e a política por turma (D19), a tela do que o Tutor sabe com a contestação (D66), busca em fontes aprovadas (D68), aviso etário, encaminhamento a quem notifica, teste adversário completo |
-| F10 | sinal chegando à conversa do Tutor do professor certo | WebSocket em duas instâncias, modo casa com resumo |
-| F11 | thread, função com autonomia declarada, entrega pendente, execução registrada, idempotência, suspensão por função numa escola; Assistente (correção e adaptação) e Tutor | execução na fila do worker (no MVP, no processo da API: `TODO(fila)`, D49), limite de passos e de custo, "seu dia e sua semana", Analista por evento |
-| F12 | governança de IA, agentes e funções com autonomia, consumo, resumo do Analista a pedido, nominal com auditoria; do lado nosso, o painel da operação (A0) | painel completo, resumo semanal do Analista, Conformidade, Denúncias, Exportar, dossiê |
-| F15 | roteiro, um comando que sobe o ambiente vazio | demonstração completa, com um bimestre e notas |
-| F8, F13, F14, F17, F16 | nada | tudo |
-
 ## X5 — `reengenharia` [x]
 Concluída em 23/10/2026, validada em tasks/prd-reengenharia/validacao.md.
 **Depende de:** X3 · **vem antes da X4**, que fica congelada até ela pousar
@@ -380,7 +370,7 @@ guardas, a unidade, a integração e o e2e rodam verdes antes e depois, com o di
 **O que as quatro têm em comum.** Nenhuma muda regra de negócio, permissão nem contrato da API, fora
 o que a X4 declara. Toda tela continua com os quatro estados, com o e2e que já prova a regra dela e
 com o que a lei pede e o mockup afrouxou (D80, item 7). O que o mockup mostra e depende de dado ou de
-fase que não existe **não é construído aqui**: fica na fase dele, que encolhe (tabela abaixo).
+fase que não existe **não é construído aqui**: fica na fase dele, que encolhe (o "Já existe" de cada fase diz o que chegou pronto).
 
 ## X1 — `pele-e-casca` [x]
 Concluída em 16/10/2026, validada em tasks/prd-pele-e-casca/validacao.md.
@@ -461,39 +451,31 @@ ranking (D59; regra 50, item 9); a introdução aparece uma vez por pessoa, pode
 é aviso obrigatório e pode ser revista; o aviso de privacidade está em linguagem de 11 anos; e o e2e
 do aluno e das páginas públicas continua provando as mesmas regras.
 
-### O que as fases seguintes deixam de fazer por causa das X
-
-| Fase | O que já chega pronto | O que continua sendo dela |
-|---|---|---|
-| F2 | a casca, a aba Turmas de Escola, o painel do professor e o lugar de "Grade e calendário" no menu de Escola | importar grade e calendário, Classroom, reset de senha, a escala |
-| F4 | a aba Material, na tabela nova | o painel de estado da ingestão, versões, reprocessamento |
-| F6 | as três abas da turma aberta (decididas na D80), a tela de Aprovar, Tarefas do aluno | prova em tela de foco, saída da aba (D70), os outros modos, os indicadores |
-| F7 | o catálogo, o formulário, Criados e a folha do documento | as ferramentas que faltam, PPTX e XLSX, histórico de conversas, busca na web |
-| F8 | nada de casca: o calendário é a visão **Semana** de Turmas, e não um lugar | a visão Semana e o que a grade alimenta |
-| F9 | a casca do aluno, Início, Tarefas, Eu e a introdução com o aviso em linguagem da idade | Avisar um adulto, modo casa, o que o Tutor lembra com contestação, busca em fontes |
-| F10 | o lugar dos sinais do Tutor na aba Hoje e no sino | a aula ao vivo, o tempo real em duas instâncias |
-| F11 | "Esperando você" no lugar de "Seu time" | o runtime na fila, limite de passos e de custo |
-| F12 | o Painel, Registros e "Como cada IA trabalha" | os painéis de desempenho, Auditoria, Exportar, Dossiê, Avisos, Configurações da escola |
-| F14 | as peças de painel e a casca | a área da rede inteira |
-
 ## F2 — `onboarding-por-convite` [ ]
 **Depende de:** F1
 
-Coordenador cria séries e turmas, sobe lista de nomes e **importa grade horária e
-calendário**, que definem a alocação professor × turma × disciplina (D3 revista). Professor
-entra por link e confirma o vínculo. Aluno entra pela conta da escola ou pelo link da sala,
-reivindica o nome e **o professor aprova**. Importação de turmas do Classroom como adaptador
-opcional (D48). Token com validade, uso único, revogação. Reset de senha do aluno pelo
-coordenador. **O núcleo nasce na A1** (D71 revista): turmas na tela, lista de nomes, convite e
-reivindicação; o F2 completa com a grade, o calendário, o Classroom, o reset de senha e a escala.
+Conferido contra o código em 24/10/2026. **Já existe** (A1): séries, turmas e disciplinas na tela; a lista de nomes por turma, colada ou em CSV,
+até 200 linhas; a alocação professor × turma × disciplina feita à mão; o convite do professor com validade, uso
+único e revogação; o link da sala, com a reivindicação aprovada pelo professor; e o teste dos 35 alunos
+reivindicando no mesmo minuto sem duplicidade nem erro cru.
 
-**Pronto quando:** uma escola inteira entra sem ninguém ser cadastrado individualmente, com
-grade e calendário importados, 35 alunos reivindicando nomes no mesmo minuto não geram
-duplicidade nem erro cru, e o Assistente tem de onde abrir o dia do professor ("seu dia e sua
-semana", D32 revista).
+**Falta:** importar **grade horária e calendário**, que passam a definir a alocação (D3 revista), e o lugar
+"Grade e calendário" no menu de Escola, que não existe (hoje são Turmas, Professores e Material); a escola
+inteira em escala, com alunos e professores em lote e planilha suja; o reset de senha do aluno pelo
+coordenador; a entrada do aluno pela conta da escola (o login Google e Microsoft existe, mas aluno sem ligação
+não entra; D48); e o Classroom como adaptador opcional, no fim. **Entra aqui o que era o F8**: a visão
+**Semana** em Turmas, com a rotina por escola e turma ligada a avaliações, entregas e ao que os agentes
+concluíram.
+
+**Pronto quando:** uma escola inteira entra sem ninguém ser cadastrado individualmente, professor incluído;
+a grade e o calendário importados geram a alocação; o coordenador redefine a senha de um aluno, com
+auditoria; e o professor abre a semana e vê o que precisa fazer sem cadastrar nada.
 
 ## X6 — `reengenharia-continuacao` [ ]
 **Depende de:** X5 · **não segura a X4 nem o F2**
+
+É a dona da fila de IA do F11 (42.0 e 47.0) e do gateway do F5 (49.0 e 50.0): as duas fases esperam essas partes
+dela, e não as refazem.
 
 O que a X5 deixou de fora no recorte de 22/10/2026 (D81), registrado para não se perder. As tarefas guardam o número da
 X5, e a lista está em "Saíram para a X6" de `tasks/prd-reengenharia/tasks.md`, com o desenho nos `onda-<n>.md` (revisto
@@ -548,110 +530,112 @@ recebimento; e nada do que a coordenação vê separa o professor que usou a IA 
 ## F4 — `ingestao-do-material` [ ]
 **Depende de:** F1
 
-Pipeline único com porta de fonte. **Upload de PDF é a primeira implementação**; adaptador
-de scraper só com escola real, fonte definida e licença do dono do conteúdo (D22). Só entra
-material com titularidade declarada e, se for de terceiro, com licença registrada (D5
-revista). Extração, chunking, classificação por
-série/disciplina/capítulo/BNCC, indexação, rastreabilidade até a página, versionamento,
-reprocessamento, registro de autorização da escola por fonte, painel de estado da ingestão.
+Conferido contra o código em 24/10/2026. **Já existe** (A1): upload de PDF pela coordenação, com titularidade e licença declaradas (D5
+revista, D75); recusa sem licença antes da extração; extração em fila; trecho por página, com rastreio até a
+página citada; e busca textual. O "Pronto quando" original está cumprido.
 
-**Pronto quando:** material com licença vira base consultável, toda questão gerada aponta a
-página, e arquivo sem autorização ou sem licença é recusado antes da extração.
+**Falta:** classificar o material por série, capítulo e habilidade BNCC (hoje só por disciplina), para a
+geração usar; trecho menor que a página, se a busca pedir; versionamento e reprocessamento, que exigem guardar
+o arquivo (hoje ele não é guardado: rever com `docs/mvp-rapido.md` seção 4 e com o mapa de `docs/lgpd.md`);
+autorização da escola por fonte; e o painel agregado do estado da ingestão. A extração no worker é da X6
+(45.0 e 46.0). A porta de fonte com adaptador de scraper sai daqui: só entra com escola real, fonte definida e
+licença do dono do conteúdo (D22), depois do portão.
+
+**Pronto quando:** o material é classificado por série e habilidade BNCC e a geração usa isso; um material
+trocado por versão nova é reprocessado, e o artefato antigo continua apontando a página da versão que citou;
+e a coordenação vê num painel o estado de toda a ingestão da escola.
 
 ## F5 — `camada-ia` [ ]
-**Depende de:** F0 · **paralelo com F1–F4**
+**Depende de:** F0 · **paralelo com F1–F4**; o gateway vem da X6
 
-Porta `LLMProvider`, adaptador Ollama, adaptador OpenAI-compatível, perfis, orçamento de
-tokens por aluno e por escola, registro de consumo, cache, validação de schema. Gateway com
-limitador de tokens por minuto, prioridade (tutor em sala na frente de lote), timeout,
-provedor de reserva e degradação para modelo menor (D29). Adaptador falso com latência de
-streaming simulada para teste de carga.
+Conferido contra o código em 24/10/2026. **Já existe** (A2, X5): a porta `LLMProvider`; o adaptador OpenAI-compatível, que atende o Ollama e o
+`llama-server` pelo `/v1` (não haverá adaptador Ollama próprio), e o falso; os perfis; a validação de schema,
+com uma repetição; o prazo por perfil com disjuntor; o consumo em tokens por escola, na governança; a troca de
+provedor por variável de ambiente; e o pacote do Tutor por turma, com freio diário (D38).
 
-Roteamento por soberania: chamada que carrega texto escrito por aluno vai para provedor com
-processamento no Brasil; tarefa sem dado pessoal pode ir para provedor fora (D62).
+**Vem da X6:** o gateway com limite de tokens por minuto e a degradação para modelo menor (49.0), a prioridade
+da IA pelas filas, com o Tutor em sala na frente do lote (47.0), e a subida que recusa provedor sem
+processamento no Brasil (50.0).
 
-**Pronto quando:** trocar de provedor é variável de ambiente, o consumo aparece por escola,
-e com o limite estourado o pedido interativo espera e degrada em vez de falhar. Pacote do
-tutor por turma com freio diário (D38). Avaliação de modelos de
-`docs/avaliacao-de-modelos.md` executada, com os critérios eliminatórios da seção 3.1
-(processamento no Brasil para conversa de aluno, uso por menor permitido em contrato,
-treinamento vedado, equidade em português brasileiro real), e principal e reserva registrados
-(D37, D62). Teste prova que prompt com texto de aluno não sai para provedor fora do Brasil.
+**Falta aqui:** o roteamento por soberania em cada chamada (a tarefa já declara `levaTextoDeAluno`, e ninguém lê
+a marca), com o teste de que texto de aluno não sai para provedor fora do Brasil (D62); o provedor de reserva
+(D29); o teto por escola e o custo em reais (o `custo_micros` fica sempre em zero); o consumo de IA no painel da
+operação (D76); a avaliação de modelos de `docs/avaliacao-de-modelos.md` executada, com os critérios
+eliminatórios da seção 3.1 e o principal e a reserva registrados (D37); e, se o teste de carga pedir, cache e
+streaming simulado no adaptador falso.
+
+**Pronto quando:** com o limite estourado, o pedido interativo espera e degrada em vez de falhar (com a X6);
+teste prova que prompt com texto de aluno não sai para provedor fora do Brasil; a escola tem teto e custo em
+reais; e a avaliação de modelos foi executada, com principal e reserva registrados (D37, D62).
 
 ## F6 — `avaliacao-e-correcao` [ ]
 **Depende de:** F4, F5
 
-Criar atividade e avaliação a partir do material, versões, gabarito, aplicação, correção
-objetiva, diagnóstico por habilidade, relatório por questão, aprovação do que chega ao aluno
-pelo professor (D46). **Em discursiva e redação a IA não corrige, não avalia, não dá nota nem
-conceito e não escreve devolutiva, nem como rascunho para o professor** (D55): o que a
-ferramenta entrega é rubrica e critérios antes da aplicação, organização do lote e correção
-cega. **A validação humana da objetiva é registrada** (D56), como entidade de auditoria que o
-F17 também preenche: veio do F3, no recorte de 05/10/2026, e no MVP é a `validacao_do_lote`.
-Prova online resiliente: resposta
-salva por item, relógio no servidor, retomada após queda (D27). A nota oficial e o boletim
-ficam no F17. AIA da correção e do diagnóstico escritas antes (D60).
+Conferido contra o código em 24/10/2026. **Já existe** (A3, X3, X5): atividade objetiva a partir do material, com página citada; gabarito que
+nunca vai ao aluno; aplicação e encerramento, com a flag `avaliativa` travando o Tutor; correção pela conta do
+gabarito; diagnóstico por habilidade; relatório por questão; aprovação em lote com os destaques abertos antes
+e o registro da validação (`validacao_do_lote`, D56); resposta salva por item, sem a atrasada sobrescrever a
+mais nova; retomada após queda; e **Turmas**, com as abas Hoje, Atividades e Alunos e o acerto por habilidade
+(D69, D73).
 
-Nasce aqui **Turmas**, na navegação do professor (D73): desempenho, dificuldades, evolução e
-alunos que precisam de atenção, a partir do diagnóstico por habilidade (D69); os indicadores
-de turma e aluno fecham antes deste PRD. Na prova online, **sair da aba é fato mostrado só ao
-professor**, com o aluno avisado e sem consequência automática (D70).
+**Falta:** a **prova online de verdade**: duração e prazo no relógio do servidor, extensão pelo professor,
+tela de foco, versões (A/B, embaralhamento) e a saída da aba mostrada só ao professor, com o aluno avisado e
+sem consequência automática (D70); a **discursiva e a redação**: rubrica e critérios antes da aplicação,
+organização do lote e correção cega, **sem a IA corrigir, avaliar, dar nota, conceito ou devolutiva, nem como
+rascunho para o professor** (D55); em Turmas, a evolução no tempo e os alunos que precisam de atenção, com os
+indicadores de turma e aluno fechados antes do PRD, e as abas que faltam (P11 e P28 de
+`docs/pendencias-dos-mockups.md`); e as etapas 2 a 6 das AIA da correção e do diagnóstico (D60). A nota
+oficial e o boletim ficam no F17.
 
-**Pronto quando:** a IA corrige objetiva e diagnostica, o professor aprova o que chega ao
-aluno, **nenhum campo do sistema guarda nota, conceito ou devolutiva de discursiva gerada por
-IA**, o registro da validação mostra o que foi apresentado e aberto, e uma queda de rede no
-meio da prova não perde resposta nem tempo do aluno. O professor vê a turma em Turmas
-sem esperar o F12, e teste prova que a contagem de saídas da aba não existe fora de avaliação
-nem somada por aluno.
+**Pronto quando:** uma queda de rede no meio de uma prova com tempo não perde resposta nem tempo do aluno;
+teste prova que a contagem de saídas da aba não existe fora de avaliação nem somada por aluno; a discursiva
+tem rubrica, lote e correção cega, e **nenhum campo do sistema guarda nota, conceito ou devolutiva de
+discursiva gerada por IA**; e o professor vê em Turmas quem precisa de atenção, pelo indicador decidido.
 
 ## F7 — `chat-e-ferramentas-professor` [ ]
 **Depende de:** F6
 
-Home em chat com o **Assistente de ensino** (D32 revista), com contexto de papel, turma e
-material. Ferramentas: prova, atividade, lista, **material didático** (fora da primeira
-entrega), **apresentação**, plano de aula e sequência didática, **Adaptação** — que recebe o
-tipo de adaptação, nunca texto livre sobre o aluno, e não gera PEI (D67) —, simulado ENEM, e **rubrica por competência
-para redação e discursiva — sem correção, sem nota e sem devolutiva gerada por IA** (D55).
-Sob pedido do professor, o Assistente também monta atividade de letramento em IA, alinhada às
-12 aprendizagens do MEC e às habilidades de Computação da BNCC (D65).
-Chat e formulário são o mesmo motor: o chat pergunta se quer usar a ferramenta e a abre
-como cartão na conversa (D18). Banco público de questões do ENEM a partir das provas
-oficiais do INEP (D21). Artefato salvo e ligado à turma, **exportável em PDF, PPTX e XLSX**
-(D67). **Busca na web ligada pelo professor, por conversa**, com a fonte rotulada (D68).
-Biblioteca. Histórico.
-Navegação em `docs/interface.md`.
+Conferido contra o código em 24/10/2026. **Já existe** (A2, X3): Início em chat com o **Assistente de ensino**, com contexto de turma e
+material; um motor só para chat e formulário, em que o chat propõe a ferramenta e pergunta antes (D18);
+atividade objetiva (é a "prova" do MVP); plano de aula, com duração fixa em 50 minutos; **Adaptação** por
+tipo fixo, sem campo em que caiba diagnóstico e sem PEI (D67); artefato salvo e ligado à turma; PDF; Criados,
+com filtro por tipo, turma e estado; e o catálogo nas quatro categorias (D74).
 
-**Pronto quando:** o professor faz o mesmo pelo chat e pelo formulário, o chat pergunta
-antes de usar a ferramenta quando ela não foi escolhida, o artefato fica salvo e sai nos três
-formatos, e a Adaptação não tem campo em que caiba um diagnóstico.
+**Falta:** as ferramentas lista, sequência didática, **material didático**, **apresentação**, simulado ENEM
+com o banco público de questões das provas oficiais do INEP (D21), **rubrica por competência para redação e
+discursiva — sem correção, sem nota e sem devolutiva gerada por IA** (D55), e a atividade de letramento em IA,
+alinhada às 12 aprendizagens do MEC e às habilidades de Computação da BNCC (D65); a prova como tipo próprio, se
+o F6 pedir; a duração do plano como campo; a Adaptação oferecida também pela conversa; **PPTX e XLSX** (D67);
+**busca na web ligada pelo professor, por conversa**, com a fonte rotulada (D68); o histórico de conversas em
+lista; e a biblioteca além de Criados. Navegação em `docs/interface.md`.
 
-## F8 — `calendario-do-professor` [ ]
-**Depende de:** F7
-
-Rotina por escola e turma, visão semanal e diária, ligada a avaliações, entregas e ao que
-os agentes concluíram.
-
-**Pronto quando:** o professor abre a semana e vê o que precisa fazer sem cadastrar nada.
+**Pronto quando:** cada ferramenta nova funciona pelo chat e pelo formulário, com o chat perguntando antes; o
+artefato sai nos três formatos; a busca só roda ligada pelo professor e rotula a fonte; e a Adaptação continua
+sem campo em que caiba um diagnóstico.
 
 ## F9 — `ambiente-do-aluno` [ ]
-**Depende de:** F6
+**Depende de:** F6 · a busca em fontes aprovadas espera a busca na web do F7
 
-Tutor socrático que não entrega resposta, escopo restrito ao conteúdo da turma, atividades
-e provas na plataforma, política por turma, trava durante avaliação, desempenho próprio.
-Resposta do tutor supervisionada, não aprovada uma a uma (D47). **Memória de tudo que o aluno
-fez no sistema**, feita do registro do trabalho e nunca de texto sobre a pessoa, com o contexto
-estruturado do professor e o tipo de adaptação registrada,
-que o aluno vê e contesta (D66). **Busca em fontes aprovadas**, com as duas chaves, só em sala
-e continuando socrático (D68). O Tutor mantém identidade de
-agente e **nunca se passa por pessoa** (D58); **nenhum mecanismo de uso excessivo e nenhum
-padrão manipulativo** (D59); filtro de conteúdo inadequado; aviso de privacidade em linguagem
-de faixa etária; e o canal para o aluno avisar um adulto (D61), que é a entrada dele no canal
-de notificação de violação: o canal saiu do F3 no recorte de 05/10/2026 e fecha no F12, com a
-resposta e o recurso. Linguagem adequada do 6º ano
-ao Ensino Médio (D43). Encaminhamento de assunto delicado que chega a quem notifica o
-Conselho Tutelar (`docs/regulacao.md` seção 7). Avaliação de impacto dos sinais antes de
-existirem. Acesso fora da sala configurado pela escola por turma, desligado por padrão
-(D19). Web para computador da escola em sala e celular fora dela (D51).
+Conferido contra o código em 24/10/2026. **Já existe** (A4, X4): o Tutor socrático, com a conferência que descarta a resposta pronta; o escopo
+da turma, com teste de isolamento; a trava durante avaliação; a identidade de IA, que nunca se passa por pessoa
+(D58); nenhum mecanismo de uso excessivo (D59); a memória do trabalho do aluno, só de lote aprovado (D66); a
+mensagem fixa com o 188 e o sinal de atenção humana ao professor da turma; os três testes que tentam arrancar
+a resposta pronta; os sinais do Tutor (quem travou, quem pediu resposta pronta, dúvida que se repetiu) na aba
+Hoje da turma, relidos a cada 15 s; e o tempo real (`apps/realtime`), com adaptador Redis provado em duas
+instâncias. A X4 entrega a casca do aluno, o aviso de privacidade em linguagem de 11 anos e o "Como estou
+indo" por tarefa.
+
+**Falta:** a política por turma e o acesso fora da sala, desligado por padrão (D19), com o **modo casa**
+registrando e resumindo para o professor; a tela do que o Tutor sabe, com contestação, e o contexto
+estruturado do professor e o tipo de adaptação entrando na memória (D66); o desempenho próprio por assunto;
+a **busca em fontes aprovadas**, com as duas chaves, só em sala e continuando socrático (D68); "Avisar um
+adulto" (D61), a entrada do aluno no canal de notificação de violação, que fecha no F12; o encaminhamento de
+assunto delicado a quem notifica o Conselho Tutelar, com o acesso ao conteúdo auditado (D36,
+`docs/regulacao.md` seção 7); o filtro de conteúdo inadequado; a linguagem do 6º ano ao Ensino Médio provada
+por teste (D43); e as etapas 2 a 6 das AIA do Tutor e dos sinais (D60). **Entra aqui o que era o F10**: o
+canal por turma no tempo real, a API publicando o sinal nele, a aba Hoje e o sino trocando a releitura pelo
+envio, e o que a turma pesquisou. Onde o sinal aparece — na conversa do Tutor (D32 revista) ou na aba Hoje,
+como a X3 fez — se decide antes do PRD.
 
 Herdado do F1: **a leitura do próprio histórico pelo aluno** (turmas de anos encerrados) ficou
 para cá. No F1 ela seria só a lista de turmas passadas, sem nota nem entrega, e o valor aparece
@@ -660,122 +644,120 @@ e `vinculo.ler_proprios` em `nunca` na `MATRIZ`, e `?anoLetivoId` com token de a
 tarefa que abrir isso muda a célula, cria rota e DTO próprios, e traz o teste que quebra sem a
 cláusula de `usuario_id` do contexto (validação do F1, 20/09/2026).
 
-**Pronto quando:** três tentativas diferentes de arrancar a resposta pronta falham no teste —
-inclusive "pesquisa e resume para mim" —, uma página da web com instrução escondida não muda o
-comportamento do Tutor, a busca é recusada no servidor sem as duas chaves, nenhum campo guarda
-texto livre sobre o aluno,
-o Tutor responde o que é quando o aluno pergunta se ele é uma pessoa, a AIA do Tutor existe
-escrita, e o encaminhamento de risco à vida chega a quem notifica, com o acesso ao conteúdo
-auditado.
-
-## F10 — `modo-sala-tempo-real` [ ]
-**Depende de:** F9
-
-WebSocket por turma, professor vê quem travou, quem pediu resposta pronta, dúvidas
-frequentes, e o que a turma pesquisou — avisado pelo próprio Tutor, na thread dele (D32
-revista). Modo casa com registro e resumo. Sinal derivado de evento, não vigilância.
-
-**Pronto quando:** o professor acompanha a turma ao vivo sem ler conversa por padrão, com
-duas instâncias de realtime entregando o sinal ao professor certo.
+**Pronto quando:** "pesquisa e resume para mim" também falha no teste; uma página da web com instrução
+escondida não muda o comportamento do Tutor; a busca é recusada no servidor sem as duas chaves; nenhum campo
+guarda texto livre sobre o aluno; o modo casa só existe na turma em que a escola ligou; a AIA do Tutor está
+completa; o encaminhamento de risco à vida chega a quem notifica, com o acesso ao conteúdo auditado; e o
+professor acompanha a turma ao vivo sem ler conversa, com o sinal chegando pelo tempo real, em duas
+instâncias, só ao professor certo.
 
 ## F11 — `agentes` [ ]
-**Depende de:** F7, F9
+**Depende de:** F7, F9 e a fila da X6
 
-Runtime em fila, thread por agente, não-lidos, autonomia declarada **por função** e visível
-(D9), portão de aprovação, limite de passos e de custo. Os três agentes da D32 revista —
-Assistente de ensino, Tutor e Analista de desempenho escolar — com as funções do Assistente
-(correção de objetiva, adaptação, "seu dia e sua semana"), cada uma com nível e gatilho de
-`docs/agentes.md`.
-Encaminhamento de assunto delicado (D36). Processador idempotente (D49).
+Conferido contra o código em 24/10/2026. **Já existe** (A2 a A5): os três agentes da D32 revista; a função com autonomia declarada e visível
+(D9); a entrega pendente, com o portão de aprovação; a execução registrada e idempotente pela chave de envio;
+a suspensão por função numa escola sem desligar o resto; a correção de objetiva e a Adaptação. Os três
+"Pronto quando" originais estão cumpridos, fora de fila.
 
-Cada função de alto risco entra com a AIA escrita e com **procedimento de suspensão** — como
-desligar a função numa escola, quem decide, o que acontece com o que ela já produziu (D60).
+**Vem da X6:** o runtime na fila do worker, com entrega ao menos uma vez (42.0 e 47.0, D49).
 
-**Pronto quando:** a correção de objetiva termina, avisa, e o diagnóstico espera aprovação;
-rodar a mesma função duas vezes não duplica aviso nem chamada de IA; e uma função pode ser
-suspensa numa escola sem desligar o chat do professor nem o resto do sistema.
+**Falta aqui:** thread para o Tutor e para o Analista, e os não-lidos; o limite de passos e de custo por
+execução; "seu dia e sua semana" do Assistente, que lê a grade do F2; o Analista disparado por evento; e as
+etapas 2 a 6 das AIA de cada função de alto risco, com a revisão do Gabriel e o procedimento de suspensão
+(D60). O encaminhamento de assunto delicado (D36) fecha no F9.
+
+**Pronto quando:** uma execução que passa do limite de passos ou de custo para e avisa, sem gastar mais; o
+Assistente abre o dia e a semana do professor a partir da grade; e o Analista roda por evento sem duplicar
+aviso nem chamada de IA.
 
 ## F12 — `governanca-do-coordenador` [ ]
-**Depende de:** F6, F10, F11
+**Depende de:** F6, F9, F11
 
-Uso de IA por série e disciplina, desempenho por série, turma e habilidade, alertas em
-agregado formulados como hipótese (média fora da curva, habilidade em queda, aluno em
-risco), **auditoria do que a IA gerou e quem aprovou**, autonomia de cada agente e de cada função, consumo de
-tokens. **Painel do professor** com o próprio uso e o desempenho das turmas dele; a
-coordenação vê agregado, só com dois ou mais professores no recorte, e abre o nominal com
-auditoria; sem ranking de professor (D45 revista). Turmas já existe desde o F6
-(D69, D73) e ganha aqui a comparação com a série.
-Indicadores, limiares e texto dos alertas definidos antes do PRD (decisão em aberto).
-**Sem ranking, sem lista nominal de adoção e sem alerta de professor que não usa** (D64).
-Entram as telas de **Conformidade** (o dossiê da escola num lugar: propósito, faixas etárias,
-funcionamento em linguagem simples, LGPD e ECA artigo por artigo, relatório de uso exportável,
-material de comunicação), **Denúncias** e **Exportar** (D61, D63), e o resumo da AIA em cada
-função de alto risco (D60).
+Conferido contra o código em 24/10/2026. **Já existe** (A5, X2): a governança com a autonomia de cada função, suspender e retomar; o consumo em
+tokens; o resumo do **Analista de desempenho escolar** a pedido, com o alerta de habilidade com acerto baixo;
+a regra dos dois professores no recorte e o nominal só com finalidade e auditoria (D45 revista), com os testes
+de que a coordenação não vê nominal sem deixar auditoria nem adoção nominal em lugar nenhum (D64); e o Painel,
+os Registros e "Como cada IA trabalha".
 
-Vieram do F3, no recorte de 05/10/2026: a **exportação em formato aberto** de dado, artefato e
-histórico de uso, feita pela própria coordenação (D63), com o fim de contrato e o expurgo da
-auditoria; e o **canal de notificação de violação**, com retirada de conteúdo e recurso, dizendo
-se a análise foi humana ou automatizada (D61, ECA arts. 28 a 30), cuja entrada do aluno nasce no
-F9. O arquivo de cada titular já sai em formato aberto desde o F3.
+**Falta:** a tela de **Auditoria**, que responde "o que a IA gerou e quem aprovou" (o backend grava, e nenhuma
+rota lê); o uso de IA por série e disciplina; a comparação da turma com a série; os outros alertas, formulados
+como hipótese (média fora da curva, habilidade em queda, aluno em risco, D34), com indicadores, limiares e
+texto decididos antes do PRD; o **painel do professor** com o próprio uso; o resumo semanal do Analista; o
+resumo da AIA em cada função de alto risco (D60); **Conformidade** (o dossiê da escola num lugar: propósito,
+faixas etárias, funcionamento em linguagem simples, LGPD e ECA artigo por artigo, relatório de uso exportável,
+material de comunicação); **Denúncias**, com o canal de notificação de violação, retirada de conteúdo e
+recurso, dizendo se a análise foi humana ou automatizada (D61, ECA arts. 28 a 30), cuja entrada do aluno nasce
+no F9; e **Exportar** dado, artefato e histórico de uso em formato aberto, feito pela própria coordenação, com
+o fim de contrato e o expurgo da auditoria (D63). **Sem ranking, sem lista nominal de adoção e sem alerta de
+professor que não usa** (D64).
 
-**Pronto quando:** a escola responde "o que a IA faz aqui e quem aprovou" em uma tela,
-**imprime o dossiê que a secretaria pede** a partir dela, e teste prova que a coordenação não
-vê indicador nominal de professor sem deixar auditoria nem enxerga adoção nominal em lugar
-nenhum. E, com o que veio do F3: a coordenação exporta tudo em formato aberto sem depender de
-nós, e uma notificação de violação percorre o caminho até a resposta, com recurso.
+**Pronto quando:** a escola responde "o que a IA faz aqui e quem aprovou" em uma tela e **imprime o dossiê que
+a secretaria pede** a partir dela; a coordenação exporta tudo em formato aberto sem depender de nós; uma
+notificação de violação percorre o caminho até a resposta, com recurso; e os testes de nominal com auditoria e
+de adoção nunca nominal continuam passando nas telas novas.
 
 > É o que nenhum concorrente entrega. Não trate como painel secundário.
 
 ## F13 — `eventos-e-notificacoes` [ ]
 **Depende de:** F6, F11
 
-Motor de eventos (nota aprovada, tarefa não entregue, aluno travado) e notificação interna
-para professor e coordenador. A família e o WhatsApp consomem isto depois, sem refazer nada.
+Conferido contra o código em 24/10/2026. Nada do motor existe. O sino do professor e o da coordenação (X2, X3) são calculados das filas
+pendentes, e passam a ler o evento gravado.
 
-**Pronto quando:** eventos são emitidos e roteados, com canal plugável.
+Motor de eventos (nota aprovada, tarefa não entregue, aluno travado) e notificação interna para professor e
+coordenador. A família e o WhatsApp consomem isto depois, sem refazer nada.
+
+**Pronto quando:** eventos são emitidos e roteados, com canal plugável, e o sino lê deles.
 
 ## F14 — `governanca-de-rede` [ ]
 **Depende de:** F12
 
-Consolidado por escola, comparativo, adoção, exportação. **Nunca dado individual de aluno
+Conferido contra o código em 24/10/2026. **Já existe:** a tabela `rede` e o papel de rede na `MATRIZ`, sem usuário nem rota.
+
+**Falta:** consolidado por escola, comparativo, adoção agregada e exportação. **Nunca dado individual de aluno
 ou de professor, nunca conversa.**
 
-**Pronto quando:** teste prova que a rede não alcança nota individual nem conversa de tutor.
+**Pronto quando:** teste de rota, e não só da matriz, prova que a rede não alcança nota individual nem conversa
+de tutor.
 
 ## F15 — `demonstracao` [ ]
-**Depende de:** F12, F13
+**Depende de:** F12, F13, F17
 
-Seed **sintético** de uma escola completa: turmas dos anos finais e do Ensino Médio,
-professores, alunos fictícios, grade e calendário, material de exemplo com licença, um
-bimestre de atividades com diagnóstico (e de notas, quando o F17 existir), feed de agentes
-com atividade recente.
+Conferido contra o código em 24/10/2026. **Já existe** (A5): o roteiro com as quatro coisas da D24 (`docs/roteiro-da-demonstracao.md`), rodando
+no e2e; o material de exemplo com licença (`npm run demonstracao:material`); e um comando que sobe o ambiente
+vazio.
 
-O roteiro segue as quatro coisas que a coordenação precisa ver na primeira semana (D24):
-escola cadastrada, governança com o que a IA gerou e quem aprovou (e as notas, quando o F17
-existir), professor gerando a partir do material com página citada, e tutor em sala com
-sinais chegando ao professor.
+**Falta:** o seed **sintético** de uma escola completa, que um comando sobe: turmas dos anos finais e do Ensino
+Médio, professores, alunos fictícios, grade e calendário, um bimestre de atividades com diagnóstico e notas, e
+o feed de agentes com atividade recente. Pode nascer de `tools/vitrine/` e das fixtures do e2e, apontando para
+o banco da demonstração. Onde ela roda (na VM, num espaço de escola fictícia, ou noutro ambiente) se decide no
+PRD.
 
-**Pronto quando:** um comando sobe a demonstração povoada, as quatro coisas do D24 aparecem
-nela, e o feed nunca aparece vazio.
+**Pronto quando:** um comando sobe a demonstração povoada, as quatro coisas da D24 aparecem nela, e o feed
+nunca aparece vazio.
 
 ## F17 — `nota-oficial-e-boletim` [ ]
-**Depende de:** F6, F11
+**Depende de:** F6, F11, F13
 
-Nota oficial das objetivas proposta pela correção do Assistente e aprovada em lote com destaques (D33),
-nota das discursivas dada pelo professor sem valor sugerido (D46), boletim, evento "nota
-aprovada" no motor do F13, exportação das notas aprovadas no formato de importação do
-sistema de gestão da escola. Entra depois do diagnóstico formativo (D46), e revisita a
-regra 70 com o texto final do CNE publicado.
+Conferido contra o código em 24/10/2026. **Já existe** (A3): o lote com os destaques abertos antes de aprovar e o registro da validação
+(`validacao_do_lote`), que a nota reaproveita; e o teste de que não existem as tabelas `nota` e `boletim`, que
+este F troca pela regra 70.
 
-**Pronto quando:** nenhum caminho grava `Nota` sem autor humano, o lote não libera sem abrir
-os destaques, e as notas aprovadas saem num arquivo que o sistema de gestão importa.
+**Falta:** a `Nota` com autor humano obrigatório; a nota oficial das objetivas proposta pela correção do
+Assistente e aprovada em lote com destaques (D33); a nota das discursivas dada pelo professor, sem valor
+sugerido (D46, D55); o boletim; o evento "nota aprovada" no motor do F13; e a exportação das notas aprovadas
+no formato de importação do sistema de gestão da escola. Revisita a regra 70 com o texto final do CNE
+publicado.
+
+**Pronto quando:** nenhum caminho grava `Nota` sem autor humano, o lote não libera sem abrir os destaques, e
+as notas aprovadas saem num arquivo que o sistema de gestão importa.
 
 ## F18 — `producao-na-vm` [ ]
 **Depende de:** F0 (concluída). Corre em paralelo com F2 a F5
 
 A produção do Turmma passa a rodar em **VM própria** (máquina AM5 com Proxmox, operada pelo
-Joaquim), em vez de nascer no provedor da D42 — decisão de 14/10/2026 que **revisa D31 e
-D42** (registro pela skill `registrar-decisao` pendente; homologação em aberto, pode nem existir).
+Joaquim, em casa), em vez de nascer no provedor da D42, e migra para a AWS depois — decisão de
+14/10/2026, registrada em 24/10/2026 como revisão da **D26, D31 e D42** (homologação opcional, pode nem existir).
 Três fatias: **1.** a VM de produção — compose de sempre, só a borda exposta pelo túnel da
 Cloudflare com Access, deploy e rollback ensaiados, dado sintético enquanto o portão não
 abre (regra 20); **2.** backup diário fora da VM, snapshot antes de deploy e restauração
@@ -784,27 +766,36 @@ memória e disco por VM e por contêiner, alertas (disco 80%, memória 90%, CPU 
 letivo, backup vencido) com runbook e aviso no celular. **PRD ainda não criado** — entra
 quando a fase começar.
 
-**Pronto quando:** a VM sobe sozinha depois de um desligamento e `/saude` responde em até
+**O deploy é automático** (pedido do Joaquim em 24/10/2026): o merge na `main`, com a esteira verde, sobe
+sozinho na VM, sem ninguém digitar nada. Fora do horário letivo, sai na hora; dentro dele, espera a janela
+(D27, regra 80). Troca uma API de cada vez, com migration que expande e depois contrai, e volta sozinho para
+a versão anterior se o `/saude` não responder.
+
+**Pronto quando:** um merge na `main` chega à VM sem passo manual, e um merge em horário letivo
+espera a janela; a VM sobe sozinha depois de um desligamento e `/saude` responde em até
 5 min; o deploy troca uma API de cada vez e o rollback volta em 2 min; uma restauração de
 backup foi executada em VM nova e cronometrada; e o painel de recursos mostra as três VMs
 com alerta ensaiado chegando ao celular.
 
 ## F16 — `hardening-e-conformidade` [ ]
-**Depende de:** F15, F17
+**Depende de:** F15, F17, F18
 
-Revisão de segurança, teste de autorização por objeto, verificação de log sem dado pessoal,
-backup criptografado com restauração testada, RIPD, processo de incidente ensaiado. Teste
-de carga "manhã de segunda" passando, alertas com runbook, deploy e rollback ensaiados.
-Entram também: **AIA de cada funcionalidade de alto risco** revista e assinada (D60), **dossiê
-de conformidade** fechado (D61) e **teste adversário do tutor** — tentativa de desativar
-salvaguarda, de arrancar conteúdo inadequado e de sair do escopo. O teste de página da web com
-instrução escondida não espera até aqui: nasce no F9, junto da busca (D68).
+Conferido contra o código em 24/10/2026. **Já existe** (F0, F3, A1, X5): a guarda de log sem dado pessoal, no lint e no redact do logger; os
+cenários de k6 de login das 7h30, reivindicação em sala e justiça entre escolas; 14 alertas, com a guarda de
+runbook e o ensaio; o incidente com alerta e e2e; e as suítes de isolamento por módulo.
 
-**Pronto quando:** a restauração foi executada de verdade, o RIPD e as AIA existem assinados,
-o dossiê está pronto para entregar a uma escola, e o teste de carga de `docs/infra.md`
-seção 10 passa no staging.
+**Falta:** o teste de carga "manhã de segunda" combinado (com o Tutor em 60 turmas no ritmo de `docs/infra.md`
+seção 3.2, a prova com queda de rede e a ingestão em volume); a varredura de autorização por objeto em todas
+as rotas; o backup criptografado com restauração executada de verdade; o RIPD; o processo de incidente
+ensaiado e registrado; as entradas do runbook ainda "a preencher"; a **AIA de cada funcionalidade de alto
+risco** revista e assinada (D60); o **dossiê de conformidade** fechado (D61); e o **teste adversário do
+tutor** — tentativa de desativar salvaguarda, de arrancar conteúdo inadequado e de sair do escopo. O teste de
+página da web com instrução escondida não espera até aqui: nasce no F9, junto da busca (D68). Deploy e
+rollback ensaiados vêm do F18.
 
----
+**Pronto quando:** a restauração foi executada de verdade, o RIPD e as AIA existem assinados, o dossiê está
+pronto para entregar a uma escola, e o teste de carga de `docs/infra.md` seção 10 passa no ambiente que
+substitui o staging.
 
 ## Portão da primeira escola real
 
@@ -822,9 +813,9 @@ e-mail** antes de uma conta de professor cruzar escolas (D71 revista em 25/09/20
 uma escola não abre a conta no convite de outra. O piloto do 1º semestre de 2027
 vem antes do F16 (D1 revista), então esses itens são puxados para antes dele.
 
-O **staging** (deploy automático do `main`, check externo, custo do ambiente) é criado antes
-da primeira demonstração a alguém de fora ou do piloto, o que vier primeiro, com o provedor
-escolhido nesse momento (D31, D42).
+A **VM de produção** do F18 (deploy automático pela `main`, check externo, backup fora da VM) existe antes
+da primeira demonstração a alguém de fora ou do piloto, o que vier primeiro, e faz o papel que era do
+staging (D31 revista). O provedor de nuvem é escolhido na migração (D42).
 
 ---
 
@@ -843,9 +834,9 @@ escolhido nesse momento (D31, D42).
   `develop` com o processo completo (D23, D53), e o F2 completa o que a A1 começou
 - F5 corre desde o início, independente do domínio; a fatia mínima dela nasceu na A2
 - F3 corre em paralelo com F4 e F5, e **não pode ser a última**
-- F10 depende só de F9; F13 pode correr junto de F12
-- F17 (nota oficial) corre depois de F6 e F11, em paralelo com F12 a F15
+- F13 pode correr junto de F12; a fila do F11 e o gateway do F5 chegam pela X6
+- F17 (nota oficial) corre depois de F6, F11 e F13, em paralelo com F12 e F14, e antes do F15
 - O teste de carga começa no F0 com um cenário mínimo e cresce a cada funcionalidade do
-  caminho quente (F2, F5, F6, F9, F10), em vez de nascer inteiro no F16
+  caminho quente (F2, F5, F6, F9), em vez de nascer inteiro no F16
 - F18 (`producao-na-vm`) corre em paralelo com F2 a F5, não depende de nenhuma delas e é o
-  que substitui o staging da D31 enquanto a decisão revisada não é registrada
+  que substitui o staging (D31 revista)

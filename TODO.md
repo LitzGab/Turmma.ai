@@ -397,10 +397,10 @@ para o staging".
       aninhado) e mostra a configuração **efetiva** — inclusive o `health_checker` que o próprio Caddy
       acrescenta ao `exclude`. Roda em `test:infra`, não no portão rápido: custa o binário do Caddy
 
-- [ ] Escolher provedor de hospedagem em região Brasil, com Postgres + pgvector, Redis e
-      storage S3 gerenciados (D26, D28), quando for criar o staging (D31, D42). O Redis do staging
-      precisa ser gerenciado **na mesma região**: com o corte de 100 ms do cliente do login, o
-      staging passou a ser o único ensaio desse corte fora de produção (`infra-guardian`)
+- [ ] **Onde este arquivo diz "staging", vale a VM de produção do F18** (D31 revista em 24/10/2026): o item
+      "antes do staging" vale antes da produção na VM. O provedor de nuvem, com Postgres + pgvector, Redis e storage
+      S3 gerenciados (D26, D28), é escolhido na migração para a AWS (D42). O Redis da VM fica na mesma máquina da
+      API, e o corte de 100 ms do cliente do login é ensaiado nela (`infra-guardian`)
 - [ ] **Bloqueio de IP na borda contra ataque ao código da turma** (A1): na A1 não existe, e a resposta é revogar os
       acessos da escola (`docs/runbook.md`, "Código da turma errado em massa numa escola"). Entra com o staging e o
       provedor (D42), com finalidade e prazo de remoção no `docs/lgpd.md` antes do primeiro uso, na regra do provedor

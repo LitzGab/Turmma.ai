@@ -331,10 +331,15 @@ usuários de uma vez, e o uso se concentra no horário de aula. API, realtime e 
 separados e sem estado desde o início, para uma rede municipal (D20) ser questão de mais
 instâncias, não de refazer. Modelo de carga em `docs/infra.md`.
 
-**D26 — Banco, Redis e storage são serviços gerenciados.**
+**D26 — Banco, Redis e storage rodam na VM própria no início e viram serviços gerenciados na migração para a AWS.**
 Quem opera é o Joaquim, sozinho e sem plantão. Manter Postgres com replicação e backup na
 mão não cabe nisso. Continuam sendo padrões abertos (Postgres, Redis, S3), então a regra 00
 e o `docker compose up` seguem valendo.
+Revista em 24/10/2026, pelo Joaquim (a decisão de 14/10/2026, registrada agora): no início, banco, Redis e
+storage rodam em contêiner na VM de produção própria (F18), e passam a gerenciados quando a produção migrar
+para a AWS (D42). O que o serviço gerenciado dava de graça vira obrigação do F18: backup diário fora da VM,
+snapshot antes de deploy, restauração executada de verdade e alerta de backup vencido. O portão da primeira
+escola real vale igual. Motivo, nas palavras do Joaquim: "quero rodar a produção na minha máquina em casa porque tem PC potente no início, depois a migração para AWS": custo de hospedagem perto de zero no primeiro ano, numa máquina que aguenta a carga das primeiras escolas, e o compose de sempre, que sobe o sistema inteiro num servidor (o critério da stack), torna a migração uma troca de endereço e de serviço gerenciado, não uma reescrita.
 
 **D27 — Meta de 99,5% de disponibilidade no horário letivo, com prova resiliente.**
 Resposta de prova salva por item, relógio no servidor e retomada após queda. Deploy em
@@ -358,8 +363,7 @@ Uns 7% do preço alvo. É medido por escola desde o F0, junto com o custo de IA 
 Revista em 13/09/2026: o uso já nasce marcado por escola no F0; o custo do ambiente passa a
 ser medido quando o staging existir (D31).
 
-**D31 — Três ambientes: local, staging e produção. O staging nasce quando houver o que
-mostrar fora da nossa máquina.**
+**D31 — Produção na VM própria, com deploy automático pela `main`; homologação opcional.**
 Staging recebe todo commit do `main`, roda e2e e teste de carga, e só tem seed sintético.
 Com commit direto no `main` (D23), é o staging que segura o erro antes de chegar à escola.
 Revista em 13/09/2026: o F0 e a validação inicial são 100% locais, sem ambiente remoto e
@@ -368,6 +372,12 @@ e2e). O staging é criado antes da primeira demonstração a alguém de fora ou 
 que vier primeiro. Validar local não exige máquina ligada nem custo, e o que só um ambiente
 remoto prova (URL pública, check externo, custo do ambiente) não tem valor antes de haver
 quem veja.
+Revista em 24/10/2026, pelo Joaquim: o staging dá lugar à VM de produção própria (F18). O merge na `main`,
+com a esteira verde, sobe sozinho na VM, e só fora do horário letivo (D27, regra 80): dentro dele, o deploy
+espera a janela. Uma VM de homologação é opcional e pode nem existir; até lá, o portão continua sendo a
+esteira, e a demonstração externa e o piloto partem da VM, com dado sintético enquanto o portão da primeira
+escola real não abre (regra 20). Os itens marcados "antes do staging" no `TODO.md` passam a valer antes da
+produção na VM. Motivo, nas palavras do Joaquim: "quero rodar a produção na minha máquina em casa porque tem PC potente no início, depois a migração para AWS": custo de hospedagem perto de zero no primeiro ano, numa máquina que aguenta a carga das primeiras escolas, e o compose de sempre, que sobe o sistema inteiro num servidor (o critério da stack), torna a migração uma troca de endereço e de serviço gerenciado, não uma reescrita.
 
 **D32 — Os agentes são sete, mais o Mensageiro da família na fase posterior.**
 Rotina, Corretor, Planejador, Monitor de turma, Tutor, Adaptador e Analista da coordenação.
@@ -464,7 +474,7 @@ R$ 5, IA (R$ 1,50) mais infra (R$ 2) mais imposto dão uns R$ 4,15 e não sobra 
 nem licitação. Perder licitação só por preço é aceito. O orçamento continua sendo
 configuração por rede.
 
-**D42 — O provedor de hospedagem é escolhido quando o staging for criado, por critério fixo.**
+**D42 — O provedor de nuvem é escolhido na migração para fora da VM, com a AWS São Paulo como candidata.**
 Nada de produção é necessário antes do staging. Critérios: região São Paulo, Postgres
 gerenciado com pgvector e backup contínuo, Redis gerenciado configurável sem expulsão de
 chave, storage S3-compatível, custo dentro de R$ 2 por aluno (D30), preço em real ou
@@ -473,6 +483,10 @@ Cloud. Revista em 13/09/2026: saiu da Tech Spec do F0, porque o F0 passou a ser 
 (D31). A comparação já feita fica como ponto de partida (AWS São Paulo como candidata;
 Azure eliminada por não ter API S3, Magalu por não ter Redis gerenciado), e opção sem custo
 entra na comparação.
+Revista em 24/10/2026, pelo Joaquim: a produção começa na VM própria, numa máquina AM5 com Proxmox em casa,
+com só a borda exposta pelo túnel da Cloudflare com Access (F18); a escolha de provedor vai para a migração,
+com os mesmos critérios e a AWS São Paulo como candidata. A máquina fica no Brasil, então a D28 continua.
+Motivo, nas palavras do Joaquim: "quero rodar a produção na minha máquina em casa porque tem PC potente no início, depois a migração para AWS": custo de hospedagem perto de zero no primeiro ano, numa máquina que aguenta a carga das primeiras escolas, e o compose de sempre, que sobe o sistema inteiro num servidor (o critério da stack), torna a migração uma troca de endereço e de serviço gerenciado, não uma reescrita.
 
 **D43 — O recorte é anos finais e Ensino Médio, em qualquer computador da escola.**
 Do 6º ao 9º ano e do 1º ao 3º do Ensino Médio, em escola particular e rede pública, com o

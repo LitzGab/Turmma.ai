@@ -84,12 +84,12 @@ algo que dependa dela.** Nova decisão ou revisão entra lá e aqui, pela skill 
 | D23 | O trabalho acontece na `develop`; `release` e `main` por merge |
 | D24 | Quatro coisas que a coordenação vê na primeira semana |
 | D25 | Infra do primeiro ano para até dez escolas |
-| D26 | Banco, Redis e storage gerenciados |
+| D26 | Banco, Redis e storage na VM no início, gerenciados na migração |
 | D27 | 99,5% de disponibilidade no horário letivo |
 | D28 | Hospedagem em região Brasil |
 | D29 | Modelo em produção por API, com contrato e reserva |
 | D30 | Infra custa até R$ 2 por aluno por mês |
-| D31 | Três ambientes; staging antes da primeira demonstração externa |
+| D31 | Produção na VM própria, com deploy automático pela `main` |
 | D32 | Três agentes: Assistente de ensino, Tutor e Analista de desempenho escolar |
 | D33 | Nota de objetiva aprovada em lote, com os fora da curva abertos antes |
 | D34 | Aluno em risco nomeado só ao professor da turma |
@@ -100,7 +100,7 @@ algo que dependa dela.** Nova decisão ou revisão entra lá e aqui, pela skill 
 | D39 | IA custa até R$ 5 por aluno por mês na escola particular |
 | D40 | A escola paga por aluno, sem crédito visível |
 | D41 | Rede pública: pacote de rede com piso de preço |
-| D42 | O provedor de hospedagem é escolhido com o staging |
+| D42 | O provedor de nuvem é escolhido na migração, AWS como candidata |
 | D43 | Recorte: 6º ao 9º ano e Ensino Médio, em qualquer computador da escola |
 | D44 | Assistente com agentes supervisionados |
 | D45 | O professor é medido em espelho, sem ranking |
