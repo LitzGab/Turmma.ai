@@ -390,8 +390,11 @@ describe('o comando da limpeza grava a pedida que a vigia lê (RF27)', () => {
   }
 
   /** Roda o comando do passo em `cwd`, com um `maestri` falso (em `bin/` do térreo) que só anota o que recebeu. */
-  function rodarOComando(passo: string, terreo: string, cwd: string) {
+  async function rodarOComando(passo: string, terreo: string, cwd: string) {
     const marca = join(terreo, 'disparou.txt')
+    // O disparo é um processo solto (`nohup setsid … &`) que escreve a marca no térreo: o helper só devolve com ele terminado, e nenhum caso
+    // apaga o térreo debaixo dele (ENOTEMPTY na esteira 40133872609). A marca de uma rodada anterior sai, para a espera ser desta.
+    rmSync(marca, { force: true })
     mkdirSync(join(terreo, 'bin'), { recursive: true })
     writeFileSync(join(terreo, 'bin/maestri'), `#!/bin/sh\necho "$@" > '${marca}'\n`)
     chmodSync(join(terreo, 'bin/maestri'), 0o755)
@@ -399,6 +402,7 @@ describe('o comando da limpeza grava a pedida que a vigia lê (RF27)', () => {
     // O ambiente do git de quem roda o teste (dentro de um hook do git, `GIT_DIR` e `GIT_WORK_TREE` apontam o repositório real) não entra:
     // o `git rev-parse` do comando responde pelo `cwd`, e a pedida não pode ir parar no `.processo` do térreo de verdade.
     const resultado = spawnSync('sh', ['-c', comandoDo(passo).replace('sleep 25', 'sleep 0')], { cwd, env: { ...ambienteSemOGitDeFora(), PATH: `${join(terreo, 'bin')}:${process.env['PATH'] ?? ''}` }, encoding: 'utf8' })
+    await esperar(marca)
     return { resultado, marca }
   }
   const VARIAVEIS_DO_GIT_DE_FORA = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_OBJECT_DIRECTORY']
@@ -413,7 +417,11 @@ describe('o comando da limpeza grava a pedida que a vigia lê (RF27)', () => {
     vi.unstubAllEnvs()
   })
   const esperar = async (arquivo: string) => {
-    for (let tentativa = 0; tentativa < 50 && !existsSync(arquivo); tentativa++) await new Promise((resolver) => setTimeout(resolver, 100))
+    // Com conteúdo: o `echo > marca` cria o arquivo e escreve em dois passos.
+    const chegou = () => existsSync(arquivo) && readFileSync(arquivo, 'utf8').length > 0
+    for (let tentativa = 0; tentativa < 50 && !chegou(); tentativa++) await new Promise((resolver) => setTimeout(resolver, 100))
+    // Sem a marca o disparo não aconteceu (ou atrasou além do prazo): falha aqui, com o caminho, e não como ENOTEMPTY no `rmSync` do `finally`.
+    if (!chegou()) throw new Error(`a rotina não disparou em 5 s: sem conteúdo em ${arquivo}`)
   }
 
   it.each(['6-tarefa.md', '9-vigia-e-contexto.md'])('%s: de dentro de um andar (worktree), a pedida vai para o térreo, que é onde a vigia lê, e não para o andar', async (passo) => {
@@ -429,17 +437,29 @@ describe('o comando da limpeza grava a pedida que a vigia lê (RF27)', () => {
       // Do andar e de uma pasta dentro dele: o comando acha o térreo pelo git, e não pelo diretório em que o Bash está.
       for (const cwd of [andar, join(andar, 'pasta')]) {
         rmSync(join(terreo, '.processo'), { recursive: true, force: true })
-        const { resultado, marca } = rodarOComando(passo, terreo, cwd)
+        const { resultado, marca } = await rodarOComando(passo, terreo, cwd)
         expect(resultado.status).toBe(0)
         const limpeza = JSON.parse(readFileSync(join(terreo, '.processo/limpeza.json'), 'utf8')) as { pedida: string }
         expect(Object.keys(limpeza)).toEqual(['pedida'])
         expect(existsSync(join(andar, '.processo'))).toBe(false)
         expect(existsSync(join(andar, 'pasta/.processo'))).toBe(false)
-        await esperar(marca)
         expect(readFileSync(marca, 'utf8').trim()).toBe('routine run Limpa o Orquestrador')
       }
     } finally {
       git(terreo, 'worktree', 'remove', '--force', andar)
+      rmSync(terreo, { recursive: true, force: true })
+    }
+  })
+
+  it('rodarOComando só devolve com a rotina já disparada: o térreo não é apagado debaixo do processo em segundo plano', async () => {
+    const terreo = mkdtempSync(join(tmpdir(), 'comando-espera-'))
+    try {
+      git(terreo, 'init', '-q')
+      // O disparo é um `nohup setsid … &`: sobrevive ao comando e escreve a marca no térreo. Quem apaga o térreo antes dele (o `finally` dos casos)
+      // corre contra essa escrita, e o `rmSync` falha com ENOTEMPTY (esteira 40133872609).
+      const { marca } = await rodarOComando('9-vigia-e-contexto.md', terreo, terreo)
+      expect(readFileSync(marca, 'utf8').trim()).toBe('routine run Limpa o Orquestrador')
+    } finally {
       rmSync(terreo, { recursive: true, force: true })
     }
   })
@@ -453,7 +473,7 @@ describe('o comando da limpeza grava a pedida que a vigia lê (RF27)', () => {
       // Dentro de um hook do git o ambiente é este: o repositório "de verdade" é o do `GIT_DIR`, qualquer que seja o `cwd`.
       vi.stubEnv('GIT_DIR', join(intruso, '.git'))
       vi.stubEnv('GIT_WORK_TREE', intruso)
-      const { resultado } = rodarOComando(passo, terreo, terreo)
+      const { resultado } = await rodarOComando(passo, terreo, terreo)
       expect(resultado.status).toBe(0)
       expect(existsSync(join(terreo, '.processo/limpeza.json'))).toBe(true)
       expect(existsSync(join(intruso, '.processo'))).toBe(false)
@@ -471,12 +491,11 @@ describe('o comando da limpeza grava a pedida que a vigia lê (RF27)', () => {
       mkdirSync(join(raiz, 'bin'))
       writeFileSync(join(raiz, 'bin/mkdir'), `#!/bin/sh\necho "$@" >> '${join(raiz, 'mkdir.log')}'\n`)
       chmodSync(join(raiz, 'bin/mkdir'), 0o755)
-      const { resultado, marca } = rodarOComando(passo, raiz, raiz)
+      const { resultado, marca } = await rodarOComando(passo, raiz, raiz)
       // A âncora é o git: sem ele não há onde gravar. O `/clear` não depende da pedida, e por isso a rotina segue.
       expect(resultado.status).toBe(0)
       expect(existsSync(join(raiz, 'mkdir.log'))).toBe(false)
       expect(existsSync(join(raiz, '.processo'))).toBe(false)
-      await esperar(marca)
       expect(readFileSync(marca, 'utf8').trim()).toBe('routine run Limpa o Orquestrador')
     } finally {
       rmSync(raiz, { recursive: true, force: true })
@@ -487,13 +506,8 @@ describe('o comando da limpeza grava a pedida que a vigia lê (RF27)', () => {
     const raiz = mkdtempSync(join(tmpdir(), 'comando-'))
     try {
       git(raiz, 'init', '-q')
-      mkdirSync(join(raiz, 'bin'))
-      const marca = join(raiz, 'disparou.txt')
-      writeFileSync(join(raiz, 'bin/maestri'), `#!/bin/sh\necho "$@" > '${marca}'\n`)
-      chmodSync(join(raiz, 'bin/maestri'), 0o755)
       const antes = Date.now()
-      // O `sleep 25` é a espera do turno acabar: aqui não há turno.
-      const resultado = spawnSync('sh', ['-c', comandoDo(passo).replace('sleep 25', 'sleep 0')], { cwd: raiz, env: { ...process.env, PATH: `${join(raiz, 'bin')}:${process.env['PATH'] ?? ''}` }, encoding: 'utf8' })
+      const { resultado } = await rodarOComando(passo, raiz, raiz)
       expect(resultado.status).toBe(0)
       const limpeza = JSON.parse(readFileSync(join(raiz, '.processo/limpeza.json'), 'utf8')) as { pedida: string; feita?: string }
       expect(Object.keys(limpeza)).toEqual(['pedida'])
@@ -503,8 +517,7 @@ describe('o comando da limpeza grava a pedida que a vigia lê (RF27)', () => {
       // E é o que a vigia lê: em dia agora, perdida onze minutos depois.
       expect(limpezaPerdida(limpeza, new Date())).toBe(false)
       expect(limpezaPerdida(limpeza, new Date(Date.now() + 11 * 60_000))).toBe(true)
-      for (let tentativa = 0; tentativa < 50 && !existsSync(marca); tentativa++) await new Promise((resolver) => setTimeout(resolver, 100))
-      expect(readFileSync(marca, 'utf8').trim()).toBe('routine run Limpa o Orquestrador')
+      expect(readFileSync(join(raiz, 'disparou.txt'), 'utf8').trim()).toBe('routine run Limpa o Orquestrador')
     } finally {
       rmSync(raiz, { recursive: true, force: true })
     }

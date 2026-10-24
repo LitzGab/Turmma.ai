@@ -1939,6 +1939,11 @@ Ficam, de antes da retro:
       estourado de vermelho, com o nome do job, mas o lote continua no limite; (2) na fixture `e2e/casca.ts`, o passo do código do MFA
       tem a mesma causa possível do Redis de fila parado 2 s, e falha em 20 s com o erro certo (relatório da correção
       `agentes-suspensao-intermitente`). Voltam como correção se caírem de novo (dono: Orquestrador)
+- [ ] **(X7, correção `2026-10-24-comando-da-limpeza-apaga-debaixo-do-disparo`) Acabamento de `tools/processo/vigia.test.ts`**:
+      (1) o caso `roda no térreo…` monta `join(raiz, 'disparou.txt')` à mão e o helper já devolve esse caminho em `marca`; (2) o
+      comentário do `rodarOComando` diz que ele "só devolve com ele terminado", mas ele só espera a marca ter conteúdo; (3) o helper
+      `rodar` (~linha 245) e o `ambienteGit` (~linha 285) ainda usam `{ ...process.env }` e herdariam o `GIT_DIR` de um hook do git.
+      Fazer na próxima correção que tocar a vigia (dono: Orquestrador; origem: a correção, `test-engineer` e `revisor-geral` 2ª)
 
 Saíram na retro da X7, com o motivo em `tasks/prd-harness/retro.md` ("Tirar do `TODO.md`"): o resto das recomendações da
 revisão da spec (rodada 4), da 2.0, da 5.0, da 7.0, da 11.0, da 12.0 (o `catch` do `rev-list`), da 17.0, da 18.0 e da 19.0,
