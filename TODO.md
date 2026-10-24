@@ -1855,9 +1855,14 @@ pede. (dono: Orquestrador)
       subir o compose do e2e; (2) o cabeçalho de `tools/processo/mutacoes.ts` cita dois dos três casos de carga; (3) a mutação em que
       um caso roda e lança (`TypeError` no lugar da asserção) ainda conta como provada: separar exceção de asserção dentro do caso é
       outro mecanismo, no Vitest e no Playwright (dono: Arquiteto; origem: `tasks/correcoes/2026-10-24-mutacao-so-por-assercao.md`)
-- [ ] **(X7, retro, M3) O portão avisa a divergência que ficou só no documento da tarefa**: em `tools/processo/portao-local.ts`,
+- [x] **(X7, retro, M3) O portão avisa a divergência que ficou só no documento da tarefa** (feito em 24/10/2026, correção
+      `2026-10-24-portao-avisa-divergencia`, `a8c81a9`): em `tools/processo/portao-local.ts`,
       se a seção "Divergências resolvidas nesta tarefa" ganhou linha no diff e nem a `techspec.md` nem o `cenarios.md` da spec
       mudaram, o portão imprime o aviso; só informa, como o `--faltando` (15.0, 18.0, 19.0; duas na X5)
+- [ ] **(X7, correção M3) O filtro `/^nenhuma\b/i` de `tools/processo/divergencias.ts:19` descarta também a divergência de
+      verdade que começa por "Nenhuma"**: exigir a célula ou a frase inteira ("nenhuma", "Nenhuma divergência"). O aviso só informa, e
+      o erro cai para o lado de calar; muda o que `ehDivergencia` conta, com teste e bloco de mutação (dono: Arquiteto; origem:
+      `tasks/correcoes/2026-10-24-portao-avisa-divergencia.md`, revisor-geral 1ª)
 - [ ] **(X7, retro, M4) A esteira não roda no push das branches de linha**: em `.github/workflows/ci.yml`, `on.push.branches` ganha
       `'!spec/**--l*'` depois de `'spec/**'`, com o caso em `tools/ci/esteira.test.ts`, o comentário do topo do `ci.yml` e o texto da
       regra 40 ("A esteira", que diz que o commit vai à branch da linha e cada push dispara tudo). Na X7, do push ao veredito, mediana
