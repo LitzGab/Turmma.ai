@@ -1,3 +1,11 @@
+---
+paths:
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "e2e/**"
+  - "tools/**"
+---
+
 # Regra 40 — Testes
 
 ## Por que esta regra existe
@@ -102,6 +110,12 @@ diff tocou, e só ele, fica vermelho se passar de **metade do prazo** dele na m�
 que o documento declara: aplica cada uma, roda o teste citado, exige vermelho e restaura
 (`tools/processo/mutacoes.ts`). Grava o carimbo que o hook exige antes do commit (D53). Leva minutos.
 Enquanto um teste não passa, ele se roda isolado; o portão não é ferramenta de depuração.
+
+**Código de produção sem mutação não recebe carimbo (RF17).** Tarefa ou correção que altera arquivo de
+`apps/*/src` ou `packages/*/src` (fora teste e `.d.ts`) precisa, no documento dela, de ao menos um bloco
+` ```mutacao ` ou da linha `**Sem mutação:** <motivo>`, com o motivo escrito. Sem um dos dois o portão fica
+vermelho e o hook recusa o commit. `node tools/processo/mutacoes.ts --faltando <documento>` lista as linhas
+novas com condição que nenhum bloco alcança.
 
 **A esteira**, em todo push. Cada commit de tarefa vai para o GitHub logo depois de feito, na branch
 da linha, e **a da spec** (`spec/<funcionalidade>`) recebe a soma das linhas no encontro

@@ -1,3 +1,10 @@
+---
+paths:
+  - "apps/**"
+  - "packages/**"
+  - "infra/**"
+---
+
 # Regra 00 — Arquitetura
 
 ## Por que esta regra existe

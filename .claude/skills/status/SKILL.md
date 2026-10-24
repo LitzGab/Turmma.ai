@@ -20,7 +20,7 @@ Alvo opcional: `$ARGUMENTS`
 2. `tasks/prd-<func>/estado.md` do andar, se existir — o diário do Orquestrador: o que ele espera, o
    que falhou e o que decidiu sem perguntar
 3. A seção "Esperando o Joaquim" desse `estado.md` — o que espera decisão dele
-4. `CLAUDE.md`, seção "Decisões em aberto" — só as que travam a funcionalidade da vez ou a próxima
+4. `docs/decisoes-em-aberto.md` — só as que travam a funcionalidade da vez ou a próxima
 5. `TODO.md` — só os itens que bloqueiam a funcionalidade da vez ou a próxima
 6. `git log --oneline -5` do andar
 

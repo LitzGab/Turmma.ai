@@ -326,17 +326,24 @@ describe('lerEstado, do disco', () => {
     expect(fora.proximoPasso).toContain('nao-existe')
   })
 
-  it('o resumo da sessão aponta a funcionalidade da vez e conta as decisões em aberto', () => {
+  it('o resumo da sessão aponta a funcionalidade da vez e conta as decisões em aberto do arquivo delas, não as do CLAUDE.md', () => {
     const raiz = repositorio({
       'ROADMAP.md': ROADMAP,
       'tasks/prd-lgpd-e-titular/prd.md': '# PRD',
-      'CLAUDE.md': '# Turmma\n\n## Decisões em aberto\n\n| Decisão | Dono | Quando fecha |\n|---|---|---|\n| Provedor | Joaquim | F5 |\n| Avatares | Gabriel | a definir |\n\n## Stack\n\n| Outra | tabela |\n',
+      // O arquivo das decisões em aberto tem duas linhas; o `CLAUDE.md` ainda traz uma seção antiga com cinco, que não conta.
+      'docs/decisoes-em-aberto.md': '# Decisões em aberto\n\n| Decisão | Dono | Quando fecha |\n|---|---|---|\n| Provedor | Joaquim | F5 |\n| Avatares | Gabriel | a definir |\n',
+      'CLAUDE.md': '# Turmma\n\n## Decisões em aberto\n\n| Decisão | Dono | Quando fecha |\n|---|---|---|\n| A | x | y |\n| B | x | y |\n| C | x | y |\n| D | x | y |\n| E | x | y |\n',
     })
     const linhas = resumo(raiz).split('\n')
     expect(linhas).toContain('Concluídas: F1 A0b')
     expect(linhas).toContain('Da vez: F3 lgpd-e-titular — sem-techspec')
     expect(linhas.find((linha) => linha.startsWith('Próximo passo:'))).toContain('/seguir lgpd-e-titular')
-    expect(linhas).toContain('Decisões em aberto no CLAUDE.md: 2')
+    expect(linhas).toContain('Decisões em aberto em docs/decisoes-em-aberto.md: 2')
+  })
+
+  it('o arquivo real das decisões em aberto existe e o resumo da sessão o conta', () => {
+    const linha = resumo(join(import.meta.dirname, '..', '..')).split('\n').find((achada) => achada.startsWith('Decisões em aberto em '))
+    expect(linha).toMatch(/^Decisões em aberto em docs\/decisoes-em-aberto\.md: [1-9]\d*$/)
   })
 })
 
@@ -497,7 +504,7 @@ describe('lerEstado e os textos, do disco', () => {
     expect(relatorio(estado)).toContain('Nenhuma tarefa liberada: 1.0 espera 2.0; 2.0 espera 1.0')
   })
 
-  it('o resumo em construção traz a contagem e a próxima, e sem CLAUDE.md não inventa a linha de decisões', () => {
+  it('o resumo em construção traz a contagem e a próxima, e sem o arquivo das decisões em aberto não inventa a linha de decisões', () => {
     const raiz = repositorio({ 'ROADMAP.md': ROADMAP, ...pasta({ 'tasks.md': TASKS, '3_task.md': '# Tarefa 3.0\n' }) })
     const linhas = resumo(raiz).split('\n')
     // A lista dos testes autoriza tarefas em paralelo: a primeira pendente não é a de quem lê, e o resumo não a diz.

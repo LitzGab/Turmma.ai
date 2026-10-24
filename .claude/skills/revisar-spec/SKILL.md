@@ -23,6 +23,7 @@ Funcionalidade alvo: `$ARGUMENTS`
 ## 1. Preparar
 
 - `tasks/prd-$ARGUMENTS/prd.md` e `techspec.md` existem? Não: volte à etapa que falta (`criar-prd` ou `criar-techspec`).
+- Leia as regras 00 (`00-arquitetura.md`), 40 (`40-testes.md`), 60 (`60-dominio.md`) e 80 (`80-infra-e-carga.md`), de `.claude/rules/`, por extenso: têm `paths:` e não carregam sozinhas aqui (a 10, a 20 e a 70 já estão no contexto), antes de chamar os revisores.
 - Meça: `wc -w tasks/prd-$ARGUMENTS/prd.md tasks/prd-$ARGUMENTS/techspec.md`. Acima de 2.000
   palavras sem aceite escrito no topo é achado **bloqueante** desta revisão.
 - Crie `tasks/prd-$ARGUMENTS/revisao-spec.md`, se ainda não existir:

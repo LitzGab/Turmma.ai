@@ -22,6 +22,7 @@ Funcionalidade alvo: `$ARGUMENTS`
 
 - `docs/visao-produto.md` — o que é o produto e para quem. Sem isso, você vai escrever
   requisito genérico de software escolar, e não deste software escolar
+- As regras 00 (`00-arquitetura.md`), 40 (`40-testes.md`), 60 (`60-dominio.md`) e 80 (`80-infra-e-carga.md`), de `.claude/rules/`, por extenso: têm `paths:` e não carregam sozinhas aqui (a 10, a 20 e a 70 já estão no contexto)
 - `docs/fluxos.md` — provavelmente esta funcionalidade é um dos sete fluxos, ou parte de
   um. O fluxo já traz os casos de borda reais
 - `CLAUDE.md` e `docs/decisoes.md` — o que já foi decidido, para você não perguntar de novo.
@@ -33,7 +34,7 @@ Funcionalidade alvo: `$ARGUMENTS`
   das ferramentas e do feed já estão decididos lá
 - `docs/negocio.md` — se a funcionalidade mexe com preço, consumo de IA, governança ou
   demonstração
-- Se o PRD depende de uma **decisão em aberto** do `CLAUDE.md` (lista de agentes, teto do
+- Se o PRD depende de uma **decisão em aberto** (`docs/decisoes-em-aberto.md`) (lista de agentes, teto do
   tutor, cobrança), PARE e sugira `/descobrir <tema>` antes. Não feche essa decisão dentro
   do PRD
 - Se a funcionalidade toca dado de pessoa ou IA sobre aluno: `docs/lgpd.md` e

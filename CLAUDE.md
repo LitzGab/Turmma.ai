@@ -1,8 +1,8 @@
 # Turmma — contexto e decisões
 
 > **Antes deste arquivo, leia `docs/visao-produto.md`.** Ele explica o que estamos
-> construindo e para quem. Este aqui registra o que já foi decidido e por quê, para não
-> rediscutirmos a mesma coisa toda semana.
+> construindo e para quem. Este aqui lista o que já foi decidido (o texto e o porquê estão em
+> `docs/decisoes.md`), para não rediscutirmos a mesma coisa toda semana.
 >
 > **O produto se chama Turmma** (D54). A marca, a paleta e a landing page existem em
 > `turmma.com`; o registro no INPI e o do domínio seguem pendentes (`TODO.md`). O
@@ -53,247 +53,104 @@ não confiar, a escola não compra.
 
 ## Decisões tomadas
 
-O texto completo de cada decisão, com o motivo e as revisões, está em `docs/decisoes.md`.
-**Leia a decisão lá antes de citá-la, de discuti-la de novo ou de implementar algo que dependa
-dela.** Aqui fica uma linha por decisão, para saber que ela existe e onde procurar.
+Uma linha por decisão: número e título. O texto completo, com o motivo e as revisões, está em
+`docs/decisoes.md`. **Leia a decisão lá antes de citá-la, de discuti-la de novo ou de implementar
+algo que dependa dela.** Nova decisão ou revisão entra lá e aqui, pelo `/registrar-decisao`.
 
 | D | Decisão |
 |---|---|
-| D1 | Sistema inteiro como alvo; MVP de apresentação logo depois do F1 (D71); escola piloto gratuita no 1º semestre de 2027 com o que estiver pronto, com o portão de LGPD e infra antes dela |
-| D2 | O cliente é a instituição: sem cadastro público, sem plano avulso de professor |
-| D3 | Onboarding por convite: a coordenação importa turmas, nomes, grade e calendário e aloca o professor, que só confirma o vínculo |
-| D4 | A identidade do aluno passa por aprovação humana (reivindicação de nome) |
-| D5 | Pipeline único de ingestão, só com material cuja licença permite o uso; apostila de terceiro sem licença não entra |
-| D6 | Indexação por série, disciplina, capítulo e habilidade da BNCC, com rastreio até a página |
+| D1 | Sistema inteiro como alvo, com MVP de apresentação (D71) e piloto gratuito em 2027 |
+| D2 | O cliente é a instituição: sem cadastro público |
+| D3 | Onboarding por convite, sem cadastro individual |
+| D4 | A identidade do aluno passa por aprovação humana |
+| D5 | Pipeline único de ingestão, só com licença que permite o uso |
+| D6 | Indexação pela BNCC, com rastreio até a página |
 | D7 | Nota nunca é publicada sem aprovação humana |
-| D8 | O tutor é sempre visível ao professor: sala ao vivo, casa com registro e resumo |
-| D9 | Todo agente tem nível de autonomia declarado e visível à coordenação, por função (revista em 23/09/2026) |
+| D8 | O tutor é sempre visível ao professor |
+| D9 | Autonomia do agente declarada e visível, por função |
 | D10 | A escola é controladora dos dados; nós somos operadores |
-| D11 | WhatsApp e portal da família depois; o motor de eventos entra agora |
-| D12 | Backend e frontend separados, multi-tenant por escola, tudo em container, sem trava de fornecedor |
+| D11 | WhatsApp e portal da família depois; o motor de eventos agora |
+| D12 | Backend e frontend separados, multi-tenant, sem trava de fornecedor |
 | D13 | IA por porta e adaptador, com Ollama local no desenvolvimento |
-| D14 | Orçamento de tokens por aluno e por escola é requisito, medido desde a primeira chamada |
-| D15 | Construção do zero, sem reaproveitar produto anterior |
-| D16 | A stack está ratificada (seção "Stack") |
-| D17 | Agentes têm nome de função, não nome próprio; as funções do Assistente também |
-| D18 | Chat e ferramentas são o mesmo motor; o chat pergunta antes de abrir a ferramenta como cartão |
-| D19 | Tutor fora da sala é configuração da escola por turma, desligada por padrão |
-| D20 | Escola particular e rede pública são alvo juntas desde o início |
-| D21 | O banco público de questões vem das provas oficiais do ENEM e entra no F7 |
-| D22 | A ingestão começa pelo upload de PDF licenciado; adaptador de scraper só com escola real e licença |
-| D23 | O trabalho acontece na `develop`; `release` e `main` recebem por merge, que o Joaquim gerencia. O Gabriel abre branch própria e integra na `develop`. A esteira roda nas três branches. O portão de qualidade continua no processo (revista pela D53, em 19/09/2026 e em 21/09/2026; revista pela D77 só no MVP; revista pela D78: cada spec num andar com branch própria; revista em 23/10/2026: a esteira roda também no PR para a `develop`) |
-| D24 | Na primeira semana a coordenação vê quatro coisas: escola cadastrada sem trabalho manual, governança de IA, prova e plano com página citada, tutor em sala com sinais |
-| D25 | Infra do primeiro ano para até dez escolas; API, realtime e worker separados e sem estado |
-| D26 | Banco, Redis e storage são serviços gerenciados |
-| D27 | 99,5% de disponibilidade no horário letivo, prova resiliente, deploy só fora do horário |
+| D14 | Orçamento de tokens por aluno e por escola, medido desde a primeira chamada |
+| D15 | Construção do zero |
+| D16 | A stack está ratificada |
+| D17 | Agentes têm nome de função, não nome próprio |
+| D18 | Chat e ferramentas são o mesmo motor |
+| D19 | Tutor fora da sala: configuração da escola por turma, desligada por padrão |
+| D20 | Escola particular e rede pública, alvo juntas |
+| D21 | Banco público de questões do ENEM, no F7 |
+| D22 | A ingestão começa pelo upload de PDF licenciado |
+| D23 | O trabalho acontece na `develop`; `release` e `main` por merge |
+| D24 | Quatro coisas que a coordenação vê na primeira semana |
+| D25 | Infra do primeiro ano para até dez escolas |
+| D26 | Banco, Redis e storage gerenciados |
+| D27 | 99,5% de disponibilidade no horário letivo |
 | D28 | Hospedagem em região Brasil |
-| D29 | Modelo em produção por API com contrato e reserva; no pico, fila curta e depois modelo menor |
-| D30 | Infra custa até R$ 2 por aluno por mês, sem contar IA |
-| D31 | Três ambientes; F0 e validação inicial 100% locais; staging antes da primeira demonstração externa ou do piloto |
-| D32 | Três agentes, um por pessoa da escola: Assistente de ensino, Tutor e Analista de desempenho escolar; Corretor, Planejador e Adaptador são funções do Assistente; Mensageiro da família depois (revista em 23/09/2026) |
-| D33 | Nota de objetiva aprovada em lote, com os casos fora da curva abertos antes |
-| D34 | Aluno em risco nomeado só ao professor da turma; coordenação vê agregado, nominal com auditoria |
-| D35 | A coordenação registra a adaptação necessária, nunca o diagnóstico |
-| D36 | Assunto pessoal delicado no tutor vai para um humano, com CVV em risco à vida; o professor recebe o sinal sem o conteúdo |
-| D37 | O provedor de modelo sai de avaliação com amostras sintéticas (finalistas Maritaca e Google) |
-| D38 | Tutor com pacote mensal por turma (300 trocas por aluno) e freio de 60 trocas por dia por aluno |
-| D39 | IA custa até R$ 5 por aluno por mês no pacote completo da escola particular |
-| D40 | A escola paga por aluno com uso normal incluso; não há crédito visível |
-| D41 | Na rede pública, pacote de rede com piso em torno de R$ 10; orçamento de IA é configuração por rede |
-| D42 | O provedor de hospedagem é escolhido quando o staging for criado, por critério fixo |
+| D29 | Modelo em produção por API, com contrato e reserva |
+| D30 | Infra custa até R$ 2 por aluno por mês |
+| D31 | Três ambientes; staging antes da primeira demonstração externa |
+| D32 | Três agentes: Assistente de ensino, Tutor e Analista de desempenho escolar |
+| D33 | Nota de objetiva aprovada em lote, com os fora da curva abertos antes |
+| D34 | Aluno em risco nomeado só ao professor da turma |
+| D35 | A coordenação registra a adaptação, nunca o diagnóstico |
+| D36 | Assunto pessoal delicado no tutor vai para um humano |
+| D37 | O provedor de modelo sai de avaliação com amostras sintéticas |
+| D38 | Tutor com pacote mensal por turma e freio diário por aluno |
+| D39 | IA custa até R$ 5 por aluno por mês na escola particular |
+| D40 | A escola paga por aluno, sem crédito visível |
+| D41 | Rede pública: pacote de rede com piso de preço |
+| D42 | O provedor de hospedagem é escolhido com o staging |
 | D43 | Recorte: 6º ao 9º ano e Ensino Médio, em qualquer computador da escola |
-| D44 | O produto se apresenta como assistente com agentes supervisionados |
-| D45 | O professor é medido em espelho, pelo desempenho das turmas dele: vê o próprio dado; coordenação vê agregado só com dois ou mais professores no recorte; sem ranking nem decisão sobre ele |
-| D46 | Primeiro o diagnóstico formativo, depois a nota oficial; sem nota proposta em discursiva e redação |
+| D44 | Assistente com agentes supervisionados |
+| D45 | O professor é medido em espelho, sem ranking |
+| D46 | Primeiro o diagnóstico formativo, depois a nota oficial |
 | D47 | O tutor é supervisionado, não aprovado resposta por resposta |
-| D48 | Login pela conta Google ou Microsoft da escola quando existe, matrícula quando não; só o identificador opaco |
-| D49 | Fila de jobs mantida, com entrega pelo menos uma vez e idempotência obrigatória |
-| D50 | Preço por aluno com faixas de pacote: base e completo com tutor |
-| D51 | Toda tela nasce responsiva e usável no celular, sem que nenhum fluxo dependa dele |
-| D52 | Testes de integração da infra fora do portão de toda tarefa, na esteira |
-| D53 | Processo enxugado onde repetia trabalho: `test-engineer` primeiro, caducidade pelo que o revisor audita, portão com carimbo, `revisor-geral`, `/revisar-spec`, `/corrigir` e `/retro` (revista pela D77 só no MVP; revista pela D78; revista em 23/10/2026: código de processo com revisão e git hook nativo como segunda camada) |
-| D54 | O nome do produto é Turmma; o código continua `educa` até uma renomeação própria |
-| D55 | Em discursiva e redação a IA não corrige, não avalia, não dá nota nem conceito, e não pré-corrige nem sugere nota ao professor (revisão da D46) |
-| D56 | Na objetiva, a validação humana é registrada: o que foi mostrado, o que foi aberto e quem confirmou (complementa a D33) |
-| D57 | Usos vedados, escritos e testados: sem inferência de emoção, perfil comportamental, pontuação social, biometria ou uso comercial de dado educacional |
-| D58 | Os agentes continuam agentes, com identidade de função; proibido só se passar por pessoa ou simular vínculo afetivo (Decreto 12.880, art. 11) |
-| D59 | Nada induz uso excessivo, e sair nunca é mais difícil que entrar (Decreto 12.880, arts. 9º e 10) |
-| D60 | Avaliação de Impacto Algorítmico por funcionalidade de alto risco, em seis etapas, antes de ela existir, versionada em `docs/aia/`; suspensão por função numa escola |
-| D61 | O dossiê de conformidade é entregável de produto, com canal de denúncia e material de consulta à comunidade |
-| D62 | Conversa de aluno só em provedor de modelo com processamento no Brasil |
-| D63 | O que a escola e o professor produzem é deles, e sai em formato aberto a qualquer momento |
-| D64 | Recusar a ferramenta não gera indicador: sem medição nominal de adoção por professor (afina a D45) |
-| D65 | Letramento em IA entra por três portas pequenas e não vira fase de roadmap |
-| D66 | O Tutor tem memória de tudo que o aluno fez no sistema (atividades, trabalhos, avaliações, sessões), feita do registro do trabalho e nunca de texto sobre a pessoa; recebe contexto estruturado do professor e lê a adaptação registrada |
-| D67 | Entram as ferramentas de apresentação e de material didático; o artefato exporta em PDF, PPTX e XLSX; a ferramenta se chama Adaptação e recebe o tipo de adaptação, nunca texto livre sobre o aluno |
-| D68 | Busca na web por ativação do professor: para ele no Assistente de ensino, e para o aluno no Tutor só em fontes aprovadas, com duas chaves, socrático, só em sala |
-| D69 | "Turmas" é item da navegação do professor e nasce no F6; tempo ocioso do aluno não é indicador (revista pela D73 e pela D80: três abas na turma aberta, e o "Meu uso" na conta do professor) |
-| D70 | Sair da aba durante a prova é fato mostrado só ao professor, com o aluno avisado, sem consequência automática nem histórico; fora de avaliação não existe |
-| D71 | Depois do F1 vem o MVP de apresentação: cinco specs (A1 a A5), fatias finas e reais do fluxo completo, dado 100% sintético, mesmas regras e mesmo processo (na A2 a A5, o processo enxuto da D77). A A1 é a escola montada pela coordenação, sem seed de escola pronta; os quatro afrouxamentos valem só enquanto o dado for sintético (revista em 23/09/2026 e 25/09/2026); a A0, painel da operação, vem antes da A1 (D76) |
-| D72 | A pele do produto é uma só em todas as telas, com a fonte do sistema e o laranja da pinta (revista pela D80, que troca o sistema do ChatGPT pelo do mockup de outubro) |
-| D73 | Cada item da navegação só aparece com a fase dele (os lugares de cada papel são os da D80) |
-| D74 | É ferramenta o que entrega um output próprio; o resto é pedido ao Assistente. Quatro categorias: Planejar, Preparar a aula, Avaliar, Corrigir |
-| D75 | O material da escola entra pela coordenação, com titularidade e licença declaradas; professor e aluno não sobem material para a base |
-| D76 | A equipe Turmma tem um painel de operação (A0 e A0b): cria rede e escola, convida a coordenação e acompanha uso e custo por escola, sem ver dado de pessoa |
-| D77 | O MVP de apresentação (A2 a A5) é uma fatia só, com processo enxuto, enquanto o dado for sintético: contratos primeiro, commit `(mvp: <resumo>)` com portão local, esteira disparada à mão por fase, revisores com veto numa passada por fase e IA no processo da API como dívida declarada; as regras 10, 20, 30, 40 e 70 não mudam, e o processo completo volta antes da primeira escola real (revisa a D71, a D23 e a D53 só para esta fatia; revista em 23/10/2026: o caminho `(mvp:)` sai do hook) |
-| D78 | O processo roda no Maestri: um andar e uma branch por spec, que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando (`/seguir`); papéis de terminal em `.claude/agents/` com modelo por papel (Opus orquestra, desenha e valida; Sonnet implementa e conduz a revisão); a Mesa de revisão chama os revisores e traduz a reprovação em ordem de correção; seis paradas são do Joaquim (revisa a D23 e a D53; revista em 09/10/2026: na tarefa roda só o portão da tarefa, com os testes que ela alterou, e o portão completo roda uma vez por spec, antes da validação; e o opencode foi testado no Implementador e saiu (D79); revista em 10/10/2026: o contexto de todo o time é compactado aos 400 mil tokens, a vigia do Orquestrador tem skill própria, e o Orquestrador limpa o próprio contexto a cada tarefa; e a parada segura só a tarefa que depende dela) |
-| D79 | O processo é revisto para tempo, depois do F3: a esteira roda em todo push da spec e ninguém espera por ela; o portão da tarefa prova as mutações; os revisores rodam juntos e a ordem de correção não dita código; tarefa de um comportamento e até três guardiões; a Tech Spec e a lista de tarefas viram aviso com prazo; spec fora da sequência entra no roadmap como `X<n>`; e o modo econômico sai (revisa a D78; revista em 11/10/2026: a construção corre por linhas, até três tarefas ao mesmo tempo, e a vigia só acorda o Orquestrador com o que olhar; revista em 23/10/2026: o guardião com veto é exigido pelo caminho alterado, e tarefa de código sem mutação não recebe carimbo; a proposta de texto da retro e a ressalva menor da validação viram aviso) |
-| D80 | A pele é o sistema Turmma do mockup de outubro: cor por família, borda de 2 px com degrau, ícone ilustrado, a onça como mascote e avatar dos agentes, modo escuro e até quatro lugares por papel; o que o mockup afrouxa de regra ou depende de fase que não existe não entra; chega em quatro specs, X1 a X4, antes do F2 (revisa a D72, a D73 e a D69) |
-| D81 | Padrão de mercado antes de mecanismo próprio: peça técnica com o nome do framework, em inglês, e conceito do domínio em português; a entrada HTTP pelo `ZodValidationPipe`; a X5 recortada em 32 tarefas, com o resto na X6, sem parada até o pouso (revê a P2 e a P3 da X5) |
+| D48 | Login pela conta da escola, ou por matrícula |
+| D49 | Fila de jobs com entrega ao menos uma vez e idempotência |
+| D50 | Preço por aluno com faixas de pacote |
+| D51 | Toda tela responsiva e usável no celular |
+| D52 | Integração da infra fora do portão de toda tarefa, na esteira |
+| D53 | Processo enxugado onde repetia trabalho |
+| D54 | O produto se chama Turmma |
+| D55 | Discursiva e redação: a IA não corrige, não dá nota nem sugere nota, e não pré-corrige |
+| D56 | Na objetiva, a validação humana é registrada |
+| D57 | Usos vedados, escritos e testados |
+| D58 | Agentes com identidade de função, sem se passar por pessoa |
+| D59 | Nada induz uso excessivo; sair nunca é mais difícil que entrar |
+| D60 | Avaliação de Impacto Algorítmico por funcionalidade de alto risco |
+| D61 | O dossiê de conformidade é entregável de produto |
+| D62 | Conversa de aluno só em provedor com processamento no Brasil |
+| D63 | O que a escola e o professor produzem é deles, em formato aberto |
+| D64 | Recusar a ferramenta não gera indicador |
+| D65 | Letramento em IA por três portas pequenas |
+| D66 | A memória do Tutor é o trabalho do aluno, nunca a pessoa |
+| D67 | Ferramentas de apresentação e material didático, com exportação aberta |
+| D68 | Busca na web por ativação do professor |
+| D69 | "Turmas" na navegação do professor, desde o F6 |
+| D70 | Sair da aba é fato mostrado ao professor, só durante a prova |
+| D71 | MVP de apresentação depois do F1, com dado sintético |
+| D72 | A pele do produto é uma só em todas as telas |
+| D73 | Cada item da navegação só aparece com a fase dele |
+| D74 | É ferramenta o que entrega um output próprio |
+| D75 | O material da escola entra pela coordenação |
+| D76 | Painel de operação da equipe Turmma |
+| D77 | O MVP de apresentação (A2 a A5) é uma fatia só, com processo enxuto |
+| D78 | O processo roda no Maestri: um andar por spec, um comando |
+| D79 | O processo é revisto para tempo |
+| D80 | A pele é o sistema Turmma do mockup de outubro |
+| D81 | Padrão de mercado antes de mecanismo próprio |
 
-> **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
-> da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim
-> ratificou todas em bloco em 23/09/2026. No mesmo dia entraram a D72 a D75, que fecham o que a
-> revisão dos mockups pedia antes do PRD da A1, e a D32, a D9, a D60, a D69 e a D71 foram
-> revistas. O que ainda depende de parecer (D55, D68, D70) ou de outra decisão (D62 com a D37)
-> está dito em cada uma, em `docs/decisoes.md`.
+## Conflitos já resolvidos e decisões em aberto
 
----
+**Conflitos já resolvidos** (login do aluno, notificação à família, importação por planilha, scraper,
+discursiva e redação, nome do produto, tutor e aprovação, fila de jobs, processo de construção, nome de
+peça técnica, nome e lista de agentes, medir o professor, adaptar sem gerar o PEI, MVP, pele, vigiar a
+navegação, escola particular ou rede pública, Chromebook, celular): no topo de `docs/decisoes.md`.
+Cada um já voltou uma vez; leia antes de reabrir o assunto.
 
-## Conflitos já resolvidos
-
-Registrados porque cada um deles já voltou uma vez.
-
-**Login do aluno.** A reivindicação de nome é o *cadastro*. O *login* recorrente é escola +
-matrícula + senha, definida pelo aluno no momento da reivindicação. Aluno não tem e-mail no
-sistema. Onde a escola tem conta Google ou Microsoft, o login e a importação vêm dela, e
-guardamos só o identificador da conta, nunca o e-mail (D48).
-
-**Notificação à família.** O motor de eventos entra agora; a interface do responsável e o
-WhatsApp ficam para depois.
-
-**Importação por planilha.** Sobrevive, reduzida: a coordenação sobe lista de nomes por
-turma, grade horária e calendário, não cadastro completo de pessoa (D3 revista). Professor
-e aluno entram por link.
-
-**Scraper de material.** Permitido, com cinco condições: licença ou parceria com o dono do
-conteúdo, autorização escrita da escola registrada no sistema, credencial fornecida pela
-escola, conteúdo preso ao tenant dela, e nada que contorne pagamento ou bloqueio técnico de
-terceiro. Fonte que proíbe sai, e **o upload não cobre o caso**: apostila de terceiro sem
-licença não entra por nenhum caminho (D5 revista). O primeiro caminho implementado é o
-upload de material com licença (D22).
-
-**Correção de discursiva e redação.** Voltou em 19/09/2026 e ficou mais restrita: a IA não
-corrige, não avalia, não dá nota nem conceito, e **não faz pré-correção nem sugere nota ao
-professor** — o que derruba a devolutiva rascunho de discursiva como estava desenhada (D55,
-revisão da D46). Rubrica, organização do lote e correção cega continuam. A devolutiva
-formativa volta à mesa quando o texto oficial do CNE for publicado e lido com advogado.
-
-**Nome do produto.** Fechado: Turmma (D54). Não é mais "nome provisório". O que continua
-aberto é registro no INPI e domínio, e o código segue com `educa`.
-
-**Tutor e aprovação prévia.** O tutor é supervisionado, não aprovado resposta por resposta.
-A regra 70, item 3, declara essa exceção (D47).
-
-**Fila de jobs.** A auditoria de 13/09/2026 propôs trocar por fila só no Postgres. Ficou
-como está, com entrega pelo menos uma vez e idempotência obrigatória (D49).
-
-**Processo de construção.** A mesma auditoria propôs teto de tamanho por tarefa, assinatura
-humana no portão e revisor de simplicidade. Os vetos e o portão de qualidade no processo
-ficaram (D23). O commit direto no `main` caiu em 19/09/2026, com a terceira pessoa no código, e em
-21/09/2026 o fluxo foi fixado: **o trabalho acontece na `develop`**, `release` e `main` recebem por
-merge que o Joaquim gerencia, o Gabriel abre branch própria e integra na `develop`, e a esteira roda
-nas três (D23 revista). Em 15/09/2026 o processo foi enxugado onde repetia trabalho, sem tirar revisão:
-`test-engineer` primeiro, caducidade pelo que o revisor audita, portão local com carimbo,
-`revisor-geral` no lugar da autorrevisão, `/revisar-spec`, `/corrigir` e `/retro` (D53). Em 08/10/2026
-o processo passou a rodar no Maestri (D78): cada spec num andar com a branch `spec/<funcionalidade>`,
-que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando, `/seguir`;
-e a Mesa de revisão chamando os revisores. O hook, os vetos e o portão local não mudaram. **Papel de
-agente vem de `.claude/agents/`, nunca de responsabilidade do Maestri:** com ela o agente nasce fora
-da raiz e nenhum hook dispara. Em 11/10/2026, com o F3 medido, o processo foi revisto para tempo
-(D79): o opencode, testado em duas tarefas, saiu, e as tarefas que não se tocam passaram a correr ao
-mesmo tempo, em linhas.
-
-**Nome de peça técnica e mecanismo próprio.** Fechado em 22/10/2026 (D81): a peça técnica tem o nome do framework, em
-inglês (`TurmaController`, `ZodValidationPipe`), e o conceito do domínio fica em português, pelo glossário. Mecanismo
-próprio só com o motivo escrito; o que já existe com nome em português só muda quando a tarefa já mexe nele.
-
-**Nome dos agentes.** O desenho da call tinha nomes próprios; os docs usam função. Fica a
-função (D17).
-
-**Lista de agentes.** Eram sete; em 19/09/2026 viraram seis (D32 revista): o chat do professor
-ganhou identidade, o **Assistente de ensino**; o Monitor de turma se dissolveu; e o Planejador
-absorveu o Rotina. Em 23/09/2026 viraram **três, um por pessoa da escola** (D32 revista de
-novo): Assistente de ensino, Tutor e Analista de desempenho escolar. Corretor, Planejador e
-Adaptador viraram **funções do Assistente**, porque cada um tinha uma ferramenta gêmea que
-chamava o mesmo caso de uso; a autonomia e a suspensão passaram a ser por função (D9, D60).
-"Monitor" não é nome de agente: servia a duas coisas diferentes.
-
-**Medir o professor pela turma.** A estrutura de 19/09/2026 pedia que o Analista analisasse o
-professor pelo resultado dos alunos e cada aluno individualmente. Fica dentro da D45 e da D34:
-o indicador do professor deriva do desempenho das turmas dele, ele vê primeiro, a coordenação
-vê agregado só com dois ou mais professores no recorte e abre o nominal com auditoria. Sem
-ranking, sem decisão sobre ele, sem adoção nominal (D64).
-
-**Adaptar sem gerar o PEI.** Voltou duas vezes em 19/09/2026. O plano individual é obrigação da
-escola (LBI, art. 28, VII; Decreto 12.686/2025), feito pela equipe dela; o que a lei pune é
-recusar matrícula ou recusar adaptação (Lei 7.853, art. 8º; LBI, arts. 4º e 88). Adaptar prova
-e atividade a partir do **tipo de adaptação** é o que a lei quer, e não depende de o sistema
-gerar o documento. Não geramos o PEI por minimização de dado sensível (D35, D67), a confirmar
-com advogado junto da base legal da adaptação (`TODO.md`).
-
-**MVP.** Não existe MVP de venda (D1). Existem duas coisas diferentes: o **MVP de apresentação**
-(D71), logo depois do F1, com dado sintético, para demonstrar o fluxo completo; e a **fatia do
-piloto**, com escola real em 2027, que só entra depois do F2, do F3 e do portão da primeira
-escola real. **Sem seed de escola pronta** (D71 revista em 23/09/2026): a demonstração começa
-com a escola criada por nós no painel da operação (A0, D76) e montada pela coordenação na tela,
-com nomes inventados. Sintético é o dado, não o caminho. A A2 a A5 saíram numa fatia só, com
-processo enxuto (D77), e entraram na `develop` em 05/10/2026 (`13eab64`); o processo completo
-voltou para o F2, o F3 e o portão do piloto. A composição de cada spec ficou no PRD da A1 e, da
-A2 a A5, no `docs/mvp-rapido.md`; o documento que a coordenação sobe na demonstração é um PDF
-original nosso, gerado por `tools/demonstracao/` (D75, D5).
-
-**Pele do produto.** Voltou quatro vezes: a da landing page (rejeitada vendo), a do ChatGPT (P02), a
-cópia da Teachy (P31) e, em outubro de 2026, o sistema que o Gabriel desenhou no estilo do Duolingo.
-Fica **uma só**, a de outubro, em todas as telas (D80): a técnica é tomada, a marca não (mascote,
-cores, ícones e fonte são nossos), e a mecânica de uso compulsivo fica de fora por lei (D59). Onde o
-mockup afrouxa uma proteção que o produto já tem, vale o produto.
-
-**Vigiar a navegação do aluno.** Pedido em 19/09/2026: alertar o professor quando o aluno sai
-do sistema para usar outra IA, e medir tempo ocioso. Ficou: saída da aba só durante a prova,
-como fato, só para o professor (D70); "concluiu o que foi atribuído" no lugar do tempo ocioso
-(D69); e bloquear outras IAs é configuração da escola, com guia nosso no dossiê.
-
-**Escola particular ou rede pública.** As duas, como alvo juntas desde o início, com a rede
-em pacote com piso de preço (D20 e D41 revistas).
-
-**Chromebook.** Deixou de ser filtro de mercado: vale qualquer computador da escola. Continua
-como referência de máquina fraca para desempenho (D43, regra 50).
-
-**Celular.** O produto não depende do celular em nenhum fluxo, mas toda tela funciona nele
-(D51). "Sem dependência de celular" e "responsivo para celular" não se contradizem: o
-primeiro é sobre o que o fluxo exige, o segundo sobre onde a tela funciona.
-
----
-
-## Decisões em aberto
-
-Para fechar uma, peça ao Orquestrador (`/seguir`): o Arquiteto conduz a descoberta com você e
-registra a decisão.
-
-Todas têm dono e momento. Nenhuma trava o F0.
-
-| Decisão | Dono | Quando fecha |
-|---|---|---|
-| **Projetos** do professor, **anexo de documento na conversa** e **faltas** por aluno: pedidos do Gabriel que não existem em nenhuma fase (P05, P07, P08). O anexo esbarra na D5 e abre a porta para correção de discursiva por IA (D55); faltas não tem origem de dado nem linha na tabela da LGPD | Gabriel e Joaquim | `/descobrir` de cada um, antes de entrar em qualquer PRD; fora do MVP de apresentação até lá |
-| Se o calendário junta as duas escolas do professor ou mostra só a escola ativa (P12, regra 10); o seletor de escola fechou na A1, só com a escola ativa e trocando o token (P30) | Joaquim e Gabriel | no PRD do F8 |
-| **Ranking de participação** (presença e entrega, com pódio), **Recursos** (enviar artefato à turma) e **Mural** da turma: pedidos do Gabriel que não existem em fase nenhuma. O ranking bate na proibição de placar e pódio do `docs/interface.md` 10.2 (D59) e chega perto de pontuação social (D57) (P26, P28) | Gabriel e Joaquim | `/descobrir` de cada um; fora do MVP de apresentação até lá |
-| As **oito ferramentas que a D67 não lista** — planejamento do período, projeto, plano de recuperação, mapa mental, roteiro de experimento, avaliação diagnóstica, proposta de redação e importar prova (P22). A regra e as categorias já estão na D74. O planejamento e o projeto dependem do F8; o plano de recuperação, do F6 | Gabriel propõe; Joaquim decide e estima | por `/descobrir`, uma a uma, antes do F7 |
-| Provedor de modelo principal e reserva | Joaquim | avaliação de `docs/avaliacao-de-modelos.md`, antes de a F5 ficar pronta (D37) |
-| Provedor de hospedagem | Joaquim | quando o staging for criado, antes da primeira demonstração externa ou do piloto (D42) |
-| Registro no INPI e do domínio `turmma.com` (o nome já está fechado, D54) | Gabriel | antes do material de venda e do piloto |
-| Se o art. 24 do ECA Digital exige conta de responsável vinculada para aluno de até 16 anos — e, se exigir, se o portal da família sai da fase posterior | Joaquim e Gabriel, com advogado | **antes do PRD do F9**; o vínculo já nasce no modelo de dados do F1 (`docs/regulacao.md` 2.2) |
-| Como os arts. 17 e 18 do ECA Digital (supervisão parental) se modulam pelo art. 39 no nosso caso | advogado | junto com o parecer do ECA Digital |
-| Evidência independente de eficácia pedagógica: desenho da medição com a escola piloto | Gabriel e Joaquim | ao fechar o piloto (`docs/conformidade-mec.md` 12) |
-| Sistemas de ensino das escolas-alvo, licença do material e primeiro adaptador | quem conduzir o piloto | nas entrevistas com escolas; até lá só upload de material com licença (D5, D22) |
-| Quais funcionalidades formam a fatia do piloto, e quais das quatro coisas da D24 ele precisa ter. Não confundir com o MVP de apresentação, que é sintético (D71) | Joaquim e Gabriel | com o MVP de apresentação de pé, antes de completar a primeira fase para escola real (D1 revista) |
-| Valores das faixas de preço e teto de IA do pacote base | Gabriel e Joaquim | com a planilha de custo por pacote, validados no piloto (D50, D39) |
-| Indicadores de desempenho do professor e do aluno (quais, limiar, texto do alerta). Ponto de partida: percentual de erro e acerto por habilidade e o sinal "concluiu o que foi atribuído"; tempo ocioso não entra (D69). O MVP mostra limiares provisórios (sinais do Tutor, destaques da correção, 60% do alerta do Analista), escolhidos na construção e listados no Estado de `docs/mvp-rapido.md`: entram nesta decisão | Joaquim e Gabriel | os de turma e aluno **antes do PRD do F6**, porque "Turmas" nasce lá (D69, D73); os de professor antes do PRD do F12 (D45, D46) |
-| Imagens da ferramenta de apresentação: de onde vêm e com que licença (D67, D5) | Gabriel e Joaquim | antes do PRD do F7 |
-| Lista padrão de fontes aprovadas da busca do Tutor, por faixa etária, e o provedor de busca (D68) | Gabriel (lista) e Joaquim (provedor) | antes do PRD do F9 |
-| Se ligar a busca para aluno de até 16 anos sem conta de responsável vinculada conta como rebaixar a proteção (ECA Digital, art. 24, § 5º; D68) | advogado | junto com o parecer do ECA Digital, antes do PRD do F9 |
-| Acompanhar a saída da aba fora de avaliação, com o aluno estudando em sala. Hoje não existe: bate na regra 70, item 7 (D70) | Joaquim e Gabriel, com advogado | na AIA de sinais; sem parecer, continua não existindo |
-| Texto final das diretrizes do CNE e o que muda na correção, na devolutiva de discursiva e nos sinais do tutor | Joaquim, com advogado | quando a resolução for homologada e publicada pelo MEC (D46, D55) |
+**Decisões em aberto:** `docs/decisoes-em-aberto.md`, cada uma com dono e momento. Para fechar uma,
+peça ao Orquestrador (`/seguir`).
 
 ---
 
@@ -348,66 +205,23 @@ AIA precisa ter; uma por funcionalidade, antes do PRD dela)
 `docs/ingestao.md`
 **Para não cair no horário de aula:** `docs/infra.md`, `docs/runbook.md`
 **Para escolher modelo e medir custo de IA:** `docs/avaliacao-de-modelos.md`
-**Para saber o que já foi decidido, por extenso:** `docs/decisoes.md`
+**Para saber o que já foi decidido, por extenso:** `docs/decisoes.md` (com os conflitos já resolvidos
+no topo); o que está em aberto, em `docs/decisoes-em-aberto.md`
+**Para saber como cada skill de terceiros conflita com as regras:** `docs/skills-de-terceiros.md`
 **Para trabalhar:** `README.md`, `ROADMAP.md`, `TODO.md`, `.claude/rules/` e `.claude/skills/`
 
-As regras 30 (IA) e 50 (frontend) carregam sozinhas só quando se lê arquivo do caminho delas
-(`paths:` no topo de cada uma). Quem escreve PRD, Tech Spec ou tarefa que envolve IA ou tela lê
-a regra explicitamente.
+Só as regras 10, 20 e 70 estão sempre no contexto. As regras 00, 30, 40, 50, 60 e 80 carregam sozinhas só
+quando se lê arquivo do caminho delas (`paths:` no topo de cada uma). Quem escreve PRD, Tech Spec ou
+tarefa lê explicitamente a 00, a 40, a 60 e a 80, e a 30 e a 50 quando há IA ou tela.
 
 ---
 
 ## Skills
 
-**Do processo** (nossas, em `.claude/skills/`): o comando é um só, **`/seguir`** (D78). O
-Orquestrador lê a fase em `tools/processo/estado.ts`, monta o time no Maestri e conduz até a próxima
-decisão que é do Joaquim. As outras são procedimento interno dos agentes, na ordem em que entram:
-`status`, `descobrir`, `registrar-decisao`, `criar-prd`, `criar-techspec`, `revisar-spec`,
-`criar-tasks`, `executar-task`, `revisar-tarefa`, `corrigir`, `validar`, `retro`; e `vigia`, a
-rotina de 30 minutos do Orquestrador. Como os agentes conversam está em
+O comando é um só, **`/seguir`** (D78). O time (Orquestrador e quatro papéis), os revisores, o hook de
+commit e a lista das skills estão em `.claude/skills/seguir/time.md`; como os agentes conversam, em
 `.claude/skills/seguir/protocolo.md`.
 
-**O time** é fixo, no térreo do Maestri: o Orquestrador (o terminal Maestro, em Opus) e quatro
-papéis, que rodam no Claude Code, de `.claude/agents/`, iniciados com `claude --agent <papel>`:
-`arquiteto` (Opus), `implementador` (Sonnet), `mesa-de-revisao` (Sonnet) e `validador` (Opus). Os
-terminais ficam; a sessão de cada um é reiniciada a cada tarefa ou fase, já apontada para o checkout
-em que vai trabalhar: na construção, o de uma linha da spec, cada uma com o seu par de Implementador
-e Mesa (D79). Sessão que passa de 400 mil tokens é compactada sozinha
-(`autoCompactWindow`, em `.claude/settings.json`), e `.claude/hooks/contexto-inicial.sh` diz a cada
-papel o que reler depois. O Orquestrador não espera por isso: limpa o próprio contexto a cada tarefa,
-e o que ele sabe da funcionalidade é o "Agora" do `estado.md` do andar.
-
-**Revisores** (em `.claude/agents/`, subagentes chamados pela Mesa de revisão): em toda tarefa,
-`test-engineer`, `revisor-geral` e os guardiões marcados, juntos. O hook `tools/processo/revisoes.ts`
-registra as rodadas, guarda o que foi exigido em `achados/<documento>.md` com resumo de uma linha
-em `achados/indice.md` (leia o índice, abra o bloco), e bloqueia o commit sem
-revisão válida, sem portão da tarefa carimbado (`node tools/processo/portao-local.ts --tarefa`), ou que leve
-código sem `(tarefa N.0)` nem `(correção <slug>)` (D53).
-
-**Técnicas** (de terceiros, instaladas via skills.sh, versões em `skills-lock.json`):
-`nestjs-best-practices`, `drizzle-orm-patterns`, `supabase-postgres-best-practices`,
-`bullmq-specialist`, `vercel-react-best-practices`, `tanstack-query-best-practices`,
-`tailwind-design-system`, `frontend-design`, `accessibility`, `vitest`,
-`playwright-best-practices`, `lgpd-brasil`. Atualizar com `npx skills update -p`, e ler o
-diff antes de commitar: skill vira instrução para o Claude.
-
-<critical>As skills de terceiros são referência técnica genérica. Quando conflitam com
-`.claude/rules/` ou com uma decisão (`docs/decisoes.md`), a regra e a decisão vencem. Os conflitos
-já conhecidos:</critical>
-
-- **Escopo de tenant.** `supabase-postgres-best-practices` recomenda RLS. Aqui o escopo é
-  aplicado no repository, a partir do token (regra 10). RLS pode entrar como segunda camada
-  de defesa, nunca no lugar do repository
-- **React.** `vercel-react-best-practices` é escrita para Next.js. Somos SPA com Vite: ignore
-  Server Components, Server Actions e tudo que depende de servidor Next. As regras de bundle,
-  re-render e carregamento valem, e valem ainda mais no Chromebook fraco (regra 50)
-- **Visual.** `frontend-design` pede ousadia estética. Aqui o limite é Chromebook fraco,
-  acessibilidade e a professora com quarenta minutos de intervalo (regra 50). Fonte pesada,
-  animação e efeito que custam CPU ficam de fora. A identidade visual ainda está em aberto
-- **Playwright.** Viewport de celular, toque e rede móvel **se aplicam** (D51): toda tela
-  roda nos projetos `chromebook` e `celular`. Geolocalização, permissões de aparelho, PWA
-  instalável e app nativo não se aplicam (regra 50, item 2)
-- **LGPD.** `lgpd-brasil` resume a lei. O que vale para o código é `docs/lgpd.md` e a regra
-  20, que são mais restritivos (aluno sem e-mail, sem CPF, sem foto)
-- **NestJS.** A organização em controller, service, repository e DTO de `docs/arquitetura.md`
-  prevalece sobre qualquer outra estrutura sugerida
+<critical>As skills de terceiros (`skills-lock.json`) são referência técnica genérica. Quando conflitam
+com `.claude/rules/` ou com uma decisão (`docs/decisoes.md`), a regra e a decisão vencem. Os conflitos
+conhecidos, um por skill, estão em `docs/skills-de-terceiros.md`.</critical>

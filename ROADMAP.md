@@ -8,7 +8,7 @@ vende.
 
 **Piloto por fatias (D1 revista).** Uma escola piloto gratuita entra no 1º semestre de 2027
 usando o que já estiver pronto, antes do F16. O portão da primeira escola real (abaixo) vale
-antes dela. Quais funcionalidades formam a fatia do piloto está em aberto no `CLAUDE.md`.
+antes dela. Quais funcionalidades formam a fatia do piloto está em aberto em `docs/decisoes-em-aberto.md`.
 
 **MVP de apresentação (D71).** Logo depois do F1 entram cinco specs, A1 a A5: fatias finas e
 reais do fluxo completo, numa escola sintética, para começarmos a demonstrar. Não é MVP de

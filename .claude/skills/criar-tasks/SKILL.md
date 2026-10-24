@@ -19,7 +19,7 @@ Funcionalidade alvo: `$ARGUMENTS`
 
 ## Pré-requisitos
 
-`tasks/prd-$ARGUMENTS/prd.md`, `tasks/prd-$ARGUMENTS/techspec.md` e `.claude/rules/`.
+`tasks/prd-$ARGUMENTS/prd.md`, `tasks/prd-$ARGUMENTS/techspec.md` e `.claude/rules/`. Leia por extenso as regras 00 (`00-arquitetura.md`), 40 (`40-testes.md`), 60 (`60-dominio.md`) e 80 (`80-infra-e-carga.md`), de `.claude/rules/`: têm `paths:` e não carregam sozinhas aqui (a 10, a 20 e a 70 já estão no contexto).
 
 `tasks/prd-$ARGUMENTS/revisao-spec.md` com veredito **APROVADA** (`/revisar-spec`). Sem ele, volte à
 skill `revisar-spec`: erro na Tech Spec contamina todas as tarefas, e é o momento

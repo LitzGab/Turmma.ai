@@ -48,6 +48,7 @@ de pé: ele precisa chegar sem nada da rodada anterior. Envie, sem nenhum contex
 
 ```
 Valide contra o PRD e a Tech Spec, seguindo integralmente `.claude/agents/validador.md`.
+Leia por extenso `.claude/rules/00-arquitetura.md`, `40-testes.md`, `60-dominio.md` e `80-infra-e-carga.md`: têm `paths:` e não carregam sozinhas.
 
 Funcionalidade: tasks/prd-<func>/
 Escopo: funcionalidade completa | tarefa N.0 (tasks/prd-<func>/N_task.md)

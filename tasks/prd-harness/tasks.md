@@ -81,10 +81,10 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [ ] 14.2 O caminho `(mvp:)` sai do hook (RF18)
   - [ ] 14.3 Testes: RF16 e RF18 do `cenarios.md`
 
-- [ ] **15.0 — A base fixa curta, e as regras 00, 40, 60 e 80 por `paths:`**
-  - [ ] 15.1 `CLAUDE.md` com os destinos do `texto.md`; `docs/decisoes-em-aberto.md` lido pelo `estado.ts`
-  - [ ] 15.2 `paths:` nas quatro regras; 10, 20 e 70 sempre carregadas
-  - [ ] 15.3 Testes: RF20 do `cenarios.md`, com a medida antes e depois
+- [x] **15.0 — A base fixa curta, e as regras 00, 40, 60 e 80 por `paths:`**
+  - [x] 15.1 `CLAUDE.md` com os destinos do `texto.md`; `docs/decisoes-em-aberto.md` lido pelo `estado.ts`
+  - [x] 15.2 `paths:` nas quatro regras; 10, 20 e 70 sempre carregadas
+  - [x] 15.3 Testes: RF20 do `cenarios.md`, com a medida antes e depois
 
 - [ ] **16.0 — Cada regra aponta a checagem que a garante, e nada cita caminho que não existe**
   - [ ] 16.1 Checagem citada ou "só a revisão garante" em cada regra (RF25)
