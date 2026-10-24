@@ -11,8 +11,9 @@
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador`/`Mesa`): **14.0** (grande), 1ª tentativa, desde ~23:12
-  - linhas 2 e 3: **ociosas**. Nada mais parte: a 16.0 e a 17.0 esperam a 14.0
+  - linha 1 (`Implementador`/`Mesa`): **16.0** (grande), 1ª tentativa, desde ~23:36
+  - linhas 2 e 3: **ociosas**. O quadro, depois do encontro da 14.0, só soltou a 16.0; a 17.0 não partiu junto. A 18.0 e a
+    20.0 esperam a 17.0; a 19.0, a 18.0; a 21.0, a 16.0, a 18.0 e a 19.0. Depois do encontro da 16.0, rodar o quadro de novo
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Devo ainda:**
   - no fechamento, levar ao `TODO.md` as três "Recomendações sem aplicar" do `4_task.md` (destino TODO.md)
@@ -27,7 +28,8 @@
     100 caminhos); as notas da 10.0, do `tasks.md:26`, da saída 5 do encontro (17.2) e do `-F` (18.4a) aplicadas
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `822cec2` (encontro da 13.0); esteira `40052965683` correndo. Antes: `ca159fa` (encontro da 12.0), esteira `40049333195`. Antes: `f6d13ea` (encontro da 11.0), esteira `40046467544` (em `76b3b71`). Antes: `ae839fc` (encontro da 10.0),
+- **Base:** `spec/harness` em `c1759e2` (encontro da 14.0); esteiras `40054774558` (em `c1759e2`) e `40052965683` (em `822cec2`)
+  correndo; a última concluída, `40049775840` em `d1cd361`, **verde**. Antes: `822cec2` (encontro da 13.0). Antes: `ca159fa` (encontro da 12.0), esteira `40049333195`. Antes: `f6d13ea` (encontro da 11.0), esteira `40046467544` (em `76b3b71`). Antes: `ae839fc` (encontro da 10.0),
   com as esteiras `40026244263` (em `0068e5d`) e `40039836142`. Com a 4.0, o `esteira.ts` pula a cancelada e lê a última concluída. As três anteriores (`40017905038`,
   `40018797893`, `40021941702`) foram **canceladas** pelo push seguinte, não reprovadas: o `esteira.ts` lê cancelada como
   VERMELHA. Não abri correção. Sem esteira concluída na spec desde `a691e02`
@@ -52,6 +54,7 @@
 | 11.0 | `6e701d4` (+ `ea6b093`, correção `audit-multer`) | Sonnet 5.5 | infra-guardian 1, test-engineer 2, revisor-geral 2 (correção: infra-guardian 1, test-engineer 1) | DIVERGÊNCIA `portão` (multer GHSA-q7qp-rjg7-q26m) → correção `2026-10-23-audit-multer` na linha, overrides do multer 2.5.0; 53 mutações; item novo no `TODO.md` "(X7, tarefa 11.0)" |
 | 12.0 | `fbe056f` | Sonnet 5.5 | privacy-guardian 2, infra-guardian 3, revisor-geral 2, test-engineer 2 | 56 mutações; duas entradas novas no `TODO.md`; a 14.1 deve importar a lista do §5(e) de `portao.ts` (levado ao Arquiteto) |
 | 13.0 | `3649e27` | Sonnet 5.5 | tenancy-guardian 2, privacy-guardian 2, conformidade-reviewer 2, test-engineer 2, revisor-geral 2 | |
+| 14.0 | `8ddb462` | Sonnet 5.5 | infra-guardian, privacy-guardian, conformidade-reviewer, tenancy-guardian, test-engineer, revisor-geral, todos aprovados na 2ª (o test-engineer reprovou a 1ª) | `tools/ci/caminhos-da-esteira.ts` novo, fora dos previstos; 4 divergências no documento; a correção que leva código de processo passa a exigir o revisor-geral |
 
 ## Esperando o Joaquim
 ## 23/10/2026 ~19:10 — X7 tarefa 10.0 (limite: 3 reprovações do test-engineer)
