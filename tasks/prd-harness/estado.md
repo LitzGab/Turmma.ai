@@ -10,17 +10,18 @@
   rodada 10 (`b7a8a7f`), 20 tarefas (`d57bf2b`), sem mudança de desenho nem de critério do PRD
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
-- **Espero:** (21 de 21 tarefas concluídas; base `fc51411`, encontro da 20.0)
+- **Espero:** o `RELATÓRIO` do `Validador` (1ª rodada, funcionalidade completa, commit `53944c1`), pedido em 24/10. Ninguém usa o
+  ambiente de teste 0 enquanto ele valida. Com o veredito: conferir que só o `validacao.md` mudou, e o passo 8 (esteira
+  `--fechamento`, `linhas.ts fechar`, commit de fechamento com os itens de "Devo ainda", pedido de pouso). O aviso da Mesa 2 ao
+  Validador (a fixture do RF31 já foi regravada) está em `.processo/ordens/2026-10-24-fixture-maestri-list-r2.md`, na linha 2
+  - linha 2: ociosa. Correção `2026-10-24-fixture-maestri-list` feita (`e2da6d9`, encontro em `53944c1`, esteira `40068026208`
+    rodando). Rodadas: privacy-guardian 1, test-engineer 2, revisor-geral 2. Cumpre o "regravar a fixture" do "Devo ainda"
   - linha 1: ociosa. **Ensaio do RF31 feito** (correção `2026-10-24-dockerignore-reengenharia`, `029cdb5`, encontro em `ae95688`,
     esteira `40067862653` rodando): commit sem revisão por `/usr/bin/git` recusado duas vezes no andar da linha (marca ausente;
     revisões incompletas), registrado no documento da correção. Rodadas: infra-guardian 1, test-engineer 2, revisor-geral 2.
     O `TODO.md` fechou o item "(X5, RF31)" e ganhou um item da X7 (revisar a lista de pastas ignoradas)
-  - linha 2 (`Implementador 2`/`Mesa 2`): correção `2026-10-24-fixture-maestri-list` (regravar a fixture com a saída do meu
-    terminal, com as linhas numeradas, conferida pelo privacy-guardian), 1ª tentativa, desde ~03:10 de 24/10
   - linha 3: ociosa
-  - cabeçalhos dos quatro reiniciados conferidos (Sonnet, `@implementador`/`@mesa-de-revisao`, checkout da linha, sem `.maestri/roles`)
-  - depois dos dois encontros: commit "antes da validação", o `Validador` reiniciado no andar (o cabeçalho dele é o 4º papel do
-    RF31; o do `Arquiteto` se confere no próximo reinício), e o passo 8
+  - o cabeçalho do `Validador` é o 4º papel do RF31; o do `Arquiteto` se confere no próximo reinício
 - **Devo ainda:**
   - do relatório da 20.0 (RF31): no meu primeiro `/clear` **depois do pouso** (o hook novo só vale no térreo quando a X7 pousar), conferir se `.processo/limpeza.json` ganha `feita` (o `/clear` de sessão sem papel no térreo esconde uma limpeza perdida); regravar `tools/processo/__fixtures__/maestri-list.txt` com a saída do meu terminal (linhas numeradas, sem caminho de usuário nem título de sessão: repositório público), por correção; a transcrição da prova do 20.6 em `~/.claude/projects` foi apagada; o `TODO.md` ganhou duas linhas "Da X7" (`limpeza.json` ancorado no térreo e `limpeza.json` que não é objeto); SKILL+protocolo+6-tarefa somam 23.967 B (teto 24.000)
   - no fechamento, levar ao `TODO.md` o "sem aplicar" da Mesa na 19.0 (r2): o comentário do cabeçalho do
@@ -37,7 +38,7 @@
     100 caminhos); as notas da 10.0, do `tasks.md:26`, da saída 5 do encontro (17.2) e do `-F` (18.4a) aplicadas
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `ae95688` (encontro da correção da linha 1, push feito), esteira `40067862653` rodando. Antes: `68200ca` (encontro da 21.0, push feito), esteira `40066578823` na fila; a `40064817905` (em `9a86e4c`) correndo. Antes: `9a86e4c` (encontro da 19.0). Antes: `9232548` (encontro da 18.0), esteira `40062318436` rodando ao ler. Antes: `e77d55f` (encontro da 17.0); esteiras `40059951136` (em `e77d55f`) na fila e `40057552550` (em `1f066fe`) correndo. Antes: `1f066fe` (encontro da 16.0); a última concluída,
+- **Base:** `spec/harness` em `53944c1` (encontro da correção da linha 2, push feito), esteira `40068026208` rodando. Antes: `ae95688` (encontro da correção da linha 1), esteira `40067862653`. Antes: `68200ca` (encontro da 21.0, push feito), esteira `40066578823` na fila; a `40064817905` (em `9a86e4c`) correndo. Antes: `9a86e4c` (encontro da 19.0). Antes: `9232548` (encontro da 18.0), esteira `40062318436` rodando ao ler. Antes: `e77d55f` (encontro da 17.0); esteiras `40059951136` (em `e77d55f`) na fila e `40057552550` (em `1f066fe`) correndo. Antes: `1f066fe` (encontro da 16.0); a última concluída,
   `40054774558` em `c1759e2`, **verde** (a `40052965683`, em `822cec2`, cancelada pelo push seguinte). Antes: `c1759e2` (encontro
   da 14.0). Antes: `822cec2` (encontro da 13.0). Antes: `ca159fa` (encontro da 12.0), esteira `40049333195`. Antes: `f6d13ea` (encontro da 11.0), esteira `40046467544` (em `76b3b71`). Antes: `ae839fc` (encontro da 10.0),
   com as esteiras `40026244263` (em `0068e5d`) e `40039836142`. Com a 4.0, o `esteira.ts` pula a cancelada e lê a última concluída. As três anteriores (`40017905038`,
@@ -72,6 +73,7 @@
 | 21.0 | `57f9cd3` | Sonnet 5.5 | test-engineer 2, revisor-geral 2, tenancy 1, privacy 1, conformidade 1 | encontro em `68200ca` |
 | 20.0 | `d5377d7` | Sonnet 5.5 | 2 rodadas (todos aprovados na 2ª) | premissa do §12 provada em parte (`20_task.md` "Divergências"); pendências levadas a "Devo ainda" |
 | correção dockerignore-reengenharia (linha 1) | `029cdb5` | Sonnet 5.5 | infra-guardian 1, test-engineer 2, revisor-geral 2 | ensaio do RF31: `/usr/bin/git` sem revisão recusado duas vezes; encontro em `ae95688` |
+| correção fixture-maestri-list (linha 2) | `e2da6d9` | Sonnet 5.5 | privacy-guardian 1, test-engineer 2, revisor-geral 2 | fixture regravada do terminal do Orquestrador; encontro em `53944c1` |
 
 ## Esperando o Joaquim
 ## 23/10/2026 ~19:10 — X7 tarefa 10.0 (limite: 3 reprovações do test-engineer)
