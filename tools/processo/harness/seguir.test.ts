@@ -63,6 +63,7 @@ const OBRIGATORIOS_NO_PASSO_6 = [
   { nome: 'a abertura de linha', termo: 'linhas.ts abrir' },
   { nome: 'o reinício do par (recruit --replace)', termo: 'recruit --replace' },
   { nome: 'a saída VERIFICAÇÃO RECUSADA', termo: 'VERIFICAÇÃO RECUSADA' },
+  { nome: 'o comando que solta a linha presa (RF6)', termo: 'linhas.ts abandonar' },
 ]
 /** Os passos que podem ser citados pelo passo 6: são os condicionais. */
 const CITAVEIS_NO_PASSO_6 = ['passo 7', 'passo 8', 'passo 10']
