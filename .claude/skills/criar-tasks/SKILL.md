@@ -122,6 +122,12 @@ infere o porte pela contagem de guardiões e avisa que inferiu.
   de testes**: "quem contorna é acusado", uma por forma (reexportação, `import()`, o caminho como
   texto), e "a guarda reprova quando o alvo dela não existe". Na X5, a 9.0 e a 12.0 somaram oito
   reprovações por escape e por cerca que se calava
+- **Tarefa que cria comando, hook ou script de processo leva duas subtarefas fixas**: (a) pôr o
+  comando no passo do `/seguir` ou no papel que o usa, com o termo no teste do passo; (b) gravar a
+  entrada real como fixture (a mensagem colada como chega, com o embrulho; a saída do terminal de
+  quem roda o comando), e o teste lê a fixture, não um exemplo escrito à mão. Na X7, o aviso da
+  mensagem colada testava a forma imaginada (crítico da validação), o `abandonar` não estava em passo
+  nenhum (maior), e a fixture do `maestri list` veio do terminal errado
 - **Uma linha da tabela de testes, um comportamento.** O que a célula junta com ponto e vírgula se
   perde: na X3, "100 ou mais", "decidir tira o item" e "vínculo encerrado tira a página" estavam numa
   célula com outros, ninguém escreveu o teste, e três dos oito achados da validação foram eles

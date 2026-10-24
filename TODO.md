@@ -1779,9 +1779,9 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
   §2): correção sem versão maior, em 8.3.5 e 5.0.5. A trava (`guarda:dependencias`) olha só produção, e por isso não
   acusa; mas a imagem `web` roda `vite preview` (`tasks/prd-reengenharia/medidas-da-onda-5.md`). Subir antes do staging,
   numa correção com o portão. (dono: Joaquim)
-- [ ] **(X5, validação 1) O encontro das linhas rodar o `eslint .` depois do merge** (X7, `harness`; é a M2 da X5): a supressão órfã de
+- [x] **(X5, validação 1) O encontro das linhas rodar o `eslint .` depois do merge** (X7, `harness`; é a M2 da X5): a supressão órfã de
   `tools/ci/compose.ts` nasceu de duas tarefas verdes, cada uma no seu portão (13.0 e 90.0), e só a validação a viu.
-  (dono: Joaquim)
+  (dono: Joaquim) — *feito na X7, tarefa 6.0 (`8dce7e7`): o encontro roda tipagem e lint e recusa o vermelho.*
 - [x] **(X5, RF31) `.dockerignore` e `tools/ci/dockerfile.test.ts:128-130` ainda citam `.reengenharia`**, a pasta que o
   fechamento da X5 apagou (R64). A linha não faz mal (ignora uma pasta que não existe), e tirá-la é código, com o teste junto:
   na próxima tarefa que tocar o Dockerfile ou o `.dockerignore` (onda 5, na X6). (dono: Joaquim) — *resolvido na correção
@@ -1811,7 +1811,7 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       do Playwright percebia o dado, nos degraus de 100/250/500/1000 ms, e não quando ele apareceu, a ~4,1 s; agora conta o
       instante da página. Se passar de 5 s assim, a investigação vai para o peso da primeira carga. `areas.spec.ts:647` e
       `troca-de-escola.spec.ts:156` ficaram fora: entram se caírem de novo, ou no censo de prazo do e2e da X7.)
-- [ ] **(X5, retrospectiva) Código de processo que a X5 pediu** (`tasks/prd-reengenharia/retro.md`, P4 e M1 a M7). **Destino que o
+- [x] **(X5, retrospectiva) Código de processo que a X5 pediu** (`tasks/prd-reengenharia/retro.md`, P4 e M1 a M7). **Destino que o
       Joaquim deu em 23/10/2026: a X7 (`harness`)**, a próxima spec, antes da X4, com teste e revisão, junto das
       M1 a M3 da X3 (item "(X3, retrospectiva) Código de processo", acima); a correção do `casca.spec.ts:67` parte antes dela. (P4)
       `.github/workflows/ci.yml` com `concurrency: { group: esteira-${{ github.ref }}, cancel-in-progress }` só em `spec/**` e
@@ -1825,78 +1825,55 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       regular) que nenhum bloco alcança, impressas pelo portão para o Implementador declarar o bloco ou o motivo antes da Mesa (grupo
       A: 10 reprovações). (M5) `linhas.ts abandonar <n>`. (M6) o portão para o despachante e os workers do compose de teste antes da
       integração. (M7) o portão chama as guardas pelas etapas de `tools/ci/etapas-de-guarda.ts`, as mesmas do `ci:verificar`.
-      (dono: Orquestrador)
+      (dono: Orquestrador) — *feito na X7 (3.0, 5.0, 6.0, 7.0, 8.0, 9.0), pousada em `aad6d14`; o que sobrou está na retro da X7.*
 
 ## Da X7 (harness), fora dela
 
-- [ ] **(X7, 20.0) Ancorar o caminho de `.processo/limpeza.json` no térreo:** o comando de limpeza dos passos 6 e 9 grava em
-      `.processo` relativo ao diretório do Bash do Orquestrador, e o `contexto-inicial.sh` grava em relativo ao
-      `CLAUDE_PROJECT_DIR`. Ancorar os dois (o comando pelo `git rev-parse --git-common-dir`, o hook pelo
-      `$CLAUDE_PROJECT_DIR`) para a `pedida` não cair fora do térreo. Muda o comando dos dois passos, o do hook e quatro
-      blocos de "Mutações" de `20_task.md`. (dono: Arquiteto, na `retro` da X7)
-- [ ] **(X7, 20.0) `vigia.ts` e o `limpeza.json` que é JSON válido mas não é objeto** (`null`, `[]`, texto): o motivo sai
-      enganoso ou a vigia não acorda; mostrar a `pedida` ilegível no motivo. Pede teste e mutação novos. (dono: Arquiteto,
-      na `retro` da X7)
+Da retrospectiva da X7 (`tasks/prd-harness/retro.md`), aceitas pelo Joaquim em 24/10/2026 ("tudo o recomendado"). **As M1 a
+M7 partem como correções antes da primeira tarefa da X4**, pelo `/corrigir`, cada uma com o portão e os revisores que o caminho
+pede. (dono: Orquestrador)
+
+- [ ] **(X7, retro, M1) O `mutacoes.ts --faltando` lê também `tools/`**: `linhasNovasDaArvore` (`tools/processo/mutacoes.ts:678`)
+      passa a incluir `tools/` no diff e nos arquivos novos, fora `*.test.ts` e `__fixtures__/`, com teste e bloco de mutação. As 8
+      reprovações de cláusula sem bloco da X7 estavam todas em `tools/`, que o `--faltando` não lia
+- [ ] **(X7, retro, M2) Mutação vermelha só vale por asserção**: em `tools/processo/mutacoes.ts`, a mutação que deixa o teste
+      vermelho por erro de carga (sintaxe, módulo que não carrega, nenhum teste rodou) é recusada com o motivo e não conta como
+      provada (4.0, bloco com erro de sintaxe; 18.0, três mutações vermelhas por exceção)
+- [ ] **(X7, retro, M3) O portão avisa a divergência que ficou só no documento da tarefa**: em `tools/processo/portao-local.ts`,
+      se a seção "Divergências resolvidas nesta tarefa" ganhou linha no diff e nem a `techspec.md` nem o `cenarios.md` da spec
+      mudaram, o portão imprime o aviso; só informa, como o `--faltando` (15.0, 18.0, 19.0; duas na X5)
+- [ ] **(X7, retro, M4) A esteira não roda no push das branches de linha**: em `.github/workflows/ci.yml`, `on.push.branches` ganha
+      `'!spec/**--l*'` depois de `'spec/**'`, com o caso em `tools/ci/esteira.test.ts`, o comentário do topo do `ci.yml` e o texto da
+      regra 40 ("A esteira", que diz que o commit vai à branch da linha e cada push dispara tudo). Na X7, do push ao veredito, mediana
+      de 70 min e máximo de 4 h 26; um job esperou 3 h 38 por máquina, e 34 das 83 execuções eram das linhas
+- [ ] **(X7, retro, M5) Correção "processo seguro"**: (1) `.processo/limpeza.json` ancorado no térreo, no comando dos passos 6 e 9
+      (pelo `git rev-parse --git-common-dir`) e no `contexto-inicial.sh` (pelo `$CLAUDE_PROJECT_DIR`), e o `vigia.ts` com motivo
+      legível para o JSON que não é objeto (`null`, `[]`, texto), com os blocos de "Mutações" de `20_task.md` que mudam; (2) Ctrl-C
+      no portão devolve o arquivo mutado (hoje o `finally` não roda) e SIGTERM ao grupo também no `close` do teste que deixa neto
+      vivo (7.0, 1ª); (3) bloco de mutação para o ramo `if ('vermelho' in conferencia)` do `portao-local.ts` (7.0, 2ª); (4) `git
+      config --get core.hooksPath` liberado em sessão de papel, como leitura (`tools/processo/comando-git.ts:422`, m1 da validação);
+      (5) o CLI de `linhas.ts` escreve na saída quando `EDUCA_ENCONTRO_SOB_A_TRAVA` ou `EDUCA_COMANDO_DE_INSTALACAO` está ligada, e a
+      marca `abertura` sai junto com `abrindo: false` (5.0); (6) o teste "o SIGINT no supervisor leva o grupo do teste junto"
+      (`mutacoes.test.ts`) sem a corrida que o deixou vermelho em `d76ef01` (esperava 124, veio 255)
+- [ ] **(X7, retro, M6) A citação por número de decisão soma o `conformidade-reviewer`**: nas "Regras de casamento" de
+      `tools/processo/guardioes-por-caminho.ts`, o arquivo de exceção que cita D45, D47, D55 a D59 ou D64 soma o
+      `conformidade-reviewer`, como a citação da regra 70 já soma (revisão da spec da X7, rodada 4)
+- [ ] **(X7, retro, M7) Correção "acabamento de texto da X7"**: (1) os comentários que dizem que a lógica do hook mora em
+      `revisoes.ts` (`tools/ci/etapas-de-guarda.ts:119`, `tools/ci/e2e-que-cita-literal.ts:4`, `tools/processo/sequencia-do-portao.ts:80`,
+      e o `executar-task/SKILL.md` com `MARCAS_DE_DIRETIVA` e `DOCUMENTO_QUE_UMA_SUITE_LE`), o cabeçalho de
+      `tools/processo/harness/metadados.test.ts:12` (sem a regra e o `settings.json`) e a frase morta do
+      `.claude/hooks/contexto-inicial.sh:27` ("Checkout anterior à X7"); (2) a regex do caso dos módulos apagados em
+      `hook-git.int.test.ts:184` exige o nome do módulo, com `replaceAll`; (3) `retro/SKILL.md:91`, "salvo as do grupo seguinte",
+      trocado junto com o termo do `seguir.test.ts:140`; (4) o retoque do `passos/6-tarefa.md` (m6 da validação: "Não chega como
+      mensagem:" de volta ao `PEDIDO de estado`, e "e reabra com `abrir`") e uns 300 B de folga no orçamento de 24.000 B
+      (`SKILL.md` + `protocolo.md` + `passos/6-tarefa.md`, hoje 23.979), tirando explicação e não instrução; (5)
+      `docs/aia/ouro-retido/README.md:4` sem o `(ouro: <política>)`, que não existe mais (18.0)
+
+Ficam, de antes da retro:
+
 - [ ] **(X7, Tech Spec §9) Remover `tools/processo/separar-achados.ts` e o teste dele**: o hook já separa os achados por
       documento desde a X5, e o script só serviu para a migração. Espera o ok do Gabriel (U11-10), porque ele roda o
       processo na branch dele. (dono: Joaquim, com o Gabriel)
-- [ ] **(X7, revisão da spec, rodada 4) Para a retrospectiva da X7**, recomendações que mudariam a lista fechada do RF15 e
-      do RF16 e por isso não entraram na spec: (1) a citação por número de decisão (D45, D47, D55 a D59, D64) somar o
-      `conformidade-reviewer`, como a citação da regra 70 soma (`tasks/prd-harness/tabela-de-guardioes.md`, "Regras de
-      casamento"); (2) a linha `**Sem mutação:**` em arquivo que pede o `conformidade-reviewer` exigir a rodada dele;
-      (3) `.dockerignore`, `.nvmrc` e `package-lock.json` fora da lista do §5(e) de propósito: entrar muda a D53. (dono:
-      Arquiteto, na `retro` da X7)
-- [ ] **(X7, 5.0) O CLI de `linhas.ts` lê `EDUCA_ENCONTRO_SOB_A_TRAVA` e `EDUCA_COMANDO_DE_INSTALACAO` de `process.env` em
-      toda execução**: escrever na saída quando uma estiver ligada, ou restringir às execuções de teste. Decide a 6.0, ao
-      mover o ponto de injeção para depois do merge. (dono: Implementador da 6.0)
-- [ ] **(X7, 5.0, recomendações da 2ª rodada) Acabamento do quadro e da tarefa**: (1) apagar a marca `abertura` junto com
-      `abrindo: false` ao concluir a abertura; (2) trocar um dos dois blocos de `aindaAbrindo` por uma mutação que prove
-      outra coisa (`randomUUID()` por constante); (3) completar a tabela de testes do `5_task.md` com os cinco testes que
-      só têm o bloco. Nenhum muda comportamento. (dono: Implementador da 6.0, no mesmo `linhas.ts`)
-- [ ] **(X7, tarefa 7.0, rodada 1) Para a retrospectiva da X7**, recomendações da mutação que trava que não entraram: (1) Ctrl-C
-      no portão mata o pai sem passar pelo `finally` que devolve o arquivo mutado; (2) `testTimeoutDoProjeto` lê o primeiro
-      `testTimeout:` do `vitest.config.ts` sem saber de que projeto é e fixa 5 s e 30 s sem ler o `playwright.config.ts`; (3) o
-      teste que sai normalmente e deixa um neto vivo não leva o grupo junto (SIGTERM ao grupo também no `close`); (4) nenhum
-      teste roda dois `rodarCalado` em paralelo, nem há bloco que tire o `rename` de `copiaDoSupervisor`. (dono: Arquiteto, na
-      `retro` da X7)
-- [ ] **(X7, tarefa 7.0, rodada 2) Para a retrospectiva da X7**, recomendações da 2ª rodada que não viraram ordem: (1) o parágrafo do
-      topo de "Mutações" de `tasks/prd-harness/7_task.md` não cita as cláusulas da reconstrução da web e de
-      `conferirMutacoesDoDocumento`; (2) o auxiliar `conferir` do teste de reconstrução (`mutacoes.test.ts`) acha o fonte mutado
-      por um trecho exato com `\n` e indentação de `REPOSITORIO`, e mudar a formatação o faria ver tudo como mutado; (3) a tabela
-      "Testes que provam a regra" do `7_task.md` não tem linha para a reconstrução que estoura, cai ou roda com mutação
-      reprovada, nem para a guarda de `terminar` (o Validador confere: os testes existem e os blocos de mutação os citam); (4) o
-      ramo `if ('vermelho' in conferencia) { … process.exit(1) }` de `portao-local.ts` não tem bloco de mutação; (5) no teste da
-      guarda de `terminar`, máquina muito carregada pode ver o marcador só depois dos 1,5 s do SIGKILL, e uma `esperaMs` de uns 5 s
-      tira a janela; (6) `durouMs < 5_000` do teste do prazo e do `rodarCalado` conta a subida do Node com folga de uns 4 s.
-      (dono: Arquiteto, na `retro` da X7)
-- [ ] **(X7, 2.0) Comentários que ainda dizem onde a lógica do hook mora**: `tools/ci/etapas-de-guarda.ts:119`,
-      `tools/ci/e2e-que-cita-literal.ts:4` e `tools/processo/sequencia-do-portao.ts:80` citam `tools/processo/revisoes.ts`
-      (`alvosDoPortao` e outras peças), e o `executar-task/SKILL.md` cita `MARCAS_DE_DIRETIVA` e
-      `DOCUMENTO_QUE_UMA_SUITE_LE` no mesmo arquivo. Continuam certos pela reexportação; o nome certo agora é
-      `portao.ts` (`alvosDoPortao`) e `caducidade.ts` (as duas constantes). Os do `.claude/` entram no texto do RF20 a RF25.
-      Mais cinco da revisão da 2.0: (1) a linha do `revisoes.ts` no §2 da `techspec.md` não diz que `PAPEIS_DO_TIME` e
-      `BRANCHES_PROTEGIDAS` ficam no `comando-git.ts` (o `portao.ts` reexporta o primeiro); (2) `hook-portao.test.ts:84` quebra
-      só o `revisoes.ts`, e erro de sintaxe no `portao.ts` ou no `comando-git.ts` também derruba o hook sem teste que o
-      exercite (um caso por módulo, na 10.0); (3) o `break` do próximo cabeçalho e o da linha em branco de `corpoDaSecao`
-      sobrevivem a qualquer teste de hoje (falta seção vazia seguida de outra seção, e parágrafo solto seguido de linha em
-      branco); (4) os blocos de mutação do `particao.test.ts` em `2_task.md` citam o teste por um trecho do nome ("o arquivo
-      de hoje passa", "de um módulo que sumiu: vermelho", "o arquivo que não existe: vermelho"), e não pelo nome inteiro; (5) o
-      caso "módulo que sumiu" só tira `./caducidade.ts`, e se outro módulo sair de `REEXPORTADOS` nenhum teste fica vermelho
-      (um `it.each` sobre os quatro). (dono: Arquiteto, na `retro` da X7)
-- [ ] **(X7, tarefa 11.0) Para a retrospectiva da X7**, recomendações da 11.0 que não viraram ordem: (1) o texto morto do
-      `.claude/hooks/contexto-inicial.sh:27`, "Checkout anterior à X7: traga a develop antes", nunca aparece onde se aplica: num
-      checkout anterior à X7 o `contexto-inicial.sh` que roda é o antigo, e o `core.hooksPath` gravado pelo `prepare` fica na config
-      comum, que os worktrees compartilham (a Tech Spec §5a já diz o que a máquina faz); tirar a frase muda o hook e caduca os três
-      revisores; (2) `hook-git.int.test.ts:184`, o caso dos módulos apagados (`it.each` de `portao.ts`, `comando-git.ts` e
-      `mutacoes.ts`): a regex aceita `ERR_MODULE_NOT_FOUND`, e a falta de qualquer outro módulo também passaria, então exigir o
-      nome do módulo; e `modulo.replace('.', '\\.')` só escapa o primeiro ponto (a lista tem nomes com um ponto só, mas
-      `replaceAll` não custa). Mexer no teste caduca `test-engineer` e `revisor-geral`. (dono: Arquiteto, na `retro` da X7)
-- [ ] **(X7, tarefa 12.0) `tools/ci/conferir-entregas.ts`: o `catch` do `rev-list` mistura dois casos.** Qualquer falha do
-      `git rev-list origin/develop..HEAD` sai 2 com "não achei origin/develop neste checkout": a `origin/develop` ausente (checkout
-      raso) e uma falha do próprio git (objeto corrompido, `git` fora do `PATH`) têm a mesma mensagem. Continua fechando na falha, que é o
-      que importa. Um `git rev-parse --verify origin/develop` antes do `rev-list` separaria os dois, com mensagem e teste novos; mexer no
-      script caduca os quatro revisores. A 12.0 chegou a tê-lo e o tirou: com o ref ausente o `rev-list` já falha, e a linha era redundante.
-      (dono: Arquiteto, na `retro` da X7; origem: `12_task.md`, "Recomendações sem aplicar")
 - [ ] **(X7, tarefa 12.0) `tools/ci/conferir-entregas.ts` e o merge com mais de dois pais, e a linha "remerge CONFLICT".** (i) Não há
       teste de merge octopus: o `git show --remerge-diff --name-only` talvez não liste nada nele, e um octopus com código resolvido à
       mão passaria sem marca. Falta o experimento com o git (versão 2.56 aqui), e, se for o caso, ou código que trate o merge de mais de dois
@@ -1904,42 +1881,6 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       `--remerge-diff --name-only` pode imprimir num conflito que não é de conteúdo (modify/delete, por exemplo), vale também aqui: a linha
       seria lida como nome de arquivo, e não é código. Juntar os dois quando o Arquiteto decidir, na tarefa futura que mexer no
       `--remerge-diff` (dono: Arquiteto; origem: `12_task.md`, "Recomendações sem aplicar")
-- [ ] **(X7, 17.0) Ampliar o grupo de confirmação da `retro` ao arquivo inteiro de cada revisor com veto, ao `mesa-de-revisao.md` e à
-      §6 do `validador.md`:** hoje só a lista "O que verificar" é confirmação; uma proposta que mude outra parte desses papéis (a
-      decisão de quem aprova, a classificação de achado) cai no aviso de 30 minutos. É revisão da D79, que muda o desenho da regra de
-      aplicar (dono: Joaquim; origem: `17_task.md`, "Recomendações sem aplicar", conformidade-reviewer 1ª e 2ª rodadas)
-- [ ] **(X7, 17.0) `.claude/skills/vigia/SKILL.md:30` apontar direto para `passos/3-time-e-andar.md`:** o índice do `SKILL.md` já resolve
-      o caminho, mas a skill da vigia ainda diz "passo 3 do `/seguir`" (dono: quem mexer na `vigia`; origem: `17_task.md`,
-      revisor-geral 1ª rodada)
-- [ ] **(X7, 17.0) Ajustes de texto, sem efeito no comportamento, para a próxima edição da `retro`, do passo 7 e do `validador.md`:**
-      (i) `retro/SKILL.md:91`, "salvo os do grupo seguinte" deveria ser "salvo as do grupo seguinte" (propostas), e a linha passa de 120
-      colunas; troca-se o texto e o termo do `seguir.test.ts` juntos; (ii) `passos/7-paradas.md:32` descreve o aviso da retro sem a
-      ressalva "salvo os do grupo seguinte"; (iii) `validador.md:136` dizer que um commit `Fora do processo:` que toca nota, correção,
-      tutor ou saída de IA é lido contra a regra 70 (dono: Arquiteto; origem: `17_task.md`, revisor-geral e conformidade-reviewer 2ª)
-- [ ] **(X7, 17.0) Levar ao `/retro` da X7 a folga de 68 B do orçamento de leitura por tarefa** (`SKILL.md` + `protocolo.md` +
-      `passos/6-tarefa.md` = 23.932 B de 24.000): o próximo acréscimo num dos três precisa tirar texto de outro lugar deles (dono:
-      Arquiteto; origem: `17_task.md`, test-engineer 2ª rodada)
-- [ ] **(X7, 18.0) Tirar o `(ouro: <política>)` de `docs/aia/ouro-retido/README.md:4`**: a pasta vizinha `docs/aia/ouro/` já manda
-      `(correção <slug>)` com o `conformidade-reviewer` (14.0, RF16), e este README continua mandando o marcador que não existe mais
-      (dono: Arquiteto, num commit só de `docs/`; origem: `18_task.md`, test-engineer 1ª rodada)
-- [ ] **(X7, 18.0) Corrigir o caminho na nota da regra 80, item 5** (`.claude/rules/80-infra-e-carga.md`): `sessao.leitura.duracao` é medida em
-      `packages/nucleo/src/identidade/guarda-sessao.ts` (nome em `packages/nucleo/src/telemetria/metricas.ts`), e só `observarPoolDoBanco`
-      está no `apps/api/src/main.ts`; faz-se junto com o fechamento da N2 da X5 (dono: Arquiteto; origem: `18_task.md`, revisor-geral 2ª rodada)
-- [ ] **(X7, 18.0) Tirar o `pedagogia-reviewer` da frase "só a frase 'para a validação e a retro'"** no parágrafo 18.3 do §9 da `techspec.md`
-      (ele também ganhou o bloco das fotos em três parágrafos); entra com a próxima edição do §9, na 19.0 (dono: Arquiteto; origem:
-      `18_task.md`, revisor-geral 2ª rodada)
-- [ ] **(X7, validação) Os menores da validação** (`tasks/prd-harness/validacao.md`, seção 6 das duas rodadas): (m1) em sessão de
-      papel, a leitura `git config --get core.hooksPath` é negada como "mexe no core.hooksPath" (`tools/processo/comando-git.ts:422`),
-      e o papel não consegue conferir se o hook nativo está ligado; (m2) o ensaio do RF31
-      (`tasks/correcoes/2026-10-24-dockerignore-reengenharia.md:54`) não diz se a recusa veio do `PreToolUse` ou do `commit-msg`;
-      (m3) folgas curtas nos orçamentos: a base fixa (RF20) e o `/seguir` (RF26, hoje 21 B de 24.000), e o próximo acréscimo tira
-      texto antes; (m5) a seção "Revisões" de `tasks/correcoes/2026-10-24-aviso-mensagem-colada.md:62` sem a linha de cabeçalho e a
-      de separação da tabela (dono: Arquiteto, na `retro` da X7)
-- [ ] **(X7, correção M1) Retoque de texto do `.claude/skills/seguir/passos/6-tarefa.md`** (m6 da validação): devolver "Não chega
-      como mensagem:" ao `PEDIDO de estado` (`:106`) e dar sujeito a "e se abre de novo (`abrir`)" (`:121`, "e reabra com `abrir`"),
-      na próxima correção que mexa no passo 6 e sobre byte no teto de 24.000 B; acertar junto a frase "uma oração do veredito da
-      esteira" do documento da correção (dono: quem mexer no passo 6; origem: `tasks/correcoes/2026-10-24-seguir-abandonar-linha.md`,
-      "Recomendações sem aplicar")
 - [ ] **(X7, 4.0) A guarda do anexo do censo do e2e** (`tools/ci/esteira.test.ts:410-416`) procura só `.attach(` em `e2e/**/*.ts`:
       não pega `testInfo.attachments.push(...)`, `testInfo['attach'](...)`, helper fora de `e2e/` nem `console.` num spec. Hoje nenhum
       spec faz isso, e a garantia principal é o dado sintético; estender quando o e2e usar dado que não é montado na hora (dono:
@@ -1947,13 +1888,13 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X7, 4.0) Antes da primeira escola real: rever o upload do censo do e2e** como artefato da esteira num repositório público,
       quando o staging (D31) ou um e2e contra ambiente com dado real existir (dono: Joaquim, no portão da primeira escola real;
       origem: `4_task.md`, privacy-guardian 2ª rodada)
-- [ ] **(X7, 19.0) Acabamento do `metadados.test.ts` e do `19_task.md`**: o comentário do cabeçalho do teste (`:12`) cita "papel,
-      skill nossa, hook, `CLAUDE.md`, código do processo" sem a regra e sem o `settings.json`; e a 19.3 ainda descreve o `grep` sobre
-      `.claude/` inteiro, sem a nota do recorte da Tech Spec (dono: Arquiteto, na `retro` da X7; origem: `19_task.md`, revisor-geral 2ª)
 - [ ] **(X7, 19.0) Quem revisa a skill `lgpd-brasil` quando o `npx skills update -p` trouxer versão nova**: ela já está atrás do ECA
       Digital (`docs/processo-licoes.md`, seção 2), e skill vira instrução (dono: Joaquim; origem: `19_task.md`, privacy-guardian 1ª)
-- [ ] **(X7) Para a `retro` da X7**: (1) o lote 5/7 do e2e passou dos 45 min do job na correção do `casca`; o RF2 já marca o prazo
+- [ ] **(X7) Dois e2e no limite**: (1) o lote 5/7 do e2e passou dos 45 min do job na correção do `casca`; o RF2 já marca o prazo
       estourado de vermelho, com o nome do job, mas o lote continua no limite; (2) na fixture `e2e/casca.ts`, o passo do código do MFA
       tem a mesma causa possível do Redis de fila parado 2 s, e falha em 20 s com o erro certo (relatório da correção
-      `agentes-suspensao-intermitente`); (3) as execuções da esteira nas branches de linha ocupam a fila do GitHub junto com a da spec
-      (dono: Arquiteto, na `retro` da X7)
+      `agentes-suspensao-intermitente`). Voltam como correção se caírem de novo (dono: Orquestrador)
+
+Saíram na retro da X7, com o motivo em `tasks/prd-harness/retro.md` ("Tirar do `TODO.md`"): o resto das recomendações da
+revisão da spec (rodada 4), da 2.0, da 5.0, da 7.0, da 11.0, da 12.0 (o `catch` do `rev-list`), da 17.0, da 18.0 e da 19.0,
+e os menores m2 e m5 da validação.

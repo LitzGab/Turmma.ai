@@ -1401,6 +1401,11 @@ veto e as skills que decidem a marcação de guardião continuam parada), e a
 ressalva menor da validação, que vai para o `TODO.md` com dono e não segura o pouso (crítica e maior
 continuam parada, e achado das regras 10, 20 e 70 nunca é menor). Motivo: nas últimas retrospectivas o Joaquim escolheu sempre o que o Arquiteto
 recomendou, e a parada só custou espera.
+Revista em 24/10/2026, na retrospectiva da X7, pelo Joaquim no terminal do Arquiteto ("tudo o recomendado"): o grupo
+de confirmação da retrospectiva passa a ter, além da lista "O que verificar" de um guardião com veto, o resto do arquivo
+de cada revisor com veto, o `mesa-de-revisao.md` e a seção 6 do `validador.md`. Motivo: uma proposta que mudasse quem
+aprova ou como se classifica um achado cairia no aviso de 30 minutos, e o veto não pode mudar sem a palavra do Joaquim
+(17.0 da X7, `conformidade-reviewer`).
 
 **D80 — A pele do produto é o sistema Turmma do mockup de outubro: cor por família, borda de 2 px
 com degrau sólido, ícone ilustrado, a onça como mascote, modo escuro, e até quatro lugares por

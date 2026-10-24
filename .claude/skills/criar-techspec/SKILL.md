@@ -49,6 +49,11 @@ Mapeie módulos existentes, entidades já criadas, pontos de integração e padr
 Reaproveitar o que existe vale mais do que criar algo novo e mais bonito. Um segundo jeito
 de fazer a mesma coisa é dívida permanente.
 
+Tabela que reparte o repositório (caminho → guardião, caminho → suíte, pasta → dono) sai de
+`git ls-files | cut -d/ -f1-3 | sort -u`, com cada pasta numa linha ou na lista do que fica fora, e o
+motivo. Na X7, a tabela do RF15 foi escrita de memória, e os quatro guardiões reprovaram três rodadas
+seguidas apontando pastas que faltavam.
+
 ### 3. Pesquisar
 
 - Dúvida sobre biblioteca: documentação oficial, não blog
@@ -97,6 +102,18 @@ a AIA e o `llm-integrator` já na revisão da spec: padrão sozinho é piso, nã
 frases novas que o `test-engineer` usa na revisão. Na X5 o `ouro` foi lido para escrever os padrões, 75
 de 75 viraram 23 de 75 no lote retido, e a 2.0, a 3.0 e a 93.0 somaram 21 reprovações, cada rodada
 fechando um furo e abrindo outro, até a decisão de a regra decidir e o modelo somar.
+
+Se a funcionalidade tem **trava, fila ou estado gravado** que mais de um processo lê (quadro das linhas,
+job, sessão), a seção de carga traz a **tabela de estados**: cada estado, quem entra nele, quem sai, o
+prazo, e o que acontece quando o prazo estoura ou o processo morre no meio. Na X7, a trava das linhas
+levou oito reprovações na revisão da spec, porque cada correção do texto criava um estado novo sem saída
+nem caso.
+
+Se a funcionalidade tem uma **guarda que lê linguagem aberta** (linha de comando do shell, opções do git,
+expressão regular sobre código), a Tech Spec escreve a gramática que a guarda aceita e diz que **o resto
+é negado ou é limite declarado**, com a lista dos limites. Lista de formas de escapar é piso, não desenho.
+Na X7, a 10.0 levou três reprovações de forma nova, uma por rodada (`$'…'`, `--config-env=`, opção
+global), uma escalada e um bloqueio, até a §5(a) ganhar "todo o resto é limite".
 
 ### 6. Mapear conformidade
 

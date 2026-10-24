@@ -140,6 +140,8 @@ node tools/processo/portao-local.ts --tarefa
   git log origin/develop..HEAD -i --grep='^Fora do processo:' --format='%h %s' -- apps packages infra e2e tools
   ```
 
+  Commit `Fora do processo:` que toca nota, correção, tutor ou saída de IA é lido também contra a regra 70.
+
 ## 6. Classificação
 
 - **CRÍTICO**: RF não atendido ou parcial, violação das regras 10, 20, 70 ou 80, bug,

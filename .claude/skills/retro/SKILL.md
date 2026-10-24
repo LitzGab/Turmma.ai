@@ -92,7 +92,8 @@ Separe as propostas em dois grupos (D79, revista em 23/10/2026):
   agora mais 30 minutos, e siga: aplique depois dessa hora, se o Joaquim não objetou. Com a objeção,
   ela passa para o grupo seguinte.
 - **Confirmação** é todo o resto: código de processo (`tools/`, `.claude/hooks/`, `.claude/settings.json`),
-  regra, decisão, a lista "O que verificar" de um guardião com veto (os de `REVISORES_COM_VETO`, em
+  regra, decisão, a lista "O que verificar" de um guardião com veto e o resto do arquivo de cada revisor com
+  veto, o `mesa-de-revisao.md` e a seção 6 do `validador.md` (os revisores com veto são os de `REVISORES_COM_VETO`, em
   `tools/processo/documento-de-revisao.ts`: `tenancy-guardian`, `privacy-guardian`,
   `conformidade-reviewer`, `infra-guardian`, `test-engineer` e `revisor-geral`) e as skills que decidem a marcação de
   guardião (`criar-tasks`, `revisar-tarefa`, `revisar-spec`). Mostre e pergunte quais aplicar, arquivo

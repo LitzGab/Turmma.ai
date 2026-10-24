@@ -10,7 +10,8 @@ Só nestas você para e espera o Joaquim:
    `**Veredito: APROVADA COM RESSALVAS** — ressalvas aceitas por Joaquim em <data>: <motivo>`, e faz o
    commit. É por "aceitas por" nessa linha que o script sai de `validacao-com-ressalvas`;
 4. proposta da retrospectiva que muda código de processo, regra, decisão, a lista de um guardião com
-   veto, ou `criar-tasks`, `revisar-tarefa` ou `revisar-spec` (as skills que decidem a marcação de
+   veto (e o resto do arquivo de um revisor com veto, o `mesa-de-revisao.md` e a seção 6 do
+   `validador.md`), ou `criar-tasks`, `revisar-tarefa` ou `revisar-spec` (as skills que decidem a marcação de
    guardião), arquivo por arquivo. Também no terminal do Arquiteto;
 5. decisão de produto;
 6. pouso na `develop`.
@@ -29,8 +30,8 @@ validação.
   em "Agora" e encerra o turno, com a vigia ligada. Na primeira vigia depois da hora, sem palavra do
   Joaquim no seu terminal nem no do Arquiteto, comece a primeira tarefa. Objeção depois disso é
   mudança de desenho (item 2).
-- **A proposta da retrospectiva que só muda skill, papel ou modelo de documento.** O Arquiteto mostra
-  no terminal dele, com a hora, e aplica 30 minutos depois, sem objeção do Joaquim. Com a objeção, a
+- **A proposta da retrospectiva que só muda skill, papel ou modelo de documento**, salvo as do item 4
+  acima. O Arquiteto mostra no terminal dele, com a hora, e aplica 30 minutos depois, sem objeção do Joaquim. Com a objeção, a
   proposta volta a ser confirmação, arquivo por arquivo. Você não tem o que fazer além de registrar.
 - **A ressalva menor da validação.** Não segura o pouso: no fechamento você leva cada uma ao
   `TODO.md`, com dono e data, e registra em "O que decidi sem perguntar". Se o veredito foi APROVADA COM
