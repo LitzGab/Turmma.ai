@@ -201,6 +201,7 @@ obrigatória para implementar
 documentos do MEC virados em requisito, o dossiê de conformidade e a AIA)
 **Para escrever a AIA de uma funcionalidade de alto risco:** `docs/aia/` (índice e o que toda
 AIA precisa ter; uma por funcionalidade, antes do PRD dela)
+**Para escrever código no padrão da casa:** `docs/guia-do-desenvolvedor.md` (receitas e travas)
 **Para construir:** `docs/arquitetura.md`, `docs/modelo-de-dados.md`, `docs/agentes.md`,
 `docs/ingestao.md`
 **Para não cair no horário de aula:** `docs/infra.md`, `docs/runbook.md`

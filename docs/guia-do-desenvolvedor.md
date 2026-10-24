@@ -3,6 +3,8 @@
 Para quem chega no código do Turmma. Em meia hora você sabe onde cada coisa fica, como uma requisição anda, como criar
 um endpoint, uma tabela, um job ou uma tela, e o que a máquina não deixa você fazer errado.
 
+A skill `receitas-de-codigo` aponta a receita da §5 pelo assunto, e a esteira confere que ela continua apontando para cá.
+
 Antes deste guia, leia o `CLAUDE.md`, ao menos "Em uma frase" e "As seis regras que não se negociam". Depois deste,
 leia a regra de `.claude/rules/` da área em que você vai mexer.
 

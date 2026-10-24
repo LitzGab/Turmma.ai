@@ -9,6 +9,9 @@ Como isso será construído, em um parágrafo. Sem repetir os requisitos do PRD.
 
 ## 2. Módulos afetados
 
+Para cada endpoint, tabela, job, chamada de IA ou tela, a receita e o exemplo estão na skill `receitas-de-codigo`; o que se afasta
+da receita vai à seção 11, com o motivo.
+
 | Módulo | Novo ou alterado | O quê |
 |---|---|---|
 
