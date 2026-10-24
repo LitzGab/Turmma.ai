@@ -31,6 +31,8 @@ revisores ficam idênticos, com teste; e o `executar-task` perde o diário de in
 - [ ] 18.3 — Blocos repetidos entre revisores: um texto só, igual em todos
 - [ ] 18.4 — `executar-task`: incidentes datados para `docs/processo-licoes.md`, com data e origem; a autoconferência vira
   até doze perguntas no `task-template.md`
+- [ ] 18.4a — `executar-task` e `corrigir`: a mensagem do commit vai num arquivo, por `git commit -F <arquivo>`. O hook
+  procura `Revisões:` no começo de uma linha, e vários `-m` a deixam no meio do comando (aviso do Implementador 2, na 10.0)
 - [ ] 18.5 — Testes
 
 ## Arquivos previstos
