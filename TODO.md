@@ -1903,7 +1903,8 @@ pede. (dono: Orquestrador)
       dígito, `_` ou `#` colado); (2) D60, D66, D68 e D70, que a regra 70 também cita, entram no termo do `conformidade-reviewer`,
       tirando D60 da lista "não soma" do teste. Muda o conjunto de guardiões de um arquivo, com teste e bloco de mutação (dono:
       Arquiteto; origem: `tasks/correcoes/2026-10-24-decisao-soma-conformidade.md`, privacy-guardian e conformidade-reviewer 1ª)
-- [ ] **(X7, retro, M7) Correção "acabamento de texto da X7"**: (1) os comentários que dizem que a lógica do hook mora em
+- [x] **(X7, retro, M7) Correção "acabamento de texto da X7"** (feito em 24/10/2026, correção
+      `2026-10-24-acabamento-de-texto-x7`, `8bcd4aa`): (1) os comentários que dizem que a lógica do hook mora em
       `revisoes.ts` (`tools/ci/etapas-de-guarda.ts:119`, `tools/ci/e2e-que-cita-literal.ts:4`, `tools/processo/sequencia-do-portao.ts:80`,
       e o `executar-task/SKILL.md` com `MARCAS_DE_DIRETIVA` e `DOCUMENTO_QUE_UMA_SUITE_LE`), o cabeçalho de
       `tools/processo/harness/metadados.test.ts:12` (sem a regra e o `settings.json`) e a frase morta do
