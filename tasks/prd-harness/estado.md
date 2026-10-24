@@ -10,13 +10,18 @@
   rodada 10 (`b7a8a7f`), 20 tarefas (`d57bf2b`), sem mudança de desenho nem de critério do PRD
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
-- **Espero:**
-  - linha 1: ociosa. A 20.0 se encontrou em `d5377d7` (~03:00 de 24/10)
-  - linha 2: ociosa. A 21.0 se encontrou em `57f9cd3` (encontro `68200ca`, ~02:31 de 24/10)
-  - linha 3: ociosa; não há outra tarefa. A 20.0 é a última: depois do encontro dela, o passo 8 (validação)
-  - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
+- **Espero:** (21 de 21 tarefas concluídas; base `fc51411`, encontro da 20.0)
+  - linha 1 (`Implementador`/`Mesa`): **ensaio do RF31**, correção `2026-10-24-dockerignore-reengenharia` (o item "(X5, RF31)" do
+    `TODO.md`: `.reengenharia` no `.dockerignore` e em `tools/ci/dockerfile.test.ts`), 1ª tentativa, desde ~03:10 de 24/10. O
+    pedido inclui provar que um commit sem revisão por `/usr/bin/git` é recusado no andar da linha, registrado no documento da correção
+  - linha 2 (`Implementador 2`/`Mesa 2`): correção `2026-10-24-fixture-maestri-list` (regravar a fixture com a saída do meu
+    terminal, com as linhas numeradas, conferida pelo privacy-guardian), 1ª tentativa, desde ~03:10 de 24/10
+  - linha 3: ociosa
+  - cabeçalhos dos quatro reiniciados conferidos (Sonnet, `@implementador`/`@mesa-de-revisao`, checkout da linha, sem `.maestri/roles`)
+  - depois dos dois encontros: commit "antes da validação", o `Validador` reiniciado no andar (o cabeçalho dele é o 4º papel do
+    RF31; o do `Arquiteto` se confere no próximo reinício), e o passo 8
 - **Devo ainda:**
-  - do relatório da 20.0 (RF31): no meu primeiro `/clear`, conferir se `.processo/limpeza.json` ganha `feita` (o `/clear` de sessão sem papel no térreo esconde uma limpeza perdida); regravar `tools/processo/__fixtures__/maestri-list.txt` com a saída do meu terminal (linhas numeradas, sem caminho de usuário nem título de sessão: repositório público), por correção; a transcrição da prova do 20.6 em `~/.claude/projects` foi apagada; o `TODO.md` ganhou duas linhas "Da X7" (`limpeza.json` ancorado no térreo e `limpeza.json` que não é objeto); SKILL+protocolo+6-tarefa somam 23.967 B (teto 24.000)
+  - do relatório da 20.0 (RF31): no meu primeiro `/clear` **depois do pouso** (o hook novo só vale no térreo quando a X7 pousar), conferir se `.processo/limpeza.json` ganha `feita` (o `/clear` de sessão sem papel no térreo esconde uma limpeza perdida); regravar `tools/processo/__fixtures__/maestri-list.txt` com a saída do meu terminal (linhas numeradas, sem caminho de usuário nem título de sessão: repositório público), por correção; a transcrição da prova do 20.6 em `~/.claude/projects` foi apagada; o `TODO.md` ganhou duas linhas "Da X7" (`limpeza.json` ancorado no térreo e `limpeza.json` que não é objeto); SKILL+protocolo+6-tarefa somam 23.967 B (teto 24.000)
   - no fechamento, levar ao `TODO.md` o "sem aplicar" da Mesa na 19.0 (r2): o comentário do cabeçalho do
     `metadados.test.ts` (regra e `settings.json`), a nota na 19.3, e a revisão da `lgpd-brasil`
   - no fechamento, levar ao `TODO.md` as três "Recomendações sem aplicar" do `4_task.md` (destino TODO.md)

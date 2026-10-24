@@ -125,8 +125,11 @@ describe('um Dockerfile só, com um alvo por serviço', () => {
     for (const estagio of deImagem) expect(estagio.de, estagio.nome).toBe(IMAGEM_DO_NODE)
   })
 
-  it('o contexto de build fica fora do que a imagem não usa: mockups, .processo e .reengenharia', () => {
-    const ignorados = lerArquivo('.dockerignore').split('\n')
-    for (const pasta of ['mockups', '.processo', '.reengenharia']) expect(ignorados, pasta).toContain(pasta)
+  it('o contexto de build fica fora do que a imagem não usa: mockups e .processo', () => {
+    const ignorados = lerArquivo('.dockerignore')
+      .split('\n')
+      .map((linha) => linha.trim().replace(/^\/|\/$/g, ''))
+    for (const pasta of ['mockups', '.processo']) expect(ignorados, pasta).toContain(pasta)
+    expect(ignorados, '.reengenharia foi apagada no fechamento da X5 (R64)').not.toContain('.reengenharia')
   })
 })
