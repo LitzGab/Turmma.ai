@@ -14,13 +14,13 @@
   `aviso-de-sessao.sh:23` só reconhece `/seguir ` no começo, e a mensagem colada real chega `<pasted_content id=…>\n/seguir …`
   (o próprio relatório do Validador chegou assim a esta sessão). Maior M1: o `linhas.ts abandonar` (RF6) não está em passo
   nenhum do `/seguir`. Menores m1–m3 vão ao `TODO.md` no fechamento (seção 6 do `validacao.md`)
-- **Espero:** as duas correções, uma por achado, que não se tocam:
-  - linha 1: ociosa; a correção `2026-10-24-aviso-mensagem-colada` (C1) se encontrou em `7346053` (03:18)
-  - linha 2: correção `2026-10-24-seguir-abandonar-linha` (M1), 1ª tentativa, com o `Implementador 2` e a `Mesa 2`
-  - linha 3: ociosa
-  - com os dois encontros: commit "antes da validação", o `Validador` reiniciado no andar para a 2ª rodada (só RF29, M1 e a
-    esteira do commit novo, como a seção 5 do `validacao.md` diz), e depois o passo 8
+- **Correções da validação encontradas (24/10):** C1 em `7346053` (linha 1); M1 em `8df95e4`, encontro `98cac20` (linha 2),
+  esteira `40069855328` rodando. As três linhas ociosas
+- **Espero:** o `RELATÓRIO` do `Validador`, 2ª rodada (só RF29, M1 e o que as duas correções mudaram, seção 5 do
+  `validacao.md`), sobre o commit "antes da validação". Com ele, o passo 8 (`esteira.ts --fechamento`, depois `linhas.ts fechar`)
 - **Devo ainda:**
+  - no fechamento, levar ao `TODO.md` o que a Mesa 2 deu de destino na correção M1 (`tasks/correcoes/2026-10-24-seguir-abandonar-linha.md`,
+    tabela): devolver "Não chega como mensagem:" no PEDIDO de estado e dar sujeito a "e reabra com abrir" no `6-tarefa.md` (faltam 21 B no teto)
   - no fechamento, pedir ao `Arquiteto` o ajuste da `techspec.md` §5(h) e §12, que o C1 deixou desatualizadas (o texto está na ordem r2 da Mesa e em `tasks/correcoes/2026-10-24-aviso-mensagem-colada.md`)
   - do relatório da 20.0 (RF31): no meu primeiro `/clear` **depois do pouso** (o hook novo só vale no térreo quando a X7 pousar), conferir se `.processo/limpeza.json` ganha `feita` (o `/clear` de sessão sem papel no térreo esconde uma limpeza perdida); regravar `tools/processo/__fixtures__/maestri-list.txt` com a saída do meu terminal (linhas numeradas, sem caminho de usuário nem título de sessão: repositório público), por correção; a transcrição da prova do 20.6 em `~/.claude/projects` foi apagada; o `TODO.md` ganhou duas linhas "Da X7" (`limpeza.json` ancorado no térreo e `limpeza.json` que não é objeto); SKILL+protocolo+6-tarefa somam 23.967 B (teto 24.000)
   - no fechamento, levar ao `TODO.md` o "sem aplicar" da Mesa na 19.0 (r2): o comentário do cabeçalho do
@@ -37,7 +37,7 @@
     100 caminhos); as notas da 10.0, do `tasks.md:26`, da saída 5 do encontro (17.2) e do `-F` (18.4a) aplicadas
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `7346053` (encontro da correção C1, linha 1, push feito), esteira `40069641584` rodando. Antes: `f0881d9` (validação reprovada). Antes: `53944c1` (encontro da correção da linha 2, push feito), esteira `40068026208` rodando. Antes: `ae95688` (encontro da correção da linha 1), esteira `40067862653`. Antes: `68200ca` (encontro da 21.0, push feito), esteira `40066578823` na fila; a `40064817905` (em `9a86e4c`) correndo. Antes: `9a86e4c` (encontro da 19.0). Antes: `9232548` (encontro da 18.0), esteira `40062318436` rodando ao ler. Antes: `e77d55f` (encontro da 17.0); esteiras `40059951136` (em `e77d55f`) na fila e `40057552550` (em `1f066fe`) correndo. Antes: `1f066fe` (encontro da 16.0); a última concluída,
+- **Base:** `spec/harness` em `98cac20` (encontro da correção M1, linha 2, push feito), esteira `40069855328` rodando. Antes: `7346053` (encontro da correção C1, linha 1, push feito), esteira `40069641584`. Antes: `f0881d9` (validação reprovada). Antes: `53944c1` (encontro da correção da linha 2, push feito), esteira `40068026208` rodando. Antes: `ae95688` (encontro da correção da linha 1), esteira `40067862653`. Antes: `68200ca` (encontro da 21.0, push feito), esteira `40066578823` na fila; a `40064817905` (em `9a86e4c`) correndo. Antes: `9a86e4c` (encontro da 19.0). Antes: `9232548` (encontro da 18.0), esteira `40062318436` rodando ao ler. Antes: `e77d55f` (encontro da 17.0); esteiras `40059951136` (em `e77d55f`) na fila e `40057552550` (em `1f066fe`) correndo. Antes: `1f066fe` (encontro da 16.0); a última concluída,
   `40054774558` em `c1759e2`, **verde** (a `40052965683`, em `822cec2`, cancelada pelo push seguinte). Antes: `c1759e2` (encontro
   da 14.0). Antes: `822cec2` (encontro da 13.0). Antes: `ca159fa` (encontro da 12.0), esteira `40049333195`. Antes: `f6d13ea` (encontro da 11.0), esteira `40046467544` (em `76b3b71`). Antes: `ae839fc` (encontro da 10.0),
   com as esteiras `40026244263` (em `0068e5d`) e `40039836142`. Com a 4.0, o `esteira.ts` pula a cancelada e lê a última concluída. As três anteriores (`40017905038`,
