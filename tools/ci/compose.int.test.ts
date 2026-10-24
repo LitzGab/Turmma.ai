@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { compose, composeOuFalha, recriarDoZero } from '../testes/compose.ts'
 import { AMBIENTE_DE_TESTE, ARGUMENTOS_COMPOSE, ETAPA_DO_LOG_DA_FALHA, PROJETO_TESTE, lerAmbienteDeTeste, valorObrigatorio } from './compose.ts'
+import { lerLinhaDoDespejo } from './despejo-da-falha.ts'
 import { raizRepositorio } from './executar.ts'
 
 /** Ambiente mínimo, sem nenhuma variável do projeto herdada do shell de quem roda. */
@@ -256,19 +257,17 @@ describe('ambiente do compose', () => {
 
     const carimbos = new Map<string, number[]>()
     for (const linha of linhas) {
-      // `<serviço>-1  | <RFC3339Nano> <mensagem do próprio serviço>`
-      // A fração é opcional: o RFC3339Nano do Go corta zeros à direita, e nanossegundo exatamente 0
-      // sai `...:09Z`. É ~1e-9 por linha, mas `(\.\d+)?` é de graça e tira o vermelho falso.
-      const partida = /^(?<servico>\S+)\s+\|\s+(?<carimbo>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z)\s/.exec(linha)
-      expect(partida?.groups, `linha sem carimbo do Docker: ${linha.slice(0, 120)}`).toBeDefined()
-      const instante = Date.parse(partida?.groups?.['carimbo'] ?? '')
-      expect(Number.isNaN(instante)).toBe(false)
-      const servico = partida?.groups?.['servico'] ?? ''
-      carimbos.set(servico, [...(carimbos.get(servico) ?? []), instante])
+      // `<serviço>-1  | <RFC3339Nano> <mensagem do próprio serviço>`, lido por `lerLinhaDoDespejo`: o `|` do
+      // prefixo é do compose e não entra na promessa (a esteira 40095652612 recebeu uma linha sem ele). O
+      // `JSON.stringify` mostra o que de fato veio, se a próxima linha estranha trouxer outro caractere.
+      const lida = lerLinhaDoDespejo(linha)
+      expect(lida, `linha sem carimbo do Docker: ${JSON.stringify(linha.slice(0, 120))}`).toBeDefined()
+      if (lida === undefined) continue // o `expect` acima já derrubou o caso; isto só estreita o tipo
+      carimbos.set(lida.servico, [...(carimbos.get(lida.servico) ?? []), lida.instante])
     }
 
-    // Quem faz o trabalho de separar carimbo do Docker de carimbo do serviço é a **regex acima**, que
-    // exige o `T` e o `Z` literais: ela reprova os três formatos reais (`1:M 21 Sep 2026` do Redis,
+    // Quem faz o trabalho de separar carimbo do Docker de carimbo do serviço é a **regex de
+    // `despejo-da-falha.ts`**, que exige o `T` e o `Z` literais: ela reprova os três formatos reais (`1:M 21 Sep 2026` do Redis,
     // `2026-09-21 20:55:01.773 UTC` do Postgres, `"ts":1789870704.789` do Caddy) e qualquer forma com
     // deslocamento `-03:00`. Os limites abaixo pegam só **erro de época** — epoch, ano errado, fuso a
     // leste rotulado Z. Um carimbo em hora local de fuso a oeste rotulado Z passa por eles, e isso é
