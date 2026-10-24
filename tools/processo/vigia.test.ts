@@ -74,14 +74,40 @@ describe('acordar ou não', () => {
 })
 
 describe('a saída real do maestri list (RF28)', () => {
-  it('lê os terminais do time entre os agentes ligados, e não o do bloco "You" nem o Orquestrador', () => {
-    const lista = readFileSync(FIXTURE_DO_LIST, 'utf8')
-    // A fixture é a saída crua de `maestri list`, gravada em 24/10/2026 no terminal do Implementador (tarefa 20.0): o do
-    // Orquestrador, onde a vigia roda, pode trazer outros blocos e as linhas numeradas (`Implementador 2`). Regrave-a quando o
-    // Maestri mudar o formato. Os dois blocos que o código lê têm de estar nela.
+  const lerFixture = () => readFileSync(FIXTURE_DO_LIST, 'utf8')
+  const TIME = ['Arquiteto', 'Implementador', 'Mesa', 'Validador', 'Implementador 2', 'Mesa 2', 'Implementador 3', 'Mesa 3']
+
+  it('lê os terminais do time entre os agentes ligados, com as linhas numeradas, e deixa de fora o que não é do time', () => {
+    const lista = lerFixture()
+    // A fixture é a saída crua de `maestri list`, gravada em 24/10/2026 no terminal do Orquestrador, onde a vigia roda: traz
+    // as linhas numeradas (`Implementador 2`, `Mesa 3`), um terminal que não é do time (`Claude Code #2`), uma nota ligada
+    // (`Comandos`, depois de "Connected agents:") e as linhas `⎿` de quem está ligado a quem. Regrave-a quando o Maestri
+    // mudar o formato. Os dois blocos que o código lê têm de estar nela.
     expect(lista).toContain('Connected agents:')
     expect(lista).toContain('You:')
-    expect(nomesDoTime(lista)).toEqual(['Mesa'])
+    expect(lista).toContain('- name: "Claude Code #2"')
+    expect(lista).toContain('- name: "Comandos"')
+    expect(nomesDoTime(lista)).toEqual(TIME)
+    expect(nomesDoTime(lista)).not.toContain('Claude Code #2')
+    expect(nomesDoTime(lista)).not.toContain('Comandos')
+  })
+
+  it('não lê o bloco "You": nome do time ali, como na lista de um terminal do time, não entra', () => {
+    const lista = lerFixture()
+    // A fixture, tirada do Orquestrador, tem só `Claude Code` no `You:`; a lista de um terminal do time traz um papel ali.
+    // Troca-se o bloco por um papel e o resultado tem de ser o mesmo: sem o corte em `Connected agents:`, `Implementador`
+    // entraria duas vezes.
+    const comPapelNoYou = `You:\n  - name: "Implementador"\n${lista.slice(lista.indexOf('\nConnected agents:'))}`
+    expect(comPapelNoYou).not.toBe(lista)
+    expect(nomesDoTime(comPapelNoYou)).toEqual(TIME)
+  })
+
+  it('a fixture não leva caminho de usuário, e-mail nem endereço fora do loopback (o repositório é público)', () => {
+    const lista = lerFixture()
+    expect(lista).not.toMatch(/\/home\/|\/Users\/|C:\\|~\//)
+    expect(lista).not.toMatch(/[\w.+-]+@[\w-]+\.[\w.-]+/)
+    const enderecos = [...lista.matchAll(/https?:\/\/([^\s:/"]+)/g)].map((achado) => achado[1])
+    expect(enderecos.every((endereco) => endereco === '127.0.0.1' || endereco === 'localhost')).toBe(true)
   })
 })
 

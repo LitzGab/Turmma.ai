@@ -1,6 +1,23 @@
 You:
-  - name: "Implementador"
+  - name: "Claude Code", maestro: true
 
 Connected agents:
-  - name: "Claude Code"
+  - name: "Arquiteto"
+  - name: "Implementador"
+    ⎿ agent: "Mesa"
   - name: "Mesa"
+    ⎿ agent: "Implementador"
+    ⎿ portal: "Vitrine computador" - url: http://127.0.0.1:28090
+  - name: "Validador"
+  - name: "Claude Code #2"
+  - name: "Implementador 2"
+    ⎿ agent: "Mesa 2"
+  - name: "Mesa 2"
+    ⎿ agent: "Implementador 2"
+  - name: "Implementador 3"
+    ⎿ agent: "Mesa 3"
+  - name: "Mesa 3"
+    ⎿ agent: "Implementador 3"
+
+Connected notes (use `maestri note read/write/edit`):
+  - name: "Comandos"
