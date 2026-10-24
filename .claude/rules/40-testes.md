@@ -96,6 +96,23 @@ Ollama local cobre o que precisa de modelo de verdade.
 `.skip`, teste comentado, `any` para calar o compilador, asserção que sempre passa, e
 desabilitar teste para "destravar a tarefa". Teste vermelho é informação, não obstáculo.
 
+## As regras e a checagem de cada uma
+
+1. **O teste prova a regra de negócio.** Apagada a regra, ele falha; "retornou 200" não conta.
+   Checagem: `tools/processo/mutacoes.test.ts`, `test-engineer`.
+2. **Todo módulo entrega o teste de isolamento** entre escolas, na camada de integração.
+   Checagem: só a revisão garante (`tenancy-guardian`, `test-engineer`).
+3. **Nenhum teste chama provedor pago.** O adaptador falso ou o Ollama local cobrem.
+   Checagem: só a revisão garante (`llm-integrator`, `test-engineer`).
+4. **O que é probabilístico tem amostra fixa e taxa mínima declarada.**
+   Checagem: só a revisão garante (`test-engineer`).
+5. **É proibido** `.skip`, teste comentado, `any` para calar o compilador e asserção que sempre passa.
+   Checagem: `guardas/teste-sem-desligar` pega o .skip e o .only; só a revisão garante o teste comentado, o any e a asserção que sempre passa (`test-engineer`).
+6. **Os fluxos da seção "Os fluxos que exigem E2E" têm e2e.**
+   Checagem: só a revisão garante (`test-engineer`).
+7. **O portão da tarefa roda antes do commit, e código de produção sem mutação não recebe carimbo** (RF17).
+   Checagem: `tools/processo/portao-local.test.ts`, `tools/processo/hook-portao.test.ts`, `tools/processo/mutacoes.test.ts`.
+
 ## O portão
 
 Há dois, e o que muda entre eles é o quanto roda e quem espera (D78, D79).

@@ -38,16 +38,19 @@ acontece se isso vazar?"**.
 1. **Campo pessoal novo só entra se estiver na tabela de dados de `docs/lgpd.md`**, com
    finalidade e retenção preenchidas. Não está lá, não entra na migration. Atualizar a
    tabela faz parte da mesma tarefa, não de uma futura.
+   Checagem: só a revisão garante (`privacy-guardian`).
 
 2. **Aluno não tem** e-mail, telefone, CPF, foto, endereço, data de nascimento nem
    diagnóstico. O contato é sempre do responsável. Isso não é excesso de zelo: é o que faz
    um vazamento nosso ser muito menos grave que o de um concorrente. No login ou na
    importação pela conta Google ou Microsoft da escola (D48), guardamos só o identificador
    opaco da conta; e-mail e foto que o provedor devolve são descartados antes de gravar.
+   Checagem: `apps/api/test/contratos.test.ts` (e-mail na saída), `packages/shared/src/estrutura/documento-na-matricula.test.ts` (CPF na importação); só a revisão garante o resto, telefone, foto, endereço e nascimento (`privacy-guardian`).
 
 3. **Necessidade específica é dado sensível** (art. 11). A ferramenta de adaptação precisa
    saber *que adaptação fazer*, não *qual é o diagnóstico*. Guarde "prova com fonte ampliada
    e tempo adicional", não o laudo.
+   Checagem: só a revisão garante (`privacy-guardian`); o que há de teste: `packages/nucleo/src/db/schema/mvp/tabelas-do-mvp.int.test.ts`.
 
 ## Exposição — onde o vazamento realmente acontece
 
@@ -61,17 +64,23 @@ acontece se isso vazar?"**.
    return { id: aluno.id, nome: aluno.nome, turmaId: aluno.turmaId }
    ```
 
+   Checagem: `apps/api/test/contratos.test.ts`, `privacy-guardian`.
+
 5. **Autorização por objeto, não só por rota.** Papel de professor não basta; aquele aluno
    precisa ser de uma turma dele. Faça sempre o teste de trocar o id na URL.
+   Checagem: só a revisão garante (`privacy-guardian`, `tenancy-guardian`); o que há de teste: `apps/api/test/acesso-da-turma.int.test.ts`.
 
 6. **"Não encontrado" e "sem permissão" respondem igual.** Respostas diferentes confirmam a
    existência do registro.
+   Checagem: só a revisão garante (`privacy-guardian`); o que há de teste: `apps/api/test/borda-de-entrada-ultimos-modulos.int.test.ts`.
 
 7. **Arquivo em bucket privado, com URL assinada de validade curta.** Nunca URL permanente,
    nunca bucket público "porque é só uma imagem de prova".
+   Checagem: `packages/nucleo/src/titular/armazem-s3.test.ts`, `privacy-guardian`.
 
 8. **Convite é token único, com expiração, uso único e revogação.** Link de sala sem
    validade circula em grupo de WhatsApp e vira porta aberta meses depois.
+   Checagem: `apps/api/test/convite.int.test.ts`, `apps/api/test/login-convite-revogado.int.test.ts`.
 
 ## Log e rastro
 
@@ -86,52 +95,65 @@ acontece se isso vazar?"**.
    logger.info('correcao.concluida', { escolaId, avaliacaoId, alunoId })
    ```
 
+   Checagem: `guardas/log-sem-dado-pessoal`, `guardas/log-sem-conteudo-montado`.
+
 10. **Auditoria obrigatória** em: leitura de dado de aluno por coordenação ou rede,
     leitura nominal de indicador de professor pela coordenação (D45), exportação, alteração
     de nota, alteração de permissão, aprovação de saída de IA. Auditoria não é log: é
     registro consultável, com autor, data e finalidade. O registro de acesso exigido pelo
     Marco Civil (art. 15, 6 meses) é outra coisa e tem retenção própria.
+    Checagem: `packages/nucleo/src/auditoria/porta-unica.test.ts`, `packages/nucleo/src/auditoria/acoes.test.ts`, `privacy-guardian`.
 
 10a. **Indicador de professor é dado pessoal do professor.** Entra no mapa de dados de
      `docs/lgpd.md` com finalidade de apoio pedagógico, nunca de decisão sobre o professor,
      antes de qualquer migration. Métrica que forma perfil profissional dá ao professor o
      direito de pedir revisão (art. 20).
+     Checagem: só a revisão garante (`privacy-guardian`, `conformidade-reviewer`).
 
 11. **Erro para o cliente é curto e tipado.** Stack trace nunca sai da API.
+    Checagem: `guardas/erro-tipado`, `apps/api/test/erro.int.test.ts`.
 
 ## IA
 
 12. **Envio externo leva o mínimo, com identificador em vez de nome.** O modelo não precisa
     saber que é a Maria; precisa da dúvida e do trecho do material.
+    Checagem: `apps/api/src/tutor/tutor-modelo.int.test.ts`, `packages/nucleo/src/ia/provedor.test.ts`, `privacy-guardian`, `llm-integrator`.
 
 13. **Sem contrato vedando treinamento com nosso dado, use o provedor local.** Não existe
     exceção "só para testar com dado real". O contrato também precisa permitir serviço
     usado por menor de idade e dizer onde o dado é processado: os termos da Gemini API
     (AI Studio) vedam serviço "provável de ser acessado" por menor de 18, e o DPA da
     Maritaca lista processamento no Brasil, nos EUA e na UE.
+    Checagem: `packages/nucleo/src/ia/provedor.test.ts`, `privacy-guardian`.
 
 14. **Conversa de tutor tem retenção curta e acesso restrito ao professor da turma.** A
     camada de rede nunca alcança conteúdo de conversa, só agregado.
+    Checagem: só a revisão garante (`privacy-guardian`) que a camada de rede não chega à conversa; o que há de teste: `apps/api/test/retencao.int.test.ts`, `apps/api/src/tutor/tutor.int.test.ts`.
 
 ## Ciclo de vida
 
 15. Exclusão é lógica e auditada. Eliminação a pedido do titular apaga de fato e propaga
     para backup na próxima rotação.
+    Checagem: `apps/api/test/ciclo-de-vida.int.test.ts`, `apps/api/test/eliminacao-agendada.int.test.ts`.
 
 16. Rotina de expurgo conforme a retenção, que é configurável por escola, porque o prazo de
     guarda de registro escolar varia por rede.
+    Checagem: `apps/api/test/retencao.int.test.ts`, `apps/worker/test/expurgo.int.test.ts`.
 
 17. **Seed de desenvolvimento e de demonstração é sintético.** Dump de produção em máquina
     de desenvolvedor é proibido, mesmo "só para depurar um caso". É uma das formas mais
     comuns de vazamento e uma das mais fáceis de evitar.
+    Checagem: só a revisão garante (`privacy-guardian`).
 
 18. Fim de vínculo desativa a conta. Professor que saiu em março não continua vendo a turma
     em outubro.
+    Checagem: `apps/api/test/acesso-fim-do-vinculo.int.test.ts`.
 
 ## Direitos do titular
 
 19. Acesso, correção, eliminação, portabilidade e lista de compartilhamento precisam ser
     atendidos **por código**. Processo manual não escala e não sobrevive a auditoria.
+    Checagem: `apps/api/test/arquivo-do-titular.int.test.ts`, `apps/api/test/pedido-titular.int.test.ts`.
 
 ## O teste de fechamento
 

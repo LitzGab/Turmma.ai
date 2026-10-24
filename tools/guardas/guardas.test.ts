@@ -239,7 +239,7 @@ describe('guarda do teste desligado', () => {
 describe('guarda de log com dado pessoal', () => {
   it.each([
     'apps/api/src/sistema/correcao.service.ts',
-    'apps/api/src/ia/adapters/openai.adapter.ts',
+    'packages/nucleo/src/ia/adaptador-openai-compat.ts',
     'apps/api/test/correcao.int.test.ts',
     'apps/web/src/logica.ts',
     'packages/nucleo/src/fila/worker.ts',
@@ -310,13 +310,16 @@ describe('guarda de SDK de provedor de IA', () => {
     'apps/api/src/sistema/modelo.ts',
     'apps/api/src/ia/porta.ts',
     'apps/api/src/ia/adapters.ts',
+    'apps/api/src/ia/adapters/x.ts',
     'apps/web/src/modelo.ts',
     'packages/nucleo/src/modelo.ts',
+    'packages/nucleo/src/ia/porta.ts',
+    'packages/nucleo/src/ia/adaptador.ts',
   ])('reprova import, alias, subcaminho, export, require, import() e typeof import() em %s', async (caminho) => {
     expect(await lintar(eslint, 'sdk-de-ia.ts', caminho)).toEqual(marcasDeViolacao('sdk-de-ia.ts'))
   })
 
-  it.each(['apps/api/src/ia/adapters/openai.adapter.ts', 'apps/api/src/ia/adapters/google/cliente.ts'])(
+  it.each(['packages/nucleo/src/ia/adaptador-openai-compat.ts', 'packages/nucleo/src/ia/adaptador-falso.ts'])(
     'deixa o mesmo código passar dentro dos adaptadores: %s',
     async (caminho) => {
       expect(await lintar(eslint, 'sdk-de-ia.ts', caminho)).toEqual([])
@@ -645,7 +648,7 @@ describe('tamanho com catraca (RF11, R37)', () => {
 describe('configuração das guardas', () => {
   it('as únicas exceções são o SDK nos adaptadores, a tabela no repository, no teste e no db/ do núcleo, a própria guarda de tabela, o erro tipado em teste, em __fixtures__ e no main.tsx da web, o teste do redact e a mensagem repassada pelo LoggerDoNest', () => {
     expect(EXCECOES_DAS_GUARDAS).toEqual([
-      { files: ['apps/api/src/ia/adapters/**'], regras: REGRAS_DE_SDK_DE_IA },
+      { files: ['packages/nucleo/src/ia/adaptador-*.ts'], regras: REGRAS_DE_SDK_DE_IA },
       { files: ['**/*.repository.ts'], regras: REGRAS_DE_TENANT },
       { files: ARQUIVOS_DE_TESTE, regras: REGRAS_DE_TENANT },
       { files: ['packages/nucleo/src/db/**'], regras: REGRAS_DE_TENANT },

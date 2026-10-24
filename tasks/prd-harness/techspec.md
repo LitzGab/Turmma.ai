@@ -318,6 +318,15 @@ teste prova a base fixa (`CLAUDE.md` mais as regras sem `paths:`) em até 40.000
 porque só a lista de D1 a D81, uma linha por decisão, ocupa 83. A medida de depois: 12.920 B no `CLAUDE.md` e 34.326 B de
 base fixa (antes, 36.351 B e 75.218 B). O "~150" do PRD fica como estimativa; o vermelho é o do `cenarios.md` C, RF20.
 
+**A checagem de cada item das regras (16.0, 23/10/2026).** Cada item numerado das nove regras termina numa linha
+`Checagem:`, com o teste (o caminho), a guarda (`guardas/<nome>`) ou o revisor (o nome do arquivo de `.claude/agents/`), ou com a
+frase "só a revisão garante" (e o revisor entre parênteses). `tools/processo/harness/checagens.test.ts` prova que cada
+um existe. A regra 40 não tinha item numerado, e ganhou a seção "As regras e a checagem de cada uma", com sete. As checagens
+custaram 5,2 KB: a base fixa passou de 34.326 B para 39.535 B, ainda abaixo dos 40.000 B do RF20. A extração dos caminhos ficou
+exportada de `caminhos.test.ts` (`extrairCaminhos`, `ehCaminho`, `problemaDoCaminho`), e a 21.0 a move para `caminhos.ts` sem
+mudar o que devolve. Os caminhos conferidos hoje são 181, e não os 121 que a especificação contou: as checagens das regras
+acrescentaram os testes que elas citam. O teste não prova que a checagem escolhida prova o item; isso é da revisão.
+
 ## 12. Premissas não verificadas
 
 - ✅ VERIFICADO pela 1.0 (`1_task.md`, "Prova da premissa", 23/10/2026): o `CLAUDE_CODE_AGENT` chega ao Bash do papel

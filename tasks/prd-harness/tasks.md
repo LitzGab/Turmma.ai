@@ -86,7 +86,7 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [x] 15.2 `paths:` nas quatro regras; 10, 20 e 70 sempre carregadas
   - [x] 15.3 Testes: RF20 do `cenarios.md`, com a medida antes e depois
 
-- [ ] **16.0 — Cada regra aponta a checagem que a garante, e nada cita caminho que não existe**
+- [x] **16.0 — Cada regra aponta a checagem que a garante, e nada cita caminho que não existe**
   - [ ] 16.1 Checagem citada ou "só a revisão garante" em cada regra (RF25)
   - [ ] 16.2 Caminhos citados em papel, regra e guarda; a isenção da guarda de IA (RF24)
   - [ ] 16.3 Testes: RF24 e RF25 do `cenarios.md`
