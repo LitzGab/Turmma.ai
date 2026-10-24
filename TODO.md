@@ -1846,9 +1846,15 @@ pede. (dono: Orquestrador)
 - [ ] **(X7, correção M1) A regra 17 vale para o texto embutido em `tools/`** (`tools/ia/`, `tools/demonstracao/`): agora a linha
       nova de `tools/` aparece no stdout do `--faltando` e no log da esteira; escrever em `docs/lgpd.md` ou na regra 20 que esse
       texto é sintético, sempre (dono: Joaquim; origem: a mesma correção, privacy-guardian 1ª)
-- [ ] **(X7, retro, M2) Mutação vermelha só vale por asserção**: em `tools/processo/mutacoes.ts`, a mutação que deixa o teste
+- [x] **(X7, retro, M2) Mutação vermelha só vale por asserção** (feito em 24/10/2026, correção
+      `2026-10-24-mutacao-so-por-assercao`, `c6c431a`): em `tools/processo/mutacoes.ts`, a mutação que deixa o teste
       vermelho por erro de carga (sintaxe, módulo que não carrega, nenhum teste rodou) é recusada com o motivo e não conta como
       provada (4.0, bloco com erro de sintaxe; 18.0, três mutações vermelhas por exceção)
+- [ ] **(X7, correção M2) O que a M2 deixou**: (1) a herança do ambiente pelo `tools/ci/executar.ts`
+      (`{ ...process.env, ...etapa.ambiente }`) até o Playwright do `tools/ci/e2e.ts` foi conferida só por leitura: prová-la pede
+      subir o compose do e2e; (2) o cabeçalho de `tools/processo/mutacoes.ts` cita dois dos três casos de carga; (3) a mutação em que
+      um caso roda e lança (`TypeError` no lugar da asserção) ainda conta como provada: separar exceção de asserção dentro do caso é
+      outro mecanismo, no Vitest e no Playwright (dono: Arquiteto; origem: `tasks/correcoes/2026-10-24-mutacao-so-por-assercao.md`)
 - [ ] **(X7, retro, M3) O portão avisa a divergência que ficou só no documento da tarefa**: em `tools/processo/portao-local.ts`,
       se a seção "Divergências resolvidas nesta tarefa" ganhou linha no diff e nem a `techspec.md` nem o `cenarios.md` da spec
       mudaram, o portão imprime o aviso; só informa, como o `--faltando` (15.0, 18.0, 19.0; duas na X5)

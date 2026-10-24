@@ -73,7 +73,8 @@ Linha que começa com `-` sai, com `+` entra, e com espaço é contexto: fica, e
 no arquivo. Cláusula que só vale no celular (o ramo de toque, o menu de baixo) acrescenta ao cabeçalho a linha
 `projeto: celular`; ela só vale para teste de e2e, e sem ela o caso roda no `chromebook`, onde essa cláusula não é
 alcançada. O portão da tarefa aplica cada bloco, roda o teste citado, exige vermelho e restaura
-(`tools/processo/mutacoes.ts`).
+(`tools/processo/mutacoes.ts`). O vermelho tem de vir de um caso que falhou: trecho que deixa o arquivo com erro de sintaxe, ou
+o módulo sem carregar, é recusado como erro de carga. Troque-o por código válido.
 
 ## 3. Implementar
 
