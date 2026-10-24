@@ -11,11 +11,12 @@
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
 - **Espero:**
-  - linha 1 (`Implementador`/`Mesa`): **20.0** (grande), 1ª tentativa, desde ~01:50 de 24/10
-  - linha 2 (`Implementador 2`/`Mesa 2`): **21.0** (grande), 1ª tentativa, desde ~01:50 de 24/10
-  - linha 3: ociosa; não há outra tarefa. São as duas últimas: depois dos dois encontros, o passo 8 (validação)
+  - linha 1: ociosa. A 20.0 se encontrou em `d5377d7` (~03:00 de 24/10)
+  - linha 2: ociosa. A 21.0 se encontrou em `57f9cd3` (encontro `68200ca`, ~02:31 de 24/10)
+  - linha 3: ociosa; não há outra tarefa. A 20.0 é a última: depois do encontro dela, o passo 8 (validação)
   - cada `RELATÓRIO` → `linhas.ts encontro <n>`, depois `esteira.ts`
 - **Devo ainda:**
+  - do relatório da 20.0 (RF31): no meu primeiro `/clear`, conferir se `.processo/limpeza.json` ganha `feita` (o `/clear` de sessão sem papel no térreo esconde uma limpeza perdida); regravar `tools/processo/__fixtures__/maestri-list.txt` com a saída do meu terminal (linhas numeradas, sem caminho de usuário nem título de sessão: repositório público), por correção; a transcrição da prova do 20.6 em `~/.claude/projects` foi apagada; o `TODO.md` ganhou duas linhas "Da X7" (`limpeza.json` ancorado no térreo e `limpeza.json` que não é objeto); SKILL+protocolo+6-tarefa somam 23.967 B (teto 24.000)
   - no fechamento, levar ao `TODO.md` o "sem aplicar" da Mesa na 19.0 (r2): o comentário do cabeçalho do
     `metadados.test.ts` (regra e `settings.json`), a nota na 19.3, e a revisão da `lgpd-brasil`
   - no fechamento, levar ao `TODO.md` as três "Recomendações sem aplicar" do `4_task.md` (destino TODO.md)
@@ -30,7 +31,7 @@
     100 caminhos); as notas da 10.0, do `tasks.md:26`, da saída 5 do encontro (17.2) e do `-F` (18.4a) aplicadas
 - **Escopo:** a **21.0 entrou** (RF32, skill `receitas-de-codigo`, que aponta o guia), por decisão do Joaquim às ~16:10. Ela depende da
   16.0, da 18.0 e da 19.0. A revisão da spec, rodadas 11 a 13, saiu APROVADA, em `7669852`
-- **Base:** `spec/harness` em `9a86e4c` (encontro da 19.0, push feito). Antes: `9232548` (encontro da 18.0), esteira `40062318436` rodando ao ler. Antes: `e77d55f` (encontro da 17.0); esteiras `40059951136` (em `e77d55f`) na fila e `40057552550` (em `1f066fe`) correndo. Antes: `1f066fe` (encontro da 16.0); a última concluída,
+- **Base:** `spec/harness` em `68200ca` (encontro da 21.0, push feito), esteira `40066578823` na fila; a `40064817905` (em `9a86e4c`) correndo. Antes: `9a86e4c` (encontro da 19.0). Antes: `9232548` (encontro da 18.0), esteira `40062318436` rodando ao ler. Antes: `e77d55f` (encontro da 17.0); esteiras `40059951136` (em `e77d55f`) na fila e `40057552550` (em `1f066fe`) correndo. Antes: `1f066fe` (encontro da 16.0); a última concluída,
   `40054774558` em `c1759e2`, **verde** (a `40052965683`, em `822cec2`, cancelada pelo push seguinte). Antes: `c1759e2` (encontro
   da 14.0). Antes: `822cec2` (encontro da 13.0). Antes: `ca159fa` (encontro da 12.0), esteira `40049333195`. Antes: `f6d13ea` (encontro da 11.0), esteira `40046467544` (em `76b3b71`). Antes: `ae839fc` (encontro da 10.0),
   com as esteiras `40026244263` (em `0068e5d`) e `40039836142`. Com a 4.0, o `esteira.ts` pula a cancelada e lê a última concluída. As três anteriores (`40017905038`,
@@ -62,6 +63,8 @@
 | 17.0 | `3fde484` | Sonnet 5.5 | conformidade-reviewer 2, test-engineer 2, revisor-geral 2 | recomendações com destino TODO.md já entraram (4 linhas); folga do orçamento de leitura, 68 B; encontro em `e77d55f` |
 | 18.0 | `bf94e40` | Sonnet 5.5 | tenancy-guardian 1, privacy-guardian 1, conformidade-reviewer 1, infra-guardian 1, test-engineer 2, revisor-geral 2 | encontro em `9232548` |
 | 19.0 | `d699407` | Sonnet 5.5 | test-engineer 2, revisor-geral 2, privacy-guardian 1 | sem aplicar da Mesa (r2) levado a "Devo ainda"; encontro em `9a86e4c` |
+| 21.0 | `57f9cd3` | Sonnet 5.5 | test-engineer 2, revisor-geral 2, tenancy 1, privacy 1, conformidade 1 | encontro em `68200ca` |
+| 20.0 | `d5377d7` | Sonnet 5.5 | 2 rodadas (todos aprovados na 2ª) | premissa do §12 provada em parte (`20_task.md` "Divergências"); pendências levadas a "Devo ainda" |
 
 ## Esperando o Joaquim
 ## 23/10/2026 ~19:10 — X7 tarefa 10.0 (limite: 3 reprovações do test-engineer)
