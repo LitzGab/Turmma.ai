@@ -59,22 +59,62 @@ describe('o hook de entrada com o prefixo /seguir (RF29)', () => {
 
   it('com papel (qualquer um do time): nada', () => {
     for (const papel of ['implementador', 'mesa-de-revisao', 'arquiteto', 'validador']) {
-      const saida = rodar(pastaVazia(), entrada('/seguir RELATÓRIO de Implementador'), papel)
-      expect(saida.status).toBe(0)
-      expect(saida.stdout).toBe('')
+      // A checagem de `CLAUDE_CODE_AGENT` vem antes da expressão: vale para a forma pura e para a embrulhada.
+      for (const prompt of ['/seguir RELATÓRIO de Implementador', '<pasted_content id="cf73">\n\n/seguir RELATÓRIO de Implementador']) {
+        const saida = rodar(pastaVazia(), entrada(prompt), papel)
+        expect(saida.status, `${papel} ${JSON.stringify(prompt)}`).toBe(0)
+        expect(saida.stdout, `${papel} ${JSON.stringify(prompt)}`).toBe('')
+      }
     }
   })
 
-  it('sem o prefixo `/seguir `: nada, inclusive o texto que só o cita no meio ou cola o nome da skill', () => {
-    for (const prompt of ['PEDIDO de Orquestrador\nTarefa: x', 'rode o /seguir agora', '/seguirdepois algo', '/seguir', ' /seguir tarefa', '', 'RELATÓRIO\n/seguir x']) {
+  it('mensagem colada de verdade: o `<pasted_content id="…">` e a quebra de linha (às vezes com linha em branco) antes do `/seguir `', () => {
+    // A forma tirada das transcrições do Orquestrador: 611 mensagens coladas, 504 delas com `\n\n` antes do `/seguir`.
+    const corpo = '/seguir RELATÓRIO de Implementador\nTarefa: tasks/prd-x/1_task.md'
+    const formas = [
+      `<pasted_content id="cf73">\n${corpo}`,
+      `<pasted_content id="cf73">\n\n${corpo}`,
+      `<pasted_content id="a1-B_2">\r\n${corpo}`,
+      `<pasted_content id="cf73">${corpo}`,
+      `\n<pasted_content id="cf73">\n\n${corpo}`,
+      `  ${corpo}`,
+    ]
+    for (const prompt of formas) {
       const saida = rodar(pastaVazia(), entrada(prompt))
-      expect(saida.status).toBe(0)
-      expect(saida.stdout).toBe('')
+      expect(saida.status, JSON.stringify(prompt)).toBe(0)
+      expect(saida.stdout, JSON.stringify(prompt)).toContain('.claude/skills/seguir/SKILL.md')
+      expect(saida.stdout, JSON.stringify(prompt)).toContain('siga com esta entrada')
+    }
+  })
+
+  it('mensagem colada que não começa pelo `/seguir `: nada, inclusive o texto que só o cita no meio, dentro ou fora do embrulho', () => {
+    const prompts = [
+      'PEDIDO de Orquestrador\nTarefa: x',
+      'rode o /seguir agora',
+      '/seguirdepois algo',
+      '/seguir',
+      '',
+      'RELATÓRIO\n/seguir x',
+      '<pasted_content id="cf73">\nPEDIDO de Orquestrador\n/seguir x',
+      '<pasted_content id="cf73">\nrode o /seguir agora',
+      '<pasted_content id="cf73">\n/seguirdepois algo',
+      '<pasted_content id="cf73">\n/seguir',
+      '<pasted_content id="cf73">',
+      '<pasted_content id="">\n/seguir x',
+      '<pasted_content id="a b">\n/seguir x',
+      '<pasted_content id="a">\nRELATÓRIO\n</pasted_content id="a">\n<pasted_content id="b">\n/seguir x',
+      'veja:\n<pasted_content id="cf73">\n/seguir x',
+      '<outro_embrulho id="cf73">\n/seguir x',
+    ]
+    for (const prompt of prompts) {
+      const saida = rodar(pastaVazia(), entrada(prompt))
+      expect(saida.status, JSON.stringify(prompt)).toBe(0)
+      expect(saida.stdout, JSON.stringify(prompt)).toBe('')
     }
   })
 
   it('entrada que não é JSON, vazia ou sem `prompt`: sai 0 e calada, nunca bloqueia o prompt', () => {
-    for (const stdin of ['', 'isto não é json', '{}', '{"prompt":42}', '{"prompt":null}']) {
+    for (const stdin of ['', 'isto não é json', '{}', '{"prompt":42}', '{"prompt":null}', '{"prompt":["/seguir x"]}', '{"prompt":{"toString":"/seguir x"}}']) {
       const saida = rodar(pastaVazia(), stdin)
       expect(saida.status).toBe(0)
       expect(saida.stdout).toBe('')
@@ -88,12 +128,16 @@ describe('o hook de entrada com o prefixo /seguir (RF29)', () => {
     mkdirSync(join(raiz, '.claude/hooks'), { recursive: true })
     cpSync(join(REPOSITORIO, HOOK), join(raiz, HOOK))
     const tudoEm = (dir: string) => readdirSync(dir, { recursive: true }).map(String).sort()
-    const casa = pastaVazia()
-    const antes = tudoEm(raiz)
-    const saida = rodar(casa, entrada('/seguir RELATÓRIO de Implementador SEGREDO-DA-MENSAGEM'), undefined, raiz)
-    expect(saida.stdout).not.toBe('')
-    expect(tudoEm(raiz)).toEqual(antes)
-    expect(tudoEm(casa)).toEqual([])
+    // A forma pura e a embrulhada, que é o caminho que a correção do C1 abre.
+    for (const prompt of ['/seguir RELATÓRIO de Implementador SEGREDO-DA-MENSAGEM', '<pasted_content id="cf73">\n\n/seguir RELATÓRIO de Implementador SEGREDO-DA-MENSAGEM']) {
+      const casa = pastaVazia()
+      const antes = tudoEm(raiz)
+      const saida = rodar(casa, entrada(prompt), undefined, raiz)
+      expect(saida.stdout, JSON.stringify(prompt)).not.toBe('')
+      expect(saida.stdout, JSON.stringify(prompt)).not.toContain('SEGREDO-DA-MENSAGEM')
+      expect(tudoEm(raiz), JSON.stringify(prompt)).toEqual(antes)
+      expect(tudoEm(casa), JSON.stringify(prompt)).toEqual([])
+    }
   })
 })
 
