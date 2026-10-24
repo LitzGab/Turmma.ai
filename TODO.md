@@ -1863,10 +1863,16 @@ pede. (dono: Orquestrador)
       verdade que começa por "Nenhuma"**: exigir a célula ou a frase inteira ("nenhuma", "Nenhuma divergência"). O aviso só informa, e
       o erro cai para o lado de calar; muda o que `ehDivergencia` conta, com teste e bloco de mutação (dono: Arquiteto; origem:
       `tasks/correcoes/2026-10-24-portao-avisa-divergencia.md`, revisor-geral 1ª)
-- [ ] **(X7, retro, M4) A esteira não roda no push das branches de linha**: em `.github/workflows/ci.yml`, `on.push.branches` ganha
+- [x] **(X7, retro, M4) A esteira não roda no push das branches de linha** (feito em 24/10/2026, correção
+      `2026-10-24-esteira-sem-branch-de-linha`, `b1011e9`): em `.github/workflows/ci.yml`, `on.push.branches` ganha
       `'!spec/**--l*'` depois de `'spec/**'`, com o caso em `tools/ci/esteira.test.ts`, o comentário do topo do `ci.yml` e o texto da
       regra 40 ("A esteira", que diz que o commit vai à branch da linha e cada push dispara tudo). Na X7, do push ao veredito, mediana
       de 70 min e máximo de 4 h 26; um job esperou 3 h 38 por máquina, e 34 das 83 execuções eram das linhas
+- [ ] **(X7, correção M4) Textos que ainda dizem que a esteira roda em todo push de `spec/**`**, sem a exceção da linha: o
+      cabeçalho de `tools/processo/esteira.ts:1-2`, `.claude/skills/corrigir/SKILL.md:102` (e a frase igual no passo "Commit e push"),
+      e a D79 em `docs/decisoes.md` (pela `registrar-decisao`); e a frase nova da regra 40 ("A esteira") pode citar, no formato
+      "Checagem:", o teste que prova que o `segredo` é suíte exigida do portão local, que a correção não localizou (dono: Arquiteto;
+      origem: `tasks/correcoes/2026-10-24-esteira-sem-branch-de-linha.md`)
 - [ ] **(X7, retro, M5) Correção "processo seguro"**: (1) `.processo/limpeza.json` ancorado no térreo, no comando dos passos 6 e 9
       (pelo `git rev-parse --git-common-dir`) e no `contexto-inicial.sh` (pelo `$CLAUDE_PROJECT_DIR`), e o `vigia.ts` com motivo
       legível para o JSON que não é objeto (`null`, `[]`, texto), com os blocos de "Mutações" de `20_task.md` que mudam; (2) Ctrl-C
