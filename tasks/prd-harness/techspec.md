@@ -1,7 +1,7 @@
 # Tech Spec — Harness (X7)
 
 **PRD:** `tasks/prd-harness/prd.md`
-**Status:** aprovada na revisão da spec (rodada 10, `revisao-spec.md`)
+**Status:** implementada em 24/10/2026 (aprovada na revisão da spec, rodada 10, `revisao-spec.md`)
 
 Respostas do Joaquim, 23/10/2026: `core.hooksPath` pelo `prepare`; as paradas do §9; o ensaio do RF31 é o item
 "(X5, RF31)" do `TODO.md`; e, na revisão da spec, RF2, RF14, RF15, RF16 e a cópia congelada fora. Anexos:

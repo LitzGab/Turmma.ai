@@ -1928,3 +1928,32 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
 - [ ] **(X7, 18.0) Tirar o `pedagogia-reviewer` da frase "só a frase 'para a validação e a retro'"** no parágrafo 18.3 do §9 da `techspec.md`
       (ele também ganhou o bloco das fotos em três parágrafos); entra com a próxima edição do §9, na 19.0 (dono: Arquiteto; origem:
       `18_task.md`, revisor-geral 2ª rodada)
+- [ ] **(X7, validação) Os menores da validação** (`tasks/prd-harness/validacao.md`, seção 6 das duas rodadas): (m1) em sessão de
+      papel, a leitura `git config --get core.hooksPath` é negada como "mexe no core.hooksPath" (`tools/processo/comando-git.ts:422`),
+      e o papel não consegue conferir se o hook nativo está ligado; (m2) o ensaio do RF31
+      (`tasks/correcoes/2026-10-24-dockerignore-reengenharia.md:54`) não diz se a recusa veio do `PreToolUse` ou do `commit-msg`;
+      (m3) folgas curtas nos orçamentos: a base fixa (RF20) e o `/seguir` (RF26, hoje 21 B de 24.000), e o próximo acréscimo tira
+      texto antes; (m5) a seção "Revisões" de `tasks/correcoes/2026-10-24-aviso-mensagem-colada.md:62` sem a linha de cabeçalho e a
+      de separação da tabela (dono: Arquiteto, na `retro` da X7)
+- [ ] **(X7, correção M1) Retoque de texto do `.claude/skills/seguir/passos/6-tarefa.md`** (m6 da validação): devolver "Não chega
+      como mensagem:" ao `PEDIDO de estado` (`:106`) e dar sujeito a "e se abre de novo (`abrir`)" (`:121`, "e reabra com `abrir`"),
+      na próxima correção que mexa no passo 6 e sobre byte no teto de 24.000 B; acertar junto a frase "uma oração do veredito da
+      esteira" do documento da correção (dono: quem mexer no passo 6; origem: `tasks/correcoes/2026-10-24-seguir-abandonar-linha.md`,
+      "Recomendações sem aplicar")
+- [ ] **(X7, 4.0) A guarda do anexo do censo do e2e** (`tools/ci/esteira.test.ts:410-416`) procura só `.attach(` em `e2e/**/*.ts`:
+      não pega `testInfo.attachments.push(...)`, `testInfo['attach'](...)`, helper fora de `e2e/` nem `console.` num spec. Hoje nenhum
+      spec faz isso, e a garantia principal é o dado sintético; estender quando o e2e usar dado que não é montado na hora (dono:
+      Arquiteto; origem: `4_task.md`, test-engineer, revisor-geral e privacy-guardian 2ª rodada)
+- [ ] **(X7, 4.0) Antes da primeira escola real: rever o upload do censo do e2e** como artefato da esteira num repositório público,
+      quando o staging (D31) ou um e2e contra ambiente com dado real existir (dono: Joaquim, no portão da primeira escola real;
+      origem: `4_task.md`, privacy-guardian 2ª rodada)
+- [ ] **(X7, 19.0) Acabamento do `metadados.test.ts` e do `19_task.md`**: o comentário do cabeçalho do teste (`:12`) cita "papel,
+      skill nossa, hook, `CLAUDE.md`, código do processo" sem a regra e sem o `settings.json`; e a 19.3 ainda descreve o `grep` sobre
+      `.claude/` inteiro, sem a nota do recorte da Tech Spec (dono: Arquiteto, na `retro` da X7; origem: `19_task.md`, revisor-geral 2ª)
+- [ ] **(X7, 19.0) Quem revisa a skill `lgpd-brasil` quando o `npx skills update -p` trouxer versão nova**: ela já está atrás do ECA
+      Digital (`docs/processo-licoes.md`, seção 2), e skill vira instrução (dono: Joaquim; origem: `19_task.md`, privacy-guardian 1ª)
+- [ ] **(X7) Para a `retro` da X7**: (1) o lote 5/7 do e2e passou dos 45 min do job na correção do `casca`; o RF2 já marca o prazo
+      estourado de vermelho, com o nome do job, mas o lote continua no limite; (2) na fixture `e2e/casca.ts`, o passo do código do MFA
+      tem a mesma causa possível do Redis de fila parado 2 s, e falha em 20 s com o erro certo (relatório da correção
+      `agentes-suspensao-intermitente`); (3) as execuções da esteira nas branches de linha ocupam a fila do GitHub junto com a da spec
+      (dono: Arquiteto, na `retro` da X7)

@@ -319,7 +319,8 @@ ferramenta; o guia do desenvolvedor existe e o `docs/arquitetura.md` diz o que e
 as invariantes das regras 10 e 70 continuam provados; a pasta temporária da missão foi apagada com o que importa migrado; e o
 relatório final diz o que foi feito, o que foi medido e o que foi para a X6, sem número que não foi coletado.
 
-## X7 — `harness` [~]
+## X7 — `harness` [x]
+Concluída em 24/10/2026, validada em tasks/prd-harness/validacao.md.
 **Depende de:** X5 · **vem antes da X4**, que espera ela pousar; parte depois da correção do `e2e/casca.spec.ts:67`
 
 O `.claude`, as skills e o fluxo do Maestri revistos para o sistema continuar sendo feito com IA sem voltar ao estado

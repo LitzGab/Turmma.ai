@@ -16,22 +16,17 @@
   nenhum do `/seguir`. Menores m1–m3 vão ao `TODO.md` no fechamento (seção 6 do `validacao.md`)
 - **Correções da validação encontradas (24/10):** C1 em `7346053` (linha 1); M1 em `8df95e4`, encontro `98cac20` (linha 2),
   esteira `40069855328` rodando. As três linhas ociosas
-- **Espero:** o `RELATÓRIO` do `Validador`, 2ª rodada (só RF29, M1 e o que as duas correções mudaram, seção 5 do
-  `validacao.md`), sobre o commit "antes da validação". Com ele, o passo 8 (`esteira.ts --fechamento`, depois `linhas.ts fechar`)
-- **Devo ainda:**
-  - no fechamento, levar ao `TODO.md` o que a Mesa 2 deu de destino na correção M1 (`tasks/correcoes/2026-10-24-seguir-abandonar-linha.md`,
-    tabela): devolver "Não chega como mensagem:" no PEDIDO de estado e dar sujeito a "e reabra com abrir" no `6-tarefa.md` (faltam 21 B no teto)
-  - no fechamento, pedir ao `Arquiteto` o ajuste da `techspec.md` §5(h) e §12, que o C1 deixou desatualizadas (o texto está na ordem r2 da Mesa e em `tasks/correcoes/2026-10-24-aviso-mensagem-colada.md`)
+- **Validação, 2ª rodada (24/10, sobre `d449457`): APROVADA**, 32 de 32 RF, sem crítico nem maior; menores m4–m6 (Tech Spec
+  §5(h)/§12 atrás do hook, cabeçalho de Revisões na C1, retoques do passo 6) vão ao `TODO.md` no fechamento
+- **Esteira `40069886249` em `d449457`: verde** (`esteira.ts --fechamento`: de lá à ponta só documento)
+- **Fechamento (24/10):** ajuste da `techspec.md` §5(h) e §12 pelo `Arquiteto` em `053284e`; `linhas.ts fechar` feito (as três
+  linhas na spec, andares L1–L3 a desfazer depois do pouso); `ROADMAP.md` `[x]`, `techspec.md` implementada, `TODO.md` com os
+  menores m1–m6, as recomendações da 4.0, da 19.0 e da correção M1 e as notas para a `retro`; commit de fechamento com push
+- **Espero:** a palavra do Joaquim para o pouso da X7 na `develop` ("Esperando o Joaquim"). Com ela, o passo 8 ("Pousar"),
+  a esteira da `develop`, `maestri floor delete` das linhas L1–L3, e a retrospectiva ao `Arquiteto` no térreo
+- **Devo ainda (depois do pouso):**
   - do relatório da 20.0 (RF31): no meu primeiro `/clear` **depois do pouso** (o hook novo só vale no térreo quando a X7 pousar), conferir se `.processo/limpeza.json` ganha `feita` (o `/clear` de sessão sem papel no térreo esconde uma limpeza perdida); regravar `tools/processo/__fixtures__/maestri-list.txt` com a saída do meu terminal (linhas numeradas, sem caminho de usuário nem título de sessão: repositório público), por correção; a transcrição da prova do 20.6 em `~/.claude/projects` foi apagada; o `TODO.md` ganhou duas linhas "Da X7" (`limpeza.json` ancorado no térreo e `limpeza.json` que não é objeto); SKILL+protocolo+6-tarefa somam 23.967 B (teto 24.000)
-  - no fechamento, levar ao `TODO.md` o "sem aplicar" da Mesa na 19.0 (r2): o comentário do cabeçalho do
-    `metadados.test.ts` (regra e `settings.json`), a nota na 19.3, e a revisão da `lgpd-brasil`
-  - no fechamento, levar ao `TODO.md` as três "Recomendações sem aplicar" do `4_task.md` (destino TODO.md)
-  - no fechamento, levar ao `TODO.md` (ou ao `/retro`) o lote 5/7 do e2e, que passou dos 45 min do job na correção do
-    `casca`: o Arquiteto não abriu tarefa, porque o RF2 já marca de vermelho o prazo estourado, com o nome do job
-  - a fila da esteira: perguntei ao Joaquim se cancelo as execuções das branches de linha, e ele não respondeu. Não é parada,
-    e a 3.0 (RF1) resolve isso
-  - para o `/retro`: na fixture `casca.ts`, o passo seguinte (código do MFA na entrada) tem a mesma causa possível (Redis de
-    fila parado 2 s), mas falha em 20 s com o erro certo (relatório da correção `agentes-suspensao-intermitente`)
+  - conferir que o aviso dispara na primeira mensagem `/seguir` colada no térreo (RF29, seção 6 da rodada 2 do `validacao.md`)
   - **feito (RELATÓRIO do Arquiteto, 22:26, `d1cd361`):** a 14.1 importa a lista do §5(e) via `ehCodigoParaAEsteira`; a fronteira
     do `16_task.md` fechada (fora `*.test.ts` e `__fixtures__` de `tools/guardas`, reticência vale como placeholder, mínimo de
     100 caminhos); as notas da 10.0, do `tasks.md:26`, da saída 5 do encontro (17.2) e do `-F` (18.4a) aplicadas
@@ -75,6 +70,12 @@
 | correção fixture-maestri-list (linha 2) | `e2da6d9` | Sonnet 5.5 | privacy-guardian 1, test-engineer 2, revisor-geral 2 | fixture regravada do terminal do Orquestrador; encontro em `53944c1` |
 
 ## Esperando o Joaquim
+## 24/10/2026 — X7 harness (pouso)
+Decisão: pousar a X7 na `develop`, com o push?
+Contexto: validação APROVADA na 2ª rodada (32 de 32 RF, `tasks/prd-harness/validacao.md`), esteira verde em `d449457`, de lá à
+ponta só documento; fechamento commitado na `spec/harness`
+Opções: pousar agora | esperar
+Recomendo: pousar agora; a X4 espera a X7 pousar
 ## 23/10/2026 ~19:10 — X7 tarefa 10.0 (limite: 3 reprovações do test-engineer)
 Decisão: como destravar a 10.0, que o `test-engineer` reprovou na 3ª rodada seguida (infra-guardian e revisor-geral aprovaram)?
 Contexto: bloqueante único em `tools/processo/comando-git.ts:361` (linha 2): `OPCOES_DO_GIT_COM_ARGUMENTO` não tem `--attr-source` nem

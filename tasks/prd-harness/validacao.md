@@ -1,5 +1,102 @@
 # Validação — harness (X7)
 
+## Rodada 2 — 24/10/2026 (revalidação)
+
+**Escopo:** revalidação da funcionalidade completa, restrita ao RF29, ao M1 e ao que as correções C1
+(`tasks/correcoes/2026-10-24-aviso-mensagem-colada.md`, `7346053`) e M1 (`tasks/correcoes/2026-10-24-seguir-abandonar-linha.md`,
+`8df95e4`, encontro em `98cac20`) mudaram, como pede a seção 5 da rodada 1
+**Commit validado:** `d449457b`
+**Veredito: APROVADA**
+
+O C1 está resolvido: o hook reconhece a forma real da mensagem colada, o teste usa essa forma, e duas mutações no hook ficam
+vermelhas. O M1 também: o passo 6 do `/seguir` ensina o `linhas.ts abandonar`, o teste do passo exige o comando, e a soma do
+RF26 fica dentro do teto. Os outros 31 RF seguem como a rodada 1 os deixou: de `147854c2` a `d449457b` só mudaram
+`.claude/hooks/aviso-de-sessao.sh`, `.claude/skills/seguir/passos/6-tarefa.md`, os dois testes deles e documentos em `tasks/`.
+Não sobra crítico nem maior. Ficam três menores, que vão para a seção 6.
+
+### 1. RF a RF
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF29 | ATENDIDO | `.claude/hooks/aviso-de-sessao.sh:13` (sai se `CLAUDE_CODE_AGENT` estiver preenchido), `:23` (`/^\s*(?:<pasted_content id="[\w-]+">\s*)?\/seguir /`), `:29` (`typeof prompt === "string"`), `:34` (sai 0 em qualquer falha) | `tools/processo/harness/aviso-de-sessao.test.ts:71-88` (seis formas embrulhadas, com `\n`, `\n\n`, `\r\n`, sem quebra, quebra antes do embrulho e espaço no começo), `:90-114` (16 entradas que não podem disparar, como o `/seguir` no meio do texto, dentro ou fora do embrulho, embrulho vazio, id inválido, segundo embrulho e outra tag), `:60-69` (com papel, nas duas formas), `:116-123` (entrada que não é texto), `:125-141` (não grava nada, nas duas formas). O hook roda pelo comando real do `settings.json` | Medi nas transcrições reais do Orquestrador (`~/.claude/projects/-home-joaquimdp-Documentos-git-Educa-ia/*.jsonl`), passando a expressão do hook em cada entrada de usuário. Das 331 mensagens `/seguir` coladas que existem hoje, todas casam. Das 35 coladas que não são `/seguir`, nenhuma casa. A transcrição desta sessão mostra mais uma forma, `\n\n<pasted_content id="53a1">\n…`, com quebra **antes** do embrulho, e o caso `:79` a cobre. Que o `prompt` do `UserPromptSubmit` chega como a transcrição o grava continua sem prova numa sessão interativa: o hook aceita a forma pura e a embrulhada, então dispara nas duas. A confirmação vem na primeira mensagem colada depois do pouso (seção 6) |
+| RF6 (M1) | ATENDIDO | `tools/processo/linhas.ts:559-578` (`abandonarSobATrava`, sem mudança); `.claude/skills/seguir/passos/6-tarefa.md:119-121` (item **Linha presa**, em "O que pode chegar") | `tools/processo/harness/seguir.test.ts:66` (`linhas.ts abandonar` em `OBRIGATORIOS_NO_PASSO_6`, cobrado pela conferência `passoDaTarefa` e pelo `it.each`); o comportamento já estava provado em `linhas.test.ts` (rodada 1) | Conferi o item contra o código: "solta a linha, e a tarefa volta a pendente" é `:567` e `:572`; "a branch e o checkout ficam, e a próxima partida exige a árvore limpa e nenhum commit que a spec não tenha" é `:573` e `partidaSobATrava` `:545-547`; "abertura que morreu: tira a linha do quadro" é `:566-568`. RF26: `SKILL.md` + `protocolo.md` + `6-tarefa.md` = **23.979 B** (teto 24.000). Os cortes que tiravam instrução voltaram na rodada 1 da Mesa. O que saiu foi explicação, e o "Não chega como mensagem:" tem destino (seção 6) |
+
+Provas de mutação (cada arquivo restaurado com `git checkout --`; a árvore terminou limpa):
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF29 | `aviso-de-sessao.sh:23`: a expressão volta a `/^\/seguir /`, sem espaço no começo e sem o embrulho (a regra antiga) | `aviso-de-sessao.test.ts`: 2 de 7 vermelhos ("mensagem colada de verdade…" e "não grava arquivo nenhum…", que usa a forma embrulhada) |
+| RF29 | `aviso-de-sessao.sh:23`: sem a âncora `^`, o `/seguir` passa a casar em qualquer lugar | `aviso-de-sessao.test.ts`: "mensagem colada que não começa pelo `/seguir `: nada, inclusive o texto que só o cita no meio…" |
+| RF6 (M1) | `6-tarefa.md`: o item **Linha presa** apagado (o arquivo fica sem `abandonar`) | `seguir.test.ts`: "o repositório de hoje passa…" e os casos de `o passo 6 se basta (RF26)` vermelhos |
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regra: todo commit que mexe no hook prova, com o comando real do `settings.json`, que ele carrega | cumprida | `aviso-de-sessao.test.ts:18-25,48` (roda `sh -c` com o comando do `settings.json`), `:144-151` (`bash -n`) |
+| Regra 20, item 9: o hook não grava a entrada | cumprida | `aviso-de-sessao.test.ts:125-141`, nas duas formas, com o `SEGREDO-DA-MENSAGEM` fora da saída e nenhuma pasta alterada; `privacy-guardian` APROVADO na 2ª rodada |
+| Borda: texto colado que só cita `/seguir` no meio | coberta | `aviso-de-sessao.test.ts:93,97-99,105-106`; mutação 2 |
+| Borda: sessão de papel recebe a mensagem embrulhada | coberta | `aviso-de-sessao.test.ts:63` |
+| Pronto: os 32 RF com a prova da coluna "Como se prova" | cumprido | o RF29, que faltava, está acima; os outros 31 vêm da rodada 1, sem mudança de código |
+| Pronto: a esteira verde no último commit que alterou código | conferida no fechamento | pelo Orquestrador (esteira `40069855328` em `98cac20`, que o `estado.md` dá como rodando) |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| Dependências | `node_modules/.package-lock.json` mais novo que o `package-lock.json`: não precisou de `npm ci` |
+| Testes de evidência (`npx vitest run --project unidade tools/processo/harness/aviso-de-sessao.test.ts tools/processo/harness/seguir.test.ts`) | ✅ 2 arquivos, 109 testes |
+| Três provas de mutação | ✅ as três vermelhas, restauradas |
+| Suítes inteiras | não rodadas aqui (D79) |
+| Esteira do GitHub | conferida no fechamento, pelo Orquestrador: não entra no veredito |
+| Revisões com veto registradas e aprovadas | ✅ C1: `privacy-guardian`, `test-engineer` e `revisor-geral`, APROVADO na 2ª rodada. M1: `test-engineer` e `revisor-geral`, APROVADO na 2ª rodada. Os dois commits têm a marca `(correção <slug>)` e a linha `Revisões:` |
+| Revisores exigidos pelo caminho | ✅ `.claude/hooks/` está em `RESTO_DO_PROCESSO` (`tools/processo/guardioes-por-caminho.ts:93-101`) e não pede guardião, a não ser pela regra citada. O hook cita a regra 20, e o `privacy-guardian` entrou. A rodada 1 dizia "os quatro guardiões" para esse caminho, e isso estava errado: vale a tabela do RF16 |
+| Commits `Fora do processo:` com código | nenhum (`git log origin/develop..d449457b -i --grep='^Fora do processo:' -- apps packages infra e2e tools` vazio) |
+
+### 4. Achados
+
+**Críticos**
+- nenhum
+
+**Maiores**
+- nenhum
+
+**Menores** (vão à seção 6)
+- m4: `tasks/prd-harness/techspec.md:244-245` (§5(h), "Olha o prefixo `/seguir `") e `:403-406` (§12, "**Não provado** … que o texto
+  *colado* chega assim, sem ser expandido") ficaram atrás do hook, que agora parte da forma embrulhada. A divergência não foi
+  decidida em silêncio: está no documento da correção C1 e em "Devo ainda" no `estado.md`, que pede ao Arquiteto o ajuste no
+  fechamento. Mas ainda não chegou à Tech Spec. Correção: a §5(h) passa a citar o embrulho opcional e o espaço no começo, e a §12
+  registra a forma vista nas transcrições (331 mensagens coladas) e o que segue sem prova, que é o hook disparar numa sessão
+  interativa.
+- m5: `tasks/correcoes/2026-10-24-aviso-mensagem-colada.md:62-68`: a seção "Revisões" ficou sem o parágrafo do modelo e sem a
+  linha de cabeçalho e a de separação da tabela. As linhas do hook não aparecem como tabela. Correção: devolver o cabeçalho
+  `| Início | Fim | Revisor | Rodada | Veredito | Agente |` e o `|---|…|`, como na correção M1.
+- m6: as duas recomendações da Mesa 2 na correção M1 (devolver "Não chega como mensagem:" ao `PEDIDO de estado` e dar sujeito a "e se
+  abre de novo (`abrir`)", em `6-tarefa.md:106` e `:121`). Estão em "Devo ainda" no `estado.md`, para o `TODO.md` no fechamento. Ficam
+  aqui também, para não se perderem. A folga do RF26 caiu para 21 B.
+
+**Positivos**
+- A correção C1 trouxe as formas de teste da transcrição real e fechou o lado que não pode disparar (16 entradas). Por isso a
+  mutação da âncora cai sozinha num caso próprio, sem depender do caso que pede o aviso.
+
+### 5. Conclusão
+
+APROVADA. O único crítico da rodada 1 (C1, RF29 PARCIAL) está fechado: o hook tem código, teste na forma real e duas mutações
+pegas, e reconhece todas as mensagens `/seguir` coladas das transcrições reais sem nenhum falso positivo. O maior M1 também:
+o passo 6 ensina o comando, o teste o exige e a mutação o pega. Os 32 RF estão atendidos. Os menores (m1 a m6) não mudam o
+veredito e vão para o `TODO.md` no fechamento. A esteira do commit validado fica com o Orquestrador.
+
+### 6. Pendências herdadas
+
+| Item | Dono | Arquivo | Destino |
+|---|---|---|---|
+| m4, Tech Spec §5(h) e §12 atrás do hook do RF29 | Orquestrador → Arquiteto | `tasks/prd-harness/techspec.md:244,403` | já em "Devo ainda" no `estado.md`, no fechamento |
+| m5, tabela de "Revisões" sem cabeçalho na correção C1 | Orquestrador | `tasks/correcoes/2026-10-24-aviso-mensagem-colada.md:62` | `TODO.md` (retro da X7), ou junto do fechamento |
+| m6, "Não chega como mensagem:" e o sujeito do "abrir" no passo 6 | Orquestrador | `.claude/skills/seguir/passos/6-tarefa.md:106,121` | já em "Devo ainda" no `estado.md`, para o `TODO.md` |
+| RF29: conferir que o aviso dispara na primeira mensagem `/seguir` colada no térreo depois do pouso (o hook só vale lá quando a X7 pousar) | Orquestrador | `.claude/hooks/aviso-de-sessao.sh` | junto da conferência do `limpeza.json` (RF27), em "Devo ainda" |
+| m1, m2 e m3 da rodada 1 | Orquestrador | ver a rodada 1 | `TODO.md` (retro da X7) |
+| Commits `Fora do processo:` com código da spec | — | — | nenhum |
+
 ## Rodada 1 — 24/10/2026
 
 **Escopo:** funcionalidade completa
