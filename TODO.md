@@ -1833,9 +1833,19 @@ Da retrospectiva da X7 (`tasks/prd-harness/retro.md`), aceitas pelo Joaquim em 2
 M7 partem como correções antes da primeira tarefa da X4**, pelo `/corrigir`, cada uma com o portão e os revisores que o caminho
 pede. (dono: Orquestrador)
 
-- [ ] **(X7, retro, M1) O `mutacoes.ts --faltando` lê também `tools/`**: `linhasNovasDaArvore` (`tools/processo/mutacoes.ts:678`)
+- [x] **(X7, retro, M1) O `mutacoes.ts --faltando` lê também `tools/`** (feito em 24/10/2026, correção
+      `2026-10-24-mutacoes-faltando-le-tools`, `7c88705`): `linhasNovasDaArvore` (`tools/processo/mutacoes.ts:678`)
       passa a incluir `tools/` no diff e nos arquivos novos, fora `*.test.ts` e `__fixtures__/`, com teste e bloco de mutação. As 8
       reprovações de cláusula sem bloco da X7 estavam todas em `tools/`, que o `--faltando` não lia
+- [ ] **(X7, correção M1) O `--faltando` lê o arquivo novo antes de filtrar** (`tools/processo/mutacoes.ts:696-701`): um
+      arquivo novo ilegível (link para pasta, sem permissão, binário) derruba o `--faltando` e o portão com `EISDIR`; filtrar com
+      `ehArquivoDoFaltando` antes do `readFileSync`, com teste e bloco de mutação. O risco já existia em `apps/` e `packages/`;
+      junto, o título "Linhas novas de produção" do relatório, que agora lista também `tools/`, e o RF5 em
+      `tasks/prd-harness/cenarios.md:17` (dono: Arquiteto; origem: `tasks/correcoes/2026-10-24-mutacoes-faltando-le-tools.md`,
+      revisor-geral e test-engineer 1ª)
+- [ ] **(X7, correção M1) A regra 17 vale para o texto embutido em `tools/`** (`tools/ia/`, `tools/demonstracao/`): agora a linha
+      nova de `tools/` aparece no stdout do `--faltando` e no log da esteira; escrever em `docs/lgpd.md` ou na regra 20 que esse
+      texto é sintético, sempre (dono: Joaquim; origem: a mesma correção, privacy-guardian 1ª)
 - [ ] **(X7, retro, M2) Mutação vermelha só vale por asserção**: em `tools/processo/mutacoes.ts`, a mutação que deixa o teste
       vermelho por erro de carga (sintaxe, módulo que não carrega, nenhum teste rodou) é recusada com o motivo e não conta como
       provada (4.0, bloco com erro de sintaxe; 18.0, três mutações vermelhas por exceção)
