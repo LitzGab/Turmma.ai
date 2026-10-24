@@ -88,9 +88,9 @@ e custa leitura em toda tarefa.
 Separe as propostas em dois grupos (D79, revista em 23/10/2026):
 
 - **Aviso** é a proposta que muda **só** skill (`.claude/skills/`), papel (`.claude/agents/`) ou modelo
-  de documento (`task-template.md`, `template.md` e parecidos), salvo os do grupo seguinte. Mostre-a no terminal, com a hora de
+  de documento (`task-template.md`, `template.md` e parecidos), salvo os da confirmação (abaixo). Mostre-a no terminal, com a hora de
   agora mais 30 minutos, e siga: aplique depois dessa hora, se o Joaquim não objetou. Com a objeção,
-  ela passa para o grupo seguinte.
+  ela passa para a confirmação.
 - **Confirmação** é todo o resto: código de processo (`tools/`, `.claude/hooks/`, `.claude/settings.json`),
   regra, decisão, a lista "O que verificar" de um guardião com veto e o resto do arquivo de cada revisor com
   veto, o `mesa-de-revisao.md` e a seção 6 do `validador.md` (os revisores com veto são os de `REVISORES_COM_VETO`, em

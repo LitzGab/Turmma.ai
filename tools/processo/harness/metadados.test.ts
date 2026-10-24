@@ -9,7 +9,7 @@
 //   (2) RF23, as cinco skills de terceiros que ficam têm, na primeira linha depois do frontmatter, o conflito escrito em
 //       `docs/skills-de-terceiros.md`, e a `frontend-design` não está nem na pasta nem no `skills-lock.json`.
 //   (3) RF24, os quatro papéis do time têm a seção "Critério de saída" com os itens "Terminou quando" e "Entrega".
-//   (4) RF24, a skill `status` saiu e ninguém a cita (papel, skill nossa, hook, `CLAUDE.md`, código do processo).
+//   (4) RF24, a skill `status` saiu e ninguém a cita (papel, regra, `settings.json`, skill nossa, hook, `CLAUDE.md`, código do processo).
 //
 // Cada conferência é uma função sobre uma pasta-raiz e roda sobre o repositório e sobre uma amostra quebrada em pasta temporária. Limites
 // declarados: o teste prova que o texto está no arquivo, não que a skill ou o papel o segue; a linha de conflito acusa, nunca reaplica

@@ -1,7 +1,6 @@
 ## 6. O ciclo de uma tarefa
 
-Quem diz o que cada linha faz é o quadro, não você: ele lê as dependências, o paralelo que o Arquiteto
-autorizou e os arquivos previstos. O par de uma linha é `Implementador` e `Mesa` (a linha 1) ou
+Quem diz o que cada linha faz é o quadro, não você. O par de uma linha é `Implementador` e `Mesa` (a linha 1) ou
 `Implementador <n>` e `Mesa <n>` (2 e 3), e o papel vem de `.claude/agents/`, nunca de responsabilidade
 do Maestri:
 
@@ -15,7 +14,7 @@ do Maestri:
    novo. "NENHUMA TAREFA LIBERADA": pare e reporte. Sem nada a partir, encerre o turno: o relatório
    de quem corre o acorda.
 
-   **Abrir a linha `<n>`** (o teto é 3, o de ambientes de teste da máquina):
+   **Abrir a linha `<n>`** (o teto é 3):
 
    ```bash
    git -C <andar> branch spec/<func>--l<n> spec/<func>
@@ -28,10 +27,9 @@ do Maestri:
    maestri connect "Implementador <n>" "Mesa <n>"
    ```
 
-   No andar da spec ninguém implementa: o `Arquiteto`, para ver uma tarefa em curso, é apontado
-   para o checkout da linha dela.
+   No andar da spec ninguém implementa: o `Arquiteto` vê a tarefa em curso no checkout da linha dela.
 2. **Partida**, para cada linha que parte: `(cd <andar> && node tools/processo/linhas.ts partida <n> <N>)`.
-   Ela traz a linha à ponta da spec e recusa a tarefa que não corre junto com as em curso.
+   Ela recusa a tarefa que não corre junto com as em curso.
 3. **Porte e diário.** O Implementador roda em Sonnet em toda tarefa. O porte do documento
    (`**Porte:**`; sem a linha, o inferido que o `estado.ts` mostra) diz quanto ela deve levar, que é
    o que a vigia usa. No `estado.md` do andar, a seção "Agora" tem três linhas, **Espero** (o relatório
@@ -80,9 +78,9 @@ do Maestri:
 ### O que pode chegar
 
 - **`RELATÓRIO` com `STATUS: SUCESSO`**, da linha `<n>`. Rode o encontro, que confere e junta:
-  `(cd <andar> && node tools/processo/linhas.ts encontro <n>)`. Ele exige a marca e a linha
-  `Revisões:` em todo commit novo com código e a árvore limpa, traz a spec para a linha, **verifica
-  a soma** (tipagem e lint), avança a spec com o `estado.md` e faz o push. Pela saída:
+  `(cd <andar> && node tools/processo/linhas.ts encontro <n>)`. Ele confere a marca e a linha
+  `Revisões:` dos commits novos com código e a árvore limpa, traz a spec para a linha, **verifica
+  a soma** (tipagem e lint), avança a spec e faz o push. Pela saída:
   - **feito:** rode `(cd <andar> && node tools/processo/esteira.ts)`. O push dispara
     a esteira sobre a soma das linhas, e ninguém espera por ela (D79): aqui você lê o
     veredito dos pushes anteriores. `VERMELHA`: correção (`corrigir`) numa linha ociosa, com
@@ -102,7 +100,7 @@ do Maestri:
   com o slug que a saída dá. O Implementador da linha traz a spec (`git merge spec/<func>`), resolve
   ou conserta o que quebrou, passa o portão e a Mesa, e fecha o merge com o commit da correção.
   Depois, o encontro de novo. Registre em "O que falhou".
-- **Resposta a um `PEDIDO de estado`.** Lê-se na saída do `maestri ask` ou no `maestri check`. Só registre; não é relatório de conclusão.
+- **Resposta a um `PEDIDO de estado`.** Não chega como mensagem: lê-se na saída do `maestri ask` ou no `maestri check`. Só registre; não é relatório de conclusão.
 - **`RELATÓRIO` com `STATUS: FALHA`.** Defeito fora da tarefa: correção antes de retomar (abaixo).
   Senão, a cada falha o Implementador volta com **mais contexto**:
   - *primeira falha:* reinicie-o e envie um `PEDIDO de retomada` com o teste, o erro e o que já foi tentado;
@@ -117,7 +115,7 @@ do Maestri:
 - **`BLOQUEIO` da Mesa** (três). Parada (passo 7).
 - **Linha presa** (tarefa replanejada, papel morto): `(cd <andar> && node tools/processo/linhas.ts abandonar <n>)` solta a
   linha, e a tarefa volta a pendente; a branch e o checkout ficam, e a próxima partida exige a árvore limpa e nenhum commit que
-  a spec não tenha. Abertura que morreu: o comando tira a linha do quadro, e se abre de novo (`abrir`).
+  a spec não tenha. Abertura que morreu: o comando tira a linha do quadro, e você reabre com `abrir`.
 - **`DIVERGÊNCIA`**, com a linha `Motivo:`:
   - `desenho` ou `ordem`: reinicie o `Arquiteto` no andar e envie um `PEDIDO` de triagem com o
     documento e a seção. A resposta dele volta ao Implementador como observação de um
@@ -129,5 +127,5 @@ do Maestri:
     revisão, e o commit da correção leva só os arquivos dela. Ela não tem encontro próprio: o
     commit fica na linha e segue com o da tarefa. Registre em "O que decidi sem perguntar".
 
-A fila de carga é do portão e do e2e, que a tomam sozinhos. **Não mande uma linha esperar a outra com
+**Não mande uma linha esperar a outra com
 laço de `pgrep`**: ele casa com a própria linha de comando e não sai. O andar da spec e o térreo dividem o ambiente 0: um por vez.

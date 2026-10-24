@@ -100,6 +100,11 @@ const REQUISITOS_DO_TEXTO = [
     termo: 'A ressalva menor da validação',
   },
   {
+    nome: 'o passo 6 diz que a resposta a um PEDIDO de estado não chega como mensagem',
+    arquivo: `${PASSOS}6-tarefa.md`,
+    termo: 'Não chega como mensagem: lê-se na saída do `maestri ask` ou no `maestri check`',
+  },
+  {
     nome: 'o passo 7 diz que a proposta que só muda skill, papel ou modelo é aviso',
     arquivo: `${PASSOS}7-paradas.md`,
     termo: 'só muda skill, papel ou modelo de documento',
@@ -137,7 +142,7 @@ const REQUISITOS_DO_TEXTO = [
   {
     nome: 'a retro tira o grupo de confirmação do aviso',
     arquivo: 'skills/retro/SKILL.md',
-    termo: 'salvo os do grupo seguinte',
+    termo: 'salvo os da confirmação (abaixo)',
   },
   {
     nome: 'a retro mantém a confirmação para as skills que decidem a marcação',

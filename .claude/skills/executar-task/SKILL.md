@@ -48,7 +48,7 @@ linha de um cenário depois da medição, desligar um limite). O que diverge vai
 nesta tarefa" do `N_task.md`, com o motivo, e, antes dos revisores, entra na `techspec.md`, no `cenarios.md` e no
 documento que a seção 11 aponta, com o texto do código. Editar `.md` não caduca rodada nem carimbo, com uma exceção: o
 `docs/runbook.md`, que a guarda `alerta-tem-runbook` lê, conta como código e caduca os dois
-(`DOCUMENTO_QUE_UMA_SUITE_LE`, em `tools/processo/revisoes.ts`).</critical>
+(`DOCUMENTO_QUE_UMA_SUITE_LE`, em `tools/processo/caducidade.ts`).</critical>
 
 ### Autoconferência antes de codar
 
@@ -223,7 +223,7 @@ outro comando seu em paralelo.
 ## 5. Revisão
 
 <critical>A tarefa não fecha sem os revisores obrigatórios. Não é recomendação: o hook
-`tools/processo/revisoes.ts` registra cada rodada na seção "Revisões" do `N_task.md` e
+`tools/processo/hook-revisoes.ts` registra cada rodada na seção "Revisões" do `N_task.md` e
 BLOQUEIA o commit enquanto algum revisor obrigatório não tiver uma rodada que valha para o
 código atual, com APROVADO nos que têm veto.</critical>
 
@@ -269,7 +269,7 @@ Mexeu em código depois de uma aprovação, a aprovação caducou, e o hook diz 
 commit. A caducidade segue o que o revisor audita: mudança **só em arquivo de teste** (`*.test.ts`,
 `*.spec.ts`, `test/`, `e2e/`, `__fixtures__/`) caduca só `test-engineer` e `revisor-geral`; mudança
 **só em comentário** de `.ts`/`.tsx` caduca só o `revisor-geral`, salvo comentário com diretiva
-(`MARCAS_DE_DIRETIVA`, em `tools/processo/revisoes.ts`); qualquer outra caduca todos. O carimbo não
+(`MARCAS_DE_DIRETIVA`, em `tools/processo/caducidade.ts`); qualquer outra caduca todos. O carimbo não
 tem exceção: mudou qualquer coisa, o portão da tarefa roda de novo. Por isso, na correção pedida pelo
 `test-engineer`, mexa só no teste sempre que a ordem permitir.
 

@@ -79,7 +79,7 @@ function passosDoAlvo({ alvos, docker, servicosDeJob }: EntradaDaSequencia): Pas
 }
 
 /**
- * As suítes que o portão roda, em ordem. A da tarefa é a de `revisoes.ts`, a que o carimbo e o hook leem; a completa é a
+ * As suítes que o portão roda, em ordem. A da tarefa é a de `portao.ts`, a que o carimbo e o hook leem; a completa é a
  * da esteira (`--e2e` e `--infra` põem as duas que a máquina não roda por padrão), com as guardas da mesma lista do
  * `ci:verificar`.
  */

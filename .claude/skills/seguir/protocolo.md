@@ -15,7 +15,7 @@ e quem está ligado a quem (D78).
 - **Na raiz do checkout.** `pwd` tem de ser igual a `git rev-parse --show-toplevel`. Se não for,
   PARE e avise o Orquestrador. Agente criado com uma *responsabilidade* do Maestri nasce em
   `.maestri/roles/<id>/`, e ali **nenhum hook dispara**: o commit sem revisão passa e a rodada do
-  revisor não é registrada (provado em 08/10/2026). Por isso o papel vem de
+  revisor não é registrada. Por isso o papel vem de
   `.claude/agents/<papel>.md`, com `claude --agent <papel>`, e nunca de responsabilidade do Maestri
 - **O contexto é compactado sozinho** perto de 400 mil tokens (`autoCompactWindow`, em
   `.claude/settings.json`): a sessão continua com um resumo no lugar da conversa, e o hook de início de

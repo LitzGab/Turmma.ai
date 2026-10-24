@@ -24,7 +24,7 @@ hooks="$(git config --get core.hooksPath 2>/dev/null || true)"
 if [ "$hooks" != "tools/processo/git-hooks" ]; then
   echo
   if [ -z "$hooks" ]; then atual="não está definido"; else atual="é \"$hooks\""; fi
-  echo "Aviso: o git hook nativo não está ligado neste checkout (core.hooksPath $atual). Rode: git config core.hooksPath tools/processo/git-hooks (é o que o \`npm ci\` faz pelo \`prepare\`). Checkout anterior à X7: traga a develop antes. Sem o hook, o commit e o push de papel por caminho absoluto, \`env\` ou script só são conferidos pela esteira."
+  echo "Aviso: o git hook nativo não está ligado neste checkout (core.hooksPath $atual). Rode: git config core.hooksPath tools/processo/git-hooks (é o que o \`npm ci\` faz pelo \`prepare\`). Sem o hook, o commit e o push de papel por caminho absoluto, \`env\` ou script só são conferidos pela esteira."
 fi
 
 origem=inicio

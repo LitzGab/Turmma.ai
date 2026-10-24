@@ -660,7 +660,9 @@ describe('o hook-git.ts chamado direto', () => {
     const saida = commitar(raiz, 'Ajusta a nota')
     expect(saida.criou).toBe(false)
     expect(saida.status).not.toBe(0)
-    expect(saida.stderr).toMatch(new RegExp(`${modulo.replace('.', '\\.')}|ERR_MODULE_NOT_FOUND`))
+    // É o módulo que faltou que tem de estar na mensagem do Node ("Cannot find module '<faltante>' imported from <quem importa>"): só
+    // ERR_MODULE_NOT_FOUND, ou o nome solto, passaria também com outro módulo (`portao.ts` casa com `sequencia-do-portao.ts`).
+    expect(saida.stderr).toMatch(new RegExp(`Cannot find module '[^']*/${modulo.replaceAll('.', '\\.')}'`))
   })
 
   it('o erro de carga recusa: a mensagem que não existe derruba o julgamento, e o hook diz que falhou', () => {

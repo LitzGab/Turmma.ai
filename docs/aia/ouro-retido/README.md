@@ -1,7 +1,7 @@
 # Os lotes retidos do `ouro`
 
-**Gênero:** referência viva · **Quem altera:** só o Arquiteto, com o `conformidade-reviewer`, num commit só de documento
-com `(ouro: <política>)` no assunto. **Quem escreve padrão não abre esta pasta**, nem para procurar um id: o lote mede
+**Gênero:** referência viva · **Quem altera:** só o Arquiteto, com o `conformidade-reviewer`, num commit só de documento.
+**Quem escreve padrão não abre esta pasta**, nem para procurar um id: o lote mede
 o que o padrão não conhecia (`tasks/prd-reengenharia/onda-0.md` §2.1, "O lote retido").
 
 Cada lote substitui, na medida de generalização, o corpus do `ouro` que alguém leu para escrever o padrão. Tem o mesmo

@@ -1,7 +1,7 @@
 // O e2e que cita um texto que o diff tirou de `apps/web/src` (retrospectiva da X2, `TODO.md`, "(X1, retrospectiva) Código de
 // processo", letra (d)).
 //
-// O portão da tarefa roda os e2e que a árvore **alterou** (`alvosDoPortao`, em `tools/processo/revisoes.ts`). A tarefa que troca
+// O portão da tarefa roda os e2e que a árvore **alterou** (`alvosDoPortao`, em `tools/processo/portao.ts`). A tarefa que troca
 // um título, um rótulo ou um aviso da tela e não mexe no `e2e/` que o procura passava no portão e quebrava na esteira: na X2, o
 // W12 da casca (a 3.0 trocou "Governança"; `casca.spec.ts`, vermelho em cinco execuções) e o sino da 6.0 ("Refazer o convite de";
 // `sino-da-coordenacao.spec.ts`). O único elo entre a tela e o e2e é o texto, e é por ele que este módulo acha o spec.

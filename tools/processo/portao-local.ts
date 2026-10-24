@@ -1,5 +1,5 @@
 // Portão local da tarefa, com carimbo. Roda typecheck, lint e testes e, se tudo passar, grava em
-// .processo/portao.json quando começou e o que rodou. O portão do commit (revisoes.ts) exige o
+// .processo/portao.json quando começou e o que rodou. O portão do commit (portao.ts) exige o
 // carimbo mais novo que a última alteração, e o revisor-geral confere o carimbo em vez de rodar tudo
 // de novo sobre a mesma árvore.
 //

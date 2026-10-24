@@ -1913,6 +1913,12 @@ pede. (dono: Orquestrador)
       mensagem:" de volta ao `PEDIDO de estado`, e "e reabra com `abrir`") e uns 300 B de folga no orçamento de 24.000 B
       (`SKILL.md` + `protocolo.md` + `passos/6-tarefa.md`, hoje 23.979), tirando explicação e não instrução; (5)
       `docs/aia/ouro-retido/README.md:4` sem o `(ouro: <política>)`, que não existe mais (18.0)
+- [ ] **(X7, correção M7) As outras citações de `tools/processo/revisoes.ts` como dono do hook** (`hook-revisoes.ts`, com a lógica em
+      `portao.ts`, `caducidade.ts`, `comando-git.ts` e `documento-de-revisao.ts`): `tools/guardas/escopo-dos-repositories.ts:254`
+      (comentário), `tools/processo/documento-de-revisao.ts:48`, `:204` e `:329` (texto que o hook grava nos documentos),
+      `.claude/skills/criar-tasks/task-template.md:171`, `.claude/skills/revisar-tarefa/SKILL.md:14` e `.claude/skills/seguir/time.md:25`.
+      O `revisar-tarefa` e o `time.md` são confirmação do Joaquim, não aviso (dono: Implementador, numa correção própria; origem:
+      `tasks/correcoes/2026-10-24-acabamento-de-texto-x7.md`, revisor-geral e test-engineer 1ª)
 
 Ficam, de antes da retro:
 

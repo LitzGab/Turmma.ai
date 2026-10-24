@@ -116,7 +116,7 @@ export const ETAPAS_DE_DEPENDENCIAS: readonly Etapa[] = [etapaAuditoriaDeDepende
 
 /**
  * Uma guarda da esteira e o jeito de o portão local rodá-la. `suite` é o nome que o carimbo do portão guarda
- * (`SUITES_DO_PORTAO_DA_TAREFA`, em `tools/processo/revisoes.ts`); `script` é o `npm run` do portão. O de dependências
+ * (`SUITES_DO_PORTAO_DA_TAREFA`, em `tools/processo/portao.ts`); `script` é o `npm run` do portão. O de dependências
  * roda as mesmas `etapas` que o `ci:verificar`, importadas daqui (`tools/ci/dependencias.ts`). O do segredo
  * (`tools/ci/segredo.ts`) monta as dele a partir de `argumentosGitleaks`, porque olha também o que ainda não tem commit e
  * o gitdir do andar: o que ele compartilha com a esteira é a imagem do gitleaks e as regras, não o objeto `etapa`.
