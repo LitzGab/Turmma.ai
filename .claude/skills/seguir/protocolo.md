@@ -18,15 +18,14 @@ e quem está ligado a quem (D78).
   revisor não é registrada (provado em 08/10/2026). Por isso o papel vem de
   `.claude/agents/<papel>.md`, com `claude --agent <papel>`, e nunca de responsabilidade do Maestri
 - **O contexto é compactado sozinho** perto de 400 mil tokens (`autoCompactWindow`, em
-  `.claude/settings.json`). A sessão continua o mesmo trabalho com um
-  resumo no lugar da conversa, e o hook de início de sessão diz a cada papel o que reler. Por isso o
-  que importa fica em arquivo (o documento da tarefa, a ordem de correção, o `estado.md`), nunca só
-  na conversa. Depois de compactar, releia o que o aviso manda antes do próximo passo. O Orquestrador
-  não espera a compactação: limpa o próprio contexto a cada tarefa (passo 9 do `/seguir`), e por isso
-  o que você disser a ele precisa caber na mensagem ou num arquivo, sem contar com o que ele "já sabe"
+  `.claude/settings.json`): a sessão continua com um resumo no lugar da conversa, e o hook de início de
+  sessão diz a cada papel o que reler. Por isso o que importa fica em arquivo (o documento da tarefa, a
+  ordem de correção, o `estado.md`), nunca só na conversa; depois de compactar, releia o que o aviso
+  manda. O Orquestrador limpa o próprio contexto a cada tarefa (`passos/9-vigia-e-contexto.md`): o que
+  você disser a ele precisa caber na mensagem ou num arquivo, sem contar com o que ele "já sabe"
 - **Só no seu checkout.** Não edite arquivo de outro checkout. A única exceção é o Orquestrador,
-  que roda no térreo e escreve, no andar da spec, os documentos de estado listados no passo 4 do
-  `/seguir`, sempre com `git -C <andar>`
+  que roda no térreo e escreve, no andar da spec, os documentos de estado listados em
+  `passos/4-documentos.md`, sempre com `git -C <andar>`
 
 ## 2. Mensagens
 
@@ -90,7 +89,7 @@ notifica.
 | Implementador | branch do andar | o commit da tarefa `(tarefa N.0)` ou da correção `(correção <slug>)`, com push |
 | Arquiteto | branch do andar | PRD, Tech Spec, revisão da spec e tarefas, um commit por etapa, com push |
 | Arquiteto | `develop`, no térreo | a retrospectiva e a decisão tomada fora de uma spec: commit de documento, **sem push**. Decisão que nasce dentro de uma spec entra na branch dela |
-| Orquestrador | branch do andar | os commits de documento do passo 4 do `/seguir`, com push |
+| Orquestrador | branch do andar | os commits de documento de `passos/4-documentos.md`, com push |
 | Orquestrador | branch do andar | o merge da `develop`, antes do pouso, quando ela andou |
 | Orquestrador | `develop` | o pouso e o push, só com a palavra do Joaquim |
 

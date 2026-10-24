@@ -277,6 +277,18 @@ conflito na primeira linha depois do frontmatter), o destino de cada seção do 
 lugar que fica, o `/seguir` partido em `passos/` e as paradas que viram aviso (D79 revista). Sai a `status`; o
 `separar-achados.ts` espera o ok do Gabriel.
 
+**O `/seguir` partido (17.0, 24/10/2026).** `passos/` tem `3-time-e-andar.md`, `4-documentos.md`, `6-tarefa.md`, `7-paradas.md`,
+`8-validacao-e-pouso.md`, `9-vigia-e-contexto.md`, `10-avulsos.md` e `estado-md.md`; o número do arquivo é o do passo, e o primeiro título do
+arquivo repete o número, de modo que "passo N" em qualquer skill continua apontando o lugar certo. O orçamento é de **24.000 B**
+(decimal, como os 41 KB de hoje, que são 41.050 B), no teste `tools/processo/harness/seguir.test.ts`: 24.000 passa e 24.001 é vermelho; a
+medida de depois é 23.932 B (6.843 do `SKILL.md`, 7.857 do protocolo e 9.232 do `passos/6-tarefa.md`), com 68 B de folga: o próximo acréscimo num dos três precisa tirar texto de outro lugar deles, ou o teste fica vermelho. O passo 6 traz as quatro coisas da
+página (a limpeza, a abertura de linha, o reinício do par com `recruit --replace` e as saídas do encontro, a de código 5 incluída) e o
+`Agora` do `estado.md` em uma linha por campo. O censo do e2e (RF9) é do passo 8, depois do `esteira.ts --fechamento`. A **ressalva menor**
+(D79 revista) é assim: o Validador só dá "APROVADA COM RESSALVAS" quando há achado maior, e o menor vai à seção 6 do relatório; o
+Orquestrador o leva ao `TODO.md` no fechamento. Se mesmo assim o veredito vier com ressalvas e **todas** forem menores e fora das regras 10,
+20 e 70, ele escreve o aceite com "aceitas por Orquestrador (aviso da D79)", que é o que o `estado.ts` lê. Os commits `Fora do processo:`
+com código da spec saem na seção 6 do relatório (`validador.md`, seção 5, e `validar/SKILL.md`, passo 3).
+
 **Receitas (RF32, decisão do Joaquim, 23/10/2026).** A receita mora no `docs/guia-do-desenvolvedor.md` (§5 as receitas,
 §7 as travas); a skill `.claude/skills/receitas-de-codigo/SKILL.md` só aponta. Frontmatter com `name` e uma `description`
 que contém as palavras dos seis assuntos (`endpoint`, `tabela`, `job`, `IA`, `tela`, `isolamento`), que é como o

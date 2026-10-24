@@ -1887,3 +1887,18 @@ Achados ao conferir o código depois do merge (`13eab64`). Não estão resolvido
       `--remerge-diff --name-only` pode imprimir num conflito que não é de conteúdo (modify/delete, por exemplo), vale também aqui: a linha
       seria lida como nome de arquivo, e não é código. Juntar os dois quando o Arquiteto decidir, na tarefa futura que mexer no
       `--remerge-diff` (dono: Arquiteto; origem: `12_task.md`, "Recomendações sem aplicar")
+- [ ] **(X7, 17.0) Ampliar o grupo de confirmação da `retro` ao arquivo inteiro de cada revisor com veto, ao `mesa-de-revisao.md` e à
+      §6 do `validador.md`:** hoje só a lista "O que verificar" é confirmação; uma proposta que mude outra parte desses papéis (a
+      decisão de quem aprova, a classificação de achado) cai no aviso de 30 minutos. É revisão da D79, que muda o desenho da regra de
+      aplicar (dono: Joaquim; origem: `17_task.md`, "Recomendações sem aplicar", conformidade-reviewer 1ª e 2ª rodadas)
+- [ ] **(X7, 17.0) `.claude/skills/vigia/SKILL.md:30` apontar direto para `passos/3-time-e-andar.md`:** o índice do `SKILL.md` já resolve
+      o caminho, mas a skill da vigia ainda diz "passo 3 do `/seguir`" (dono: quem mexer na `vigia`; origem: `17_task.md`,
+      revisor-geral 1ª rodada)
+- [ ] **(X7, 17.0) Ajustes de texto, sem efeito no comportamento, para a próxima edição da `retro`, do passo 7 e do `validador.md`:**
+      (i) `retro/SKILL.md:91`, "salvo os do grupo seguinte" deveria ser "salvo as do grupo seguinte" (propostas), e a linha passa de 120
+      colunas; troca-se o texto e o termo do `seguir.test.ts` juntos; (ii) `passos/7-paradas.md:32` descreve o aviso da retro sem a
+      ressalva "salvo os do grupo seguinte"; (iii) `validador.md:136` dizer que um commit `Fora do processo:` que toca nota, correção,
+      tutor ou saída de IA é lido contra a regra 70 (dono: Arquiteto; origem: `17_task.md`, revisor-geral e conformidade-reviewer 2ª)
+- [ ] **(X7, 17.0) Levar ao `/retro` da X7 a folga de 68 B do orçamento de leitura por tarefa** (`SKILL.md` + `protocolo.md` +
+      `passos/6-tarefa.md` = 23.932 B de 24.000): o próximo acréscimo num dos três precisa tirar texto de outro lugar deles (dono:
+      Arquiteto; origem: `17_task.md`, test-engineer 2ª rodada)

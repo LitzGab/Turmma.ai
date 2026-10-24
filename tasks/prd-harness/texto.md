@@ -65,6 +65,10 @@ resposta de cada guardião com veto não mudam.
 **As paradas (revisão da D79).** Viram aviso a proposta de retrospectiva que muda só skill, papel ou modelo de
 documento, salvo a que mexe na lista de um guardião com veto ou nas skills que decidem a marcação (`criar-tasks`,
 `revisar-tarefa`, `revisar-spec`), e a ressalva menor da validação. Achado das regras 10, 20 e 70 nunca é menor. Muda o passo 7 do `/seguir`, a `retro` e o `validador.md`.
+Na prática (17.0): a proposta de skill, papel ou modelo é mostrada com a hora de agora mais 30 minutos e aplicada depois dela, sem
+objeção; o resto é confirmação, arquivo por arquivo. O veredito só com menores é APROVADA, e o menor vai à seção 6 do relatório e ao
+`TODO.md`; o "COM RESSALVAS" cujas ressalvas são todas menores o Orquestrador aceita sozinho, na linha do veredito. O `validar` e o
+`validador.md` listam os commits `Fora do processo:` com código da spec. O orçamento de 24 KB são 24.000 B.
 
 **Auditoria e critério de saída (RF23, RF24).** A tabela da auditoria das skills de processo (objetivo, escopo,
 conflito, redundância, desatualização, decisão) fica em `docs/processo-licoes.md`; o critério de saída e a entrega de

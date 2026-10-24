@@ -12,8 +12,9 @@ no começo do F1, 31 de 119 rodadas reprovaram, 16 delas do `test-engineer`, e n
 tarefa seguinte aprender com a anterior. Cada reprovação evitada é uma rodada inteira de
 revisores a menos.
 
-<critical>Proponha, não aplique. Mudança em template, agente ou regra só com confirmação do
-usuário, arquivo por arquivo.</critical>
+<critical>Proponha, não aplique. Mudança em código de processo, regra, decisão, na lista de um guardião com
+veto ou em `criar-tasks`, `revisar-tarefa` e `revisar-spec` só com confirmação do usuário, arquivo por
+arquivo. A que muda só skill, papel ou modelo de documento é aviso (seção 5).</critical>
 <critical>Regra 10, 20 e 70 não são afrouxadas por retrospectiva. Se o achado é "o guardião é
 rigoroso demais", a proposta é deixar o requisito mais claro para quem implementa, não tirá-lo.</critical>
 
@@ -82,14 +83,28 @@ agente, com o exemplo que ele reprovou sem motivo.
 Proponha também o que **tirar**: item de checklist que nunca pegou nada em toda a funcionalidade
 e custa leitura em toda tarefa.
 
-## 5. Aplicar com confirmação
+## 5. Aplicar: confirmação ou aviso
 
-Mostre as propostas e pergunte quais aplicar. Aplique só as aceitas.
+Separe as propostas em dois grupos (D79, revista em 23/10/2026):
+
+- **Aviso** é a proposta que muda **só** skill (`.claude/skills/`), papel (`.claude/agents/`) ou modelo
+  de documento (`task-template.md`, `template.md` e parecidos), salvo os do grupo seguinte. Mostre-a no terminal, com a hora de
+  agora mais 30 minutos, e siga: aplique depois dessa hora, se o Joaquim não objetou. Com a objeção,
+  ela passa para o grupo seguinte.
+- **Confirmação** é todo o resto: código de processo (`tools/`, `.claude/hooks/`, `.claude/settings.json`),
+  regra, decisão, a lista "O que verificar" de um guardião com veto (os de `REVISORES_COM_VETO`, em
+  `tools/processo/documento-de-revisao.ts`: `tenancy-guardian`, `privacy-guardian`,
+  `conformidade-reviewer`, `infra-guardian`, `test-engineer` e `revisor-geral`) e as skills que decidem a marcação de
+  guardião (`criar-tasks`, `revisar-tarefa`, `revisar-spec`). Mostre e pergunte quais aplicar, arquivo
+  por arquivo; aplique só as aceitas.
+
+Proposta que afrouxa a regra 10, a 20 ou a 70 não existe (aviso crítico acima). Na dúvida de qual grupo,
+é confirmação.
 
 ## 6. Salvar
 
 `tasks/prd-$ARGUMENTS/retro.md`, com as medidas, os grupos, as propostas e o que foi aceito ou
-recusado (com o motivo). O `/criar-tasks` da próxima funcionalidade lê esse arquivo.
+recusado (com o motivo), marcando as que foram aviso. O `/criar-tasks` da próxima funcionalidade lê esse arquivo.
 
 Commit na `develop`, no térreo, depois do pouso da funcionalidade (D78), sem push (o push é do
 Orquestrador): `Faz a retrospectiva de <funcionalidade> e ajusta o processo`,

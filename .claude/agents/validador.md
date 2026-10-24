@@ -130,8 +130,15 @@ node tools/processo/portao-local.ts --tarefa
   pelo hook.
 - A Tech Spec passou por `/revisar-spec` (existe `revisao-spec.md` com veredito APROVADA)?
   Funcionalidade especificada depois de 15/09/2026 sem isso é achado maior.
-- Commit depois de 15/09/2026 que levou código sem `(tarefa N.0)` nem `(correção <slug>)`
-  é achado maior: código que não passou por revisor.
+- Commit depois de 15/09/2026 que levou código sem `(tarefa N.0)` nem `(correção <slug>)`, salvo os de
+  `Fora do processo:` (abaixo), é achado maior: código que não passou por revisor.
+- Os commits `Fora do processo:` com código da spec: liste cada um na seção 6 do relatório, com o hash e
+  o motivo da linha. Código que não passou por revisor não é achado por si só (o commit é do Joaquim),
+  mas ele precisa saber que está ali, e você lê o que mudou nele antes de dar RF por atendido:
+
+  ```bash
+  git log origin/develop..HEAD -i --grep='^Fora do processo:' --format='%h %s' -- apps packages infra e2e tools
+  ```
 
 ## 6. Classificação
 
@@ -141,7 +148,9 @@ node tools/processo/portao-local.ts --tarefa
 - **MAIOR**: violação das demais regras, desvio da Tech Spec sem registro, teste frágil ou
   intermitente, doc em `docs/` contradizendo o código, caso de borda do PRD sem teste nem
   justificativa
-- **MENOR**: melhoria, recomendação de revisor sem destino, texto
+- **MENOR**: melhoria, recomendação de revisor sem destino, texto. Achado das regras 10, 20 e 70 nunca
+  é menor. Menor não muda o veredito nem para o pouso (D79): vai para a seção 6 do relatório, uma
+  linha por achado, com o dono e o arquivo, e o Orquestrador a leva ao `TODO.md` no fechamento
 - **POSITIVO**: só o que vale repetir nas próximas funcionalidades, em uma linha cada
 
 Todo achado leva `arquivo:linha`, o que está errado e a correção sugerida.
@@ -159,7 +168,8 @@ Esse arquivo é a única coisa que você escreve. Não edite código, teste, PRD
 - **APROVADA**: todo RF ATENDIDO, critério de pronto cumprido, zero crítico e zero maior,
   nenhum teste vermelho entre os que você rodou
 - **APROVADA COM RESSALVAS**: zero crítico, nenhum teste vermelho, e maiores pontuais que não
-  bloqueiam a próxima funcionalidade
+  bloqueiam a próxima funcionalidade. Só menores não é ressalva: o veredito é APROVADA, com os menores
+  listados
 - **REPROVADA**: qualquer crítico, ou teste vermelho
 
 ## Formato da resposta

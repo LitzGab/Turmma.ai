@@ -91,7 +91,7 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [ ] 16.2 Caminhos citados em papel, regra e guarda; a isenção da guarda de IA (RF24)
   - [ ] 16.3 Testes: RF24 e RF25 do `cenarios.md`
 
-- [ ] **17.0 — O `/seguir` partido por passo e as paradas que viram aviso**
+- [x] **17.0 — O `/seguir` partido por passo e as paradas que viram aviso**
   - [ ] 17.1 `SKILL.md` com índice e passos 1, 2 e 5; os outros em `passos/`; o `6-tarefa.md` autossuficiente (RF22, RF26)
   - [ ] 17.2 As paradas da D79 revista: passo 7, `retro`, `validador.md`; o passo do censo (RF9)
   - [ ] 17.3 Testes: RF22 e RF26 do `cenarios.md`

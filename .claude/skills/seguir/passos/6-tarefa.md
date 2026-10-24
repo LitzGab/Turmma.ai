@@ -1,0 +1,135 @@
+## 6. O ciclo de uma tarefa
+
+Quem diz o que cada linha faz é o quadro, não você: ele lê as dependências, o paralelo que o Arquiteto
+autorizou e os arquivos previstos. O par de uma linha é `Implementador` e `Mesa` (a linha 1) ou
+`Implementador <n>` e `Mesa <n>` (2 e 3), e o papel vem de `.claude/agents/`, nunca de responsabilidade
+do Maestri:
+
+| Terminal | Comando (`--command`) |
+|---|---|
+| Implementador | `claude --dangerously-skip-permissions --agent implementador --model sonnet --effort high` |
+| Mesa | `claude --dangerously-skip-permissions --agent mesa-de-revisao --effort high` |
+
+1. **Quadro.** `(cd <andar> && node tools/processo/linhas.ts)` mostra cada linha, o que **parte
+   agora** e se cabe abrir outra. Abra a que ele pedir (abaixo; na primeira tarefa, a 1) e rode de
+   novo. "NENHUMA TAREFA LIBERADA": pare e reporte. Sem nada a partir, encerre o turno: o relatório
+   de quem corre o acorda.
+
+   **Abrir a linha `<n>`** (o teto é 3, o de ambientes de teste da máquina):
+
+   ```bash
+   git -C <andar> branch spec/<func>--l<n> spec/<func>
+   maestri floor create "<id> <funcionalidade> L<n>" --branch spec/<func>--l<n> --existing-branch
+   maestri floor list                                   # anote o caminho do checkout da linha
+   (cd <andar> && node tools/processo/linhas.ts abrir <n> <checkout da linha>)   # ambiente de teste, carimbo e npm ci
+   # as três linhas abaixo: só nas linhas 2 e 3, e só na primeira vez
+   maestri recruit "Implementador <n>" --dir "<checkout da linha>" --command "<comando da tabela>"
+   maestri recruit "Mesa <n>" --dir "<checkout da linha>" --command "<comando da tabela>"
+   maestri connect "Implementador <n>" "Mesa <n>"
+   ```
+
+   No andar da spec ninguém implementa: quem precisa ver uma tarefa em curso (o `Arquiteto`, no
+   diagnóstico e na triagem) é apontado para o checkout da linha dela.
+2. **Partida**, para cada linha que parte: `(cd <andar> && node tools/processo/linhas.ts partida <n> <N>)`.
+   Ela traz a linha à ponta da spec e recusa a tarefa que não corre junto com as em curso.
+3. **Porte e diário.** O Implementador roda em Sonnet em toda tarefa. O porte do documento
+   (`**Porte:**`; sem a linha, o inferido que o `estado.ts` mostra) diz quanto ela deve levar, que é
+   o que a vigia usa. No `estado.md` do andar, a seção "Agora" tem três linhas, **Espero** (o relatório
+   de cada linha e em que tentativa a tarefa está), **Devo ainda** (o que ficou combinado e não está
+   feito) e **Base** (`spec/<func>` em `<hash>`); em "Concluídas", a tarefa que acabou de se encontrar.
+4. **Sessões novas.** Reinicie o par da linha, apontado para o **checkout da linha**: o terminal
+   mantém a caixa, a posição e as ligações.
+
+   ```bash
+   maestri recruit --replace "<Implementador [n]>" --command "<comando da tabela>" --dir "<checkout da linha>"
+   maestri recruit --replace "<Mesa [n]>" --command "<comando da tabela>" --dir "<checkout da linha>"
+   maestri check "<Implementador [n]>" ; maestri check "<Mesa [n]>"
+   ```
+
+   **Confira o cabeçalho de cada um**: o modelo esperado, o `@papel` e o caminho do checkout da
+   linha, sem `.maestri/roles` (fora da raiz nenhum hook dispara). Não bate: reinicie de novo. Depois:
+   `maestri floor status "tarefa N.0" --progress <feitas>/<total> --floor "<andar>"`.
+5. **Peça**, ao Implementador da linha:
+
+   ```
+   PEDIDO de <seu nome>
+   Tarefa: tasks/prd-<func>/<N>_task.md
+   Mesa de revisão: <a Mesa da linha> · Orquestrador: <seu nome>
+   Ao terminar, envie a <seu nome>: /seguir RELATÓRIO de <o Implementador da linha> …
+   Observação: <só se houver: achado de execução anterior, decisão do Arquiteto>
+   ```
+
+   Tarefa retomada (o quadro já mostra a linha com ela, sem partida nova): a primeira linha é
+   `PEDIDO de retomada`, e a observação diz o ponto ("o `test-engineer` reprovou na 1ª rodada; a ordem
+   está em `.processo/ordens/…`", "implementação na árvore, sem portão").
+
+   Depois, um `maestri check` no terminal, uma vez: o pedido tem de aparecer enviado, com ele
+   trabalhando. Texto parado na caixa: envie o Enter (`maestri ask "<terminal>" --raw "\n"`).
+6. **Limpe o seu contexto e encerre o turno.** Com o pedido da última partida do turno enviado e
+   conferido, tudo o que você sabia já está no `estado.md` e no quadro. Quem digita o `/clear` é a
+   rotina `Limpa o Orquestrador`, e ela pula o disparo se o seu terminal estiver ocupado: o comando é o
+   **último do turno**, num Bash comum (não em segundo plano), e depois dele você encerra o turno em
+   uma linha, sem rodar mais nada:
+
+   ```bash
+   nohup setsid sh -c 'sleep 25; maestri routine run "Limpa o Orquestrador"' >/dev/null 2>&1 &
+   ```
+
+   A resposta chega a uma sessão que só tem o diário. Não limpe em `PEDIDO de retomada` nem em
+   correção no meio de uma tarefa, nem com um pedido por conferir, nem no turno em que você pergunta
+   ao Joaquim.
+
+### O que pode chegar
+
+- **`RELATÓRIO` com `STATUS: SUCESSO`**, da linha `<n>`. Rode o encontro, que confere e junta:
+  `(cd <andar> && node tools/processo/linhas.ts encontro <n>)`. Ele exige a marca e a linha
+  `Revisões:` em todo commit novo com código e a árvore limpa, traz a spec para a linha, **verifica
+  a soma** (tipagem e lint), avança a spec com o `estado.md` e faz o push. Pela saída:
+  - **feito:** rode `(cd <andar> && node tools/processo/esteira.ts)`. O push do encontro dispara
+    a esteira sobre a soma das linhas, e ninguém espera por ela (D79): é aqui que você lê o
+    veredito dos pushes anteriores. `VERMELHA`: correção (`corrigir`) numa linha ociosa, com
+    `partida <n> correcao:<slug>`, **antes** de qualquer partida de tarefa, e o documento dela diz
+    de qual tarefa foi. Volte ao item 1;
+  - **`RECUSADO`** (código 1): é falha, mesmo com o relatório dizendo sucesso. Diga ao Implementador
+    da linha o que a saída diz, num `PEDIDO de retomada`; se ele não resolver, trate como
+    `STATUS: FALHA`;
+  - **`O PUSH FALHOU`** (código 3): `git -C <andar> push origin spec/<func>` antes de seguir;
+  - **`CONFLITO`** (código 4): duas linhas mexeram no mesmo arquivo, e nada mudou;
+  - **`VERIFICAÇÃO RECUSADA`** (código 5): a soma da linha com a spec não passa na tipagem ou no
+    lint, passou do prazo ou o encontro foi interrompido. A saída diz que a linha **voltou** ao
+    commit de antes do merge e que a spec não andou nem houve push; se ela disser "A LINHA NÃO
+    VOLTOU", o `git reset --hard <commit>` que ela dá vem antes de qualquer outro comando.
+
+  `CONFLITO` e `VERIFICAÇÃO RECUSADA` pedem a mesma coisa: é correção na própria linha (passo 10),
+  com o slug que a saída dá. O Implementador da linha traz a spec (`git merge spec/<func>`), resolve
+  ou conserta o que quebrou, passa o portão e a Mesa, e fecha o merge com o commit da correção.
+  Depois, o encontro de novo. Registre em "O que falhou".
+- **Resposta a um `PEDIDO de estado`.** Não chega como mensagem: lê-se na saída do `maestri ask` ou
+  com `maestri check`. Só registre; não é relatório de conclusão.
+- **`RELATÓRIO` com `STATUS: FALHA`.** Leia o motivo. Defeito fora da tarefa: correção antes de
+  retomar (abaixo). Senão, a cada falha o Implementador volta com **mais contexto**:
+  - *primeira falha:* reinicie-o e envie um `PEDIDO de retomada` que repete o que o relatório
+    trouxe: o teste, o erro e o que já foi tentado;
+  - *segunda falha:* peça o **diagnóstico** (abaixo), apontando os dois relatórios;
+  - *terceira falha:* parada (passo 7).
+- **`ESCALADA` da Mesa** (duas reprovações seguidas do mesmo revisor): o Implementador já tentou duas
+  vezes a partir da ordem. Antes da terceira, peça o **diagnóstico**, apontando a ordem e os achados.
+  Registre no `estado.md`.
+- **O diagnóstico:** reinicie o `Arquiteto` no andar e peça a seção "Diagnóstico" de
+  `.claude/agents/arquiteto.md`. Com a resposta, um `PEDIDO de retomada` ao Implementador apontando
+  `.processo/ordens/diagnostico-<N>.md` (e a ordem da Mesa, na escalada).
+- **`BLOQUEIO` da Mesa** (três). Parada (passo 7).
+- **`DIVERGÊNCIA`**, com a linha `Motivo:`:
+  - `desenho` ou `ordem`: reinicie o `Arquiteto` no andar e envie um `PEDIDO` de triagem com o
+    documento e a seção. A resposta dele volta ao Implementador como observação de um
+    `PEDIDO de retomada`, ou vira parada, se ele devolver `BLOQUEIO`;
+  - `portão`: o portão local falha por algo fora dos arquivos da tarefa. É correção (`corrigir`) na
+    mesma linha, pelo Implementador dela reiniciado, **antes** de retomar a tarefa. O trabalho da
+    tarefa fica na árvore, e por isso o `PEDIDO` da correção (passo 10) leva a linha
+    `Arquivos da tarefa em curso: <a saída de git status --short de agora>`: a Mesa os deixa fora da
+    revisão, e o commit da correção leva só os arquivos dela. Ela não tem encontro próprio: o
+    commit fica na linha e segue com o da tarefa. Registre em "O que decidi sem perguntar".
+
+A fila de carga é do portão e do e2e, que a tomam sozinhos. **Não mande uma linha esperar a outra com
+laço de `pgrep`**: ele casa com a própria linha de comando e não sai. No andar da spec e no térreo,
+que dividem o ambiente 0, um por vez.
