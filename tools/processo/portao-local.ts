@@ -18,6 +18,7 @@ import { ARGUMENTOS_COMPOSE, servicosDeJob } from '../ci/compose.ts'
 import { arquivoDoRelatorioDoE2e, motivoDaDuracaoDoE2e, VARIAVEL_DO_RELATORIO_DO_E2E } from '../ci/duracao-do-e2e.ts'
 import { e2eDosLiteraisRemovidos } from '../ci/e2e-que-cita-literal.ts'
 import { garantirFilaDeCarga } from '../ci/fila-de-carga.ts'
+import { avisoDaDivergenciaSoNoDocumento } from './divergencias.ts'
 import {
   avaliarMutacoes,
   conferirMutacoesDoDocumento,
@@ -167,6 +168,9 @@ if (semMutacao !== null) {
 // RF5: as linhas novas com condição que nenhum bloco alcança. Só informa; quem decide é o `test-engineer`.
 if (documento && textoDoDocumento !== null) {
   process.stdout.write(`\n${relatorioDoFaltando(linhasSemBloco(linhasNovasDaArvore(raiz), lerMutacoes(textoDoDocumento).mutacoes), documento)}`)
+  // M3 da retro da X7: a divergência que ficou só no documento da tarefa. Só informa, como o `--faltando`.
+  const aviso = avisoDaDivergenciaSoNoDocumento(raiz, documento, arquivosAlterados(raiz))
+  if (aviso !== null) process.stdout.write(`\n${aviso}`)
 }
 // Com node_modules anterior ao lock (um pull que trouxe dependência nova), o typecheck falha com TS2307
 // sem dizer que falta instalar.
