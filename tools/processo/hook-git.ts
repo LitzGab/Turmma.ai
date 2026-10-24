@@ -15,11 +15,13 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { basename } from 'node:path'
-import { BRANCHES_PROTEGIDAS, ehPapelDoTime, PAPEIS_DO_TIME } from './comando-git.ts'
+import { BRANCHES_PROTEGIDAS, conteudoDoHead, ehPapelDoTime, LIMITE_DE_LEITURA_DO_GIT, PAPEIS_DO_TIME } from './comando-git.ts'
+import type { ConteudoDe } from './guardioes-por-caminho.ts'
 import { avaliarMutacoes } from './mutacoes.ts'
 import { bloqueioDoForaDoProcesso, decidirCommit } from './portao.ts'
 
-const git = (raiz: string, argumentos: string[]): string => execFileSync('git', argumentos, { cwd: raiz, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+const git = (raiz: string, argumentos: string[]): string =>
+  execFileSync('git', argumentos, { cwd: raiz, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: LIMITE_DE_LEITURA_DO_GIT })
 
 /** Os nomes que um `git diff --cached` devolve com `-z`, sem o vazio do último separador. */
 const nomes = (saida: string): string[] => saida.split('\0').filter((nome) => nome !== '')
@@ -59,9 +61,14 @@ export function arquivosDoIndice(raiz: string): string[] {
   return doCommit.filter((arquivo) => doOutroLado.has(arquivo))
 }
 
-/** O conteúdo de um arquivo como está no índice, ou `null` quando ele não está lá. Vale o índice, e não o disco: é o que vai para o commit. */
-export function conteudoDoIndice(raiz: string): (arquivo: string) => string | null {
-  return (arquivo) => {
+/**
+ * O conteúdo de um arquivo como está no índice, ou no HEAD quando pedido; `null` quando ele não está lá. Vale o índice, e não o
+ * disco: é o que vai para o commit.
+ */
+export function conteudoDoIndice(raiz: string): ConteudoDe {
+  const doHead = conteudoDoHead(raiz)
+  return (arquivo, onde) => {
+    if (onde === 'head') return doHead(arquivo)
     try {
       return git(raiz, ['show', `:${arquivo}`])
     } catch {

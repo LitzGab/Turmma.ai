@@ -135,6 +135,15 @@ em `apps/`, `packages/`, `e2e/`, `tools/guardas/` e `tools/testes/` pede os quat
 guardião dela; as exceções, com motivo, e as regras de casamento estão
 em `tabela-de-guardioes.md` (decisão do Joaquim na rodada 2). O teto de três da D79 vale para a marcação.
 O portão imprime a lista unida.
+No código (13.0): `tools/processo/guardioes-por-caminho.ts` não importa módulo nenhum e exporta `guardioesDoCaminho(arquivos, conteudoDe)`, com
+`conteudoDe(arquivo, onde: 'head' | 'indice')`. Só é código aqui o arquivo que casa uma entrada: as cinco pastas do padrão e as exceções do código
+(`infra/` é uma delas, com `infra-guardian` e `privacy-guardian`); documento e o resto de `tools/` não pedem ninguém, nem citando a regra, até a 14.0 somar as
+linhas do RF16. O padrão devolve os quatro sem ler o arquivo; só a exceção lê o texto, nos dois lados, para o sufixo, o `@SemEscopo(` e a citação (`regra\s+10`,
+`20`, `70` e `80` sem outro dígito depois, e `lgpd`, sem diferença de maiúscula). A `decidirCommit` une os marcados e os de toda tarefa com os do caminho
+dos **arquivos que o commit leva** (`entrada.arquivos`), e não dos alterados da árvore: o guardião do que fica fora do commit é cobrado no commit que o levar
+(`obrigatoriosDoCommit`, em `portao.ts`). O `conteudoDe` do `PreToolUse` lê o disco como índice e o HEAD pelo git (`conteudoDoHead`, em `comando-git.ts`); o do git
+hook lê o índice e o HEAD pelo git. O `portao-local.ts` imprime `Revisores obrigatórios: …` (`linhaDosObrigatorios`) na primeira linha do subcomando `revisores`, que
+cobra essa mesma lista, e com `▶` no início do portão da tarefa, a partir dos arquivos alterados da árvore.
 
 **(c) O hook sem cópia congelada.** Julga o hook da árvore. Tarefa que mexe em `tools/processo/` roda o
 `hook-portao.test.ts` com o comando do `settings.json`. Se ele quebrar, o papel conserta pelo Edit, que não passa

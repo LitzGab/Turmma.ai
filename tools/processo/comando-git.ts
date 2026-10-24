@@ -91,8 +91,27 @@ export function branchAtual(raiz: string): string {
   }
 }
 
+/** O maior arquivo que `git show` devolve inteiro: acima do padrão do Node (1 MB), o arquivo que cita uma regra deixaria de ser lido e a citação se perderia. */
+export const LIMITE_DE_LEITURA_DO_GIT = 64 * 1024 * 1024
+
+/**
+ * O conteúdo de um arquivo como está no HEAD, ou `null` quando ele não está lá (arquivo novo, ou repositório sem commit). `null`
+ * é também o que o `git show` que falha produz (arquivo acima de `LIMITE_DE_LEITURA_DO_GIT`, erro do git): a citação de regra
+ * dele não é vista, e o guardião que ela somaria só vem pelo índice.
+ */
+export function conteudoDoHead(raiz: string): (arquivo: string) => string | null {
+  return (arquivo) => {
+    try {
+      return execFileSync('git', ['show', `HEAD:${arquivo}`], { cwd: raiz, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: LIMITE_DE_LEITURA_DO_GIT })
+    } catch {
+      return null
+    }
+  }
+}
+
+/** Os arquivos do índice. Sem detectar rename (`--no-renames`), como o git hook: o caminho de origem de um arquivo movido conta, e mover um repository para fora do padrão não esconde o guardião que ele pedia. */
 export function arquivosPreparados(raiz: string): string[] {
-  return execFileSync('git', ['diff', '--cached', '--name-only', '-z'], { cwd: raiz, encoding: 'utf8' }).split('\0').filter(Boolean)
+  return execFileSync('git', ['diff', '--cached', '--name-only', '--no-renames', '-z'], { cwd: raiz, encoding: 'utf8' }).split('\0').filter(Boolean)
 }
 
 const CAMINHO = String.raw`(?:"[^"]+"|'[^']+'|[^\s;&|()]+)`

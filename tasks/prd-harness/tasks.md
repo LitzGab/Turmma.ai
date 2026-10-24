@@ -71,7 +71,7 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [ ] 12.1 `tools/ci/conferir-entregas.ts` e o job `verificar` (§5a)
   - [ ] 12.2 Testes: terceira camada do `cenarios.md`
 
-- [ ] **13.0 — O commit exige o guardião que o caminho pede**
+- [x] **13.0 — O commit exige o guardião que o caminho pede**
   - [ ] 13.1 `guardioes-por-caminho.ts` com a tabela, as regras de casamento e a união (RF15)
   - [ ] 13.2 O portão imprime a lista unida
   - [ ] 13.3 Testes: `guardioes.test.ts` e RF15 do `cenarios.md`

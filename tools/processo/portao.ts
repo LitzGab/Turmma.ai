@@ -33,6 +33,7 @@ import {
   arquivosPreparados,
   arvoreDoCommit,
   branchAtual,
+  conteudoDoHead,
   desvioDoHook,
   documentoDaMensagem,
   ehCommit,
@@ -42,7 +43,17 @@ import {
   pushDoTime,
   textoDosArquivosDeMensagem,
 } from './comando-git.ts'
-import { formatarHora, lerRevisoes, REVISORES_COM_VETO, revisoresObrigatorios, tipoDoDocumento, type EntradaHook, type Revisao } from './documento-de-revisao.ts'
+import {
+  formatarHora,
+  lerRevisoes,
+  REVISORES_COM_VETO,
+  revisoresObrigatorios,
+  tipoDoDocumento,
+  type EntradaHook,
+  type Revisao,
+  type TipoDocumento,
+} from './documento-de-revisao.ts'
+import { guardioesDoCaminho, type ConteudoDe } from './guardioes-por-caminho.ts'
 
 export { PAPEIS_DO_TIME } from './comando-git.ts'
 
@@ -317,8 +328,11 @@ export interface EntradaDoCommit {
    * os lê do `git status`, mais largo que o commit; sem eles, valem os que o commit leva, que é o caso do git hook.
    */
   alterados?: string[]
-  /** O conteúdo de um arquivo, ou `null` quando ele não existe. No `PreToolUse` é o disco; o git hook entrega o índice. */
-  conteudoDe: (arquivo: string) => string | null
+  /**
+   * O conteúdo de um arquivo no HEAD ou no índice, ou `null` quando ele não existe lá. O documento da tarefa e o texto que o
+   * guardião do caminho procura (`guardioes-por-caminho.ts`) saem daqui. No `PreToolUse` o índice é o disco; o git hook entrega o índice.
+   */
+  conteudoDe: ConteudoDe
   /** A raiz da árvore: dela vêm o carimbo, os instantâneos (`.processo/`), as pastas de `tasks/` e a hora dos arquivos. */
   raiz: string
   /** O papel da sessão (`CLAUDE_CODE_AGENT`). A tarefa 14.0 o lê, para as pastas de processo valerem só em sessão de papel (RF16). */
@@ -338,12 +352,25 @@ function bloqueioDoCommitSemDocumento(arquivos: string[]): string | null {
   )
 }
 
+/**
+ * Quem é obrigatório (RF15): a união dos marcados no documento, dos que toda tarefa e toda correção têm e dos que o caminho dos
+ * `arquivos` pede. A exceção da tabela nunca tira quem o Arquiteto marcou. Os marcados vêm primeiro, e o portão imprime esta lista.
+ */
+export function obrigatoriosDoCommit(conteudo: string, tipo: TipoDocumento, arquivos: readonly string[], conteudoDe: ConteudoDe): string[] {
+  return [...new Set([...revisoresObrigatorios(conteudo, tipo), ...guardioesDoCaminho(arquivos, conteudoDe)])]
+}
+
+/** A linha que o portão local imprime com os obrigatórios já unidos ao caminho. */
+export function linhaDosObrigatorios(obrigatorios: readonly string[]): string {
+  return `Revisores obrigatórios: ${obrigatorios.join(', ')}`
+}
+
 /** As revisões, o portão carimbado e a conferência a mais do documento que o commit cita. */
 function bloqueioDoDocumento(entrada: EntradaDoCommit, alterados: string[], caminho: string, conferencia: ConferenciaDoDocumento): string | null {
-  const conteudo = entrada.conteudoDe(caminho)
+  const conteudo = entrada.conteudoDe(caminho, 'indice')
   if (conteudo === null) return `Commit bloqueado: não achei ${caminho} para conferir as revisões.`
   const { bloqueios } = avaliarPortao({
-    obrigatorios: revisoresObrigatorios(conteudo, tipoDoDocumento(caminho)),
+    obrigatorios: obrigatoriosDoCommit(conteudo, tipoDoDocumento(caminho), entrada.arquivos, entrada.conteudoDe),
     revisoes: lerRevisoes(conteudo),
     alteracoes: alteracoesDeCodigo(entrada.raiz, alterados),
     carimbo: lerCarimbo(entrada.raiz),
@@ -366,7 +393,8 @@ function bloqueioDoDocumento(entrada: EntradaDoCommit, alterados: string[], cami
  * Lê o disco da `raiz` em três pontos, e é divergência declarada (`10_task.md`, `techspec.md` §5a): o que o processo guarda
  * (`.processo/`, a pasta `tasks/`, o documento de correção citado); e a caducidade (`alteracoesDeCodigo`), que compara bytes
  * e hora dos arquivos de código com o carimbo, e por isso não passa por `conteudoDe`, que devolve texto: os bytes dos
- * arquivos alterados saem do disco. O `conteudoDe` só lê o documento da tarefa.
+ * arquivos alterados saem do disco. O `conteudoDe` lê o documento da tarefa e, dos arquivos que o commit leva, o índice e o HEAD:
+ * é o texto de onde `guardioesDoCaminho` tira o `@SemEscopo(` e a citação de regra.
  */
 export function decidirCommit(entrada: EntradaDoCommit, conferencia: ConferenciaDoDocumento = () => null): string | null {
   const alterados = entrada.alterados ?? entrada.arquivos
@@ -376,9 +404,14 @@ export function decidirCommit(entrada: EntradaDoCommit, conferencia: Conferencia
   return bloqueioDoDocumento(entrada, alterados, documento.caminho, conferencia)
 }
 
-/** O conteúdo de um arquivo da árvore, no disco; `null` quando não existe ou não é arquivo (uma pasta). É o `conteudoDe` do `PreToolUse`. */
-export function conteudoDoDisco(raiz: string): (arquivo: string) => string | null {
-  return (arquivo) => {
+/**
+ * O conteúdo de um arquivo da árvore: o disco, que no `PreToolUse` é o que o commit vai levar, e o HEAD quando pedido; `null` quando não
+ * existe ou não é arquivo (uma pasta). É o `conteudoDe` do `PreToolUse`.
+ */
+export function conteudoDoDisco(raiz: string): ConteudoDe {
+  const doHead = conteudoDoHead(raiz)
+  return (arquivo, onde) => {
+    if (onde === 'head') return doHead(arquivo)
     const caminho = join(raiz, arquivo)
     return existsSync(caminho) && statSync(caminho).isFile() ? readFileSync(caminho, 'utf8') : null
   }

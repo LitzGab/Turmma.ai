@@ -102,7 +102,8 @@ conferência a mais, documento ilegível, revisor obrigatório sem rodada), com 
 **RF15** (`tools/processo/harness/guardioes.test.ts` e `revisoes.test.ts`, pela `decidirCommit`): todos os casos de
 `tabela-de-guardioes.md`, seção "O teste da tabela", cada regra de casamento com bloco de mutação; repository alterado sem `tenancy-guardian` marcado e sem rodada
 dele: recusado, com a rodada APROVADO: passa; marcado e não pedido pelo caminho continua obrigatório; o portão imprime
-a lista unida.
+a lista unida. Pelo commit: o guardião sai dos arquivos que o commit leva, e não dos alterados da árvore; o conteúdo do HEAD, do índice e do disco é lido de onde o nome
+diz, inclusive o arquivo de mais de 1 MB; pelo git hook de verdade, o `tenancy-guardian` que ninguém marcou é cobrado em `apps/codigo.ts`. A parte do RF16 fica na 14.0.
 
 **RF16** (`revisoes.test.ts`): em sessão de papel, sem tarefa, um arquivo de cada caminho do §5(e) é recusado
 (`tsconfig.base.json`, `.claude/settings.local.json`, `compose.yaml` e `.env.example` incluídos);

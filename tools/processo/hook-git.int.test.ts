@@ -9,6 +9,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unli
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
+import { conteudoDoIndice } from './hook-git.ts'
 import { gravarCarimbo, registrar } from './revisoes.ts'
 
 const PROCESSO = import.meta.dirname
@@ -146,7 +147,7 @@ function prepararDocumento(raiz: string): void {
   git(raiz, 'add', 'docs/nota.md')
 }
 
-const REVISORES_DA_TAREFA = ['infra-guardian', 'test-engineer', 'revisor-geral']
+const REVISORES_DA_TAREFA = ['infra-guardian', 'tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'test-engineer', 'revisor-geral']
 const SUITES = ['typecheck', 'lint', 'segredo', 'dependencias', 'test']
 const pastaDosTranscripts = pastaTemporaria('transcripts-')
 
@@ -227,7 +228,7 @@ describe('RF14: o commit de papel, por qualquer caminho, contra um git de verdad
   it('o documento ruim no índice e bom no disco é recusado: vale o índice', () => {
     const raiz = repositorio()
     prepararCodigo(raiz)
-    for (const revisor of ['infra-guardian', 'test-engineer']) registrarRodada(raiz, revisor)
+    for (const revisor of REVISORES_DA_TAREFA.filter((nome) => nome !== 'revisor-geral')) registrarRodada(raiz, revisor)
     git(raiz, 'add', 'tasks')
     // A rodada que falta chega depois do `git add`: o disco tem as três, e o índice, que é o que vai para o commit, duas.
     registrarRodada(raiz, 'revisor-geral')
@@ -236,6 +237,64 @@ describe('RF14: o commit de papel, por qualquer caminho, contra um git de verdad
     const saida = rodar(raiz, GIT, COM_MARCA)
     expect(saida.criou).toBe(false)
     expect(saida.stderr).toMatch(/revisor-geral: nenhuma rodada registrada/)
+  })
+
+  it('o guardião que o caminho pede e ninguém marcou é cobrado pelo git hook (RF15): sem a rodada, recusa; com ela, passa', () => {
+    const raiz = repositorio()
+    prepararCodigo(raiz)
+    // O documento marca `infra-guardian` e `test-engineer`: o `tenancy-guardian` só é pedido porque `apps/codigo.ts` é código.
+    for (const revisor of REVISORES_DA_TAREFA.filter((nome) => nome !== 'tenancy-guardian')) registrarRodada(raiz, revisor)
+    carimbar(raiz)
+    git(raiz, 'add', 'tasks')
+    const sem = rodar(raiz, GIT, COM_MARCA)
+    expect(sem.criou).toBe(false)
+    expect(sem.stderr).toMatch(/tenancy-guardian: nenhuma rodada registrada/)
+    expect(sem.stderr).not.toMatch(/privacy-guardian: nenhuma|conformidade-reviewer: nenhuma|infra-guardian: nenhuma/)
+
+    registrarRodada(raiz, 'tenancy-guardian')
+    git(raiz, 'add', 'tasks')
+    const com = rodar(raiz, GIT, COM_MARCA)
+    expect(com.stderr).toBe('')
+    expect(com.criou).toBe(true)
+  })
+
+  it('o arquivo movido do padrão para uma exceção ainda pede os quatro: o caminho de origem conta (RF15)', () => {
+    const raiz = repositorio()
+    mkdirSync(join(raiz, 'apps/web'), { recursive: true })
+    // `apps/codigo.ts` (os quatro) vira `apps/web/vite.config.ts` (só I, e fora de `apps/*/src`, que o RF17 cobra): só o caminho de origem pede os outros três.
+    git(raiz, 'mv', 'apps/codigo.ts', 'apps/web/vite.config.ts')
+    for (const revisor of REVISORES_DA_TAREFA.filter((nome) => nome !== 'tenancy-guardian')) registrarRodada(raiz, revisor)
+    carimbar(raiz)
+    git(raiz, 'add', 'tasks')
+    const sem = rodar(raiz, GIT, COM_MARCA)
+    expect(sem.criou).toBe(false)
+    expect(sem.stderr).toMatch(/tenancy-guardian: nenhuma rodada registrada/)
+
+    registrarRodada(raiz, 'tenancy-guardian')
+    git(raiz, 'add', 'tasks')
+    const com = rodar(raiz, GIT, COM_MARCA)
+    expect(com.stderr).toBe('')
+    expect(com.criou).toBe(true)
+  })
+
+  it('o conteúdo do índice e o do HEAD vêm de onde o nome diz', () => {
+    const raiz = repositorio()
+    escreverCodigo(raiz, '// regra 20\n')
+    git(raiz, 'add', 'apps/codigo.ts')
+    git(raiz, 'commit', '-q', '-m', 'base')
+    escreverCodigo(raiz, 'export const a = 3\n')
+    git(raiz, 'add', 'apps/codigo.ts')
+    escreverCodigo(raiz, 'export const a = 4\n')
+    const leitura = conteudoDoIndice(raiz)
+    expect(leitura('apps/codigo.ts', 'head')).toBe('// regra 20\n')
+    expect(leitura('apps/codigo.ts', 'indice')).toBe('export const a = 3\n')
+    expect(leitura('apps/novo.ts', 'head')).toBeNull()
+    expect(leitura('apps/novo.ts', 'indice')).toBeNull()
+    // Arquivo maior que o padrão do Node (1 MB) é lido inteiro do índice.
+    const grande = 'x'.repeat(2_000_000)
+    writeFileSync(join(raiz, 'apps/grande.txt'), grande)
+    git(raiz, 'add', 'apps/grande.txt')
+    expect(leitura('apps/grande.txt', 'indice')).toBe(grande)
   })
 
   it('o documento bom no índice e ruim no disco passa: vale o índice', () => {

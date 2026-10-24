@@ -13,6 +13,7 @@ import {
   arvoreDoCommit,
   destinoProtegidoDoPush,
   arquivosDoCommit,
+  arquivosPreparados,
   avaliarCarimbo,
   avaliarCommitDoMvp,
   avaliarPortao,
@@ -40,7 +41,9 @@ import {
   lerInstantaneos,
   lerRevisoes,
   lerTranscript,
+  linhaDosObrigatorios,
   marcadorDoMvp,
+  obrigatoriosDoCommit,
   portao,
   registrar,
   revisoresObrigatorios,
@@ -406,7 +409,7 @@ describe('hooks sobre um repositório de verdade', () => {
 
     expect(portao(commit, raiz)).toMatch(/nenhuma rodada/)
 
-    for (const revisor of ['infra-guardian', 'tenancy-guardian', 'test-engineer', 'revisor-geral']) {
+    for (const revisor of ['infra-guardian', 'tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'test-engineer', 'revisor-geral']) {
       const veredito = revisor === 'tenancy-guardian' ? 'REPROVADO' : 'APROVADO'
       const mensagem = veredito === 'REPROVADO' ? 'VEREDITO: REPROVADO\nBloqueantes:\n- apps/codigo.ts:1 sem escopo de escola' : `VEREDITO: ${veredito}`
       registrar(
@@ -422,6 +425,8 @@ describe('hooks sobre um repositório de verdade', () => {
     expect(registradas.map((revisao) => `${revisao.revisor} ${revisao.veredito} ${revisao.inicio}`)).toEqual([
       'infra-guardian APROVADO 2026-09-13 10:00:00',
       'tenancy-guardian REPROVADO 2026-09-13 10:00:00',
+      'privacy-guardian APROVADO 2026-09-13 10:00:00',
+      'conformidade-reviewer APROVADO 2026-09-13 10:00:00',
       'test-engineer APROVADO 2026-09-13 10:00:00',
       'revisor-geral APROVADO 2026-09-13 10:00:00',
     ])
@@ -441,11 +446,13 @@ describe('hooks sobre um repositório de verdade', () => {
     )
     const motivo = portao(commit, raiz)
     expect(motivo).toMatch(/infra-guardian: apps\/codigo.ts mudou/)
+    expect(motivo).toMatch(/privacy-guardian: apps\/codigo.ts mudou/)
+    expect(motivo).toMatch(/conformidade-reviewer: apps\/codigo.ts mudou/)
     expect(motivo).toMatch(/test-engineer: apps\/codigo.ts mudou/)
     expect(motivo).toMatch(/revisor-geral: apps\/codigo.ts mudou/)
     expect(motivo).not.toMatch(/tenancy-guardian/)
 
-    for (const revisor of ['infra-guardian', 'test-engineer', 'revisor-geral']) {
+    for (const revisor of ['infra-guardian', 'privacy-guardian', 'conformidade-reviewer', 'test-engineer', 'revisor-geral']) {
       registrar(
         { agent_type: revisor, agent_transcript_path: transcript(raiz, `${revisor}-2`, '2026-09-13T10:12:00'), last_assistant_message: 'VEREDITO: APROVADO' },
         raiz,
@@ -474,7 +481,7 @@ describe('hooks sobre um repositório de verdade', () => {
     writeFileSync(join(raiz, 'apps/api/src/pedidos.ts'), 'export const a = 1\n')
     tocar(raiz, 'apps/api/src/pedidos.ts', '2026-09-13T09:00:00')
     tocar(raiz, 'apps/codigo.ts', '2026-09-13T09:00:00')
-    for (const revisor of ['infra-guardian', 'tenancy-guardian', 'test-engineer', 'revisor-geral']) {
+    for (const revisor of ['infra-guardian', 'tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'test-engineer', 'revisor-geral']) {
       registrar(
         { agent_type: revisor, agent_transcript_path: transcript(raiz, revisor, '2026-09-13T10:00:00'), last_assistant_message: 'VEREDITO: APROVADO' },
         raiz,
@@ -509,7 +516,7 @@ describe('hooks sobre um repositório de verdade', () => {
     const raiz = repositorio()
     const commit = { tool_input: { command: COMMIT_DA_TAREFA } }
     corrigir(raiz, 'apps/codigo.ts', '2026-09-13T09:00:00', 'export const original = true\n')
-    for (const revisor of ['infra-guardian', 'tenancy-guardian', 'test-engineer', 'revisor-geral']) {
+    for (const revisor of ['infra-guardian', 'tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'test-engineer', 'revisor-geral']) {
       registrar(
         { agent_type: revisor, agent_transcript_path: transcript(raiz, revisor, '2026-09-13T10:00:00'), last_assistant_message: 'VEREDITO: APROVADO' },
         raiz,
@@ -648,6 +655,24 @@ describe('hooks sobre um repositório de verdade', () => {
       expect(portaoDaTarefa(pedido).status).toBe(0)
       expect(lerCarimbo(raiz)).toMatchObject({ documento })
     }
+  }, 60_000)
+
+  it('o portão da tarefa e o subcomando revisores imprimem a lista unida: os marcados mais os que o caminho alterado pede (RF15)', () => {
+    const { documento, raiz, portaoDaTarefa, subcomando, comLinha } = arvoreDoPortaoDaTarefa()
+    // O documento do fixture marca `infra-guardian`, `tenancy-guardian` e `test-engineer`; produção em apps/ pede também os outros dois guardiões.
+    const lista = 'Revisores obrigatórios: infra-guardian, tenancy-guardian, test-engineer, revisor-geral, privacy-guardian, conformidade-reviewer'
+    writeFileSync(join(raiz, documento), comLinha)
+    const portao = portaoDaTarefa()
+    expect(portao.status).toBe(0)
+    expect(portao.stdout).toContain(`▶ ${lista}\n`)
+    const revisores = subcomando('revisores')
+    expect(revisores.stdout.split('\n')[0]).toBe(lista)
+    // E é a lista que o subcomando cobra: sem rodada nenhuma, todos os seis faltam, os dois que só o caminho pede inclusive.
+    expect(revisores.stdout).toContain('- privacy-guardian: nenhuma rodada registrada')
+    expect(revisores.stdout).toContain('- conformidade-reviewer: nenhuma rodada registrada')
+    // Sem código alterado, a lista volta a ser a do documento.
+    rmSync(join(raiz, 'apps/api/src/pedidos.ts'))
+    expect(subcomando('revisores').stdout.split('\n')[0]).toBe('Revisores obrigatórios: infra-guardian, tenancy-guardian, test-engineer, revisor-geral')
   }, 60_000)
 
   it('o portão local, rodado como processo, não carimba o que a suíte editou no meio da corrida', () => {
@@ -1894,7 +1919,7 @@ describe('a mensagem do commit vem do comando ou do arquivo (RF14)', () => {
 describe('decidirCommit e portao decidem igual (RF14)', () => {
   const git = (cwd: string, ...args: string[]) => execFileSync('git', args, { cwd, stdio: 'pipe' })
   const DOCUMENTO = 'tasks/prd-exemplo/9_task.md'
-  const REVISORES = ['infra-guardian', 'tenancy-guardian', 'test-engineer', 'revisor-geral']
+  const REVISORES = ['infra-guardian', 'tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'test-engineer', 'revisor-geral']
 
   /** Uma árvore com a tarefa 9.0 revisada por todos às 10:05, o código salvo às 09:00 e o portão local carimbado às 09:59:30. */
   function arvoreRevisada() {
@@ -1998,9 +2023,142 @@ describe('decidirCommit e portao decidem igual (RF14)', () => {
 
   it('o conteúdo do disco: o arquivo que existe, e null para o que não existe', () => {
     const raiz = arvoreRevisada()
-    expect(conteudoDoDisco(raiz)('docs.md')).toBe('texto\n')
-    expect(conteudoDoDisco(raiz)('nao-existe.md')).toBeNull()
+    expect(conteudoDoDisco(raiz)('docs.md', 'indice')).toBe('texto\n')
+    expect(conteudoDoDisco(raiz)('nao-existe.md', 'indice')).toBeNull()
     // Uma pasta não é arquivo: devolve null em vez de lançar.
-    expect(conteudoDoDisco(raiz)('tasks')).toBeNull()
+    expect(conteudoDoDisco(raiz)('tasks', 'indice')).toBeNull()
+  })
+})
+
+describe('RF15: o commit exige o guardião que o caminho pede', () => {
+  const DOCUMENTO = 'tasks/prd-exemplo/9_task.md'
+  const MARCA = 'Implementa x (tarefa 9.0)\n\nRevisões: ok'
+  const SEMPRE = ['test-engineer', 'revisor-geral']
+  const GUARDIOES = ['tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'infra-guardian']
+  const REPOSITORY = 'apps/api/src/pedidos/pedidos.repository.ts'
+
+  /** Uma árvore com a tarefa 9.0 que marca só `marcados`, revisada às 10:05 por `revisados`, o código salvo às 09:00 e o portão carimbado às 09:59:30. */
+  function arvore(marcados: string[], revisados: string[], arquivos: Record<string, string> = { [REPOSITORY]: 'export const a = 1\n' }) {
+    const raiz = mkdtempSync(join(tmpdir(), 'guardioes-'))
+    execFileSync('git', ['init', '-q'], { cwd: raiz, stdio: 'pipe' })
+    mkdirSync(join(raiz, 'tasks/prd-exemplo'), { recursive: true })
+    const documento = TAREFA.replace(/\*\*Subagentes obrigatórios:\*\*.*/, `**Subagentes obrigatórios:** ${marcados.map((nome) => `\`${nome}\``).join(', ')}`)
+    const revisada = revisados.reduce((conteudo, revisor) => acrescentarRevisao(conteudo, rodada(revisor, 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:05:00')), documento)
+    writeFileSync(join(raiz, DOCUMENTO), revisada)
+    for (const [arquivo, texto] of Object.entries(arquivos)) {
+      mkdirSync(join(raiz, dirname(arquivo)), { recursive: true })
+      writeFileSync(join(raiz, arquivo), texto)
+      utimesSync(join(raiz, arquivo), new Date('2026-09-13T09:00:00'), new Date('2026-09-13T09:00:00'))
+    }
+    gravarCarimbo(raiz, { inicio: new Date('2026-09-13T09:59:30').toISOString(), suites: ['typecheck', 'lint', 'segredo', 'dependencias', 'test'] })
+    return raiz
+  }
+
+  /** O commit da tarefa, levando `arquivos`. O conteúdo vem do disco, e o do HEAD de `doHead` (o repositório do teste não tem commit). */
+  function decidir(raiz: string, arquivos: string[], doHead: (arquivo: string) => string | null = () => null, alterados?: string[]) {
+    const doDisco = conteudoDoDisco(raiz)
+    return decidirCommit({ mensagem: MARCA, arquivos, ...(alterados ? { alterados } : {}), conteudoDe: (arquivo, onde) => (onde === 'head' ? doHead(arquivo) : doDisco(arquivo, 'indice')), raiz, papel: '' })
+  }
+
+  it('repository alterado sem tenancy-guardian marcado e sem rodada dele é recusado; com a rodada APROVADO, passa', () => {
+    const semRodada = arvore([], [...SEMPRE, 'privacy-guardian', 'conformidade-reviewer', 'infra-guardian'])
+    const recusa = decidir(semRodada, [REPOSITORY])
+    expect(recusa).toMatch(/^Commit bloqueado: revisões de tasks\/prd-exemplo\/9_task\.md incompletas\.\n- tenancy-guardian: nenhuma rodada registrada/)
+    expect(recusa).not.toMatch(/privacy-guardian|conformidade-reviewer|infra-guardian|test-engineer|revisor-geral/)
+
+    const comRodada = arvore([], [...SEMPRE, ...GUARDIOES])
+    expect(decidir(comRodada, [REPOSITORY])).toBeNull()
+  })
+
+  it.each(GUARDIOES)('código de apps/ sem a rodada do %s é recusado, e só por ele', (faltante) => {
+    const raiz = arvore([], [...SEMPRE, ...GUARDIOES.filter((guardiao) => guardiao !== faltante)])
+    const recusa = decidir(raiz, [REPOSITORY])
+    expect(recusa).toContain(`- ${faltante}: nenhuma rodada registrada`)
+    expect(recusa?.match(/nenhuma rodada registrada/g)).toHaveLength(1)
+  })
+
+  it('o veto do guardião do caminho também vale: a última rodada reprovada recusa', () => {
+    const raiz = arvore([], [...SEMPRE, ...GUARDIOES])
+    writeFileSync(join(raiz, DOCUMENTO), acrescentarRevisao(readFileSync(join(raiz, DOCUMENTO), 'utf8'), rodada('privacy-guardian', 'REPROVADO', '2026-09-13 10:20:00')))
+    expect(decidir(raiz, [REPOSITORY])).toMatch(/- privacy-guardian: a última rodada \(2ª/)
+  })
+
+  it('marcado e não pedido pelo caminho continua obrigatório', () => {
+    // O commit leva só o documento e uma exceção sem guardião (`tema.ts`): o caminho não pede ninguém, e o Arquiteto marcou `infra-guardian`.
+    const arquivos = { 'apps/web/src/tema.ts': 'export const a = 1\n' }
+    const semRodada = arvore(['infra-guardian'], SEMPRE, arquivos)
+    expect(decidir(semRodada, [DOCUMENTO, 'apps/web/src/tema.ts'])).toMatch(/- infra-guardian: nenhuma rodada registrada/)
+    expect(decidir(semRodada, [DOCUMENTO])).toMatch(/- infra-guardian: nenhuma rodada registrada/)
+    const comRodada = arvore(['infra-guardian'], [...SEMPRE, 'infra-guardian'], arquivos)
+    expect(decidir(comRodada, [DOCUMENTO, 'apps/web/src/tema.ts'])).toBeNull()
+  })
+
+  it('a exceção não pede guardião, e a citação da regra no índice ou no HEAD o pede', () => {
+    const raiz = arvore([], SEMPRE, { 'apps/web/src/tema.ts': 'export const a = 1\n' })
+    expect(decidir(raiz, ['apps/web/src/tema.ts'])).toBeNull()
+    // Citando "regra 70" no disco (o índice do `PreToolUse`).
+    writeFileSync(join(raiz, 'apps/web/src/tema.ts'), '// regra 70\nexport const a = 1\n')
+    utimesSync(join(raiz, 'apps/web/src/tema.ts'), new Date('2026-09-13T09:00:00'), new Date('2026-09-13T09:00:00'))
+    expect(decidir(raiz, ['apps/web/src/tema.ts'])).toMatch(/- conformidade-reviewer: nenhuma rodada registrada/)
+    // Citava "regra 20" no HEAD e não cita mais: o guardião continua pedido.
+    writeFileSync(join(raiz, 'apps/web/src/tema.ts'), 'export const a = 1\n')
+    utimesSync(join(raiz, 'apps/web/src/tema.ts'), new Date('2026-09-13T09:00:00'), new Date('2026-09-13T09:00:00'))
+    expect(decidir(raiz, ['apps/web/src/tema.ts'], () => '// regra 20\n')).toMatch(/- privacy-guardian: nenhuma rodada registrada/)
+  })
+
+  it('o commit que não leva código não pede guardião, ainda que a árvore tenha', () => {
+    const raiz = arvore([], SEMPRE)
+    expect(decidir(raiz, [DOCUMENTO])).toBeNull()
+    // O código alterado na árvore e fora do commit não pede o guardião: o commit pede o de quem ele leva.
+    expect(decidir(raiz, [DOCUMENTO], () => null, [REPOSITORY])).toBeNull()
+    expect(decidir(raiz, [DOCUMENTO, REPOSITORY], () => null, [REPOSITORY])).toMatch(/- tenancy-guardian: nenhuma rodada registrada/)
+  })
+
+  it('o arquivo movido no índice traz os dois caminhos, o de origem e o de destino', () => {
+    const raiz = arvore([], SEMPRE, { 'apps/api/src/x.repository.ts': 'export const a = 1\n' })
+    const git = (...args: string[]) => execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { cwd: raiz, stdio: 'pipe' })
+    git('add', 'apps')
+    git('commit', '-q', '-m', 'base')
+    mkdirSync(join(raiz, 'apps/web/src/galeria'), { recursive: true })
+    git('mv', 'apps/api/src/x.repository.ts', 'apps/web/src/galeria/x.tsx')
+    expect(arquivosPreparados(raiz).sort()).toEqual(['apps/api/src/x.repository.ts', 'apps/web/src/galeria/x.tsx'])
+  })
+
+  it('o conteúdo do HEAD, lido do git de verdade, e o do disco são lidos de onde o nome diz', () => {
+    const grande = 'x'.repeat(2_000_000)
+    const raiz = arvore([], SEMPRE, { 'docs.md': 'no HEAD\n', 'grande.txt': grande })
+    const git = (...args: string[]) => execFileSync('git', ['-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { cwd: raiz, stdio: 'pipe' })
+    expect(conteudoDoDisco(raiz)('docs.md', 'head')).toBeNull()
+    git('add', 'docs.md', 'grande.txt')
+    git('commit', '-q', '-m', 'base')
+    // Três versões: a do HEAD, a do índice e a do disco. O HEAD não é o índice, e o índice não é o disco.
+    writeFileSync(join(raiz, 'docs.md'), 'no índice\n')
+    git('add', 'docs.md')
+    writeFileSync(join(raiz, 'docs.md'), 'no disco\n')
+    expect(conteudoDoDisco(raiz)('docs.md', 'head')).toBe('no HEAD\n')
+    expect(conteudoDoDisco(raiz)('docs.md', 'indice')).toBe('no disco\n')
+    expect(conteudoDoDisco(raiz)('nao-existe.md', 'head')).toBeNull()
+    // Arquivo maior que o padrão do Node (1 MB) é lido inteiro: o que não coubesse deixaria a citação sem ser vista.
+    expect(conteudoDoDisco(raiz)('grande.txt', 'head')).toBe(grande)
+  })
+
+  it('o portão imprime a lista unida: os marcados, os de toda tarefa e os do caminho, sem repetir', () => {
+    const conteudo = arvoreMarcando('`tenancy-guardian`, `frontend-reviewer`')
+    const conteudoDe = () => 'export const a = 1\n'
+    expect(obrigatoriosDoCommit(conteudo, 'tarefa', [REPOSITORY], conteudoDe)).toEqual([
+      'tenancy-guardian',
+      'frontend-reviewer',
+      'test-engineer',
+      'revisor-geral',
+      'privacy-guardian',
+      'conformidade-reviewer',
+      'infra-guardian',
+    ])
+    expect(obrigatoriosDoCommit(conteudo, 'tarefa', ['docs/x.md'], conteudoDe)).toEqual(['tenancy-guardian', 'frontend-reviewer', 'test-engineer', 'revisor-geral'])
+    expect(linhaDosObrigatorios(['tenancy-guardian', 'test-engineer'])).toBe('Revisores obrigatórios: tenancy-guardian, test-engineer')
+
+    function arvoreMarcando(marcados: string): string {
+      return TAREFA.replace(/\*\*Subagentes obrigatórios:\*\*.*/, `**Subagentes obrigatórios:** ${marcados}`)
+    }
   })
 })

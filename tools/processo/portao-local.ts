@@ -38,10 +38,12 @@ import {
   avaliarPortao,
   CHAVE_DO_PORTAO,
   carimbarSeNadaMudou,
+  conteudoDoDisco,
   lerCarimbo,
   lerInstantaneos,
   lerRevisoes,
-  revisoresObrigatorios,
+  linhaDosObrigatorios,
+  obrigatoriosDoCommit,
   SUITES_DO_PORTAO_COMPLETO,
   suitesExigidas,
   tipoDoDocumento,
@@ -80,17 +82,23 @@ if (argumentos[0] === 'revisores') {
   // A mesma conta do hook do commit, sem o commit: é o que a Mesa de revisão lê para saber quem chamar, em vez de
   // descobrir pela tentativa. A mensagem leva a linha `Revisões:` só para o portão não cobrá-la aqui.
   const conteudo = readFileSync(join(raiz, documento), 'utf8')
+  // Uma leitura da árvore só: a lista de obrigatórios, a caducidade e as mutações têm de falar da mesma árvore.
+  const alterados = arquivosAlterados(raiz)
+  // Os obrigatórios são os marcados mais os que o caminho de **todos** os alterados pede (RF15). O commit cobra só os arquivos que leva
+  // (`techspec.md` §5b): esta lista pode pedir mais guardiões do que o commit vai cobrar, e nunca menos.
+  const obrigatorios = obrigatoriosDoCommit(conteudo, tipoDoDocumento(documento), alterados, conteudoDoDisco(raiz))
   const { bloqueios, linhaResumo } = avaliarPortao({
-    obrigatorios: revisoresObrigatorios(conteudo, tipoDoDocumento(documento)),
+    obrigatorios,
     revisoes: lerRevisoes(conteudo),
-    alteracoes: alteracoesDeCodigo(raiz, arquivosAlterados(raiz)),
+    alteracoes: alteracoesDeCodigo(raiz, alterados),
     carimbo: lerCarimbo(raiz),
     mensagemCommit: 'Revisões: conferência',
     documento,
     instantaneos: lerInstantaneos(raiz),
   })
-  const mutacoes = avaliarMutacoes(lerCarimbo(raiz), documento, conteudo, arquivosAlterados(raiz))
+  const mutacoes = avaliarMutacoes(lerCarimbo(raiz), documento, conteudo, alterados)
   if (mutacoes !== null) bloqueios.push(mutacoes)
+  process.stdout.write(`${linhaDosObrigatorios(obrigatorios)}\n`)
   process.stdout.write(bloqueios.length > 0 ? `${bloqueios.map((bloqueio) => `- ${bloqueio}`).join('\n')}\n` : `nada pendente: ${linhaResumo}\n`)
   process.exit(bloqueios.length > 0 ? 1 : 0)
 }
@@ -145,6 +153,10 @@ function ambienteDoPasso(passo: PassoDoPortao): NodeJS.ProcessEnv {
 const documento = daTarefa ? documentoDasMutacoes() : null
 const textoDoDocumento = documento ? readFileSync(join(raiz, documento), 'utf8') : null
 if (daTarefa && documento === null) process.stdout.write('\n▶ nenhum documento de tarefa achado (ou mais de um alterado): as mutações não serão conferidas. Passe o documento para conferi-las.\n')
+// RF15: a lista que o commit vai cobrar, a que o Arquiteto marcou unida à que o caminho alterado pede.
+if (documento && textoDoDocumento !== null) {
+  process.stdout.write(`\n▶ ${linhaDosObrigatorios(obrigatoriosDoCommit(textoDoDocumento, tipoDoDocumento(documento), arquivosAlterados(raiz), conteudoDoDisco(raiz)))}\n`)
+}
 // RF17: com código de produto alterado, o documento precisa de bloco de mutação ou da linha `Sem mutação` com motivo. Vermelho
 // antes de qualquer suíte: a falta está no documento, e as suítes não a consertam.
 const semMutacao = daTarefa ? exigenciaDeMutacao(arquivosAlterados(raiz), textoDoDocumento) : null
