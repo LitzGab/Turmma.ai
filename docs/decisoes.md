@@ -61,7 +61,8 @@ mesmo tempo, em linhas.
 
 **Nome de peça técnica e mecanismo próprio.** Fechado em 22/10/2026 (D81): a peça técnica tem o nome do framework, em
 inglês (`TurmaController`, `ZodValidationPipe`), e o conceito do domínio fica em português, pelo glossário. Mecanismo
-próprio só com o motivo escrito; o que já existe com nome em português só muda quando a tarefa já mexe nele.
+próprio só com o motivo escrito. O que já existe com nome em português é renomeado de uma vez na X8, depois da X4
+(D81 revista em 24/10/2026); "ferramenta" é domínio e fica.
 
 **Nome dos agentes.** O desenho da call tinha nomes próprios; os docs usam função. Fica a
 função (D17).
@@ -1525,4 +1526,12 @@ piloto esperando; a linha de base mostrou um sistema saudável (97,9 % de linhas
 de duplicação, nenhuma violação de camada), e a reengenharia trava por máquina o que hoje depende de
 disciplina. E mecanismo próprio é framework nosso para manter: o dev que chega sabe NestJS, não o
 `@Corpo`. O `nestjs-zod` ficou de fora porque a versão 5.5 declara `@nestjs/common` e `@nestjs/swagger`
-só até `^11`, e o projeto usa o 12; entrar com `--legacy-peer-deps` não é padrão de mercado.
+só até `^11`, e o projeto usa o 12; entrar com `--legacy-peer-deps` não é padrão de mercado. Revista em 24/10/2026, pelo Joaquim:
+o nome técnico antigo em português deixa de esperar a tarefa que mexe nele e é renomeado de uma vez na
+**X8 `nomes-de-mercado`**, depois da X4 e antes do F2, a partir de um inventário completo que ele aprova
+antes do rename. "Ferramenta" fica em português, porque é conceito de domínio (glossário, D74), não tool
+de LLM: o modelo não escolhe nem chama nada, quem roda a tarefa é o servidor. `Tool` fica reservado para
+function calling, quando existir. Banco, rota HTTP, código de erro e texto de tela não mudam. Motivo, nas
+palavras dele: "tools já entendo que é a tool que o agente pode usar via MCP… coisa de software podia ser
+inglês como geralmente é chamado"; o rename gradual deixa a base em dois idiomas por tempo indefinido, e
+quem vem do mercado lê a peça traduzida como mecanismo próprio.

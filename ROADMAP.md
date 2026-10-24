@@ -353,6 +353,22 @@ regra aponta a checagem que a garante; a P4 e as M1 a M7 da X5 e as M1 a M3 da X
 a prova; cada pergunta "Para a Etapa 9" tem resposta do Joaquim, aplicada ou registrada; e a base fixa que toda sessão
 carrega está medida antes e depois.
 
+## X8 — `nomes-de-mercado` [ ]
+**Depende de:** X4 · **parte depois que a X4 pousar e vem antes do F2**
+
+A D81 aplicada ao código que já existe (revista em 24/10/2026, a pedido do Joaquim). Primeiro, um inventário completo
+das peças técnicas com nome em português em `apps/` e `packages/` (adaptadores, executor, agendador, repositórios em
+memória, fila, limitador, erros, utilitários), com o nome de mercado de cada uma; o Joaquim aprova o inventário (⛔)
+antes de qualquer rename. Depois, o rename mecânico, em ondas por pacote. O conceito de domínio fica em português, pelo
+glossário: turma, nota, ferramenta, artefato, entrega, função, autonomia, orçamento e os nomes dos agentes. "Ferramenta"
+não vira `Tool`: no nosso código o modelo não chama função, e `Tool` fica para quando houver function calling. **Não
+mudam:** tabela e coluna do banco, rota HTTP, código de erro, texto de tela e `tools/processo/`.
+
+**Pronto quando:** nenhuma peça do inventário aprovado tem nome em português; uma guarda recusa, em código novo, os
+prefixos e sufixos técnicos em português do inventário (`Adaptador…`, `…EmMemoria`, `Agendador…`); a tipagem, o lint, as
+guardas, a unidade, a integração e o e2e rodam verdes antes e depois, com o diff só de nome; e o guia do desenvolvedor
+(§9), o `docs/arquitetura.md` e o README da camada de IA (`packages/nucleo/src/ia/README.md`) usam os nomes novos.
+
 ## A pele nova — X1 a X4 (D80)
 
 > **Decidido em 12/10/2026** (D80). O Gabriel redesenhou o produto inteiro em mockup, de 04 a

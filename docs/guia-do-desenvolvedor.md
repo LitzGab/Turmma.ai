@@ -11,7 +11,7 @@ leia a regra de `.claude/rules/` da área em que você vai mexer.
 > **A regra de idioma (D81).** A peça técnica tem o nome do framework, em inglês: `Controller`, `Service`,
 > `Repository`, `Module`, `Pipe`, `Guard`, os hooks `use…`. O conceito do domínio fica em português, pelo
 > `docs/glossario.md`: `turma`, `nota`, `matricula`, `anoLetivo`. Por isso você vai ver `TurmaController` e
-> `turma.repository.ts`. Algumas peças técnicas antigas têm nome em português, e a §9 traz o equivalente de mercado.
+> `turma.repository.ts`. Algumas peças técnicas antigas têm nome em português, e a §9 traz o equivalente de mercado até a X8 renomeá-las (D81 revista).
 
 ---
 
