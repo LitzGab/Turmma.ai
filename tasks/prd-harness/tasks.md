@@ -76,10 +76,10 @@ depois do texto (21.0). O ensaio do RF31 é do Orquestrador, no fechamento, e n�
   - [ ] 13.2 O portão imprime a lista unida
   - [ ] 13.3 Testes: `guardioes.test.ts` e RF15 do `cenarios.md`
 
-- [ ] **14.0 — Código de processo exige revisão, e o `(mvp:)` sai**
-  - [ ] 14.1 A lista do §5(e) e as linhas do RF16 na tabela (RF16)
-  - [ ] 14.2 O caminho `(mvp:)` sai do hook (RF18)
-  - [ ] 14.3 Testes: RF16 e RF18 do `cenarios.md`
+- [x] **14.0 — Código de processo exige revisão, e o `(mvp:)` sai**
+  - [x] 14.1 A lista do §5(e) e as linhas do RF16 na tabela (RF16)
+  - [x] 14.2 O caminho `(mvp:)` sai do hook (RF18)
+  - [x] 14.3 Testes: RF16 e RF18 do `cenarios.md`
 
 - [x] **15.0 — A base fixa curta, e as regras 00, 40, 60 e 80 por `paths:`**
   - [x] 15.1 `CLAUDE.md` com os destinos do `texto.md`; `docs/decisoes-em-aberto.md` lido pelo `estado.ts`

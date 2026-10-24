@@ -1,7 +1,10 @@
 # O corpus `ouro`
 
 **Gênero:** referência viva · **Quem altera:** só o Arquiteto, com o `conformidade-reviewer`, num commit só de `docs/` com
-`(ouro: <política>)` no assunto (R38). O Implementador lê e não altera. O selo nasce na tarefa 1.0 da X5, como
+`(correção <slug>)` no assunto, que é a marca de qualquer código de processo (RF16, X7): o documento da correção marca o
+`conformidade-reviewer`. O hook só recusa o commit sem a rodada dele em sessão de papel (o Arquiteto é um); o commit de quem não
+tem papel (o Orquestrador, o Joaquim) não passa por ele, e só a esteira (`ci:conferir-entregas`) o pega, sem saber quem escreveu.
+O `(ouro: <política>)` não existe mais, e nunca teve checagem. O Implementador lê e não altera. O selo nasce na tarefa 1.0 da X5, como
 `selo-do-ouro.test.ts`, e cobre todo arquivo desta pasta menos o próprio `SELO.json`; a 29.0 só leva esse teste para o módulo
 de políticas e acrescenta `tools/guardas/ouro-separado.ts`.
 

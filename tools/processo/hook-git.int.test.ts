@@ -184,6 +184,19 @@ describe('RF14: o commit de papel, por qualquer caminho, contra um git de verdad
     expect(saida.stderr).toMatch(/Commit bloqueado: ele leva código \(apps\/codigo\.ts\) sem "\(tarefa N\.0\)"/)
   })
 
+  it('o arquivo de tools/ sem marca é recusado pelo commit-msg do papel (RF16), e passa sem papel', () => {
+    const raiz = repositorio()
+    mkdirSync(join(raiz, 'tools'), { recursive: true })
+    writeFileSync(join(raiz, 'tools/outro.ts'), 'export const a = 1\n')
+    git(raiz, 'add', 'tools/outro.ts')
+    const recusado = rodar(raiz, GIT, ['commit', '-q', '-m', 'Ajusta x'])
+    expect(recusado.criou).toBe(false)
+    expect(recusado.stderr).toMatch(/Commit bloqueado: ele leva código \(tools\/outro\.ts\) sem "\(tarefa N\.0\)"/)
+    const livre = rodar(raiz, GIT, ['commit', '-q', '-m', 'Ajusta x'], SEM_PAPEL)
+    expect(livre.stderr).toBe('')
+    expect(livre.criou).toBe(true)
+  })
+
   it.each([
     ['env git commit', 'env', (git: string) => [git, 'commit', '-q', '-m', 'Ajusta x']],
     ['command git commit', 'sh', (git: string) => ['-c', `command ${git} commit -q -m "Ajusta x"`]],

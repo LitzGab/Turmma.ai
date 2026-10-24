@@ -79,7 +79,7 @@ caducam as rodadas e entram na conferência, enquanto `arquivos` são os que o c
 em sessão de papel, §5e). O `documentoDoCommit` virou `documentoDaMensagem(mensagem, raiz, arquivos)`, sem a guarda de
 `git commit` no texto, porque a mensagem do git hook não a tem. A mensagem do `PreToolUse` é o comando inteiro mais o texto
 do arquivo de `-F`, lido da pasta em que o commit roda (`-C`, `cd`); o comando inteiro, e não só o `-m`, porque a mensagem
-pode vir de `$(cat <<EOF …)`. O caminho `(mvp: …)` (D77) continua no `portao`, antes da `decidirCommit`, e sai na 14.0 (RF18).
+pode vir de `$(cat <<EOF …)`. O caminho `(mvp: …)` (D77) ficava no `portao`, antes da `decidirCommit`, e saiu na 14.0 (RF18): o commit marcado com ele é código sem tarefa. A `decidirCommit` lê o `papel` para contar como código o que a `ehCodigoParaAEsteira` conta, só em sessão de papel (`arquivosDeCodigo`, em `portao.ts`); a tabela de guardiões do RF16 (`REGRAS_DO_RF16` e `RESTO_DO_PROCESSO`, em `guardioes-por-caminho.ts`) vale para o commit de tarefa ou de correção em qualquer sessão. E a correção que leva código de processo (`ehCodigoParaAEsteira` menos `PASTAS_DE_CODIGO`) exige também o `revisor-geral`, marcado ou não (`obrigatoriosDoCommit`): a tarefa já o tem sempre.
 A linha `Fora do processo:` não é da `decidirCommit`: `bloqueioDoForaDoProcesso(comando, doArquivo)` a nega no
 `PreToolUse` e o `hook-git.ts` a reaproveita. No arquivo vale a linha que começa pelo termo; no comando, o termo em
 qualquer lugar, porque dentro de `-m "…"` não se separa linha de menção; sem distinguir maiúscula, para a esteira (12.0)

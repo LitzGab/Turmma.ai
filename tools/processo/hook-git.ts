@@ -11,7 +11,7 @@
 // é recusa, e script que não acha este arquivo também (o `exec node` falha). O que a máquina não alcança está em
 // "Limites declarados", na Tech Spec, e a terceira camada (`ci:conferir-entregas`) é quem pega.
 //
-// Fica fora o caminho `(mvp: …)` do `PreToolUse` (D77): a 14.0 o tira (RF18), e a fatia que ele servia já pousou.
+// Não há caminho `(mvp: …)` (D77): saiu na 14.0 (RF18), e a fatia que ele servia já pousou. Commit com o marcador é código sem tarefa.
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { basename } from 'node:path'

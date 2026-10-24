@@ -15,7 +15,6 @@ import {
   arquivosDoCommit,
   arquivosPreparados,
   avaliarCarimbo,
-  avaliarCommitDoMvp,
   avaliarPortao,
   arquivosDaMensagem,
   arquivosQueMudaram,
@@ -24,6 +23,7 @@ import {
   conteudoDoDisco,
   decidirCommit,
   desvioDoHook,
+  ehCodigoParaAEsteira,
   ehPapelDoTime,
   textoDosArquivosDeMensagem,
   caminhoDaTarefa,
@@ -42,12 +42,10 @@ import {
   lerRevisoes,
   lerTranscript,
   linhaDosObrigatorios,
-  marcadorDoMvp,
   obrigatoriosDoCommit,
   portao,
   registrar,
   revisoresObrigatorios,
-  SUITES_DO_MVP,
   SUITES_DO_PORTAO_COMPLETO,
   SUITES_DO_PORTAO_DA_TAREFA,
   type Carimbo,
@@ -55,6 +53,7 @@ import {
   ultimaRodadaNosAchados,
 } from './revisoes.ts'
 import { avaliarMutacoes } from './mutacoes.ts'
+import { CODIGO_PARA_A_ESTEIRA, DOCUMENTO_PARA_A_ESTEIRA } from '../ci/caminhos-da-esteira.ts'
 
 const TAREFA = `# Tarefa 9.0 — Exemplo
 
@@ -764,110 +763,55 @@ describe('hooks sobre um repositório de verdade', () => {
     expect(portao({ tool_input: { command: 'git commit -m "Registra decisão D53"' } }, raiz)).toBeNull()
   })
 
-  describe('o marcador da fatia do MVP (D77)', () => {
-    /** O repositório de fixture numa branch da fatia, com o código salvo antes do portão. */
-    function repositorioDoMvp(branch = 'mvp/apresentacao') {
+  // O `(mvp: …)` (D77) saiu na 14.0 (RF18). Este é o único teste existente que mudou: os casos que aceitavam o commit marcado viraram este, que o recusa.
+  describe('o marcador da fatia do MVP saiu (RF18)', () => {
+    /** O repositório de fixture numa branch `mvp/…`, com o código salvo antes do portão. */
+    function repositorioDaFatia(branch = 'mvp/apresentacao') {
       const raiz = repositorio()
       execFileSync('git', ['checkout', '-q', '-b', branch], { cwd: raiz, stdio: 'pipe' })
       tocar(raiz, 'apps/codigo.ts', '2026-09-13T09:00:00')
       return raiz
     }
-    /** O portão local passou às 09:59:30 sobre o conteúdo de agora. */
-    const carimbar = (raiz: string, suites: string[]) => {
-      gravarCarimbo(raiz, { inicio: new Date('2026-09-13T09:59:30').toISOString(), suites })
+    /** O portão local passou às 09:59:30 sobre o conteúdo de agora, com as três suítes que o caminho do MVP exigia. */
+    const carimbar = (raiz: string) => {
+      gravarCarimbo(raiz, { inicio: new Date('2026-09-13T09:59:30').toISOString(), suites: ['typecheck', 'lint', 'test'] })
       gravarInstantaneo(raiz, CHAVE_DO_PORTAO, alteracoesDeCodigo(raiz, arquivosAlterados(raiz)))
     }
     const commitCom = (mensagem: string) => ({ tool_input: { command: `git add apps/codigo.ts && git commit -m "${mensagem}"` } })
     const COMMIT_DO_MVP = commitCom('Cria os contratos do time (mvp: contratos do time)')
+    const SEM_TAREFA = /^Commit bloqueado: ele leva código \(apps\/codigo\.ts\) sem "\(tarefa N\.0\)" nem "\(correção <slug>\)"\./
 
-    it('passa sem documento de tarefa e sem revisor, só com o portão local carimbado', () => {
-      const raiz = repositorioDoMvp()
-      carimbar(raiz, ['typecheck', 'lint', 'test'])
-      expect(portao(COMMIT_DO_MVP, raiz)).toBeNull()
-      // O carimbo de uma tarefa, com suítes a mais, também serve.
-      carimbar(raiz, ['typecheck', 'lint', 'test', 'e2e', 'infra'])
-      expect(portao(COMMIT_DO_MVP, raiz)).toBeNull()
-    })
-
-    it('bloqueia sem carimbo, com carimbo sem uma das três suítes, e com código editado depois do portão', () => {
-      const raiz = repositorioDoMvp()
-      expect(portao(COMMIT_DO_MVP, raiz)).toMatch(/^Commit bloqueado: portão local: nunca passou/)
-
-      carimbar(raiz, ['typecheck', 'lint'])
-      expect(portao(COMMIT_DO_MVP, raiz)).toMatch(/^Commit bloqueado: portão local: o último não rodou test\./)
-
-      carimbar(raiz, ['typecheck', 'lint', 'test'])
-      expect(portao(COMMIT_DO_MVP, raiz)).toBeNull()
-      corrigir(raiz, 'apps/codigo.ts', '2026-09-13T10:05:00', 'export const a = 2\n')
-      expect(portao(COMMIT_DO_MVP, raiz)).toMatch(/^Commit bloqueado: portão local: apps\/codigo.ts mudou em 2026-09-13 10:05:00/)
-    })
-
-    it('o código que o commit não leva também invalida o carimbo: as suítes rodaram sobre a árvore inteira', () => {
-      const raiz = repositorioDoMvp()
-      writeFileSync(join(raiz, 'apps/outro.ts'), 'export const b = 1\n')
-      tocar(raiz, 'apps/outro.ts', '2026-09-13T09:00:00')
-      carimbar(raiz, ['typecheck', 'lint', 'test'])
-      expect(portao(COMMIT_DO_MVP, raiz)).toBeNull()
-      corrigir(raiz, 'apps/outro.ts', '2026-09-13T10:05:00', 'export const b = 2\n')
-      expect(portao(COMMIT_DO_MVP, raiz)).toMatch(/portão local: apps\/outro.ts mudou/)
-    })
-
-    it('só vale em branch mvp/…: na develop, o mesmo commit com o portão verde é bloqueado', () => {
-      for (const branch of ['develop', 'main', 'correcao/mvp/x']) {
-        const raiz = repositorioDoMvp(branch)
-        carimbar(raiz, ['typecheck', 'lint', 'test'])
-        expect(portao(COMMIT_DO_MVP, raiz)).toMatch(new RegExp(`só vale em branch mvp/… \\(D77\\), e esta é ${branch}\\.`))
+    it.each(['mvp/apresentacao', 'mvp/material', 'develop', 'spec/exemplo'])('em %s, "(mvp: algo)" com código e carimbo válido é código sem tarefa', (branch) => {
+      const raiz = repositorioDaFatia(branch)
+      carimbar(raiz)
+      for (const papel of ['', 'implementador']) {
+        const bloqueio = portao(COMMIT_DO_MVP, raiz, papel)
+        expect(bloqueio).toMatch(SEM_TAREFA)
+        // A mensagem não ensina mais o caminho que saiu.
+        expect(bloqueio).not.toMatch(/mvp|D77/i)
       }
-      const pacote = repositorioDoMvp('mvp/material')
-      carimbar(pacote, ['typecheck', 'lint', 'test'])
-      expect(portao(COMMIT_DO_MVP, pacote)).toBeNull()
     })
 
-    it('com o HEAD solto não há branch, e o marcador não vale', () => {
-      const raiz = repositorioDoMvp()
-      const git = (...args: string[]) => execFileSync('git', ['-c', 'user.name=teste', '-c', 'user.email=teste@exemplo.invalid', ...args], { cwd: raiz, stdio: 'pipe' })
-      git('add', '-A')
-      git('commit', '-q', '-m', 'base')
-      git('checkout', '-q', '--detach')
-      // Outro tamanho e outro instante: com os dois iguais ao que está no índice, o git não vê a mudança.
-      corrigir(raiz, 'apps/codigo.ts', '2026-09-13T09:30:00', 'export const a = 30\n')
-      carimbar(raiz, ['typecheck', 'lint', 'test'])
-      expect(arquivosAlterados(raiz)).toContain('apps/codigo.ts')
-      expect(portao(COMMIT_DO_MVP, raiz)).toMatch(/esta é um HEAD solto\./)
+    it('o git hook decide igual: a decisão não tem caminho do MVP', () => {
+      const raiz = repositorioDaFatia()
+      carimbar(raiz)
+      const decisao = decidirCommit({ mensagem: 'Cria os contratos do time (mvp: contratos do time)', arquivos: ['apps/codigo.ts'], conteudoDe: conteudoDoDisco(raiz), raiz, papel: 'implementador' })
+      expect(decisao).toMatch(SEM_TAREFA)
     })
 
-    it('marcador sem resumo não é marcador, e código sem marcador continua bloqueado', () => {
-      const raiz = repositorioDoMvp()
-      carimbar(raiz, ['typecheck', 'lint', 'test'])
-      for (const mensagem of ['Ajusta x', 'Ajusta x (mvp: )', 'Ajusta x (mvp:)', 'Ajusta x (mvp)', 'Ajusta x mvp: contratos']) {
-        expect(portao(commitCom(mensagem), raiz)).toMatch(/leva código \(apps\/codigo.ts\) sem "\(tarefa N.0\)"/)
-      }
-      expect(marcadorDoMvp('git commit -m "x (mvp:  contratos do time )"')).toBe('contratos do time')
-      expect(marcadorDoMvp('git commit -m "x (mvp: )"')).toBeNull()
-      expect(marcadorDoMvp('git commit -m "x"')).toBeNull()
-    })
-
-    it('a marca de tarefa vence a do MVP: os revisores da tarefa continuam exigidos', () => {
-      const raiz = repositorioDoMvp()
-      carimbar(raiz, ['typecheck', 'lint', 'test'])
+    it('o marcador ao lado da marca de tarefa não muda nada: os revisores da tarefa continuam exigidos', () => {
+      const raiz = repositorioDaFatia()
+      carimbar(raiz)
       const comando = COMMIT_DA_TAREFA.replace('(tarefa 9.0)', '(tarefa 9.0) (mvp: atalho)')
       expect(comando).toContain('(mvp: atalho)')
       expect(portao({ tool_input: { command: comando } }, raiz)).toMatch(/revisões de tasks\/prd-exemplo\/9_task.md incompletas[\s\S]*nenhuma rodada registrada/)
     })
 
     it('commit que não leva código passa com ou sem o marcador, sem portão', () => {
-      const raiz = repositorioDoMvp()
+      const raiz = repositorioDaFatia()
       writeFileSync(join(raiz, 'docs.md'), 'texto\n')
-      expect(portao({ tool_input: { command: 'git add docs.md && git commit -m "Atualiza o estado (mvp: estado)"' } }, raiz)).toBeNull()
-      expect(portao({ tool_input: { command: 'git add docs.md && git commit -m "Atualiza o estado"' } }, raiz)).toBeNull()
-    })
-
-    it('a decisão, sem repositório: a branch errada vem antes do carimbo', () => {
-      const semAlteracao = { carimbo: null, alteracoes: [], instantaneo: undefined }
-      expect(avaliarCommitDoMvp({ ...semAlteracao, branch: 'develop' })).toMatch(/só vale em branch mvp\//)
-      expect(avaliarCommitDoMvp({ ...semAlteracao, branch: 'mvp/apresentacao' })).toMatch(/portão local: nunca passou/)
-      const verde: Carimbo = { inicio: new Date('2026-09-13T09:59:30').toISOString(), suites: [...SUITES_DO_MVP] }
-      expect(avaliarCommitDoMvp({ ...semAlteracao, carimbo: verde, branch: 'mvp/apresentacao' })).toBeNull()
+      expect(portao({ tool_input: { command: 'git add docs.md && git commit -m "Atualiza o estado (mvp: estado)"' } }, raiz, '')).toBeNull()
+      expect(portao({ tool_input: { command: 'git add docs.md && git commit -m "Atualiza o estado"' } }, raiz, '')).toBeNull()
     })
   })
 
@@ -2160,5 +2104,220 @@ describe('RF15: o commit exige o guardião que o caminho pede', () => {
     function arvoreMarcando(marcados: string): string {
       return TAREFA.replace(/\*\*Subagentes obrigatórios:\*\*.*/, `**Subagentes obrigatórios:** ${marcados}`)
     }
+  })
+})
+
+describe('RF16: o código de processo exige revisão, só em sessão de papel', () => {
+  const DOCUMENTO = 'tasks/prd-exemplo/9_task.md'
+  const CORRECAO = 'tasks/correcoes/2026-09-13-x.md'
+  const MARCA = 'Implementa x (tarefa 9.0)\n\nRevisões: ok'
+  const SEMPRE = ['test-engineer', 'revisor-geral']
+  const OS_QUATRO = ['tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'infra-guardian']
+  const TEXTO = 'export const a = 1\n'
+
+  /** O código de produto: conta em toda sessão, com ou sem papel. */
+  const DE_PRODUTO = (arquivo: string) => ['apps/', 'packages/', 'infra/', 'e2e/'].some((pasta) => arquivo.startsWith(pasta))
+  const escapar = (texto: string) => texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+  /** Uma árvore com os `arquivos` salvos às 09:00, o portão carimbado às 09:59:30 e o documento (tarefa 9.0 ou correção) revisado às 10:05 pelos `revisados`. */
+  function arvore(arquivos: string[], revisados: string[] = [], marcados: string[] = [], tipo: 'tarefa' | 'correcao' = 'tarefa') {
+    const raiz = mkdtempSync(join(tmpdir(), 'rf16-'))
+    execFileSync('git', ['init', '-q'], { cwd: raiz, stdio: 'pipe' })
+    const caminho = tipo === 'tarefa' ? DOCUMENTO : CORRECAO
+    mkdirSync(join(raiz, dirname(caminho)), { recursive: true })
+    const linha = `**Subagentes obrigatórios:** ${marcados.map((nome) => `\`${nome}\``).join(', ')}`
+    const base = tipo === 'tarefa' ? TAREFA.replace(/\*\*Subagentes obrigatórios:\*\*.*/, linha) : `# Correção\n\n${linha}\n`
+    writeFileSync(join(raiz, caminho), revisados.reduce((conteudo, revisor) => acrescentarRevisao(conteudo, rodada(revisor, 'APROVADO', '2026-09-13 10:00:00', '2026-09-13 10:05:00')), base))
+    for (const arquivo of arquivos) {
+      mkdirSync(join(raiz, dirname(arquivo)), { recursive: true })
+      writeFileSync(join(raiz, arquivo), TEXTO)
+      utimesSync(join(raiz, arquivo), new Date('2026-09-13T09:00:00'), new Date('2026-09-13T09:00:00'))
+    }
+    gravarCarimbo(raiz, { inicio: new Date('2026-09-13T09:59:30').toISOString(), suites: ['typecheck', 'lint', 'segredo', 'dependencias', 'test'] })
+    return raiz
+  }
+
+  /** O commit que leva `arquivos`, com a `mensagem`, na sessão do `papel` ('' é sem papel). */
+  const decidir = (raiz: string, arquivos: string[], papel: string | undefined, mensagem = MARCA) =>
+    decidirCommit({ mensagem, arquivos, conteudoDe: conteudoDoDisco(raiz), raiz, papel })
+
+  describe('sem tarefa nem correção', () => {
+    it.each(CODIGO_PARA_A_ESTEIRA)('em papel, %s é código: recusado', (arquivo) => {
+      expect(decidir(arvore([]), [arquivo], 'implementador', 'Ajusta x')).toMatch(new RegExp(`^Commit bloqueado: ele leva código \\(${escapar(arquivo)}\\) sem "\\(tarefa N\\.0\\)"`))
+    })
+
+    it.each(DOCUMENTO_PARA_A_ESTEIRA)('em papel, %s é documento: passa', (arquivo) => {
+      expect(decidir(arvore([]), [arquivo], 'implementador', 'Ajusta x')).toBeNull()
+    })
+
+    it('uma lista só: em papel, a decisão e a esteira contam o mesmo código, em todo papel do time', () => {
+      const raiz = arvore([])
+      for (const papel of ['arquiteto', 'implementador', 'mesa-de-revisao', 'validador']) {
+        for (const arquivo of [...CODIGO_PARA_A_ESTEIRA, ...DOCUMENTO_PARA_A_ESTEIRA]) {
+          expect({ arquivo, recusado: decidir(raiz, [arquivo], papel, 'Ajusta x') !== null }).toEqual({ arquivo, recusado: ehCodigoParaAEsteira(arquivo) })
+        }
+      }
+    })
+
+    it('sem papel, o §5(e) passa e só o código de produto é recusado', () => {
+      const raiz = arvore([])
+      for (const papel of ['', undefined, 'general-purpose']) {
+        for (const arquivo of CODIGO_PARA_A_ESTEIRA) {
+          const decisao = decidir(raiz, [arquivo], papel, 'Ajusta x')
+          if (DE_PRODUTO(arquivo)) expect(decisao, arquivo).toMatch(/leva código/)
+          else expect(decisao, arquivo).toBeNull()
+        }
+      }
+    })
+
+    it('o commit do papel que leva um documento e dois arquivos de processo é recusado por eles, e a mensagem os cita', () => {
+      expect(decidir(arvore([]), ['docs/guia.md', 'tools/processo/x.ts', 'package.json'], 'implementador', 'Ajusta x')).toMatch(/leva código \(tools\/processo\/x\.ts, package\.json\)/)
+    })
+
+    it('pelo PreToolUse: o commit do papel com tools/ é recusado, e o mesmo comando sem papel passa', () => {
+      const raiz = arvore(['tools/x.ts'])
+      const comando = { tool_input: { command: 'git add tools/x.ts && git commit -m "Ajusta x"' } }
+      expect(portao(comando, raiz, 'implementador')).toMatch(/leva código \(tools\/x\.ts\)/)
+      expect(portao(comando, raiz, '')).toBeNull()
+    })
+
+    it('pelo caminho do hook, o papel vem de CLAUDE_CODE_AGENT: com `implementador` o commit com tools/ é recusado, sem o papel passa', () => {
+      const raiz = arvore(['tools/x.ts'])
+      const comando = { tool_input: { command: 'git add tools/x.ts && git commit -m "Ajusta x"' } }
+      try {
+        vi.stubEnv('CLAUDE_CODE_AGENT', 'implementador')
+        expect(portao(comando, raiz)).toMatch(/leva código \(tools\/x\.ts\)/)
+        vi.stubEnv('CLAUDE_CODE_AGENT', '')
+        expect(portao(comando, raiz)).toBeNull()
+      } finally {
+        vi.unstubAllEnvs()
+      }
+    })
+  })
+
+  describe('com tarefa ou correção', () => {
+    /** Cada linha da tabela do RF16: o arquivo e o conjunto exato que ela pede (o conjunto também vive, por caminho, em `harness/guardioes.test.ts`). */
+    const TABELA: [string, string[]][] = [
+      ['tools/processo/guardioes-por-caminho.ts', OS_QUATRO],
+      ['tools/processo/portao.ts', OS_QUATRO],
+      ['tools/processo/caducidade.ts', OS_QUATRO],
+      ['tools/processo/documento-de-revisao.ts', OS_QUATRO],
+      ['tools/processo/revisoes.ts', OS_QUATRO],
+      ['tools/processo/hook-revisoes.ts', OS_QUATRO],
+      ['tools/processo/comando-git.ts', OS_QUATRO],
+      ['tools/processo/hook-git.ts', OS_QUATRO],
+      ['tools/processo/git-hooks/commit-msg', OS_QUATRO],
+      ['tools/processo/harness/guardioes.test.ts', OS_QUATRO],
+      ['tools/ci/conferir-entregas.ts', OS_QUATRO],
+      ['.claude/settings.json', OS_QUATRO],
+      ['.claude/settings.local.json', OS_QUATRO],
+      ['eslint.config.mjs', OS_QUATRO],
+      ['eslint-suppressions.json', OS_QUATRO],
+      ['tools/vitrine/escola.ts', ['privacy-guardian', 'conformidade-reviewer']],
+      ['tools/ia/medir-risco-a-vida.ts', ['privacy-guardian', 'conformidade-reviewer']],
+      ['docs/aia/ouro/x.json', ['conformidade-reviewer']],
+      ['docs/aia/ouro-retido/x.json', ['conformidade-reviewer']],
+      ['tools/ci/compose.ts', ['infra-guardian']],
+      ['tools/ci/borda.test.ts', ['infra-guardian', 'privacy-guardian']],
+      ['.github/workflows/ci.yml', ['infra-guardian', 'privacy-guardian']],
+      ['playwright.config.ts', ['privacy-guardian']],
+      ['compose.yaml', ['infra-guardian']],
+      ['.env.example', ['infra-guardian']],
+      ['tools/guardas/index.mjs', OS_QUATRO],
+      ['infra/Caddyfile', ['privacy-guardian', 'infra-guardian']],
+      ['infra/k6/x.js', ['infra-guardian', 'privacy-guardian']],
+    ]
+
+    it.each(TABELA)('%s: sem qualquer um dos guardiões da linha, recusado; com todos, e só eles, aceito', (arquivo, guardioes) => {
+      for (const faltante of guardioes) {
+        const raiz = arvore([arquivo], [...SEMPRE, ...guardioes.filter((guardiao) => guardiao !== faltante)])
+        const recusa = decidir(raiz, [DOCUMENTO, arquivo], 'implementador')
+        expect(recusa, `sem ${faltante}`).toContain(`- ${faltante}: nenhuma rodada registrada`)
+        expect(recusa?.match(/nenhuma rodada registrada/g), `sem ${faltante}`).toHaveLength(1)
+      }
+      // Os da linha e mais nenhum: o guardião de fora da linha não é cobrado.
+      expect(decidir(arvore([arquivo], [...SEMPRE, ...guardioes]), [DOCUMENTO, arquivo], 'implementador')).toBeNull()
+    })
+
+    it('o resto do §5(e) pede só os de toda tarefa: sem guardião com veto, aceito', () => {
+      for (const arquivo of ['tools/processo/linhas.ts', '.claude/hooks/x.sh', 'package.json', 'vitest.config.ts', 'tsconfig.base.json', 'knip.json', '.gitleaks.toml', '.size-limit.json']) {
+        expect(decidir(arvore([arquivo], SEMPRE), [DOCUMENTO, arquivo], 'implementador'), arquivo).toBeNull()
+      }
+    })
+
+    it('entre as linhas: eslint sem tenancy, ouro sem conformidade, hook-git sem os quatro, borda sem privacy, guardas sem privacy', () => {
+      const sem = (arquivo: string, ...faltantes: string[]) =>
+        decidir(arvore([arquivo], [...SEMPRE, ...OS_QUATRO.filter((guardiao) => !faltantes.includes(guardiao))]), [DOCUMENTO, arquivo], 'implementador')
+      expect(sem('eslint.config.mjs', 'tenancy-guardian')).toContain('- tenancy-guardian: nenhuma rodada')
+      expect(sem('docs/aia/ouro/x.json', 'conformidade-reviewer')).toContain('- conformidade-reviewer: nenhuma rodada')
+      expect(sem('tools/processo/hook-git.ts', ...OS_QUATRO)?.match(/nenhuma rodada registrada/g)).toHaveLength(4)
+      expect(sem('tools/ci/borda.test.ts', 'privacy-guardian')).toContain('- privacy-guardian: nenhuma rodada')
+      // `tools/guardas/` é o padrão (os quatro), e não o resto de `tools/`.
+      expect(sem('tools/guardas/index.mjs', 'privacy-guardian')).toContain('- privacy-guardian: nenhuma rodada')
+    })
+
+    it('`infra/Caddyfile` sem privacy-guardian é recusado com e sem papel; `infra/k6/x.js` com infra-guardian e privacy-guardian passa', () => {
+      for (const papel of ['implementador', '']) {
+        const sem = arvore(['infra/Caddyfile'], [...SEMPRE, 'infra-guardian'])
+        expect(decidir(sem, [DOCUMENTO, 'infra/Caddyfile'], papel)).toContain('- privacy-guardian: nenhuma rodada registrada')
+        const com = arvore(['infra/k6/x.js'], [...SEMPRE, 'infra-guardian', 'privacy-guardian'])
+        expect(decidir(com, [DOCUMENTO, 'infra/k6/x.js'], papel)).toBeNull()
+      }
+    })
+
+    it('sem papel, o commit de tarefa com um arquivo do §5(e) cobra o guardião da linha dele do mesmo jeito', () => {
+      const raiz = arvore(['eslint.config.mjs'], SEMPRE)
+      expect(decidir(raiz, [DOCUMENTO, 'eslint.config.mjs'], '')).toContain('- tenancy-guardian: nenhuma rodada registrada')
+    })
+
+    it('a citação da regra soma o guardião também no resto de tools/', () => {
+      const raiz = arvore([], SEMPRE)
+      mkdirSync(join(raiz, 'tools/processo'), { recursive: true })
+      writeFileSync(join(raiz, 'tools/processo/x.ts'), '// regra 20: o log leva só o id\nexport const a = 1\n')
+      expect(decidir(raiz, [DOCUMENTO, 'tools/processo/x.ts'], 'implementador')).toContain('- privacy-guardian: nenhuma rodada registrada')
+    })
+
+    describe('a correção que leva código de processo exige o revisor-geral, marcado ou não', () => {
+      const mensagem = 'Corrige x (correção 2026-09-13-x)\n\nRevisões: ok'
+      /** O documento da correção marca só os guardiões, e nunca o `revisor-geral`: quem o cobra é o código. */
+      const correcao = (arquivo: string, revisados: string[]) => arvore([arquivo], revisados, OS_QUATRO, 'correcao')
+
+      it('sem a rodada do revisor-geral, recusada, e só por ele; com ela, aceita', () => {
+        const sem = correcao('tools/processo/portao.ts', ['test-engineer', ...OS_QUATRO])
+        expect(readFileSync(join(sem, CORRECAO), 'utf8')).not.toContain('revisor-geral')
+        const recusa = decidir(sem, [CORRECAO, 'tools/processo/portao.ts'], 'implementador', mensagem)
+        expect(recusa).toContain('- revisor-geral: nenhuma rodada registrada')
+        expect(recusa?.match(/nenhuma rodada registrada/g)).toHaveLength(1)
+        const com = correcao('tools/processo/portao.ts', ['test-engineer', 'revisor-geral', ...OS_QUATRO])
+        expect(decidir(com, [CORRECAO, 'tools/processo/portao.ts'], 'implementador', mensagem)).toBeNull()
+      })
+
+      it.each(['tools/processo/linhas.ts', 'package.json', '.claude/hooks/x.sh', 'docs/aia/ouro/x.json', '.github/workflows/ci.yml', 'eslint.config.mjs'])('%s também o exige, e a sessão não importa', (arquivo) => {
+        for (const papel of ['implementador', '']) {
+          const sem = correcao(arquivo, ['test-engineer', ...OS_QUATRO])
+          expect(decidir(sem, [CORRECAO, arquivo], papel, mensagem), `${arquivo} sem`).toContain('- revisor-geral: nenhuma rodada registrada')
+          const com = correcao(arquivo, ['test-engineer', 'revisor-geral', ...OS_QUATRO])
+          expect(decidir(com, [CORRECAO, arquivo], papel, mensagem), `${arquivo} com`).toBeNull()
+        }
+      })
+
+      it('a correção que leva só código de produto não o ganha: continua como estava', () => {
+        const raiz = correcao('apps/api/src/x.ts', ['test-engineer', ...OS_QUATRO])
+        expect(decidir(raiz, [CORRECAO, 'apps/api/src/x.ts'], 'implementador', mensagem)).toBeNull()
+        const infra = correcao('infra/Caddyfile', ['test-engineer', ...OS_QUATRO])
+        expect(decidir(infra, [CORRECAO, 'infra/Caddyfile'], 'implementador', mensagem)).toBeNull()
+      })
+
+      it('a correção que leva só documento não o ganha, e a tarefa continua com ele sempre', () => {
+        const doc = correcao('docs/guia.md', ['test-engineer', ...OS_QUATRO])
+        expect(decidir(doc, [CORRECAO, 'docs/guia.md'], 'implementador', mensagem)).toBeNull()
+        // O que o portão imprime: a correção de documento sem o revisor-geral; a de processo, com ele; a tarefa, sempre.
+        const conteudo = '# Correção\n\n**Subagentes obrigatórios:** `infra-guardian`\n'
+        const texto = () => 'export const a = 1\n'
+        expect(obrigatoriosDoCommit(conteudo, 'correcao', ['docs/guia.md'], texto)).toEqual(['infra-guardian', 'test-engineer'])
+        expect(obrigatoriosDoCommit(conteudo, 'correcao', ['tools/processo/linhas.ts'], texto)).toEqual(['infra-guardian', 'test-engineer', 'revisor-geral'])
+        expect(obrigatoriosDoCommit(conteudo, 'tarefa', ['docs/guia.md'], texto)).toEqual(['infra-guardian', 'test-engineer', 'revisor-geral'])
+      })
+    })
   })
 })

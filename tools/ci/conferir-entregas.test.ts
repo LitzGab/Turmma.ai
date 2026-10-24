@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { ehCodigoParaAEsteira } from '../processo/portao.ts'
+import { CODIGO_PARA_A_ESTEIRA, DOCUMENTO_PARA_A_ESTEIRA } from './caminhos-da-esteira.ts'
 
 const SCRIPT = join(import.meta.dirname, 'conferir-entregas.ts')
 const HOOKS_DO_PROCESSO = join(import.meta.dirname, '..', 'processo', 'git-hooks')
@@ -289,51 +290,11 @@ describe('ci:conferir-entregas, a terceira camada do RF14', () => {
 })
 
 describe('a classificação de código da esteira', () => {
-  it.each([
-    'apps/api/src/x.ts',
-    'packages/nucleo/src/x.ts',
-    'infra/Caddyfile',
-    'e2e/x.spec.ts',
-    'tools/ci/x.ts',
-    '.github/workflows/ci.yml',
-    '.claude/hooks/x.sh',
-    'docs/aia/ouro/x.json',
-    'docs/aia/ouro-retido/x.json',
-    '.claude/settings.json',
-    '.claude/settings.local.json',
-    'package.json',
-    'compose.yaml',
-    '.env.example',
-    'eslint.config.mjs',
-    'eslint-suppressions.json',
-    'vitest.config.ts',
-    'playwright.config.ts',
-    'tsconfig.base.json',
-    'knip.json',
-    '.gitleaks.toml',
-    '.size-limit.json',
-  ])('código para a esteira: %s', (arquivo) => {
+  it.each(CODIGO_PARA_A_ESTEIRA)('código para a esteira: %s', (arquivo) => {
     expect(ehCodigoParaAEsteira(arquivo)).toBe(true)
   })
 
-  it.each([
-    'skills-lock.json',
-    'package-lock.json',
-    'README.md',
-    'tasks/prd-x/tasks.md',
-    'docs/guia.md',
-    'docs/aia/tutor.md',
-    '.claude/skills/x/SKILL.md',
-    '.claude/rules/40-testes.md',
-    '.claude/agents/implementador.md',
-    '.claude/settings/x.json',
-    '.claude/settings.json.bak',
-    'sub/.claude/settings.json',
-    'tsconfig.base.json.bak',
-    'sub/tsconfig.json',
-    'docs/tsconfig.json',
-    'docs/package.json',
-  ])('documento para a esteira: %s', (arquivo) => {
+  it.each(DOCUMENTO_PARA_A_ESTEIRA)('documento para a esteira: %s', (arquivo) => {
     expect(ehCodigoParaAEsteira(arquivo)).toBe(false)
   })
 })

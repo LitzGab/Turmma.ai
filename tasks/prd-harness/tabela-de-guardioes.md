@@ -36,7 +36,9 @@ configurações do §5e):
 | `apps/despachante/` | T P I | leva job do banco ao Redis; sem nota, IA nem aluno |
 | `infra/` | I P | a borda (`Caddyfile`, log de requisição) e os alertas dos prazos do titular (`grafana/alertas/`) |
 
-## Fora do código de produto (RF16, só em sessão de papel)
+## Fora do código de produto (RF16)
+
+O que conta como código sem tarefa **só em sessão de papel** (`decidirCommit`); a tabela abaixo vale para o commit de tarefa ou de correção em qualquer sessão. Na correção que leva um desses arquivos, o `revisor-geral` também é obrigatório, marcado ou não.
 
 Além de `revisor-geral` e `test-engineer`:
 
@@ -73,3 +75,8 @@ Além de `revisor-geral` e `test-engineer`:
 - `componentes/ui/ia/AvisoFila.tsx` sai com P C I; `componentes/ui/sobrepostos/DialogoDeConfirmacao.tsx` sai com C I
 - `packages/nucleo/src/titular/leitura-do-titular.ts`, `apps/api/test/estrutura-isolamento.int.test.ts`,
   `e2e/aluno-tutor.spec.ts` e uma pasta nova inventada saem com os quatro
+
+Na 14.0 (RF16): `REGRAS_DO_RF16` e `RESTO_DO_PROCESSO`, em `guardioes-por-caminho.ts`, repetem os nomes que `portao.ts` lista como código de processo
+(`PASTAS_DE_PROCESSO`, `ARQUIVOS_DE_PROCESSO`), porque a tabela não importa módulo nenhum. A cópia é conferida pelo `guardioes.test.ts`: nome da esteira
+sem linha aqui, ou nome do "resto" que a esteira não conta, deixa o teste vermelho. A tabela não lê o papel da sessão: o papel só decide o que conta como código
+sem tarefa (`decidirCommit`).

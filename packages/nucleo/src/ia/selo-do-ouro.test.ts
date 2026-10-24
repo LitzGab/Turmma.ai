@@ -7,8 +7,8 @@ import { raizDoOuro } from './__fixtures__/ouro.js'
 
 /**
  * O selo do `ouro` (`docs/aia/ouro/SELO.json`): o sha256 de todo arquivo da pasta, menos o próprio selo, e o mesmo
- * conjunto de nomes. Quem altera o `ouro` é o Arquiteto, num commit só de `docs/` com `(ouro: <política>)` no assunto, e
- * o selo é regravado no mesmo commit. Alteração de outra mão, ou arquivo a mais ou a menos, deixa este teste vermelho.
+ * conjunto de nomes. Quem altera o `ouro` é o Arquiteto, num commit de correção (`(correção <slug>)`, com o
+ * `conformidade-reviewer`; RF16 da X7), e o selo é regravado no mesmo commit. Alteração de outra mão, ou arquivo a mais ou a menos, deixa este teste vermelho.
  * A 29.0 leva este arquivo para o módulo de políticas.
  */
 

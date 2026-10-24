@@ -6,6 +6,10 @@
 // `tenancy-guardian`, `privacy-guardian`, `conformidade-reviewer` e `infra-guardian`, testes e fixtures inclusive. Pasta nova
 // nasce protegida. O que pede menos é exceção escrita abaixo, e a citação de uma regra no texto do arquivo soma o guardião dela.
 //
+// O RF16 (14.0) acrescenta o código de processo: `tools/`, `.github/`, `.claude/hooks/`, `.claude/settings*.json`, o corpus `ouro` e as
+// configurações do portão. A tabela daqui não sabe se a sessão é de papel: o que depende do papel é o que conta como código
+// (`decidirCommit`), e quem leva um desses arquivos num commit de tarefa ou de correção deve os guardiões da linha dele.
+//
 // Este módulo não importa nenhum outro: o `portao.ts` o usa em `decidirCommit`, e o `portao-local.ts` para imprimir a lista.
 
 export const OS_QUATRO = ['tenancy-guardian', 'privacy-guardian', 'conformidade-reviewer', 'infra-guardian'] as const
@@ -17,15 +21,20 @@ export type OndeLer = 'head' | 'indice'
 export type ConteudoDe = (arquivo: string, onde: OndeLer) => string | null
 
 interface Entrada {
-  /** Prefixo de caminho, sem glob. Vale a entrada mais longa que casa. */
-  prefixo: string
+  /** O arquivo é desta entrada? Prefixo de caminho, sem glob, ou o padrão das duas famílias de nome da raiz. */
+  casa: (arquivo: string) => boolean
+  /** Vale a entrada de maior peso que casa: o tamanho do prefixo, e 1 para o padrão (nenhum prefixo de processo o sobrepõe). */
+  peso: number
   guardioes: readonly Guardiao[]
 }
+
+const doPrefixo = (prefixo: string, guardioes: readonly Guardiao[]): Entrada => ({ casa: (arquivo) => arquivo.startsWith(prefixo), peso: prefixo.length, guardioes })
+const doPadrao = (padrao: RegExp, guardioes: readonly Guardiao[]): Entrada => ({ casa: (arquivo) => padrao.test(arquivo), peso: 1, guardioes })
 
 const [T, P, C, I] = OS_QUATRO
 
 /** As pastas em que todo arquivo pede os quatro. */
-const PADRAO: readonly Entrada[] = ['apps/', 'packages/', 'e2e/', 'tools/guardas/', 'tools/testes/'].map((prefixo) => ({ prefixo, guardioes: OS_QUATRO }))
+const PADRAO: readonly Entrada[] = ['apps/', 'packages/', 'e2e/', 'tools/guardas/', 'tools/testes/'].map((prefixo) => doPrefixo(prefixo, OS_QUATRO))
 
 /** As exceções do código, com o motivo de cada uma em `tabela-de-guardioes.md`. Uma entrada que não casa nenhum arquivo versionado deixa a esteira vermelha. */
 export const EXCECOES_DO_CODIGO: readonly { prefixo: string; guardioes: readonly Guardiao[] }[] = [
@@ -46,7 +55,59 @@ export const EXCECOES_DO_CODIGO: readonly { prefixo: string; guardioes: readonly
   { prefixo: 'infra/', guardioes: [I, P] },
 ]
 
-const ENTRADAS: readonly Entrada[] = [...PADRAO, ...EXCECOES_DO_CODIGO]
+/**
+ * O código de processo (RF16), com o motivo de cada linha em `tabela-de-guardioes.md`. Os prefixos são os da tabela, e o conjunto de
+ * cada um é o que `harness/guardioes.test.ts` escreve por extenso. As linhas sem guardião são o "resto" do §5(e): casam o arquivo
+ * como código, para a citação de uma regra somar o guardião dela, e não pedem ninguém sem citação.
+ */
+export const REGRAS_DO_RF16: readonly { prefixo: string; guardioes: readonly Guardiao[] }[] = [
+  // Aplicam ou provam a tabela e a lista de veto, ligam e suprimem as guardas: os quatro.
+  ...[
+    'tools/processo/guardioes-por-caminho.ts',
+    'tools/processo/portao.ts',
+    'tools/processo/caducidade.ts',
+    'tools/processo/documento-de-revisao.ts',
+    'tools/processo/revisoes.ts',
+    'tools/processo/hook-revisoes.ts',
+    'tools/processo/comando-git.ts',
+    'tools/processo/hook-git.ts',
+    'tools/processo/git-hooks/',
+    'tools/processo/harness/guardioes.test.ts',
+    'tools/ci/conferir-entregas.ts',
+    'eslint.config.mjs',
+    'eslint-suppressions.json',
+  ].map((prefixo) => ({ prefixo, guardioes: OS_QUATRO })),
+  { prefixo: 'tools/vitrine/', guardioes: [P, C] },
+  { prefixo: 'tools/ia/', guardioes: [P, C] },
+  { prefixo: 'docs/aia/ouro/', guardioes: [C] },
+  { prefixo: 'docs/aia/ouro-retido/', guardioes: [C] },
+  { prefixo: 'tools/ci/', guardioes: [I] },
+  { prefixo: 'tools/ci/borda.test.ts', guardioes: [I, P] },
+  { prefixo: '.github/', guardioes: [I, P] },
+  { prefixo: 'playwright.config.ts', guardioes: [P] },
+  { prefixo: 'compose.yaml', guardioes: [I] },
+  { prefixo: '.env.example', guardioes: [I] },
+]
+
+/** O resto do §5(e): código de processo que não pede ninguém, salvo pela citação. Os nomes são os de `ARQUIVOS_DE_PROCESSO` e `PASTAS_DE_PROCESSO`, em `portao.ts`, e o teste da tabela os confere. */
+export const RESTO_DO_PROCESSO: readonly string[] = [
+  'tools/',
+  '.claude/hooks/',
+  'package.json',
+  'vitest.config.ts',
+  'knip.json',
+  '.gitleaks.toml',
+  '.size-limit.json',
+]
+
+const ENTRADAS: readonly Entrada[] = [
+  ...PADRAO,
+  ...EXCECOES_DO_CODIGO.map((excecao) => doPrefixo(excecao.prefixo, excecao.guardioes)),
+  ...REGRAS_DO_RF16.map((regra) => doPrefixo(regra.prefixo, regra.guardioes)),
+  doPadrao(/^\.claude\/settings[^/]*\.json$/, OS_QUATRO),
+  doPadrao(/^tsconfig[^/]*\.json$/, []),
+  ...RESTO_DO_PROCESSO.map((prefixo) => doPrefixo(prefixo, [])),
+]
 
 /** O sufixo de arquivo que toca dado de escola ou de pessoa: onde estiver, nunca cai em exceção e pede os quatro. */
 const SUFIXOS_QUE_NUNCA_SAO_EXCECAO = ['.repository.ts', '.controller.ts', '.gateway.ts', '.service.ts']
@@ -61,9 +122,9 @@ const CITACOES: readonly { termo: RegExp; guardiao: Guardiao }[] = [
   { termo: /regra\s+80(?!\d)/i, guardiao: I },
 ]
 
-/** A entrada mais longa que casa o caminho, ou `undefined` quando o arquivo não é código. */
+/** A entrada de maior peso que casa o caminho (o prefixo mais longo), ou `undefined` quando o arquivo não é código. */
 function entradaDe(arquivo: string): Entrada | undefined {
-  return ENTRADAS.filter((entrada) => arquivo.startsWith(entrada.prefixo)).sort((a, b) => b.prefixo.length - a.prefixo.length)[0]
+  return ENTRADAS.filter((entrada) => entrada.casa(arquivo)).sort((a, b) => b.peso - a.peso)[0]
 }
 
 function guardioesDoArquivo(arquivo: string, conteudoDe: ConteudoDe): Guardiao[] {

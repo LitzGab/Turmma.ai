@@ -7,9 +7,8 @@
 // não tiver passado depois da última alteração, ou enquanto a mensagem não trouxer a linha
 // "Revisões:". Bloqueia também commit que leva código sem nenhuma das duas marcas.
 //
-// A terceira marca é `(mvp: <resumo>)`, da fatia do MVP de apresentação (D77): não tem documento de
-// tarefa nem revisor por commit (os revisores passam por fase), e por isso sobra só o portão local
-// carimbado. Vale só em branch `mvp/…`, para o processo enxuto não vazar para a `develop`.
+// Não há terceira marca: o `(mvp: <resumo>)` da fatia do MVP de apresentação (D77) saiu na tarefa 14.0 da X7 (RF18), e o commit
+// marcado com ele é código sem tarefa como qualquer outro.
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import {
@@ -32,13 +31,11 @@ import {
   arquivosDoCommit,
   arquivosPreparados,
   arvoreDoCommit,
-  branchAtual,
   conteudoDoHead,
   desvioDoHook,
   documentoDaMensagem,
   ehCommit,
   ehPapelDoTime,
-  marcadorDoMvp,
   pastaDoCommit,
   pushDoTime,
   textoDosArquivosDeMensagem,
@@ -57,17 +54,9 @@ import { guardioesDoCaminho, type ConteudoDe } from './guardioes-por-caminho.ts'
 
 export { PAPEIS_DO_TIME } from './comando-git.ts'
 
-// Código só entra por tarefa ou por correção, as duas com revisores; na fatia do MVP de apresentação, por
-// `(mvp: <resumo>)`, com o portão local (D77).
+// Código só entra por tarefa ou por correção, as duas com revisores. Em sessão de papel, o código de processo (`ehCodigoParaAEsteira`)
+// também (RF16).
 export const PASTAS_DE_CODIGO = ['apps/', 'packages/', 'infra/', 'e2e/']
-
-/** Onde o marcador `(mvp: …)` vale: a branch da fatia e as dos pacotes dela (D77). */
-export const PREFIXO_DAS_BRANCHES_DO_MVP = 'mvp/'
-/**
- * O que o portão local precisa ter rodado para um commit do MVP. Sem `e2e` nem `infra`, de propósito: a D77 troca a
- * esteira por commit pela esteira disparada à mão no fim de cada fase, e é ela que roda os dois.
- */
-export const SUITES_DO_MVP = ['typecheck', 'lint', 'test']
 
 export const CAMINHO_CARIMBO = '.processo/portao.json'
 
@@ -274,28 +263,6 @@ export function gravarCarimbo(raiz: string, carimbo: Carimbo): void {
   writeFileSync(join(raiz, CAMINHO_CARIMBO), `${JSON.stringify(carimbo, null, 2)}\n`)
 }
 
-/**
- * O veredito do commit do MVP (D77): a branch certa e o portão local valendo para o código de agora. Não há revisor a
- * conferir aqui — na fatia do MVP eles passam uma vez por fase —, então o carimbo é a única prova, e ele não tem a
- * exceção de comentário (`avaliarCarimbo`).
- */
-export function avaliarCommitDoMvp(entrada: {
-  /** A branch da árvore; vazia com o HEAD solto. */
-  branch: string
-  carimbo: Carimbo | null
-  alteracoes: Alteracao[]
-  instantaneo: Record<string, string> | undefined
-}): string | null {
-  if (!entrada.branch.startsWith(PREFIXO_DAS_BRANCHES_DO_MVP)) {
-    return (
-      `Commit bloqueado: o marcador "(mvp: …)" só vale em branch ${PREFIXO_DAS_BRANCHES_DO_MVP}… (D77), e esta é ${entrada.branch || 'um HEAD solto'}. ` +
-      'Fora da fatia do MVP, código entra por tarefa ou por correção, que passam pelos revisores.'
-    )
-  }
-  const carimbo = avaliarCarimbo(entrada.carimbo, SUITES_DO_MVP, entrada.alteracoes, entrada.instantaneo)
-  return carimbo ? `Commit bloqueado: ${carimbo}` : null
-}
-
 /** O bloqueio do que o comando faz antes do `git commit`, ou de a árvore do commit não ser conhecida; `null` quando nenhum dos dois acontece. */
 function bloqueioAntesDaArvore(comando: string, raizDaSessao: string, cwd: string | undefined): string | null {
   const estranho = antesDoCommit(comando)
@@ -335,29 +302,40 @@ export interface EntradaDoCommit {
   conteudoDe: ConteudoDe
   /** A raiz da árvore: dela vêm o carimbo, os instantâneos (`.processo/`), as pastas de `tasks/` e a hora dos arquivos. */
   raiz: string
-  /** O papel da sessão (`CLAUDE_CODE_AGENT`). A tarefa 14.0 o lê, para as pastas de processo valerem só em sessão de papel (RF16). */
+  /** O papel da sessão (`CLAUDE_CODE_AGENT`). As pastas de processo (RF16) só contam como código em sessão de papel (`arquivosDeCodigo`). */
   papel: string | undefined
 }
 
-const arquivosDeCodigo = (arquivos: string[]): string[] => arquivos.filter((arquivo) => PASTAS_DE_CODIGO.some((pasta) => arquivo.startsWith(pasta)))
+/**
+ * O que o commit leva de código. As pastas de produto contam em toda sessão; em sessão de papel contam também as de processo e as
+ * configurações do portão (RF16), pela mesma `ehCodigoParaAEsteira` que a esteira usa: uma lista só, sem cópia (§5a, 12.0). Sem
+ * papel (o Orquestrador e o Joaquim) o processo é documento, como sempre foi.
+ */
+const arquivosDeCodigo = (arquivos: string[], papel: string | undefined): string[] =>
+  arquivos.filter((arquivo) => (ehPapelDoTime(papel) ? ehCodigoParaAEsteira(arquivo) : PASTAS_DE_CODIGO.some((pasta) => arquivo.startsWith(pasta))))
 
 /** O commit que não cita documento: passa quando não leva código, e bloqueia quando leva. */
-function bloqueioDoCommitSemDocumento(arquivos: string[]): string | null {
-  const codigo = arquivosDeCodigo(arquivos)
+function bloqueioDoCommitSemDocumento(arquivos: string[], papel: string | undefined): string | null {
+  const codigo = arquivosDeCodigo(arquivos, papel)
   if (codigo.length === 0) return null
   return (
     `Commit bloqueado: ele leva código (${codigo.slice(0, 3).join(', ')}${codigo.length > 3 ? ', …' : ''}) sem "(tarefa N.0)" nem "(correção <slug>)". ` +
-    'Código entra por tarefa ou por correção, que passam pelos revisores (o Orquestrador conduz, com /seguir). ' +
-    `Na fatia do MVP de apresentação (D77), em branch ${PREFIXO_DAS_BRANCHES_DO_MVP}…, o marcador é "(mvp: <resumo>)", com o portão local carimbado.`
+    'Código entra por tarefa ou por correção, que passam pelos revisores (o Orquestrador conduz, com /seguir).'
   )
 }
 
+/** Código de processo (RF16): o que a esteira conta como código e não é de produto. O de produto tem a regra dele (a correção o cobra por tamanho). */
+const ehCodigoDeProcesso = (arquivo: string): boolean => ehCodigoParaAEsteira(arquivo) && !PASTAS_DE_CODIGO.some((pasta) => arquivo.startsWith(pasta))
+
 /**
- * Quem é obrigatório (RF15): a união dos marcados no documento, dos que toda tarefa e toda correção têm e dos que o caminho dos
- * `arquivos` pede. A exceção da tabela nunca tira quem o Arquiteto marcou. Os marcados vêm primeiro, e o portão imprime esta lista.
+ * Quem é obrigatório (RF15, RF16): a união dos marcados no documento, dos que toda tarefa e toda correção têm, dos que o caminho dos
+ * `arquivos` pede e, na correção que leva código de processo, do `revisor-geral`, que a tarefa já tem sempre (a correção só o tem
+ * quando o documento o marca). A exceção da tabela nunca tira quem o Arquiteto marcou. Os marcados vêm primeiro, e o portão imprime
+ * esta lista. Vale em qualquer sessão: o que depende do papel é só o que conta como código sem tarefa (`arquivosDeCodigo`).
  */
 export function obrigatoriosDoCommit(conteudo: string, tipo: TipoDocumento, arquivos: readonly string[], conteudoDe: ConteudoDe): string[] {
-  return [...new Set([...revisoresObrigatorios(conteudo, tipo), ...guardioesDoCaminho(arquivos, conteudoDe)])]
+  const doProcesso = tipo === 'correcao' && arquivos.some(ehCodigoDeProcesso) ? ['revisor-geral'] : []
+  return [...new Set([...revisoresObrigatorios(conteudo, tipo), ...doProcesso, ...guardioesDoCaminho(arquivos, conteudoDe)])]
 }
 
 /** A linha que o portão local imprime com os obrigatórios já unidos ao caminho. */
@@ -399,7 +377,7 @@ function bloqueioDoDocumento(entrada: EntradaDoCommit, alterados: string[], cami
 export function decidirCommit(entrada: EntradaDoCommit, conferencia: ConferenciaDoDocumento = () => null): string | null {
   const alterados = entrada.alterados ?? entrada.arquivos
   const documento = documentoDaMensagem(entrada.mensagem, entrada.raiz, alterados)
-  if (!documento) return bloqueioDoCommitSemDocumento(entrada.arquivos)
+  if (!documento) return bloqueioDoCommitSemDocumento(entrada.arquivos, entrada.papel)
   if ('erro' in documento) return documento.erro
   return bloqueioDoDocumento(entrada, alterados, documento.caminho, conferencia)
 }
@@ -417,15 +395,6 @@ export function conteudoDoDisco(raiz: string): ConteudoDe {
   }
 }
 
-/** O commit da fatia do MVP (D77): marcador com resumo, sem documento de tarefa, levando código. A tarefa 14.0 o tira (RF18). */
-function ehCommitDoMvp(entrada: EntradaDoCommit, alterados: string[]): boolean {
-  return (
-    marcadorDoMvp(entrada.mensagem) !== null &&
-    documentoDaMensagem(entrada.mensagem, entrada.raiz, alterados) === null &&
-    arquivosDeCodigo(entrada.arquivos).length > 0
-  )
-}
-
 export const TERMO_FORA_DO_PROCESSO = 'Fora do processo:'
 /** A linha da mensagem que dispensa a marca no commit do Joaquim (`techspec.md` §5a). */
 export const LINHA_FORA_DO_PROCESSO = /^Fora do processo:/im
@@ -433,7 +402,7 @@ export const LINHA_FORA_DO_PROCESSO = /^Fora do processo:/im
 /**
  * Além de `PASTAS_DE_CODIGO`, o que o §5(e) da Tech Spec conta como código de processo: pastas, e os arquivos de
  * configuração do portão. A esteira (`tools/ci/conferir-entregas.ts`) não sabe se quem commitou era papel, e por isso conta
- * estes em todo commit; a `decidirCommit` só os cobrará em sessão de papel (14.0).
+ * estes em todo commit; a `decidirCommit` os cobra só em sessão de papel (`arquivosDeCodigo`, 14.0).
  */
 export const PASTAS_DE_PROCESSO = [
   'tools/',
@@ -512,14 +481,6 @@ function bloqueioDoCommit(comando: string, raizDaSessao: string, cwd: string | u
     conteudoDe: conteudoDoDisco(raiz),
     raiz,
     papel,
-  }
-  if (ehCommitDoMvp(entrada, alterados)) {
-    return avaliarCommitDoMvp({
-      branch: branchAtual(raiz),
-      carimbo: lerCarimbo(raiz),
-      alteracoes: alteracoesDeCodigo(raiz, alterados),
-      instantaneo: lerInstantaneos(raiz)[CHAVE_DO_PORTAO],
-    })
   }
   return decidirCommit(entrada, conferencia)
 }

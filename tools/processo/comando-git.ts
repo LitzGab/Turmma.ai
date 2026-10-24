@@ -73,15 +73,6 @@ export function documentoDaMensagem(mensagem: string, raiz: string, arquivos: st
   return { caminho: join('tasks', escolhidas[0], `${numero}_task.md`) }
 }
 
-/**
- * O resumo do marcador `(mvp: <resumo>)`, ou `null` quando o comando não o traz. Marcador sem resumo não vale: é ele
- * que diz, no `git log`, o que o commit fez, já que não existe documento de tarefa para onde olhar.
- */
-export function marcadorDoMvp(comando: string): string | null {
-  const resumo = /\(mvp:([^()\n]*)\)/.exec(comando)?.[1]?.trim()
-  return resumo ? resumo : null
-}
-
 /** A branch em que a árvore está. Funciona em repositório sem commit; com o HEAD solto, devolve vazio. */
 export function branchAtual(raiz: string): string {
   try {

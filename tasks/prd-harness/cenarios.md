@@ -107,8 +107,8 @@ diz, inclusive o arquivo de mais de 1 MB; pelo git hook de verdade, o `tenancy-g
 
 **RF16** (`revisoes.test.ts`): em sessão de papel, sem tarefa, um arquivo de cada caminho do §5(e) é recusado
 (`tsconfig.base.json`, `.claude/settings.local.json`, `compose.yaml` e `.env.example` incluídos);
-`.claude/skills/x/SKILL.md`, `.claude/rules/40-testes.md`, `docs/aia/tutor.md` e `tasks/` passam. Com correção marcada
-e sem `revisor-geral`: recusado. O conjunto exato por caminho fica no `guardioes.test.ts` (tabela, "O teste da tabela"); aqui, os dois lados pela
+`.claude/skills/x/SKILL.md`, `.claude/rules/40-testes.md`, `docs/aia/tutor.md` e `tasks/` passam. A correção que leva código de processo
+e sem `revisor-geral`: recusada sem a rodada dele, marcado ou não no documento; a correção só de produto ou só de documento não o ganha. O conjunto exato por caminho fica no `guardioes.test.ts` (tabela, "O teste da tabela"); aqui, os dois lados pela
 `decidirCommit` (sem o guardião, recusado; com ele, aceito), num `it.each` por caminho da tabela, entre elas `eslint.config.mjs` sem
 `tenancy-guardian`, `docs/aia/ouro/x.json` sem `conformidade-reviewer`, `hook-git.ts` sem os quatro, `infra/Caddyfile`
 e `tools/ci/borda.test.ts` sem `privacy-guardian`; `infra/k6/x.js` com `infra-guardian` e `privacy-guardian` passa;

@@ -1,11 +1,12 @@
 // A tabela de caminho para guardião (X7, RF15): `tasks/prd-harness/tabela-de-guardioes.md`, seção "O teste da tabela".
 // Os literais estão escritos aqui, por extenso, e não lidos da constante: tabela que se confere contra si mesma não vê erro dela.
-// A parte do RF16 (as pastas de processo, só em sessão de papel) é da 14.0. Os dois lados pela `decidirCommit` (recusado sem o
-// guardião, aceito com ele) ficam em `revisoes.test.ts`.
+// O RF16 (14.0) é o último bloco: o código de processo, com o conjunto exato por caminho. Os dois lados pela `decidirCommit` (recusado
+// sem o guardião, aceito com ele) ficam em `revisoes.test.ts`.
 import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { EXCECOES_DO_CODIGO, guardioesDoCaminho, type ConteudoDe, type Guardiao } from '../guardioes-por-caminho.ts'
+import { EXCECOES_DO_CODIGO, guardioesDoCaminho, REGRAS_DO_RF16, RESTO_DO_PROCESSO, type ConteudoDe, type Guardiao } from '../guardioes-por-caminho.ts'
+import { ARQUIVOS_DE_PROCESSO, PASTAS_DE_PROCESSO } from '../portao.ts'
 
 const RAIZ = join(import.meta.dirname, '..', '..', '..')
 
@@ -56,13 +57,13 @@ describe('o padrão: os quatro guardiões', () => {
     expect(fora).toEqual([])
   })
 
-  it('as cinco pastas pedem os quatro, uma a uma, e o resto de tools/ e de docs/ não é código aqui', () => {
+  it('as cinco pastas pedem os quatro, uma a uma, e o documento não é código aqui', () => {
     for (const arquivo of ['apps/api/src/x.ts', 'packages/nucleo/src/x.ts', 'e2e/x.spec.ts', 'tools/guardas/x.mjs', 'tools/testes/x.ts']) {
       expect(pede(arquivo)).toEqual(OS_QUATRO)
     }
-    // O RF16 (14.0) trata as pastas de processo; até lá elas e os documentos não pedem guardião, nem citando a regra.
+    // Documento não é código: nem citando a regra pede guardião. O código de processo (RF16) é o último bloco deste arquivo.
     const cita = textos('regra 10 regra 20 regra 70 regra 80 LGPD')
-    for (const arquivo of ['tools/processo/x.ts', 'tools/vitrine/x.ts', 'docs/lgpd.md', 'tasks/prd-x/1_task.md', '.claude/rules/10-multitenancy.md', 'package.json']) {
+    for (const arquivo of ['docs/lgpd.md', 'tasks/prd-x/1_task.md', '.claude/rules/10-multitenancy.md', '.claude/skills/x/SKILL.md', 'docs/aia/tutor.md']) {
       expect(pede(arquivo, cita)).toEqual([])
     }
   })
@@ -199,5 +200,135 @@ describe('a união de vários arquivos', () => {
   it('sem arquivo, ou só com arquivo que não é código, não pede ninguém', () => {
     expect(guardioesDoCaminho([], SEM_TEXTO)).toEqual([])
     expect(guardioesDoCaminho(['docs/x.md', 'tasks/prd-x/1_task.md'], SEM_TEXTO)).toEqual([])
+  })
+})
+
+describe('o código de processo (RF16)', () => {
+  /** Cada linha da tabela do RF16, com o conjunto exato que ela pede. O arquivo é um que existe no repositório, ou o nome que a linha cobre. */
+  const LINHAS: { prefixo: string; arquivo: string; guardioes: Guardiao[] }[] = [
+    { prefixo: 'tools/processo/guardioes-por-caminho.ts', arquivo: 'tools/processo/guardioes-por-caminho.ts', guardioes: OS_QUATRO },
+    { prefixo: 'tools/processo/portao.ts', arquivo: 'tools/processo/portao.ts', guardioes: OS_QUATRO },
+    { prefixo: 'tools/processo/caducidade.ts', arquivo: 'tools/processo/caducidade.ts', guardioes: OS_QUATRO },
+    { prefixo: 'tools/processo/documento-de-revisao.ts', arquivo: 'tools/processo/documento-de-revisao.ts', guardioes: OS_QUATRO },
+    { prefixo: 'tools/processo/revisoes.ts', arquivo: 'tools/processo/revisoes.ts', guardioes: OS_QUATRO },
+    { prefixo: 'tools/processo/hook-revisoes.ts', arquivo: 'tools/processo/hook-revisoes.ts', guardioes: OS_QUATRO },
+    { prefixo: 'tools/processo/comando-git.ts', arquivo: 'tools/processo/comando-git.ts', guardioes: OS_QUATRO },
+    { prefixo: 'tools/processo/hook-git.ts', arquivo: 'tools/processo/hook-git.ts', guardioes: OS_QUATRO },
+    { prefixo: 'tools/processo/git-hooks/', arquivo: 'tools/processo/git-hooks/commit-msg', guardioes: OS_QUATRO },
+    { prefixo: 'tools/processo/harness/guardioes.test.ts', arquivo: 'tools/processo/harness/guardioes.test.ts', guardioes: OS_QUATRO },
+    { prefixo: 'tools/ci/conferir-entregas.ts', arquivo: 'tools/ci/conferir-entregas.ts', guardioes: OS_QUATRO },
+    { prefixo: 'eslint.config.mjs', arquivo: 'eslint.config.mjs', guardioes: OS_QUATRO },
+    { prefixo: 'eslint-suppressions.json', arquivo: 'eslint-suppressions.json', guardioes: OS_QUATRO },
+    { prefixo: 'tools/vitrine/', arquivo: 'tools/vitrine/escola.ts', guardioes: [P, C] },
+    { prefixo: 'tools/ia/', arquivo: 'tools/ia/medir-risco-a-vida.ts', guardioes: [P, C] },
+    { prefixo: 'docs/aia/ouro/', arquivo: 'docs/aia/ouro/riscoAVida.json', guardioes: [C] },
+    { prefixo: 'docs/aia/ouro-retido/', arquivo: 'docs/aia/ouro-retido/x.json', guardioes: [C] },
+    { prefixo: 'tools/ci/', arquivo: 'tools/ci/compose.ts', guardioes: [I] },
+    { prefixo: 'tools/ci/borda.test.ts', arquivo: 'tools/ci/borda.test.ts', guardioes: [P, I] },
+    { prefixo: '.github/', arquivo: '.github/workflows/ci.yml', guardioes: [P, I] },
+    { prefixo: 'playwright.config.ts', arquivo: 'playwright.config.ts', guardioes: [P] },
+    { prefixo: 'compose.yaml', arquivo: 'compose.yaml', guardioes: [I] },
+    { prefixo: '.env.example', arquivo: '.env.example', guardioes: [I] },
+  ]
+
+  it.each(LINHAS)('$arquivo pede exatamente $guardioes', ({ arquivo, guardioes }) => {
+    expect(pede(arquivo)).toEqual(guardioes)
+  })
+
+  it.each([
+    '.claude/settings.json',
+    '.claude/settings.local.json',
+    '.claude/settings.team.json',
+  ])('%s pede os quatro: o padrão `.claude/settings*.json`', (arquivo) => {
+    expect(pede(arquivo)).toEqual(OS_QUATRO)
+  })
+
+  it.each([
+    '.claude/settings/x.json',
+    '.claude/settings.json.bak',
+    'sub/.claude/settings.json',
+    '.claude/skills/x/SKILL.md',
+    '.claude/rules/40-testes.md',
+    '.claude/agents/implementador.md',
+  ])('%s não é código: o padrão não alcança o vizinho nem a pasta de documento', (arquivo) => {
+    expect(pede(arquivo, textos('regra 10 regra 20 regra 70 regra 80 LGPD'))).toEqual([])
+  })
+
+  it('o resto de tools/ e as outras configurações do portão não pedem ninguém', () => {
+    for (const arquivo of ['tools/processo/linhas.ts', 'tools/processo/portao-local.ts', 'tools/processo/revisoes.test.ts', '.claude/hooks/x.sh', 'package.json', 'vitest.config.ts', 'tsconfig.json', 'tsconfig.base.json', 'knip.json', '.gitleaks.toml', '.size-limit.json']) {
+      expect(pede(arquivo), arquivo).toEqual([])
+    }
+  })
+
+  it('o padrão e o `infra/` vencem o resto de tools/: tools/guardas/ e tools/testes/ pedem os quatro, infra/k6/ pede P I', () => {
+    expect(pede('tools/guardas/index.mjs')).toEqual(OS_QUATRO)
+    expect(pede('tools/testes/x.ts')).toEqual(OS_QUATRO)
+    expect(pede('infra/k6/x.js')).toEqual([P, I])
+    expect(pede('infra/Caddyfile')).toEqual([P, I])
+  })
+
+  it('vale o prefixo mais longo: borda.test.ts pede P I e o resto de tools/ci/ pede I', () => {
+    expect(pede('tools/ci/borda.test.ts')).toEqual([P, I])
+    expect(pede('tools/ci/borda.ts')).toEqual([I])
+    expect(pede('tools/ci/fixtures/x.ts')).toEqual([I])
+  })
+
+  it('nunca cai em exceção: o sufixo e o @SemEscopo( pedem os quatro nas linhas do RF16 que pedem menos', () => {
+    for (const nome of ['x.repository.ts', 'x.controller.ts', 'x.gateway.ts', 'x.service.ts']) {
+      for (const pasta of ['tools/vitrine/', 'tools/ia/', 'tools/ci/', 'tools/processo/', 'docs/aia/ouro/', '.github/']) {
+        expect(pede(`${pasta}${nome}`), `${pasta}${nome}`).toEqual(OS_QUATRO)
+      }
+    }
+    const marca = '@SemEscopo() // rotina administrativa nossa\n'
+    // No índice, só no HEAD, e em nenhum: os quatro, os quatro, e a linha dele.
+    expect(pede('tools/vitrine/x.ts', textos(marca, 'export const a = 1\n'))).toEqual(OS_QUATRO)
+    expect(pede('tools/vitrine/x.ts', textos('export const a = 1\n', marca))).toEqual(OS_QUATRO)
+    expect(pede('tools/vitrine/x.ts', textos('export const a = 1\n'))).toEqual([P, C])
+    expect(pede('tools/processo/x.ts', textos(marca, null))).toEqual(OS_QUATRO)
+  })
+
+  it('a citação soma o guardião da regra no resto de tools/ e nas outras linhas', () => {
+    expect(pede('tools/processo/x.ts', textos('// regra 20\n'))).toEqual([P])
+    expect(pede('tools/processo/x.ts', textos('// regra 10\n'))).toEqual([T])
+    expect(pede('tools/processo/x.ts', textos('// regra 70\n'))).toEqual([C])
+    expect(pede('tools/processo/x.ts', textos('// Regra 80\n'))).toEqual([I])
+    expect(pede('tools/processo/x.ts', textos('// LGPD\n'))).toEqual([P])
+    expect(pede('tools/processo/x.ts', textos('export const a = 1\n'))).toEqual([])
+    // Citava no HEAD e não cita no índice: o guardião continua.
+    expect(pede('package.json', textos('{}\n', '// regra 20\n'))).toEqual([P])
+    expect(pede('tools/vitrine/x.ts', textos('// regra 80\n'))).toEqual([P, C, I])
+    expect(pede('tools/ci/x.ts', textos('// regra 10\n'))).toEqual([T, I])
+    expect(pede('docs/aia/ouro/x.json', textos('regra 20'))).toEqual([P, C])
+  })
+
+  it('a união de vários arquivos de processo soma o que cada um pede', () => {
+    expect(guardioesDoCaminho(['tools/vitrine/escola.ts', 'compose.yaml', 'tools/processo/linhas.ts'], SEM_TEXTO)).toEqual([P, C, I])
+    expect(guardioesDoCaminho(['playwright.config.ts', 'docs/aia/ouro/x.json'], SEM_TEXTO)).toEqual([P, C])
+    expect(guardioesDoCaminho(['tools/processo/linhas.ts', 'package.json'], SEM_TEXTO)).toEqual([])
+  })
+
+  it('cada linha da tabela casa ao menos um arquivo versionado, ou é o nome de um arquivo que o repositório pode ter: linha morta é vermelha', () => {
+    const arquivos = versionados('tools', '.github', '.claude', 'docs/aia', 'eslint.config.mjs', 'eslint-suppressions.json', 'playwright.config.ts', 'compose.yaml', '.env.example')
+    // `docs/aia/ouro-retido/` pode não estar versionado: ele nasce quando o corpus retido existe. Todas as outras linhas casam um arquivo de hoje.
+    const podeNaoExistir = ['docs/aia/ouro-retido/']
+    const mortas = LINHAS.filter((linha) => !podeNaoExistir.includes(linha.prefixo) && !arquivos.some((arquivo) => arquivo.startsWith(linha.prefixo))).map((linha) => linha.prefixo)
+    expect(mortas).toEqual([])
+    // A constante do código é a tabela escrita aqui, na ordem em que o código a escreve.
+    const doCodigo = REGRAS_DO_RF16.map((regra) => [regra.prefixo, OS_QUATRO.filter((g) => regra.guardioes.includes(g))])
+    const daqui = LINHAS.map((linha) => [linha.prefixo, OS_QUATRO.filter((g) => linha.guardioes.includes(g))])
+    expect(doCodigo.sort()).toEqual(daqui.sort())
+  })
+
+  it('o resto do §5(e) é o que `portao.ts` lista e a tabela não pede: nenhum nome da esteira fica sem linha aqui', () => {
+    const daEsteira = [...PASTAS_DE_PROCESSO, ...ARQUIVOS_DE_PROCESSO]
+    const cobertos = [...LINHAS.map((linha) => linha.prefixo), ...RESTO_DO_PROCESSO]
+    // Todo nome que a esteira conta como código de processo tem linha aqui; sem ela, citar a regra nele não somaria o guardião.
+    const sem = daEsteira.filter((nome) => !cobertos.some((prefixo) => nome.startsWith(prefixo)))
+    expect(sem).toEqual([])
+    // E o inverso: o "resto" não guarda nome que a esteira não conta.
+    expect(RESTO_DO_PROCESSO.filter((nome) => !daEsteira.some((da) => da === nome))).toEqual([])
+    // Cada nome do "resto" é de fato pedido por citação.
+    for (const nome of RESTO_DO_PROCESSO) expect(pede(nome.endsWith('/') ? `${nome}x.ts` : nome, textos('// regra 20\n')), nome).toEqual([P])
+    expect(pede('tsconfig.base.json', textos('// regra 20\n'))).toEqual([P])
   })
 })
