@@ -1,3 +1,13 @@
+---
+paths:
+  - "apps/**"
+  - "packages/nucleo/**"
+  - "infra/**"
+  - ".github/**"
+  - "tools/ci/**"
+  - "compose.yaml"
+---
+
 # Regra 80 — Infraestrutura, carga e operação
 
 ## Por que esta regra existe

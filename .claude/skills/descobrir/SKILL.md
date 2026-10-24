@@ -21,7 +21,7 @@ Tema: `$ARGUMENTS`
 
 ## 1. Ler antes de perguntar
 
-- `CLAUDE.md` — índice das decisões, conflitos resolvidos e a lista de decisões em aberto
+- `CLAUDE.md` — índice das decisões; `docs/decisoes-em-aberto.md` — a lista das em aberto; o topo de `docs/decisoes.md` — os conflitos já resolvidos
 - `docs/decisoes.md` — o texto completo das decisões que tocam o tema
 - `docs/visao-produto.md` e `docs/fluxos.md` — o que o produto promete
 - `docs/negocio.md` — preço, mercado e concorrência, quando a decisão mexe com custo ou venda

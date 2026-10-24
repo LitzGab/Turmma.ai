@@ -85,7 +85,8 @@ dentro do terminal, reiniciada já apontada para o checkout do andar.
 | `Mesa` | rodadas de revisão | `claude --dangerously-skip-permissions --agent mesa-de-revisao --effort high` |
 | `Validador` | validação | `claude --dangerously-skip-permissions --agent validador --effort high` |
 
-O papel vem de `.claude/agents/`, **nunca de responsabilidade do Maestri** (`protocolo.md`, item 1).
+O papel vem de `.claude/agents/`, **nunca de responsabilidade do Maestri** (`protocolo.md`, item 1). O que o time é, os
+revisores, o hook do commit e a lista das skills estão em `.claude/skills/seguir/time.md`: leia-o ao montar o time.
 
 Terminal que falta no `maestri list` (primeira vez, ou alguém o fechou). **Na primeira vez, crie o
 andar antes** (abaixo) e recrute os quatro apontados para o checkout dele, cada um com o comando da

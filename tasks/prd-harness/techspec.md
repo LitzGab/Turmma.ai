@@ -291,6 +291,11 @@ amostra quebrada e contagem mínima. Os rótulos vêm das constantes do hook e d
 Sem desvio. A 10, a 20 e a 70 seguem sempre carregadas e cobradas pelo caminho; a 00, a 40, a 60 e a 80 ganham
 `paths:`, com o RF17 na 40.
 
+**O critério do RF20 é de bytes, e não de linhas (15.0, 23/10/2026).** O PRD diz "`CLAUDE.md` com até ~150 linhas", e o
+teste prova a base fixa (`CLAUDE.md` mais as regras sem `paths:`) em até 40.000 B. O `CLAUDE.md` ficou com 227 linhas,
+porque só a lista de D1 a D81, uma linha por decisão, ocupa 83. A medida de depois: 12.920 B no `CLAUDE.md` e 34.326 B de
+base fixa (antes, 36.351 B e 75.218 B). O "~150" do PRD fica como estimativa; o vermelho é o do `cenarios.md` C, RF20.
+
 ## 12. Premissas não verificadas
 
 - ✅ VERIFICADO pela 1.0 (`1_task.md`, "Prova da premissa", 23/10/2026): o `CLAUDE_CODE_AGENT` chega ao Bash do papel
@@ -300,7 +305,10 @@ Sem desvio. A 10, a 20 e a 70 seguem sempre carregadas e cobradas pelo caminho; 
   revisor) para saber quem está rodando. O Orquestrador, sem `--agent`, não tem a variável, e o hook não age nele.
   O que a 1.0 deixou sem medir, o subagente de outro papel, o Arquiteto mediu no mesmo dia: o subagente que ele chama vê
   `arquiteto`. A regra vale para todo papel que chama subagente
-- ⚠️ NÃO VERIFICADO: a regra com `paths:` carrega quando um subagente lê o arquivo; a saída está no §9
+- ✅ VERIFICADO pela 15.0 (`15_task.md`, "Divergências", 23/10/2026): o subagente (`general-purpose`, chamado por uma
+  sessão `claude -p`) que lê `apps/api/src/main.ts` recebe a regra 00 como bloco automático de instruções, em mensagem
+  própria **depois** do resultado do `Read`; antes de ler, e depois de ler só o `README.md`, não a tem. Os revisores
+  não precisam mandar ler as quatro regras, e a saída do §9 não se aplica
 - ⚠️ NÃO VERIFICADO: o `UserPromptSubmit` recebe o texto colado expandido, e o `SessionStart` distingue `clear`; se
   não valer, o RF29 e o RF27 ficam no aviso de início de sessão
 

@@ -31,8 +31,8 @@ decidiu. Faltou o motivo: pergunte. É a parte que mais importa.
   mudou e por quê>`. Não crie uma D nova que contradiz uma antiga
 - Contradiz uma regra de `.claude/rules/`? Pare e mostre o conflito. Regra 10, 20 e 70 não
   são revogadas por decisão de produto
-- Resolve um item de "Decisões em aberto"? Ele sai de lá
-- Resolve um conflito que já tinha voltado uma vez? Vai também para "Conflitos já resolvidos"
+- Resolve um item de `docs/decisoes-em-aberto.md`? Ele sai de lá
+- Resolve um conflito que já tinha voltado uma vez? Vai também para "Conflitos já resolvidos", no topo de `docs/decisoes.md`
 
 ## 3. Propagar
 
@@ -41,7 +41,8 @@ Liste todo arquivo que precisa mudar para ficar coerente com a decisão:
 | Onde | O que verificar |
 |---|---|
 | `docs/decisoes.md` | texto completo da D<n> nova, ou o `Revista em` da D<n> revista |
-| `CLAUDE.md` | linha da D<n> no índice "Decisões tomadas" (nova, ou reescrita se a revisão muda o resumo), "Decisões em aberto", "Conflitos já resolvidos" |
+| `CLAUDE.md` | linha da D<n> no índice "Decisões tomadas" (nova, ou o título reescrito se a revisão o muda) |
+| `docs/decisoes-em-aberto.md`, topo de `docs/decisoes.md` | o item de decisão em aberto que a D<n> fecha; o conflito resolvido que ela registra |
 | `ROADMAP.md` | escopo e critério de pronto das funcionalidades afetadas |
 | `TODO.md` | item fora do código que foi resolvido ou criado |
 | `docs/*.md` | o doc do tema (agentes, ingestão, interface, arquitetura, negócio, lgpd) |
@@ -61,8 +62,8 @@ Formato da decisão, igual às existentes:
 <o que foi decidido, em uma ou duas frases>. <o motivo>.
 ```
 
-O texto completo vai em `docs/decisoes.md`. No índice do `CLAUDE.md`, uma linha só:
-`| D<n> | <a decisão em uma frase, sem o motivo> |`.
+O texto completo vai em `docs/decisoes.md`. No índice do `CLAUDE.md`, uma linha só, com o título curto:
+`| D<n> | <título, sem o motivo> |`.
 
 Numeração: a próxima depois da maior D existente em `docs/decisoes.md`. Nunca reaproveite número.
 

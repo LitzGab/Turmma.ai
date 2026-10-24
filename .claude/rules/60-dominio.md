@@ -1,3 +1,9 @@
+---
+paths:
+  - "apps/**"
+  - "packages/**"
+---
+
 # Regra 60 — Domínio
 
 ## Por que esta regra existe

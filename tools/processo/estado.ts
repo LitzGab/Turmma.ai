@@ -70,6 +70,8 @@ export const COLUNAS_DE_DEPENDENCIAS = {
   paralelo: { posicao: 3, titulo: 'Pode correr em paralelo com' },
 } as const
 export const ROTULO_DO_PORTE = '**Porte:**'
+/** Onde mora a tabela das decisões em aberto; o resumo da sessão conta as linhas dela (saiu do `CLAUDE.md`, X7 RF20). */
+export const ARQUIVO_DAS_DECISOES_EM_ABERTO = 'docs/decisoes-em-aberto.md'
 export const TITULO_DA_RODADA_DA_VALIDACAO = '## Rodada '
 export const ROTULO_DO_ESCOPO = '**Escopo:**'
 export const ROTULO_DO_VEREDITO = '**Veredito: '
@@ -429,9 +431,9 @@ export function resumo(raiz: string): string {
     linhas.push(`Da vez: ${estado.funcionalidade.id} ${estado.funcionalidade.nome} — ${estado.fase}${tarefas}${proxima}`)
     linhas.push(`Próximo passo: ${estado.proximoPasso} (quem conduz é o Orquestrador, com /seguir ${estado.funcionalidade.nome})`)
   }
-  const abertas = /\n## Decisões em aberto\n([\s\S]*?)(?=\n## |$)/.exec(ler(join(raiz, 'CLAUDE.md')) ?? '')?.[1] ?? ''
+  const abertas = ler(join(raiz, ARQUIVO_DAS_DECISOES_EM_ABERTO)) ?? ''
   const quantas = abertas.split('\n').filter((linha) => linha.startsWith('| ') && !linha.startsWith('| Decisão')).length
-  if (quantas > 0) linhas.push(`Decisões em aberto no CLAUDE.md: ${quantas}`)
+  if (quantas > 0) linhas.push(`Decisões em aberto em ${ARQUIVO_DAS_DECISOES_EM_ABERTO}: ${quantas}`)
   return linhas.join('\n')
 }
 

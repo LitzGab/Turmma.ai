@@ -23,8 +23,8 @@ Funcionalidade alvo: `$ARGUMENTS`
 - Template: `.claude/skills/criar-techspec/template.md`
 - Desenho vigente: `docs/arquitetura.md` e `docs/modelo-de-dados.md`
 - Regras: `.claude/rules/` — cada uma explica por que existe; leia o porquê, não só a lista.
-  As regras 30 e 50 só carregam sozinhas ao ler arquivo do caminho delas: leia-as se a
-  funcionalidade tem IA ou tela
+  Leia por extenso `00-arquitetura.md`, `40-testes.md`, `60-dominio.md` e `80-infra-e-carga.md`, que têm `paths:` e não
+  carregam sozinhas aqui (a 10, a 20 e a 70 já estão no contexto), e a 30 e a 50 se a funcionalidade tem IA ou tela
 - Contexto: `CLAUDE.md`, `docs/visao-produto.md` e as decisões citadas no PRD, por extenso, em
   `docs/decisoes.md`
 - Tela: `docs/interface.md`
@@ -34,7 +34,7 @@ Funcionalidade alvo: `$ARGUMENTS`
   descartado com motivo
 - Skills técnicas da stack em `.claude/skills/` (NestJS, Drizzle, Postgres, BullMQ, React,
   TanStack Query, Tailwind, Vitest, Playwright). Use como referência, respeitando os
-  conflitos listados na seção "Skills" do `CLAUDE.md`
+  conflitos listados em `docs/skills-de-terceiros.md`
 
 ## Fluxo
 

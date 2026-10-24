@@ -103,8 +103,9 @@ sentido.
    com um dia real de uma professora. Se você só puder ler um arquivo, leia este.
 2. **`docs/fluxos.md`** — os sete caminhos que o sistema precisa fazer funcionar, narrados
    como acontecem na escola.
-3. **`CLAUDE.md`** — o índice das decisões e o que está em aberto; o texto completo de cada
-   decisão está em `docs/decisoes.md`. É o que evita rediscutir a mesma coisa toda semana.
+3. **`CLAUDE.md`** — o índice das decisões (número e título); o texto completo de cada
+   decisão e os conflitos já resolvidos estão em `docs/decisoes.md`, e o que está em aberto, em
+   `docs/decisoes-em-aberto.md`. É o que evita rediscutir a mesma coisa toda semana.
 4. **`docs/lgpd.md`** — o documento mais importante do repositório. Leia antes de tocar em
    qualquer campo que guarde dado de pessoa.
 5. **`docs/regulacao.md`** — o que a lei exige, virado em requisito: diretrizes do CNE, ECA
@@ -129,8 +130,9 @@ funcionalidade em andamento e o próximo passo.
 | `docs/glossario.md` | O vocabulário do domínio escolar que usamos no código |
 | `docs/interface.md` | As telas por papel, o chat que abre ferramenta, o feed de agentes |
 | `docs/negocio.md` | Mercado, preço, concorrência e como a venda acontece |
-| `CLAUDE.md` | Índice das decisões, decisões em aberto, conflitos já resolvidos |
-| `docs/decisoes.md` | O texto completo de cada decisão, com o motivo e as revisões |
+| `CLAUDE.md` | Índice das decisões (número e título), as seis regras, o recorte e o mapa |
+| `docs/decisoes.md` | O texto completo de cada decisão, com o motivo e as revisões, e os conflitos já resolvidos |
+| `docs/decisoes-em-aberto.md` | As decisões em aberto, cada uma com dono e momento |
 | `TODO.md` | O que trava o projeto e não se resolve programando |
 
 ### Restrições

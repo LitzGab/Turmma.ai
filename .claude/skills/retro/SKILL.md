@@ -21,6 +21,7 @@ Funcionalidade: `$ARGUMENTS`
 
 ## 1. Ler
 
+- As regras 00 (`00-arquitetura.md`), 40 (`40-testes.md`), 60 (`60-dominio.md`) e 80 (`80-infra-e-carga.md`), de `.claude/rules/`, por extenso: têm `paths:` e não carregam sozinhas aqui (a 10, a 20 e a 70 já estão no contexto)
 - `tasks/prd-$ARGUMENTS/*_task.md`: a seção "Revisões" de cada um
 - `tasks/prd-$ARGUMENTS/achados/indice.md`: uma linha por rodada com o que cada revisor exigiu.
   Agrupe pelo índice e abra `achados/<documento>.md` só onde precisar do texto inteiro

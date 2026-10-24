@@ -1,8 +1,132 @@
 # Decisões tomadas
 
-> Texto completo das decisões D1 em diante, com o motivo e as revisões. O `CLAUDE.md` tem uma
-> linha por decisão e a lista das que estão em aberto. Nova decisão ou revisão entra aqui e no
-> índice do `CLAUDE.md`, pelo `/registrar-decisao`.
+> Texto completo das decisões D1 em diante, com o motivo e as revisões, e, no topo, os conflitos já
+> resolvidos. O `CLAUDE.md` tem uma linha por decisão (número e título) e aponta para este arquivo e para
+> `docs/decisoes-em-aberto.md`. Nova decisão ou revisão entra aqui e no índice do `CLAUDE.md`, pelo
+> `/registrar-decisao`.
+
+## Conflitos já resolvidos
+
+Registrados porque cada um deles já voltou uma vez.
+
+**Login do aluno.** A reivindicação de nome é o *cadastro*. O *login* recorrente é escola +
+matrícula + senha, definida pelo aluno no momento da reivindicação. Aluno não tem e-mail no
+sistema. Onde a escola tem conta Google ou Microsoft, o login e a importação vêm dela, e
+guardamos só o identificador da conta, nunca o e-mail (D48).
+
+**Notificação à família.** O motor de eventos entra agora; a interface do responsável e o
+WhatsApp ficam para depois.
+
+**Importação por planilha.** Sobrevive, reduzida: a coordenação sobe lista de nomes por
+turma, grade horária e calendário, não cadastro completo de pessoa (D3 revista). Professor
+e aluno entram por link.
+
+**Scraper de material.** Permitido, com cinco condições: licença ou parceria com o dono do
+conteúdo, autorização escrita da escola registrada no sistema, credencial fornecida pela
+escola, conteúdo preso ao tenant dela, e nada que contorne pagamento ou bloqueio técnico de
+terceiro. Fonte que proíbe sai, e **o upload não cobre o caso**: apostila de terceiro sem
+licença não entra por nenhum caminho (D5 revista). O primeiro caminho implementado é o
+upload de material com licença (D22).
+
+**Correção de discursiva e redação.** Voltou em 19/09/2026 e ficou mais restrita: a IA não
+corrige, não avalia, não dá nota nem conceito, e **não faz pré-correção nem sugere nota ao
+professor** — o que derruba a devolutiva rascunho de discursiva como estava desenhada (D55,
+revisão da D46). Rubrica, organização do lote e correção cega continuam. A devolutiva
+formativa volta à mesa quando o texto oficial do CNE for publicado e lido com advogado.
+
+**Nome do produto.** Fechado: Turmma (D54). Não é mais "nome provisório". O que continua
+aberto é registro no INPI e domínio, e o código segue com `educa`.
+
+**Tutor e aprovação prévia.** O tutor é supervisionado, não aprovado resposta por resposta.
+A regra 70, item 3, declara essa exceção (D47).
+
+**Fila de jobs.** A auditoria de 13/09/2026 propôs trocar por fila só no Postgres. Ficou
+como está, com entrega pelo menos uma vez e idempotência obrigatória (D49).
+
+**Processo de construção.** A mesma auditoria propôs teto de tamanho por tarefa, assinatura
+humana no portão e revisor de simplicidade. Os vetos e o portão de qualidade no processo
+ficaram (D23). O commit direto no `main` caiu em 19/09/2026, com a terceira pessoa no código, e em
+21/09/2026 o fluxo foi fixado: **o trabalho acontece na `develop`**, `release` e `main` recebem por
+merge que o Joaquim gerencia, o Gabriel abre branch própria e integra na `develop`, e a esteira roda
+nas três (D23 revista). Em 15/09/2026 o processo foi enxugado onde repetia trabalho, sem tirar revisão:
+`test-engineer` primeiro, caducidade pelo que o revisor audita, portão local com carimbo,
+`revisor-geral` no lugar da autorrevisão, `/revisar-spec`, `/corrigir` e `/retro` (D53). Em 08/10/2026
+o processo passou a rodar no Maestri (D78): cada spec num andar com a branch `spec/<funcionalidade>`,
+que entra na `develop` por pouso; a esteira uma vez por spec, antes do pouso; um comando, `/seguir`;
+e a Mesa de revisão chamando os revisores. O hook, os vetos e o portão local não mudaram. **Papel de
+agente vem de `.claude/agents/`, nunca de responsabilidade do Maestri:** com ela o agente nasce fora
+da raiz e nenhum hook dispara. Em 11/10/2026, com o F3 medido, o processo foi revisto para tempo
+(D79): o opencode, testado em duas tarefas, saiu, e as tarefas que não se tocam passaram a correr ao
+mesmo tempo, em linhas.
+
+**Nome de peça técnica e mecanismo próprio.** Fechado em 22/10/2026 (D81): a peça técnica tem o nome do framework, em
+inglês (`TurmaController`, `ZodValidationPipe`), e o conceito do domínio fica em português, pelo glossário. Mecanismo
+próprio só com o motivo escrito; o que já existe com nome em português só muda quando a tarefa já mexe nele.
+
+**Nome dos agentes.** O desenho da call tinha nomes próprios; os docs usam função. Fica a
+função (D17).
+
+**Lista de agentes.** Eram sete; em 19/09/2026 viraram seis (D32 revista): o chat do professor
+ganhou identidade, o **Assistente de ensino**; o Monitor de turma se dissolveu; e o Planejador
+absorveu o Rotina. Em 23/09/2026 viraram **três, um por pessoa da escola** (D32 revista de
+novo): Assistente de ensino, Tutor e Analista de desempenho escolar. Corretor, Planejador e
+Adaptador viraram **funções do Assistente**, porque cada um tinha uma ferramenta gêmea que
+chamava o mesmo caso de uso; a autonomia e a suspensão passaram a ser por função (D9, D60).
+"Monitor" não é nome de agente: servia a duas coisas diferentes.
+
+**Medir o professor pela turma.** A estrutura de 19/09/2026 pedia que o Analista analisasse o
+professor pelo resultado dos alunos e cada aluno individualmente. Fica dentro da D45 e da D34:
+o indicador do professor deriva do desempenho das turmas dele, ele vê primeiro, a coordenação
+vê agregado só com dois ou mais professores no recorte e abre o nominal com auditoria. Sem
+ranking, sem decisão sobre ele, sem adoção nominal (D64).
+
+**Adaptar sem gerar o PEI.** Voltou duas vezes em 19/09/2026. O plano individual é obrigação da
+escola (LBI, art. 28, VII; Decreto 12.686/2025), feito pela equipe dela; o que a lei pune é
+recusar matrícula ou recusar adaptação (Lei 7.853, art. 8º; LBI, arts. 4º e 88). Adaptar prova
+e atividade a partir do **tipo de adaptação** é o que a lei quer, e não depende de o sistema
+gerar o documento. Não geramos o PEI por minimização de dado sensível (D35, D67), a confirmar
+com advogado junto da base legal da adaptação (`TODO.md`).
+
+**MVP.** Não existe MVP de venda (D1). Existem duas coisas diferentes: o **MVP de apresentação**
+(D71), logo depois do F1, com dado sintético, para demonstrar o fluxo completo; e a **fatia do
+piloto**, com escola real em 2027, que só entra depois do F2, do F3 e do portão da primeira
+escola real. **Sem seed de escola pronta** (D71 revista em 23/09/2026): a demonstração começa
+com a escola criada por nós no painel da operação (A0, D76) e montada pela coordenação na tela,
+com nomes inventados. Sintético é o dado, não o caminho. A A2 a A5 saíram numa fatia só, com
+processo enxuto (D77), e entraram na `develop` em 05/10/2026 (`13eab64`); o processo completo
+voltou para o F2, o F3 e o portão do piloto. A composição de cada spec ficou no PRD da A1 e, da
+A2 a A5, no `docs/mvp-rapido.md`; o documento que a coordenação sobe na demonstração é um PDF
+original nosso, gerado por `tools/demonstracao/` (D75, D5).
+
+**Pele do produto.** Voltou quatro vezes: a da landing page (rejeitada vendo), a do ChatGPT (P02), a
+cópia da Teachy (P31) e, em outubro de 2026, o sistema que o Gabriel desenhou no estilo do Duolingo.
+Fica **uma só**, a de outubro, em todas as telas (D80): a técnica é tomada, a marca não (mascote,
+cores, ícones e fonte são nossos), e a mecânica de uso compulsivo fica de fora por lei (D59). Onde o
+mockup afrouxa uma proteção que o produto já tem, vale o produto.
+
+**Vigiar a navegação do aluno.** Pedido em 19/09/2026: alertar o professor quando o aluno sai
+do sistema para usar outra IA, e medir tempo ocioso. Ficou: saída da aba só durante a prova,
+como fato, só para o professor (D70); "concluiu o que foi atribuído" no lugar do tempo ocioso
+(D69); e bloquear outras IAs é configuração da escola, com guia nosso no dossiê.
+
+**Escola particular ou rede pública.** As duas, como alvo juntas desde o início, com a rede
+em pacote com piso de preço (D20 e D41 revistas).
+
+**Chromebook.** Deixou de ser filtro de mercado: vale qualquer computador da escola. Continua
+como referência de máquina fraca para desempenho (D43, regra 50).
+
+**Celular.** O produto não depende do celular em nenhum fluxo, mas toda tela funciona nele
+(D51). "Sem dependência de celular" e "responsivo para celular" não se contradizem: o
+primeiro é sobre o que o fluxo exige, o segundo sobre onde a tela funciona.
+
+## As decisões
+
+> **D54 a D71 estão ratificadas.** Saíram em 19/09/2026 da leitura das fontes de regulação e
+> da estrutura de agentes por papel; o Gabriel ratificou as dele no mesmo dia, e o Joaquim
+> ratificou todas em bloco em 23/09/2026. No mesmo dia entraram a D72 a D75, que fecham o que a
+> revisão dos mockups pedia antes do PRD da A1, e a D32, a D9, a D60, a D69 e a D71 foram
+> revistas. O que ainda depende de parecer (D55, D68, D70) ou de outra decisão (D62 com a D37)
+> está dito em cada uma, abaixo.
 
 Cada uma com o motivo, porque decisão sem motivo é decisão que volta.
 
