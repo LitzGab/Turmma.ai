@@ -25,7 +25,7 @@
 //
 // Existe porque uma spec de 16 tarefas levou 55 horas com uma tarefa por vez (F3), e o Joaquim pediu que as tarefas
 // que não se tocam corram juntas, quantas a máquina aguentar.
-import { execFileSync, spawn } from 'node:child_process'
+import { type ChildProcess, execFileSync, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -434,13 +434,12 @@ type Veredito = 'passou' | 'vermelha' | 'prazo' | 'interrompida'
  * não só o `sh`, porque o `npx`, o `tsc` e o `eslint` são netos e seguem segurando a árvore e o `node_modules`. A saída do
  * comando vai para o erro deste, para quem lê o encontro ver o que quebrou.
  */
-async function rodarEmGrupo(checkout: string, comando: string, prazoMs: number, esperaMs: number): Promise<Veredito> {
-  const filho = spawn('sh', ['-c', comando], { cwd: checkout, detached: true, stdio: ['ignore', 2, 2] })
-  const saiu = new Promise<'passou' | 'vermelha'>((resolver) => {
-    filho.once('error', () => resolver('vermelha'))
-    filho.once('exit', (codigo) => resolver(codigo === 0 ? 'passou' : 'vermelha'))
-  })
+export async function rodarEmGrupo(checkout: string, comando: string, prazoMs: number, esperaMs: number): Promise<Veredito> {
   const desligar: (() => void)[] = []
+  // Os ouvintes sobem ANTES de o filho nascer: ele roda em outro processo e, em poucos ms, já fez o que o chamador espera
+  // ver antes de mandar o sinal. Com o ouvinte depois do `spawn`, um encontro tirado da CPU nesse intervalo morria pela
+  // ação padrão do sinal, sem matar o grupo nem voltar a linha. O `finally` desliga relógio e ouvintes também quando o
+  // `spawn` lança: ouvinte solto engoliria o Ctrl-C do encontro, e o relógio o seguraria vivo até o fim do prazo.
   const interrompido = new Promise<'prazo' | 'interrompida'>((resolver) => {
     const relogio = setTimeout(() => resolver('prazo'), prazoMs)
     desligar.push(() => clearTimeout(relogio))
@@ -451,8 +450,19 @@ async function rodarEmGrupo(checkout: string, comando: string, prazoMs: number, 
       desligar.push(() => process.off(sinal, aoSinal))
     }
   })
-  const veredito = await Promise.race([saiu, interrompido])
-  for (const fechar of desligar) fechar()
+  let filho: ChildProcess
+  let veredito: Veredito
+  try {
+    filho = spawn('sh', ['-c', comando], { cwd: checkout, detached: true, stdio: ['ignore', 2, 2] })
+    const nascido = filho
+    const saiu = new Promise<'passou' | 'vermelha'>((resolver) => {
+      nascido.once('error', () => resolver('vermelha'))
+      nascido.once('exit', (codigo) => resolver(codigo === 0 ? 'passou' : 'vermelha'))
+    })
+    veredito = await Promise.race([saiu, interrompido])
+  } finally {
+    for (const fechar of desligar) fechar()
+  }
   if (filho.pid !== undefined) await matarGrupo(filho.pid, esperaMs)
   return veredito
 }
