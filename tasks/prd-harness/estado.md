@@ -10,18 +10,16 @@
   rodada 10 (`b7a8a7f`), 20 tarefas (`d57bf2b`), sem mudança de desenho nem de critério do PRD
 - **Construção começou às ~14:10 de 23/10/2026**, pela palavra do Joaquim ("pode começar a spec"), antes da hora do aviso.
   Três linhas abertas (`spec/harness--l1..l3`, ambientes de teste 1 a 3)
-- **Espero:** o `RELATÓRIO` do `Validador` (1ª rodada, funcionalidade completa, commit `53944c1`), pedido em 24/10. Ninguém usa o
-  ambiente de teste 0 enquanto ele valida. Com o veredito: conferir que só o `validacao.md` mudou, e o passo 8 (esteira
-  `--fechamento`, `linhas.ts fechar`, commit de fechamento com os itens de "Devo ainda", pedido de pouso). O aviso da Mesa 2 ao
-  Validador (a fixture do RF31 já foi regravada) está em `.processo/ordens/2026-10-24-fixture-maestri-list-r2.md`, na linha 2
-  - linha 2: ociosa. Correção `2026-10-24-fixture-maestri-list` feita (`e2da6d9`, encontro em `53944c1`, esteira `40068026208`
-    rodando). Rodadas: privacy-guardian 1, test-engineer 2, revisor-geral 2. Cumpre o "regravar a fixture" do "Devo ainda"
-  - linha 1: ociosa. **Ensaio do RF31 feito** (correção `2026-10-24-dockerignore-reengenharia`, `029cdb5`, encontro em `ae95688`,
-    esteira `40067862653` rodando): commit sem revisão por `/usr/bin/git` recusado duas vezes no andar da linha (marca ausente;
-    revisões incompletas), registrado no documento da correção. Rodadas: infra-guardian 1, test-engineer 2, revisor-geral 2.
-    O `TODO.md` fechou o item "(X5, RF31)" e ganhou um item da X7 (revisar a lista de pastas ignoradas)
+- **Validação, 1ª rodada (24/10, sobre `147854c`): REPROVADA** (`validacao.md`). 31 RF atendidos, RF29 parcial. Crítico C1: o
+  `aviso-de-sessao.sh:23` só reconhece `/seguir ` no começo, e a mensagem colada real chega `<pasted_content id=…>\n/seguir …`
+  (o próprio relatório do Validador chegou assim a esta sessão). Maior M1: o `linhas.ts abandonar` (RF6) não está em passo
+  nenhum do `/seguir`. Menores m1–m3 vão ao `TODO.md` no fechamento (seção 6 do `validacao.md`)
+- **Espero:** as duas correções, uma por achado, que não se tocam:
+  - linha 1: correção `2026-10-24-aviso-mensagem-colada` (C1), 1ª tentativa, com o `Implementador` e a `Mesa`
+  - linha 2: correção `2026-10-24-seguir-abandonar-linha` (M1), 1ª tentativa, com o `Implementador 2` e a `Mesa 2`
   - linha 3: ociosa
-  - o cabeçalho do `Validador` é o 4º papel do RF31; o do `Arquiteto` se confere no próximo reinício
+  - com os dois encontros: commit "antes da validação", o `Validador` reiniciado no andar para a 2ª rodada (só RF29, M1 e a
+    esteira do commit novo, como a seção 5 do `validacao.md` diz), e depois o passo 8
 - **Devo ainda:**
   - do relatório da 20.0 (RF31): no meu primeiro `/clear` **depois do pouso** (o hook novo só vale no térreo quando a X7 pousar), conferir se `.processo/limpeza.json` ganha `feita` (o `/clear` de sessão sem papel no térreo esconde uma limpeza perdida); regravar `tools/processo/__fixtures__/maestri-list.txt` com a saída do meu terminal (linhas numeradas, sem caminho de usuário nem título de sessão: repositório público), por correção; a transcrição da prova do 20.6 em `~/.claude/projects` foi apagada; o `TODO.md` ganhou duas linhas "Da X7" (`limpeza.json` ancorado no térreo e `limpeza.json` que não é objeto); SKILL+protocolo+6-tarefa somam 23.967 B (teto 24.000)
   - no fechamento, levar ao `TODO.md` o "sem aplicar" da Mesa na 19.0 (r2): o comentário do cabeçalho do
