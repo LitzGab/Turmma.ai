@@ -545,6 +545,21 @@ export function ehArquivoDeProducao(arquivo: string): boolean {
 }
 
 /**
+ * O que o `--faltando` lê: a produção (`ehArquivoDeProducao`) e o código de `tools/` (script, guarda, ferramenta do
+ * processo), que a produção não cobre. Fora, em `tools/`: o que não é código (documento, dado, gancho sem extensão, em que
+ * `?` e `&&` de texto corrido passariam por condição), teste, `.d.ts` e as pastas `test/`, `tests/`, `__tests__/`,
+ * `__fixtures__/` e `fixtures/`. Só o `--faltando` e o relatório do portão usam: o RF17 (`exigenciaDeMutacao`) segue só com
+ * a produção.
+ */
+export function ehArquivoDoFaltando(arquivo: string): boolean {
+  if (ehArquivoDeProducao(arquivo)) return true
+  if (!/^tools\/.+\.[cm]?[jt]sx?$/.test(arquivo)) return false
+  if (/\.d\.ts$/.test(arquivo)) return false
+  if (/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(arquivo)) return false
+  return !/(?:^|\/)(?:test|tests|__tests__|__fixtures__|fixtures)\//.test(arquivo)
+}
+
+/**
  * A linha `**Sem mutação:** <motivo>` do documento: `motivo` (há uma com motivo), `vazia` (há, sem motivo, ou só o
  * `<motivo>` do modelo) ou `ausente`. A linha existe para a tarefa de produção que não tem cláusula a provar (tipo,
  * renomeação, texto), e o motivo é o que o revisor lê para discordar.
@@ -668,23 +683,23 @@ export function linhasSemBloco(novas: readonly LinhaNova[], mutacoes: readonly M
     citadas.set(mutacao.arquivo, doArquivo)
   }
   return novas
-    .filter((nova) => ehArquivoDeProducao(nova.arquivo))
+    .filter((nova) => ehArquivoDoFaltando(nova.arquivo))
     .map((nova) => ({ ...nova, condicoes: condicoesDaLinha(nova.texto) }))
     .filter((nova) => nova.condicoes.length > 0 && !citadas.get(nova.arquivo)?.has(nova.texto.trim()))
     .sort((a, b) => (a.arquivo === b.arquivo ? a.linha - b.linha : a.arquivo < b.arquivo ? -1 : 1))
 }
 
-/** O que a árvore acrescentou em produção em relação ao HEAD: o diff dos versionados e todas as linhas dos arquivos novos. */
+/** O que a árvore acrescentou em produção e em `tools/` em relação ao HEAD: o diff dos versionados e todas as linhas dos arquivos novos. */
 export function linhasNovasDaArvore(raiz: string): LinhaNova[] {
   const git = (...argumentos: string[]) => execFileSync('git', argumentos, { cwd: raiz, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
-  const novas = linhasAcrescentadas(git('diff', '-U0', '--no-color', '--no-ext-diff', '--no-renames', 'HEAD', '--', 'apps', 'packages'))
-  for (const arquivo of git('ls-files', '--others', '--exclude-standard', '-z', '--', 'apps', 'packages').split('\0')) {
+  const novas = linhasAcrescentadas(git('diff', '-U0', '--no-color', '--no-ext-diff', '--no-renames', 'HEAD', '--', 'apps', 'packages', 'tools'))
+  for (const arquivo of git('ls-files', '--others', '--exclude-standard', '-z', '--', 'apps', 'packages', 'tools').split('\0')) {
     if (arquivo === '') continue
     const linhas = readFileSync(join(raiz, arquivo), 'utf8').split('\n')
     if (linhas.at(-1) === '') linhas.pop()
     linhas.forEach((texto, indice) => novas.push({ arquivo, linha: indice + 1, texto }))
   }
-  return novas.filter((nova) => ehArquivoDeProducao(nova.arquivo))
+  return novas.filter((nova) => ehArquivoDoFaltando(nova.arquivo))
 }
 
 /** O texto do `--faltando`: a lista, ou a frase de que não falta nada. Só informa: quem decide é o `test-engineer`. */

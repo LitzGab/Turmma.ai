@@ -13,6 +13,7 @@ import {
   conferirMutacoesDoDocumento,
   documentoDaTarefa,
   ehArquivoDeProducao,
+  ehArquivoDoFaltando,
   exigenciaDeMutacao,
   impressaoDasMutacoes,
   lerMutacoes,
@@ -577,6 +578,40 @@ index 0000000..4444444
     expect(linhasSemBloco(emTeste, [])).toEqual([])
   })
 
+  it.each([
+    { nome: 'produção de apps', arquivo: 'apps/api/src/pedidos.repository.ts', lido: true },
+    { nome: 'produção de packages', arquivo: 'packages/nucleo/src/ia/provedor.ts', lido: true },
+    { nome: 'script do processo', arquivo: 'tools/processo/mutacoes.ts', lido: true },
+    { nome: 'guarda', arquivo: 'tools/guardas/catraca.ts', lido: true },
+    { nome: 'ferramenta de ci em módulo', arquivo: 'tools/ci/duracao-do-e2e.mjs', lido: true },
+    { nome: 'ajudante de teste que não é teste', arquivo: 'tools/testes/compose.ts', lido: true },
+    { nome: 'teste de tools', arquivo: 'tools/processo/mutacoes.test.ts', lido: false },
+    { nome: 'spec de tools', arquivo: 'tools/ci/algo.spec.ts', lido: false },
+    { nome: 'declaração de tipos de tools', arquivo: 'tools/ci/tipos.d.ts', lido: false },
+    { nome: '__fixtures__ de tools', arquivo: 'tools/processo/__fixtures__/esteira/voce.ts', lido: false },
+    { nome: 'fixtures de tools', arquivo: 'tools/ci/fixtures/usa-a-fila.ts', lido: false },
+    { nome: 'pasta test de tools', arquivo: 'tools/guardas/test/ajuda.ts', lido: false },
+    { nome: 'documento de tools', arquivo: 'tools/processo/harness/LEIAME.md', lido: false },
+    { nome: 'dado de tools', arquivo: 'tools/ci/resultado.json', lido: false },
+    { nome: 'gancho do git, sem extensão', arquivo: 'tools/processo/git-hooks/pre-push', lido: false },
+    { nome: 'e2e', arquivo: 'e2e/areas.spec.ts', lido: false },
+    { nome: 'configuração de apps fora de src', arquivo: 'apps/web/vite.config.ts', lido: false },
+    { nome: 'pasta parecida com tools', arquivo: 'ferramentas/tools/x.ts', lido: false },
+  ])('o --faltando lê o arquivo $nome: $lido', ({ arquivo, lido }) => {
+    expect(ehArquivoDoFaltando(arquivo)).toBe(lido)
+  })
+
+  it('linha nova com condição em tools/ é listada, e o bloco do mesmo arquivo a alcança', () => {
+    const deTools: LinhaNova[] = [
+      { arquivo: 'tools/processo/mutacoes.ts', linha: 9, texto: '  if (a) return b' },
+      { arquivo: 'tools/ci/e2e.ts', linha: 3, texto: 'const a = b ?? c' },
+      { arquivo: 'tools/processo/mutacoes.test.ts', linha: 1, texto: 'if (x) y' },
+      { arquivo: 'tools/ci/fixtures/usa-a-fila.ts', linha: 1, texto: 'if (x) y' },
+    ]
+    expect(linhasSemBloco(deTools, []).map((linha) => `${linha.arquivo}:${String(linha.linha)}`)).toEqual(['tools/ci/e2e.ts:3', 'tools/processo/mutacoes.ts:9'])
+    expect(linhasSemBloco(deTools, [sobre('tools/processo/mutacoes.ts', 'if (a) return b')]).map((linha) => linha.arquivo)).toEqual(['tools/ci/e2e.ts'])
+  })
+
   it('o relatório lista arquivo, linha, operador e texto, ou diz que não falta nada', () => {
     const lista = relatorioDoFaltando(linhasSemBloco(novas, []), 'tasks/prd-x/3_task.md')
     expect(lista).toBe(
@@ -597,7 +632,7 @@ describe('--faltando, sobre uma árvore de verdade', () => {
   const script = join(dirname(fileURLToPath(import.meta.url)), 'mutacoes.ts')
 
   /** Um repositório com um arquivo de produção versionado, um de teste e o documento da tarefa. */
-  function repositorio(documento: string): string {
+  function repositorio(documento: string, comTools = false): string {
     const raiz = mkdtempSync(join(tmpdir(), 'faltando-'))
     const git = (...argumentos: string[]) => execFileSync('git', argumentos, { cwd: raiz, stdio: 'pipe' })
     git('init', '-q')
@@ -607,6 +642,12 @@ describe('--faltando, sobre uma árvore de verdade', () => {
       mkdirSync(dirname(join(raiz, arquivo)), { recursive: true })
       writeFileSync(join(raiz, arquivo), conteudo)
     }
+    if (comTools) {
+      for (const arquivo of ['tools/ci/velho.ts', 'tools/ci/velho.test.ts', 'tools/ci/__fixtures__/velho.ts']) {
+        mkdirSync(dirname(join(raiz, arquivo)), { recursive: true })
+        writeFileSync(join(raiz, arquivo), 'export const a = 1\n')
+      }
+    }
     git('add', '-A')
     git('commit', '-q', '-m', 'base')
     writeFileSync(join(raiz, 'apps/api/src/velho.ts'), 'export const a = 1\nexport const b = a && 2\n')
@@ -614,6 +655,19 @@ describe('--faltando, sobre uma árvore de verdade', () => {
     git('add', 'apps/api/src/velho.ts')
     writeFileSync(join(raiz, 'apps/api/test/velho.int.test.ts'), '// teste\nif (x) y\n')
     writeFileSync(join(raiz, 'apps/api/src/novo.ts'), 'export function f(x: number) {\n  if (x > 1) return 1\n  return 0\n}\n')
+    if (comTools) {
+      // Versionado e no índice, como na hora do commit; o teste e a fixture versionados também mudam, e não entram.
+      writeFileSync(join(raiz, 'tools/ci/velho.ts'), 'export const a = 1\nexport const c = a || 3\n')
+      git('add', 'tools/ci/velho.ts')
+      writeFileSync(join(raiz, 'tools/ci/velho.test.ts'), 'export const a = 1\nif (x) y\n')
+      writeFileSync(join(raiz, 'tools/ci/__fixtures__/velho.ts'), 'export const a = 1\nif (x) y\n')
+      // Arquivos novos: o código entra; o teste, a fixture, o documento e o dado não.
+      writeFileSync(join(raiz, 'tools/ci/novo.ts'), 'export function g(x: number) {\n  if (x > 1) return 1\n  return 0\n}\n')
+      writeFileSync(join(raiz, 'tools/ci/novo.test.ts'), 'if (x) y\n')
+      mkdirSync(join(raiz, 'tools/ci/fixtures'), { recursive: true })
+      writeFileSync(join(raiz, 'tools/ci/fixtures/novo.ts'), 'if (x) y\n')
+      writeFileSync(join(raiz, 'tools/ci/LEIAME.md'), 'se a && b, então if (c)\n')
+    }
     return raiz
   }
 
@@ -629,6 +683,41 @@ describe('--faltando, sobre uma árvore de verdade', () => {
       'apps/api/src/novo.ts:3',
       'apps/api/src/novo.ts:4',
     ])
+  })
+
+  it('lê também tools/: o diff dos versionados e as linhas dos arquivos novos, fora teste, fixture e documento', () => {
+    const raiz = repositorio('# Tarefa\n', true)
+    expect(linhasNovasDaArvore(raiz).map((linha) => `${linha.arquivo}:${String(linha.linha)}`)).toEqual([
+      'apps/api/src/velho.ts:2',
+      'tools/ci/velho.ts:2',
+      'apps/api/src/novo.ts:1',
+      'apps/api/src/novo.ts:2',
+      'apps/api/src/novo.ts:3',
+      'apps/api/src/novo.ts:4',
+      'tools/ci/novo.ts:1',
+      'tools/ci/novo.ts:2',
+      'tools/ci/novo.ts:3',
+      'tools/ci/novo.ts:4',
+    ])
+  })
+
+  it('lista a condição nova de tools/ e sai 0; o bloco do arquivo de tools/ a tira da lista', () => {
+    const sem = rodar(repositorio('# Tarefa\n', true))
+    expect(sem.status).toBe(0)
+    expect(sem.stdout).toBe(
+      'Linhas novas de produção com condição que nenhum bloco de tasks/prd-x/3_task.md alcança (4):\n' +
+        '  apps/api/src/novo.ts:2  [if]  if (x > 1) return 1\n' +
+        '  apps/api/src/velho.ts:2  [&&]  export const b = a && 2\n' +
+        '  tools/ci/novo.ts:2  [if]  if (x > 1) return 1\n' +
+        '  tools/ci/velho.ts:2  [||]  export const c = a || 3\n',
+    )
+    const documento = `# Tarefa\n\n${bloco('arquivo: tools/ci/velho.ts', 'teste: tools/ci/velho.test.ts', '- export const c = a || 3', '+ export const c = a')}\n\n${bloco('arquivo: tools/ci/novo.ts', 'teste: tools/ci/velho.test.ts', '- if (x > 1) return 1')}\n`
+    const com = rodar(repositorio(documento, true))
+    expect(com.stdout).toBe(
+      'Linhas novas de produção com condição que nenhum bloco de tasks/prd-x/3_task.md alcança (2):\n' +
+        '  apps/api/src/novo.ts:2  [if]  if (x > 1) return 1\n' +
+        '  apps/api/src/velho.ts:2  [&&]  export const b = a && 2\n',
+    )
   })
 
   it('lista o que nenhum bloco alcança e sai 0', () => {
