@@ -5,12 +5,13 @@ import {
   CLASSIFICACAO_DAS_TABELAS,
   FINALIDADE_DO_ARQUIVO_DO_PROPRIO_TITULAR,
   MENSAGENS_DE_ERRO,
+  TIPO_MONTAR_ARQUIVO,
   VALIDADE_DA_URL_DO_ARQUIVO_SEGUNDOS,
   VALIDADE_DO_ARQUIVO_DIAS,
 } from '@educa/shared'
 import { PgDialect } from 'drizzle-orm/pg-core'
 import { randomUUID } from 'node:crypto'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { MedidorDeTeste } from '../../../tools/testes/metricas.ts'
 import { criarMontagemDoArquivo } from '../../worker/src/processadores/montar-arquivo.js'
 import { PrivacidadeService } from '../src/privacidade/privacidade.service.js'
@@ -78,6 +79,11 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
       linhasDeLog,
       { ...MONTAGEM_DE_TESTE, armazemDeArquivos: armazem, relogioDaPrivacidade: relogio },
     )
+  })
+
+  // O relógio volta à hora real antes de cada caso: um caso que falha no meio de uma data do futuro não contamina o seguinte.
+  beforeEach(() => {
+    relogio.atual = new Date()
   })
 
   afterAll(async () => {
@@ -411,8 +417,48 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
     const criado = await registrar(cenario.coordenacao, titular.id, extras)
     expect(criado.status).toBe(201)
     const id = criado.corpo['id'] as string
+    await tirarDaFila(cenario.escolaId, id)
     await montar(cenario.escolaId, id)
     return id
+  }
+
+  /**
+   * Tira da fila o job `titular.montar-arquivo` que a API enfileirou para o pedido, e deixa o teste como o único que monta
+   * o arquivo. Sem isso, um worker de pé na pilha (o `test:e2e --manter-ambiente` os deixa) roda o mesmo job e regrava a
+   * linha com a hora real, em momento que o teste não controla.
+   *
+   * O `update` só pega o job ainda `aguardando`: o despachante reserva só `aguardando`, com a mesma condição no `update`, e o
+   * executor não roda job `concluido`. Então ou o teste ganha a linha e nenhum worker vai rodá-lo, ou o despachante já a
+   * tinha; nesse caso o teste espera o job terminar e desfaz o que ele fez (a linha do arquivo e o estado `pronto`), e o
+   * pedido volta a ser o de quem acabou de registrar. Depois desta chamada, a linha só muda pela mão do próprio teste.
+   */
+  async function tirarDaFila(escolaId: string, pedidoId: string): Promise<void> {
+    const filtro = `escola_id = $1 and tipo = '${TIPO_MONTAR_ARQUIVO}' and dados->>'pedidoId' = $2`
+    const { rowCount } = await bancada.pool.query(`update job_registro set estado = 'concluido', concluido_em = now() where ${filtro} and estado = 'aguardando'`, [escolaId, pedidoId])
+    if (rowCount === 1) return
+    const limite = Date.now() + 15_000
+    for (;;) {
+      const { rows } = await bancada.pool.query<{ estado: string }>(`select estado from job_registro where ${filtro}`, [escolaId, pedidoId])
+      const estado = rows[0]?.estado
+      if (estado === 'concluido' || estado === 'falhou') break
+      if (Date.now() > limite) throw new Error(`o job do pedido ficou em '${estado ?? 'sem linha'}': há um despachante sem worker na pilha`)
+      await new Promise((pronto) => setTimeout(pronto, 100))
+    }
+    await bancada.pool.query('delete from arquivo_titular where escola_id = $1 and pedido_id = $2', [escolaId, pedidoId])
+    await bancada.pool.query(`update pedido_titular set estado = 'em_preparacao' where escola_id = $1 and id = $2`, [escolaId, pedidoId])
+  }
+
+  const UM_DIA_MS = 86_400_000
+
+  /**
+   * A validade do arquivo como a linha a tem agora: o instante em que ficou pronto e o em que vence. A linha tem um escritor só, o
+   * `montar` do teste, depois de `tirarDaFila`; lida uma vez, ela vale para o resto do caso.
+   */
+  async function validadeDoArquivo(pedidoId: string, versao: 'completa' | 'coordenacao' = 'completa'): Promise<{ prontoEm: Date; expiraEm: Date }> {
+    const { rows } = await bancada.pool.query<{ pronto_em: Date; expira_em: Date }>('select pronto_em, expira_em from arquivo_titular where pedido_id = $1 and versao = $2', [pedidoId, versao])
+    const linha = rows[0]
+    if (linha === undefined) throw new Error('o pedido não tem o arquivo gravado')
+    return { prontoEm: linha.pronto_em, expiraEm: linha.expira_em }
   }
 
   describe('conteúdo (RF11): uma sentinela por tabela, nada de outro titular nem de outra escola', () => {
@@ -678,21 +724,22 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
       const quemTem = await pessoa(cenario, 'aluno', 'AlunoComArquivo')
       const quemEspera = await pessoa(cenario, 'aluno', 'AlunoEsperando')
       for (const aluno of [quemTem, quemEspera]) await bancada.pool.query('update usuario set desativado_em = now() where id = $1', [aluno.id])
-      relogio.atual = new Date('2026-10-12T14:00:00Z')
       const comArquivo = await pedidoPronto(cenario, quemTem)
       // O titular desativado cujo job ainda não rodou: a escola tem a versão da escola de outro pedido, e não é a deste.
       const emPreparacao = (await registrar(cenario.coordenacao, quemEspera.id)).corpo['id'] as string
+      await tirarDaFila(cenario.escolaId, emPreparacao)
       expect(semRequisicao(await arquivoDaEscola(cenario.coordenacao, emPreparacao))).toEqual(NAO_ENCONTRADO)
       expect((await arquivoDaEscola(cenario.coordenacao, comArquivo)).status).toBe(200)
 
       // Passados os 7 dias, e com o objeto marcado como apagado, a escola também não o alcança.
-      relogio.atual = new Date('2026-10-19T14:00:01Z')
+      // A fronteira é o `expira_em` da versão da escola: um segundo depois vence, um segundo antes ainda vale.
+      const { expiraEm } = await validadeDoArquivo(comArquivo, 'coordenacao')
+      relogio.atual = new Date(expiraEm.getTime() + 1_000)
       expect(semRequisicao(await arquivoDaEscola(cenario.coordenacao, comArquivo))).toEqual(NAO_ENCONTRADO)
-      relogio.atual = new Date('2026-10-12T14:00:00Z')
+      relogio.atual = new Date(expiraEm.getTime() - 1_000)
       expect((await arquivoDaEscola(cenario.coordenacao, comArquivo)).status).toBe(200)
       await bancada.pool.query('update arquivo_titular set apagado_em = now() where pedido_id = $1', [comArquivo])
       expect(semRequisicao(await arquivoDaEscola(cenario.coordenacao, comArquivo))).toEqual(NAO_ENCONTRADO)
-      relogio.atual = new Date()
     })
 
     it('ativo em B e desativado em A: em A ele não tem conta ativa, e a versão da escola existe', async () => {
@@ -800,12 +847,21 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
       const outraEscola = await novaEscola()
       const deB = await pessoa(outraEscola, 'aluno', 'AlunoDeB')
 
+      // O vencimento da linha é movido de propósito (+1 h): a lista tem de ler o `expira_em` da linha, e não calcular relógio ou `pronto_em` + 7 dias.
+      const { rows: movida } = await bancada.pool.query<{ pronto_em: Date; expira_em: Date }>(
+        `update arquivo_titular set expira_em = pronto_em + interval '7 days 1 hour' where pedido_id = $1 and versao = 'completa' returning pronto_em, expira_em`,
+        [pedidoId],
+      )
+      const linha = { prontoEm: movida[0]?.pronto_em ?? new Date(NaN), expiraEm: movida[0]?.expira_em ?? new Date(NaN) }
       const lista = await meusDados(aluno.sessao)
       expect(lista.status).toBe(200)
       const pedidos = lista.corpo['pedidos'] as Array<Record<string, unknown>>
       expect(pedidos).toHaveLength(1)
       expect(pedidos[0]).toMatchObject({ id: pedidoId, tipo: 'acesso', estado: 'pronto', chegouEm: HOJE(), arquivo: { situacao: 'disponivel' } })
-      expect(Date.parse(((pedidos[0]?.['arquivo'] ?? {}) as { expiraEm: string }).expiraEm)).toBe(relogio.atual.getTime() + VALIDADE_DO_ARQUIVO_DIAS * 86_400_000)
+      const listado = Date.parse(((pedidos[0]?.['arquivo'] ?? {}) as { expiraEm: string }).expiraEm)
+      expect(listado).toBe(linha.expiraEm.getTime())
+      expect(listado).not.toBe(linha.prontoEm.getTime() + VALIDADE_DO_ARQUIVO_DIAS * UM_DIA_MS)
+      expect(listado).not.toBe(relogio.atual.getTime() + VALIDADE_DO_ARQUIVO_DIAS * UM_DIA_MS)
       expect(lista.corpo['categorias']).toEqual(expect.arrayContaining([{ categoria: 'conversa_tutor', quantidade: 1 }]))
       expect(((await meusDados(deB.sessao)).corpo['pedidos'] as unknown[]).length).toBe(0)
     })
@@ -932,26 +988,31 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
     it('a URL vale 300 s, o arquivo vale até o 7º dia, e no 8º a rota responde como o id inexistente', async () => {
       const cenario = await novaEscola()
       const aluno = await pessoa(cenario, 'aluno', 'Aluno')
-      relogio.atual = new Date('2026-10-12T14:00:00Z')
       const pedidoId = await pedidoPronto(cenario, aluno)
-      const { rows } = await bancada.pool.query<{ pronto_em: Date; expira_em: Date }>('select pronto_em, expira_em from arquivo_titular where pedido_id = $1 and versao = $2', [pedidoId, 'completa'])
-      expect(rows[0]?.expira_em.getTime()).toBe(new Date('2026-10-19T14:00:00Z').getTime())
+      const { prontoEm, expiraEm } = await validadeDoArquivo(pedidoId)
+      expect(expiraEm.getTime()).toBe(prontoEm.getTime() + VALIDADE_DO_ARQUIVO_DIAS * UM_DIA_MS)
+      expect(VALIDADE_DO_ARQUIVO_DIAS).toBe(7)
+      // O job gravou com o relógio injetado (o `beforeEach` o fixa, e o `montar` do teste é o único escritor): a hora real é sempre posterior.
+      expect(prontoEm).toEqual(relogio.atual)
 
-      relogio.atual = new Date('2026-10-18T14:00:00Z')
-      const noSextoDia = await baixar(aluno.sessao, pedidoId)
-      expect(noSextoDia.status).toBe(200)
+      // O instante do 6º dia (meio-dia de Brasília, 15:00Z, do dia `pronto_em` + 6) cai entre 5 dias e 15 h e 6 dias e 14 h depois do `pronto_em`: o que se prova é "antes dos 7 dias", e a hora fixa tira o nome do arquivo (o dia de uso) da dependência da hora em que o teste roda.
+      const meioDia = new Date(prontoEm.getTime() + 6 * UM_DIA_MS)
+      meioDia.setUTCHours(15, 0, 0, 0)
+      relogio.atual = meioDia
+      const sexto = await baixar(aluno.sessao, pedidoId)
+      expect(sexto.status).toBe(200)
       const assinada = armazem.urlsAssinadas.at(-1)
-      expect(assinada).toMatchObject({ chave: `titular/${cenario.escolaId}/${pedidoId}/completa.json`, validadeSegundos: VALIDADE_DA_URL_DO_ARQUIVO_SEGUNDOS, nome: 'meus-dados-2026-10-18.json' })
+      expect(assinada).toMatchObject({ chave: `titular/${cenario.escolaId}/${pedidoId}/completa.json`, validadeSegundos: VALIDADE_DA_URL_DO_ARQUIVO_SEGUNDOS, nome: `meus-dados-${diaDeUso(meioDia)}.json` })
       expect(VALIDADE_DA_URL_DO_ARQUIVO_SEGUNDOS).toBe(300)
-      expect(noSextoDia.corpo['validaAte']).toBe(new Date('2026-10-18T14:05:00Z').toISOString())
+      expect(sexto.corpo['validaAte']).toBe(new Date(meioDia.getTime() + 300_000).toISOString())
 
-      relogio.atual = new Date('2026-10-19T13:59:59Z')
+      // A fronteira é o `expira_em` da linha: um segundo antes baixa, um segundo depois responde como o id inexistente.
+      relogio.atual = new Date(expiraEm.getTime() - 1_000)
       expect((await baixar(aluno.sessao, pedidoId)).status).toBe(200)
-      relogio.atual = new Date('2026-10-19T14:00:01Z')
+      relogio.atual = new Date(expiraEm.getTime() + 1_000)
       expect(semRequisicao(await baixar(aluno.sessao, pedidoId))).toEqual(NAO_ENCONTRADO)
       const lista = (await meusDados(aluno.sessao)).corpo['pedidos'] as Array<{ arquivo: { situacao: string } }>
       expect(lista[0]?.arquivo.situacao).toBe('expirado')
-      relogio.atual = new Date()
     })
 
     it('o arquivo marcado `apagado_em` (a eliminação do titular) não baixa, mesmo dentro dos 7 dias', async () => {
