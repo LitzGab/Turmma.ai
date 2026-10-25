@@ -1,7 +1,7 @@
 import { CodigoDeErro, nomeDaSerie } from '@educa/shared'
 import { useQuery } from '@tanstack/react-query'
-import { Lock, LogOut } from 'lucide-react'
-import { useContext } from 'react'
+import { Lock, LogOut, Settings } from 'lucide-react'
+import { useContext, useState } from 'react'
 import { ErroDaApi } from '../../api/cliente'
 import { consultaMinhaTurma } from '../../api/minha-turma'
 import { ROTAS_DO_ALUNO } from '../../caminhos'
@@ -12,6 +12,7 @@ import { Linha } from '../../componentes/ui/Linha'
 import { Tela } from '../../componentes/ui/Tela'
 import { useTituloDaTela } from '../../titulo'
 import { ComoEstouIndo } from './ComoEstouIndo'
+import { DialogoDeAjustes } from './DialogoDeAjustes'
 
 /**
  * O que a tela diz quando a API não acha turma para o aluno no ano em curso (`NAO_ENCONTRADO`): o ano virou e a turma
@@ -21,8 +22,8 @@ import { ComoEstouIndo } from './ComoEstouIndo'
 const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. Fale com quem dá a aula ou com a coordenação.'
 
 /**
- * "Eu" do aluno (telas do aluno e primeiro acesso, 2.0 e 7.0; RF9): o cartão da turma, que era "Minha turma" (A1, 12.0; RF13),
- * "Como estou indo" (`ComoEstouIndo`, com os quatro estados dele) e as linhas **Privacidade** e **Sair**. Sem colegas, sem professor, sem matrícula (regra 50, item 9): o contrato de
+ * "Eu" do aluno (telas do aluno e primeiro acesso, 2.0, 7.0 e 8.0; RF9): o cartão da turma, que era "Minha turma" (A1, 12.0; RF13),
+ * "Como estou indo" (`ComoEstouIndo`, com os quatro estados dele) e as linhas **Privacidade**, **Ajustes** (o diálogo com a aparência e o tamanho da letra, que só grava ao escolher) e **Sair**. Sem colegas, sem professor, sem matrícula (regra 50, item 9): o contrato de
  * `GET /v1/minha-turma` não traz nada disso, e a tela não tem de onde tirar.
  *
  * Os estados do cartão são carregando, com dado, o erro com "Tentar de novo" (queda de rede não é logout, regra 80, item 6)
@@ -35,6 +36,7 @@ export default function Eu() {
   useTituloDaTela('Eu')
   const minhaTurma = useQuery(consultaMinhaTurma)
   const { sair, saindo } = useContext(ContextoDaSaida)
+  const [ajustesAbertos, definirAjustesAbertos] = useState(false)
 
   function cartaoDaTurma() {
     if (minhaTurma.isPending) return <EstadoCarregando rotulo="Carregando a sua turma…" />
@@ -69,7 +71,7 @@ export default function Eu() {
         {cartaoDaTurma()}
       </section>
       <ComoEstouIndo />
-      <ul aria-label="Privacidade e saída" className="divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda bg-superficie">
+      <ul aria-label="Conta" className="divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda bg-superficie">
         <li>
           <Linha
             titulo="Privacidade"
@@ -79,6 +81,17 @@ export default function Eu() {
               </Ladrilho>
             }
             para={ROTAS_DO_ALUNO.privacidade}
+          />
+        </li>
+        <li>
+          <Linha
+            titulo="Ajustes"
+            inicio={
+              <Ladrilho familia="turquesa" tamanho={40}>
+                <Settings aria-hidden="true" />
+              </Ladrilho>
+            }
+            aoAcionar={() => definirAjustesAbertos(true)}
           />
         </li>
         <li>
@@ -93,6 +106,7 @@ export default function Eu() {
           />
         </li>
       </ul>
+      {ajustesAbertos && <DialogoDeAjustes aoFechar={() => definirAjustesAbertos(false)} />}
     </Tela>
   )
 }

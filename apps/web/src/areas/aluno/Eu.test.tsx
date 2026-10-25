@@ -3,12 +3,13 @@ import { focusManager, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { CHAVE_DA_MEMORIA_DO_TUTOR } from '../../api/chaves-do-aluno'
 import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
 import { prepararTela, redeFalsa, renderizarTela } from '../../__fixtures__/tela'
 import { ContextoDaSaida } from '../../componentes/saida-da-casca'
+import { escolherLetra } from '../../letra'
 import type { RespostaMemoriaDoTutor } from '@educa/shared'
 import { DESCRICAO_DO_VAZIO, ROTULO_DAS_HABILIDADES, ROTULO_DO_CARREGANDO, TEXTO_DA_CONTESTACAO, TITULO_DO_VAZIO } from './como-estou-indo'
 import Eu from './Eu'
@@ -65,12 +66,12 @@ function montar(saida?: ComponentProps<typeof ContextoDaSaida>['value']) {
   return renderizarTela(saida === undefined ? eu : <ContextoDaSaida value={saida}>{eu}</ContextoDaSaida>)
 }
 
-/** As linhas Privacidade e Sair, que têm de estar em qualquer estado. */
-function conferirAsLinhas(): { sair: HTMLElement; privacidade: HTMLElement } {
-  const linhas = screen.getByRole('list', { name: 'Privacidade e saída' })
+/** As linhas Privacidade, Ajustes e Sair, que têm de estar em qualquer estado. */
+function conferirAsLinhas(): { sair: HTMLElement; privacidade: HTMLElement; ajustes: HTMLElement } {
+  const linhas = screen.getByRole('list', { name: 'Conta' })
   const privacidade = within(linhas).getByRole('link', { name: 'Privacidade' })
   expect(privacidade.getAttribute('href')).toBe('/aluno/privacidade')
-  return { sair: within(linhas).getByRole('button', { name: 'Sair' }), privacidade }
+  return { sair: within(linhas).getByRole('button', { name: 'Sair' }), privacidade, ajustes: within(linhas).getByRole('button', { name: 'Ajustes' }) }
 }
 
 /** A seção "Como estou indo", pelo título dela. */
@@ -321,3 +322,78 @@ describe('Eu: "Como estou indo"', () => {
     expect(await within(secao).findByText('Lista aprovada')).toBeTruthy()
   })
 })
+
+describe('Eu: Ajustes', () => {
+  // O `jsdom` não abre o `<dialog>` em modo modal: o mesmo dublê de `Atividade.test.tsx`. O Esc e o foco preso são do e2e.
+  beforeEach(() => {
+    HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+      this.setAttribute('open', '')
+    }
+    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+      if (!this.hasAttribute('open')) return
+      this.removeAttribute('open')
+      this.dispatchEvent(new Event('close'))
+    }
+  })
+
+  afterEach(() => {
+    // Os espiões de `setItem` e `removeItem` não passam para o caso seguinte (e o `escolherLetra` abaixo grava de verdade).
+    vi.restoreAllMocks()
+    window.localStorage.clear()
+    escolherLetra('padrao')
+  })
+
+  /** A turma e a memória respondem, para a tela estar parada com dado enquanto o diálogo abre. */
+  function montarComDado() {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/minha-turma', COM_TURMA)
+    rede.responderPor('/v1/tutor/memoria', MEMORIA_VAZIA)
+    return montar()
+  }
+
+  it('a linha "Ajustes" abre o diálogo com a aparência e o tamanho da letra, sem gravar nada, e o "Fechar" devolve o foco à linha', async () => {
+    window.localStorage.clear()
+    const gravar = vi.spyOn(Storage.prototype, 'setItem')
+    const apagar = vi.spyOn(Storage.prototype, 'removeItem')
+    const usuario = userEvent.setup()
+    montarComDado()
+    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    const { ajustes } = conferirAsLinhas()
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    await usuario.click(ajustes)
+    const dialogo = await screen.findByRole('dialog', { name: 'Ajustes' })
+    expect(within(dialogo).getByRole('radiogroup', { name: 'Aparência' })).toBeTruthy()
+    expect(within(dialogo).getByRole('group', { name: 'Tamanho da letra' })).toBeTruthy()
+    expect(within(dialogo).queryByText(/senha/i)).toBeNull()
+    expect(gravar).not.toHaveBeenCalled()
+    expect(apagar).not.toHaveBeenCalled()
+    expect(Object.entries(window.localStorage)).toEqual([])
+
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Fechar' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(ajustes)
+    expect(Object.entries(window.localStorage)).toEqual([])
+  })
+
+  it('abrir de novo mostra a escolha que ficou, e o foco volta à linha ao fechar', async () => {
+    const usuario = userEvent.setup()
+    montarComDado()
+    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    const { ajustes } = conferirAsLinhas()
+
+    await usuario.click(ajustes)
+    const dialogo = await screen.findByRole('dialog', { name: 'Ajustes' })
+    await usuario.click(within(dialogo).getByRole('radio', { name: 'Grande' }))
+    expect(Object.entries(window.localStorage)).toEqual([['educa.letra', 'grande']])
+
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Fechar' }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(ajustes)
+
+    await usuario.click(ajustes)
+    const reaberto = await screen.findByRole('dialog', { name: 'Ajustes' })
+    expect((within(reaberto).getByRole('radio', { name: 'Grande' }) as HTMLInputElement).checked).toBe(true)
+  })
+})
+

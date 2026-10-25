@@ -295,6 +295,21 @@
   }
 
   /*
+   * O tamanho da letra do aluno (telas do aluno e primeiro acesso, 8.0; RF11): Padrão é a ausência do atributo e fica nos
+   * 16 px do navegador. Grande e Maior mudam o `font-size` do `<html>`, e tudo que a pele mede em `rem` (texto, altura,
+   * espaço) acompanha: 18 px e 20 px. Quem escreve `data-letra` é o script do `index.html` (antes do primeiro quadro) e
+   * `useTamanhoDaLetra()`, só enquanto o endereço é o da área do aluno. Os pontos de quebra do Tailwind são em `rem` de media query, que o navegador
+   * lê contra os 16 px de fábrica: o celular continua celular com a letra Maior.
+   */
+  :root[data-letra='grande'] {
+    font-size: 112.5%;
+  }
+
+  :root[data-letra='maior'] {
+    font-size: 125%;
+  }
+
+  /*
    * O lugar que a barra de baixo do celular toma da janela (RF14, RF23): 68 px mais a área segura, e zero onde ela não
    * existe. Quem a desenha (`BarraDeBaixo`) põe `data-barra-de-baixo` no `<html>` enquanto está na página, e é só por
    * isso que a variável vale: a coordenação, que no celular tem os itens na gaveta, e toda largura de 768 px para cima
@@ -389,73 +404,75 @@
 /*
  * A tipografia da 9.2 do `docs/interface.md`, uma classe por papel: tamanho, altura de linha, peso e caixa. A fonte é a
  * do sistema (o `--font-corpo` do `@theme`), dois pesos, 500 e 700. A caixa-alta é do CSS: o texto vai escrito normal
- * para o leitor de tela. O piso é 14 px; 13 px só no `t-selo`. Entram em `components`, abaixo das utilidades, para a tela
+ * para o leitor de tela. O piso é 14 px; 13 px só no `t-selo`. Tamanho e altura de linha são em `rem` (a tabela do documento
+ * é em px, que é o que o `rem` vale nos 16 px de fábrica): é o que faz o texto acompanhar o tamanho da letra do aluno
+ * (`data-letra`, mais acima). Entram em `components`, abaixo das utilidades, para a tela
  * que pede `text-sm` num botão ganhar do tamanho da classe sem brigar com ela.
  */
 @layer components {
   .t-titulo {
-    font-size: 24px;
-    line-height: 30px;
+    font-size: 1.5rem;
+    line-height: 1.875rem;
     font-weight: 700;
     letter-spacing: -0.01em;
   }
 
   .t-secao {
-    font-size: 20px;
-    line-height: 26px;
+    font-size: 1.25rem;
+    line-height: 1.625rem;
     font-weight: 700;
   }
 
   .t-balao {
-    font-size: 20px;
-    line-height: 26px;
+    font-size: 1.25rem;
+    line-height: 1.625rem;
     font-weight: 500;
   }
 
   .t-cartao {
-    font-size: 17px;
-    line-height: 22px;
+    font-size: 1.0625rem;
+    line-height: 1.375rem;
     font-weight: 700;
   }
 
   .t-corpo {
-    font-size: 17px;
-    line-height: 25px;
+    font-size: 1.0625rem;
+    line-height: 1.5625rem;
     font-weight: 500;
   }
 
   .t-apoio {
-    font-size: 15px;
-    line-height: 20px;
+    font-size: 0.9375rem;
+    line-height: 1.25rem;
     font-weight: 500;
   }
 
   .t-rotulo {
-    font-size: 15px;
-    line-height: 18px;
+    font-size: 0.9375rem;
+    line-height: 1.125rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 
   .t-selo {
-    font-size: 13px;
-    line-height: 16px;
+    font-size: 0.8125rem;
+    line-height: 1rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 
   .t-numero {
-    font-size: 28px;
-    line-height: 32px;
+    font-size: 1.75rem;
+    line-height: 2rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
 
   .t-numero-g {
-    font-size: 36px;
-    line-height: 40px;
+    font-size: 2.25rem;
+    line-height: 2.5rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }

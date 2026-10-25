@@ -190,6 +190,13 @@ describe('nome dos chunks', () => {
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/aluno/Comemoracao.css')).toBe(false)
   })
 
+  it('o tamanho da letra (X4, 8.0) está fora da entrada, com a pasta dela, e o `letra.ts`, que a entrada importa, não é peça', () => {
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ajustes/TamanhoDaLetra.tsx')).toBe(true)
+    // Só o arquivo da lista: o mesmo nome fora da pasta, ou o módulo da letra, não é peça sem entrar nela.
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/TamanhoDaLetra.tsx')).toBe(false)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/letra.ts')).toBe(false)
+  })
+
   it('a peça nova de lista (X1, 5.0) está fora da entrada, e o `Linha` do `Tabela` não é um arquivo', () => {
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Linha.tsx')).toBe(true)
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Linha.test.tsx')).toBe(false)

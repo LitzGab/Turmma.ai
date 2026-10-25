@@ -606,11 +606,22 @@ para ninguém confundir com a tela de uma escola. As medidas estão na seção 1
 - **Claro e escuro** (D80, item 2): a pessoa escolhe entre Sistema, Claro e Escuro, em qualquer
   área. A escolha fica no navegador, sem identificador, e vale antes de a primeira tela desenhar.
   Nenhuma tela escreve cor por tema: quem usa token muda sozinho (9.1 e 9.10)
-- **O que o navegador guarda é lista fechada** (regra 50, item 7; Tech Spec da X1, seção 7): duas chaves de
-  `localStorage`, `educa.aparencia` (`claro` ou `escuro`; Sistema **apaga** a chave) e `educa.lateral-recolhida` (`sim`;
-  aberta apaga a chave). Nenhuma chave nem valor leva pessoa, escola, papel nem identificador, e nada vai para o
-  `sessionStorage`. A aparência é do aparelho: fica para a próxima pessoa do mesmo computador, e mais nada fica. Chave
-  nova é decisão, com a regra 20 junto, e o e2e de `aparencia.spec.ts` (duas pessoas no mesmo navegador) a reprova
+- **O que o navegador guarda é lista fechada** (regra 50, item 7; Tech Spec da X1, seção 7; telas do aluno, 8.0): três chaves de
+  `localStorage`, `educa.aparencia` (`claro` ou `escuro`; Sistema **apaga** a chave), `educa.lateral-recolhida` (`sim`;
+  aberta apaga a chave) e `educa.letra` (`grande` ou `maior`; Padrão **apaga** a chave). Nenhuma chave nem valor leva pessoa, escola, papel
+  nem identificador, e nada vai para o `sessionStorage`. A aparência e a letra são do aparelho: ficam para a próxima pessoa do
+  mesmo computador, e mais nada fica. **Só a escolha grava**: montar a peça, abrir "Ajustes" e entrar na área não escrevem nada.
+  Chave nova é decisão, com a regra 20 junto, e os e2e de `aparencia.spec.ts` (duas pessoas no mesmo navegador) e de
+  `tamanho-da-letra.spec.ts` a reprovam
+- **O tamanho da letra é do aluno** (RF11 das telas do aluno): Padrão, Grande ou Maior, em Eu › Ajustes, valendo só na área
+  `/aluno`. O script em linha do `index.html` lê a chave e, se o caminho é o do aluno, escreve `data-letra` no `<html>` antes do
+  primeiro quadro; o `font-size` do `<html>` passa a 112,5% (18 px) ou 125% (20 px). **Toda medida de texto é em `rem`**,
+  também as classes `t-*` da 9.2 (a tabela diz px, que é o que o `rem` vale nos 16 px de fábrica): medida de texto escrita em
+  px não acompanha a letra. Os pontos de quebra seguem os 16 px do navegador, e por isso o celular continua celular com a
+  letra Maior; com ela, nada rola de lado a 360 px (se rolar, conserta-se a tela, e não o tamanho)
+  O `rem` vale para **todas** as áreas, e não só para o aluno: no Padrão 1 rem são 16 px e nada muda, mas quem configurou o
+  navegador do Chromebook gerenciado com letra acima de 16 px passa a ver também o texto do professor e da coordenação maior.
+  É intencional (acessibilidade, regra 50, item 11), e não bug a desfazer
 
 ## 7. Em aberto
 
@@ -1549,6 +1560,7 @@ prova isso (RF6 da X1).
 | `Interruptor` (N) | Trilho de 52 × 32 px, com alvo de toque de 44 px de altura abaixo de 768. Desligado: `borda`, com borda `borda-campo` (produto). Ligado: `azul`, com borda `azul-degrau`. Bolinha de 24 em `fundo` (produto). Fora de uso: `fundo-suave` com borda `borda` e bolinha `borda-campo`, sem opacidade (produto); a posição da bolinha continua dizendo o estado | `role="switch"`. Muda na hora |
 | `Segmentado` (N) | Grupo de 44 px, borda 2, canto 12. A opção ativa em `azul-claro`, `azul-borda`, `azul-texto`. Até quatro; com quatro rótulos longos, `emDuasColunasNoCelular` põe as opções duas por linha abaixo de 768 px (o filtro "Estado" de Registros › IA). Troca o jeito de ver; não é aba | `radiogroup`, com as setas, Home e End |
 | `Aparencia` (N) | O `Segmentado` Sistema · Claro · Escuro, em "Sua conta" | Só a escolha explícita grava; voltar a Sistema apaga a chave. Sem armazenamento, vale o sistema, calado |
+| `TamanhoDaLetra` (N) | `componentes/ajustes/TamanhoDaLetra` (numa pasta própria: `componentes/` já está no teto de 25 arquivos de produção). Três `Opcao` de rádio (Padrão · Grande · Maior) num `fieldset` "Tamanho da letra", e a prévia "Assim fica a minha letra." no tamanho de agora. Em Eu › Ajustes, com a `Aparencia` | Setas trocam a escolha, uma parada de Tab. Só a escolha grava; Padrão apaga a chave. Sem armazenamento, vale na sessão, calado |
 
 **Sobrepor**
 
@@ -1633,7 +1645,7 @@ Uma só para coordenação, professor e aluno. A lateral do professor, como fica
   que fica à vista no pé da lateral, no trilho e na barra de topo do celular, a um clique e do
   tamanho dos vizinhos (D59; RF15 da X1)
 - **O tema** é escrito no `<html>` (`data-tema`) por um script em linha, antes de o CSS pintar. No
-  navegador ficam só duas chaves, `educa.aparencia` e `educa.lateral-recolhida`, sem identificador
+  navegador ficam só três chaves, `educa.aparencia`, `educa.lateral-recolhida` e `educa.letra`, sem identificador
   (regra 50, item 7)
 
 **Responsivo** (D51), com uma navegação por vez na página:

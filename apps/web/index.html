@@ -11,7 +11,8 @@
     <!--
       O tema antes do primeiro quadro (Tech Spec da X1, seção 5). Em linha e sem `type="module"`, para rodar antes de o CSS
       pintar e sem esperar o pacote do React. Lê a escolha da pessoa (`claro` ou `escuro`), cai no que o aparelho diz e
-      escreve `data-tema` no <html>: só `claro` ou `escuro`, nunca o texto que leu. Nunca lança: armazenamento que recusa e
+      escreve `data-tema` no <html>: só `claro` ou `escuro`, nunca o texto que leu. No fim, a letra do aluno (`educa.letra`)
+      vira `data-letra`, só em `/aluno`. Nunca lança: armazenamento que recusa e
       navegador sem `matchMedia` caem no claro. `src/tema.ts` repete esta conta em `resolverTema`, e `tema.test.ts` roda
       este script contra ela. Entra por hash quando a borda servir política de segurança de conteúdo (`TODO.md`, F16).
     -->
@@ -27,6 +28,14 @@
         } catch (erro) {}
         var tema = escolha === 'claro' || escolha === 'escuro' ? escolha : escuro ? 'escuro' : 'claro'
         document.documentElement.setAttribute('data-tema', tema)
+        // A letra do aluno (telas do aluno e primeiro acesso, 8.0): só `grande` ou `maior`, só em `/aluno`. Padrão não deixa
+        // atributo. `src/letra.ts` repete esta conta em `resolverLetra`, e `letra.test.ts` roda este script contra ela.
+        try {
+          var letra = window.localStorage.getItem('educa.letra')
+          var caminho = window.location.pathname
+          var naAreaDoAluno = caminho === '/aluno' || caminho.indexOf('/aluno/') === 0 // o mesmo teste de `noCaminhoDoAluno`
+          if (naAreaDoAluno && (letra === 'grande' || letra === 'maior')) document.documentElement.setAttribute('data-letra', letra)
+        } catch (erro) {}
       })()
     </script>
   </head>

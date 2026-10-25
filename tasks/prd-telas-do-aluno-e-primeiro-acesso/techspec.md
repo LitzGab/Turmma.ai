@@ -22,9 +22,9 @@ páginas públicas não mudam.
 | `apps/api/src/sessao` (`eu/eu.*`, `tenant/resolucao-de-tenant.repository.ts`) | alterado | leitura e escrita da data |
 | `apps/web/src/areas/aluno/` | novo e alterado | `Inicio`, `Eu`, `introducao/BemVindo`; `Atividades`, `Atividade`, `rotas` |
 | `apps/web/src/areas/professor/introducao/`, `areas/coordenacao/introducao/` | novo | `BemVindo` e os textos; a rota em `rotas.tsx` da área |
-| `apps/web/src/componentes/` | novo | `introducao/` (`Introducao`, `TelaDeFoco`, `Balao`), `TamanhoDaLetra`; no kit, `ui/Comemoracao` e as poses em `ui/onca/Onca` |
+| `apps/web/src/componentes/` | novo | `introducao/` (`Introducao`, `TelaDeFoco`, `Balao`), `ajustes/TamanhoDaLetra` (numa pasta própria: `componentes/` já está nos 25 arquivos de produção do teto de `tools/guardas/tamanho-das-pastas.test.ts`); no kit, `ui/Comemoracao` e as poses em `ui/onca/Onca` |
 | `CascaDaEscola.tsx`, `caminhos.ts`, `areas/navegacao.ts`, `paginas/Inicio.tsx` | alterado | foco, endereços, lugares, desvio |
-| `apps/web/src/letra.ts`, `index.html`, `estilos.css` | novo e alterado | o tamanho da letra |
+| `apps/web/src/letra.ts`, `index.html`, `estilos.css`, `main.tsx` | novo e alterado | o tamanho da letra |
 | `e2e/`, `tools/vitrine/`, `docs/` | alterado | fixtures, specs, documentos |
 
 ## 3. Modelo de dados
@@ -87,7 +87,12 @@ ano em curso e precisa gravar.
 
 **Tamanho da letra.** Chave `educa.letra` (`grande` ou `maior`; ausente é Padrão; voltar a Padrão apaga). O script
 em linha da X1 a lê e, se o caminho começa por `/aluno`, escreve `data-letra` no `<html>`; `useTamanhoDaLetra()`,
-montado na área do aluno, mantém o atributo e o tira ao sair. No CSS, `font-size` de 112,5% e de 125%.
+montado **na raiz** (`main.tsx`) e preso ao endereço, mantém o atributo enquanto o endereço é o do aluno e o tira no
+instante em que deixa de ser. Na raiz, e não na área do aluno: quem abre `/aluno` sem sessão é levado à entrada sem a área
+chegar a montar, e o atributo do primeiro quadro ficaria para a pessoa seguinte, que pode ser um professor. `iniciarLetra()`
+(também em `main.tsx`) só acompanha o evento `storage` das outras abas, e por isso `letra.ts` fica na entrada, e não num pedaço dividido
+entre a área do aluno e a galeria. No CSS, `font-size` de 112,5% e de 125% no `<html>`; para o texto acompanhar, as classes
+`t-*` (`estilos.css`, 9.2 do `docs/interface.md`) passam de px a `rem`, que nos 16 px de fábrica é o mesmo número.
 
 ## 6. Isolamento (obrigatório)
 

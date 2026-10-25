@@ -144,7 +144,7 @@ test.describe('aparência: Sistema, Claro e Escuro', () => {
     expect(await larguraExcedente(page)).toBe(0)
   })
 
-  test('RF24: duas pessoas no mesmo computador: o navegador guarda só a aparência e a lateral recolhida, a segunda pessoa herda as duas e nada mais, e entra na largura do projeto', async ({ page, hasTouch }) => {
+  test('RF24: duas pessoas no mesmo computador: o navegador guarda só a aparência, a lateral recolhida e a letra do aluno, a segunda pessoa herda as três e nada mais, e entra na largura do projeto', async ({ page, hasTouch }) => {
     test.setTimeout(120_000)
     const primeira = await entrarComoProfessora(page, hasTouch)
     const larguraDoProjeto = page.viewportSize()
@@ -154,10 +154,13 @@ test.describe('aparência: Sistema, Claro e Escuro', () => {
     expect(await temaDaPagina(page)).toBe('escuro')
     await acionar(page.getByRole('button', { name: 'Recolher a lateral' }), hasTouch)
     await expect(page.getByRole('button', { name: 'Abrir a lateral' })).toBeVisible()
+    // A terceira chave da lista fechada (telas do aluno, 8.0): quem a escolhe é o aluno, em Eu › Ajustes (`tamanho-da-letra.spec.ts`);
+    // aqui ela é posta à mão, para provar que fica na lista e que a professora que entra depois não a aplica.
+    await page.evaluate(() => window.localStorage.setItem('educa.letra', 'maior'))
     await sair(page, hasTouch)
 
-    // Quem sai não leva nem deixa nada além dessas duas chaves, e o tema continua o do computador.
-    expect(await guardadoNoNavegador(page)).toEqual({ 'educa.aparencia': 'escuro', 'educa.lateral-recolhida': 'sim' })
+    // Quem sai não leva nem deixa nada além dessas três chaves, e o tema continua o do computador.
+    expect(await guardadoNoNavegador(page)).toEqual({ 'educa.aparencia': 'escuro', 'educa.lateral-recolhida': 'sim', 'educa.letra': 'maior' })
     expect(await temaDaPagina(page)).toBe('escuro')
 
     // A segunda pessoa chega na tela do projeto: no celular, a 360 px, onde a lateral é a gaveta.
@@ -168,9 +171,11 @@ test.describe('aparência: Sistema, Claro e Escuro', () => {
     await expect(page.getByText(/^(Bom dia|Boa tarde|Boa noite), /)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     const depois = await page.evaluate(() => ({ local: Object.fromEntries(Object.entries(localStorage)), sessao: Object.fromEntries(Object.entries(sessionStorage)) }))
     // Nenhuma chave nem valor leva pessoa, escola ou papel; o `sessionStorage` não tem nada.
-    expect(depois.local).toEqual({ 'educa.aparencia': 'escuro', 'educa.lateral-recolhida': 'sim' })
+    expect(depois.local).toEqual({ 'educa.aparencia': 'escuro', 'educa.lateral-recolhida': 'sim', 'educa.letra': 'maior' })
     expect(depois.sessao).toEqual({})
     expect(await temaDaPagina(page)).toBe('escuro')
+    // A letra é do aluno: a professora herda a chave, mas não a letra.
+    expect(await page.evaluate(() => document.documentElement.getAttribute('data-letra'))).toBeNull()
 
     // Na mesma aba, é a segunda pessoa que está na tela: nada da primeira ficou no cache (regra 20, itens 4 e 5).
     if (naGaveta(page)) await abrirNavegacao(page, hasTouch)
