@@ -168,7 +168,7 @@ test.describe('recomeço de "Eu" e do Início', () => {
     await expect(page.locator('body')).not.toContainText(primeiro.nome)
   })
 
-  test('segunda pessoa no Início: o aluno seguinte vê "Carregando as suas atividades…" e depois a atividade dele, nunca a do anterior', async ({ page, hasTouch }) => {
+  test('segunda pessoa no Início: o aluno seguinte vê "Carregando as suas tarefas…" e depois a atividade dele, nunca a do anterior', async ({ page, hasTouch }) => {
     const primeiro = await criarAlunoComMatricula()
     const segundo = await criarAlunoComMatricula({ escola: primeiro })
     const atividadeDoPrimeiro = minhaAtividade({ titulo: 'Lista só do primeiro aluno' })
@@ -200,7 +200,7 @@ test.describe('recomeço de "Eu" e do Início', () => {
     if (hasTouch) await entrar.tap()
     else await entrar.click()
     await esperarInicioDoAluno(page, segundo.nome)
-    await expect(page.getByRole('main').getByRole('status')).toHaveText('Carregando as suas atividades…', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByRole('main').getByRole('status')).toHaveText('Carregando as suas tarefas…', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText(atividadeDoPrimeiro.titulo)
 
     // Liberada a leitura, aparece a do segundo, e a do primeiro continua ausente.

@@ -181,6 +181,15 @@ describe('nome dos chunks', () => {
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/onca/OncaInteira.tsx')).toBe(false)
   })
 
+  it('a comemoração e o estilo dela (X4, 6.0) estão fora da entrada, e o CSS de outro arquivo não é peça só por ser CSS', () => {
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Comemoracao.tsx')).toBe(true)
+    // O estilo ao lado da peça é da peça: sem isto, o pedaço dividido entre a galeria e a tarefa aberta cai em `parte-*`.
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Comemoracao.css')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Comemoracao.css?used')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Botao.css')).toBe(false)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/aluno/Comemoracao.css')).toBe(false)
+  })
+
   it('a peça nova de lista (X1, 5.0) está fora da entrada, e o `Linha` do `Tabela` não é um arquivo', () => {
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Linha.tsx')).toBe(true)
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Linha.test.tsx')).toBe(false)

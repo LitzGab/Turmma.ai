@@ -21,7 +21,7 @@
   - [ ] 2.5 `docs/interface.md` 11.1 e `docs/glossario.md`
   - [ ] 2.6 Testes: os lugares, cada endereço antigo, o redirecionamento, "Sair" e a segunda pessoa
 
-- [ ] **3.0 — O Início mostra o Tutor, a faixa de supervisão e as próximas tarefas**
+- [x] **3.0 — O Início mostra o Tutor, a faixa de supervisão e as próximas tarefas**
   - [ ] 3.1 O seed de `infra/scripts/carga-login.ts` com ano em curso, turma e atividades, e `infra/k6/login-7h30.js`: o aluno faz `/v1/eu` e `minhas-atividades` depois do login, com o p95 das autenticadas valendo na rajada
   - [ ] 3.2 A tela: saudação fixa, faixa presa, "Para fazer", os caminhos até o Tutor e o aviso da avaliação (sem `tutor/conversa`)
   - [ ] 3.3 Testes: os quatro estados, a rede sem `tutor/conversa`, a avaliativa, o aluno sem turma, a varredura de texto e o k6
@@ -39,10 +39,10 @@
   - [ ] 5.4 A seção da galeria, nos dois temas
   - [ ] 5.5 Testes: ordem, foco, botões iguais, passo obrigatório, movimento reduzido, rosto das poses, quem importa a onça e a `Comemoracao`, a casca em foco
 
-- [ ] **6.0 — A tarefa aberta na pele nova, com a comemoração na entrega**
-  - [ ] 6.1 A moldura da tarefa aberta com as peças da X1, sem mudar o fluxo
-  - [ ] 6.2 A `Comemoracao`, uma vez, depois do envio confirmado nesta tela
-  - [ ] 6.3 Testes: aparece no envio; não aparece ao reabrir, no resultado nem na encerrada
+- [x] **6.0 — A tarefa aberta na pele nova, com a comemoração na entrega**
+  - [x] 6.1 A moldura da tarefa aberta com as peças da X1, sem mudar o fluxo
+  - [x] 6.2 A `Comemoracao`, uma vez, depois do envio confirmado nesta tela
+  - [x] 6.3 Testes: aparece no envio; não aparece ao reabrir, no resultado nem na encerrada
 
 - [x] **7.0 — Eu: a turma, como estou indo, Privacidade e Sair**
   - [x] 7.1 `consultaMemoriaDoTutor` (só `trabalhos` com resultado)

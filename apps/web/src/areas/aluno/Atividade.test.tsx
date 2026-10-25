@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
+import { CodigoDeErro, MENSAGENS_DE_ERRO, type RespostaMeuDiagnostico } from '@educa/shared'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { prepararTela, redeFalsa, renderizarTela, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
 import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
 import { consultaEu } from '../../api/eu'
-import { AVISO_DE_OUTRA_JANELA } from './atividade'
+import { AVISO_DE_OUTRA_JANELA, FALA_DA_ENTREGA, ROTULO_DE_VOLTAR_AS_TAREFAS } from './atividade'
 import Atividade from './Atividade'
 
 /**
@@ -18,18 +19,41 @@ import Atividade from './Atividade'
  * O tamanho e o toque nas duas larguras, e o fluxo inteiro, são do e2e (`e2e/aluno-atividade.spec.ts`).
  *
  * A fila de respostas é uma por atividade e vive no módulo, como na aba: cada caso usa uma atividade (id) própria.
+ *
+ * A moldura, os quatro estados e a comemoração do envio são da tarefa 6.0 da X4 (RF7, RF8, RF20), no fim do arquivo. O
+ * `jsdom` não tem `ResizeObserver` (a barra presa mede a si mesma) nem o `dialog` modal (o diálogo "Enviar a atividade?"):
+ * o teste os põe, e são API do navegador, e não peça nossa.
  */
 prepararTela()
+
+beforeEach(() => {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    },
+  )
+  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+    this.setAttribute('open', '')
+  }
+  HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+    if (!this.hasAttribute('open')) return
+    this.removeAttribute('open')
+    this.dispatchEvent(new Event('close'))
+  }
+})
 
 const idDaAtividade = (n: number) => `0197a1c0-0000-7000-8000-${String(n).padStart(12, '0')}`
 
 const ALTERNATIVAS = ['Quatro', 'Cinco', 'Seis', 'Sete']
 const questao = (numero: number) => ({ numero, enunciado: `Enunciado sintético da questão ${String(numero)}`, alternativas: ALTERNATIVAS })
 
-function prova(atividadeAplicadaId: string, respostas: readonly { questao: number; alternativa: number; sequencia: number }[] = []): RespostaFalsa {
+function prova(atividadeAplicadaId: string, respostas: readonly { questao: number; alternativa: number; sequencia: number }[] = [], campos: Record<string, unknown> = {}): RespostaFalsa {
   return {
     status: 200,
-    corpo: { atividadeAplicadaId, titulo: 'Lista sintética', avaliativa: false, estado: 'aberta', adaptacao: null, questoes: [questao(1), questao(2), questao(3)], respostas, enviadaEm: null },
+    corpo: { atividadeAplicadaId, titulo: 'Lista sintética', avaliativa: false, estado: 'aberta', adaptacao: null, questoes: [questao(1), questao(2), questao(3)], respostas, enviadaEm: null, ...campos },
   }
 }
 
@@ -211,5 +235,359 @@ describe('a atividade na tela: a escolha pendente sobrevive ao F5 (53.0, RF21)',
     await waitFor(() => expect(window.sessionStorage.getItem(`educa.escolhas-pendentes.${id}`)).toBeNull())
     expect(marcada()).toBe(-1)
     expect(envios(rede)).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Tarefa 6.0 da X4: a tarefa aberta na pele nova, com a comemoração na entrega (RF7, RF8, RF20).
+// ---------------------------------------------------------------------------------------------------------------------
+
+const REQUISICAO = '0190f5a0-0000-7000-8000-000000000001'
+const erroDaApi = (status: number, codigo: string): RespostaFalsa => ({ status, corpo: { erro: { codigo, mensagem: 'x', requisicaoId: REQUISICAO } } })
+const NAO_ACHADA = erroDaApi(404, CodigoDeErro.NAO_ENCONTRADO)
+const ENVIADA_EM = '2026-10-22T13:30:00.000Z'
+const respostaDe = (questaoNumero: number, alternativa: number) => ({ questao: questaoNumero, alternativa, sequencia: 1 })
+const DUAS_RESPONDIDAS = [respostaDe(1, 1), respostaDe(2, 0)]
+
+function diagnosticoDe(atividadeAplicadaId: string): RespostaFalsa {
+  const corpo: RespostaMeuDiagnostico = {
+    atividadeAplicadaId,
+    titulo: 'Lista sintética',
+    acertos: 2,
+    total: 3,
+    porHabilidade: [{ habilidade: { codigo: 'QUI.EM.05', descricao: 'Calcular a massa molar de uma substância' }, acertos: 2, total: 3 }],
+    questoes: [{ numero: 1, alternativa: 1, gabarito: 1, correta: true, explicacao: 'Porque sim.', citacao: { materialId: '0190f5a0-0000-7000-8000-0000000000b1', pagina: 3, trecho: 'Trecho sintético.' } }],
+    aprovadoPor: { nome: 'Professora Sintética' },
+    aprovadoEm: '2026-10-22T15:00:00.000Z',
+  }
+  return { status: 200, corpo }
+}
+
+const enviadaAgora: RespostaFalsa = { status: 200, corpo: { enviadaEm: ENVIADA_EM, respondidas: 2, questoes: 3 } }
+const comemoracoes = () => document.querySelectorAll('[data-comemoracao]')
+const pedidosDeEnvio = (rede: RedeFalsa) => rede.chamadas.filter(({ caminho, metodo }) => metodo === 'POST' && caminho.endsWith('/enviar'))
+
+/** O aluno abre a confirmação e confirma o envio: o mesmo caminho da tela, pelos dois botões "Enviar a atividade". */
+async function enviarPelaTela(usuario: ReturnType<typeof userEvent.setup>) {
+  await usuario.click(await screen.findByRole('button', { name: 'Enviar a atividade' }))
+  const dialogo = await screen.findByRole('alertdialog')
+  await usuario.click(within(dialogo).getByRole('button', { name: 'Enviar a atividade' }))
+  return dialogo
+}
+
+/** A tela da tarefa de uma aluna que respondeu duas de três, com a rede pronta para o envio dar certo. */
+function prepararEnvio(n: number, diagnostico: RespostaFalsa = NAO_ACHADA) {
+  const id = idDaAtividade(n)
+  const rede = redeFalsa()
+  rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id, DUAS_RESPONDIDAS))
+  rede.responderPor(`/v1/atividades-aplicadas/${id}/enviar`, enviadaAgora)
+  rede.responderPor(`/v1/atividades-aplicadas/${id}/meu-diagnostico`, diagnostico)
+  return { id, rede }
+}
+
+describe('a comemoração do envio (X4, 6.0; RF8; D59)', () => {
+  it('aparece uma vez, logo depois do envio confirmado: a onça comemorando, a função, o selo "IA", o fato e o caminho de volta', async () => {
+    const usuario = userEvent.setup()
+    const { id, rede } = prepararEnvio(10)
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+    expect(comemoracoes()).toHaveLength(0)
+
+    await enviarPelaTela(usuario)
+    await screen.findByRole('heading', { name: 'Atividade enviada' })
+
+    expect(pedidosDeEnvio(rede)).toHaveLength(1)
+    expect(comemoracoes()).toHaveLength(1)
+    const comemoracao = comemoracoes()[0] as HTMLElement
+    expect(comemoracao.querySelector('[data-onca]')?.getAttribute('data-pose')).toBe('comemorando')
+    expect(comemoracao.querySelector('figcaption')?.textContent).toMatch(/^Tutor/)
+    expect(comemoracao.querySelectorAll('[data-selo-ia]')).toHaveLength(1)
+    expect(comemoracao.textContent).toContain(FALA_DA_ENTREGA)
+    // O caminho de volta é o mesmo do "Voltar" do alto: a lista, do mesmo tamanho de toque de qualquer botão.
+    const volta = screen.getByRole('link', { name: ROTULO_DE_VOLTAR_AS_TAREFAS })
+    expect(volta.getAttribute('href')).toBe('/atividades')
+    // O que a tela já dizia continua: o cartão "Atividade enviada" e o aviso de que o resultado vem depois.
+    expect(screen.getByRole('heading', { name: 'Atividade enviada' })).toBeTruthy()
+    expect(await screen.findByText(/Quem dá a aula ainda vai revisar a correção/)).toBeTruthy()
+  })
+
+  it('nunca de nota nem de acerto: o cartão da comemoração não traz número, acerto, tempo nem "parabéns"', async () => {
+    const usuario = userEvent.setup()
+    const { id } = prepararEnvio(11)
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+    await enviarPelaTela(usuario)
+    await screen.findByRole('heading', { name: 'Atividade enviada' })
+
+    const cartao = (comemoracoes()[0] as HTMLElement).parentElement as HTMLElement
+    // A legenda da onça, a fala e o botão: é tudo o que o cartão diz, e nada disso tem dígito nem festa.
+    expect(cartao.textContent).not.toMatch(/\d/)
+    expect(cartao.textContent).not.toMatch(/acert|errou|nota\b|conceito|ponto|%|tempo|minuto|parab[ée]ns|incr[ií]vel|muito bem|!/i)
+    expect(cartao.textContent).toContain('Atividade entregue.')
+    // O número de questões respondidas está no cartão "Atividade enviada", ao lado, e não na comemoração.
+    expect(cartao.querySelectorAll('audio, video, progress, [role="progressbar"]')).toHaveLength(0)
+  })
+
+  it('não volta ao reabrir: a mesma tarefa, lida de novo do servidor, só diz "Atividade enviada"; nada fica guardado', async () => {
+    const usuario = userEvent.setup()
+    const { id } = prepararEnvio(12)
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+    await enviarPelaTela(usuario)
+    await waitFor(() => expect(comemoracoes()).toHaveLength(1))
+    // Nem no armazenamento da aba, nem no do navegador: a comemoração é estado da tela.
+    expect(window.localStorage.length).toBe(0)
+    expect(Object.keys(window.sessionStorage).filter((chave) => /comemor|entreg/i.test(chave))).toEqual([])
+
+    // O F5, ou abrir a tarefa pela lista: outra abertura, outro cache, e o servidor já tem o envio.
+    cleanup()
+    const redeDaLeitura = redeFalsa()
+    redeDaLeitura.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id, DUAS_RESPONDIDAS, { enviadaEm: ENVIADA_EM }))
+    redeDaLeitura.responderPor(`/v1/atividades-aplicadas/${id}/meu-diagnostico`, NAO_ACHADA)
+    montar(id)
+    await screen.findByRole('heading', { name: 'Atividade enviada' })
+    await screen.findByText(/Quem dá a aula ainda vai revisar a correção/)
+    expect(comemoracoes()).toHaveLength(0)
+    expect(screen.queryByRole('link', { name: ROTULO_DE_VOLTAR_AS_TAREFAS })).toBeNull()
+  })
+
+  it('a tarefa que tem resultado abre sem comemoração', async () => {
+    const id = idDaAtividade(13)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id, DUAS_RESPONDIDAS, { enviadaEm: ENVIADA_EM }))
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/meu-diagnostico`, diagnosticoDe(id))
+    montar(id)
+    await screen.findByRole('region', { name: 'Seu resultado' })
+    expect(comemoracoes()).toHaveLength(0)
+  })
+
+  it('a tarefa que a professora encerrou abre sem comemoração', async () => {
+    const id = idDaAtividade(14)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id, DUAS_RESPONDIDAS, { estado: 'encerrada' }))
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/meu-diagnostico`, NAO_ACHADA)
+    montar(id)
+    await screen.findByRole('heading', { name: 'Quem dá a aula encerrou esta atividade' })
+    expect(comemoracoes()).toHaveLength(0)
+  })
+
+  it('o resultado aprovado que já está à vista na hora do envio tira a comemoração: ela nunca divide a tela com acerto', async () => {
+    const usuario = userEvent.setup()
+    const id = idDaAtividade(15)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id, DUAS_RESPONDIDAS))
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/enviar`, enviadaAgora)
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/meu-diagnostico`, diagnosticoDe(id))
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+    await enviarPelaTela(usuario)
+
+    await screen.findByRole('region', { name: 'Seu resultado' })
+    expect(comemoracoes()).toHaveLength(0)
+  })
+
+  it('a professora encerra com o diálogo aberto (ATIVIDADE_ENCERRADA): a tela passa a dizer isso, sem comemoração', async () => {
+    const usuario = userEvent.setup()
+    const id = idDaAtividade(16)
+    const rede = redeFalsa()
+    let encerrou = false
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, () => prova(id, DUAS_RESPONDIDAS, encerrou ? { estado: 'encerrada' } : {}))
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/enviar`, () => {
+      encerrou = true
+      return erroDaApi(409, CodigoDeErro.ATIVIDADE_ENCERRADA)
+    })
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/meu-diagnostico`, NAO_ACHADA)
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+    await enviarPelaTela(usuario)
+
+    await screen.findByRole('heading', { name: 'Quem dá a aula encerrou esta atividade' })
+    expect(comemoracoes()).toHaveLength(0)
+    expect(screen.queryByRole('heading', { name: 'Atividade enviada' })).toBeNull()
+  })
+
+  it('a queda de rede no envio deixa o diálogo aberto e sem comemoração; ela só vem quando o envio, de fato, passa', async () => {
+    const usuario = userEvent.setup()
+    const id = idDaAtividade(17)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id, DUAS_RESPONDIDAS))
+    let tentativas = 0
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/enviar`, () => (++tentativas === 1 ? erroDaApi(503, CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO) : enviadaAgora))
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/meu-diagnostico`, NAO_ACHADA)
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+    const dialogo = await enviarPelaTela(usuario)
+
+    await within(dialogo).findByText(MENSAGENS_DE_ERRO.INDISPONIVEL_TENTE_DE_NOVO)
+    expect(comemoracoes()).toHaveLength(0)
+    // As respostas continuam à vista: nada foi enviado.
+    expect(screen.getAllByRole('radio')).toHaveLength(4)
+
+    await usuario.click(within(dialogo).getByRole('button', { name: 'Enviar a atividade' }))
+    await screen.findByRole('heading', { name: 'Atividade enviada' })
+    expect(tentativas).toBe(2)
+    expect(comemoracoes()).toHaveLength(1)
+  })
+
+  it('o envio que falha com a tarefa já enviada em outra janela não comemora: a comemoração é só do `onSuccess`', async () => {
+    const usuario = userEvent.setup()
+    const id = idDaAtividade(18)
+    const rede = redeFalsa()
+    // Outra janela enviou a mesma tarefa: este envio é recusado, e a leitura que a tela refaz já traz o envio.
+    let enviadaEmOutraJanela = false
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, () => prova(id, DUAS_RESPONDIDAS, enviadaEmOutraJanela ? { enviadaEm: ENVIADA_EM } : {}))
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/enviar`, () => {
+      enviadaEmOutraJanela = true
+      return erroDaApi(409, CodigoDeErro.ATIVIDADE_ENCERRADA)
+    })
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/meu-diagnostico`, NAO_ACHADA)
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+    await enviarPelaTela(usuario)
+
+    // A tela passou a ser a da tarefa enviada (a leitura trouxe o envio), e a comemoração não veio: este envio não deu certo.
+    await screen.findByRole('heading', { name: 'Atividade enviada' })
+    expect(pedidosDeEnvio(rede)).toHaveLength(1)
+    expect(comemoracoes()).toHaveLength(0)
+    expect(screen.queryByRole('link', { name: ROTULO_DE_VOLTAR_AS_TAREFAS })).toBeNull()
+  })
+
+  it('o clique duplo em "Enviar a atividade" manda um envio só e comemora uma vez', async () => {
+    const usuario = userEvent.setup()
+    const id = idDaAtividade(19)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id, DUAS_RESPONDIDAS))
+    // O servidor só responde quando o teste libera: o segundo clique chega com o primeiro envio ainda no ar.
+    let liberar: (resposta: RespostaFalsa) => void = () => undefined
+    const segurada = new Promise<RespostaFalsa>((resolver) => (liberar = resolver))
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/enviar`, () => segurada)
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/meu-diagnostico`, NAO_ACHADA)
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+    await usuario.click(await screen.findByRole('button', { name: 'Enviar a atividade' }))
+    const dialogo = await screen.findByRole('alertdialog')
+
+    await usuario.dblClick(within(dialogo).getByRole('button', { name: 'Enviar a atividade' }))
+    expect((within(dialogo).getByRole('button', { name: 'Enviando…' }) as HTMLButtonElement).disabled).toBe(true)
+    liberar(enviadaAgora)
+
+    await screen.findByRole('heading', { name: 'Atividade enviada' })
+    expect(pedidosDeEnvio(rede)).toHaveLength(1)
+    expect(comemoracoes()).toHaveLength(1)
+  })
+})
+
+describe('a tarefa aberta: a moldura (X4, 6.1; RF7)', () => {
+  it('é a `Tela` na largura de leitura, e o "Voltar" diz Tarefas', async () => {
+    const id = idDaAtividade(20)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id))
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+
+    expect(document.querySelector('[data-tela]')?.getAttribute('data-tela')).toBe('leitura')
+    const volta = screen.getByRole('link', { name: 'Voltar para Tarefas' })
+    expect(volta.getAttribute('href')).toBe('/atividades')
+    expect(screen.queryByText(/Voltar para Atividades/)).toBeNull()
+  })
+
+  it('"Anterior" e "Próxima" estão na barra presa, e param nas pontas; "Enviar a atividade" não fica dentro dela', async () => {
+    const usuario = userEvent.setup()
+    const id = idDaAtividade(21)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id))
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+
+    const barra = screen.getByRole('group', { name: 'Trocar de questão' })
+    expect(barra.hasAttribute('data-barra-presa')).toBe(true)
+    const anterior = within(barra).getByRole('button', { name: 'Anterior' })
+    const proxima = within(barra).getByRole('button', { name: 'Próxima' })
+    expect(within(barra).queryByRole('button', { name: 'Enviar a atividade' })).toBeNull()
+    expect((anterior as HTMLButtonElement).disabled).toBe(true)
+    expect((proxima as HTMLButtonElement).disabled).toBe(false)
+
+    await usuario.click(proxima)
+    await usuario.click(proxima)
+    expect((proxima as HTMLButtonElement).disabled).toBe(true)
+    expect((anterior as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.getByText('Questão 3 de 3')).toBeTruthy()
+    await usuario.click(anterior)
+    expect(screen.getByText('Questão 2 de 3')).toBeTruthy()
+  })
+
+  it('o mapa distingue a questão aberta e a respondida da que está em branco, sem depender só da cor', async () => {
+    const id = idDaAtividade(22)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id, [respostaDe(2, 1)]))
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+
+    const mapa = screen.getByRole('navigation', { name: 'Questões' })
+    const [primeira, segunda, terceira] = within(mapa).getAllByRole('button')
+    expect(primeira?.getAttribute('aria-current')).toBe('step')
+    expect(segunda?.getAttribute('aria-label')).toBe('Questão 2, respondida')
+    expect(terceira?.getAttribute('aria-label')).toBe('Questão 3, sem resposta')
+    // A aberta não tem o mesmo desenho de uma em branco (a 3 está em branco como a 1, que está aberta), nem a respondida.
+    expect(primeira?.className).not.toBe(terceira?.className)
+    expect(segunda?.className).not.toBe(terceira?.className)
+  })
+})
+
+describe('a tarefa aberta: os quatro estados (X4, 6.1; RF20)', () => {
+  it('carregando: o texto, o "Voltar" à vista e nenhuma questão', async () => {
+    const id = idDaAtividade(30)
+    const rede = redeFalsa()
+    const segurada = rede.segurar()
+    montar(id)
+
+    expect((await screen.findByRole('status')).textContent).toBe('Carregando a atividade…')
+    expect(screen.getByRole('link', { name: 'Voltar para Tarefas' })).toBeTruthy()
+    expect(screen.queryAllByRole('radio')).toHaveLength(0)
+    segurada.liberar(prova(id))
+    await screen.findByRole('radio', { name: /^A\./ })
+  })
+
+  it('não disponível: a de outra turma responde como a que não existe, e aponta para Tarefas, sem "Tentar de novo"', async () => {
+    const id = idDaAtividade(31)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, NAO_ACHADA)
+    montar(id)
+
+    await screen.findByText('Esta atividade não está disponível')
+    expect(screen.getByText(/As tarefas da sua turma estão em Tarefas\./)).toBeTruthy()
+    expect(screen.queryByText(/estão em Atividades/)).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Voltar para Tarefas' }).getAttribute('href')).toBe('/atividades')
+  })
+
+  it('erro: diz o que fazer, sem código, e "Tentar de novo" traz a tarefa', async () => {
+    const usuario = userEvent.setup()
+    const id = idDaAtividade(32)
+    const rede = redeFalsa()
+    let tentativas = 0
+    // Limite excedido não é repetido sozinho (`deveTentarDeNovo`): o erro aparece na hora, sem esperar a nova tentativa de 1 s.
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, () => (++tentativas === 1 ? erroDaApi(429, CodigoDeErro.LIMITE_EXCEDIDO) : prova(id)))
+    montar(id)
+
+    expect((await screen.findByRole('alert')).textContent).toBe(MENSAGENS_DE_ERRO.LIMITE_EXCEDIDO)
+    expect(document.body.textContent).not.toMatch(/429|LIMITE_EXCEDIDO/)
+    await usuario.click(screen.getByRole('button', { name: 'Tentar de novo' }))
+    await screen.findByRole('radio', { name: /^A\./ })
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('com dado: o título da tarefa, a questão, as alternativas e o ponto de parada dito', async () => {
+    const id = idDaAtividade(33)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id))
+    montar(id)
+
+    await screen.findByRole('heading', { level: 1, name: 'Lista sintética' })
+    expect(screen.getAllByRole('radio')).toHaveLength(4)
+    expect(screen.getByText('Questão 1 de 3')).toBeTruthy()
+    expect(screen.getByText(/Pode parar quando quiser/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Pedir ajuda ao Tutor nesta questão' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Enviar a atividade' })).toBeTruthy()
   })
 })

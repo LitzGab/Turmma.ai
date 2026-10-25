@@ -81,7 +81,7 @@ pessoa e do papel**.
 | Caso | Comportamento esperado |
 |---|---|
 | Aluno sem turma no ano letivo | Eu mostra o texto de hoje; o Início diz que não há tarefa |
-| Aluno transferido | A tarefa corrigida da turma antiga não aparece em Eu, como hoje |
+| Aluno transferido de turma no mesmo ano | A tarefa corrigida da turma antiga continua em Eu ("Como estou indo"), com o resultado: é trabalho dele, e o Tutor também a lembra (D66). A virada do ano letivo corta |
 | Dois alunos no mesmo Chromebook | A letra fica; nada do primeiro aparece para o segundo |
 | Professor em duas escolas; virada do ano letivo; vínculo de uma escola encerrado | Uma introdução por papel; nem a troca de escola, nem o ano novo, nem o fim de um vínculo (com a outra já aberta) a reabrem |
 | Aluno em duas escolas | Vê a introdução nas duas |

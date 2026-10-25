@@ -46,6 +46,28 @@ export function resultadoNaTela(fase: FaseDaAtividade, leitura: LeituraDoDiagnos
   return { tipo: 'carregando' }
 }
 
+/**
+ * O que a `Comemoracao` diz (RF8; D59; regra 70, item 4a): só o **fato** da entrega, e de quem vê a correção. Texto fixo:
+ * não varia com acerto, tempo nem número de tentativas, não afirma ser pessoa, não promete voltar nem esperar, e não
+ * faz festa de nota. O teste de falas (`atividade.test.ts`) lê esta constante, e não a tela.
+ */
+export const FALA_DA_ENTREGA = 'Atividade entregue. Quem dá a aula vê a correção antes de você.'
+
+/** O botão que fecha a comemoração: leva à lista, o mesmo caminho do "Voltar" do alto da tela. */
+export const ROTULO_DE_VOLTAR_AS_TAREFAS = 'Voltar às tarefas'
+
+/**
+ * Se a comemoração está na tela. Ela é **da entrega**, e de mais nada (RF8; D59):
+ * - `entregueAgora`: o envio foi confirmado **nesta tela**, nesta abertura. Estado de tela: recarregar, abrir a tarefa
+ *   pela lista ou voltar a ela depois de sair a apagam, e a tarefa enviada em outra hora ou em outra janela não a tem.
+ * - `enviadaEm` preenchida: a tela já leu o envio. Sem ele a tela ainda é a de quem responde.
+ * - sem o resultado na tela: a comemoração nunca divide a tela com acerto, mesmo que a correção seja aprovada enquanto
+ *   o aluno ainda está nela.
+ */
+export function comemoracaoNaTela(entregueAgora: boolean, prova: Pick<RespostaProva, 'enviadaEm'>, resultado: ResultadoNaTela): boolean {
+  return entregueAgora && prova.enviadaEm !== null && resultado.tipo !== 'pronto'
+}
+
 /** As letras das alternativas, na ordem do índice do contrato (0 a 3). */
 export const LETRAS_DAS_ALTERNATIVAS = ['A', 'B', 'C', 'D'] as const
 
