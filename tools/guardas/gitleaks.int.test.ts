@@ -1,11 +1,12 @@
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { randomInt } from 'node:crypto'
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
-import { argumentosGitleaks, argumentosGitleaksDaPasta } from '../ci/etapas-de-guarda.ts'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { argumentosGitleaks } from '../ci/etapas-de-guarda.ts'
 import { raizRepositorio } from '../ci/executar.ts'
+import { gitNaPasta, pastaComoRepositorio } from '../ci/pasta-como-repositorio.ts'
 
 // O gitleaks de verdade, na mesma imagem e com os mesmos argumentos da esteira, sobre um
 // repositório temporário com o `.gitleaks.toml` do projeto. Prova que o segredo falso reprova
@@ -23,6 +24,7 @@ const CAMINHO_DA_FIXTURE = 'tools/guardas/__fixtures__/segredo-falso.ts'
 const diretorios: string[] = []
 
 afterEach(() => {
+  vi.unstubAllEnvs()
   for (const diretorio of diretorios.splice(0)) rmSync(diretorio, { recursive: true, force: true })
 })
 
@@ -54,12 +56,7 @@ function tokenFalso(): string {
 }
 
 function git(repositorio: string, ...argumentos: string[]): void {
-  const resultado = spawnSync(
-    'git',
-    ['-c', 'user.name=Guardas', '-c', 'user.email=guardas@exemplo.test', '-c', 'commit.gpgsign=false', ...argumentos],
-    { cwd: repositorio, encoding: 'utf8' },
-  )
-  expect(resultado.status, resultado.stderr).toBe(0)
+  gitNaPasta(repositorio, ...argumentos)
 }
 
 /**
@@ -108,6 +105,47 @@ describe('a chave falsa dos testes', () => {
       expect(chave).toHaveLength(40)
       expect(/[A-Za-z]{2}/.test(chave), 'duas letras seguidas').toBe(false)
     }
+  })
+})
+
+describe('pastaComoRepositorio', () => {
+  function pastaComArquivo(): string {
+    const pasta = mkdtempSync(join(tmpdir(), 'educa-gitleaks-pasta-'))
+    diretorios.push(pasta)
+    writeFileSync(join(pasta, 'b.txt'), 'b\n')
+    return pasta
+  }
+
+  const arquivosVersionados = (pasta: string) => execFileSync('git', ['ls-files'], { cwd: pasta, encoding: 'utf8' }).split('\n').filter(Boolean).sort()
+
+  it('não herda o ambiente de um hook: com GIT_DIR apontando para outro repositório, o init, o add e o commit ficam na pasta', () => {
+    const outro = repositorioCom({ 'a.txt': 'a\n' })
+    const pasta = pastaComArquivo()
+    vi.stubEnv('GIT_DIR', join(outro, '.git'))
+    pastaComoRepositorio(pasta, join(raizRepositorio, '.gitleaks.toml'))
+    vi.unstubAllEnvs()
+    expect(existsSync(join(pasta, '.git'))).toBe(true)
+    expect(execFileSync('git', ['rev-list', '--count', 'HEAD'], { cwd: outro, encoding: 'utf8' }).trim()).toBe('1')
+    expect(arquivosVersionados(pasta)).toEqual(['.gitleaks.toml', 'b.txt'])
+  })
+
+  it('não herda a configuração do desenvolvedor: o init.templateDir do ~/.gitconfig não vale na pasta', () => {
+    // O `~/.gitconfig` é onde o git do desenvolvedor lê a configuração global de verdade (a variável `GIT_CONFIG_GLOBAL` já cairia no
+    // filtro das `GIT_*`, e não provaria a cláusula). O molde de `git init` leva o arquivo `marcador` a todo `.git` novo, se valesse.
+    const casa = mkdtempSync(join(tmpdir(), 'educa-gitleaks-casa-'))
+    diretorios.push(casa)
+    const molde = join(casa, 'molde')
+    mkdirSync(molde)
+    writeFileSync(join(molde, 'marcador'), 'x')
+    writeFileSync(join(casa, '.gitconfig'), `[init]\n\ttemplateDir = ${molde}\n`)
+    const pasta = pastaComArquivo()
+    vi.stubEnv('HOME', casa)
+    vi.stubEnv('XDG_CONFIG_HOME', join(casa, '.config'))
+    pastaComoRepositorio(pasta, join(raizRepositorio, '.gitleaks.toml'))
+    vi.unstubAllEnvs()
+    expect(existsSync(join(pasta, '.git'))).toBe(true)
+    expect(existsSync(join(pasta, '.git', 'marcador'))).toBe(false)
+    expect(arquivosVersionados(pasta)).toEqual(['.gitleaks.toml', 'b.txt'])
   })
 })
 
@@ -209,7 +247,7 @@ describe('gitleaks com o .gitleaks.toml do projeto', () => {
     expect(outraLinha.saida).toMatch(/RuleID:\s+github-pat/)
   })
 
-  /** A varredura que o portão local faz nos arquivos ainda sem commit: uma pasta, e não o histórico. */
+  /** A varredura que o portão local faz nos arquivos ainda sem commit: a pasta vira um repositório de um commit só (`pastaComoRepositorio`), como em `tools/ci/segredo.ts`. */
   function varrerPasta(arquivos: Record<string, string>): Varredura {
     const pasta = mkdtempSync(join(tmpdir(), 'educa-gitleaks-pasta-'))
     diretorios.push(pasta)
@@ -217,8 +255,8 @@ describe('gitleaks com o .gitleaks.toml do projeto', () => {
       mkdirSync(dirname(join(pasta, caminho)), { recursive: true })
       writeFileSync(join(pasta, caminho), conteudo)
     }
-    spawnSync('chmod', ['-R', 'a+rX', pasta])
-    return rodarGitleaks(argumentosGitleaksDaPasta(pasta, join(raizRepositorio, '.gitleaks.toml')))
+    pastaComoRepositorio(pasta, join(raizRepositorio, '.gitleaks.toml'))
+    return varrer(pasta)
   }
 
   it('reprova o segredo em arquivo ainda sem commit, com o caminho relativo, e as exceções por caminho continuam valendo', () => {
@@ -232,6 +270,30 @@ describe('gitleaks com o .gitleaks.toml do projeto', () => {
     const soPlano = varrerPasta({ [TAREFA_COM_PLANO]: `${LINHA_DO_PLANO}\n` })
     expect(soPlano.codigo, soPlano.saida).toBe(0)
     expect(varrerPasta({ 'docs/plano.md': `${LINHA_DO_PLANO}\n` }).codigo).toBe(1)
+  })
+
+  it('reprova o segredo nos arquivos que têm exceção, também na varredura de pasta: o caminho perdoado não esvazia o arquivo', () => {
+    // O gitleaks `dir` pula o arquivo cujo caminho casa com uma allowlist, sem olhar a regex de linha: o segredo no documento de
+    // tarefa só aparecia depois do commit. Cada caminho abaixo tem uma exceção no `.gitleaks.toml`.
+    const caminhos = [
+      TAREFA_COM_PLANO,
+      'tasks/prd-fundacao-tecnica/techspec.md',
+      '.claude/skills/playwright-best-practices/advanced/authentication-flows.md',
+      ARQUIVO_DO_CONVITE,
+      'tasks/correcoes/2026-09-18-gitleaks-le-senha-de-teste-do-convite.md',
+    ]
+    const arquivos = Object.fromEntries(caminhos.map((caminho) => [caminho, `token de exemplo: ${tokenFalso()}\n`]))
+    const { codigo, saida } = varrerPasta(arquivos)
+    expect(codigo, saida).toBe(1)
+    for (const caminho of caminhos) expect(saida).toContain(`File:        ${caminho}`)
+  })
+
+  it('na varredura de pasta, a exceção do plano e a do convite continuam valendo só para a linha: o plano passa, e um segredo na linha ao lado reprova', () => {
+    const soPerdoadas = varrerPasta({ [TAREFA_COM_PLANO]: `${LINHA_DO_PLANO}\n`, [ARQUIVO_DO_CONVITE]: `${linhaPerdoadaDoConvite()}\n` })
+    expect(soPerdoadas.codigo, soPerdoadas.saida).toBe(0)
+    const comSegredo = varrerPasta({ [TAREFA_COM_PLANO]: `${LINHA_DO_PLANO}\ntoken de exemplo: ${tokenFalso()}\n` })
+    expect(comSegredo.codigo, comSegredo.saida).toBe(1)
+    expect(comSegredo.saida).toContain(`File:        ${TAREFA_COM_PLANO}`)
   })
 
   it('deixa passar um repositório sem segredo, para a falha acima ser do segredo e não da execução', () => {

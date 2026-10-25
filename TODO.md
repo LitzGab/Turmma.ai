@@ -167,7 +167,13 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] **(Telas do aluno, 3.0) A vitrine cheia semeia atividade aplicada** (`frontend-reviewer`, `conformidade-reviewer`,
       `privacy-guardian` e `test-engineer`, 1ª a 3ª): `tools/vitrine/` não semeia nenhuma, e a foto do Início só mostra o vazio.
       Semear uma atividade aplicada, uma delas avaliativa e uma com título sem espaço (para a foto do celular mostrar a quebra a
-      360 px), antes de o Validador fotografar a spec; a medida de 44 px do título entra junto, com `boundingBox()` no e2e
+      360 px), antes de o Validador fotografar a spec; a medida de 44 px do título entra junto, com `boundingBox()` no e2e.
+      Entra também uma atividade "Para fazer" aberta, para fotografar a questão em letra Maior a 360 px (correção
+      `2026-10-25-enunciado-nao-acompanha-a-letra`, `frontend-reviewer`, 1ª)
+- [ ] **(Telas do aluno, correção `2026-10-25-enunciado-nao-acompanha-a-letra`) Mais `text-[Npx]` na área do aluno** (`test-engineer`, 1ª):
+      o mesmo defeito do enunciado, o tamanho em `px` que não acompanha a letra Grande ou Maior, está em `Toque.tsx:39`, `Aviso.tsx:54`,
+      `ui/ia/AssinaturaIA.tsx:34`, `ui/onca/Onca.tsx:124`, `meus-dados/MeusDados.tsx:217` e `MenuDaPessoa.tsx:64`. Corrigir em
+      correção própria, medindo cada um com a letra Maior, e acrescentar a guarda que recuse `text-[Npx]` nas telas do aluno
 - [ ] **(Telas do aluno, 3.0) O recomeço do Início está duplicado** em `e2e/aluno-inicio.spec.ts` e `e2e/minha-turma.spec.ts`
       (`test-engineer`, 1ª): apagar um dos dois numa passada de e2e (dono: quem tocar `minha-turma.spec.ts`)
 
@@ -2050,6 +2056,15 @@ Ficam, de antes da retro:
 - [ ] **(X4, 6.0) O 503 do envio simula a queda de rede; a falha de verdade é o `fetch` rejeitado.** O caminho do cliente é o mesmo,
       mas um caso com `fetch` rejeitado fecha a dúvida. Entra na tarefa que tocar `Atividade.test.tsx` ou a `redeFalsa` (dono:
       Arquiteto; origem: `6_task.md`, `test-engineer` 1ª)
+
+- [ ] **(gitleaks na pasta, 25/10/2026) A cópia temporária do `guarda:segredo` é legível por qualquer usuário da máquina:**
+      `pastaComoRepositorio` (`tools/ci/pasta-como-repositorio.ts`) faz `chmod -R a+rX` para o usuário do contêiner do gitleaks
+      ler a pasta, e a pasta tem o conteúdo inteiro dos arquivos alterados até o fim da varredura. Efeito pequeno, e já era
+      assim antes da correção `2026-10-25-gitleaks-pasta-perdoa-documento-de-tarefa`. Limitar ao UID da imagem fixada exige
+      medir qual ele é; muda comportamento, por isso não entrou na correção (`privacy-guardian`, 1ª)
+- [ ] **(gitleaks na pasta, 25/10/2026) Comentário velho em `tools/ci/etapas-de-guarda.ts`:** o JSDoc de `GuardaDaEsteira` diz que
+      `tools/ci/segredo.ts` monta as etapas do segredo; desde a mesma correção elas moram em `tools/ci/etapas-do-segredo.ts`.
+      Uma linha de comentário; mexer no arquivo caducaria quem já aprovou (`revisor-geral`, 2ª)
 
 Saíram na retro da X7, com o motivo em `tasks/prd-harness/retro.md` ("Tirar do `TODO.md`"): o resto das recomendações da
 revisão da spec (rodada 4), da 2.0, da 5.0, da 7.0, da 11.0, da 12.0 (o `catch` do `rev-list`), da 17.0, da 18.0 e da 19.0,

@@ -171,7 +171,7 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar, aoEntregar
       </nav>
 
       <Cartao className="flex flex-col gap-4">
-        <h2 ref={enunciado} tabIndex={-1} className={`min-w-0 rounded-controle leading-relaxed font-normal break-words whitespace-pre-wrap text-tinta ${ampliada ? 'text-2xl' : 'text-[17px]'}`}>
+        <h2 ref={enunciado} tabIndex={-1} className={`min-w-0 rounded-controle leading-relaxed font-normal break-words whitespace-pre-wrap text-tinta ${ampliada ? 'text-2xl' : 'text-[1.0625rem]'}`}>
           <span className="sr-only">Questão {numero}: </span>
           {questao.enunciado}
         </h2>
