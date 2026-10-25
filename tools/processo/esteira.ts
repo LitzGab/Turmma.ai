@@ -158,7 +158,7 @@ export function relatorioDaEsteira(situacao: Situacao, branch: string, noFechame
 }
 
 /** As fatias do e2e na matriz do `ci.yml` (`tools/ci/esteira.test.ts` confere que são as mesmas). */
-export const FATIAS_DO_E2E = [1, 2, 3, 4, 5, 6, 7] as const
+export const FATIAS_DO_E2E = [1, 2, 3, 4, 5, 6, 7, 8] as const
 
 /** O caso do censo passa de dois terços do prazo que a esteira lhe deu: o runner oscila, e a folga que sobra é de um terço. */
 export function acimaDeDoisTercos(caso: Pick<CasoMedido, 'duracaoMs' | 'prazoMs'>): boolean {
@@ -230,7 +230,7 @@ export type Censo =
   | { tipo: 'lista'; execucao: Execucao; casos: CasoDoCenso[] }
 
 /**
- * O censo da última execução verde: com as sete fatias a ler, a lista dos casos acima de dois terços do prazo; com fatia
+ * O censo da última execução verde: com todas as fatias de `FATIAS_DO_E2E` a ler, a lista dos casos acima de dois terços do prazo; com fatia
  * faltando ou expirada, nada é lido, porque lista de uma parte da suíte passaria pela suíte inteira.
  */
 export function fazerOCenso(

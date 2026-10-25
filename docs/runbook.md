@@ -916,8 +916,8 @@ Se reprovar, a saída diz a fase e o critério:
 
 ## Esteira vermelha no e2e
 
-O e2e roda em **sete fatias**, cada uma num job próprio (`e2e 1/7` a `e2e 7/7`), com o seu compose e
-o seu `--shard=<i>/7` do Playwright; uma fatia vermelha não cancela as outras. A quinta entrou em
+O e2e roda em **oito fatias**, cada uma num job próprio (`e2e 1/8` a `e2e 8/8`), com o seu compose e
+o seu `--shard=<i>/8` do Playwright; uma fatia vermelha não cancela as outras. A quinta entrou em
 13/10/2026, com a suíte em 776 casos commitados e 818 com os 42 do e2e da 6.0 da X1: em quatro fatias eram
 194 por fatia (uns 27 min, no limite de 27) e 205 (uns 28 min, acima dele); em cinco, 156 e 164 (uns 23 e 24 min;
 `tasks/correcoes/2026-10-13-quinta-fatia-do-e2e.md`). A sexta entrou em 16/10/2026, com a suíte em 990 casos
@@ -926,8 +926,12 @@ commitado e 201 com a 2.0 (uns 28 min nos dois casos, acima do limite de 27); em
 `tasks/correcoes/2026-10-16-sexta-fatia-do-e2e.md`). A sétima entrou em 19/10/2026, com a suíte em 1178 casos
 na linha 3 de `telas-do-professor` e 1196 com a spec somada a ela: em seis fatias eram 197 por fatia só com a
 linha (uns 27 min, no limite) e 200 com a soma (uns 28 min, acima dele); em sete, 169 e 171 (uns 24 min nos dois;
-`tasks/correcoes/2026-10-19-setima-fatia-do-e2e.md`). Em sete fatias o limite continua 197 casos por fatia, uns 1379 no
-total, cerca de 180 a mais que os 1196 de hoje: é o ponto em que a oitava fatia passa a ser pedida. Cada fatia publica o
+`tasks/correcoes/2026-10-19-setima-fatia-do-e2e.md`). A oitava entrou em 25/10/2026, com a suíte em 1384 casos: em sete
+fatias eram 198 por fatia (uns 28 min, acima do limite de 27); em oito, 173 (uns 25 min;
+`tasks/correcoes/2026-10-25-oitava-fatia-do-e2e.md`). Em oito fatias o limite continua 197 casos por fatia, 1576 no
+total, cerca de 190 a mais que os 1384 de hoje: é o ponto em que a nona fatia passa a ser pedida. O total de fatias está
+escrito em quatro lugares: a matriz, o `name` do job e o `--shard` do passo em `.github/workflows/ci.yml`, e
+`FATIAS_DO_E2E` em `tools/processo/esteira.ts`, que o censo lê. Cada fatia publica o
 diretório de saída do Playwright quando falha ou é cancelada: artefato **`traco-do-e2e-<i>`**, com o
 número da fatia, `trace.zip` e `error-context.md` do caso que falhou, por 7 dias. (O nome, o prazo e o
 caminho são afirmados em `tools/ci/esteira.test.ts`; se renomearem o artefato, é lá que o vermelho
@@ -943,7 +947,7 @@ serviços no próprio job.
 
 Vermelho de e2e que não reproduz na máquina segura a tarefa seguinte (regra 40, D52): trate como
 defeito pela correção (`corrigir`), com a causa achada no traço, e não repetindo a execução até passar. Para
-repetir só a fatia na máquina: `node tools/ci/e2e.ts --shard=<i>/7`, que sobe o compose limpo como a
+repetir só a fatia na máquina: `node tools/ci/e2e.ts --shard=<i>/8`, que sobe o compose limpo como a
 esteira. A fatia começa com o banco vazio e roda só a parte dela: caso que passa na suíte inteira e
 falha na fatia depende de outro spec ter rodado antes, e isso é o defeito.
 
@@ -959,9 +963,9 @@ Dois sinais chegam antes do cancelamento. `tools/ci/esteira.test.ts` refaz a con
 fatia e reprova no portão local e no job `verificar` quando uma delas passa de 60% do teto, mesmo pela
 média. E `tools/ci/e2e.ts` mede a etapa de testes de cada fatia e, quando ela passa desse limiar (60% do
 teto menos o custo fixo), deixa a anotação **"e2e perto do teto"** no resumo da execução, mesmo verde.
-Qualquer um dos dois pede mais fatias: acrescentar o número à `matrix.fatia` e trocar o total (hoje `/7`)
-pelo novo nos dois lugares em que ele aparece, o `name` do job e o passo `npm run ci:e2e`; a guarda confere
-os dois contra o tamanho da matriz. Subir o `timeout-minutes` ou baixar as
+Qualquer um dos dois pede mais fatias: acrescentar o número à `matrix.fatia` e trocar o total (hoje `/8`)
+pelo novo no `name` do job e no passo `npm run ci:e2e`, e acrescentar o número a `FATIAS_DO_E2E`; a guarda confere
+os três contra o tamanho da matriz. Subir o `timeout-minutes` ou baixar as
 constantes de `tools/ci/prazo-do-e2e.ts` para o teste passar não é saída.
 
 **O artefato é público**, porque o repositório é. Ele é inofensivo hoje por construção: todo dado do
@@ -969,7 +973,9 @@ e2e é sintético, e o ambiente do compose de teste sai só de `.env.example` e 
 versionados, sem ler nada do runner (`tools/ci/compose.ts`). Por isso, **nada além da saída do
 Playwright deve ser escrito em `test-results/`** — despejo de log de serviço, dump ou material
 licenciado de fixture mudariam a classe do que se publica, e aí a decisão de publicar precisa ser
-tomada de novo, com o `privacy-guardian`.
+tomada de novo, com o `privacy-guardian`. O mesmo vale para o relatório do censo
+(`censo-do-e2e-<i>`, o `censo-do-e2e.json`), que também é público, inclusive na execução de pull request de fork, e leva o
+`stdout`, o `stderr` e os `errors` de cada caso: um `console.log` de fixture com dado real vazaria por ali.
 
 ## Como avisar as escolas
 
