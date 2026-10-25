@@ -1,4 +1,4 @@
-import { ArmazemEmMemoria, criarLogger, type Banco, diaDeUso, executarNoContexto, instrucaoDoRastroDoAluno, LEITURAS_DO_ARQUIVO, type Relogio } from '@educa/nucleo'
+import { ArmazemEmMemoria, ArquivoDoTitularRepository, criarLogger, type Banco, diaDeUso, executarNoContexto, instrucaoDoRastroDoAluno, LEITURAS_DO_ARQUIVO, type Relogio } from '@educa/nucleo'
 import {
   CodigoDeErro,
   COLUNAS_FORA_DO_ARQUIVO,
@@ -846,6 +846,20 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
       expect((await arquivoDaEscola(cenario.coordenacao, pedidoId)).status).toBe(404)
     })
 
+    it('o repository lê a escola do contexto: no contexto de A, o arquivo do pedido de B não vem; no de B, vem (regra 10, item 5)', async () => {
+      const a = await novaEscola()
+      const b = await novaEscola()
+      const alunoDeB = await pessoa(b, 'aluno', 'AlunoDeB')
+      const pedidoDeB = await pedidoPronto(b, alunoDeB)
+      const noContexto = <T>(escolaId: string, consulta: (repository: ArquivoDoTitularRepository) => Promise<T>): Promise<T> =>
+        executarNoContexto({ requisicaoId: randomUUID(), escolaId }, () => consulta(new ArquivoDoTitularRepository(bancada.banco)))
+
+      // O pedido e a versão são os mesmos nas duas leituras: só a escola do contexto muda.
+      expect(await noContexto(a.escolaId, (repository) => repository.doPedido(pedidoDeB, 'completa'))).toBeUndefined()
+      const deB = await noContexto(b.escolaId, (repository) => repository.doPedido(pedidoDeB, 'completa'))
+      expect(deB).toMatchObject({ versao: 'completa', chaveObjeto: `titular/${b.escolaId}/${pedidoDeB}/completa.json` })
+    })
+
     it('a coordenação de B não alcança, pela rota da escola, o arquivo do pedido de A', async () => {
       const a = await novaEscola()
       const b = await novaEscola()
@@ -877,7 +891,10 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
         `update arquivo_titular set expira_em = pronto_em + interval '7 days 1 hour' where pedido_id = $1 and versao = 'completa' returning pronto_em, expira_em`,
         [pedidoId],
       )
-      const linha = { prontoEm: movida[0]?.pronto_em ?? new Date(NaN), expiraEm: movida[0]?.expira_em ?? new Date(NaN) }
+      expect(movida).toHaveLength(1)
+      const [movido] = movida
+      if (movido === undefined) throw new Error('o update não achou a linha do arquivo')
+      const linha = { prontoEm: movido.pronto_em, expiraEm: movido.expira_em }
       const lista = await meusDados(aluno.sessao)
       expect(lista.status).toBe(200)
       const pedidos = lista.corpo['pedidos'] as Array<Record<string, unknown>>
@@ -1013,11 +1030,13 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
     it('a URL vale 300 s, o arquivo vale até o 7º dia, e no 8º a rota responde como o id inexistente', async () => {
       const cenario = await novaEscola()
       const aluno = await pessoa(cenario, 'aluno', 'Aluno')
+      // O relógio do teste fica uma hora antes da hora real: só o relógio injetado dá esse `pronto_em`, e a prova não depende de a hora real ter andado.
+      relogio.atual = new Date(Date.now() - 3_600_000)
       const pedidoId = await pedidoPronto(cenario, aluno)
       const { prontoEm, expiraEm } = await validadeDoArquivo(pedidoId)
       expect(expiraEm.getTime()).toBe(prontoEm.getTime() + VALIDADE_DO_ARQUIVO_DIAS * UM_DIA_MS)
       expect(VALIDADE_DO_ARQUIVO_DIAS).toBe(7)
-      // O job gravou com o relógio injetado (o `beforeEach` o fixa, e o `montar` do teste é o único escritor): a hora real é sempre posterior.
+      // O job gravou com o relógio injetado (o caso o pôs uma hora antes da hora real, logo antes do `pedidoPronto`, e o `montar` do teste é o único escritor): a hora real é sempre posterior.
       expect(prontoEm).toEqual(relogio.atual)
 
       // O instante do 6º dia (meio-dia de Brasília, 15:00Z, do dia `pronto_em` + 6) cai entre 5 dias e 15 h e 6 dias e 14 h depois do `pronto_em`: o que se prova é "antes dos 7 dias", e a hora fixa tira o nome do arquivo (o dia de uso) da dependência da hora em que o teste roda.
@@ -1136,6 +1155,8 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
         const criado = await registrar(cenario.coordenacao, aluno.id)
         const pedidoId = criado.corpo['id'] as string
         expect(criado.corpo['estado']).toBe('em_preparacao')
+        // Tira o job da API da fila: com um worker de pé ele montaria o arquivo (o armazém dele não é este) e as asserções abaixo correriam contra ele.
+        await tirarDaFila(cenario.escolaId, pedidoId)
         await expect(montar(cenario.escolaId, pedidoId)).rejects.toMatchObject({ name: 'ArmazemIndisponivel' })
         const { rows: depois } = await bancada.pool.query<{ estado: string }>('select estado from pedido_titular where id = $1', [pedidoId])
         expect(depois[0]?.estado).toBe('em_preparacao')
