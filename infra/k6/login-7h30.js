@@ -4,7 +4,8 @@
 //
 //   FASE=base           só B e C: login e requisições autenticadas, sem ataque. O p95 das autenticadas vira a base.
 //   FASE=rajada         2.100 contas de A, B e C em 5 min, 40% no primeiro minuto e 30% errando a senha uma vez antes
-//                       de acertar, cada uma seguida de requisições autenticadas.
+//                       de acertar, cada uma seguida de requisições autenticadas. O aluno lê também o que o Início dele
+//                       lê (GET /v1/eu e a primeira página de GET /v1/minhas-atividades, telas do aluno 3.0).
 //   FASE=renovacao      600 contas entram e renovam a sessão em duas abas ao mesmo tempo, como no pior caso da web. Em
 //                       vez de esperar o token curto vencer, a renovação vem logo depois do login: a disputa é a mesma.
 //   FASE=preparacao     sem ataque, as contas "com cookie" entram uma vez, e o `educa_dispositivo` que o login grava vai
@@ -41,6 +42,9 @@ if (!API || !ARQUIVO_DAS_CONTAS) throw new Error('defina API_URL e ARQUIVO_DAS_C
 
 /** p95 do login, em toda fase (PRD, RF21; alerta `login-lento`). */
 export const P95_MAXIMO_DO_LOGIN_MS = 1_000
+/** O nome (a tag `name`) das duas leituras do Início do aluno, e o da rota que ganha limite próprio na rajada. */
+export const ROTA_DO_EU = 'GET /v1/eu'
+export const ROTA_DAS_TAREFAS = 'GET /v1/minhas-atividades'
 /** Margem declarada sobre o p95 das requisições autenticadas da B e da C na base. */
 export const MARGEM_SOBRE_A_BASE_MS = 250
 /** Quanto a web repete sozinha no 503 antes de mostrar erro (Tech Spec, seção 5, "Hash"; 18.0). */
@@ -227,6 +231,11 @@ function configuracao() {
         },
         thresholds: {
           ...legitimo('rajada'),
+          // O que o Início do aluno lê depois do login (Tech Spec das telas do aluno, 7c): as autenticadas da rajada, todas, ficam
+          // abaixo de 1 s no p95, e a `minhas-atividades` tem o mesmo limite sozinha, para a página lenta não se esconder na
+          // média das outras rotas.
+          'autenticada_duracao{grupo:rajada}': [`p(95)<${P95_MAXIMO_DO_LOGIN_MS}`],
+          [`autenticada_duracao{grupo:rajada,name:${ROTA_DAS_TAREFAS}}`]: [`p(95)<${P95_MAXIMO_DO_LOGIN_MS}`],
           // As 2.100 entraram: nenhuma iteração perdida por falta de VU, nenhuma conta que desistiu.
           'contas_que_entraram{grupo:rajada}': [`count==${CONTAS_NA_RAJADA}`],
           dropped_iterations: ['count==0'],
@@ -334,11 +343,28 @@ function entrar(conta, grupo, navegador, erra = false) {
   return entrou ? token : undefined
 }
 
-function autenticada(token, grupo) {
-  const resposta = http.get(`${API}/v1/sistema/contexto`, { headers: { Authorization: `Bearer ${token}` }, tags: { name: 'GET /v1/sistema/contexto', grupo } })
-  duracaoAutenticada.add(resposta.timings.duration, { grupo })
+/**
+ * Uma leitura autenticada: soma a duração em `autenticada_duracao`, com a tag `name` da rota (o k6 não copia a tag da
+ * requisição para a métrica própria), e conta como inesperada a que não responde 200. Devolve a resposta.
+ */
+function autenticada(token, grupo, caminho = '/v1/sistema/contexto', nome = `GET ${caminho}`) {
+  const resposta = http.get(`${API}${caminho}`, { headers: { Authorization: `Bearer ${token}` }, tags: { name: nome, grupo } })
+  duracaoAutenticada.add(resposta.timings.duration, { grupo, name: nome })
   respostas429.add(resposta.status === 429 ? 1 : 0, { grupo })
   inesperadas.add(resposta.status === 200 ? 0 : 1, { grupo, status: String(resposta.status) })
+  return resposta
+}
+
+/**
+ * O que o Início do aluno lê depois do login: a pessoa (`/v1/eu`) e a primeira página das tarefas. As duas têm de responder
+ * 200, e a página não pode vir vazia: a escola da carga dá ao aluno turma e atividades, e uma página vazia quer dizer que o
+ * seed ou o vínculo falhou, e que a consulta que o Início paga nem rodou de verdade.
+ */
+function leituraDoInicio(token, grupo) {
+  autenticada(token, grupo, '/v1/eu', ROTA_DO_EU)
+  const tarefas = autenticada(token, grupo, '/v1/minhas-atividades', ROTA_DAS_TAREFAS)
+  const itens = tarefas.status === 200 ? tarefas.json('itens') : undefined
+  inesperadas.add(tarefas.status !== 200 || (Array.isArray(itens) && itens.length > 0) ? 0 : 1, { grupo, status: 'pagina_vazia' })
 }
 
 /** Um navegador novo: sem cookie nenhum, ou só com o `educa_dispositivo` de quem já entrou nele. */
@@ -406,6 +432,8 @@ export function rajada() {
   if (conta === undefined) return
   const token = entrar(conta, 'rajada', navegador(), conta.erra)
   if (token === undefined) return
+  // Só o aluno tem Início: a equipe da rajada continua nas autenticadas de sempre.
+  if (conta.matricula !== undefined) leituraDoInicio(token, 'rajada')
   for (let vez = 0; vez < 3; vez++) {
     sleep(1)
     autenticada(token, 'rajada')

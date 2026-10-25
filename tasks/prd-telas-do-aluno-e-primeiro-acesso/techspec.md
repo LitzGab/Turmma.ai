@@ -164,7 +164,9 @@ Nenhum caso de uso novo e nenhuma chamada de modelo.
 atividade e o cartão da turma), para as tarefas seguintes não tocarem em arquivo comum.
 
 **Início**: saudação fixa ("Oi, <nome>."), faixa presa e "Para fazer" (até três, da primeira página), cada uma com
-"Pedir ajuda ao Tutor", sem número de uso; a avaliação aberta leva o `AVISO_DA_AVALIACAO` e o caminho continua. Limite
+"Pedir ajuda ao Tutor", sem número de uso; a avaliação aberta leva o `AVISO_DA_AVALIACAO` e o caminho continua. O título da
+tarefa abre a tarefa, e o "Sair" do Início é o da casca (a um clique em toda tela do aluno, 2.0): a tela não desenha outro, para não
+haver dois "Sair" na mesma tela, e o e2e confere que ele tem o tamanho de toque dos vizinhos (3.0). Limite
 do dia e função suspensa seguem avisados na tela do Tutor. **Leituras** (`staleTime`, `refetchOnWindowFocus`): `['eu']`
 e `minhas-atividades`, 60 s e `false`; `tutor/memoria` em Eu, 5 min e `false`; o envio da tarefa e a sessão esvaziam
 as chaves, como hoje. Aluno sem turma: `minhas-atividades` responde vazio e `tutor/memoria` responde

@@ -124,6 +124,31 @@ export const ALUNOS_DA_A_ALVO_DO_ATAQUE = 80
 export const EQUIPE_ALVO_DO_ATAQUE_POR_ESCOLA = 5
 
 /**
+ * O que o Início do aluno lê depois do login (telas do aluno e primeiro acesso, 3.0; Tech Spec, 7c): `/v1/eu` e a primeira
+ * página de `/v1/minhas-atividades`. Para a rajada exercitar essa leitura de verdade, cada escola tem o ano em curso, turmas
+ * de 35 alunos com vínculo `confirmado`, e **mais atividades aplicadas por turma do que cabem numa página**
+ * (`TAMANHO_PADRAO_DA_PAGINA`): a primeira página sai cheia, e a consulta faz a junção com tentativa e resposta que a tela
+ * do aluno paga. As contas de aluno já viram a introdução, e o desvio da primeira entrada não entra na rajada.
+ */
+export const ALUNOS_POR_TURMA = 35
+/** 60 atividades por turma: mais que os 50 da página (`TAMANHO_PADRAO_DA_PAGINA`), então a primeira página sempre sai cheia. */
+export const ATIVIDADES_POR_TURMA = 60
+/** As atividades mais novas de cada turma, que caem na primeira página, ganham tentativa dos alunos (as duas mais novas, enviadas) e duas respostas. */
+export const ATIVIDADES_NOVAS_COM_TENTATIVA = 5
+export const ATIVIDADES_NOVAS_ENVIADAS = 2
+/** As questões do artefato sintético: o repository só conta `conteudo.questoes`. */
+const QUESTOES_SINTETICAS = Array.from({ length: 3 }, (_, posicao) => ({
+  enunciado: `Enunciado sintético da questão ${String(posicao + 1)}`,
+  alternativas: ['Alternativa A', 'Alternativa B', 'Alternativa C', 'Alternativa D'],
+  gabarito: posicao % 4,
+}))
+
+/** Quantas turmas de `ALUNOS_POR_TURMA` a escola tem para os seus alunos: a última pode ficar com menos. */
+export function turmasDaEscola(alunos: number): number {
+  return Math.ceil(alunos / ALUNOS_POR_TURMA)
+}
+
+/**
  * Monta as listas do k6 a partir das contas criadas. A rajada intercala as três escolas e a equipe, e marca 3 em cada
  * 10 contas para errar a senha uma vez; as listas dos ataques e as das contas legítimas não se cruzam: o ataque que
  * segura uma conta não pode ser confundido com a conta legítima recusada.
@@ -316,6 +341,76 @@ async function importarDaApi(): Promise<ModulosDaApi> {
 }
 
 /**
+ * Dá à escola o que o Início do aluno lê (Tech Spec, 7c): o ano em curso, uma série e uma disciplina, turmas de
+ * `ALUNOS_POR_TURMA` com o vínculo de aluno `confirmado` de cada conta, `ATIVIDADES_POR_TURMA` atividades aplicadas em cada
+ * turma e, nas mais novas, tentativa e resposta dos alunos. Os alunos já viram a introdução. Tudo sintético, direto no banco
+ * da carga (como o e2e): o professor sintético é quem criou e aplicou.
+ */
+async function semearTurmasEAtividades(banco: Pick<pg.Pool, 'query'>, { escolaId, alunoIds, professorId }: { escolaId: string; alunoIds: readonly string[]; professorId: string }): Promise<void> {
+  const um = async (texto: string, valores: unknown[]): Promise<string> => {
+    const { rows } = await banco.query<{ id: string }>(texto, valores)
+    const [linha] = rows
+    if (linha === undefined) throw new Error(`o seed da carga não devolveu o id: ${texto.slice(0, 40)}`)
+    return linha.id
+  }
+  const anoLetivoId = await um("insert into ano_letivo (escola_id, ano, inicio, fim, situacao) values ($1, 2026, '2026-02-01', '2026-12-18', 'em_curso') returning id", [escolaId])
+  const serieId = await um("insert into serie (escola_id, etapa, ano) values ($1, 'ef_anos_finais', 7) returning id", [escolaId])
+  const disciplinaId = await um("insert into disciplina (escola_id, nome) values ($1, 'Química sintética') returning id", [escolaId])
+  await banco.query("insert into turma (escola_id, ano_letivo_id, serie_id, nome) select $1, $2, $3, 'Turma sintética ' || lpad(n::text, 2, '0') from generate_series(1, $4::int) n", [
+    escolaId,
+    anoLetivoId,
+    serieId,
+    turmasDaEscola(alunoIds.length),
+  ])
+  const { rows: turmas } = await banco.query<{ id: string }>('select id from turma where escola_id = $1 and ano_letivo_id = $2 order by nome', [escolaId, anoLetivoId])
+  const turmaIds = turmas.map((turma) => turma.id)
+  const [primeiraTurma] = turmaIds
+  if (primeiraTurma === undefined) throw new Error('o seed da carga não criou turma')
+
+  await banco.query(
+    `insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, papel, estado, criado_por, decidido_em)
+     select $1, $2, aluno.id, ($3::uuid[])[((aluno.posicao - 1) / $5::int)::int + 1], 'aluno', 'confirmado', $4, now()
+       from unnest($6::uuid[]) with ordinality as aluno(id, posicao)`,
+    [escolaId, anoLetivoId, turmaIds, professorId, ALUNOS_POR_TURMA, alunoIds],
+  )
+  await banco.query('update usuario set introducao_vista_em = now() where escola_id = $1 and id = any($2::uuid[])', [escolaId, alunoIds])
+
+  // O artefato é da turma que o criou; a aplicação pode ser em outra turma do mesmo ano, e é assim que as 60 atividades servem às 20 turmas.
+  const { rows: artefatos } = await banco.query<{ id: string }>(
+    `insert into artefato (escola_id, ano_letivo_id, turma_id, disciplina_id, tipo, titulo, conteudo, criado_por)
+     select $1, $2, $3, $4, 'atividade_objetiva', 'Lista sintética ' || lpad(n::text, 2, '0'),
+            jsonb_build_object('tipo', 'atividade_objetiva', 'titulo', 'Lista sintética ' || lpad(n::text, 2, '0'), 'questoes', $6::jsonb), $5
+       from generate_series(1, $7::int) n
+     returning id`,
+    [escolaId, anoLetivoId, primeiraTurma, disciplinaId, professorId, JSON.stringify(QUESTOES_SINTETICAS), ATIVIDADES_POR_TURMA],
+  )
+  await banco.query(
+    `insert into atividade_aplicada (escola_id, ano_letivo_id, turma_id, artefato_id, avaliativa, aplicada_por)
+     select $1, $2, turma.id, artefato.id, false, $5
+       from unnest($3::uuid[]) as turma(id) cross join unnest($4::uuid[]) as artefato(id)`,
+    [escolaId, anoLetivoId, turmaIds, artefatos.map((artefato) => artefato.id), professorId],
+  )
+
+  // Tentativa e resposta nas atividades mais novas de cada turma, que são as da primeira página; as mais novas, já enviadas.
+  await banco.query(
+    `insert into tentativa_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, enviada_em)
+     select $1, $2, recente.id, vinculo.usuario_id, case when recente.ordem <= $4::int then now() end
+       from (select id, turma_id, row_number() over (partition by turma_id order by id desc) as ordem
+               from atividade_aplicada where escola_id = $1 and ano_letivo_id = $2) recente
+       join vinculo on vinculo.escola_id = $1 and vinculo.ano_letivo_id = $2 and vinculo.turma_id = recente.turma_id and vinculo.papel = 'aluno' and vinculo.estado = 'confirmado'
+      where recente.ordem <= $3::int`,
+    [escolaId, anoLetivoId, ATIVIDADES_NOVAS_COM_TENTATIVA, ATIVIDADES_NOVAS_ENVIADAS],
+  )
+  await banco.query(
+    `insert into resposta_atividade (escola_id, ano_letivo_id, atividade_aplicada_id, aluno_id, questao, alternativa, sequencia)
+     select tentativa.escola_id, tentativa.ano_letivo_id, tentativa.atividade_aplicada_id, tentativa.aluno_id, questao, 0, 1
+       from tentativa_atividade tentativa cross join generate_series(1, 2) as questao
+      where tentativa.escola_id = $1 and tentativa.ano_letivo_id = $2`,
+    [escolaId, anoLetivoId],
+  )
+}
+
+/**
  * Cria rede, escolas e as 2.100 contas no banco do projeto de carga, pelos mesmos serviços do seed e do
  * `ops:sessao-sintetica` (só com `AMBIENTE=local`). O hash é gerado uma vez, com os parâmetros calibrados do ambiente
  * da carga, e vale para todas as contas.
@@ -337,8 +432,11 @@ async function semearContas(doArquivo: Record<string, string>): Promise<ContasDo
       const slug = `login-${nome.toLowerCase()}-${randomUUID()}`
       const { id: escolaId } = await ops.criarEscola(banco, autor, { id: randomUUID(), redeId, nome: `Escola sintética ${nome}`, slug })
       slugs[nome] = slug
-      await sessoes.criarAlunosComMatricula(banco, doArquivo, escolaId, Array.from({ length: ALUNOS_POR_ESCOLA }, (_, posicao) => ({ matricula: matriculaSintetica(posicao), senhaHash })))
+      const alunoIds = await sessoes.criarAlunosComMatricula(banco, doArquivo, escolaId, Array.from({ length: ALUNOS_POR_ESCOLA }, (_, posicao) => ({ matricula: matriculaSintetica(posicao), senhaHash })))
       const equipe = await sessoes.criarSessoesSinteticas(banco, doArquivo, { escolaId, papel: 'professor', quantidade: EQUIPE_POR_ESCOLA })
+      const [professor] = equipe
+      if (professor === undefined) throw new Error('a escola da carga precisa de professor')
+      await semearTurmasEAtividades(pool, { escolaId, alunoIds, professorId: professor.usuarioId })
       // O professor sintético nasce com conta sem senha: a senha da carga entra aqui, e o e-mail (`.invalid`) sai para o k6.
       const { rows } = await pool.query<{ email: string }>(
         `update conta set senha_hash = $1

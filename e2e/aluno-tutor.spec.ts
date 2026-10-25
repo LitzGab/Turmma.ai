@@ -84,12 +84,12 @@ test.describe('o Tutor pelo Início e a conversa por atividade', () => {
     const segurada = portao()
     const { api, colega } = await entrar(page, hasTouch)
 
-    // Pelo Início (X4, 2.0), sem atividade nenhuma: o vazio diz quando haverá o que fazer, e a faixa já está lá. O endereço de
-    // hoje do Tutor, `/aluno/tutor`, abre a mesma escolha (RF2) e fica dentro de "Início" na lateral.
+    // Pelo Início (X4, 3.0), sem tarefa nenhuma: o vazio diz que o Tutor ajuda quando houver, e a faixa já está lá. O endereço de
+    // hoje do Tutor, `/aluno/tutor`, abre a escolha da atividade (RF2) e fica dentro de "Início" na lateral.
     await irPelaNavegacao(page, 'Início', hasTouch)
     await expect(page).toHaveURL(/\/aluno\/inicio$/)
     await expect(page).toHaveTitle('Início · Turmma', { timeout: PRAZO_DA_TELA_MS })
-    await expect(principal(page).getByText('Nenhuma atividade para pedir ajuda agora')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(principal(page).getByText('Nenhuma tarefa por agora')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     await expect(faixa(page).getByRole('note')).toHaveText(SUPERVISAO)
     // Sem botão de fechar: o Tutor é sempre supervisionado, e o aluno não esconde o aviso (D8; regra 70, item 4).
     await expect(faixa(page).getByRole('button')).toHaveCount(0)
@@ -103,6 +103,8 @@ test.describe('o Tutor pelo Início e a conversa por atividade', () => {
       return api.responder('conversa', entrada)
     })
     await recarregar(page)
+    await irPara(page, '/aluno/tutor')
+    await expect(page).toHaveURL(/\/aluno\/tutor$/)
     await expect(principal(page).getByRole('heading', { name: 'Em qual atividade você quer ajuda?' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     await acionar(principal(page).getByRole('link', { name: /Lista de estequiometria/ }), hasTouch)
     await expect(page).toHaveURL(new RegExp(`/aluno/tutor/${atividade.id}$`))
