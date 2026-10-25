@@ -240,6 +240,18 @@ Sair. Tomou o lugar de "Minha turma", cujo endereço leva até ele. Só do próp
 inatividade. Os endereços estão em `ehTelaDeFoco` (`apps/web/src/caminhos.ts`): hoje, a introdução de cada papel
 (`/<área>/bem-vindo`).
 
+**Introdução** — Os passos que cada papel vê na primeira entrada (`componentes/introducao/Introducao.tsx`): a onça
+acenando ou apontando, a fala como título, o conteúdo e os botões "Continuar" e "Pular", iguais. Aviso não se pula na
+primeira vez; revendo, todo passo tem "Fechar". Os textos de cada papel são das tarefas 9.0 a 11.0.
+
+**Balão** — A caixa da fala da onça numa introdução; a fala é o título (`h1`) da tela.
+
+**Comemoração** — A onça de corpo inteiro dando um salto, uma vez, depois do envio confirmado de uma tarefa; parada com
+"reduzir movimento", sem som e sem número (`componentes/ui/Comemoracao.tsx`, D59).
+
+**Pose (da onça)** — Uma das três formas do corpo da onça: acenando, apontando e comemorando (`componentes/ui/onca/Onca.tsx`).
+O rosto é o neutro da cabeça em todas, e só o corpo muda. "Acolhendo" não existe.
+
 **Tutor** — O agente que conversa com o aluno. Conduz por perguntas e não entrega a
 resposta. É o mesmo agente que avisa o professor, na thread dele, o que viu no uso da turma.
 

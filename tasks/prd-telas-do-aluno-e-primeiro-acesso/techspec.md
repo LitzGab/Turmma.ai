@@ -178,7 +178,7 @@ moldura e a `Comemoracao`. **Eu**: cartão da turma, "Como estou indo" e as quat
 lado da `CabecaOnca` da X1. A cadeia fechada da onça da X1 (`componentes/ui/ia/avatar-so-nas-duas-pecas.test.ts`) passa a
 admitir os importadores desta spec, e só eles. **As três poses usam o mesmo rosto
 neutro da cabeça da X1; só o corpo muda** (D80, item 3). A introdução usa acenando e apontando e termina parada. A pose
-`comemorando` só é desenhada pela `Comemoracao`, e a `Comemoracao` só é importada por `areas/aluno/Atividade.tsx`. A `Introducao`
+`comemorando` só é desenhada pela `Comemoracao`, e a `Comemoracao` só é importada por `areas/aluno/Atividade.tsx` **e pela seção `galeria/secoes/introducao.tsx`**, o palco em que o e2e prova o salto e o "reduzir movimento" antes de a tarefa aberta existir (5.0). A `Introducao`
 recebe passos (`pose`, `fala`, `conteudo`, `obrigatorio`) e avisa "concluiu" ou "pulou"; a fala é o `h1`, recebe o
 foco a cada passo, e Enter continua. Os textos moram em `.ts` com teste.
 
@@ -201,7 +201,7 @@ provado a 360 px, também com a letra Maior.
 |---|---|
 | Unidade | os três grupos; `materia.ts`; os textos dos três papéis (falas sem pessoa, volta ou saudade) e o aviso (frases, prazo, IA da empresa, quem vê, sem "nota"); `letra.ts`; navegação e caminhos |
 | Componente (jsdom) | os quatro estados de Início, Tarefas, Eu e `BemVindo`; a comemoração; a `Introducao` (ordem, foco, botões iguais, obrigatório, rever); a casca em foco; o rosto de cada pose igual ao neutro |
-| Arquitetura | `comemorando` só pela `Comemoracao`; a `Comemoracao` só em `Atividade.tsx`; a entrada não importa a onça |
+| Arquitetura | `comemorando` só pela `Comemoracao`; a `Comemoracao` só em `Atividade.tsx` (e na seção da galeria); a entrada não importa a onça |
 | Integração | a rota (repetida, em paralelo, por papel, sem ano em curso), o `/v1/eu` com a data e a primeira saída, o arquivo do titular |
 | Carga | `infra/k6/login-7h30.js` com `/v1/eu` e `minhas-atividades` depois do login do aluno, em `autenticada_duracao`, e o p95 delas abaixo de `P95_MAXIMO_DO_LOGIN_MS` na fase `rajada` |
 | E2E | os lugares; a primeira entrada por papel; o tamanho da letra; e os specs do aluno, `areas`, `meus-dados`, `escola-montada` e `roteiro-da-demonstracao`, mudando só rótulo e caminho; os três passos obrigatórios, o passo 4 (pular sem escolher não grava; "Maior" aplica na hora e a 360 px não rola) e a segunda entrada em `browser.newContext()` |

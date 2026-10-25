@@ -6,9 +6,9 @@
   `spec/telas-do-aluno-e-primeiro-acesso--congelada` (local, `1477850`, a 1.0 de antes), só para consulta ao refazer a 1.0
 - **Conferência do Arquiteto (24/10, `341deca`):** sem BLOQUEIO, nada de desenho nem de critério do PRD (techspec §12c); caminhos,
   nomes (D81) e arquivos previstos alinhados ao código depois da X5 e da X7, em dez `_task.md` (a 7.0 não precisou)
-- **Espero:** as três linhas, 1ª tentativa, pedidas em 25/10 ~04:30, todas de porte grande: linha 1 a 3.0, linha 2 a 4.0, linha 3 a 5.0 (aberta agora, ambiente de teste 3). A 7.0 não cabe junto com estas; parte quando o quadro mandar
+- **Espero:** linha 1 a 3.0 e linha 3 a 5.0 (1ª tentativa, porte grande, desde 04:16); linha 2 a correção `2026-10-25-rodape-da-casca-do-aluno` (esteira vermelha `40172232547` em `ce8beed`: `e2e/casca.spec.ts:733` W12, navegação "Rodapé" do aluno não encontrada, no chromebook e no celular; veio da 2.0, único código entre a verde `848c22c` e a vermelha), pedida às ~04:50. Depois dela, a linha 2 parte a 7.0, que o quadro já libera
 - **Devo ainda:** no fechamento, somar ao item "Três testes com prazo apertado na esteira" do `TODO.md` (correção M5 da X7): a esteira da `develop` `40144205508` caiu no e2e 2/7 (`e2e/operacao-convite-coordenacao.spec.ts`, W1/W6/W10 e W3 no chromebook, elemento que não apareceu) e ficou verde na 2ª tentativa, sem mudança de código (24/10 ~23:45); e levar ao `TODO.md` as quatro primeiras linhas de "Recomendações sem aplicar" de `tasks/correcoes/2026-10-25-montar-arquivo-renova-validade.md` (janela de corrida guarda/gravação, registro em `docs/lgpd.md` e no runbook, marcador `arquivo_montado_em`; a do `doPedido` saiu, coberta pela correção `2026-10-25-testes-do-arquivo-do-titular`), mais o achado do Implementador 2: o `-t` do vitest lê parênteses do nome do teste como regex, e a mutação fica "verde" sem rodar caso
-- **Base:** `spec/telas-do-aluno-e-primeiro-acesso` em `dd9012e` (esteira `40172152371` rodando; a de `848c22c` ficou verde)
+- **Base:** `spec/telas-do-aluno-e-primeiro-acesso` em `05935df` (encontro da 4.0; esteira `40175702471` rodando)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -17,12 +17,14 @@
 | correção `2026-10-25-montar-arquivo-renova-validade` (linha 2) | `59b93d3` (spec em `11e3790`) | Sonnet 5.5 | 2 (test-engineer na 2ª; privacy, infra, tenancy e conformidade na 1ª) | encontro e verificação da soma sem conflito |
 | correção `2026-10-25-testes-do-arquivo-do-titular` (linha 2) | `b41749d` (spec em `848c22c`) | Sonnet 5.5 | 1 (os cinco revisores aprovaram na 1ª; ordem só de comentário, aplicada antes do commit) | encontro e verificação da soma sem conflito; as três "Recomendações sem aplicar" foram recusadas com motivo, nada a levar ao `TODO.md` |
 | 2.0 (linha 1) | `469a395` (spec em `dd9012e`) | Sonnet 5.5 | 2 (revisor-geral e test-engineer na 2ª; os cinco outros na 1ª) | a Mesa caiu num erro 500 da API às 03:15 e retomou com um Enter; três recomendações da 2ª rodada em "Recomendações sem aplicar" do `2_task.md` (`.processo/ordens/2_task-r2.md`); linha nova no `TODO.md`: idempotência do `DELETE /v1/sessao` |
+| 4.0 (linha 2) | `c81e091` (spec em `05935df`) | Sonnet 5.5 | 3 (test-engineer e revisor-geral na 3ª; os cinco outros na 1ª) | encontro e verificação da soma sem conflito; 7 linhas novas no `TODO.md`; divergências da reserva de matéria e do título sem número na tarefa e na techspec §9 |
 
 ## Esperando o Joaquim
 ## O que falhou
 - Correção `2026-10-24-arquivo-do-titular-data-fixa` (no meio da 1.0): 3 rodadas do test-engineer, com ESCALADA e diagnóstico do Arquiteto (tirar o job da fila com update atômico). Pousou na linha 1 em `4bbc01a`
 - 25/10 ~00:15 (vigia): na correção `2026-10-24-arquivo-do-titular-data-fixa`, o Implementador esperou o portão com um laço `while pgrep -f "portao-local.ts …"`, que casa com a própria linha de comando e nunca terminou. O portão tinha acabado verde às 23:44, e ele ficou parado 30 min. Encerrei o laço (`kill`), e ele seguiu. É a armadilha que o passo 6 já descreve, só que do lado do Implementador
 ## O que decidi sem perguntar
+- 25/10 ~04:50: esteira da spec vermelha em `ce8beed` (`e2e/casca.spec.ts` W12, aluno, "Rodapé"), vinda da 2.0. Pelo passo 6, abri a correção `2026-10-25-rodape-da-casca-do-aluno` na linha 2, ociosa depois do encontro da 4.0, antes da partida da 7.0. Guardião que ditei: `frontend-reviewer`
 - 25/10 ~01:55: encontro da linha 2 (correção montar-arquivo, `11e3790`). Com a linha 2 ociosa e nada a partir (tudo espera a 2.0), abri nela a correção `2026-10-25-testes-do-arquivo-do-titular`, a que a correção data-fixa deixou "a abrir pelo Orquestrador", somando o caso de isolamento do `doPedido` (tenancy), que é do mesmo arquivo. Guardiões que ditei: tenancy e privacy
 - 25/10 ~01:05: ESCALADA da Mesa na 1.0 (test-engineer, 2ª, só falta citar o caso do `escolher`). Pedi o diagnóstico mesmo assim, como o passo 6 manda, e o Arquiteto devolveu dois ajustes de texto
 - 25/10 ~00:25: ESCALADA da Mesa na correção do arquivo do titular. Pedi o diagnóstico ao Arquiteto, apontado para o checkout da linha 1 (passo 3)
