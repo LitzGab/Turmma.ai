@@ -11,8 +11,13 @@ import { raizRepositorio } from '../ci/executar.ts'
 // repositório temporário com o `.gitleaks.toml` do projeto. Prova que o segredo falso reprova
 // onde quer que seja commitado, inclusive nos arquivos que têm uma linha na allowlist.
 
-// Sem vogal: nenhuma sequência aleatória forma uma das palavras que o gitleaks descarta como falso positivo.
-const CARACTERES = 'BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz0123456789'
+// O gitleaks descarta o achado genérico cujo segredo contém uma palavra da lista dele, sem diferenciar maiúscula ("vpn", por
+// exemplo). Sem vogal não bastava: consoantes soltas formam palavras assim em cerca de 0,5% das chaves (esteira 40214908506).
+// Por isso a chave alterna letra e dígito, e duas letras nunca ficam juntas. Isso cobre a palavra de duas letras ou mais; não cobre
+// palavra de uma letra só nem palavra que tenha dígito, caso a lista do gitleaks mude de versão. Quem pega essa mudança é o caso
+// das 1500 amostras, mais abaixo.
+const LETRAS = 'BCDFGHJKLMNPQRSTVWXZbcdfghjklmnpqrstvwxz'
+const DIGITOS = '0123456789'
 const CAMINHO_DA_FIXTURE = 'tools/guardas/__fixtures__/segredo-falso.ts'
 
 const diretorios: string[] = []
@@ -22,7 +27,10 @@ afterEach(() => {
 })
 
 function aleatorio(tamanho: number): string {
-  return Array.from({ length: tamanho }, () => CARACTERES[randomInt(CARACTERES.length)]).join('')
+  return Array.from({ length: tamanho }, (_, posicao) => {
+    const grupo = posicao % 2 === 0 ? LETRAS : DIGITOS
+    return grupo[randomInt(grupo.length)]
+  }).join('')
 }
 
 const ARQUIVO_DO_CONVITE = 'apps/api/test/convite.int.test.ts'
@@ -84,11 +92,44 @@ interface Varredura {
 }
 
 function varrer(repositorio: string): Varredura {
-  const resultado = spawnSync('docker', [...argumentosGitleaks(repositorio), '--verbose'], { encoding: 'utf8' })
+  return rodarGitleaks(argumentosGitleaks(repositorio))
+}
+
+/** 64 MB: a varredura de muitas amostras de uma vez imprime um achado por arquivo, e o padrão de 1 MB cortaria a saída. */
+function rodarGitleaks(argumentos: string[]): Varredura {
+  const resultado = spawnSync('docker', [...argumentos, '--verbose'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 })
   return { codigo: resultado.status, saida: `${resultado.stdout}${resultado.stderr}` }
 }
 
+describe('a chave falsa dos testes', () => {
+  it('alterna letra e dígito: sem duas letras juntas, nenhuma palavra da lista de descarte do gitleaks cabe nela', () => {
+    for (let amostra = 0; amostra < 200; amostra++) {
+      const chave = aleatorio(40)
+      expect(chave).toHaveLength(40)
+      expect(/[A-Za-z]{2}/.test(chave), 'duas letras seguidas').toBe(false)
+    }
+  })
+})
+
 describe('gitleaks com o .gitleaks.toml do projeto', () => {
+  it('reprova a chave genérica em todas as amostras de uma vez: nenhuma é descartada como palavra comum (esteira 40214908506)', () => {
+    // Esteira 40214908506. Mil e quinhentas amostras no mesmo commit tornam a oscilação certa, e não mais uma questão de sorte.
+    // Metade em minúsculas, que é o formato do caso `comprida` (alfabeto menor, entropia mais baixa).
+    const total = 1500
+    const caminhoDaAmostra = (indice: number) => `tasks/prd-amostra/${indice}_task.md`
+    const linhaDaAmostra = (indice: number) => {
+      const chave = aleatorio(40)
+      return `   ${linhaDeChave('Sort', indice % 2 === 0 ? chave : chave.toLowerCase())}\n`
+    }
+    const arquivos = Object.fromEntries(Array.from({ length: total }, (_, indice) => [caminhoDaAmostra(indice), linhaDaAmostra(indice)]))
+    const { codigo, saida } = varrer(repositorioCom(arquivos))
+    expect(codigo).toBe(1)
+    // Conta pela linha `File:` da saída `--verbose` do gitleaks v8.30.1 (IMAGEM_GITLEAKS). Se a imagem subir e o formato mudar,
+    // este caso falha sem haver vazamento: ajuste a expressão, e não o total.
+    const reprovados = new Set(saida.match(/^File:\s+tasks\/prd-amostra\/\d+_task\.md$/gm))
+    expect(reprovados.size).toBe(total)
+  })
+
   it('reprova a fixture de segredo falso, sem mostrar o segredo no log', () => {
     const token = tokenFalso()
     const conteudo = readFileSync(join(raizRepositorio, CAMINHO_DA_FIXTURE), 'utf8').replace('__SEGREDO_FALSO__', token)
@@ -177,8 +218,7 @@ describe('gitleaks com o .gitleaks.toml do projeto', () => {
       writeFileSync(join(pasta, caminho), conteudo)
     }
     spawnSync('chmod', ['-R', 'a+rX', pasta])
-    const resultado = spawnSync('docker', [...argumentosGitleaksDaPasta(pasta, join(raizRepositorio, '.gitleaks.toml')), '--verbose'], { encoding: 'utf8' })
-    return { codigo: resultado.status, saida: `${resultado.stdout}${resultado.stderr}` }
+    return rodarGitleaks(argumentosGitleaksDaPasta(pasta, join(raizRepositorio, '.gitleaks.toml')))
   }
 
   it('reprova o segredo em arquivo ainda sem commit, com o caminho relativo, e as exceções por caminho continuam valendo', () => {
