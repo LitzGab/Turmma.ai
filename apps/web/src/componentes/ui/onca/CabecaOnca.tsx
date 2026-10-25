@@ -3,14 +3,14 @@
  * não lê token: é o único desenho do produto, com o QR, que escreve cor à mão (`ARQUIVOS_COM_COR_EM_LINHA`, em
  * `estilos.test.ts`). A língua (`#FF9FB0`) é da boca aberta, que nenhuma expressão desta peça tem.
  */
-const PELAGEM = '#E8732E'
-const SOMBRA = '#D75F18'
-const REALCE = '#ED935D'
-const CREME = '#FDEBDD'
-const ROSETA = '#7A3412'
-const PUPILA = '#16233E'
-const OLHO = '#FFFFFF'
-const NARIZ = '#E5838C'
+export const PELAGEM = '#E8732E'
+export const SOMBRA = '#D75F18'
+export const REALCE = '#ED935D'
+export const CREME = '#FDEBDD'
+export const ROSETA = '#7A3412'
+export const PUPILA = '#16233E'
+export const OLHO = '#FFFFFF'
+export const NARIZ = '#E5838C'
 
 /** Os tamanhos do avatar, em px: 24 na linha da mensagem, 32 na assinatura, 40 e 48 no cabeçalho (9.7). */
 export type TamanhoDaCabeca = 24 | 32 | 40 | 48
@@ -20,24 +20,13 @@ interface PropsDaCabecaOnca {
 }
 
 /**
- * A cabeça da onça: **um desenho só, com uma expressão neutra, parado** (`docs/interface.md` 9.7; D80, item 3). Só
- * círculos e retângulos arredondados (o nariz é um retângulo de canto grande), mais um traço para a boca: sem contorno
- * nas formas e sem degradê.
- *
- * É a peça mais restrita do produto, de propósito (D58; Decreto 12.880, art. 11; regra 70, itens 4a e 4b):
- *
- * - **Só `tamanho`.** Não há pose, "pensando", humor nem expressão que mude com quem usa: nem com a presença ou a ausência,
- *   nem com o acerto, o erro, o tempo de uso ou o assunto da conversa. Dois renders do mesmo tamanho dão o mesmo HTML.
- * - **Parada.** Nenhum `animate`, transição, temporizador nem efeito: ela é desenho, e o que a faria viva não existe aqui.
- * - **Sem nome e sem texto.** `aria-hidden`, sem `<title>` nem `<desc>`: "onça" não é o nome de agente nenhum. Quem
- *   assina é a função, ao lado (`AssinaturaIA`).
- *
- * Quem a desenha é só o `AvatarAgente`, que a põe num círculo com o anel do agente (a cadeia fechada é um teste:
- * `componentes/ui/ia/avatar-so-nas-duas-pecas.test.ts`). O SVG preenche a caixa em que está: o círculo é do avatar.
+ * O desenho da cabeça, no quadro de 48 × 48: **a fonte única do rosto da onça**. A `CabecaOnca` o põe num `svg` de
+ * qualquer um dos quatro tamanhos, e a `Onca` de corpo inteiro o põe, igual, sobre cada corpo: é por isso que as três
+ * poses têm o mesmo rosto neutro (D80, item 3), e só o corpo muda. Quem o usa não passa nada: não há expressão a escolher.
  */
-export function CabecaOnca({ tamanho }: PropsDaCabecaOnca) {
+export function DesenhoDaCabeca() {
   return (
-    <svg width={tamanho} height={tamanho} viewBox="0 0 48 48" aria-hidden="true" focusable="false" className="block size-full shrink-0">
+    <>
       {/* As orelhas, com o creme por dentro: o rosto cobre a parte de baixo delas. */}
       <circle cx="13" cy="13.5" r="6.5" fill={PELAGEM} />
       <circle cx="35" cy="13.5" r="6.5" fill={PELAGEM} />
@@ -62,6 +51,30 @@ export function CabecaOnca({ tamanho }: PropsDaCabecaOnca) {
       <circle cx="30.5" cy="26" r="3.4" fill={OLHO} />
       <circle cx="17.5" cy="26" r="1.9" fill={PUPILA} />
       <circle cx="30.5" cy="26" r="1.9" fill={PUPILA} />
+    </>
+  )
+}
+
+/**
+ * A cabeça da onça: **um desenho só, com uma expressão neutra, parado** (`docs/interface.md` 9.7; D80, item 3). Só
+ * círculos e retângulos arredondados (o nariz é um retângulo de canto grande), mais um traço para a boca: sem contorno
+ * nas formas e sem degradê.
+ *
+ * É a peça mais restrita do produto, de propósito (D58; Decreto 12.880, art. 11; regra 70, itens 4a e 4b):
+ *
+ * - **Só `tamanho`.** Não há pose, "pensando", humor nem expressão que mude com quem usa: nem com a presença ou a ausência,
+ *   nem com o acerto, o erro, o tempo de uso ou o assunto da conversa. Dois renders do mesmo tamanho dão o mesmo HTML.
+ * - **Parada.** Nenhum `animate`, transição, temporizador nem efeito: ela é desenho, e o que a faria viva não existe aqui.
+ * - **Sem nome e sem texto.** `aria-hidden`, sem `<title>` nem `<desc>`: "onça" não é o nome de agente nenhum. Quem
+ *   assina é a função, ao lado (`AssinaturaIA`).
+ *
+ * Quem a desenha é só o `AvatarAgente`, que a põe num círculo com o anel do agente (a cadeia fechada é um teste:
+ * `componentes/ui/ia/avatar-so-nas-duas-pecas.test.ts`). A onça de corpo inteiro (`Onca`) reaproveita só o desenho, o `DesenhoDaCabeca`. O SVG preenche a caixa em que está: o círculo é do avatar.
+ */
+export function CabecaOnca({ tamanho }: PropsDaCabecaOnca) {
+  return (
+    <svg width={tamanho} height={tamanho} viewBox="0 0 48 48" aria-hidden="true" focusable="false" className="block size-full shrink-0">
+      <DesenhoDaCabeca />
     </svg>
   )
 }

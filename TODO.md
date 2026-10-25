@@ -1287,6 +1287,11 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       o contrato de `MedidaDosBlocos` e os `toEqual` dos testes; (b) o teste de `desenhos` monta borda e canto com
       atalhos (`border:`, `border-radius:`) que pintam os quatro lados iguais, e `desenhos` lendo `borderBottom*` no lugar
       de `borderTop*` não seria pego: dar um lado diferente dos outros. Os dois entram na próxima tarefa que tocar a galeria
+- [ ] **Os quatro botões de `Introducao.tsx` com o mesmo componente `Botao`** (`revisor-geral`, 1ª rodada da 5.0 da X4,
+      `tasks/prd-telas-do-aluno-e-primeiro-acesso/5_task.md`): "Continuar" e "Pular" são `<button>` com `classesDoBotao`, e
+      "Fechar" e "Sair" vêm da `TelaDeFoco`; usar o `Botao` nos quatro é refatoração sem efeito para quem usa, e mexe no DOM
+      que o teste de RF16 e o bloco de Mutações com `opacity-70` citam. Entra na tarefa da X4 que mexer na `Introducao`
+      depois da 9.0, com os testes e as mutações refeitos
 
 ## Comercial
 

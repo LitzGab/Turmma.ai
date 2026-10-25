@@ -95,6 +95,9 @@ const PASTA_DAS_PECAS_DE_IA = '/apps/web/src/componentes/ui/ia/'
  * primeiro carregamento, em vez de deixá-la passar sem ser medida.
  */
 export const PECAS_FORA_DA_ENTRADA = [
+  'introducao/Balao',
+  'introducao/Introducao',
+  'introducao/TelaDeFoco',
   'sino/leitura-do-sino',
   'sino/Sino',
   'ui/Abas',
@@ -109,12 +112,14 @@ export const PECAS_FORA_DA_ENTRADA = [
   'ui/campos/Selecao',
   'ui/campos/texto-longo',
   'ui/Cartao',
+  'ui/Comemoracao',
   'ui/Contador',
   'ui/Faixa',
   'ui/Linha',
   'ui/midia',
   'ui/NumeroPainel',
   'ui/onca/CabecaOnca',
+  'ui/onca/Onca',
   'ui/SeloDeEstado',
   'ui/sobrepostos/DialogoDeConfirmacao',
   'ui/sobrepostos/flutuante',

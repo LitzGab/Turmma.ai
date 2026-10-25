@@ -32,7 +32,7 @@
   - [ ] 4.3 A lista com `Linha` e `Ladrilho`, o vazio de cada grupo e "Ver mais tarefas"
   - [ ] 4.4 Testes: a separação, os quatro estados, "Corrigida" só com correção aprovada
 
-- [ ] **5.0 — As peças da introdução: tela de foco, balão, comemoração e a onça em três poses**
+- [x] **5.0 — As peças da introdução: tela de foco, balão, comemoração e a onça em três poses**
   - [ ] 5.1 As poses acenando, apontando e comemorando em `componentes/ui/onca/`, com o mesmo rosto neutro
   - [ ] 5.2 `TelaDeFoco`, `Balao`, `Comemoracao` e `introducao/Introducao`
   - [ ] 5.3 A casca em modo de foco nos endereços de `ehTelaDeFoco`

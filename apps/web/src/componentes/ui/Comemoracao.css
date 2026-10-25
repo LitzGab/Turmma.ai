@@ -1,0 +1,38 @@
+/*
+ * O salto da comemoração (RF8; `docs/interface.md` 9.7; D59): um salto só, ao entrar, e a onça fica parada. Só `transform`
+ * e `opacity` mudam, o que o navegador faz sem refazer a página, no Chromebook também. Uma iteração, nunca laço.
+ */
+@keyframes comemoracao-salto {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  45% {
+    opacity: 1;
+    transform: translateY(-18px);
+  }
+  75%,
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.comemoracao-salto {
+  animation-name: comemoracao-salto;
+  animation-duration: 700ms;
+  animation-timing-function: ease-out;
+  animation-iteration-count: 1;
+  animation-fill-mode: both;
+}
+
+/* Com "reduzir movimento", a onça aparece já parada, inteira, sem salto. */
+@media (prefers-reduced-motion: reduce) {
+  .comemoracao-salto {
+    animation: none;
+  }
+}
