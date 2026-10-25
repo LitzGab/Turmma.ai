@@ -1300,6 +1300,11 @@ código"), com o destino de cada uma. As pequenas foram fechadas na correção `
       o contrato de `MedidaDosBlocos` e os `toEqual` dos testes; (b) o teste de `desenhos` monta borda e canto com
       atalhos (`border:`, `border-radius:`) que pintam os quatro lados iguais, e `desenhos` lendo `borderBottom*` no lugar
       de `borderTop*` não seria pego: dar um lado diferente dos outros. Os dois entram na próxima tarefa que tocar a galeria
+- [ ] **Os quatro botões de `Introducao.tsx` com o mesmo componente `Botao`** (`revisor-geral`, 1ª rodada da 5.0 da X4,
+      `tasks/prd-telas-do-aluno-e-primeiro-acesso/5_task.md`): "Continuar" e "Pular" são `<button>` com `classesDoBotao`, e
+      "Fechar" e "Sair" vêm da `TelaDeFoco`; usar o `Botao` nos quatro é refatoração sem efeito para quem usa, e mexe no DOM
+      que o teste de RF16 e o bloco de Mutações com `opacity-70` citam. Entra na tarefa da X4 que mexer na `Introducao`
+      depois da 9.0, com os testes e as mutações refeitos
 
 ## Comercial
 
@@ -1971,6 +1976,33 @@ Ficam, de antes da retro:
       sem erro e sem rotacionar o cookie de novo). Hoje não é bug: a casca trava o segundo clique, e a web trata `NAO_AUTENTICADO`
       como "não há o que encerrar". É teste de `apps/api`, fora dos arquivos da 2.0 (dono: Orquestrador; origem: `2_task.md`,
       `infra-guardian` 1ª)
+- [ ] **(X4, 4.0) "Encerrada" cai em "Entregues", e o aluno que respondeu 0 de 3 lê que entregou.** A subtarefa 4.1 põe `enviada`
+      e `encerrada` no mesmo grupo, e o título "Entregues" diz mais do que o fato: quem a professora encerrou antes de ele
+      responder não entregou nada. Decidir o texto do grupo ou um grupo à parte, e cobrir o caso com teste (aluno com
+      `encerrada` e `respondidas: 0`). Quem decide: o Validador, com o produto (dono: Validador; origem: `4_task.md`,
+      `conformidade-reviewer` e `test-engineer` 1ª)
+- [ ] **(X4, 4.0) O vazio de cada grupo olha só as páginas carregadas.** "Nenhuma corrigida ainda." pode aparecer com "Ver mais
+      tarefas" logo abaixo, e a página seguinte trazer uma corrigida. A tarefa recusou o contador no título pelo mesmo motivo.
+      Decidir o texto (por exemplo, "Nenhuma corrigida nas que já abriram") ou esconder o vazio enquanto houver página
+      seguinte (dono: Validador; origem: `4_task.md`, `infra-guardian` 1ª)
+- [ ] **(X4, 4.0) Em 360 px o título da tarefa é cortado em uma linha** ("Cinemática: lista sinté…"). É o desenho da `Linha` da X1
+      (`componentes/ui/Linha.tsx`: título numa linha, com reticências e o `title` com o texto inteiro). Reavaliar se o aluno
+      precisa ler o título inteiro no celular, e então deixar a `Linha` quebrar em até duas linhas (dono: Arquiteto, na
+      próxima spec que toque a `Linha`; origem: `4_task.md`, `frontend-reviewer` 1ª)
+- [ ] **(X4, 4.0) A reserva de matéria é `anil` com livro aberto e parece Física pela cor.** O `Ladrilho` só tem as dez
+      famílias de cor e nenhuma é neutra; a divergência está em `4_task.md` e em `docs/interface.md` 9.1. Quando a X1 ganhar uma
+      família neutra, trocar a reserva de `areas/aluno/materia.ts` e o teste de `materia.test.ts` (dono: Arquiteto, com a X1;
+      origem: `4_task.md`, `frontend-reviewer` 1ª)
+- [ ] **(X4, 4.0) O texto da tela de Tarefas ainda diz "atividade".** "Carregando as suas atividades…" e "Quando quem dá a aula
+      passar uma atividade para a turma…" ficaram, porque o rótulo do carregando é o mesmo que `e2e/minha-turma.spec.ts` e
+      `Inicio.test.tsx` citam, e mudar um sem o outro deixa dois lugares diferentes. Trocar os dois textos e os specs que os
+      citam na mesma correção (dono: Orquestrador; origem: `4_task.md`, `revisor-geral` 1ª)
+- [ ] **(X4, 4.0) `FamiliaDeCor` é importado de `componentes/ui/Contador`.** `materia.ts` busca o tipo no arquivo do `Contador`,
+      que não é de quem desenha o `Ladrilho`; o `Ladrilho` podia reexportar o tipo. É da X1 (`componentes/ui/`), com o teste
+      `casca-sem-import.test.ts` que descreve a cadeia (dono: Arquiteto, com a X1; origem: `4_task.md`, `revisor-geral` 1ª)
+- [ ] **(X4, 4.0) O e2e de 360 px de Tarefas acha o nome da linha pelo `[title]`**, detalhe interno da `Linha`. Um `data-*` na
+      `Linha` seria mais robusto, e o e2e passaria a usá-lo (`e2e/aluno-atividade.spec.ts`, "Tarefas a 360 px"). A mudança é na
+      `Linha`, da X1 (dono: Arquiteto, com a X1; origem: `4_task.md`, `revisor-geral` 1ª)
 
 Saíram na retro da X7, com o motivo em `tasks/prd-harness/retro.md` ("Tirar do `TODO.md`"): o resto das recomendações da
 revisão da spec (rodada 4), da 2.0, da 5.0, da 7.0, da 11.0, da 12.0 (o `catch` do `rev-list`), da 17.0, da 18.0 e da 19.0,

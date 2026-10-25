@@ -624,10 +624,14 @@ para ninguém confundir com a tela de uma escola. As medidas estão na seção 1
 - **O mockup de outubro está em `mockups/`** desde 16/10/2026 (cópia de `Prototipo_Turmma` em
   `a95568d`, D80). A fonte de valores continua sendo esta Parte B e o inventário em
   `tasks/prd-pele-e-casca/mockup.md`; o mockup é para ver. Nada de lá é copiado para o `apps/web`
-- **A comemoração na entrega e a onça "acolhendo"** dependem do parecer do `conformidade-reviewer`,
+- **A comemoração na entrega e a onça "acolhendo"** dependiam do parecer do `conformidade-reviewer`,
   na X4: a primeira por encostar em recompensa (D59), a segunda por pôr expressão de preocupação no
-  lugar onde o Tutor encaminha um assunto delicado (D58; regra 70, item 4a). Sem parecer, a entrega
-  termina com texto e a onça fica parada (9.5 e 9.7)
+  lugar onde o Tutor encaminha um assunto delicado (D58; regra 70, item 4a). **Parecer dado na tarefa
+  5.0 da X4 (25/10/2026) para as poses acenando e apontando e para a comemoração**, com as condições:
+  um salto só, e só depois do envio confirmado nesta tela; sem número, sem som e sem depender de
+  acerto, resultado ou tempo de uso; parada quando a pessoa pede menos movimento; não volta ao
+  recarregar (RF8; a 7.0 prova, com `Atividade.tsx`). A "acolhendo"
+  **continua sem parecer** e não entra (D80, item 3)
 - **Duas camadas do mockup ficam fora**, porque o LEIAME dele não as descreve e ninguém as decidiu:
   a "15ª rodada" da conversa (voto, refazer e editar em toda resposta, anexo na caixa), que mexe no
   registro que o professor supervisiona e cria dado novo de menor; e os painéis de gestão, que
@@ -813,7 +817,8 @@ vermelho porque caiu, e a barra de acerto é neutra.
 
 - **Matérias:** Matemática azul · Língua Portuguesa roxo · Ciências e Biologia verde · Química
   turquesa · Física anil · História e Filosofia amarelo · Geografia e Sociologia lima · Língua
-  Inglesa vermelho · Arte e Educação Física rosa. O laranja nunca vai em matéria
+  Inglesa vermelho · Arte e Educação Física rosa. O laranja nunca vai em matéria. A disciplina que a escola
+  cadastra com outro nome (Robótica) cai na reserva: `anil` com um livro aberto (`areas/aluno/materia.ts`)
 - **Agentes:** Tutor laranja · Assistente de ensino azul · Analista anil (9.7)
 - **Tipos da fila** (X2 e X3): cada tipo de item tem a família dele, fixa
   (`tasks/prd-pele-e-casca/mockup.md`, seção 1.2)
@@ -1141,8 +1146,8 @@ próprio do `conformidade-reviewer`, e nenhuma pisca, acena em laço ou reage a 
 | Pose | Onde | Nasce |
 |---|---|---|
 | Dormindo | O vazio "Tudo em dia" do sino | X2, com parecer |
-| Acenando · apontando | Os passos da introdução | X4, com parecer |
-| Comemorando | A entrega de uma tarefa (9.5, regra 7) | X4, com parecer; sai se ele vetar |
+| Acenando · apontando | Os passos da introdução | X4, tarefa 5.0, com parecer dado |
+| Comemorando | A entrega de uma tarefa (9.5, regra 7) | X4, tarefa 5.0, com parecer dado, nas condições da Parte B, item "A comemoração na entrega e a onça acolhendo" |
 | Acolhendo (expressão de preocupação) | — | não entra (D80, item 3) |
 
 O que a onça **nunca** é, em nenhuma spec (D58; Decreto 12.880, art. 11; regra 70, item 4a):

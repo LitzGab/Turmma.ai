@@ -6,7 +6,7 @@ import { consultaEu } from '../api/eu'
 import { esquecerEspelhosDeOutroDono } from '../api/espelho-da-fila'
 import { assinarSessao, estadoDaSessao, lembrarQuemEsta, sair } from '../api/sessao'
 import { MENU_DA_PESSOA, NAVEGACAO, NOME_DO_RODAPE, RODAPE_DA_LATERAL, type ItemDaNavegacao } from '../areas/navegacao'
-import { ROTAS } from '../caminhos'
+import { ehTelaDeFoco, ROTAS } from '../caminhos'
 import { NOME_DO_PAPEL } from '../papeis'
 import { useInatividade } from '../sessao/inatividade'
 import { ContextoDaAncoraDoSino, type AncoraDoSino } from './ancora-do-sino'
@@ -263,6 +263,16 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
       {children}
     </main>
   )
+
+  // A tela de foco (a introdução de cada papel): sem lateral, trilho, barra do topo, gaveta nem barra de baixo. Fica o `<main>`,
+  // o "Sair" (que a `TelaDeFoco` desenha pelo contexto) e, acima, o relógio de inatividade e a memória de quem está na aba.
+  if (ehTelaDeFoco(caminho)) {
+    return (
+      <ContextoDaSaida value={saida}>
+        <main className="flex min-h-screen w-full min-w-0 flex-col bg-fundo px-4 py-4 text-tinta md:px-8 md:py-6">{children}</main>
+      </ContextoDaSaida>
+    )
+  }
 
   const gavetaNaPagina = faixa !== 'larga' && (
     // O `dialog` fica na página fechado e só abre por `showModal()`: fechado, é `display: none`, e nem o leitor de tela

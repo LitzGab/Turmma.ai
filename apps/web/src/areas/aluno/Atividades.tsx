@@ -1,38 +1,70 @@
 import type { MinhaAtividade } from '@educa/shared'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { ChevronRight } from 'lucide-react'
-import { Link } from 'wouter'
+import { Check } from 'lucide-react'
 import { consultaMinhasAtividades } from '../../api/atividades-do-aluno'
 import { caminhoDaAtividadeDoAluno } from '../../caminhos'
 import { Botao } from '../../componentes/ui/Botao'
+import { Ladrilho } from '../../componentes/ui/Ladrilho'
+import { Linha } from '../../componentes/ui/Linha'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { Estado } from '../../componentes/ui/SeloDeEstado'
 import { CabecalhoDeSecao, Tela } from '../../componentes/ui/Tela'
 import { useTituloDaTela } from '../../titulo'
-import { AVISO_DA_AVALIACAO, detalheDaSituacao, estaParaResponder, resumoDaAtividade, separarAtividades, TEXTO_DA_SITUACAO } from './atividades'
+import { AVISO_DA_AVALIACAO, detalheDaSituacao, estaParaResponder, resumoDaAtividade, separarAtividades, TEXTO_DA_SITUACAO, VAZIO_DE_CADA_GRUPO } from './atividades'
+import { caraDaMateria } from './materia'
 
-/** Uma atividade na lista: a linha inteira é o link, com 44 px de sobra para o dedo (regra 50, item 2a). */
-function LinhaDaAtividade({ atividade }: { atividade: MinhaAtividade }) {
+/** Uma tarefa na lista: a linha inteira é o link, com o ladrilho da matéria, o estado em texto no selo e o detalhe de hoje. */
+function LinhaDaTarefa({ atividade }: { atividade: MinhaAtividade }) {
+  const { familia, Icone } = caraDaMateria(atividade.disciplina.nome)
   return (
-    <li>
-      <Link
-        to={caminhoDaAtividadeDoAluno(atividade.id)}
-        data-atividade={atividade.situacao}
-        className="flex min-h-11 min-w-0 items-center gap-3 rounded-cartao border border-linha bg-superficie p-4 text-tinta hover:bg-realce-suave"
-      >
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="min-w-0 text-base font-semibold break-words">{atividade.titulo}</span>
-          <span className="min-w-0 text-sm break-words text-sutil">{resumoDaAtividade(atividade)}</span>
-          <span className="flex min-w-0 flex-wrap items-center gap-2 pt-1">
-            {/* O estado em texto, no selo: `ok` só quando há resultado; o resto é cinza, porque nada aqui é alarme. */}
-            <Estado familia={atividade.situacao === 'com_diagnostico' ? 'ok' : 'info'}>{TEXTO_DA_SITUACAO[atividade.situacao]}</Estado>
-          </span>
-          <span className="min-w-0 text-sm break-words text-apoio">{detalheDaSituacao(atividade)}</span>
-          {atividade.avaliativa && estaParaResponder(atividade) && <span className="min-w-0 text-sm font-medium break-words text-tinta">{AVISO_DA_AVALIACAO}</span>}
-        </span>
-        <ChevronRight aria-hidden="true" size={20} strokeWidth={1.75} className="shrink-0 text-sutil" />
-      </Link>
+    <li data-atividade={atividade.situacao}>
+      <Linha
+        titulo={atividade.titulo}
+        para={caminhoDaAtividadeDoAluno(atividade.id)}
+        inicio={
+          <Ladrilho familia={familia} tamanho={44}>
+            <Icone aria-hidden="true" />
+          </Ladrilho>
+        }
+        abaixo={
+          <>
+            <span className="block">{resumoDaAtividade(atividade)}</span>
+            <span className="block">{detalheDaSituacao(atividade)}</span>
+            {atividade.avaliativa && estaParaResponder(atividade) && <span className="block font-medium text-tinta">{AVISO_DA_AVALIACAO}</span>}
+          </>
+        }
+        /* O estado em texto, no selo: `ok` só quando a correção foi aprovada; o resto é cinza, porque nada aqui é alarme. */
+        fim={<Estado familia={atividade.situacao === 'com_diagnostico' ? 'ok' : 'info'}>{TEXTO_DA_SITUACAO[atividade.situacao]}</Estado>}
+      />
     </li>
+  )
+}
+
+interface PropsDoGrupo {
+  readonly id: string
+  readonly titulo: string
+  readonly vazio: string
+  readonly atividades: readonly MinhaAtividade[]
+}
+
+/** Um grupo da lista: o título, as tarefas numa moldura só, ou a linha tracejada que diz que não há nenhuma. */
+function GrupoDeTarefas({ id, titulo, vazio, atividades }: PropsDoGrupo) {
+  return (
+    <section aria-labelledby={id} className="flex min-w-0 flex-col gap-3">
+      <CabecalhoDeSecao id={id} titulo={titulo} />
+      {atividades.length === 0 ? (
+        <p className="flex min-w-0 items-center gap-2 rounded-cartao border-2 border-dashed border-borda bg-superficie p-4 text-apoio">
+          <Check aria-hidden="true" size={20} className="shrink-0" />
+          <span className="min-w-0 break-words">{vazio}</span>
+        </p>
+      ) : (
+        <ul className="divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda bg-superficie">
+          {atividades.map((atividade) => (
+            <LinhaDaTarefa key={atividade.id} atividade={atividade} />
+          ))}
+        </ul>
+      )}
+    </section>
   )
 }
 
@@ -50,7 +82,7 @@ export default function Atividades() {
   useTituloDaTela('Tarefas')
   const atividades = useInfiniteQuery(consultaMinhasAtividades)
   const itens = atividades.data?.pages.flatMap((pagina) => pagina.itens) ?? []
-  const { paraResponder, feitas } = separarAtividades(itens)
+  const { paraFazer, entregues, corrigidas } = separarAtividades(itens)
 
   return (
     <Tela titulo="Tarefas" largura="conversa">
@@ -64,36 +96,16 @@ export default function Atividades() {
 
       {itens.length > 0 && (
         <>
-          <section aria-labelledby="titulo-para-responder" className="flex min-w-0 flex-col gap-3">
-            <CabecalhoDeSecao id="titulo-para-responder" titulo="Para responder" />
-            {paraResponder.length === 0 ? (
-              <p className="rounded-cartao border border-dashed border-borda-campo bg-superficie p-4 text-apoio">Nada para responder agora.</p>
-            ) : (
-              <ul className="flex min-w-0 flex-col gap-2">
-                {paraResponder.map((atividade) => (
-                  <LinhaDaAtividade key={atividade.id} atividade={atividade} />
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {feitas.length > 0 && (
-            <section aria-labelledby="titulo-feitas" className="flex min-w-0 flex-col gap-3">
-              <CabecalhoDeSecao id="titulo-feitas" titulo="Já feitas" />
-              <ul className="flex min-w-0 flex-col gap-2">
-                {feitas.map((atividade) => (
-                  <LinhaDaAtividade key={atividade.id} atividade={atividade} />
-                ))}
-              </ul>
-            </section>
-          )}
+          <GrupoDeTarefas id="titulo-para-fazer" titulo="Para fazer" vazio={VAZIO_DE_CADA_GRUPO.paraFazer} atividades={paraFazer} />
+          <GrupoDeTarefas id="titulo-entregues" titulo="Entregues" vazio={VAZIO_DE_CADA_GRUPO.entregues} atividades={entregues} />
+          <GrupoDeTarefas id="titulo-corrigidas" titulo="Corrigidas" vazio={VAZIO_DE_CADA_GRUPO.corrigidas} atividades={corrigidas} />
         </>
       )}
 
       {/* A lista não rola sem fim: a página seguinte só vem quando o aluno pede (D59). */}
       {atividades.hasNextPage && (
         <Botao variante="secundario" onClick={() => void atividades.fetchNextPage()} disabled={atividades.isFetchingNextPage} className="self-center">
-          {atividades.isFetchingNextPage ? 'Carregando…' : 'Ver mais atividades'}
+          {atividades.isFetchingNextPage ? 'Carregando…' : 'Ver mais tarefas'}
         </Botao>
       )}
     </Tela>
