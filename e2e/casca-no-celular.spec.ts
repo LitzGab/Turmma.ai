@@ -176,9 +176,9 @@ test.describe('a casca da escola no celular', () => {
     await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Tarefas', 'Eu'])
     for (const rotulo of ['Início', 'Tarefas', 'Eu']) await esperarAlvoDe44(secoes(page).getByRole('link', { name: rotulo, exact: true }), rotulo)
 
-    // O aluno abre no Início (X4, 2.0): a escolha da atividade e a faixa já estão ali, e o Tutor da atividade é o próximo toque.
+    // O aluno abre no Início (X4, 3.0): a tarefa para fazer e a faixa já estão ali, e o Tutor da atividade é o próximo toque.
     await expect(page).toHaveURL(/\/aluno\/inicio$/, { timeout: PRAZO_DA_ENTRADA_MS })
-    await acionar(page.getByRole('main').getByRole('link', { name: /Lista de estequiometria/ }), hasTouch)
+    await acionar(page.getByRole('main').getByRole('link', { name: 'Pedir ajuda ao Tutor' }), hasTouch)
     await expect(page).toHaveURL(new RegExp(`/aluno/tutor/${atividade.id}$`), { timeout: PRAZO_DA_TELA_MS })
 
     const faixa = page.getByRole('main').locator('[data-faixa-de-supervisao]')

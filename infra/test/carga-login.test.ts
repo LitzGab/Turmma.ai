@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseEnv } from 'node:util'
+import { TAMANHO_PADRAO_DA_PAGINA } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { parse } from 'yaml'
 import { ITERACOES_MINIMAS_ARGON2, MEMORIA_MINIMA_ARGON2_KIB, THREADS_DE_FOLGA_DO_LIBUV } from '../../apps/api/src/credencial/configuracao-de-login.ts'
@@ -9,6 +10,10 @@ import { CODIGO_THRESHOLD_CRUZADO } from '../scripts/carga.ts'
 import {
   ALUNOS_DA_A_ALVO_DO_ATAQUE,
   ALUNOS_POR_ESCOLA,
+  ALUNOS_POR_TURMA,
+  ATIVIDADES_NOVAS_COM_TENTATIVA,
+  ATIVIDADES_NOVAS_ENVIADAS,
+  ATIVIDADES_POR_TURMA,
   argumentosDoK6DeLogin,
   autenticadaBaseP95,
   codigoDeSaidaDoLogin,
@@ -22,6 +27,7 @@ import {
   juntarAtacante,
   lerResumoDaFase,
   montarContas,
+  turmasDaEscola,
   type FaseDoCenario,
   type ResumoDaFase,
 } from '../scripts/carga-login.ts'
@@ -365,10 +371,41 @@ describe('ambiente do cenário "login às 7h30"', () => {
     expect(doExemplo['LOGIN_PROTECAO_DESLIGADA']).toBe('false')
   })
 
-  it('o cenário só chama as rotas do login por matrícula e e-mail, a renovação e uma autenticada: nem o login externo (oidc-falso), nem provedor pago (regra 80, item 11)', () => {
+  it('o cenário só chama as rotas do login por matrícula e e-mail, a renovação e as autenticadas, as do Início do aluno entre elas: nem o login externo (oidc-falso), nem provedor pago (regra 80, item 11)', () => {
     const script = lerArquivo('infra/k6/login-7h30.js')
-    const rotas = new Set([...script.matchAll(/\$\{API\}(\/[^`'"]*)/g)].map((achado) => achado[1]))
-    expect([...rotas].sort()).toEqual(['/v1/sessao/email', '/v1/sessao/matricula', '/v1/sessao/renovar', '/v1/sistema/contexto'])
+    // A rota vem depois de `${API}` ou como texto entre aspas (o `caminho` das autenticadas); `GET /v1/...` é o nome da tag, e não entra.
+    const rotas = new Set([...script.matchAll(/(?:\$\{API\}|['"`])(\/v1\/[^`'"$]*)/g)].map((achado) => achado[1]))
+    expect([...rotas].sort()).toEqual(['/v1/eu', '/v1/minhas-atividades', '/v1/sessao/email', '/v1/sessao/matricula', '/v1/sessao/renovar', '/v1/sistema/contexto'])
     expect(argumentosDoK6DeLogin('atacante')).toContain('API_URL=http://borda:8080')
+  })
+})
+
+describe('o Início do aluno na rajada do cenário "login às 7h30"', () => {
+  const script = lerArquivo('infra/k6/login-7h30.js')
+
+  it('o seed enche a primeira página: mais atividades por turma do que cabem nela, turmas de 35 e tentativa só nas mais novas', () => {
+    expect(ATIVIDADES_POR_TURMA).toBeGreaterThan(TAMANHO_PADRAO_DA_PAGINA)
+    expect(ALUNOS_POR_TURMA).toBe(35)
+    expect(turmasDaEscola(ALUNOS_POR_ESCOLA)).toBe(20)
+    expect(turmasDaEscola(35)).toBe(1)
+    expect(turmasDaEscola(36)).toBe(2)
+    expect(ATIVIDADES_NOVAS_COM_TENTATIVA).toBeLessThan(TAMANHO_PADRAO_DA_PAGINA)
+    expect(ATIVIDADES_NOVAS_ENVIADAS).toBeLessThanOrEqual(ATIVIDADES_NOVAS_COM_TENTATIVA)
+  })
+
+  it('a rajada julga o p95 de todas as autenticadas e o da minhas-atividades sozinho, no mesmo limite de 1 s do login', () => {
+    expect(script).toContain("'autenticada_duracao{grupo:rajada}': [`p(95)<${P95_MAXIMO_DO_LOGIN_MS}`]")
+    expect(script).toContain('[`autenticada_duracao{grupo:rajada,name:${ROTA_DAS_TAREFAS}}`]: [`p(95)<${P95_MAXIMO_DO_LOGIN_MS}`]')
+    expect(script).toContain("export const ROTA_DAS_TAREFAS = 'GET /v1/minhas-atividades'")
+    expect(script).toContain('export const P95_MAXIMO_DO_LOGIN_MS = 1_000')
+  })
+
+  it('as duas leituras entram em autenticada_duracao com a tag name da rota, e a página vazia conta como resposta inesperada', () => {
+    expect(script).toContain('duracaoAutenticada.add(resposta.timings.duration, { grupo, name: nome })')
+    expect(script).toContain("autenticada(token, grupo, '/v1/eu', ROTA_DO_EU)")
+    expect(script).toContain("autenticada(token, grupo, '/v1/minhas-atividades', ROTA_DAS_TAREFAS)")
+    expect(script).toContain("itens.length > 0) ? 0 : 1, { grupo, status: 'pagina_vazia' }")
+    // Só o aluno tem Início: a conta de matrícula lê as duas rotas, e a da equipe, não.
+    expect(script).toContain("if (conta.matricula !== undefined) leituraDoInicio(token, 'rajada')")
   })
 })

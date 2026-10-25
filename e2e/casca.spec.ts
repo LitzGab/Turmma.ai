@@ -677,7 +677,8 @@ const ALTURA_BAIXA_PX = 600
 
 const PAPEIS_DA_CASCA: readonly { readonly papel: PapelDaCasca; readonly navegacoes: readonly string[]; readonly ausentes: readonly string[]; readonly primeiro: string }[] = [
   { papel: 'professor', navegacoes: ['Seções', 'Sua conta'], ausentes: ['Seu time', 'Rodapé'], primeiro: 'Início' },
-  { papel: 'aluno', navegacoes: ['Seções', 'Rodapé'], ausentes: ['Seu time', 'Sua conta'], primeiro: 'Tutor' },
+  // X4 (2.0): o aluno tem Início, Tarefas e Eu, e o rodapé dele é vazio (`RODAPE_DA_LATERAL.aluno`), então a casca não desenha "Rodapé".
+  { papel: 'aluno', navegacoes: ['Seções'], ausentes: ['Seu time', 'Rodapé', 'Sua conta'], primeiro: 'Início' },
   { papel: 'coordenacao', navegacoes: ['Seções'], ausentes: ['Seu time', 'Rodapé', 'Sua conta'], primeiro: 'Painel' },
 ]
 

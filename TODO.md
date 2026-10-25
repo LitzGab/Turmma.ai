@@ -130,6 +130,19 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Infra e operação
 
+- [ ] **(Telas do aluno, 3.0) A carga da rajada de login, passada pelo seed** (`revisor-geral` e `infra-guardian`, 1ª rodada): em
+      `infra/scripts/carga-login.ts` o ano letivo e as datas do seed são fixos em 2026 (`matriculaSintetica` também); só importa
+      quando a carga rodar depois de 2026. `semearTurmasEAtividades` recebe `pool` e o resto usa `banco` (duas conexões no mesmo seed);
+      o seed só tem atividade com `avaliativa=false`. Na mesma passada: dar a `GET /v1/eu` limite próprio no k6, simétrico ao de
+      `minhas-atividades` (hoje entra só no limite de todas as autenticadas; o spec 7c pede o próprio só para as tarefas), e, se a
+      validação quiser, conferir que os itens da página são da escola de quem entrou (`tenancy-guardian`, 1ª)
+- [ ] **(Telas do aluno, 3.0) A vitrine cheia semeia atividade aplicada** (`frontend-reviewer`, `conformidade-reviewer`,
+      `privacy-guardian` e `test-engineer`, 1ª a 3ª): `tools/vitrine/` não semeia nenhuma, e a foto do Início só mostra o vazio.
+      Semear uma atividade aplicada, uma delas avaliativa e uma com título sem espaço (para a foto do celular mostrar a quebra a
+      360 px), antes de o Validador fotografar a spec; a medida de 44 px do título entra junto, com `boundingBox()` no e2e
+- [ ] **(Telas do aluno, 3.0) O recomeço do Início está duplicado** em `e2e/aluno-inicio.spec.ts` e `e2e/minha-turma.spec.ts`
+      (`test-engineer`, 1ª): apagar um dos dois numa passada de e2e (dono: quem tocar `minha-turma.spec.ts`)
+
 - [ ] **(Telas do aluno, 1.0) `lock_timeout` curto na gravação do `GET /v1/eu`** (`infra-guardian`, 1ª rodada): a gravação da linha da sessão,
       disparada por data de outra escola, espera a trava da linha sem prazo próprio; transação longa que a segure pendura o `GET`.
       Muda comportamento: abrir só se o painel "Datas da introdução que não gravaram" mostrar falhas junto com latência alta do `/v1/eu`.

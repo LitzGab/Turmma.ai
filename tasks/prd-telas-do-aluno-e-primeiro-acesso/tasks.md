@@ -21,7 +21,7 @@
   - [ ] 2.5 `docs/interface.md` 11.1 e `docs/glossario.md`
   - [ ] 2.6 Testes: os lugares, cada endereço antigo, o redirecionamento, "Sair" e a segunda pessoa
 
-- [ ] **3.0 — O Início mostra o Tutor, a faixa de supervisão e as próximas tarefas**
+- [x] **3.0 — O Início mostra o Tutor, a faixa de supervisão e as próximas tarefas**
   - [ ] 3.1 O seed de `infra/scripts/carga-login.ts` com ano em curso, turma e atividades, e `infra/k6/login-7h30.js`: o aluno faz `/v1/eu` e `minhas-atividades` depois do login, com o p95 das autenticadas valendo na rajada
   - [ ] 3.2 A tela: saudação fixa, faixa presa, "Para fazer", os caminhos até o Tutor e o aviso da avaliação (sem `tutor/conversa`)
   - [ ] 3.3 Testes: os quatro estados, a rede sem `tutor/conversa`, a avaliativa, o aluno sem turma, a varredura de texto e o k6

@@ -16,6 +16,16 @@ prepararTela()
 
 const REQUISICAO = '0190f5a0-0000-7000-8000-000000000001'
 const NAO_ACHADA = { status: 404, corpo: { erro: { codigo: 'NAO_ENCONTRADO', mensagem: 'x', requisicaoId: REQUISICAO } } } as const
+/** O `/v1/eu` que o Início lê para a saudação: o desvio da entrada já o leu, e aqui a rota abre direto. */
+const EU_DE_TESTE = {
+  usuarioId: '0192a4c0-5b1e-7c3d-8e4f-0000000000e1',
+  papel: 'aluno',
+  nome: 'Ana Sintética',
+  escola: { id: '0192a4c0-5b1e-7c3d-8e4f-0000000000e2', nome: 'Escola sintética', slug: 'escola-sintetica' },
+  inatividadeMin: 20,
+  introducaoVistaEm: '2026-10-01T12:00:00.000Z',
+  acessos: [],
+}
 
 function abrir(caminho: string) {
   const localizacao = memoryLocation({ path: caminho, record: true })
@@ -41,11 +51,12 @@ describe('os endereços do aluno', () => {
 
   it('"/aluno/inicio" abre o Início', async () => {
     const rede = redeFalsa()
+    rede.responderPor('/v1/eu', { status: 200, corpo: EU_DE_TESTE })
     rede.responderPor('/v1/minhas-atividades', { status: 200, corpo: { itens: [] } })
     abrir('/aluno/inicio')
     expect(await screen.findByRole('heading', { level: 1, name: 'Início' })).toBeTruthy()
     // A leitura que o Início faz foi respondida de verdade: o vazio, e não o erro de uma chamada sem resposta preparada.
-    expect(await screen.findByText('Nenhuma atividade para pedir ajuda agora')).toBeTruthy()
+    expect(await screen.findByText('Nenhuma tarefa por agora')).toBeTruthy()
     expect(screen.queryByRole('alert')).toBeNull()
   })
 
