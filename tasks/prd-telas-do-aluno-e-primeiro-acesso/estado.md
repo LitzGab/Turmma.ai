@@ -6,9 +6,9 @@
   `spec/telas-do-aluno-e-primeiro-acesso--congelada` (local, `1477850`, a 1.0 de antes), só para consulta ao refazer a 1.0
 - **Conferência do Arquiteto (24/10, `341deca`):** sem BLOQUEIO, nada de desenho nem de critério do PRD (techspec §12c); caminhos,
   nomes (D81) e arquivos previstos alinhados ao código depois da X5 e da X7, em dez `_task.md` (a 7.0 não precisou)
-- **Espero:** linha 1 ociosa (nada parte: a 8.0 espera a 7.0); linha 3 a 6.0 (1ª tentativa, porte grande, desde ~05:50); linha 2 a 7.0 (1ª tentativa, porte grande, desde ~06:05; DIVERGÊNCIA de desenho às ~06:50, `trabalhos()` da memória do tutor não filtra por turma no aluno transferido: BLOQUEIO do Arquiteto às ~07:00, parada aberta em "Esperando o Joaquim"; a 7.0 espera na árvore, portão verde)
+- **Espero:** linhas 1 e 3 ociosas (nada parte: a 8.0 espera a 7.0); linha 2 a 7.0 (1ª tentativa, porte grande, desde ~06:05; DIVERGÊNCIA de desenho às ~06:50, `trabalhos()` da memória do tutor não filtra por turma no aluno transferido: BLOQUEIO do Arquiteto às ~07:00, parada aberta em "Esperando o Joaquim"; a 7.0 espera na árvore, portão verde)
 - **Devo ainda:** no fechamento, somar ao item "Três testes com prazo apertado na esteira" do `TODO.md` (correção M5 da X7): a esteira da `develop` `40144205508` caiu no e2e 2/7 (`e2e/operacao-convite-coordenacao.spec.ts`, W1/W6/W10 e W3 no chromebook, elemento que não apareceu) e ficou verde na 2ª tentativa, sem mudança de código (24/10 ~23:45); e levar ao `TODO.md` as quatro primeiras linhas de "Recomendações sem aplicar" de `tasks/correcoes/2026-10-25-montar-arquivo-renova-validade.md` (janela de corrida guarda/gravação, registro em `docs/lgpd.md` e no runbook, marcador `arquivo_montado_em`; a do `doPedido` saiu, coberta pela correção `2026-10-25-testes-do-arquivo-do-titular`), mais o achado do Implementador 2: o `-t` do vitest lê parênteses do nome do teste como regex, e a mutação fica "verde" sem rodar caso
-- **Base:** `spec/telas-do-aluno-e-primeiro-acesso` em `15c9bbb` (encontro da 3.0; esteira verde em `f28ed6a`, execução `40178723579`, que tirou do vermelho a `40175702471`)
+- **Base:** `spec/telas-do-aluno-e-primeiro-acesso` em `bd52949` (encontro da 6.0; esteira dele rodando, execução `40185061855`, veredito no próximo encontro)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -21,6 +21,7 @@
 | 5.0 (linha 3) | `fd8f10a` (spec em `c348788`) | Sonnet 5.5 | 3 (conformidade-reviewer na 3ª, depois de reprovar na 2ª; test-engineer na 2ª; os cinco outros na 1ª) | encontro e verificação da soma sem conflito; 46 fotos da galeria, cheia e vazia, vistas na 2ª rodada |
 | correção `2026-10-25-rodape-da-casca-do-aluno` (linha 2) | `84fa5ff` (spec em `f28ed6a`) | Sonnet 5.5 | 1 (os seis revisores aprovaram na 1ª) | da 2.0: o W12 do aluno em `e2e/casca.spec.ts` ainda esperava o Rodapé e o "Tutor"; a web não mudou; encontro e verificação da soma sem conflito |
 | 3.0 (linha 1) | `fca784a` (spec em `15c9bbb`) | Sonnet 5.5 | 3 (os sete revisores aprovaram na 3ª) | encontro e verificação da soma sem conflito; fora dos previstos: `aluno-tutor`, `casca-no-celular` e `minha-turma.spec`, `rotas.test.tsx`, `carga-login.test.ts` (consequência do novo Início); 3 linhas novas no `TODO.md`; a vitrine cheia não semeia atividade, o estado com tarefas só foi visto por foto temporária do Implementador |
+| 6.0 (linha 3) | `622614a` (spec em `bd52949`) | Sonnet 5.5 | 2 (test-engineer e revisor-geral na 2ª; os cinco outros na 1ª) | encontro e verificação da soma sem conflito; a forma Entregue só foi vista pelo e2e, fica para o Validador conferir na tela; divergências registradas no documento e na techspec: `nome-dos-chunks.ts` (CSS conta como peça) e a condição `resultado.tipo !== 'pronto'` |
 
 ## Esperando o Joaquim
 ### 25/10/2026 ~07:00 — X4 tarefa 7.0 (linha 2), BLOQUEIO do Arquiteto
