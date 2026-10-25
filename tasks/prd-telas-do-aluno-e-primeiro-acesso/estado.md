@@ -6,9 +6,9 @@
   `spec/telas-do-aluno-e-primeiro-acesso--congelada` (local, `1477850`, a 1.0 de antes), só para consulta ao refazer a 1.0
 - **Conferência do Arquiteto (24/10, `341deca`):** sem BLOQUEIO, nada de desenho nem de critério do PRD (techspec §12c); caminhos,
   nomes (D81) e arquivos previstos alinhados ao código depois da X5 e da X7, em dez `_task.md` (a 7.0 não precisou)
-- **Espero:** linhas 1 e 3 ociosas (nada parte: a 8.0 espera a 7.0); linha 2 a 7.0 (1ª tentativa, porte grande, desde ~06:05; DIVERGÊNCIA de desenho às ~06:50, `trabalhos()` da memória do tutor não filtra por turma no aluno transferido: BLOQUEIO do Arquiteto às ~07:00, parada aberta em "Esperando o Joaquim"; a 7.0 espera na árvore, portão verde)
+- **Espero:** linhas 1 e 3 ociosas (nada parte: a 8.0 espera a 7.0); linha 2 a 7.0 (1ª tentativa, porte grande, desde ~06:05; DIVERGÊNCIA de desenho às ~06:50, `trabalhos()` da memória do tutor não filtra por turma no aluno transferido: BLOQUEIO do Arquiteto às ~07:00, respondido A pelo Joaquim às ~07:25; PRD §7 corrigido pelo Arquiteto em `9e44543`; `PEDIDO de retomada` ao Implementador 2 às ~07:35 com o caso de integração novo, em `.processo/ordens/retomada-7_task-decisao-A.md` da L2)
 - **Devo ainda:** no fechamento, somar ao item "Três testes com prazo apertado na esteira" do `TODO.md` (correção M5 da X7): a esteira da `develop` `40144205508` caiu no e2e 2/7 (`e2e/operacao-convite-coordenacao.spec.ts`, W1/W6/W10 e W3 no chromebook, elemento que não apareceu) e ficou verde na 2ª tentativa, sem mudança de código (24/10 ~23:45); e levar ao `TODO.md` as quatro primeiras linhas de "Recomendações sem aplicar" de `tasks/correcoes/2026-10-25-montar-arquivo-renova-validade.md` (janela de corrida guarda/gravação, registro em `docs/lgpd.md` e no runbook, marcador `arquivo_montado_em`; a do `doPedido` saiu, coberta pela correção `2026-10-25-testes-do-arquivo-do-titular`), mais o achado do Implementador 2: o `-t` do vitest lê parênteses do nome do teste como regex, e a mutação fica "verde" sem rodar caso
-- **Base:** `spec/telas-do-aluno-e-primeiro-acesso` em `bd52949` (encontro da 6.0; esteira dele rodando, execução `40185061855`, veredito no próximo encontro)
+- **Base:** `spec/telas-do-aluno-e-primeiro-acesso` em `9e44543` (PRD §7 do Arquiteto, sobre o encontro da 6.0 em `bd52949`; esteira dele rodando, execução `40185061855`, veredito no próximo encontro)
 
 ## Concluídas
 | Tarefa | Commit | Modelo | Rodadas | Observação |
@@ -25,6 +25,7 @@
 
 ## Esperando o Joaquim
 ### 25/10/2026 ~07:00 — X4 tarefa 7.0 (linha 2), BLOQUEIO do Arquiteto
+**RESPONDIDA em 25/10/2026 ~07:25 pelo Joaquim, no terminal do Orquestrador: A.** O transferido continua vendo a própria tarefa corrigida da turma antiga; o Arquiteto corrige o PRD §7 no andar da spec (só o `prd.md`, e a techspec se repetir; o `7_task.md` está alterado na árvore da L2 e não é tocado no andar), e a 7.0 retoma com o caso de integração novo.
 Decisão: o aluno transferido de turma no mesmo ano continua vendo em Eu ("Como estou indo") a tarefa corrigida da turma antiga?
 Contexto: a memória do Tutor (`trabalhos()`) filtra por escola, ano e aluno, não por turma; o PRD §7 diz "não aparece, como hoje", e o "como hoje" está errado. Triagem em `.processo/ordens/triagem-divergencia-7_task.md` do checkout da L2.
 Opções: A) aceitar: muda o PRD §7, a 7.0 sai como está e ganha um caso de integração novo | B) correção na API cortando pela turma do vínculo, e o Tutor também esquece a tarefa da turma antiga
