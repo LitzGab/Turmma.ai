@@ -52,37 +52,6 @@ export function argumentosGitleaks(repositorio: string, arvoreDeTrabalho?: Arvor
   ]
 }
 
-/**
- * O gitleaks sobre uma pasta de arquivos, e não sobre o histórico: é como o portão local olha o que ainda não tem
- * commit. `git` só vê commit; sem isto, o segredo escrito na tarefa passaria pelo portão dela e só seria visto depois
- * de commitado e enviado, quando já é incidente. A pasta entra como diretório de trabalho, para o caminho de cada
- * arquivo sair relativo e as exceções por caminho do `.gitleaks.toml` valerem.
- */
-export function argumentosGitleaksDaPasta(pasta: string, configuracao: string): string[] {
-  return [
-    'run',
-    '--rm',
-    '--network',
-    'none',
-    '--volume',
-    `${pasta.replace(/\/+$/, '')}:/alterados:ro`,
-    '--volume',
-    `${configuracao}:/gitleaks.toml:ro`,
-    '--workdir',
-    '/alterados',
-    IMAGEM_GITLEAKS,
-    'dir',
-    '--no-banner',
-    '--no-color',
-    '--redact',
-    '--exit-code',
-    '1',
-    '--config',
-    '/gitleaks.toml',
-    '.',
-  ]
-}
-
 export const etapaSegredos: Etapa = {
   nome: 'segredo commitado (gitleaks)',
   comando: 'docker',

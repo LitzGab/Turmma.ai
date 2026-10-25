@@ -2023,6 +2023,15 @@ Ficam, de antes da retro:
       mas um caso com `fetch` rejeitado fecha a dúvida. Entra na tarefa que tocar `Atividade.test.tsx` ou a `redeFalsa` (dono:
       Arquiteto; origem: `6_task.md`, `test-engineer` 1ª)
 
+- [ ] **(gitleaks na pasta, 25/10/2026) A cópia temporária do `guarda:segredo` é legível por qualquer usuário da máquina:**
+      `pastaComoRepositorio` (`tools/ci/pasta-como-repositorio.ts`) faz `chmod -R a+rX` para o usuário do contêiner do gitleaks
+      ler a pasta, e a pasta tem o conteúdo inteiro dos arquivos alterados até o fim da varredura. Efeito pequeno, e já era
+      assim antes da correção `2026-10-25-gitleaks-pasta-perdoa-documento-de-tarefa`. Limitar ao UID da imagem fixada exige
+      medir qual ele é; muda comportamento, por isso não entrou na correção (`privacy-guardian`, 1ª)
+- [ ] **(gitleaks na pasta, 25/10/2026) Comentário velho em `tools/ci/etapas-de-guarda.ts`:** o JSDoc de `GuardaDaEsteira` diz que
+      `tools/ci/segredo.ts` monta as etapas do segredo; desde a mesma correção elas moram em `tools/ci/etapas-do-segredo.ts`.
+      Uma linha de comentário; mexer no arquivo caducaria quem já aprovou (`revisor-geral`, 2ª)
+
 Saíram na retro da X7, com o motivo em `tasks/prd-harness/retro.md` ("Tirar do `TODO.md`"): o resto das recomendações da
 revisão da spec (rodada 4), da 2.0, da 5.0, da 7.0, da 11.0, da 12.0 (o `catch` do `rev-list`), da 17.0, da 18.0 e da 19.0,
 e os menores m2 e m5 da validação.
