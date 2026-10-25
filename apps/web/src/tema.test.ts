@@ -95,9 +95,10 @@ describe('o <script> do index.html', () => {
     const janela: Record<string, unknown> = {
       localStorage: {
         getItem: (chave: string) => {
-          expect(chave).toBe('educa.aparencia')
+          // O mesmo script lê também a letra do aluno (`letra.test.ts` a confere): aqui ela nunca foi escolhida.
+          expect(['educa.aparencia', 'educa.letra']).toContain(chave)
           if (guardado === 'lança') throw new Error('armazenamento recusado')
-          return guardado
+          return chave === 'educa.letra' ? null : guardado
         },
       },
     }

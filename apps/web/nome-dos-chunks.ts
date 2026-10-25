@@ -95,6 +95,7 @@ const PASTA_DAS_PECAS_DE_IA = '/apps/web/src/componentes/ui/ia/'
  * primeiro carregamento, em vez de deixá-la passar sem ser medida.
  */
 export const PECAS_FORA_DA_ENTRADA = [
+  'ajustes/TamanhoDaLetra',
   'introducao/Balao',
   'introducao/Introducao',
   'introducao/TelaDeFoco',

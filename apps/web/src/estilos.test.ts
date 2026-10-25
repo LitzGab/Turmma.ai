@@ -704,8 +704,10 @@ describe('a tipografia t-* do estilos.css (9.2 do docs/interface.md)', () => {
 
   it.each(tipografiaDoDocumento())('$classe tem o tamanho, a altura, o peso e a caixa do documento', ({ classe, tamanho, altura, peso, caixa }) => {
     const regra = declaracoesDe(`.${classe}`)
-    expect(regra.get('font-size')).toBe(`${String(tamanho)}px`)
-    expect(regra.get('line-height')).toBe(`${String(altura)}px`)
+    // O documento diz px e o CSS diz `rem`: nos 16 px de fábrica são o mesmo número, e é a `rem` que faz o texto acompanhar o
+    // tamanho da letra do aluno (8.0). O 17 px de `t-corpo` é 1.0625rem, e o `rem` de 16 px não pode voltar a ser px.
+    expect(regra.get('font-size')).toBe(`${String(tamanho / 16)}rem`)
+    expect(regra.get('line-height')).toBe(`${String(altura / 16)}rem`)
     expect(regra.get('font-weight')).toBe(String(peso))
     const espacamento = /([−-]?\d+,\d+)em/.exec(caixa)?.[1]
     expect(regra.get('letter-spacing')).toBe(espacamento === undefined ? undefined : `${espacamento.replace('−', '-').replace(',', '.').replace(/^(-?)0\./, '$10.')}em`)
@@ -713,8 +715,23 @@ describe('a tipografia t-* do estilos.css (9.2 do docs/interface.md)', () => {
     expect(regra.get('font-variant-numeric')).toBe(caixa.includes('tabular-nums') ? 'tabular-nums' : undefined)
   })
 
+  it('o tamanho da letra do aluno (8.0): Grande é 112,5% e Maior 125% no <html>, só com o atributo, e a tipografia é em rem para acompanhar', () => {
+    expect(declaracoesDe(":root[data-letra='grande']").get('font-size')).toBe('112.5%')
+    expect(declaracoesDe(":root[data-letra='maior']").get('font-size')).toBe('125%')
+    // Sem o atributo, nenhuma regra mexe no tamanho do <html>: Padrão são os 16 px de fábrica.
+    expect(declaracoesDe(':root').get('font-size')).toBeUndefined()
+    expect(declaracoesDe('html').get('font-size')).toBeUndefined()
+    // Texto em px não acompanha o <html>: nenhuma classe t-* o escreve.
+    for (const { classe } of tipografiaDoDocumento()) {
+      const regra = declaracoesDe(`.${classe}`)
+      expect(regra.get('font-size'), classe).toMatch(/rem$/)
+      expect(regra.get('line-height'), classe).toMatch(/rem$/)
+    }
+  })
+
   it('o piso é 14 px: nenhuma classe t-* desce de 13 px, e só o t-selo tem 13', () => {
-    const tamanhos = tipografiaDoDocumento().map(({ classe }) => [classe, Number.parseFloat(declaracoesDe(`.${classe}`).get('font-size') ?? '0')] as const)
+    // Em `rem`: nos 16 px de fábrica, vezes 16 são os px do documento.
+    const tamanhos = tipografiaDoDocumento().map(({ classe }) => [classe, Number.parseFloat(declaracoesDe(`.${classe}`).get('font-size') ?? '0') * 16] as const)
     expect(tamanhos.filter(([, tamanho]) => tamanho < 13)).toEqual([])
     expect(tamanhos.filter(([, tamanho]) => tamanho < 15).map(([classe]) => classe)).toEqual(['t-selo'])
   })

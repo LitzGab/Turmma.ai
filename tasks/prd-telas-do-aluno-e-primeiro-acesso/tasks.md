@@ -49,11 +49,11 @@
   - [x] 7.2 A tela: cartão da turma, "Como estou indo" e as linhas
   - [x] 7.3 Testes: os quatro estados, sem turma no ano, só correção aprovada, nada de colega
 
-- [ ] **8.0 — O aluno escolhe o tamanho da letra, em Ajustes**
-  - [ ] 8.1 `letra.ts`, o script em linha e o CSS do `<html>`
-  - [ ] 8.2 `TamanhoDaLetra` e o diálogo "Ajustes" em Eu, com a `Aparencia`
-  - [ ] 8.3 `docs/interface.md`
-  - [ ] 8.4 Testes: antes do primeiro quadro, só grava ao escolher, armazenamento recusando, 360 px com Maior
+- [x] **8.0 — O aluno escolhe o tamanho da letra, em Ajustes**
+  - [x] 8.1 `letra.ts`, o script em linha e o CSS do `<html>`
+  - [x] 8.2 `TamanhoDaLetra` e o diálogo "Ajustes" em Eu, com a `Aparencia`
+  - [x] 8.3 `docs/interface.md`
+  - [x] 8.4 Testes: antes do primeiro quadro, só grava ao escolher, armazenamento recusando, 360 px com Maior
 
 - [ ] **9.0 — A introdução do aluno, com o aviso de privacidade em linguagem de 11 anos**
   - [ ] 9.1 `aviso-de-privacidade.ts` e `textos-da-introducao.ts`, em `areas/aluno/introducao/`, com teste

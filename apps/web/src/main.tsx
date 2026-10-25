@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { aoAbrirSessao, aoTrocarDeSessao } from './api/sessao'
 import { criarClienteDeConsultas } from './api/cliente-de-consultas'
 import './estilos.css'
+import { iniciarLetra, useTamanhoDaLetra } from './letra'
 import { Rotas } from './rotas'
 import { iniciarTema } from './tema'
 
@@ -15,6 +16,9 @@ if (!elementoRaiz) {
 // O tema já foi escrito no `<html>` pelo script do `index.html`, antes do primeiro quadro. Aqui a página passa a acompanhar
 // o aparelho (em Sistema) e as outras abas, em toda tela, também nas públicas, que não têm controle (`tema.ts`).
 iniciarTema()
+// A letra do aluno (8.0): o `index.html` já escreveu o `data-letra` no primeiro quadro, e quem o mantém é o `LetraDoAluno`, mais abaixo. Aqui
+// a página só passa a acompanhar as outras abas. Não lê nem grava nada: a chave só é escrita quando o aluno escolhe.
+iniciarLetra()
 
 const clienteConsultas = criarClienteDeConsultas()
 
@@ -39,9 +43,19 @@ aoAbrirSessao(() => {
   void clienteConsultas.invalidateQueries()
 })
 
+/**
+ * Mantém o `data-letra` do aluno (`letra.ts`). Mora aqui, na raiz, e não na área do aluno: a página aberta em `/aluno` sem
+ * sessão vai à entrada sem montar a área, e o atributo do primeiro quadro precisa sair junto.
+ */
+function LetraDoAluno() {
+  useTamanhoDaLetra()
+  return null
+}
+
 createRoot(elementoRaiz).render(
   <StrictMode>
     <QueryClientProvider client={clienteConsultas}>
+      <LetraDoAluno />
       <Rotas />
     </QueryClientProvider>
   </StrictMode>,
