@@ -26,11 +26,11 @@
   - [ ] 3.2 A tela: saudação fixa, faixa presa, "Para fazer", os caminhos até o Tutor e o aviso da avaliação (sem `tutor/conversa`)
   - [ ] 3.3 Testes: os quatro estados, a rede sem `tutor/conversa`, a avaliativa, o aluno sem turma, a varredura de texto e o k6
 
-- [ ] **4.0 — Tarefas em três grupos: Para fazer, Entregues e Corrigidas**
-  - [ ] 4.1 `separarAtividades` em três grupos e os textos de estado
-  - [ ] 4.2 `materia.ts`: do nome da disciplina para a cor e o ícone do ladrilho
-  - [ ] 4.3 A lista com `Linha` e `Ladrilho`, o vazio de cada grupo e "Ver mais tarefas"
-  - [ ] 4.4 Testes: a separação, os quatro estados, "Corrigida" só com correção aprovada
+- [x] **4.0 — Tarefas em três grupos: Para fazer, Entregues e Corrigidas**
+  - [x] 4.1 `separarAtividades` em três grupos e os textos de estado
+  - [x] 4.2 `materia.ts`: do nome da disciplina para a cor e o ícone do ladrilho
+  - [x] 4.3 A lista com `Linha` e `Ladrilho`, o vazio de cada grupo e "Ver mais tarefas"
+  - [x] 4.4 Testes: a separação, os quatro estados, "Corrigida" só com correção aprovada
 
 - [x] **5.0 — As peças da introdução: tela de foco, balão, comemoração e a onça em três poses**
   - [ ] 5.1 As poses acenando, apontando e comemorando em `componentes/ui/onca/`, com o mesmo rosto neutro

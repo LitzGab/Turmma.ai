@@ -817,7 +817,8 @@ vermelho porque caiu, e a barra de acerto é neutra.
 
 - **Matérias:** Matemática azul · Língua Portuguesa roxo · Ciências e Biologia verde · Química
   turquesa · Física anil · História e Filosofia amarelo · Geografia e Sociologia lima · Língua
-  Inglesa vermelho · Arte e Educação Física rosa. O laranja nunca vai em matéria
+  Inglesa vermelho · Arte e Educação Física rosa. O laranja nunca vai em matéria. A disciplina que a escola
+  cadastra com outro nome (Robótica) cai na reserva: `anil` com um livro aberto (`areas/aluno/materia.ts`)
 - **Agentes:** Tutor laranja · Assistente de ensino azul · Analista anil (9.7)
 - **Tipos da fila** (X2 e X3): cada tipo de item tem a família dele, fixa
   (`tasks/prd-pele-e-casca/mockup.md`, seção 1.2)
