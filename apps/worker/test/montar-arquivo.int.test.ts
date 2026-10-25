@@ -118,12 +118,19 @@ describe('titular.montar-arquivo', () => {
     await Promise.all([rodar(escolaId, armazem, { pedidoId }), rodar(escolaId, armazem, { pedidoId })])
     expect((await linhasDoArquivo(pedidoId)).map(({ versao }) => versao)).toEqual(['completa', 'coordenacao'])
     expect(armazem.objetos.size).toBe(2)
-    // Cada job gravou as duas versões: o segundo sobrescreveu o primeiro, e nenhum erro subiu.
-    expect(armazem.guardadas).toBe(4)
+    // O segundo job ou sobrescreveu o objeto do primeiro (as duas leituras do estado vieram antes de qualquer gravação) ou nem chegou a
+    // montar (viu o pedido já `pronto`): nos dois casos, nenhum erro subiu e a linha de cada versão é a de um job só. Os dois jobs usam o
+    // mesmo relógio, então este caso prova a unicidade da linha e não a validade: quem prova que o job que perde a disputa não a renova é
+    // o caso `o job que perde a disputa pelo pedido…`, mais abaixo.
+    expect(armazem.guardadas).toBeGreaterThanOrEqual(2)
+    for (const linha of await linhasDoArquivo(pedidoId)) {
+      expect(linha.pronto_em.getTime()).toBe(AGORA.getTime())
+      expect(linha.expira_em.getTime()).toBe(AGORA.getTime() + 7 * UM_DIA_MS)
+    }
     expect(await estadoDo(pedidoId)).toBe('pronto')
   })
 
-  it('o job repetido depois de pronto grava a mesma linha de novo: uma só por versão, a validade conta de novo, e o pedido concluído continua concluído', async () => {
+  it('o job repetido depois de pronto e concluído não regrava a linha nem o objeto: o `pronto_em` e a validade seguem os do primeiro job', async () => {
     const { escolaId, pedidoId } = await pedidoNovo()
     const armazem = new ArmazemEmMemoria()
     await rodar(escolaId, armazem, { pedidoId })
@@ -136,11 +143,69 @@ describe('titular.montar-arquivo', () => {
     }
     const linhas = await linhasDoArquivo(pedidoId)
     expect(linhas).toHaveLength(1)
-    expect(linhas[0]?.pronto_em.getTime()).toBe(AGORA.getTime() + UM_DIA_MS)
-    expect(linhas[0]?.expira_em.getTime()).toBe(AGORA.getTime() + 8 * UM_DIA_MS)
+    expect(linhas[0]?.pronto_em.getTime()).toBe(AGORA.getTime())
+    expect(linhas[0]?.expira_em.getTime()).toBe(AGORA.getTime() + 7 * UM_DIA_MS)
+    expect(armazem.guardadas).toBe(1)
     expect(await estadoDo(pedidoId)).toBe('concluido')
-    // O log diz que o pedido já não estava em preparação: o arquivo foi gravado, e o estado, não trocado.
-    expect(log.registros().filter((linha) => linha['evento'] === 'titular.arquivo_pronto').at(-1)).toMatchObject({ status: 'estado_ja_nao_era_em_preparacao' })
+    // O log diz que o arquivo já estava montado: nada foi montado.
+    expect(log.registros().filter((linha) => String(linha['evento']).startsWith('titular.arquivo_')).at(-1)).toMatchObject({ evento: 'titular.arquivo_ja_montado' })
+  })
+
+  it('a reentrega de um pedido `pronto` cujo objeto e cuja linha já foram apagados pela validade vencida não recria nenhum dos dois', async () => {
+    const { escolaId, pedidoId } = await pedidoNovo()
+    const armazem = new ArmazemEmMemoria()
+    await rodar(escolaId, armazem, { pedidoId })
+    // O que a rotina da escola faz com o arquivo vencido: o objeto, e só depois a linha.
+    armazem.objetos.clear()
+    await bancada.pool.query('delete from arquivo_titular where pedido_id = $1', [pedidoId])
+    await rodar(escolaId, armazem, { pedidoId })
+    expect(armazem.objetos.size).toBe(0)
+    expect(armazem.guardadas).toBe(1)
+    expect(await linhasDoArquivo(pedidoId)).toEqual([])
+    expect(await estadoDo(pedidoId)).toBe('pronto')
+  })
+
+  it('o pedido que a coordenação concluiu antes de o job rodar é montado: a linha nasce, e o pedido continua `concluido`', async () => {
+    const { escolaId, pedidoId } = await pedidoNovo()
+    await bancada.pool.query(`update pedido_titular set estado = 'concluido', concluido_em = now(), concluido_por = registrado_por where id = $1`, [pedidoId])
+    const armazem = new ArmazemEmMemoria()
+    await rodar(escolaId, armazem, { pedidoId })
+    const linhas = await linhasDoArquivo(pedidoId)
+    expect(linhas).toHaveLength(1)
+    expect(linhas[0]?.pronto_em.getTime()).toBe(AGORA.getTime())
+    expect(armazem.objetos.size).toBe(1)
+    expect(await estadoDo(pedidoId)).toBe('concluido')
+  })
+
+  it('o job que perde a disputa pelo pedido porque o outro terminou enquanto ele montava deixa o `pronto_em`, a validade e o `apagado_em` de quem gravou primeiro', async () => {
+    const { escolaId, pedidoId } = await pedidoNovo()
+    const armazem = new ArmazemEmMemoria()
+    const original = armazem.guardar.bind(armazem)
+    let ganhador = false
+    armazem.guardar = async (chave, conteudo) => {
+      await original(chave, conteudo)
+      if (ganhador) return
+      // Enquanto o job de fora monta, o outro job do mesmo pedido termina inteiro, no instante AGORA.
+      ganhador = true
+      relogio.atual = AGORA
+      await rodar(escolaId, armazem, { pedidoId })
+      // A eliminação do titular marca o arquivo que o outro job acabou de gravar; o job de fora grava a seguir e não pode desmarcá-lo.
+      await bancada.pool.query('update arquivo_titular set apagado_em = now() where pedido_id = $1', [pedidoId])
+    }
+    relogio.atual = new Date(AGORA.getTime() + UM_DIA_MS)
+    try {
+      await rodar(escolaId, armazem, { pedidoId })
+    } finally {
+      relogio.atual = AGORA
+    }
+    const linhas = await linhasDoArquivo(pedidoId)
+    expect(linhas).toHaveLength(1)
+    expect(linhas[0]?.pronto_em.getTime()).toBe(AGORA.getTime())
+    expect(linhas[0]?.expira_em.getTime()).toBe(AGORA.getTime() + 7 * UM_DIA_MS)
+    expect([...armazem.objetos.keys()]).toEqual([`titular/${escolaId}/${pedidoId}/completa.json`])
+    expect(await estadoDo(pedidoId)).toBe('pronto')
+    const { rows } = await bancada.pool.query<{ apagado_em: Date | null }>('select apagado_em from arquivo_titular where pedido_id = $1', [pedidoId])
+    expect(rows[0]?.apagado_em).not.toBeNull()
   })
 
   it('o arquivo que a eliminação marcou `apagado_em` não é ressuscitado pelo job repetido', async () => {
