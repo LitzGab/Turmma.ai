@@ -173,11 +173,11 @@ test.describe('a casca da escola no celular', () => {
     await entrarComoAluno(page, aluno, hasTouch)
 
     await expect(page.getByRole('navigation', { name: 'Seções' })).toHaveCount(1)
-    await expect(secoes(page).getByRole('link')).toHaveText(['Tutor', 'Atividades', 'Minha turma'])
-    for (const rotulo of ['Tutor', 'Atividades', 'Minha turma']) await esperarAlvoDe44(secoes(page).getByRole('link', { name: rotulo }), rotulo)
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Tarefas', 'Eu'])
+    for (const rotulo of ['Início', 'Tarefas', 'Eu']) await esperarAlvoDe44(secoes(page).getByRole('link', { name: rotulo, exact: true }), rotulo)
 
-    await acionar(secoes(page).getByRole('link', { name: 'Tutor' }), hasTouch)
-    await expect(page).toHaveURL(/\/aluno\/tutor$/, { timeout: PRAZO_DA_ENTRADA_MS })
+    // O aluno abre no Início (X4, 2.0): a escolha da atividade e a faixa já estão ali, e o Tutor da atividade é o próximo toque.
+    await expect(page).toHaveURL(/\/aluno\/inicio$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await acionar(page.getByRole('main').getByRole('link', { name: /Lista de estequiometria/ }), hasTouch)
     await expect(page).toHaveURL(new RegExp(`/aluno/tutor/${atividade.id}$`), { timeout: PRAZO_DA_TELA_MS })
 

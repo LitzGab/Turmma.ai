@@ -1,5 +1,5 @@
 import type { PapelDeUsuario } from '@educa/shared'
-import { FolderLock, Lock, MessageCircleQuestion, School, type LucideIcon } from 'lucide-react'
+import { FolderLock, UserRound, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 // Só tipos, que o compilador apaga: o `Contador` e os ícones ilustrados são peças da entrada ou fora dela, e este arquivo
 // não importa nenhuma (o item 4 do guia acima). O que ele diz é qual ícone e qual família, e a casca é quem desenha.
@@ -67,31 +67,32 @@ export const NAVEGACAO: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao
     { rotulo: 'Ferramentas', caminho: ROTAS.ferramentas, icone: { lugar: 'ferramentas' } },
     { rotulo: 'Criados', caminho: ROTAS.criados, icone: { lugar: 'criados' }, tambemEm: [ROTAS.artefatos] },
   ],
-  // A3 e A4: Tutor, Atividades e Minha turma. "Meu desempenho" e "Avisar um adulto" nascem com a tela de cada um: nesta
-  // fatia não existem, e por isso não aparecem. "Privacidade" é do rodapé fixo (`RODAPE_DA_LATERAL`), e não desta lista. A
-  // conversa do Tutor e a atividade aberta ficam abaixo do endereço do item delas, que continua selecionado.
+  // X4 (2.0; `docs/interface.md` 11.1): Início, Tarefas e Eu. "Avisar um adulto" e "Meu desempenho" nascem com a tela de cada um
+  // (F9): nesta fatia não existem, e por isso não aparecem. O Tutor deixou de ser lugar: a escolha da atividade é o Início, e a
+  // conversa abre por ele ou por uma tarefa, de modo que `/aluno/tutor` e a conversa aberta acendem "Início". "Privacidade" é uma
+  // linha de Eu e acende Eu; "Minha turma" é o cartão de Eu. A tarefa aberta fica abaixo do endereço de Tarefas.
   aluno: [
-    { rotulo: 'Tutor', caminho: ROTAS.tutor, icone: { lucide: MessageCircleQuestion, familia: 'laranja' } },
-    { rotulo: 'Atividades', caminho: ROTAS.atividades, icone: { lugar: 'tarefas' } },
-    { rotulo: 'Minha turma', caminho: ROTAS.minhaTurma, icone: { lucide: School, familia: 'turquesa' } },
+    { rotulo: 'Início', caminho: ROTAS.inicioDoAluno, icone: { lugar: 'inicio' }, tambemEm: [ROTAS.tutor] },
+    { rotulo: 'Tarefas', caminho: ROTAS.atividades, icone: { lugar: 'tarefas' } },
+    { rotulo: 'Eu', caminho: ROTAS.euDoAluno, icone: { lucide: UserRound, familia: 'turquesa' }, tambemEm: [ROTAS.privacidadeDoAluno] },
   ],
 }
 
 /**
  * O rodapé fixo da lateral (`docs/interface.md` 11.1): os itens que ficam **embaixo**, acima da pessoa, e não entram na
- * lista de seções. Só o aluno tem rodapé, e por enquanto só com "Privacidade" (F3, 18.0), que abre "Meus dados"; "Avisar
- * um adulto" nasce com a tela dele. O item vale na lateral aberta, no trilho e na gaveta a 360 px.
+ * lista de seções. Hoje nenhum papel tem: o aluno tinha "Privacidade" (F3, 18.0), que na X4 virou uma linha de Eu. O
+ * "Sair" nunca entra aqui nem na lista: é do menu da pessoa, sempre à vista (D59).
  */
 export const RODAPE_DA_LATERAL: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao[]>> = {
   coordenador: [],
   professor: [],
-  aluno: [{ rotulo: 'Privacidade', caminho: ROTAS.privacidadeDoAluno, icone: { lucide: Lock, familia: 'verde' } }],
+  aluno: [],
 }
 
 /**
  * O que o menu da pessoa, no rodapé da lateral, leva além do "Sair" (P18; `docs/interface.md` 11.1): os links dela. O
  * "Sair" nunca entra aqui, porque é o último e está sempre à vista (D59). O professor tem "Meus dados" desde o F3 (18.0).
- * A coordenação não é titular de pedido (a API não lhe dá `meus_dados`), e o aluno acha os dados dele no rodapé fixo.
+ * A coordenação não é titular de pedido (a API não lhe dá `meus_dados`), e o aluno acha os dados dele em Eu (a linha Privacidade).
  */
 export const MENU_DA_PESSOA: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao[]>> = {
   coordenador: [],

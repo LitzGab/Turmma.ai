@@ -15,7 +15,8 @@ import {
   nomeNoSeletor,
   PRAZO_DA_ENTRADA_MS,
   esperarNovaConversa,
-  esperarAtividades,
+  esperarInicioDoAluno,
+  entrarPelaApi,
 } from './__fixtures__/casca.ts'
 import { cacheDeConsultas, semAcessosDaConta } from './__fixtures__/consultas.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
@@ -262,12 +263,11 @@ test.describe('W12: o seletor pelo teclado, pelo toque e a 360 px', () => {
 
 test.describe('recomeço da tela do seletor', () => {
   test('segunda pessoa: sai a professora de A e B, entra o aluno na mesma aba, sem seletor nem cache dela', async ({ page, hasTouch }) => {
-    const emA = await criarEquipeComSenha()
-    const emB = await criarUsuarioEmOutraEscola(emA.contaId)
-    const deA = await criarAlocacaoDoProfessor(emA.escolaId, emA.usuarioId)
-    const aluno = await criarAlunoComMatricula()
-    await entrarEmA(page, emA, hasTouch)
-    await irPelaNavegacao(page, 'Turmas', hasTouch)
+    // As preparações que não dependem uma da outra vão em paralelo: o caso gasta a da mais lenta (cada uma cria conta, com o hash da senha).
+    const [emA, aluno] = await Promise.all([criarEquipeComSenha(), criarAlunoComMatricula()])
+    const [emB, deA] = await Promise.all([criarUsuarioEmOutraEscola(emA.contaId), criarAlocacaoDoProfessor(emA.escolaId, emA.usuarioId)])
+    // A entrada da professora não é o assunto do caso: pela API, e o segundo login (o do aluno, pelo formulário) é o que cabe nos 15 s.
+    await entrarPelaApi(page, emA, '/professor/turmas', emA.usuarioId)
     await expect(page.getByRole('main')).toContainText(deA.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
     // A lista fica aberta quando ela sai: é o estado que a pessoa seguinte não pode herdar.
     await abrirSeletorDeEscola(page, hasTouch)
@@ -284,14 +284,14 @@ test.describe('recomeço da tela do seletor', () => {
     await page.getByLabel('Matrícula').fill(aluno.matricula)
     await page.getByLabel('Senha').fill(aluno.senha)
     await acionar(page, /^Entrar$/, hasTouch)
-    await esperarAtividades(page, aluno.nome)
+    await esperarInicioDoAluno(page, aluno.nome)
 
-    await abrirNavegacao(page, hasTouch)
+    // Contagem de nós, e não de nós à vista: vale com a gaveta fechada, e abri-la só gastaria o tempo do caso.
     await expect(botaoDoSeletor(page)).toHaveCount(0)
     await expect(lateral(page).getByRole('list', { name: 'Suas escolas' })).toHaveCount(0)
-    for (const daProfessora of [emA.escolaNome, emB.escolaNome, emA.redeNome, emB.redeNome, emA.nome, deA.turmaNome]) {
-      await expect(page.locator('body')).not.toContainText(daProfessora)
-    }
+    // Um só texto lido, e cada nome conferido nele: seis esperas em sequência seriam seis idas ao navegador.
+    const tela = (await page.locator('body').textContent()) ?? ''
+    for (const daProfessora of [emA.escolaNome, emB.escolaNome, emA.redeNome, emB.redeNome, emA.nome, deA.turmaNome]) expect(tela).not.toContain(daProfessora)
     const cache = semAcessosDaConta(await cacheDeConsultas(page))
     for (const daProfessora of [emA.usuarioId, emB.usuarioId, emA.escolaId, deA.turmaId]) expect(cache).not.toContain(daProfessora)
     expect(cache).toContain(aluno.usuarioId)

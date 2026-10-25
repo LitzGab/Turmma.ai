@@ -1954,6 +1954,10 @@ Ficam, de antes da retro:
       comentário do `rodarOComando` diz que ele "só devolve com ele terminado", mas ele só espera a marca ter conteúdo; (3) o helper
       `rodar` (~linha 245) e o `ambienteGit` (~linha 285) ainda usam `{ ...process.env }` e herdariam o `GIT_DIR` de um hook do git.
       Fazer na próxima correção que tocar a vigia (dono: Orquestrador; origem: a correção, `test-engineer` e `revisor-geral` 2ª)
+- [ ] **(X4, 2.0) Teste de API: encerrar a sessão duas vezes é idempotente** (`DELETE /v1/sessao` com a mesma sessão, a segunda
+      sem erro e sem rotacionar o cookie de novo). Hoje não é bug: a casca trava o segundo clique, e a web trata `NAO_AUTENTICADO`
+      como "não há o que encerrar". É teste de `apps/api`, fora dos arquivos da 2.0 (dono: Orquestrador; origem: `2_task.md`,
+      `infra-guardian` 1ª)
 
 Saíram na retro da X7, com o motivo em `tasks/prd-harness/retro.md` ("Tirar do `TODO.md`"): o resto das recomendações da
 revisão da spec (rodada 4), da 2.0, da 5.0, da 7.0, da 11.0, da 12.0 (o `catch` do `rev-list`), da 17.0, da 18.0 e da 19.0,

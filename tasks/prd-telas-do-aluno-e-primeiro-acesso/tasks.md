@@ -13,7 +13,7 @@
   - [x] 1.5 `docs/lgpd.md` (linha nova no mapa) e `docs/modelo-de-dados.md`
   - [x] 1.6 Testes: repetida, em paralelo, dois usuários da mesma escola, sem ano em curso, vínculo encerrado, duas escolas, dois papéis, arquivo do titular
 
-- [ ] **2.0 — O aluno navega por Início, Tarefas e Eu, e abre no Início**
+- [x] **2.0 — O aluno navega por Início, Tarefas e Eu, e abre no Início**
   - [ ] 2.1 Os endereços novos em `caminhos.ts` (inclusive os três `bem-vindo` e `ehTelaDeFoco`)
   - [ ] 2.2 Os três lugares em `navegacao.ts`; "Privacidade" sai do rodapé
   - [ ] 2.3 `Inicio.tsx` e `Eu.tsx` com o que já existe; `/aluno/minha-turma` redireciona; "Sair" pelo contexto da casca

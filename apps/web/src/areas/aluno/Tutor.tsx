@@ -1,6 +1,6 @@
-import { CodigoDeErro, type MinhaAtividade } from '@educa/shared'
+import { CodigoDeErro } from '@educa/shared'
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ChevronRight, CircleAlert, Eye, Hourglass, Lock, MoonStar, PauseCircle, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, CircleAlert, Hourglass, Lock, MoonStar, PauseCircle, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearch } from 'wouter'
 import { consultaMinhasAtividades } from '../../api/atividades-do-aluno'
@@ -9,19 +9,19 @@ import { emCurso } from '../../api/ciclo-de-execucao'
 import { ErroDaApi } from '../../api/cliente'
 import { useCicloDeExecucao } from '../../api/execucoes'
 import { consultaConversaDoTutor, mensagensDoTutorEmOrdem } from '../../api/tutor'
-import { caminhoDaAtividadeDoAluno, caminhoDoTutorNaAtividade } from '../../caminhos'
+import { caminhoDaAtividadeDoAluno } from '../../caminhos'
 import { BarraPresa } from '../../componentes/ui/BarraPresa'
 import { BarraRotulada } from '../../componentes/ui/BarraRotulada'
 import { Botao } from '../../componentes/ui/Botao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
-import { Faixa } from '../../componentes/ui/Faixa'
 import { AssinaturaIA } from '../../componentes/ui/ia/AssinaturaIA'
 import { CaixaPedido } from '../../componentes/ui/ia/CaixaPedido'
 import { Conversa as ListaDeMensagens, MensagemIA, MensagemPessoa, Pensando } from '../../componentes/ui/ia/Mensagem'
 import { TextoDaIA } from '../../componentes/ui/ia/TextoDaIA'
-import { CabecalhoDeSecao, Tela } from '../../componentes/ui/Tela'
+import { Tela } from '../../componentes/ui/Tela'
 import { useTituloDaTela } from '../../titulo'
-import { AVISO_DA_AVALIACAO, estaParaResponder, resumoDaAtividade } from './atividades'
+import { EscolhaDaAtividade } from './EscolhaDaAtividade'
+import { FaixaDeSupervisao } from './FaixaDeSupervisao'
 import { CICLO_DO_TUTOR, enviarPerguntaAoTutor } from './memoria-do-aluno'
 import {
   avisoDaPausa,
@@ -36,7 +36,6 @@ import {
   recusaVencida,
   TELEFONE_DO_CVV,
   temTelefone,
-  TEXTO_DA_SUPERVISAO,
   usoDoDia,
   type FalhaDaPergunta,
   type PausaDoTutor,
@@ -44,19 +43,6 @@ import {
 
 /** O aluno não alcança o título do material (`GET /v1/materiais` é do professor e da coordenação): o chip diz a página. */
 const SEM_TITULOS = {}
-
-/**
- * A faixa de supervisão, **presa no topo e sem botão de fechar** (D8; regra 70, item 4): em qualquer ponto da conversa
- * o aluno vê que o professor acompanha o uso. No celular ela fica logo abaixo da barra do menu. O fundo cheio é para a
- * conversa não aparecer por trás dela enquanto rola.
- */
-function FaixaDeSupervisao() {
-  return (
-    <div data-faixa-de-supervisao="" className="sticky top-14 z-[5] bg-fundo py-2 md:top-0">
-      <Faixa icone={Eye}>{TEXTO_DA_SUPERVISAO}</Faixa>
-    </div>
-  )
-}
 
 const ICONE_DA_PAUSA: Readonly<Record<PausaDoTutor, LucideIcon>> = { avaliacao: Lock, limite_do_dia: MoonStar, pacote_do_mes: MoonStar, fora: PauseCircle, suspenso: PauseCircle }
 
@@ -137,50 +123,6 @@ function FalhaNaConversa({ falha, aoTentarDeNovo }: { falha: FalhaDaPergunta; ao
         </Botao>
       )}
     </div>
-  )
-}
-
-/**
- * O Tutor pelo item da lateral: a conversa é por atividade, e por isso o aluno escolhe aqui **em qual atividade quer
- * ajuda**. Só as atividades dele, na ordem em que a API as entrega; sem sugestão, sem atalho que se mexe.
- */
-function EscolhaDaAtividade() {
-  const atividades = useInfiniteQuery(consultaMinhasAtividades)
-  const itens = atividades.data?.pages.flatMap((pagina) => pagina.itens) ?? []
-  return (
-    <>
-      {atividades.isPending && <EstadoCarregando rotulo="Carregando as suas atividades…" />}
-      {atividades.isError && atividades.data === undefined && (
-        <EstadoErro erro={atividades.error} tentando={atividades.isFetching} aoTentarDeNovo={() => void atividades.refetch({ cancelRefetch: false })} />
-      )}
-      {atividades.data !== undefined && itens.length === 0 && (
-        <EstadoVazio titulo="Nenhuma atividade para pedir ajuda agora" descricao="O Tutor ajuda nas atividades que quem dá a aula passa para a turma. Quando houver uma, ela aparece aqui." />
-      )}
-      {itens.length > 0 && (
-        <section aria-labelledby="titulo-escolha" className="flex min-w-0 flex-col gap-3">
-          <CabecalhoDeSecao id="titulo-escolha" titulo="Em qual atividade você quer ajuda?" />
-          <ul className="flex min-w-0 flex-col gap-2">
-            {itens.map((atividade: MinhaAtividade) => (
-              <li key={atividade.id}>
-                <Link to={caminhoDoTutorNaAtividade(atividade.id)} className="flex min-h-11 min-w-0 items-center gap-3 rounded-cartao border border-linha bg-superficie p-4 text-tinta hover:bg-realce-suave">
-                  <span className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span className="min-w-0 text-base font-semibold break-words">{atividade.titulo}</span>
-                    <span className="min-w-0 text-sm break-words text-sutil">{resumoDaAtividade(atividade)}</span>
-                    {atividade.avaliativa && estaParaResponder(atividade) && <span className="min-w-0 text-sm break-words text-apoio">{AVISO_DA_AVALIACAO}</span>}
-                  </span>
-                  <ChevronRight aria-hidden="true" size={20} strokeWidth={1.75} className="shrink-0 text-sutil" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-      {atividades.hasNextPage && (
-        <Botao variante="secundario" onClick={() => void atividades.fetchNextPage()} disabled={atividades.isFetchingNextPage} className="self-center">
-          {atividades.isFetchingNextPage ? 'Carregando…' : 'Ver mais atividades'}
-        </Botao>
-      )}
-    </>
   )
 }
 
@@ -266,7 +208,7 @@ function ConversaComOTutor({ atividadeAplicadaId }: { atividadeAplicadaId: strin
 
       {conversa.isPending && <EstadoCarregando rotulo="Carregando a conversa…" />}
       {conversa.isError && conversa.data === undefined && naoEncontrada && (
-        <EstadoVazio titulo="Esta atividade não está disponível" descricao="Ela pode ser de outra turma, ou o endereço está errado. Escolha a atividade em Tutor, no menu." />
+        <EstadoVazio titulo="Esta atividade não está disponível" descricao="Ela pode ser de outra turma, ou o endereço está errado. Escolha a atividade em Início, no menu." />
       )}
       {conversa.isError && conversa.data === undefined && !naoEncontrada && (
         <EstadoErro erro={conversa.error} tentando={conversa.isFetching} aoTentarDeNovo={() => void conversa.refetch({ cancelRefetch: false })} />
@@ -330,10 +272,11 @@ function ConversaComOTutor({ atividadeAplicadaId }: { atividadeAplicadaId: strin
 }
 
 /**
- * O Tutor do aluno (MVP, A4): pelo item da lateral, a escolha da atividade; a partir de uma atividade ("Pedir ajuda ao
- * Tutor nesta questão"), a conversa dela. Nas duas, a **faixa de supervisão no topo, que não fecha** (D8).
+ * O Tutor do aluno (MVP, A4): pelo endereço `/aluno/tutor`, a escolha da atividade (a mesma do Início, que é o lugar da
+ * lateral que o acende); a partir de uma atividade ("Pedir ajuda ao Tutor nesta questão"), a conversa dela. Nas duas, a
+ * **faixa de supervisão no topo, que não fecha** (D8).
  *
- * É aba de navegação: o `<h1>` existe só para o leitor de tela (`Tela`).
+ * Já não é item da lateral: o `<h1>` existe só para o leitor de tela (`Tela`).
  */
 export default function Tutor({ atividadeAplicadaId }: { atividadeAplicadaId?: string }) {
   useTituloDaTela('Tutor')

@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { diagnosticoDa, erroDaApi, minhaAtividade, portao, provaDa, QUEM_APROVA, simularAluno, type ApiDoAluno } from './__fixtures__/aluno.ts'
-import { entrarComoAluno, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { entrarComoAluno, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, type AlunoDeTeste } from './__fixtures__/sessao.ts'
 import { codigoCru, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -53,6 +53,8 @@ async function entrar(page: Page, hasTouch: boolean, antes?: (api: ApiDoAluno) =
   const colega = await criarAlunoComMatricula({ escola: aluno })
   await colocarAlunoNaTurma(colega, turma)
   await entrarComoAluno(page, aluno, hasTouch)
+  // O aluno abre no Início (X4, 2.0); a lista de tarefas, onde estes casos começam, é o segundo lugar dele.
+  await irPelaNavegacao(page, 'Tarefas', hasTouch)
   return { api, aluno, colega }
 }
 
@@ -69,7 +71,7 @@ async function abrirAtividade(page: Page, titulo: string, hasTouch: boolean): Pr
   await expect(principal(page).getByRole('heading', { level: 1, name: titulo })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
 }
 
-test.describe('Atividades: os quatro estados', () => {
+test.describe('Tarefas: os quatro estados', () => {
   test('carregando, vazia sem culpa, erro com "Tentar de novo" e a lista com o estado de cada atividade em texto, sem nada de colega', async ({ page, hasTouch }) => {
     test.slow()
     const segurada = portao()
@@ -82,7 +84,7 @@ test.describe('Atividades: os quatro estados', () => {
 
     // Carregando: o texto, e nada de lista.
     await expect(principal(page).getByRole('status')).toHaveText('Carregando as suas atividades…')
-    await expect(page).toHaveTitle('Atividades · Turmma')
+    await expect(page).toHaveTitle('Tarefas · Turmma')
 
     // Vazia: diz que não há o que fazer agora, sem cobrar nada.
     segurada.abrir()

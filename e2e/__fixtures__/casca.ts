@@ -249,31 +249,36 @@ export async function entrarComoCoordenacaoNaMesmaAba(page: Page, coordenadora: 
 }
 
 /** O título da aba na tela em que o aluno abre. */
-export const TITULO_DAS_ATIVIDADES = 'Atividades · Turmma'
+export const TITULO_DO_INICIO_DO_ALUNO = 'Início · Turmma'
 
 /**
- * O aluno abre em "Atividades" (MVP, A3), e não mais na página "Início": o endereço, a tela e, na lateral, o nome de quem
- * entrou e o papel. É o que prova que a sessão vale e de quem ela é, como a saudação "Olá, <nome>" provava antes.
+ * O aluno abre em "Início" (X4, 2.0), e não mais em "Atividades" (A3) nem na página de passagem: o endereço, a tela e, na
+ * lateral, o nome de quem entrou e o papel. É o que prova que a sessão vale e de quem ela é, como a saudação "Olá, <nome>"
+ * provava antes. O `h1` de "Início" existe só para o leitor de tela (a conversa é a exceção do título visível), e por isso a
+ * espera é por ele **no documento**, e não à vista.
  *
  * No celular a lateral é a gaveta, fechada: o nome está nela, fora da vista, e o teste o lê sem abri-la.
  */
-export async function esperarAtividades(page: Page, nome: string, opcoes: { readonly timeout?: number; readonly escolaNome?: string } = {}): Promise<void> {
+export async function esperarInicioDoAluno(page: Page, nome: string, opcoes: { readonly timeout?: number; readonly escolaNome?: string } = {}): Promise<void> {
   const timeout = opcoes.timeout ?? PRAZO_DA_ENTRADA_MS
-  await expect(page).toHaveURL(/\/aluno\/atividades$/, { timeout })
-  await expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Atividades' })).toBeAttached({ timeout })
   const lateralDaCasca = naGaveta(page) ? page.locator('dialog[aria-label="Menu"]') : page.locator('body')
-  await expect(lateralDaCasca).toContainText(nome, { timeout })
-  await expect(lateralDaCasca).toContainText('aluno', { timeout })
-  if (opcoes.escolaNome !== undefined) await expect(lateralDaCasca).toContainText(opcoes.escolaNome, { timeout })
+  // As esperas correm juntas: em série, cada uma pagaria a sua ida ao navegador, e o caso de 15 s não tem de sobra.
+  await Promise.all([
+    expect(page).toHaveURL(/\/aluno\/inicio$/, { timeout }),
+    expect(page.getByRole('main').getByRole('heading', { level: 1, name: 'Início' })).toBeAttached({ timeout }),
+    expect(lateralDaCasca).toContainText(nome, { timeout }),
+    expect(lateralDaCasca).toContainText('aluno', { timeout }),
+    ...(opcoes.escolaNome !== undefined ? [expect(lateralDaCasca).toContainText(opcoes.escolaNome, { timeout })] : []),
+  ])
 }
 
-/** O aluno entra pelo endereço da escola, com matrícula e senha, e chega a "Atividades", onde ele abre. */
+/** O aluno entra pelo endereço da escola, com matrícula e senha, e chega a "Início", onde ele abre. */
 export async function entrarComoAluno(page: Page, aluno: { readonly slug: string; readonly matricula: string; readonly senha: string; readonly nome: string }, hasTouch: boolean): Promise<void> {
   await page.goto(`/e/${aluno.slug}`)
   await page.getByLabel('Matrícula').fill(aluno.matricula)
   await page.getByLabel('Senha').fill(aluno.senha)
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-  await esperarAtividades(page, aluno.nome)
+  await esperarInicioDoAluno(page, aluno.nome)
 }
 
 /**

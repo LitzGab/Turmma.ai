@@ -8,7 +8,7 @@ import { useTituloDaTela } from '../titulo'
 /**
  * A raiz de quem entrou: cada papel é levado à tela em que abre, sem ficar no histórico. A coordenação abre no Painel
  * (X2, 3.0; `docs/interface.md` 11.1: é a tela que fecha a venda), o professor em "Início" (A2; D73; D80) e o aluno
- * em "Atividades" (A3): o que a professora passou é a primeira coisa que ele vê. A navegação de cada papel está na
+ * em "Início" (X4, 2.0): a faixa de supervisão e a escolha da atividade, antes das tarefas. A navegação de cada papel está na
  * lateral (`areas/navegacao.ts`), que também diz quem está na sessão e em qual escola.
  *
  * Não há estado vazio: a resposta de `/v1/eu` sempre traz a pessoa e a escola. Carregando e erro estão aqui, e o erro
@@ -23,8 +23,8 @@ export function Inicio() {
   if (papel === 'coordenador') return <Redirect to={ROTAS.painel} replace />
   // O professor abre em "Início", a caixa de pedido do Assistente de ensino (A2; D73; `docs/interface.md` 11.1).
   if (papel === 'professor') return <Redirect to={ROTAS.novaConversa} replace />
-  // O aluno abre em "Atividades": o que foi atribuído à turma dele (A3).
-  if (papel === 'aluno') return <Redirect to={ROTAS.atividades} replace />
+  // O aluno abre em "Início" (X4, 2.0).
+  if (papel === 'aluno') return <Redirect to={ROTAS.inicioDoAluno} replace />
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-labelledby="titulo-inicio">
       <h1 id="titulo-inicio" className="text-xl font-semibold sm:text-2xl">

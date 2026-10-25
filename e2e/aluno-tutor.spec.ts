@@ -77,19 +77,22 @@ async function animacoesEmLaco(page: Page): Promise<string[]> {
   )
 }
 
-test.describe('o Tutor pelo item da lateral e a conversa por atividade', () => {
+test.describe('o Tutor pelo Início e a conversa por atividade', () => {
   test('a escolha da atividade e a conversa: carregando, vazia, erro e com mensagens; a faixa que não fecha, a caixa só de texto, o selo de IA, o chip de página e "Hoje: N de 60"', async ({ page, hasTouch }) => {
     test.slow()
     const atividade = minhaAtividade()
     const segurada = portao()
     const { api, colega } = await entrar(page, hasTouch)
 
-    // Pelo item da lateral, sem atividade nenhuma: o vazio diz quando haverá o que fazer, e a faixa já está lá.
-    await irPelaNavegacao(page, 'Tutor', hasTouch)
-    await expect(page).toHaveURL(/\/aluno\/tutor$/)
-    await expect(page).toHaveTitle('Tutor · Turmma', { timeout: PRAZO_DA_TELA_MS })
+    // Pelo Início (X4, 2.0), sem atividade nenhuma: o vazio diz quando haverá o que fazer, e a faixa já está lá. O endereço de
+    // hoje do Tutor, `/aluno/tutor`, abre a mesma escolha (RF2) e fica dentro de "Início" na lateral.
+    await irPelaNavegacao(page, 'Início', hasTouch)
+    await expect(page).toHaveURL(/\/aluno\/inicio$/)
+    await expect(page).toHaveTitle('Início · Turmma', { timeout: PRAZO_DA_TELA_MS })
     await expect(principal(page).getByText('Nenhuma atividade para pedir ajuda agora')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     await expect(faixa(page).getByRole('note')).toHaveText(SUPERVISAO)
+    // Sem botão de fechar: o Tutor é sempre supervisionado, e o aluno não esconde o aviso (D8; regra 70, item 4).
+    await expect(faixa(page).getByRole('button')).toHaveCount(0)
     await expect(caixa(page)).toHaveCount(0)
 
     // Com atividade: o aluno escolhe em qual quer ajuda, e a conversa é dela.
@@ -190,6 +193,8 @@ test.describe('o Tutor pelo item da lateral e a conversa por atividade', () => {
       simulada.atividades = [atividade]
       simulada.provas.set(atividade.id, provaDa(atividade))
     })
+    // A atividade se abre por Tarefas: o link do Início leva direto ao Tutor dela.
+    await irPelaNavegacao(page, 'Tarefas', hasTouch)
     await acionar(principal(page).getByRole('link', { name: /Lista de estequiometria/ }), hasTouch)
     await acionar(principal(page).getByRole('button', { name: 'Próxima' }), hasTouch)
     await acionar(principal(page).getByRole('link', { name: 'Pedir ajuda ao Tutor nesta questão' }), hasTouch)

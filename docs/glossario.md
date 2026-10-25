@@ -223,6 +223,23 @@ nunca texto livre sobre o aluno (D35, D67).
 **Pacote do tutor** — As trocas com o tutor disponíveis para uma turma no mês, somadas entre
 os alunos, com freio diário por aluno.
 
+**Início (do aluno)** — O primeiro dos três lugares do aluno e a tela em que ele abre (`/aluno/inicio`): a faixa de
+supervisão, presa e sem botão de fechar, e a escolha da atividade em que quer ajuda do Tutor. O Tutor deixou de ser um
+lugar da lateral; o endereço `/aluno/tutor` continua abrindo a mesma escolha, dentro do Início. Não confundir com a
+página "Início" da raiz (`/`), que não tem conteúdo próprio e leva cada papel à tela em que abre (o aluno, a este
+Início).
+
+**Tarefas** — O segundo lugar do aluno (`/aluno/atividades`, o endereço de sempre): o que o professor atribuiu à turma,
+com o estado de cada uma em texto. Era "Atividades"; o termo `atividade` continua nos dados, na API e dentro da tarefa
+aberta, e **tarefa** é o nome na navegação e no título da lista (X4).
+
+**Eu** — O terceiro lugar do aluno (`/aluno/eu`): a turma, a série e a escola dele e as linhas Privacidade ("Meus dados") e
+Sair. Tomou o lugar de "Minha turma", cujo endereço leva até ele. Só do próprio aluno, sem colega (regra 50, item 9).
+
+**Tela de foco** — A tela em que a casca some a lateral e as barras e deixa só o conteúdo, o "Sair" e o relógio de
+inatividade. Os endereços estão em `ehTelaDeFoco` (`apps/web/src/caminhos.ts`): hoje, a introdução de cada papel
+(`/<área>/bem-vindo`).
+
 **Tutor** — O agente que conversa com o aluno. Conduz por perguntas e não entrega a
 resposta. É o mesmo agente que avisa o professor, na thread dele, o que viu no uso da turma.
 

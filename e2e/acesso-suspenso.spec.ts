@@ -1,6 +1,6 @@
 import type { BrowserContext, Locator, Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
-import { entrarComoAluno, entrarPelaApi, entrarPorEmail, esperarAtividades, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { entrarComoAluno, entrarPelaApi, entrarPorEmail, esperarInicioDoAluno, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
 import {
   agendarEliminacaoNoBanco,
@@ -109,6 +109,11 @@ test.describe('acesso suspenso pela eliminação agendada', () => {
     await page.evaluate(() => history.pushState(null, '', '/aluno/atividades'))
     await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(tituloDaTela(page)).toHaveCount(0)
+  })
+
+  test('a senha certa, com a eliminação ainda agendada, mostra o texto e não abre sessão; cancelada dentro do prazo, entra', async ({ page, hasTouch }) => {
+    const aluno = await criarAlunoComMatricula()
+    await agendarEliminacaoNoBanco(aluno.usuarioId)
     await page.goto(`/e/${aluno.slug}`)
 
     // A senha certa, com a eliminação ainda agendada, mostra o mesmo texto e não abre sessão.
@@ -121,7 +126,7 @@ test.describe('acesso suspenso pela eliminação agendada', () => {
     // Cancelado dentro do prazo, a mesma senha entra.
     await cancelarEliminacaoNoBanco(aluno.usuarioId)
     await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-    await esperarAtividades(page, aluno.nome)
+    await esperarInicioDoAluno(page, aluno.nome)
   })
 
   test('recomeço no Chromebook do carrinho: o colega entra na mesma aba, com o /v1/eu segurado, e nada do anterior aparece', async ({ page, hasTouch }) => {
@@ -158,7 +163,7 @@ test.describe('acesso suspenso pela eliminação agendada', () => {
     await expect(page.locator('body')).not.toContainText('Acesso suspenso')
 
     liberarEu()
-    await esperarAtividades(page, colega.nome)
+    await esperarInicioDoAluno(page, colega.nome)
     await expect(page.locator('body')).not.toContainText(anterior.nome)
   })
 

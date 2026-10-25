@@ -6,7 +6,7 @@ import {
   entrarPorEmail,
   escolherNoSeletor,
   esperarNovaConversa,
-  gaveta,
+  irPelaNavegacao,
   lateral,
   naGaveta,
   nomeNoSeletor,
@@ -34,7 +34,7 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo
 
 /**
  * "Meus dados" do aluno e do professor (F3, 18.0; RF12 e RF20; `docs/interface.md` 11.1): o aluno acha "Meus dados" em
- * Privacidade, no rodapé fixo da lateral; o professor, no menu da pessoa. A tela mostra os pedidos que a coordenação
+ * Privacidade, uma linha de Eu (X4, 2.0); o professor, no menu da pessoa. A tela mostra os pedidos que a coordenação
  * registrou, o estado de cada um, o resumo por categoria e o aviso de computador compartilhado, e entrega o arquivo.
  * Contra a API real e o worker real, nos projetos `chromebook` e `celular`. O que o clique fez se confere **no banco** e na
  * auditoria, e não só no que a tela diz.
@@ -96,11 +96,16 @@ async function montarEscola(): Promise<Cenario> {
   return { coordenadora, aluno }
 }
 
-/** O aluno, pelo rodapé fixo da lateral (na gaveta, aberta antes): o item Privacidade, e a seção "Meus dados" dentro dele. */
-async function abrirPrivacidadeDoAluno(page: Page, hasTouch: boolean): Promise<void> {
-  await abrirNavegacao(page, hasTouch)
-  await acionar(lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true }).getByRole('link', { name: 'Privacidade', exact: true }), hasTouch)
+/** O aluno, por Eu (X4, 2.0): a linha Privacidade, no miolo da tela, e não mais o rodapé da lateral. Só leva até lá, sem esperar o conteúdo. */
+async function irAPrivacidadeDoAluno(page: Page, hasTouch: boolean): Promise<void> {
+  await irPelaNavegacao(page, 'Eu', hasTouch)
+  await acionar(principal(page).getByRole('link', { name: 'Privacidade', exact: true }), hasTouch)
   await expect(page).toHaveURL(/\/aluno\/privacidade$/, { timeout: PRAZO_DA_ENTRADA_MS })
+}
+
+/** O aluno, por Eu: a linha Privacidade, e a seção "Meus dados" dentro dela. */
+async function abrirPrivacidadeDoAluno(page: Page, hasTouch: boolean): Promise<void> {
+  await irAPrivacidadeDoAluno(page, hasTouch)
   await expect(principal(page).getByRole('heading', { level: 2, name: 'Meus dados', exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   // Os cartões ficam um nível abaixo da seção, e o título da aba é o da tela.
   await expect(principal(page).getByRole('heading', { level: 3, name: 'Seus pedidos', exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -285,34 +290,36 @@ test.describe('Meus dados: o aluno e o professor baixam o que a coordenação re
 })
 
 test.describe('Meus dados: onde cada pessoa os acha', () => {
-  test('o aluno acha Privacidade no rodapé da lateral e, na gaveta a 360 px, sem rolar e com alvo de 44 px; fora da lista de seções', async ({ page, hasTouch }) => {
+  test('o aluno acha Privacidade em Eu, sem rolar e com alvo de 44 px a 360 px; fora da lista de seções e sem rodapé na lateral', async ({ page, hasTouch }) => {
     test.setTimeout(90_000)
     const { aluno } = await montarEscola()
     await entrarComoAluno(page, aluno, hasTouch)
     // A lista de seções do aluno está à vista sem abrir nada: no celular é a barra de baixo, fora da gaveta (A90).
-    await expect(secoes(page).getByRole('link')).toHaveText(['Tutor', 'Atividades', 'Minha turma'])
-    await abrirNavegacao(page, hasTouch)
-    const rodape = lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true })
-    const item = rodape.getByRole('link', { name: 'Privacidade', exact: true })
-    await expect(item).toBeVisible()
+    await expect(secoes(page).getByRole('link')).toHaveText(['Início', 'Tarefas', 'Eu'])
+    await expect(secoes(page).getByRole('link', { name: 'Privacidade' })).toHaveCount(0)
+    await irPelaNavegacao(page, 'Eu', hasTouch)
+    const item = principal(page).getByRole('link', { name: 'Privacidade', exact: true })
+    await expect(item).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(item).not.toHaveAttribute('aria-current', 'page')
     const caixa = await item.boundingBox()
     expect(caixa?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
-    if (naGaveta(page)) {
-      // A 360 px a gaveta mostra o rodapé sem rolagem: o item está dentro da janela, aberta a gaveta.
-      await expect(gaveta(page)).toBeVisible()
-      await expect(item).toBeInViewport()
-    }
+    expect(await larguraExcedente(page)).toBe(0)
+    await expect(item).toBeInViewport()
+    // O rodapé fixo da lateral saiu: nem na gaveta (aberta antes) nem na lateral há o grupo "Rodapé".
+    await abrirNavegacao(page, hasTouch)
+    await expect(lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true })).toHaveCount(0)
+    // Na página toda há um só link "Privacidade": o da linha de Eu (na lateral, que no computador é o mesmo `body`, não há outro).
+    await expect(page.getByRole('link', { name: 'Privacidade', exact: true })).toHaveCount(1)
+    if (naGaveta(page)) await acionar(page.getByRole('button', { name: 'Fechar o menu' }), hasTouch)
 
     await acionar(item, hasTouch)
     await expect(page).toHaveURL(/\/aluno\/privacidade$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page).getByRole('heading', { level: 2, name: 'Meus dados', exact: true })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    await abrirNavegacao(page, hasTouch)
-    await expect(lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true }).getByRole('link', { name: 'Privacidade', exact: true })).toHaveAttribute('aria-current', 'page')
-    // Nenhuma seção fica selecionada ali: o rodapé e a lista de seções nunca marcam duas telas. O controle positivo é a
+    // Eu fica selecionado em Privacidade, e é o único: a lista de seções nunca marca duas telas. O controle positivo é a
     // própria lista à vista, com os três itens: sem ele a ausência passaria vazia se `Seções` saísse do lugar.
     await expect(secoes(page).getByRole('link')).toHaveCount(3)
-    await expect(secoes(page).locator('[aria-current="page"]')).toHaveCount(0)
+    await expect(secoes(page).locator('[aria-current="page"]')).toHaveCount(1)
+    await expect(secoes(page).getByRole('link', { name: 'Eu', exact: true })).toHaveAttribute('aria-current', 'page')
   })
 
   test('o professor acha "Meus dados" no menu da pessoa, antes do "Sair", e o link fica selecionado na tela dele', async ({ page, hasTouch }) => {
@@ -345,7 +352,7 @@ test.describe('Meus dados: onde cada pessoa os acha', () => {
 })
 
 test.describe('Meus dados: no trilho da lateral', () => {
-  test('recolhida a lateral, o aluno ainda alcança Privacidade e o professor, Meus dados, com o nome e o alvo de 44 px', async ({ page, hasTouch }) => {
+  test('recolhida a lateral, o aluno ainda alcança Eu (e, por ele, Privacidade) e o professor, Meus dados, com o nome e o alvo de 44 px', async ({ page, hasTouch }) => {
     test.setTimeout(120_000)
     const { aluno } = await montarEscola()
     // O trilho é do computador: abaixo de 768 px a lateral é a gaveta. No `celular` a aba ganha a largura do computador,
@@ -353,10 +360,11 @@ test.describe('Meus dados: no trilho da lateral', () => {
     await page.setViewportSize({ width: 1366, height: 768 })
     await entrarComoAluno(page, aluno, hasTouch)
     await acionar(page.getByRole('button', { name: 'Recolher a lateral' }), hasTouch)
-    const privacidade = page.getByRole('navigation', { name: 'Rodapé', exact: true }).getByRole('link', { name: 'Privacidade', exact: true })
-    await expect(privacidade).toBeVisible()
-    expect((await privacidade.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
-    await acionar(privacidade, hasTouch)
+    const eu = page.getByRole('navigation', { name: 'Seções', exact: true }).getByRole('link', { name: 'Eu', exact: true })
+    await expect(eu).toBeVisible()
+    expect((await eu.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+    await acionar(eu, hasTouch)
+    await acionar(principal(page).getByRole('link', { name: 'Privacidade', exact: true }), hasTouch)
     await expect(page).toHaveURL(/\/aluno\/privacidade$/, { timeout: PRAZO_DA_ENTRADA_MS })
 
     // A mesma aba, a professora: o trilho guardado a recebe com o link do menu da pessoa.
@@ -451,8 +459,7 @@ test.describe('Meus dados: os estados', () => {
       return rota.continue()
     })
     await entrarComoAluno(page, aluno, hasTouch)
-    await abrirNavegacao(page, hasTouch)
-    await acionar(lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true }).getByRole('link', { name: 'Privacidade', exact: true }), hasTouch)
+    await irAPrivacidadeDoAluno(page, hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando os seus pedidos…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal(page)).not.toContainText('Nenhum pedido ainda')
     liberar()
@@ -799,9 +806,8 @@ test.describe('Meus dados: só a escola ativa, e o recomeço', () => {
     await page.getByLabel('Matrícula').fill(segundo.matricula)
     await page.getByLabel('Senha').fill(segundo.senha)
     await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-    await expect(page).toHaveURL(/\/aluno\/atividades$/, { timeout: PRAZO_DA_ENTRADA_MS })
-    await abrirNavegacao(page, hasTouch)
-    await acionar(lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true }).getByRole('link', { name: 'Privacidade', exact: true }), hasTouch)
+    await expect(page).toHaveURL(/\/aluno\/inicio$/, { timeout: PRAZO_DA_ENTRADA_MS })
+    await irAPrivacidadeDoAluno(page, hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando os seus pedidos…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText('Cópia para levar a outro serviço')
     await expect(page.locator('body')).not.toContainText(primeiro.nome)

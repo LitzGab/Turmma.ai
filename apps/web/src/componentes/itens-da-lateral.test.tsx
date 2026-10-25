@@ -48,7 +48,7 @@ describe('ItemDaLateral', () => {
     }
   })
 
-  it('o ícone ilustrado é de Início, Ferramentas, Turmas, Atividades e dos quatro lugares da coordenação, e o `lucide` num ladrilho é dos outros', () => {
+  it('o ícone ilustrado é de Início, Ferramentas, Turmas, Tarefas e dos quatro lugares da coordenação, e o `lucide` num ladrilho é dos outros', () => {
     const ilustrados = new Map<string, string>()
     const ladrilhos = new Map<string, string>()
     const porPapel = new Map<string, string>()
@@ -66,7 +66,7 @@ describe('ItemDaLateral', () => {
       ['Turmas', 'turmas'],
       ['Ferramentas', 'ferramentas'],
       ['Criados', 'criados'],
-      ['Atividades', 'tarefas'],
+      ['Tarefas', 'tarefas'],
       ['Painel', 'painel'],
       ['Analista', 'ia'],
       ['Escola', 'escola'],
@@ -74,17 +74,15 @@ describe('ItemDaLateral', () => {
     ])
     // A família de cada um (a divergência de `12_task.md`): por função, nunca a cor do estado (`ok`, `erro`, `pendente`).
     expect(Object.fromEntries([...porPapel].sort(([a], [b]) => a.localeCompare(b)))).toEqual({
-      'aluno: Minha turma': 'turquesa',
-      'aluno: Privacidade': 'verde',
-      'aluno: Tutor': 'laranja',
+      'aluno: Eu': 'turquesa',
       'professor: Meus dados': 'verde',
     })
     // Cada um dos outros tem a família dele, e a do ladrilho chega ao DOM.
-    expect([...ladrilhos.keys()].sort()).toEqual(['Meus dados', 'Minha turma', 'Privacidade', 'Tutor'].sort())
-    const tutor = NAVEGACAO.aluno.find((item) => item.rotulo === 'Tutor')
-    if (tutor === undefined) throw new Error('faltou o Tutor')
-    render(noEndereco('/', <ul><ItemDaLateral item={tutor} trilho={false} /></ul>))
-    expect(screen.getByRole('link', { name: 'Tutor' }).querySelector('[data-ladrilho]')?.getAttribute('data-ladrilho')).toBe('laranja')
+    expect([...ladrilhos.keys()].sort()).toEqual(['Eu', 'Meus dados'].sort())
+    const eu = NAVEGACAO.aluno.find((item) => item.rotulo === 'Eu')
+    if (eu === undefined) throw new Error('faltou o Eu')
+    render(noEndereco('/', <ul><ItemDaLateral item={eu} trilho={false} /></ul>))
+    expect(screen.getByRole('link', { name: 'Eu' }).querySelector('[data-ladrilho]')?.getAttribute('data-ladrilho')).toBe('turquesa')
     // E o ilustrado chega ao DOM pelo mesmo caminho, sem ladrilho: o ramo do `lugar` é o que desenha o `Icone`.
     cleanup()
     const inicio = NAVEGACAO.professor.find((item) => item.rotulo === 'Início')

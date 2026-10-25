@@ -94,22 +94,33 @@ describe('BarraDeBaixo', () => {
     expect(screen.getByRole('link', { name: 'Turmas' }).getAttribute('aria-current')).toBeNull()
   })
 
-  it('o aluno tem os três itens dele, com o ícone do `lucide` num ladrilho e o ilustrado em Atividades', () => {
-    render(noEndereco(ROTAS.tutor, <BarraDeBaixo itens={NAVEGACAO.aluno} />))
+  it('o aluno tem os três itens dele, com o ícone ilustrado em Início e Tarefas e o do `lucide` num ladrilho em Eu', () => {
+    render(noEndereco(ROTAS.inicioDoAluno, <BarraDeBaixo itens={NAVEGACAO.aluno} />))
     const secoes = screen.getByRole('navigation', { name: 'Seções' })
-    expect(within(secoes).getAllByRole('link').map((link) => link.textContent)).toEqual(['Tutor', 'Atividades', 'Minha turma'])
-    expect(within(secoes).getByRole('link', { name: 'Tutor' }).querySelectorAll('[data-ladrilho]')).toHaveLength(1)
-    expect(within(secoes).getByRole('link', { name: 'Atividades' }).querySelectorAll('svg[data-icone]')).toHaveLength(1)
-    expect(within(secoes).getByRole('link', { name: 'Atividades' }).querySelectorAll('[data-ladrilho]')).toHaveLength(0)
-    expect(within(secoes).getByRole('link', { name: 'Tutor' }).getAttribute('aria-current')).toBe('page')
+    expect(within(secoes).getAllByRole('link').map((link) => link.textContent)).toEqual(['Início', 'Tarefas', 'Eu'])
+    expect(within(secoes).getByRole('link', { name: 'Eu' }).querySelectorAll('[data-ladrilho]')).toHaveLength(1)
+    for (const ilustrado of ['Início', 'Tarefas']) {
+      expect(within(secoes).getByRole('link', { name: ilustrado }).querySelectorAll('svg[data-icone]'), ilustrado).toHaveLength(1)
+      expect(within(secoes).getByRole('link', { name: ilustrado }).querySelectorAll('[data-ladrilho]'), ilustrado).toHaveLength(0)
+    }
+    expect(within(secoes).getByRole('link', { name: 'Início' }).getAttribute('aria-current')).toBe('page')
+  })
+
+  it('o Tutor e Privacidade, que não são mais lugares, acendem Início e Eu na barra', () => {
+    const { unmount } = render(noEndereco(ROTAS.tutor, <BarraDeBaixo itens={NAVEGACAO.aluno} />))
+    expect(screen.getByRole('link', { name: 'Início' }).getAttribute('aria-current')).toBe('page')
+    unmount()
+    render(noEndereco(ROTAS.privacidadeDoAluno, <BarraDeBaixo itens={NAVEGACAO.aluno} />))
+    expect(screen.getByRole('link', { name: 'Eu' }).getAttribute('aria-current')).toBe('page')
+    expect(screen.getByRole('link', { name: 'Início' }).getAttribute('aria-current')).toBeNull()
   })
 
   it('cada ícone tem 28 px: o ilustrado direto, e o do `lucide` no ladrilho de 32 px', () => {
-    render(noEndereco(ROTAS.tutor, <BarraDeBaixo itens={NAVEGACAO.aluno} />))
-    const ilustrado = existente(screen.getByRole('link', { name: 'Atividades' }).querySelector('svg[data-icone]'), 'o ícone ilustrado de Atividades')
+    render(noEndereco(ROTAS.inicioDoAluno, <BarraDeBaixo itens={NAVEGACAO.aluno} />))
+    const ilustrado = existente(screen.getByRole('link', { name: 'Tarefas' }).querySelector('svg[data-icone]'), 'o ícone ilustrado de Tarefas')
     expect(ilustrado.getAttribute('width')).toBe('28')
     expect(ilustrado.getAttribute('height')).toBe('28')
-    const ladrilho = existente(screen.getByRole('link', { name: 'Tutor' }).querySelector('[data-ladrilho]'), 'o ladrilho do Tutor')
+    const ladrilho = existente(screen.getByRole('link', { name: 'Eu' }).querySelector('[data-ladrilho]'), 'o ladrilho de Eu')
     expect(classesDo(ladrilho).has('size-8')).toBe(true)
   })
 

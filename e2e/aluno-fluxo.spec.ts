@@ -75,7 +75,8 @@ test.describe('o fluxo do aluno contra a API real', () => {
     const { professora, dela, aluno, colega, atividadeAplicadaId } = await montarEscola(page, titulo, false)
     await entrarComoAluno(page, aluno, hasTouch)
 
-    // Atividades: o que a professora aplicou, para responder.
+    // Tarefas: o que a professora aplicou, para responder. O aluno abre no Início, e a lista é o segundo lugar dele.
+    await irPelaNavegacao(page, 'Tarefas', hasTouch)
     const naLista = principal(page).getByRole('region', { name: 'Para responder' }).getByRole('link', { name: new RegExp(titulo) })
     await expect(naLista).toContainText('Química · 3 questões', { timeout: PRAZO_DA_TELA_MS })
     await acionar(naLista, hasTouch)
@@ -159,7 +160,7 @@ test.describe('o fluxo do aluno contra a API real', () => {
     expect(await violacoesGraves(page)).toEqual([])
 
     // E a lista passa a dizer "Com resultado".
-    await irPelaNavegacao(page, 'Atividades', hasTouch)
+    await irPelaNavegacao(page, 'Tarefas', hasTouch)
     await expect(principal(page).getByRole('region', { name: 'Já feitas' }).getByRole('link', { name: new RegExp(titulo) })).toContainText('Com resultado', { timeout: PRAZO_DA_TELA_MS })
   })
 
@@ -169,13 +170,12 @@ test.describe('o fluxo do aluno contra a API real', () => {
     const { aluno, atividadeAplicadaId } = await montarEscola(page, titulo, true)
     await entrarComoAluno(page, aluno, hasTouch)
 
-    // A lista avisa antes de abrir, e a atividade não oferece o caminho ao Tutor.
+    // O Início avisa antes de abrir (RF5), e o caminho até o Tutor continua aberto: a caixa dele existe em todo estado (D36).
     const naLista = principal(page).getByRole('link', { name: new RegExp(titulo) })
     await expect(naLista).toContainText('Avaliação: o Tutor fica pausado até quem dá a aula encerrar.', { timeout: PRAZO_DA_TELA_MS })
 
-    // Pelo item da lateral: escolhe a atividade, e o Tutor explica que está pausado, com o título da avaliação.
-    await irPelaNavegacao(page, 'Tutor', hasTouch)
-    await acionar(principal(page).getByRole('link', { name: new RegExp(titulo) }), hasTouch)
+    // Pelo Início: escolhe a atividade, e o Tutor explica que está pausado, com o título da avaliação.
+    await acionar(naLista, hasTouch)
     await expect(page).toHaveURL(new RegExp(`/aluno/tutor/${atividadeAplicadaId}$`))
     const pausa = principal(page).locator('[data-pausa-do-tutor]')
     await expect(pausa).toHaveAttribute('data-pausa-do-tutor', 'avaliacao', { timeout: PRAZO_DA_TELA_MS })

@@ -1,8 +1,14 @@
 import { CodigoDeErro, nomeDaSerie } from '@educa/shared'
 import { useQuery } from '@tanstack/react-query'
+import { Lock, LogOut } from 'lucide-react'
+import { useContext } from 'react'
 import { ErroDaApi } from '../../api/cliente'
 import { consultaMinhaTurma } from '../../api/minha-turma'
+import { ROTAS_DO_ALUNO } from '../../caminhos'
 import { EstadoCarregando, EstadoErro } from '../../componentes/estado'
+import { ContextoDaSaida } from '../../componentes/saida-da-casca'
+import { Ladrilho } from '../../componentes/ui/Ladrilho'
+import { Linha } from '../../componentes/ui/Linha'
 import { Tela } from '../../componentes/ui/Tela'
 import { useTituloDaTela } from '../../titulo'
 
@@ -14,21 +20,22 @@ import { useTituloDaTela } from '../../titulo'
 const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. Fale com quem dá a aula ou com a coordenação.'
 
 /**
- * "Minha turma" do aluno (A1, 12.0; RF13; D73): a escola, a turma e a série dele, pelo vínculo confirmado no ano em curso.
- * Sem colegas, sem professor, sem matrícula (regra 50, item 9): o contrato de `GET /v1/minha-turma` não traz nada disso,
- * e a tela não tem de onde tirar.
+ * "Eu" do aluno (telas do aluno e primeiro acesso, 2.0; RF9): o cartão da turma, que era "Minha turma" (A1, 12.0; RF13), e
+ * as linhas **Privacidade** e **Sair**. Sem colegas, sem professor, sem matrícula (regra 50, item 9): o contrato de
+ * `GET /v1/minha-turma` não traz nada disso, e a tela não tem de onde tirar.
  *
- * Nunca vazia (W4): o aluno só entra depois de aprovado, e a aprovação nasce com a turma. Os estados são carregando, com
- * dado, o erro com "Tentar de novo" (queda de rede não é logout, regra 80, item 6) e, à parte, o aluno sem turma no ano,
- * que não é erro de ninguém e diz o que fazer.
+ * Os estados do cartão são carregando, com dado, o erro com "Tentar de novo" (queda de rede não é logout, regra 80, item 6)
+ * e, à parte, o aluno sem turma no ano, que não é erro de ninguém e diz o que fazer. **As linhas existem em todos os
+ * estados**: o "Sair" nunca depende de a leitura da turma ter dado certo (D59).
  *
- * É aba de navegação: o `<h1>`, visível, é o título da tela, na `Tela` (RF12; `docs/interface.md` 11.2).
+ * O "Sair" é o da casca, pelo contexto (`ContextoDaSaida`): a mesma saída do botão da lateral, a um clique.
  */
-export function MinhaTurma() {
-  useTituloDaTela('Minha turma')
+export default function Eu() {
+  useTituloDaTela('Eu')
   const minhaTurma = useQuery(consultaMinhaTurma)
+  const { sair, saindo } = useContext(ContextoDaSaida)
 
-  function conteudo() {
+  function cartaoDaTurma() {
     if (minhaTurma.isPending) return <EstadoCarregando rotulo="Carregando a sua turma…" />
     if (minhaTurma.isError) {
       if (minhaTurma.error instanceof ErroDaApi && minhaTurma.error.codigo === CodigoDeErro.NAO_ENCONTRADO)
@@ -56,10 +63,34 @@ export function MinhaTurma() {
   }
 
   return (
-    <Tela titulo="Minha turma" idDoTitulo="titulo-minha-turma">
-      <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-minha-turma">
-        {conteudo()}
+    <Tela titulo="Eu" idDoTitulo="titulo-eu" largura="conversa">
+      <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-eu">
+        {cartaoDaTurma()}
       </section>
+      <ul aria-label="Privacidade e saída" className="divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda bg-superficie">
+        <li>
+          <Linha
+            titulo="Privacidade"
+            inicio={
+              <Ladrilho familia="verde" tamanho={40}>
+                <Lock aria-hidden="true" />
+              </Ladrilho>
+            }
+            para={ROTAS_DO_ALUNO.privacidade}
+          />
+        </li>
+        <li>
+          <Linha
+            titulo={saindo ? 'Saindo…' : 'Sair'}
+            inicio={
+              <Ladrilho familia="anil" tamanho={40}>
+                <LogOut aria-hidden="true" />
+              </Ladrilho>
+            }
+            aoAcionar={sair}
+          />
+        </li>
+      </ul>
     </Tela>
   )
 }

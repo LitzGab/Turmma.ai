@@ -385,9 +385,13 @@ escola, quando existe, ou por escola + matrícula + senha (D48). A mesma área s
 ao 3º do Ensino Médio; a linguagem do tutor e os textos precisam funcionar para um aluno de
 11 anos (D43).
 
-**Decidido** (D80): quatro lugares, iguais na lateral e na barra de baixo do celular. Hoje os itens
-são Tutor, Atividades e Minha turma, com Privacidade no rodapé, e a X1 os mantém na casca nova. Os
-lugares nascem na **X4** (`telas-do-aluno-e-primeiro-acesso`); o que depende do F9 fica com ele.
+**Decidido** (D80): quatro lugares, iguais na lateral e na barra de baixo do celular. Desde a tarefa
+2.0 da **X4** (`telas-do-aluno-e-primeiro-acesso`) são três: **Início, Tarefas e Eu**, e o aluno abre
+no Início (`/aluno/inicio`). "Avisar um adulto" é o quarto e fica com o F9 (D73): lugar sem tela não
+aparece. Os endereços de antes continuam abrindo: `/aluno/tutor` e a conversa dentro de uma tarefa
+acendem Início, `/aluno/atividades` é Tarefas, `/aluno/privacidade` acende Eu, e `/aluno/minha-turma`
+leva a `/aluno/eu`, sem ficar no histórico. O rodapé fixo da lateral do aluno saiu: "Privacidade" é
+uma linha de Eu, e o "Sair" fica à vista na casca em todo lugar e também é uma linha de Eu (D59).
 
 - **Início** é a conversa com o **Tutor**, restrito ao conteúdo da turma, citando a página do
   material. Travado durante avaliação em andamento. Se apresenta pela função, como os outros
@@ -403,7 +407,8 @@ lugares nascem na **X4** (`telas-do-aluno-e-primeiro-acesso`); o que depende do 
 - **A caixa de escrever nunca some**, nem depois de um assunto delicado: é por ela que a mensagem
   fixa chega, com o caminho para um adulto (D36; D80, item 7)
 - **Tarefas** são as atividades e as provas atribuídas pelo professor, em Para fazer, Entregues e
-  Corrigidas, e a tarefa aberta. Hoje o item se chama Atividades
+  Corrigidas, e a tarefa aberta. O item se chama Tarefas desde a tarefa 2.0 da X4, no endereço de
+  Atividades; os três grupos chegam na 4.0
 - **Eu** é como estou indo, só do próprio aluno, por assunto, a partir do que o professor já
   aprovou; a porta para **Privacidade** ("Meus dados", do F3) e para os ajustes de aparência e de
   tamanho da letra; e, com o F9, **o que o Tutor lembra**: tudo que o aluno já fez no sistema —
@@ -1051,7 +1056,7 @@ Os quatro da X1 se chamam `inicio`, `turmas`, `tarefas` (que ilustra Atividades)
 quatro quadradinhos, que o mockup chama `mais`). O visto de `tarefas` é feito de dois retângulos de
 ponta redonda, para toda forma pintar por `fill-*`. O `Icone` tem cinco tamanhos: 24, 28, 32, 40 e 48.
 
-Lugar que a D80 não ilustrou (os itens de hoje da coordenação, Minha turma) usa o ícone do
+Lugar que a D80 não ilustrou (o Eu do aluno, que tomou o lugar de Minha turma) usa o ícone do
 `lucide` num `Ladrilho`, até a spec da área. Os ícones de lugar moram na entrada e somam até
 4 kB em brotli; acima disso saem dela para um `.svg` gerado pelo build, importado por URL, com hash
 no nome e teto próprio no `.size-limit.json` (`lugares-*.svg`, 6 kB em brotli). Nunca um arquivo de
@@ -1649,12 +1654,13 @@ Lugar sem tela não aparece (D73).
 | Papel | Na X1 | Os lugares da D80 | Chegam na |
 |---|---|---|---|
 | Professor | Início (era "Nova conversa") · Ferramentas · Turmas, e o grupo "Seu time" | Início · Turmas · Ferramentas · Criados, as Conversas embaixo e o sino. Na tarefa 2.0 a lateral ficou com Início · Turmas · Ferramentas, e "Seu time" saiu; Criados chegou com a tela dele (5.0), e a lateral e a barra de baixo ficaram com os quatro | X3 |
-| Aluno | Tutor · Atividades · Minha turma, e Privacidade no rodapé | Início · Tarefas · Eu · Avisar um adulto (este, com o F9) | X4 |
+| Aluno | Tutor · Atividades · Minha turma, e Privacidade no rodapé | Início · Tarefas · Eu · Avisar um adulto (este, com o F9). Início, Tarefas e Eu entraram na tarefa 2.0, e o rodapé do aluno ficou vazio | X4 |
 | Coordenação | Governança · Agentes · Analista · Estrutura · Professores · Material · Privacidade. Eram sete, na gaveta do celular, e só valeram até a X2 | Painel · Analista · Escola · Registros, e o sino. São quatro: cabem na barra de baixo do celular | X2 (entregue) |
 | Rede | — | Painel · Analista · Escolas | F14 |
 
-A coordenação abre no Painel (X2); Governança é a aba IA de Registros. O aluno abre no Tutor
-quando ele está ligado para a turma, e em Atividades quando não está.
+A coordenação abre no Painel (X2); Governança é a aba IA de Registros. O aluno abre no Início (X4),
+tenha ou não o Tutor ligado para a turma: o Início só avisa, e o aviso do limite do dia e da função
+suspensa fica na tela do Tutor.
 
 **O sino** (X2 e X3) fica no canto de cima à direita da área de conteúdo, e na barra de topo no
 celular. O contador é laranja, e é o único número da casca do professor e da coordenação. A lista

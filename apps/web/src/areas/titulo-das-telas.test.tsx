@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { prepararTela, renderizarTela } from '../__fixtures__/tela'
-import { MinhaTurma } from './aluno/MinhaTurma'
+import Eu from './aluno/Eu'
+import InicioDoAluno from './aluno/Inicio'
 import Escola from './coordenacao/Escola'
 import Estrutura from './coordenacao/estrutura/Estrutura'
 import ListaDaTurma from './coordenacao/estrutura/ListaDaTurma'
@@ -181,16 +182,16 @@ describe('o título das seis telas que passaram à Tela', () => {
     comDado: { rotas: { '/v1/meus-vinculos': { status: 200, corpo: { itens: [VINCULO] } } }, aparece: () => screen.findByRole('heading', { name: 'Suas turmas' }), regiao: 'Turmas' },
   })
 
-  provar('Minha turma', {
-    tela: () => <MinhaTurma />,
-    titulo: 'Minha turma',
+  provar('Eu', {
+    tela: () => <Eu />,
+    titulo: 'Eu',
     carregando: { rotas: { '/v1/minha-turma': 'segurar' }, aparece: () => screen.findByText('Carregando a sua turma…') },
     erro: { rotas: { '/v1/minha-turma': FALHA } },
     vazio: { rotas: { '/v1/minha-turma': NAO_ACHADA }, aparece: () => screen.findByText(/não está em uma turma neste ano letivo/) },
     comDado: {
       rotas: { '/v1/minha-turma': { status: 200, corpo: { escola: { nome: 'Escola sintética' }, turma: { id: UUID_DA_TURMA, nome: '7º A' }, serie: SERIE } } },
       aparece: () => screen.findByRole('heading', { name: '7º A' }),
-      regiao: 'Minha turma',
+      regiao: 'Eu',
     },
   })
 
@@ -284,6 +285,7 @@ describe('a conversa é a exceção: o `h1` existe, escondido, com o texto de ho
     ['o que o Assistente de ensino fez', () => <Time />, 'Assistente de ensino'],
     ['o que o Tutor viu, do professor', () => <TutorDoProfessor />, 'Tutor'],
     ['Tutor do aluno', () => <TutorDoAluno />, 'Tutor'],
+    ['Início do aluno', () => <InicioDoAluno />, 'Início'],
   ]
 
   // O `jsdom` não tem `scrollIntoView`, e a conversa o chama ao montar para levar o fim dela à vista.

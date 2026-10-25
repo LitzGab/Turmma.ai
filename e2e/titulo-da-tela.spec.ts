@@ -38,10 +38,11 @@ const ITENS_DA_COORDENACAO = [
   { rotulo: 'Escola', escondido: false, titulo: 'Escola: turmas' },
   { rotulo: 'Registros', escondido: false, titulo: 'Registros: IA' },
 ] as const
+/** Os três lugares do aluno (X4, 2.0): o Início é a conversa com o Tutor, e por isso o `h1` dele existe só para o leitor de tela. */
 const ITENS_DO_ALUNO = [
-  { rotulo: 'Tutor', escondido: true },
-  { rotulo: 'Atividades', escondido: false },
-  { rotulo: 'Minha turma', escondido: false },
+  { rotulo: 'Início', escondido: true },
+  { rotulo: 'Tarefas', escondido: false },
+  { rotulo: 'Eu', escondido: false },
 ] as const
 
 interface Item {
@@ -142,7 +143,7 @@ test.describe('o título de cada item da lateral', () => {
     await percorrer(page, ITENS_DA_COORDENACAO, hasTouch)
   })
 
-  test('aluno: Atividades e Minha turma mostram o título, e o Tutor o esconde, com o texto de hoje', async ({ page, hasTouch }) => {
+  test('aluno: Tarefas e Eu mostram o título, e o Início o esconde, com o texto de hoje', async ({ page, hasTouch }) => {
     const aluno = await criarAlunoComMatricula()
     await colocarAlunoNaTurma(aluno)
     await entrarComoAluno(page, aluno, hasTouch)

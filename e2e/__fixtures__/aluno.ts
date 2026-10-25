@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { Page, Route } from '@playwright/test'
-import type { MensagemDoTutor, MensagemDoTutorAoAluno, MinhaAtividade, RespostaConversaDoTutor, RespostaExecucao, RespostaMeuDiagnostico, RespostaProva } from '../../packages/shared/src/index.ts'
+import type { MensagemDoTutor, MensagemDoTutorAoAluno, MinhaAtividade, RespostaConversaDoTutor, RespostaExecucao, RespostaMemoriaDoTutor, RespostaMeuDiagnostico, RespostaProva } from '../../packages/shared/src/index.ts'
 import { erroDaApi, portao, type PedidoRegistrado } from './assistente.ts'
 
 export { erroDaApi, portao }
@@ -17,7 +17,7 @@ interface Resposta {
   readonly corpo?: unknown
 }
 
-type Rota = 'atividades' | 'prova' | 'responder' | 'enviar' | 'diagnostico' | 'conversa' | 'mensagens' | 'execucao'
+type Rota = 'atividades' | 'prova' | 'responder' | 'enviar' | 'diagnostico' | 'conversa' | 'mensagens' | 'memoria' | 'execucao'
 
 const ROTAS: readonly { readonly rota: Rota; readonly metodo: string; readonly caminho: RegExp }[] = [
   { rota: 'atividades', metodo: 'GET', caminho: /^\/v1\/minhas-atividades$/ },
@@ -27,6 +27,7 @@ const ROTAS: readonly { readonly rota: Rota; readonly metodo: string; readonly c
   { rota: 'diagnostico', metodo: 'GET', caminho: /^\/v1\/atividades-aplicadas\/([^/]+)\/meu-diagnostico$/ },
   { rota: 'conversa', metodo: 'GET', caminho: /^\/v1\/tutor\/conversa$/ },
   { rota: 'mensagens', metodo: 'POST', caminho: /^\/v1\/tutor\/mensagens$/ },
+  { rota: 'memoria', metodo: 'GET', caminho: /^\/v1\/tutor\/memoria$/ },
   { rota: 'execucao', metodo: 'GET', caminho: /^\/v1\/execucoes\/([^/]+)$/ },
 ]
 
@@ -53,6 +54,12 @@ export class ApiDoAluno {
   readonly conversasAnteriores = new Map<string, MensagemDoTutor[]>()
   tutor: Pick<RespostaConversaDoTutor, 'estado' | 'uso' | 'avaliacaoAberta'> = { estado: 'ligado', uso: { hoje: 12, limiteDoDia: 60 }, avaliacaoAberta: null }
   readonly execucoes = new Map<string, RespostaExecucao>()
+  /**
+   * O que o Tutor sabe do trabalho do aluno (`GET /v1/tutor/memoria`). Sem ela, a API responde como responde ao aluno sem turma
+   * no ano: `NAO_ENCONTRADO`. Nenhuma tela do aluno lê isso ainda: Eu o tratará como "sem resultado" e não como erro quando a 7.0
+   * ligar a leitura (telas do aluno e primeiro acesso, Tech Spec seção 9).
+   */
+  memoria: RespostaMemoriaDoTutor | null = null
   /** Todo `PUT` e `POST` que a tela mandou, na ordem. */
   readonly pedidos: PedidoRegistrado[] = []
   private readonly trocadas = new Map<Rota, (entrada: Entrada) => Resposta | Promise<Resposta>>()
@@ -107,7 +114,9 @@ export class ApiDoAluno {
       const execucao = this.execucoes.get(id)
       return execucao === undefined ? erroDaApi(404, 'NAO_ENCONTRADO') : { status: 200, corpo: execucao }
     }
+    if (rota === 'memoria') return this.memoria === null ? erroDaApi(404, 'NAO_ENCONTRADO') : { status: 200, corpo: this.memoria }
     if (rota === 'conversa') {
+      // Sem `atividadeAplicadaId` a resposta é o estado do Tutor e nenhuma mensagem: é o que a API devolve a quem pergunta o estado sem abrir conversa. Nenhuma tela do aluno faz essa leitura hoje (Tech Spec 7c e 12b, item 4).
       const atividade = url.searchParams.get('atividadeAplicadaId') ?? ''
       const anteriores = this.conversasAnteriores.get(atividade) ?? []
       const recentes = this.conversas.get(atividade) ?? []

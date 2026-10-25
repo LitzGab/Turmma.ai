@@ -84,7 +84,7 @@ describe('o sino só existe na área da coordenação', () => {
     await waitFor(() => expect(caminhosDe(rede).filter((chamada) => chamada !== '/v1/eu').length).toBeGreaterThan(0))
     // O título da área na tela: a área terminou de montar. O sino é `lazy()`, e o título não prova que um sino montado por
     // engano já teria pedido a fila: por isso a espera invertida, com prazo, sobre cada leitura da fila.
-    await screen.findByRole('heading', { level: 1, name: 'Atividades' })
+    await screen.findByRole('heading', { level: 1, name: 'Tarefas' })
     const todas = [...LEITURAS_DA_FILA, '/v1/entregas', '/v1/meus-vinculos']
     await expect(waitFor(() => expect(todas.some((leitura) => caminhosDe(rede).includes(leitura))).toBe(true), { timeout: 300 })).rejects.toThrow()
     expect(screen.queryByRole('button', { name: /^Esperando você/ })).toBeNull()

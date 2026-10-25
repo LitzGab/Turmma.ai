@@ -37,8 +37,8 @@ function LinhaDaAtividade({ atividade }: { atividade: MinhaAtividade }) {
 }
 
 /**
- * "Atividades" do aluno (MVP, A3; `docs/interface.md` 2 e 11.6): o que a professora atribuiu à turma dele, com o estado
- * de cada atividade em texto. É onde o aluno abre.
+ * "Tarefas" do aluno (era "Atividades", MVP, A3; `docs/interface.md` 2 e 11.6): o que a professora atribuiu à turma dele, com o estado
+ * de cada atividade em texto. É o segundo lugar do aluno: ele abre no Início (X4, 2.0) e chega aqui pela lateral.
  *
  * **Nenhum dado de colega** (regra 50, item 9): sem lista de quem entregou, sem média da turma, sem posição. O contrato
  * de `GET /v1/minhas-atividades` não traz nada disso. E nada aqui empurra (D59): sem contagem regressiva, sem "atrasada",
@@ -47,13 +47,13 @@ function LinhaDaAtividade({ atividade }: { atividade: MinhaAtividade }) {
  * É aba de navegação: o `<h1>`, visível, é o título da tela, na `Tela` (RF12 da X1).
  */
 export default function Atividades() {
-  useTituloDaTela('Atividades')
+  useTituloDaTela('Tarefas')
   const atividades = useInfiniteQuery(consultaMinhasAtividades)
   const itens = atividades.data?.pages.flatMap((pagina) => pagina.itens) ?? []
   const { paraResponder, feitas } = separarAtividades(itens)
 
   return (
-    <Tela titulo="Atividades" largura="conversa">
+    <Tela titulo="Tarefas" largura="conversa">
       {atividades.isPending && <EstadoCarregando rotulo="Carregando as suas atividades…" />}
       {atividades.isError && atividades.data === undefined && (
         <EstadoErro erro={atividades.error} tentando={atividades.isFetching} aoTentarDeNovo={() => void atividades.refetch({ cancelRefetch: false })} />

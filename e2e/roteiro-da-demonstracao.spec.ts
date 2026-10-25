@@ -5,7 +5,7 @@ import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts
 import { entregasNoBanco, validacoesNoBanco } from './__fixtures__/a2.ts'
 import { respostasNoBanco } from './__fixtures__/a3.ts'
 import { entrarComoAlunoPelaApi, responderPelaApi } from './__fixtures__/aluno-pela-api.ts'
-import { abrirAbaAlunos, esperarAtividades, esperarPainel, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirAbaAlunos, esperarInicioDoAluno, esperarPainel, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { irPelaCoordenacao, linhasDaTabela, painelDoAno } from './__fixtures__/coordenacao.ts'
 import { caixa, conversa, DISCIPLINA, gerarAtividade, PRAZO_DA_IA_MS, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
 import { auditoriasNoBanco, suspensoesNoBanco } from './__fixtures__/governanca.ts'
@@ -330,7 +330,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await aluna.getByLabel('Matrícula').fill(ana.matricula)
       await aluna.getByLabel('Senha', { exact: true }).fill(ana.senha)
       await aluna.getByRole('button', { name: /^Entrar$/ }).click()
-      await esperarAtividades(aluna, ana.nome)
+      await esperarInicioDoAluno(aluna, ana.nome)
     })
 
     // ── 4. Passo 1: o material, recusado sem licença e lido com ela (A2; D5, D75). ─────────────────────────────────
@@ -439,7 +439,8 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(naTurma.locator('[data-atividade-aplicada="aberta"]')).toContainText('Aberta para a turma · avaliativa · 0 de 3 alunos enviaram', { timeout: PRAZO_DA_ENTRADA_MS })
       const aplicadaId = await aplicacaoDoArtefato(escolaId, primeira.id)
 
-      await aluna.reload()
+      // A aluna abriu no Início (X4, 2.0); a lista do que responder é a de Tarefas, relida do servidor.
+      await aluna.goto('/aluno/atividades')
       const naLista = principal(aluna).getByRole('region', { name: 'Para responder' }).getByRole('link', { name: new RegExp(PRIMEIRA) })
       // Avaliação: o Tutor fica pausado, e a lista avisa antes de abrir.
       await expect(naLista).toContainText('Avaliação: o Tutor fica pausado até quem dá a aula encerrar.', { timeout: PRAZO_DA_ENTRADA_MS })
@@ -564,7 +565,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       const alternativaCerta = segunda.questoes[0]?.alternativaCerta ?? ''
       expect(alternativaCerta).not.toBe('')
 
-      await irPelaNavegacao(aluna, 'Atividades', hasTouch)
+      await irPelaNavegacao(aluna, 'Tarefas', hasTouch)
       await principal(aluna).getByRole('region', { name: 'Para responder' }).getByRole('link', { name: new RegExp(SEGUNDA) }).click({ timeout: PRAZO_DA_ENTRADA_MS })
       await expect(principal(aluna).getByRole('heading', { level: 1, name: SEGUNDA })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await principal(aluna).getByRole('link', { name: 'Pedir ajuda ao Tutor nesta questão' }).click()

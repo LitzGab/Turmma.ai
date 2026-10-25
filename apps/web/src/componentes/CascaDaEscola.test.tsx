@@ -2,15 +2,18 @@
 import type { PapelDeUsuario } from '@educa/shared'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { useContext } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
 import { consultaEu } from '../api/eu'
+import { abrirSessaoPeloCookie } from '../api/sessao'
 import { criarClienteDeConsultas } from '../api/cliente-de-consultas'
 import { ROTAS } from '../caminhos'
 import { classesDo } from '../__fixtures__/cor-das-classes'
 import { prepararTela, redeFalsa, type RedeFalsa } from '../__fixtures__/tela'
 import { CascaDaEscola } from './CascaDaEscola'
+import { ContextoDaSaida } from './saida-da-casca'
 
 /**
  * A casca da escola (`docs/interface.md` 11.1; D80; 13.0): onde ficam os itens de navegação em cada largura, e a gaveta
@@ -172,15 +175,18 @@ describe('onde ficam os itens de navegação em cada largura (RF14)', () => {
     expect(rede.chamadas.map((chamada) => chamada.caminho.split('?')[0])).toEqual(['/v1/eu'])
   })
 
-  it('abaixo de 768 px, o aluno tem os três itens na barra, e o Privacidade continua no rodapé da gaveta', async () => {
+  it('abaixo de 768 px, o aluno tem Início, Tarefas e Eu na barra, a gaveta fica sem navegação nem rodapé, e Início acende na conversa do Tutor', async () => {
     const rede = redeFalsa()
     await abrirCasca(rede, 'aluno', 'estreita', ROTAS.tutor)
 
     const barra = screen.getByRole('navigation', { name: 'Seções' })
-    expect(within(barra).getAllByRole('link').map((link) => link.textContent)).toEqual(['Tutor', 'Atividades', 'Minha turma'])
+    expect(within(barra).getAllByRole('link').map((link) => link.textContent)).toEqual(['Início', 'Tarefas', 'Eu'])
+    expect(within(barra).getByRole('link', { name: 'Início' }).getAttribute('aria-current')).toBe('page')
     const gaveta = gavetaDaPagina()
     expect(gaveta.querySelector('nav[aria-label="Seções"]')).toBeNull()
-    expect(within(gaveta).getByRole('navigation', { name: 'Rodapé', hidden: true })).toBeTruthy()
+    // "Privacidade" saiu do rodapé: o aluno acha a linha em Eu, e o "Sair" continua no pé da gaveta (D59).
+    expect(gaveta.querySelector('nav[aria-label="Rodapé"]')).toBeNull()
+    expect(within(gaveta).getByRole('button', { name: 'Sair', hidden: true })).toBeTruthy()
   })
 
   it('abaixo de 768 px, a coordenação, com os quatro lugares da X2, tem a barra de baixo e a gaveta fica sem a navegação', async () => {
@@ -268,5 +274,79 @@ describe('o espelho da prova de quem saiu não fica ao alcance de quem entrou (5
     await cliente.refetchQueries({ queryKey: consultaEu.queryKey })
 
     await waitFor(() => expect(guardada(ATIVIDADE_DE_A)).toBe(false))
+  })
+})
+
+describe('a saída que a casca oferece à tela (X4, 2.0; D59)', () => {
+  // Cada caso sai de verdade, e a saída esquece a sessão que `prepararTela` abriu uma vez: o seguinte a abre de novo.
+  beforeEach(async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ token: 'token-de-teste', expiraEm: new Date(Date.now() + 600_000).toISOString() }), { status: 200 })),
+    )
+    await abrirSessaoPeloCookie()
+    vi.unstubAllGlobals()
+  })
+
+  function LinhaDeSaida() {
+    const { sair, saindo } = useContext(ContextoDaSaida)
+    return (
+      <button type="button" onClick={sair}>
+        {saindo ? 'Tela saindo' : 'Tela sair'}
+      </button>
+    )
+  }
+
+  it('a tela que consome o contexto sai pelo mesmo caminho do "Sair" da casca: encerra na API e volta para a entrada, trocando a entrada do histórico', async () => {
+    const rede = redeFalsa()
+    instalarLargura('larga')
+    rede.responder(respostaEu('aluno', PESSOA_A, 'Camila Souza'))
+    const localizacao = memoryLocation({ path: ROTAS.euDoAluno, record: true })
+    render(
+      <QueryClientProvider client={criarClienteDeConsultas()}>
+        <Router hook={localizacao.hook}>
+          <CascaDaEscola>
+            <LinhaDeSaida />
+          </CascaDaEscola>
+        </Router>
+      </QueryClientProvider>,
+    )
+    await screen.findByText('Camila Souza')
+    expect(screen.getByRole('button', { name: 'Tela sair' })).toBeTruthy()
+
+    rede.responder({ status: 204 })
+    fireEvent.click(screen.getByRole('button', { name: 'Tela sair' }))
+
+    await waitFor(() => expect(localizacao.history?.at(-1)).toBe(ROTAS.entrar))
+    expect(rede.chamadas.some((chamada) => chamada.metodo === 'DELETE' && chamada.caminho.startsWith('/v1/sessao'))).toBe(true)
+    // `replace`: a entrada ocupa o lugar do Eu, e o "voltar" não devolve a tela de quem saiu.
+    expect(localizacao.history).toEqual([ROTAS.entrar])
+  })
+
+  it('dois cliques seguidos na saída da tela encerram a sessão uma vez só: o segundo, com a primeira ainda no ar, não pede nada à API', async () => {
+    const rede = redeFalsa()
+    instalarLargura('larga')
+    rede.responder(respostaEu('aluno', PESSOA_A, 'Camila Souza'))
+    const localizacao = memoryLocation({ path: ROTAS.euDoAluno, record: true })
+    render(
+      <QueryClientProvider client={criarClienteDeConsultas()}>
+        <Router hook={localizacao.hook}>
+          <CascaDaEscola>
+            <LinhaDeSaida />
+          </CascaDaEscola>
+        </Router>
+      </QueryClientProvider>,
+    )
+    await screen.findByText('Camila Souza')
+
+    // O encerramento fica no ar: é a janela em que o segundo clique acontece.
+    const encerramento = rede.segurar()
+    fireEvent.click(screen.getByRole('button', { name: 'Tela sair' }))
+    await screen.findByRole('button', { name: 'Tela saindo' })
+    fireEvent.click(screen.getByRole('button', { name: 'Tela saindo' }))
+    encerramento.liberar({ status: 204 })
+
+    await waitFor(() => expect(localizacao.history).toEqual([ROTAS.entrar]))
+    expect(rede.chamadas.filter((chamada) => chamada.metodo === 'DELETE' && chamada.caminho.startsWith('/v1/sessao'))).toHaveLength(1)
   })
 })

@@ -17,6 +17,7 @@ import { Dica, ItemDaLateral, ListaDeItens } from './itens-da-lateral'
 import { guardarRecolhida, lerRecolhida } from './lateral-recolhida'
 import { Marca } from './ui/Marca'
 import { MenuDaPessoa } from './MenuDaPessoa'
+import { ContextoDaSaida, type SaidaDaCasca } from './saida-da-casca'
 import { SeletorDeEscola } from './SeletorDeEscola'
 
 /**
@@ -245,6 +246,7 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
     navegar(ROTAS.entrar, { replace: true })
   }
   const aoSair = () => void encerrar()
+  const saida: SaidaDaCasca = { sair: aoSair, saindo }
 
   const itens = dados === undefined ? [] : NAVEGACAO[dados.papel]
   // Só abaixo de 768 px os itens saem da gaveta: de 768 a 1023 px o trilho abre por cima com todos eles (A20).
@@ -295,6 +297,7 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
   return (
     <ContextoDaAncoraDoSino value={contextoDaAncora}>
       <ContextoDaGaveta value={contextoDaGaveta}>
+        <ContextoDaSaida value={saida}>
         <div className="flex min-h-screen flex-col bg-fundo text-tinta md:flex-row">
           {faixa === 'estreita' && (
             <header className="sticky top-0 z-10 flex h-14 items-center gap-2 border-b-2 border-borda bg-fundo px-2">
@@ -355,6 +358,7 @@ export function CascaDaEscola({ children }: { children: ReactNode }) {
           {conteudo}
           {naBarraDeBaixo && <BarraDeBaixo itens={itens} />}
         </div>
+        </ContextoDaSaida>
       </ContextoDaGaveta>
     </ContextoDaAncoraDoSino>
   )

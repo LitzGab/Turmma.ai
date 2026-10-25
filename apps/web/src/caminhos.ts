@@ -33,6 +33,8 @@ export const ROTAS_DO_PROFESSOR = {
   turma: '/turmas/:turmaId',
   /** "Meus dados", no menu da pessoa: os pedidos de cópia dos próprios dados e o arquivo, para baixar (F3, 18.0; RF12 e RF20). */
   meusDados: '/meus-dados',
+  /** A introdução do professor, em tela de foco: a casca sem lateral nem barras (telas do aluno e primeiro acesso, 2.0; a tela é da 10.0). */
+  bemVindo: '/bem-vindo',
 } as const
 
 /** O endereço da turma aberta pelo professor, **relativo à área**, como o da Estrutura (`caminhoDaTurmaNaEstrutura`). */
@@ -89,6 +91,8 @@ export const ROTAS_DA_COORDENACAO = {
   privacidadeDaAba: '/privacidade/:aba',
   /** Um pedido de titular aberto, dentro da aba Pedidos da Privacidade (F3, 17.0). O id é o do pedido, nunca nome nem matrícula. */
   pedidoDoTitular: '/privacidade/pedidos/:pedidoId',
+  /** A introdução da coordenação, em tela de foco: a casca sem lateral nem barras (telas do aluno e primeiro acesso, 2.0; a tela é da 11.0). */
+  bemVindo: '/bem-vindo',
 } as const
 
 /**
@@ -137,18 +141,24 @@ export function ehTelaDoSeletorDaPrivacidade(valor: string): valor is TelaDoSele
 
 /** As rotas da área do aluno, relativas à base dela. */
 export const ROTAS_DO_ALUNO = {
-  /** O Tutor pelo item da lateral: o aluno escolhe a atividade em que quer ajuda (MVP, A4; `docs/interface.md` 11.6). */
+  /** "Início": a faixa de supervisão e a escolha da atividade. É onde o aluno abre (telas do aluno e primeiro acesso, 2.0; `docs/interface.md` 11.1). */
+  inicio: '/inicio',
+  /** O Tutor, que continua abrindo pelo endereço de hoje: a escolha da atividade. Dentro de "Início" na lateral. */
   tutor: '/tutor',
   /** A conversa com o Tutor numa atividade: é por atividade que a conversa existe. */
   tutorDaAtividade: '/tutor/:atividadeAplicadaId',
-  /** O que a professora atribuiu à turma do aluno, com o estado de cada atividade. É onde o aluno abre (MVP, A3). */
+  /** "Tarefas" (era "Atividades"): o que a professora atribuiu à turma do aluno, com o estado de cada uma. O endereço de hoje (MVP, A3). */
   atividades: '/atividades',
   /** Uma atividade aberta: uma questão por vez e, depois de aprovada a correção, o diagnóstico. */
   atividade: '/atividades/:atividadeAplicadaId',
-  /** A turma do aluno aprovado, com a escola e a série, sem colegas (A1, 12.0; RF13). */
+  /** "Eu": a turma, a série e a escola dele, e as linhas Privacidade e Sair. Era "Minha turma" (A1, 12.0; RF13), cujo endereço leva para cá. */
+  eu: '/eu',
+  /** O endereço de "Minha turma" até a X4: não é mais tela, e redireciona para `eu`, sem ficar no histórico. */
   minhaTurma: '/minha-turma',
-  /** "Privacidade", no rodapé fixo da lateral: por enquanto só com "Meus dados" (F3, 18.0; RF12 e RF20; `docs/interface.md` 11.1). */
+  /** "Privacidade", com "Meus dados" (F3, 18.0; RF12 e RF20): a linha de Eu a abre, e Eu fica selecionado nela. */
   privacidade: '/privacidade',
+  /** A introdução do aluno, em tela de foco: a casca sem lateral nem barras (2.0; a tela é da 9.0). */
+  bemVindo: '/bem-vindo',
 } as const
 
 /** O endereço de uma atividade aberta pelo aluno, **relativo à área**. */
@@ -212,14 +222,20 @@ export const ROTAS = {
   material: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.material}`,
   /** Privacidade da coordenação, pela raiz: é o endereço que a navegação usa (F3, 6.0). */
   privacidade: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.privacidade}`,
-  /** O Tutor do aluno, pela raiz: é o endereço que a navegação usa. */
+  /** "Início" do aluno, pela raiz: é onde ele abre (telas do aluno e primeiro acesso, 2.0), e o endereço que a navegação usa. As chaves do aluno levam `DoAluno`: `inicio` já é a raiz `/`. */
+  inicioDoAluno: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.inicio}`,
+  /** O Tutor do aluno, pela raiz: a escolha da atividade, dentro de "Início" na lateral. */
   tutor: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.tutor}`,
-  /** "Atividades" do aluno, pela raiz: é onde ele abre (MVP, A3), e o endereço que a navegação usa. */
+  /** "Tarefas" do aluno (era "Atividades"), pela raiz: o endereço que a navegação usa (MVP, A3). */
   atividades: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.atividades}`,
-  /** "Minha turma" do aluno, pela raiz: é o endereço que a navegação usa. */
-  minhaTurma: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.minhaTurma}`,
-  /** "Privacidade" do aluno, pela raiz: é o endereço do item do rodapé da lateral (F3, 18.0). */
+  /** "Eu" do aluno, pela raiz: é o endereço que a navegação usa. */
+  euDoAluno: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.eu}`,
+  /** "Privacidade" do aluno, pela raiz: a linha de Eu a abre, e Eu fica selecionado nela (F3, 18.0). */
   privacidadeDoAluno: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.privacidade}`,
+  /** A introdução de cada papel, pela raiz: telas de foco (`ehTelaDeFoco`). */
+  bemVindoDoAluno: `${BASE_DA_AREA.aluno}${ROTAS_DO_ALUNO.bemVindo}`,
+  bemVindoDoProfessor: `${BASE_DA_AREA.professor}${ROTAS_DO_PROFESSOR.bemVindo}`,
+  bemVindoDaCoordenacao: `${BASE_DA_AREA.coordenador}${ROTAS_DA_COORDENACAO.bemVindo}`,
   /** O convite da coordenação e o do professor. O token vai no fragmento `#`, e nunca no caminho nem na consulta. */
   convite: '/convite',
   /** Estado do sistema, público: é a tela que se abre justamente quando não se consegue entrar. */
@@ -230,6 +246,18 @@ export const ROTAS = {
    */
   galeria: '/galeria',
 } as const
+
+/**
+ * Os endereços de tela de foco: a casca some a lateral e as barras, e fica só o conteúdo, o "Sair" e o relógio de
+ * inatividade (telas do aluno e primeiro acesso, Tech Spec seção 5). Hoje são as três introduções, uma por papel; a
+ * prova em tela de foco (F6) entra aqui quando chegar.
+ */
+const TELAS_DE_FOCO: readonly string[] = [ROTAS.bemVindoDoAluno, ROTAS.bemVindoDoProfessor, ROTAS.bemVindoDaCoordenacao]
+
+/** O caminho é o de uma tela de foco? Só o endereço exato: `/aluno/bem-vindo-velho` e `/aluno/bem-vindo/x` são outra coisa. */
+export function ehTelaDeFoco(caminho: string): boolean {
+  return TELAS_DE_FOCO.includes(caminho)
+}
 
 /**
  * O endereço da sala da turma, por onde o aluno reivindica o nome: `/e/<slug>/turma` (Tech Spec da A1, seção 4). O token

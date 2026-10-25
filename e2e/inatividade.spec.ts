@@ -9,7 +9,7 @@ import {
   encerrarSessoesDoUsuario,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { irPelaNavegacao, esperarNovaConversa, esperarAtividades } from './__fixtures__/casca.ts'
+import { irPelaNavegacao, esperarNovaConversa, esperarInicioDoAluno } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { desenho } from './__fixtures__/galeria.ts'
 import { corDoToken, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -64,11 +64,6 @@ async function abrirJaEntrando(page: Page, professora: EquipeDeTeste, endereco: 
 /** A professora na tela em que ela abre, "Nova conversa" (A2; D73): a sessão dela vale. */
 async function esperarAreaAutenticada(page: Page, nome: string): Promise<void> {
   await esperarNovaConversa(page, nome)
-}
-
-/** O aluno na tela em que ele abre, "Atividades" (A3), com o nome dele na lateral. */
-async function esperarInicioDoAluno(page: Page, nome: string): Promise<void> {
-  await esperarAtividades(page, nome)
 }
 
 /** Minutos no formato que o relógio simulado do Playwright entende. */
