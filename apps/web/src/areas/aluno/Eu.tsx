@@ -11,6 +11,7 @@ import { Ladrilho } from '../../componentes/ui/Ladrilho'
 import { Linha } from '../../componentes/ui/Linha'
 import { Tela } from '../../componentes/ui/Tela'
 import { useTituloDaTela } from '../../titulo'
+import { ComoEstouIndo } from './ComoEstouIndo'
 
 /**
  * O que a tela diz quando a API não acha turma para o aluno no ano em curso (`NAO_ENCONTRADO`): o ano virou e a turma
@@ -20,8 +21,8 @@ import { useTituloDaTela } from '../../titulo'
 const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. Fale com quem dá a aula ou com a coordenação.'
 
 /**
- * "Eu" do aluno (telas do aluno e primeiro acesso, 2.0; RF9): o cartão da turma, que era "Minha turma" (A1, 12.0; RF13), e
- * as linhas **Privacidade** e **Sair**. Sem colegas, sem professor, sem matrícula (regra 50, item 9): o contrato de
+ * "Eu" do aluno (telas do aluno e primeiro acesso, 2.0 e 7.0; RF9): o cartão da turma, que era "Minha turma" (A1, 12.0; RF13),
+ * "Como estou indo" (`ComoEstouIndo`, com os quatro estados dele) e as linhas **Privacidade** e **Sair**. Sem colegas, sem professor, sem matrícula (regra 50, item 9): o contrato de
  * `GET /v1/minha-turma` não traz nada disso, e a tela não tem de onde tirar.
  *
  * Os estados do cartão são carregando, com dado, o erro com "Tentar de novo" (queda de rede não é logout, regra 80, item 6)
@@ -67,6 +68,7 @@ export default function Eu() {
       <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-eu">
         {cartaoDaTurma()}
       </section>
+      <ComoEstouIndo />
       <ul aria-label="Privacidade e saída" className="divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda bg-superficie">
         <li>
           <Linha

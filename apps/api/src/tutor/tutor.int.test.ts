@@ -965,6 +965,19 @@ describe('Tutor e sinais', () => {
       expect(await mensagensDe(aluno)).toEqual(antes)
     })
 
+    it('o aluno transferido no mesmo ano segue com a própria tarefa corrigida da turma antiga na memória, com o resultado (telas do aluno, 7.0; D66)', async () => {
+      const aluno = await novoAluno(a)
+      const aprovada = await aplicarAtividade(bancada, a, { titulo: 'Lista corrigida antes da transferência' })
+      await lancarLote(bancada, a, aprovada, 'aprovada', { alunoId: aluno.usuarioId, acertos: 2, total: 3, porHabilidade: [{ codigo: HABILIDADE_LIMITANTE.codigo, acertos: 0, total: 1 }, { codigo: HABILIDADE_MASSA_MOLAR.codigo, acertos: 2, total: 2 }] })
+      const esperado = [{ atividadeAplicadaId: aprovada, titulo: 'Lista corrigida antes da transferência', enviadaEm: expect.any(String) as string, resultado: { acertos: 2, total: 3, aReforcar: [HABILIDADE_LIMITANTE] } }]
+      expect((await memoriaDe(aluno)).trabalhos).toEqual(esperado)
+
+      await transferir(a, aluno)
+
+      // A memória é do aluno no ano, e não da turma em que ele estava: o trabalho dele, com o resultado aprovado, continua aqui.
+      expect((await memoriaDe(aluno)).trabalhos).toEqual(esperado)
+    })
+
     describe('o ano letivo anterior', () => {
       let anterior: AnoAnterior
       /** A escola A vista no ano anterior: o que os helpers gravam com ela cai em 2025. */

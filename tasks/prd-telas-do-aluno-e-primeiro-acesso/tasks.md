@@ -44,10 +44,10 @@
   - [ ] 6.2 A `Comemoracao`, uma vez, depois do envio confirmado nesta tela
   - [ ] 6.3 Testes: aparece no envio; não aparece ao reabrir, no resultado nem na encerrada
 
-- [ ] **7.0 — Eu: a turma, como estou indo, Privacidade e Sair**
-  - [ ] 7.1 `consultaMemoriaDoTutor` (só `trabalhos` com resultado)
-  - [ ] 7.2 A tela: cartão da turma, "Como estou indo" e as linhas
-  - [ ] 7.3 Testes: os quatro estados, sem turma no ano, só correção aprovada, nada de colega
+- [x] **7.0 — Eu: a turma, como estou indo, Privacidade e Sair**
+  - [x] 7.1 `consultaMemoriaDoTutor` (só `trabalhos` com resultado)
+  - [x] 7.2 A tela: cartão da turma, "Como estou indo" e as linhas
+  - [x] 7.3 Testes: os quatro estados, sem turma no ano, só correção aprovada, nada de colega
 
 - [ ] **8.0 — O aluno escolhe o tamanho da letra, em Ajustes**
   - [ ] 8.1 `letra.ts`, o script em linha e o CSS do `<html>`

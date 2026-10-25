@@ -6,3 +6,4 @@ export const CHAVE_DAS_MINHAS_ATIVIDADES = ['minhas-atividades'] as const
 export const CHAVE_DA_PROVA = ['minha-atividade', 'prova'] as const
 export const CHAVE_DO_MEU_DIAGNOSTICO = ['minha-atividade', 'diagnostico'] as const
 export const CHAVE_DA_CONVERSA_DO_TUTOR = ['tutor', 'conversa'] as const
+export const CHAVE_DA_MEMORIA_DO_TUTOR = ['tutor', 'memoria'] as const

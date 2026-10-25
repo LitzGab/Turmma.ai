@@ -65,7 +65,7 @@ test.describe('W4: os estados de "Eu"', () => {
 
     // Carregando: o texto, e nada da turma ainda.
     await irPelaNavegacao(page, 'Eu', hasTouch)
-    await expect(page.getByRole('main').getByRole('status')).toHaveText('Carregando a sua turma…', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByRole('main').getByRole('status').filter({ hasText: 'Carregando a sua turma…' })).toHaveText('Carregando a sua turma…', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page).toHaveTitle('Eu · Turmma')
 
     // Com dado: a turma, a série por extenso e a escola; o colega, não.
@@ -118,8 +118,9 @@ test.describe('W4: os estados de "Eu"', () => {
     await entrarComoAluno(page, aluno, hasTouch)
     await irPelaNavegacao(page, 'Eu', hasTouch)
     const principal = page.getByRole('main')
-    // Numa região de status: o leitor de tela anuncia a troca do "carregando" por este texto.
-    await expect(principal.getByRole('status')).toHaveText(SEM_TURMA_NO_ANO, { timeout: PRAZO_DA_ENTRADA_MS })
+    // Numa região de status: o leitor de tela anuncia a troca do "carregando" por este texto. "Como estou indo" também tem a dele
+    // (carregando, depois o vazio), e por isso o filtro: o `main` pode ter duas regiões de status ao mesmo tempo.
+    await expect(principal.getByRole('status').filter({ hasText: SEM_TURMA_NO_ANO })).toHaveText(SEM_TURMA_NO_ANO, { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal.getByRole('button', { name: 'Tentar de novo' })).toHaveCount(0)
     await expect(principal).not.toContainText(MENSAGENS_DE_ERRO.NAO_ENCONTRADO)
     expect(await violacoesGraves(page)).toEqual([])
@@ -132,8 +133,11 @@ test.describe('recomeço de "Eu" e do Início', () => {
     const turmaDoPrimeiro = await colocarAlunoNaTurma(primeiro)
     const segundo = await criarAlunoComMatricula({ escola: primeiro })
     const turmaDoSegundo = await colocarAlunoNaTurma(segundo)
-    await entrarComoAluno(page, primeiro, hasTouch)
-    await irPelaNavegacao(page, 'Eu', hasTouch)
+    // O primeiro entra pela API e abre Eu pelo endereço, como num retorno à aba (`entrarPelaApi`, em `casca.ts`): a entrada pela tela
+    // tem os casos dela, e o caso de 15 s do portão não comporta dois logins pela tela.
+    const entrada = await page.context().request.post('/v1/sessao/matricula', { data: { slug: primeiro.slug, matricula: primeiro.matricula, senha: primeiro.senha } })
+    expect(entrada.ok(), 'entrada do primeiro aluno pela API').toBe(true)
+    await page.goto('/aluno/eu')
     await expect(page.getByRole('main')).toContainText(turmaDoPrimeiro.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
     await sairPelaCasca(page, hasTouch)
 
@@ -156,7 +160,7 @@ test.describe('recomeço de "Eu" e do Início', () => {
     else await entrar.click()
     await esperarInicioDoAluno(page, segundo.nome)
     await irPelaNavegacao(page, 'Eu', hasTouch)
-    await expect(page.getByRole('main').getByRole('status')).toHaveText('Carregando a sua turma…', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(page.getByRole('main').getByRole('status').filter({ hasText: 'Carregando a sua turma…' })).toHaveText('Carregando a sua turma…', { timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText(turmaDoPrimeiro.turmaNome)
     liberar()
     await expect(page.getByRole('main')).toContainText(turmaDoSegundo.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })

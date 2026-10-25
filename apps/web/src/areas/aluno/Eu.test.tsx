@@ -1,17 +1,23 @@
 // @vitest-environment jsdom
-import { screen, within } from '@testing-library/react'
+import { focusManager, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
+import { CHAVE_DA_MEMORIA_DO_TUTOR } from '../../api/chaves-do-aluno'
+import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
 import { prepararTela, redeFalsa, renderizarTela } from '../../__fixtures__/tela'
 import { ContextoDaSaida } from '../../componentes/saida-da-casca'
+import type { RespostaMemoriaDoTutor } from '@educa/shared'
+import { DESCRICAO_DO_VAZIO, ROTULO_DAS_HABILIDADES, ROTULO_DO_CARREGANDO, TEXTO_DA_CONTESTACAO, TITULO_DO_VAZIO } from './como-estou-indo'
 import Eu from './Eu'
 
 /**
- * "Eu" do aluno nos quatro estados (telas do aluno e primeiro acesso, 2.0; RF3, RF9, RF20): carregando, erro, o aluno sem
- * turma — que é o vazio dele, e só vale com a leitura terminada — e com dado. As linhas **Privacidade** e **Sair** existem em
- * todos: o "Sair" não pode depender de a turma ter chegado (D59). O "Sair" é o da casca, pelo contexto.
+ * "Eu" do aluno nos quatro estados (telas do aluno e primeiro acesso, 2.0 e 7.0; RF3, RF9, RF10, RF20): carregando, erro, o
+ * aluno sem turma — que é o vazio dele, e só vale com a leitura terminada — e com dado. As linhas **Privacidade** e **Sair**
+ * existem em todos: o "Sair" não pode depender de a turma nem de a memória terem chegado (D59). O "Sair" é o da casca, pelo
+ * contexto. "Como estou indo" tem os quatro estados dele e não derruba o cartão da turma.
  */
 prepararTela()
 
@@ -27,6 +33,27 @@ const COM_TURMA = {
   },
 } as const
 const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. Fale com quem dá a aula ou com a coordenação.'
+const MEMORIA_VAZIA = { status: 200, corpo: { trabalhos: [], sinais: [] } } as const
+const LIMITANTE = { codigo: 'EF09CI01', descricao: 'Reconhecer o reagente limitante' }
+const MASSA_MOLAR = { codigo: 'EF09CI02', descricao: 'Calcular a massa molar' }
+type TrabalhoNaMemoria = RespostaMemoriaDoTutor['trabalhos'][number]
+let contador = 0
+/**
+ * O trabalho da memória, sem correção aprovada (`resultado: null`) a menos que o caso diga. O mesmo contrato que
+ * `e2e/__fixtures__/memoria-do-aluno.ts` monta para o e2e: o `tsc` da web não alcança `e2e/` (extensão `.ts` e `node:crypto`).
+ */
+function trabalhoNaMemoria(campos: Partial<TrabalhoNaMemoria> = {}): TrabalhoNaMemoria {
+  contador += 1
+  return { atividadeAplicadaId: `0192a4c0-5b1e-7c3d-8e4f-${String(contador).padStart(12, '0')}`, titulo: 'Lista sintética', enviadaEm: '2026-10-05T13:00:00.000Z', resultado: null, ...campos }
+}
+const resultadoAprovado = (campos: Partial<NonNullable<TrabalhoNaMemoria['resultado']>> = {}) => ({ acertos: 7, total: 8, aReforcar: [], ...campos })
+/** A resposta inteira, com um sinal de trabalho que a tela não pode mostrar nem guardar. */
+const memoriaDoAluno = (trabalhos: readonly TrabalhoNaMemoria[]): RespostaMemoriaDoTutor => ({
+  trabalhos: [...trabalhos],
+  sinais: [{ tipo: 'resposta_pronta', atividadeAplicadaId: trabalhos[0]?.atividadeAplicadaId ?? null, questao: 3, criadoEm: '2026-10-05T13:30:00.000Z' }],
+})
+/** Uma leitura que nunca termina: o estado de carregando. */
+const NUNCA = () => new Promise<never>(() => undefined)
 
 /** A área do aluno monta as rotas sob `/aluno`; o `Router` com a mesma base dá ao link o endereço que o navegador teria. */
 function montar(saida?: ComponentProps<typeof ContextoDaSaida>['value']) {
@@ -46,21 +73,28 @@ function conferirAsLinhas(): { sair: HTMLElement; privacidade: HTMLElement } {
   return { sair: within(linhas).getByRole('button', { name: 'Sair' }), privacidade }
 }
 
+/** A seção "Como estou indo", pelo título dela. */
+const comoEstouIndo = () => screen.getByRole('region', { name: 'Como estou indo' })
+
 describe('Eu', () => {
-  it('carregando: o título, o rótulo do carregamento e as duas linhas, e nenhuma turma ainda', async () => {
+  it('carregando: o título, os dois rótulos do carregamento e as duas linhas, e nenhuma turma nem tarefa ainda', async () => {
     const rede = redeFalsa()
-    rede.segurar()
+    rede.responderPor('/v1/minha-turma', NUNCA)
+    rede.responderPor('/v1/tutor/memoria', NUNCA)
     montar()
 
-    expect((await screen.findByRole('status')).textContent).toBe('Carregando a sua turma…')
+    const rotulos = (await screen.findAllByRole('status')).map((status) => status.textContent)
+    expect(rotulos).toEqual(expect.arrayContaining(['Carregando a sua turma…', ROTULO_DO_CARREGANDO]))
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Eu')
     expect(screen.queryByText(SEM_TURMA_NO_ANO)).toBeNull()
+    expect(screen.queryByText(TITULO_DO_VAZIO)).toBeNull()
     conferirAsLinhas()
   })
 
-  it('com dado: a turma, a série por extenso e a escola, e as duas linhas', async () => {
+  it('com dado: a turma, a série por extenso e a escola, "Como estou indo" depois do cartão e antes das linhas', async () => {
     const rede = redeFalsa()
     rede.responderPor('/v1/minha-turma', COM_TURMA)
+    rede.responderPor('/v1/tutor/memoria', MEMORIA_VAZIA)
     montar()
 
     expect(await screen.findByRole('heading', { level: 2, name: '7º A' })).toBeTruthy()
@@ -68,25 +102,34 @@ describe('Eu', () => {
     expect(principal.textContent).toContain('Escola sintética')
     expect(principal.textContent).toContain('7º ano do Ensino Fundamental')
     expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull()
-    conferirAsLinhas()
+    const { sair } = conferirAsLinhas()
+    const titulos = screen.getAllByRole('heading', { level: 2 }).map((titulo) => titulo.textContent)
+    expect(titulos).toEqual(['7º A', 'Como estou indo'])
+    // A ordem na página: cartão da turma, "Como estou indo", linhas.
+    const turma = screen.getByRole('heading', { level: 2, name: '7º A' })
+    expect(turma.compareDocumentPosition(comoEstouIndo()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(comoEstouIndo().compareDocumentPosition(sair) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('o aluno sem turma no ano: o texto de hoje numa região de status, sem "Tentar de novo" nem erro de rede, e as linhas continuam', async () => {
+  it('o aluno sem turma no ano: o texto de hoje numa região de status, sem "Tentar de novo" nem erro de rede, e "Como estou indo" segue, vazio', async () => {
     const rede = redeFalsa()
     rede.responderPor('/v1/minha-turma', NAO_ACHADA)
+    rede.responderPor('/v1/tutor/memoria', NAO_ACHADA)
     montar()
 
     // O carregando também é uma região de status: o texto de quem está sem turma é o que prova que a leitura terminou.
     expect((await screen.findByText(SEM_TURMA_NO_ANO)).getAttribute('role')).toBe('status')
+    expect(await within(comoEstouIndo()).findByText(TITULO_DO_VAZIO)).toBeTruthy()
     expect(screen.queryByText('Carregando a sua turma…')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
     expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull()
     conferirAsLinhas()
   })
 
-  it('com erro de rede: o alerta com "Tentar de novo", e o "Sair" continua ao alcance', async () => {
+  it('com erro de rede na turma: o alerta com "Tentar de novo", e o "Sair" continua ao alcance', async () => {
     const rede = redeFalsa()
     rede.responderPor('/v1/minha-turma', FALHA)
+    rede.responderPor('/v1/tutor/memoria', MEMORIA_VAZIA)
     montar()
 
     expect(await screen.findByRole('alert')).toBeTruthy()
@@ -98,9 +141,11 @@ describe('Eu', () => {
   it('"Sair" é a saída da casca: um clique chama a saída do contexto, uma vez, e nada mais é pedido à API pela linha', async () => {
     const rede = redeFalsa()
     rede.responderPor('/v1/minha-turma', COM_TURMA)
+    rede.responderPor('/v1/tutor/memoria', MEMORIA_VAZIA)
     const sair = vi.fn()
     montar({ sair, saindo: false })
     await screen.findByRole('heading', { level: 2, name: '7º A' })
+    await within(comoEstouIndo()).findByText(TITULO_DO_VAZIO)
     const chamadasAntes = rede.chamadas.length
 
     await userEvent.setup().click(conferirAsLinhas().sair)
@@ -112,19 +157,167 @@ describe('Eu', () => {
   it('saindo: a linha diz "Saindo…" no lugar de "Sair"', async () => {
     const rede = redeFalsa()
     rede.responderPor('/v1/minha-turma', COM_TURMA)
+    rede.responderPor('/v1/tutor/memoria', MEMORIA_VAZIA)
     montar({ sair: () => undefined, saindo: true })
     await screen.findByRole('heading', { level: 2, name: '7º A' })
 
     expect(screen.getByRole('button', { name: 'Saindo…' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Sair' })).toBeNull()
   })
+})
 
-  it('nada de colega, média, posição, sequência de dias, ponto ou meta (RF10)', async () => {
+describe('Eu: "Como estou indo"', () => {
+  it('só a correção aprovada: o trabalho sem resultado não aparece, nem a contagem dele', async () => {
     const rede = redeFalsa()
     rede.responderPor('/v1/minha-turma', COM_TURMA)
+    const pendente = trabalhoNaMemoria({ titulo: 'Lista que ainda espera a professora', resultado: null })
+    const aprovado = trabalhoNaMemoria({ titulo: 'Lista aprovada', resultado: resultadoAprovado({ acertos: 7, total: 8 }) })
+    rede.responderPor('/v1/tutor/memoria', { status: 200, corpo: memoriaDoAluno([pendente, aprovado]) })
+    montar()
+
+    const secao = comoEstouIndo()
+    expect(await within(secao).findByText('7 de 8 certas')).toBeTruthy()
+    expect(within(secao).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(secao).getByText('Lista aprovada')).toBeTruthy()
+    expect(document.body.textContent).not.toContain('Lista que ainda espera a professora')
+    expect(screen.queryByText(TITULO_DO_VAZIO)).toBeNull()
+    // A contestação aparece junto do que o aluno pode contestar.
+    expect(within(secao).getByText(TEXTO_DA_CONTESTACAO)).toBeTruthy()
+    // A correção sem habilidade a rever (acertou tudo, ou nada ficou para reforçar) não ganha o rótulo "Para rever" vazio.
+    expect(within(secao).queryByText(ROTULO_DAS_HABILIDADES)).toBeNull()
+  })
+
+  it('só trabalho sem aprovação: é o vazio, e não uma lista de tarefas pendentes', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/minha-turma', COM_TURMA)
+    rede.responderPor('/v1/tutor/memoria', { status: 200, corpo: memoriaDoAluno([trabalhoNaMemoria({ titulo: 'Lista pendente' })]) })
+    montar()
+
+    const secao = comoEstouIndo()
+    expect(await within(secao).findByText(TITULO_DO_VAZIO)).toBeTruthy()
+    expect(within(secao).getByText(DESCRICAO_DO_VAZIO)).toBeTruthy()
+    expect(within(secao).queryByRole('listitem')).toBeNull()
+    expect(screen.queryByText('Lista pendente')).toBeNull()
+    expect(screen.queryByText(TEXTO_DA_CONTESTACAO)).toBeNull()
+  })
+
+  it('as habilidades a rever vêm como a API mandou: código e descrição, na ordem dela', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/minha-turma', COM_TURMA)
+    const trabalho = trabalhoNaMemoria({ titulo: 'Lista com habilidades', resultado: resultadoAprovado({ acertos: 2, total: 6, aReforcar: [MASSA_MOLAR, LIMITANTE] }) })
+    rede.responderPor('/v1/tutor/memoria', { status: 200, corpo: memoriaDoAluno([trabalho]) })
+    montar()
+
+    const secao = comoEstouIndo()
+    expect(await within(secao).findByText('2 de 6 certas')).toBeTruthy()
+    const habilidades = within(secao)
+      .getAllByRole('listitem')
+      .filter((item) => item.textContent?.startsWith('EF09CI') === true)
+      .map((item) => item.textContent)
+    expect(habilidades).toEqual([`${MASSA_MOLAR.codigo} · ${MASSA_MOLAR.descricao}`, `${LIMITANTE.codigo} · ${LIMITANTE.descricao}`])
+    // A web não calcula limiar nenhum: nem selo de "vale revisar" nem percentual.
+    expect(secao.textContent).not.toMatch(/vale revisar|%/i)
+  })
+
+  it('os sinais do Tutor não vão à tela nem ao cache: a memória chega com eles, e o cache guarda só os trabalhos corrigidos', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/minha-turma', COM_TURMA)
+    const aprovado = trabalhoNaMemoria({ titulo: 'Lista aprovada', resultado: resultadoAprovado() })
+    const memoria = memoriaDoAluno([aprovado])
+    expect(memoria.sinais).toHaveLength(1)
+    rede.responderPor('/v1/tutor/memoria', { status: 200, corpo: memoria })
+    const cliente = criarClienteDeConsultas()
+    render(
+      <QueryClientProvider client={cliente}>
+        <Router base="/aluno">
+          <Eu />
+        </Router>
+      </QueryClientProvider>,
+    )
+
+    await within(comoEstouIndo()).findByText('Lista aprovada')
+    expect(cliente.getQueryData(CHAVE_DA_MEMORIA_DO_TUTOR)).toEqual([aprovado])
+    expect(JSON.stringify(cliente.getQueryCache().getAll().map((consulta) => consulta.state.data))).not.toContain('resposta_pronta')
+    expect(document.body.textContent).not.toMatch(/resposta_pronta|travou|duvida_repetida|resposta pronta/i)
+  })
+
+  it('nada de colega, média, posição, sequência de dias, ponto ou meta (RF10), e a rede vê só a turma e a memória', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/minha-turma', COM_TURMA)
+    rede.responderPor('/v1/tutor/memoria', { status: 200, corpo: memoriaDoAluno([trabalhoNaMemoria({ resultado: resultadoAprovado({ aReforcar: [LIMITANTE] }) })]) })
     montar()
     await screen.findByRole('heading', { level: 2, name: '7º A' })
+    await within(comoEstouIndo()).findByText('7 de 8 certas')
 
     expect(document.body.textContent ?? '').not.toMatch(/colega|média|posição|ranking|sequência|pontos|meta\b|prêmio/i)
+    expect(rede.chamadas.map((chamada) => chamada.caminho).sort()).toEqual(['/v1/minha-turma', '/v1/tutor/memoria'])
+  })
+
+  it('a leitura dura 5 minutos e não é refeita ao voltar para a aba, nem ao abrir Eu de novo', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/minha-turma', COM_TURMA)
+    rede.responderPor('/v1/tutor/memoria', { status: 200, corpo: memoriaDoAluno([trabalhoNaMemoria({ titulo: 'Lista aprovada', resultado: resultadoAprovado() })]) })
+    const cliente = criarClienteDeConsultas()
+    const eu = (
+      <QueryClientProvider client={cliente}>
+        <Router base="/aluno">
+          <Eu />
+        </Router>
+      </QueryClientProvider>
+    )
+    const memorias = () => rede.chamadas.filter((chamada) => chamada.caminho === '/v1/tutor/memoria').length
+    const primeira = render(eu)
+    await within(comoEstouIndo()).findByText('Lista aprovada')
+    primeira.unmount()
+    render(eu)
+    await within(comoEstouIndo()).findByText('Lista aprovada')
+    expect(memorias()).toBe(1)
+
+    // Passados mais de 5 minutos (e antes de o token de teste vencer, aos 10) a leitura está velha, mas voltar para a aba não a refaz: a correção só muda quando quem dá a aula aprova.
+    // Só o `Date` é falso, e continua até o fim: o cliente decide se a leitura está velha depois de um turno (`resumePausedMutations`).
+    vi.useFakeTimers({ toFake: ['Date'] })
+    try {
+      vi.setSystemTime(Date.now() + 6 * 60_000)
+      focusManager.setFocused(false)
+      focusManager.setFocused(true)
+      // Dá tempo de uma releitura sair, se a opção a mandasse: o cliente decide depois de alguns turnos, e a espera vem antes da conferência.
+      await new Promise((resolver) => setTimeout(resolver, 50))
+      // A leitura segue parada (nada em voo) e a rede não viu pedido novo: a primeira conferência não depende da rede responder.
+      expect(cliente.getQueryState(CHAVE_DA_MEMORIA_DO_TUTOR)?.fetchStatus).toBe('idle')
+      expect(memorias()).toBe(1)
+    } finally {
+      focusManager.setFocused(undefined)
+      vi.useRealTimers()
+    }
+  })
+
+  it('carregando: o rótulo dele, e o cartão da turma e as linhas já à vista', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/minha-turma', COM_TURMA)
+    rede.responderPor('/v1/tutor/memoria', NUNCA)
+    montar()
+
+    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    expect(within(comoEstouIndo()).getByRole('status').textContent).toBe(ROTULO_DO_CARREGANDO)
+    expect(screen.queryByText(TITULO_DO_VAZIO)).toBeNull()
+    conferirAsLinhas()
+  })
+
+  it('erro: "Tentar de novo" na seção, sem derrubar o cartão da turma, e a lista volta quando a API volta', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/minha-turma', COM_TURMA)
+    let falha = true
+    rede.responderPor('/v1/tutor/memoria', () => (falha ? FALHA : { status: 200, corpo: memoriaDoAluno([trabalhoNaMemoria({ titulo: 'Lista aprovada', resultado: resultadoAprovado() })]) }))
+    montar()
+
+    const secao = comoEstouIndo()
+    expect(await within(secao).findByRole('alert')).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 2, name: '7º A' })).toBeTruthy()
+    expect(screen.queryByText(TITULO_DO_VAZIO)).toBeNull()
+    conferirAsLinhas()
+
+    falha = false
+    await userEvent.setup().click(within(secao).getByRole('button', { name: 'Tentar de novo' }))
+    expect(await within(secao).findByText('Lista aprovada')).toBeTruthy()
   })
 })
