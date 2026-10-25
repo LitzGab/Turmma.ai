@@ -1,6 +1,6 @@
 import { CodigoDeErro, nomeDaSerie } from '@educa/shared'
 import { useQuery } from '@tanstack/react-query'
-import { Lock, LogOut, Settings } from 'lucide-react'
+import { BookOpen, Lock, LogOut, Settings } from 'lucide-react'
 import { useContext, useState } from 'react'
 import { ErroDaApi } from '../../api/cliente'
 import { consultaMinhaTurma } from '../../api/minha-turma'
@@ -21,9 +21,63 @@ import { DialogoDeAjustes } from './DialogoDeAjustes'
  */
 const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. Fale com quem dá a aula ou com a coordenação.'
 
+/** As linhas da conta, que existem em todos os estados da tela: o "Sair" nunca depende da leitura da turma (D59). */
+function LinhasDaConta({ aoAbrirAjustes }: { readonly aoAbrirAjustes: () => void }) {
+  const { sair, saindo } = useContext(ContextoDaSaida)
+  return (
+    <ul aria-label="Conta" className="divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda bg-superficie">
+      <li>
+        <Linha
+          titulo="Privacidade"
+          inicio={
+            <Ladrilho familia="verde" tamanho={40}>
+              <Lock aria-hidden="true" />
+            </Ladrilho>
+          }
+          para={ROTAS_DO_ALUNO.privacidade}
+        />
+      </li>
+      <li>
+        <Linha
+          titulo="Ajustes"
+          inicio={
+            <Ladrilho familia="turquesa" tamanho={40}>
+              <Settings aria-hidden="true" />
+            </Ladrilho>
+          }
+          aoAcionar={aoAbrirAjustes}
+        />
+      </li>
+      <li>
+        <Linha
+          titulo="Rever a introdução"
+          tituloEmDuasLinhas
+          inicio={
+            <Ladrilho familia="lima" tamanho={40}>
+              <BookOpen aria-hidden="true" />
+            </Ladrilho>
+          }
+          para={ROTAS_DO_ALUNO.bemVindo}
+        />
+      </li>
+      <li>
+        <Linha
+          titulo={saindo ? 'Saindo…' : 'Sair'}
+          inicio={
+            <Ladrilho familia="anil" tamanho={40}>
+              <LogOut aria-hidden="true" />
+            </Ladrilho>
+          }
+          aoAcionar={sair}
+        />
+      </li>
+    </ul>
+  )
+}
+
 /**
  * "Eu" do aluno (telas do aluno e primeiro acesso, 2.0, 7.0 e 8.0; RF9): o cartão da turma, que era "Minha turma" (A1, 12.0; RF13),
- * "Como estou indo" (`ComoEstouIndo`, com os quatro estados dele) e as linhas **Privacidade**, **Ajustes** (o diálogo com a aparência e o tamanho da letra, que só grava ao escolher) e **Sair**. Sem colegas, sem professor, sem matrícula (regra 50, item 9): o contrato de
+ * "Como estou indo" (`ComoEstouIndo`, com os quatro estados dele) e as linhas **Privacidade**, **Ajustes** (o diálogo com a aparência e o tamanho da letra, que só grava ao escolher), **Rever a introdução** (9.0; RF9, RF17: o mesmo endereço da primeira entrada, e revendo todo passo fecha) e **Sair**. Sem colegas, sem professor, sem matrícula (regra 50, item 9): o contrato de
  * `GET /v1/minha-turma` não traz nada disso, e a tela não tem de onde tirar.
  *
  * Os estados do cartão são carregando, com dado, o erro com "Tentar de novo" (queda de rede não é logout, regra 80, item 6)
@@ -35,7 +89,6 @@ const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. 
 export default function Eu() {
   useTituloDaTela('Eu')
   const minhaTurma = useQuery(consultaMinhaTurma)
-  const { sair, saindo } = useContext(ContextoDaSaida)
   const [ajustesAbertos, definirAjustesAbertos] = useState(false)
 
   function cartaoDaTurma() {
@@ -71,41 +124,7 @@ export default function Eu() {
         {cartaoDaTurma()}
       </section>
       <ComoEstouIndo />
-      <ul aria-label="Conta" className="divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda bg-superficie">
-        <li>
-          <Linha
-            titulo="Privacidade"
-            inicio={
-              <Ladrilho familia="verde" tamanho={40}>
-                <Lock aria-hidden="true" />
-              </Ladrilho>
-            }
-            para={ROTAS_DO_ALUNO.privacidade}
-          />
-        </li>
-        <li>
-          <Linha
-            titulo="Ajustes"
-            inicio={
-              <Ladrilho familia="turquesa" tamanho={40}>
-                <Settings aria-hidden="true" />
-              </Ladrilho>
-            }
-            aoAcionar={() => definirAjustesAbertos(true)}
-          />
-        </li>
-        <li>
-          <Linha
-            titulo={saindo ? 'Saindo…' : 'Sair'}
-            inicio={
-              <Ladrilho familia="anil" tamanho={40}>
-                <LogOut aria-hidden="true" />
-              </Ladrilho>
-            }
-            aoAcionar={sair}
-          />
-        </li>
-      </ul>
+      <LinhasDaConta aoAbrirAjustes={() => definirAjustesAbertos(true)} />
       {ajustesAbertos && <DialogoDeAjustes aoFechar={() => definirAjustesAbertos(false)} />}
     </Tela>
   )

@@ -272,13 +272,68 @@ export async function esperarInicioDoAluno(page: Page, nome: string, opcoes: { r
   ])
 }
 
-/** O aluno entra pelo endereço da escola, com matrícula e senha, e chega a "Início", onde ele abre. */
-export async function entrarComoAluno(page: Page, aluno: { readonly slug: string; readonly matricula: string; readonly senha: string; readonly nome: string }, hasTouch: boolean): Promise<void> {
+type DadosDeEntradaDoAluno = { readonly slug: string; readonly matricula: string; readonly senha: string; readonly nome: string }
+
+/** Preenche a matrícula e a senha na entrada da escola e aciona "Entrar"; quem chama espera a tela em que a pessoa cai. */
+async function entrarPelaTelaDaEscola(page: Page, aluno: Pick<DadosDeEntradaDoAluno, 'slug' | 'matricula' | 'senha'>, hasTouch: boolean): Promise<void> {
   await page.goto(`/e/${aluno.slug}`)
   await page.getByLabel('Matrícula').fill(aluno.matricula)
   await page.getByLabel('Senha').fill(aluno.senha)
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
+}
+
+/** O aluno entra pelo endereço da escola, com matrícula e senha, e chega a "Início", onde ele abre. */
+export async function entrarComoAluno(page: Page, aluno: DadosDeEntradaDoAluno, hasTouch: boolean): Promise<void> {
+  await entrarPelaTelaDaEscola(page, aluno, hasTouch)
   await esperarInicioDoAluno(page, aluno.nome)
+}
+
+/**
+ * As quatro falas da introdução do aluno (telas do aluno e primeiro acesso, 9.0), na ordem dos passos: o Tutor, quem dá a aula, o
+ * aviso de privacidade e o tamanho da letra. Texto de `areas/aluno/introducao/textos-da-introducao.ts`, copiado aqui porque
+ * `e2e/` não importa a web. `textos-da-introducao.test.ts` confere esta lista com os passos: se o texto mudar num lugar só, ele reprova.
+ */
+export const FALAS_DA_INTRODUCAO_DO_ALUNO = [
+  'Oi! Eu sou o Tutor, um programa da escola.',
+  'Quem dá a aula acompanha como você usa o Tutor.',
+  'Veja o que a escola guarda de você.',
+  'Qual tamanho de letra fica bom para você?',
+] as const
+
+/** A fala do passo `n` (a partir de 1), o `h1` da tela de foco. */
+export const falaDoPasso = (page: Page, n: number): Locator => page.getByRole('main').getByRole('heading', { level: 1, name: FALAS_DA_INTRODUCAO_DO_ALUNO[n - 1] ?? '', exact: true })
+
+/**
+ * A primeira entrada do aluno: o endereço é o da introdução e a fala do passo 1 está na tela. A espera é pelo endereço e pela
+ * fala juntos (cada uma paga a sua ida ao navegador, e o caso de 15 s não tem de sobra).
+ */
+export async function esperarIntroducaoDoAluno(page: Page, opcoes: { readonly timeout?: number } = {}): Promise<void> {
+  const timeout = opcoes.timeout ?? PRAZO_DA_ENTRADA_MS
+  await Promise.all([expect(page).toHaveURL(/\/aluno\/bem-vindo$/, { timeout }), expect(falaDoPasso(page, 1)).toBeVisible({ timeout })])
+}
+
+/** O aluno entra pelo endereço da escola e cai na introdução, como na primeira entrada. */
+export async function entrarComoAlunoNaPrimeiraVez(page: Page, aluno: Pick<DadosDeEntradaDoAluno, 'slug' | 'matricula' | 'senha'>, hasTouch: boolean): Promise<void> {
+  await entrarPelaTelaDaEscola(page, aluno, hasTouch)
+  await esperarIntroducaoDoAluno(page)
+}
+
+/** Os quatro "Continuar" da introdução, um por passo, e a chegada ao "Início". Quem chama já está no passo 1. */
+export async function seguirAteOFimDaIntroducao(page: Page, hasTouch: boolean): Promise<void> {
+  for (let passo = 1; passo <= FALAS_DA_INTRODUCAO_DO_ALUNO.length; passo++) {
+    await expect(falaDoPasso(page, passo)).toBeVisible()
+    await acionar(page.getByRole('button', { name: 'Continuar', exact: true }), hasTouch)
+  }
+}
+
+/**
+ * A aluna criada pela tela (reivindicou o nome, foi aprovada) entra pela primeira vez: passa pela introdução, e só então chega
+ * ao "Início". O fluxo dela não prova a introdução (`aluno-introducao.spec.ts` prova), mas ela está no caminho.
+ */
+export async function passarPelaIntroducaoDoAluno(page: Page, nome: string, hasTouch: boolean): Promise<void> {
+  await esperarIntroducaoDoAluno(page)
+  await seguirAteOFimDaIntroducao(page, hasTouch)
+  await esperarInicioDoAluno(page, nome)
 }
 
 /**

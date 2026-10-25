@@ -324,8 +324,10 @@ Lacunas reais, sem maquiagem. Cada uma tem item no `TODO.md`.
    de qualquer secretaria.
 2. **Material de formação do professor.** Exigido pelo princípio 4 e pelo critério 3. Não temos
    nada. É trabalho de conteúdo, não de código, e vira isca comercial.
-3. **Aviso de privacidade para aluno de 11 anos.** Texto em linguagem de faixa etária, que não
-   existe em lugar nenhum do produto.
+3. **Aviso de privacidade para aluno de 11 anos.** *Resolvida na X4 (tarefa 9.0, 25/10/2026).* O texto em linguagem de faixa
+   etária é o passo 3 da introdução do aluno, na primeira entrada, e fica em Eu › "Rever a introdução"
+   (`apps/web/src/areas/aluno/introducao/aviso-de-privacidade.ts`). Falta a revisão do texto por orientação educacional e por
+   advogado antes do primeiro aluno real.
 4. **Validação desagregada de equidade** sem coletar dado sensível. Sabemos que precisa
    existir; não sabemos ainda qual é o método aceitável.
 5. **Como respondemos a "o recurso equilibra personalização com aprendizagem colaborativa?"**

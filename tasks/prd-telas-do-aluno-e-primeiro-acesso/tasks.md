@@ -55,12 +55,12 @@
   - [x] 8.3 `docs/interface.md`
   - [x] 8.4 Testes: antes do primeiro quadro, só grava ao escolher, armazenamento recusando, 360 px com Maior
 
-- [ ] **9.0 — A introdução do aluno, com o aviso de privacidade em linguagem de 11 anos**
-  - [ ] 9.1 `aviso-de-privacidade.ts` e `textos-da-introducao.ts`, em `areas/aluno/introducao/`, com teste
-  - [ ] 9.2 `BemVindo.tsx` do aluno, a rota e o desvio da primeira entrada em `paginas/Inicio.tsx`
-  - [ ] 9.3 "Rever a introdução" em Eu
-  - [ ] 9.4 `docs/aia/tutor.md`, `docs/lgpd.md` (seção 9) e `docs/conformidade-mec.md`
-  - [ ] 9.5 Testes: primeira e segunda entrada (contexto novo), avisos sem "pular", passo 4, sair no meio, rever, estados da `BemVindo`, o texto do aviso
+- [x] **9.0 — A introdução do aluno, com o aviso de privacidade em linguagem de 11 anos**
+  - [x] 9.1 `aviso-de-privacidade.ts` e `textos-da-introducao.ts`, em `areas/aluno/introducao/`, com teste
+  - [x] 9.2 `BemVindo.tsx` do aluno, a rota e o desvio da primeira entrada em `paginas/Inicio.tsx`
+  - [x] 9.3 "Rever a introdução" em Eu
+  - [x] 9.4 `docs/aia/tutor.md`, `docs/lgpd.md` (seção 9) e `docs/conformidade-mec.md`
+  - [x] 9.5 Testes: primeira e segunda entrada (contexto novo), avisos sem "pular", passo 4, sair no meio, rever, estados da `BemVindo`, o texto do aviso
 
 - [ ] **10.0 — A introdução do professor**
   - [ ] 10.1 `textos-da-introducao.ts` e `BemVindo.tsx` do professor, com a rota

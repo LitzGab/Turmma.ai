@@ -366,8 +366,11 @@ administrável de uma crise.
 - [ ] **Dossiê de conformidade** entregue à escola: declaração de propósito com faixas
       etárias, documentação do funcionamento em linguagem simples, relatório de conformidade
       LGPD + ECA artigo por artigo, RIPD, AIA e relatório de uso legível (D61)
-- [ ] **Aviso de privacidade em linguagem de faixa etária**, para aluno de 11 anos, exigido
-      pelo ECA Digital (art. 16) e pelas cláusulas sugeridas pelo MEC. Não existe hoje
+- [x] **Aviso de privacidade em linguagem de faixa etária**, para aluno de 11 anos, exigido
+      pelo ECA Digital (art. 16) e pelas cláusulas sugeridas pelo MEC. Existe desde a X4 (tarefa 9.0, 25/10/2026): o
+      passo 3 da introdução do aluno, que ele revê em Eu › "Rever a introdução"
+      (`apps/web/src/areas/aluno/introducao/aviso-de-privacidade.ts`, com teste). Falta a revisão do texto por orientação
+      educacional e por advogado antes do primeiro aluno real
 - [ ] **Canal de notificação de violação** no produto, com retirada e recurso (D61)
 - [ ] **Exportação em formato aberto** de dado, artefato e histórico de uso pela própria
       coordenação (D63)

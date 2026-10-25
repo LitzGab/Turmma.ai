@@ -11,6 +11,11 @@ interface PropsComunsDaLinha {
   readonly abaixo?: ReactNode
   /** À direita, antes do chevron: um selo de estado, um contador, um número. Sem nada clicável dentro. */
   readonly fim?: ReactNode
+  /**
+   * O título quebra em até duas linhas, em vez de uma só com reticências. Só para o título **fixo e curto**, que a tela não pode
+   * deixar cortado em 360 px ("Rever a introdução", RF9): o que vem de dado (nome, atividade) segue em uma linha.
+   */
+  readonly tituloEmDuasLinhas?: boolean
 }
 
 /** Uma ação só: a linha é um link (`para`), um botão (`aoAcionar`) ou só de leitura (nenhum dos dois). */
@@ -49,13 +54,13 @@ interface PropsDoMiolo extends PropsComunsDaLinha {
 }
 
 /** O que a linha mostra por dentro, igual nos três casos; só o chevron depende de a linha ter ação. */
-function MioloDaLinha({ titulo, inicio, abaixo, fim, acionavel }: PropsDoMiolo) {
+function MioloDaLinha({ titulo, inicio, abaixo, fim, tituloEmDuasLinhas = false, acionavel }: PropsDoMiolo) {
   return (
     <>
       {inicio !== undefined && <span className="flex shrink-0 items-center">{inicio}</span>}
       <span className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
         <span className="flex min-w-0 flex-1 flex-col">
-          <span title={titulo} className="t-cartao truncate text-tinta">
+          <span title={titulo} className={`t-cartao text-tinta ${tituloEmDuasLinhas ? 'line-clamp-2 break-words' : 'truncate'}`}>
             {titulo}
           </span>
           {abaixo !== undefined && <span className="t-apoio break-words text-sutil">{abaixo}</span>}

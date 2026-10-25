@@ -71,6 +71,9 @@ function conferirAsLinhas(): { sair: HTMLElement; privacidade: HTMLElement; ajus
   const linhas = screen.getByRole('list', { name: 'Conta' })
   const privacidade = within(linhas).getByRole('link', { name: 'Privacidade' })
   expect(privacidade.getAttribute('href')).toBe('/aluno/privacidade')
+  // "Rever a introdução" (9.0; RF9, RF17) é um link para o mesmo endereço da primeira entrada, entre Ajustes e Sair, em todo estado.
+  expect(within(linhas).getByRole('link', { name: 'Rever a introdução' }).getAttribute('href')).toBe('/aluno/bem-vindo')
+  expect(within(linhas).getAllByRole('listitem').map((linha) => linha.textContent)).toEqual(['Privacidade', 'Ajustes', 'Rever a introdução', 'Sair'])
   return { sair: within(linhas).getByRole('button', { name: 'Sair' }), privacidade, ajustes: within(linhas).getByRole('button', { name: 'Ajustes' }) }
 }
 
@@ -110,6 +113,20 @@ describe('Eu', () => {
     const turma = screen.getByRole('heading', { level: 2, name: '7º A' })
     expect(turma.compareDocumentPosition(comoEstouIndo()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(comoEstouIndo().compareDocumentPosition(sair) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('o título "Rever a introdução" quebra em até duas linhas, e o dos outros fica em uma só com reticências (a 360 px ele não pode sair cortado)', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/minha-turma', COM_TURMA)
+    rede.responderPor('/v1/tutor/memoria', MEMORIA_VAZIA)
+    montar()
+    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    const linhas = screen.getByRole('list', { name: 'Conta' })
+
+    const rever = within(linhas).getByText('Rever a introdução').className
+    expect(rever).toContain('line-clamp-2')
+    expect(rever).not.toContain('truncate')
+    expect(within(linhas).getByText('Privacidade').className).toContain('truncate')
   })
 
   it('o aluno sem turma no ano: o texto de hoje numa região de status, sem "Tentar de novo" nem erro de rede, e "Como estou indo" segue, vazio', async () => {

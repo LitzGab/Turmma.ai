@@ -60,6 +60,14 @@ describe('os endereços do aluno', () => {
     expect(screen.queryByRole('alert')).toBeNull()
   })
 
+  it('"/aluno/bem-vindo" abre a introdução, com a fala do passo 1 como título', async () => {
+    const rede = redeFalsa()
+    rede.responderPor('/v1/eu', { status: 200, corpo: { ...EU_DE_TESTE, introducaoVistaEm: null } })
+    abrir('/aluno/bem-vindo')
+    expect((await screen.findByRole('heading', { level: 1, name: 'Oi! Eu sou o Tutor, um programa da escola.' })).textContent).toBe('Oi! Eu sou o Tutor, um programa da escola.')
+    expect(await screen.findByRole('button', { name: 'Continuar' })).toBeTruthy()
+  })
+
   it('um endereço que a área não tem responde "não encontrada"', async () => {
     abrir('/aluno/desempenho')
     expect(await screen.findByText(/não encontrada/i)).toBeTruthy()

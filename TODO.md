@@ -54,8 +54,36 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] **Dossiê de conformidade** da escola (D61): declaração de propósito com faixas etárias,
       funcionamento em linguagem simples com fluxograma, conformidade LGPD e ECA artigo por
       artigo, RIPD, AIA, relatório de uso legível, material de comunicação com a comunidade
-- [ ] **Aviso de privacidade em linguagem de faixa etária**, para aluno de 11 anos (exigido
-      pelo art. 16 do ECA Digital e pelas cláusulas sugeridas pelo MEC). Não existe hoje
+- [x] **Aviso de privacidade em linguagem de faixa etária**, para aluno de 11 anos (exigido
+      pelo art. 16 do ECA Digital e pelas cláusulas sugeridas pelo MEC). Feito na X4, tarefa 9.0
+      (`apps/web/src/areas/aluno/introducao/`). **Falta** a revisão do texto por orientação
+      educacional e por advogado (`docs/aia/tutor.md`, pendência 12), e a decisão do Joaquim sobre
+      se a mensagem fixa que o aluno recebe ao contar algo pessoal difícil deve dizer que o
+      professor é avisado (`packages/nucleo/src/ia/tarefas/turno-do-tutor.ts`); quando decidir, a
+      mensagem fixa e a frase do aviso ("Se você contar algo pessoal difícil, quem dá a aula é avisado.")
+      devem dizer a mesma coisa, de preferência por uma constante só. Entram na mesma revisão de
+      texto: o registro de acesso (Marco Civil), que o aviso não cobre, e `FRASE_DO_QUE_NAO_TEMOS`
+      ("Não temos seu e-mail…"), que ficou na primeira pessoa enquanto o grupo diz "A escola guarda".
+      **Gatilho do aviso do professor abrir a conversa:** no dia em que existir a tela que abre a
+      conversa de um aluno (regra 50, item 10), o aviso e a frase do sinal mudam juntos (pendência 12
+      de `docs/aia/tutor.md`)
+- [ ] Aviso de privacidade rolável (`BemVindo.tsx`, `AvisoDePrivacidade`): `haMais` começa `true`, e
+      se o aviso coubesse inteiro numa tela alta a faixa "Role para ler mais" ficaria para sempre.
+      Hoje não acontece (17 frases passam de `28dvh` em qualquer tela real); medir
+      `scrollHeight > clientHeight` ao montar e no redimensionamento, com um teste de
+      `scrollHeight` igual a `clientHeight` sem evento de rolagem (X4, 9.0)
+- [ ] `textos-da-introducao.test.ts` lê `e2e/__fixtures__/casca.ts` por expressão regular, que
+      quebra com apóstrofo ou template string; o `e2e/` importar o `.ts` puro dos textos resolveria
+      na origem, mas muda como o e2e importa módulo da web (X4, 9.0, revisor-geral)
+- [ ] Quem revê a introdução (Eu → "Rever a introdução") fica com Eu duas vezes no histórico, porque
+      o `replace` do fechamento troca só a entrada da introdução (`BemVindo.tsx`); decidir se
+      "Voltar" do navegador deve pular a duplicata (X4, 9.0, revisor-geral)
+- [ ] "Esse programa é de uma empresa contratada" (aviso de privacidade) só é verdade com provedor
+      externo: ligar a frase ao cadastro de suboperadores da escola, quando a tela de suboperador
+      existir (X4, 9.0, privacy-guardian)
+- [ ] `infra/k6/login-7h30.js`: o seed da rajada cria os alunos com a introdução já vista; falta
+      uma variante com parte das contas em `por_ver`, para medir o `POST /v1/eu/introducao` na
+      manhã de segunda (X4, 9.0, infra-guardian)
 - [ ] Cláusulas do contrato com a escola que o MEC sugere e que ainda não temos:
       responsabilização por incidente, alerta em tempo real ao supervisor quando conteúdo
       proibido for gerado, teste de segurança antes de atualização

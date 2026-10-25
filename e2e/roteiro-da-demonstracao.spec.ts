@@ -5,7 +5,7 @@ import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts
 import { entregasNoBanco, validacoesNoBanco } from './__fixtures__/a2.ts'
 import { respostasNoBanco } from './__fixtures__/a3.ts'
 import { entrarComoAlunoPelaApi, responderPelaApi } from './__fixtures__/aluno-pela-api.ts'
-import { abrirAbaAlunos, esperarInicioDoAluno, esperarPainel, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirAbaAlunos, passarPelaIntroducaoDoAluno, esperarPainel, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { irPelaCoordenacao, linhasDaTabela, painelDoAno } from './__fixtures__/coordenacao.ts'
 import { caixa, conversa, DISCIPLINA, gerarAtividade, PRAZO_DA_IA_MS, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
 import { auditoriasNoBanco, suspensoesNoBanco } from './__fixtures__/governanca.ts'
@@ -330,7 +330,8 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await aluna.getByLabel('Matrícula').fill(ana.matricula)
       await aluna.getByLabel('Senha', { exact: true }).fill(ana.senha)
       await aluna.getByRole('button', { name: /^Entrar$/ }).click()
-      await esperarInicioDoAluno(aluna, ana.nome)
+      // Aprovada pela tela, a aluna ainda não viu a introdução: ela é a primeira coisa que encontra (X4, 9.0).
+      await passarPelaIntroducaoDoAluno(aluna, ana.nome, hasTouch)
     })
 
     // ── 4. Passo 1: o material, recusado sem licença e lido com ela (A2; D5, D75). ─────────────────────────────────

@@ -116,3 +116,15 @@ Leia este índice antes de codar, e abra só os blocos que interessam à tarefa 
 | 2026-10-25 15:26:04 | `test-engineer` | 1ª | REPROVADO | `8_task` | O cookie nunca é conferido. Em `e2e/tamanho-da-letra.spec.ts:131-133`, a linha da tabela promete "em endereço, cabeçalho ou corpo", mas o teste não olha o… |
 | 2026-10-25 15:39:39 | `revisor-geral` | 2ª | APROVADO | `8_task` | `tasks/prd-telas-do-aluno-e-primeiro-acesso/8_task.md`: as mutações citam como teste `letra.test.ts › useTamanhoDaLetra`, mas o `describe` se chama… |
 | 2026-10-25 15:40:00 | `test-engineer` | 2ª | APROVADO | `8_task` | `e2e/tamanho-da-letra.spec.ts:141`: o padrão `/letra=\|=maior\|=grande/i` só pega a forma `chave=valor`. Um cookie com o valor sozinho (`pref=maior`) é pego.… |
+| 2026-10-25 16:41:27 | `infra-guardian` | 1ª | APROVADO | `9_task` | `infra/k6/login-7h30.js`: o seed da rajada cria as contas de aluno com a introdução já vista (techspec, seção de carga, linha 152). Por isso o primeiro dia de… |
+| 2026-10-25 16:41:28 | `frontend-reviewer` | 1ª | AJUSTES NECESSÁRIOS | `9_task` | `apps/web/src/areas/aluno/Eu.tsx:53` com `apps/web/src/componentes/ui/Linha.tsx:58`. |
+| 2026-10-25 16:41:38 | `conformidade-reviewer` | 1ª | APROVADO | `9_task` | Dizer que o professor pode abrir a conversa. Isso fica para o `privacy-guardian` e para o produto. Arquivos: `apps/web/src/areas/aluno/introducao/aviso-de-priva… |
+| 2026-10-25 16:41:43 | `revisor-geral` | 1ª | APROVADO | `9_task` | `TODO.md:57` está desatualizado. Ainda diz "Aviso de privacidade em linguagem de faixa etária... Não existe hoje", mas `docs/lgpd.md` e… |
+| 2026-10-25 16:42:48 | `test-engineer` | 1ª | REPROVADO | `9_task` | `apps/web/src/areas/aluno/introducao/BemVindo.test.tsx:306-307`: no caso "com a data já gravada, todo passo fecha, 'Fechar' volta a Eu sem gravar e o Esc faz o… |
+| 2026-10-25 16:43:09 | `privacy-guardian` | 1ª | REPROVADO | `9_task` | O aviso não diz que o professor recebe, com o nome do aluno, o sinal "precisa de atenção humana". |
+| 2026-10-25 17:09:53 | `frontend-reviewer` | 2ª | APROVADO | `9_task` | da rodada anterior: tratadas. |
+| 2026-10-25 17:10:24 | `infra-guardian` | 2ª | APROVADO | `9_task` | A recomendação da 1ª rodada foi cumprida. O `TODO.md` agora registra a variante do `infra/k6/login-7h30.js` com parte das contas em `por_ver`. Continua aberta,… |
+| 2026-10-25 17:10:41 | `privacy-guardian` | 2ª | APROVADO | `9_task` | A recomendação da rodada 1 sobre o registro de acesso (Marco Civil), que o aviso não menciona, não ganhou destino: nem em `TODO.md`, nem na tabela… |
+| 2026-10-25 17:11:04 | `conformidade-reviewer` | 2ª | APROVADO | `9_task` | A mensagem fixa que o aluno recebe na hora, quando conta algo pessoal difícil, ainda não diz que o professor é avisado. O aviso de privacidade resolve isso no… |
+| 2026-10-25 17:11:09 | `test-engineer` | 2ª | APROVADO | `9_task` | da 1ª rodada: as seis foram aplicadas. |
+| 2026-10-25 17:11:52 | `revisor-geral` | 2ª | APROVADO | `9_task` | `apps/web/src/areas/aluno/introducao/BemVindo.tsx:201`: `haMais` começa `true` e só muda no `onScroll`. Se o aviso couber inteiro, a faixa fica para sempre,… |

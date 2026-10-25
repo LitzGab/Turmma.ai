@@ -75,7 +75,7 @@ abertura. Se a gravação falha, ela vai do mesmo jeito, e a introdução volta 
 meio não grava.
 
 **Rever.** Um link para o mesmo endereço. Com a data já gravada, todo passo tem "Fechar", e o POST repetido não
-muda nada.
+muda nada. Revendo, nada é gravado, e "Fechar", o último "Continuar" e o Esc levam a Eu, de onde a pessoa veio.
 
 **Escrita.** Uma instrução, síncrona: `update usuario set introducao_vista_em = coalesce(introducao_vista_em,
 now()) where escola_id = <contexto> and id = <contexto> returning introducao_vista_em`. A do POST e a do GET usam
@@ -137,7 +137,7 @@ professor ou amigo; prometer voltar, esperar ou estar sempre ali; e termos de v�
 diz que o Tutor é um programa e pode errar, com teste. **O aviso de privacidade** diz, em frases de até 15 palavras:
 "o resultado das tarefas" (nunca "nota": não existe `Nota`, D46); "o que você escreve para o Tutor e o que ele
 responde"; que a conversa com o Tutor fica de 6 a 24 meses e a escola escolhe, e que as tarefas ficam pelo tempo que a escola escolhe, sem chamada nova de API; que o texto e as habilidades a rever passam
-por um programa de IA de uma empresa contratada (D62); e que o professor da turma vê as tarefas e o resultado. O teste
+por um programa de IA de uma empresa contratada (D62), em duas frases para caber nas 15 palavras; que o professor da turma vê as tarefas e o resultado; e **que quem dá a aula é avisado se o aluno contar algo pessoal difícil** (o sinal `atencao_humana` chega ao professor com o nome do aluno: LGPD, art. 6º, VI, e art. 14, § 6º). As frases dizem "a escola guarda", e não "guardamos": quem fala é o Tutor, e a primeira pessoa do plural sugeriria que a IA guarda os dados (D10, D58). O aviso **não diz que o professor abre a conversa**, porque nada na tela a abre (regra 50, item 10). Quando o aviso rola, uma faixa com "Role para ler mais" mostra que há mais abaixo; a `Linha` ganha `tituloEmDuasLinhas` para o título "Rever a introdução" não sair cortado a 360 px. O teste
 exige essas frases, recusa "nota" e tira o piso e o teto de `CATEGORIAS_DE_RETENCAO.conversa_tutor`, sem número à mão:
 o intervalo não aparece numa frase sem "Tutor". "Como estou indo" lê só o que `/v1/tutor/memoria` entrega com
 `resultado` não nulo (lote aprovado) e mostra `aReforcar` como veio: a web não calcula limiar. Os `sinais` da
@@ -186,7 +186,7 @@ lado da `CabecaOnca` da X1. A cadeia fechada da onça da X1 (`componentes/ui/ia/
 admitir os importadores desta spec, e só eles. **As três poses usam o mesmo rosto
 neutro da cabeça da X1; só o corpo muda** (D80, item 3). A introdução usa acenando e apontando e termina parada. O CSS que mora ao lado da peça (`Comemoracao.css`) conta como peça em `nome-dos-chunks.ts` (`ehPecaForaDaEntrada`): sem isso, o pedaço que a galeria e a tarefa aberta dividem sairia `parte-*`, e não `pecas-*`. A pose
 `comemorando` só é desenhada pela `Comemoracao`, e a `Comemoracao` só é importada por `areas/aluno/Atividade.tsx` **e pela seção `galeria/secoes/introducao.tsx`**, o palco em que o e2e prova o salto e o "reduzir movimento" antes de a tarefa aberta existir (5.0). A `Introducao`
-recebe passos (`pose`, `fala`, `conteudo`, `obrigatorio`) e avisa "concluiu" ou "pulou"; a fala é o `h1`, recebe o
+recebe passos (`pose`, `fala`, `conteudo`, `obrigatorio`) e avisa "concluiu" ou "pulou" (o último "Continuar" do aluno é o que a tarefa 9.0 chama de "Começar": são quatro passos, sem tela de fim); a fala é o `h1`, recebe o
 foco a cada passo, e Enter continua. Os textos moram em `.ts` com teste.
 
 **Estados da `BemVindo`** (os três papéis). Ela lê `['eu']`, do cache se o desvio já o leu, para saber se está
@@ -233,8 +233,9 @@ contrário, e pessoa criada pela tela passa por ela no teste.
   `componentes/Aparencia.tsx`, `componentes/ui/onca/CabecaOnca.tsx` e `src/tema.ts`
 - Verificado em 24/10/2026: a X2 e a X3 pousaram. "Onde fica cada coisa" continua saindo de `NAVEGACAO[papel]`; o primeiro
   lugar da coordenação é hoje "Painel", e o do professor, "Início"
-- `⚠️ NÃO VERIFICADO` — o passo "quem dá a aula acompanha" contra o que o professor vê de fato: a tarefa confere
-  com `packages/shared/src/tutor/uso.ts` e `sinal.ts`
+- Verificado em 25/10/2026 (tarefa 9.0): o passo "quem dá a aula acompanha" diz o que o professor vê de fato. `sinal.ts` tem
+  `travou`, `resposta_pronta` ("Pediu a resposta pronta") e `duvida_repetida` ("Repetiu a mesma dúvida"), e `uso.ts` traz o uso e a
+  referência da última troca, sem conteúdo de conversa; o passo não diz mais que isso
 
 ## 12b. Decididas por delegação, que o Joaquim revê
 

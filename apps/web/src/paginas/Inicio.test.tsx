@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
@@ -14,6 +14,22 @@ import { Inicio } from './Inicio'
 prepararTela()
 
 const ESCOLA = { id: '0197a1c0-0000-7000-8000-0000000000e1', nome: 'Colégio Vista Alegre', slug: 'vista-alegre' }
+const REQUISICAO = '0190f5a0-0000-7000-8000-000000000001'
+const FALHA = { status: 429, corpo: { erro: { codigo: 'LIMITE_EXCEDIDO', mensagem: 'x', requisicaoId: REQUISICAO } } } as const
+const eu = (papel: 'aluno' | 'professor' | 'coordenador', introducaoVistaEm: string | null) => ({
+  status: 200,
+  corpo: { usuarioId: '0197a1c0-0000-7000-8000-0000000000a1', papel, nome: 'Camila Souza', escola: ESCOLA, inatividadeMin: 30, introducaoVistaEm, acessos: [] },
+})
+
+function abrirARaiz() {
+  const localizacao = memoryLocation({ path: ROTAS.inicio, record: true })
+  renderizarTela(
+    <Router hook={localizacao.hook}>
+      <Inicio />
+    </Router>,
+  )
+  return localizacao
+}
 
 describe('a raiz de quem entrou', () => {
   it('o aluno abre em /aluno/inicio, e a raiz não fica no histórico', async () => {
@@ -30,5 +46,45 @@ describe('a raiz de quem entrou', () => {
     )
 
     await waitFor(() => expect(localizacao.history).toEqual([ROTAS.inicioDoAluno]))
+  })
+
+  it('o aluno que ainda não viu a introdução (data nula) é levado a ela, e a raiz não fica no histórico', async () => {
+    const rede = redeFalsa()
+    rede.responder(eu('aluno', null))
+    const localizacao = abrirARaiz()
+
+    await waitFor(() => expect(localizacao.history).toEqual([ROTAS.bemVindoDoAluno]))
+  })
+
+  it('enquanto o `/v1/eu` não chegou, a raiz não desvia para lugar nenhum: não pisca o Início nem a introdução', async () => {
+    const rede = redeFalsa()
+    const leitura = rede.segurar()
+    const localizacao = abrirARaiz()
+
+    expect(screen.getByText('Carregando a sua escola…')).toBeTruthy()
+    expect(localizacao.history).toEqual([ROTAS.inicio])
+
+    leitura.liberar(eu('aluno', null))
+    await waitFor(() => expect(localizacao.history).toEqual([ROTAS.bemVindoDoAluno]))
+  })
+
+  it('o `/v1/eu` que falha mantém a tela em pé com "Tentar de novo", sem desvio', async () => {
+    const rede = redeFalsa()
+    rede.responder(FALHA)
+    const localizacao = abrirARaiz()
+
+    expect(await screen.findByRole('button', { name: 'Tentar de novo' })).toBeTruthy()
+    expect(localizacao.history).toEqual([ROTAS.inicio])
+  })
+
+  it.each([
+    ['professor', ROTAS.novaConversa],
+    ['coordenador', ROTAS.painel],
+  ] as const)('com a data nula, o %s segue para a abertura de sempre: a introdução dele é da tarefa 10.0 ou 11.0', async (papel, destino) => {
+    const rede = redeFalsa()
+    rede.responder(eu(papel, null))
+    const localizacao = abrirARaiz()
+
+    await waitFor(() => expect(localizacao.history).toEqual([destino]))
   })
 })

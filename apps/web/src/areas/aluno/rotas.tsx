@@ -13,6 +13,8 @@ const Eu = lazy(() => import('./Eu'))
 const Atividades = lazy(() => import('./Atividades'))
 const Atividade = lazy(() => import('./Atividade'))
 const Tutor = lazy(() => import('./Tutor'))
+/** A introdução do aluno (9.0): tela de foco, dentro da casca; só quem a abre baixa o pedaço. */
+const BemVindo = lazy(() => import('./introducao/BemVindo'))
 /**
  * "Meus dados" é a mesma tela do aluno e do professor, e por isso mora em `componentes/` (a tela de uma área não importa
  * módulo de outra, `areas/navegacao.ts`, linha 5): sai num pedaço `parte-*` só por `import()`, que nenhuma entrada baixa.
@@ -25,7 +27,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 /**
  * A área do aluno, relativa a `/aluno`, num chunk próprio, `aluno-*.js` (`apps/web/nome-dos-chunks.ts`), que só se baixa
  * depois de a guarda de `apps/web/src/rotas.tsx` conferir o papel. Tem "Início" (onde o aluno abre) e "Tarefas" (a lista e a
- * atividade aberta), "Eu" (a turma dele e as linhas Privacidade e Sair; X4, 2.0), o Tutor, que continua nos endereços de hoje
+ * atividade aberta), "Eu" (a turma dele e as linhas Privacidade e Sair; X4, 2.0), "Bem-vindo" (a introdução, em tela de foco; X4, 9.0), o Tutor, que continua nos endereços de hoje
  * (a escolha da atividade e a conversa por atividade), e "Privacidade" com "Meus dados" (F3, 18.0), que a linha de Eu abre;
  * qualquer outro endereço daqui responde "Página não encontrada". "Minha turma" não é mais tela: o endereço dela leva a Eu.
  * "Meu desempenho" e "Avisar um adulto" não existem nesta fatia.
@@ -49,6 +51,7 @@ export default function RotasDoAluno() {
         {(parametros) => (UUID.test(parametros.atividadeAplicadaId) ? <Atividade key={parametros.atividadeAplicadaId} atividadeAplicadaId={parametros.atividadeAplicadaId} /> : <ConteudoNaoEncontrado />)}
       </Route>
       <Route path={ROTAS_DO_ALUNO.eu} component={Eu} />
+      <Route path={ROTAS_DO_ALUNO.bemVindo} component={BemVindo} />
       {/* O endereço de "Minha turma" leva a Eu, sem ficar no histórico: quem o guardou nos favoritos não cai em "não encontrada". */}
       <Route path={ROTAS_DO_ALUNO.minhaTurma}>
         <Redirect to={ROTAS_DO_ALUNO.eu} replace />

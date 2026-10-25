@@ -133,6 +133,14 @@ describe('Linha', () => {
     expect(abaixo.has('text-sutil')).toBe(true)
   })
 
+  it('o título que pede `tituloEmDuasLinhas` quebra em até duas linhas, sem reticência de uma só', () => {
+    render(<Linha para="/a" titulo="Rever a introdução" tituloEmDuasLinhas />)
+    const classes = classesDo(screen.getByText('Rever a introdução'))
+    expect(classes.has('line-clamp-2')).toBe(true)
+    expect(classes.has('break-words')).toBe(true)
+    expect(classes.has('truncate')).toBe(false)
+  })
+
   it('a linha tem 64 px no mínimo, ocupa a largura toda e desenha o anel por dentro', () => {
     render(
       <>

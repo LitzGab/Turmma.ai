@@ -1,9 +1,27 @@
+import type { PapelDeUsuario } from '@educa/shared'
 import { useQuery } from '@tanstack/react-query'
 import { consultaEu } from '../api/eu'
 import { Redirect } from 'wouter'
 import { ROTAS } from '../caminhos'
 import { EstadoCarregando, EstadoErro } from '../componentes/estado'
 import { useTituloDaTela } from '../titulo'
+
+/**
+ * A introdução de cada papel, que a primeira entrada abre antes da tela de abertura (telas do aluno e primeiro acesso, 9.0). Só o
+ * aluno tem a dele nesta tabela: a 10.0 acrescenta a do professor e a 11.0 a da coordenação.
+ */
+const INTRODUCAO_POR_PAPEL: Readonly<Partial<Record<PapelDeUsuario, string>>> = { aluno: ROTAS.bemVindoDoAluno }
+
+/** A tela em que cada papel abre (o texto de `Inicio`, abaixo, diz por quê). */
+const ABERTURA_POR_PAPEL: Readonly<Partial<Record<PapelDeUsuario, string>>> = {
+  coordenador: ROTAS.painel,
+  professor: ROTAS.novaConversa,
+  aluno: ROTAS.inicioDoAluno,
+}
+
+function doPapel(tabela: Readonly<Partial<Record<PapelDeUsuario, string>>>, papel: PapelDeUsuario | undefined): string | undefined {
+  return papel === undefined ? undefined : tabela[papel]
+}
 
 /**
  * A raiz de quem entrou: cada papel é levado à tela em que abre, sem ficar no histórico. A coordenação abre no Painel
@@ -20,11 +38,11 @@ export function Inicio() {
 
   if (eu.isPending) return <EstadoCarregando rotulo="Carregando a sua escola…" />
   const papel = eu.data?.papel
-  if (papel === 'coordenador') return <Redirect to={ROTAS.painel} replace />
-  // O professor abre em "Início", a caixa de pedido do Assistente de ensino (A2; D73; `docs/interface.md` 11.1).
-  if (papel === 'professor') return <Redirect to={ROTAS.novaConversa} replace />
-  // O aluno abre em "Início" (X4, 2.0).
-  if (papel === 'aluno') return <Redirect to={ROTAS.inicioDoAluno} replace />
+  // Data nula: a pessoa ainda não viu a introdução do papel dela. Só a raiz desvia; o endereço aberto direto não (Tech Spec, seção 5).
+  const introducao = doPapel(INTRODUCAO_POR_PAPEL, papel)
+  if (introducao !== undefined && eu.data?.introducaoVistaEm === null) return <Redirect to={introducao} replace />
+  const abertura = doPapel(ABERTURA_POR_PAPEL, papel)
+  if (abertura !== undefined) return <Redirect to={abertura} replace />
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-labelledby="titulo-inicio">
       <h1 id="titulo-inicio" className="text-xl font-semibold sm:text-2xl">
