@@ -167,20 +167,24 @@ test.describe('o fluxo do aluno contra a API real', () => {
   test('com a avaliação aberta o Tutor aparece pausado, a pergunta comum é recusada, e a mensagem de assunto delicado ainda recebe o 188', async ({ page, hasTouch }) => {
     test.setTimeout(180_000)
     const titulo = 'Prova de estequiometria'
-    const { aluno, atividadeAplicadaId } = await montarEscola(page, titulo, true)
+    const { aluno, colega, atividadeAplicadaId } = await montarEscola(page, titulo, true)
     await entrarComoAluno(page, aluno, hasTouch)
 
     // O Início avisa antes de abrir (RF5), e o caminho até o Tutor continua aberto: a caixa dele existe em todo estado (D36).
-    const naLista = principal(page).getByRole('link', { name: new RegExp(titulo) })
+    // No Início (3.0) o cartão da tarefa tem dois links, o do título e o "Pedir ajuda ao Tutor", e o aviso fica no cartão, fora dos dois.
+    // O cartão é o item da lista cujo link tem exatamente o título: outro item que só o citasse no texto não o confunde.
+    const naLista = principal(page).getByRole('listitem').filter({ has: page.getByRole('link', { name: titulo, exact: true }) })
     await expect(naLista).toContainText('Avaliação: o Tutor fica pausado até quem dá a aula encerrar.', { timeout: PRAZO_DA_TELA_MS })
 
-    // Pelo Início: escolhe a atividade, e o Tutor explica que está pausado, com o título da avaliação.
-    await acionar(naLista, hasTouch)
+    // Pelo Início: pede ajuda ao Tutor naquela atividade, e ele explica que está pausado, com o título da avaliação.
+    await acionar(naLista.getByRole('link', { name: 'Pedir ajuda ao Tutor' }), hasTouch)
     await expect(page).toHaveURL(new RegExp(`/aluno/tutor/${atividadeAplicadaId}$`))
     const pausa = principal(page).locator('[data-pausa-do-tutor]')
     await expect(pausa).toHaveAttribute('data-pausa-do-tutor', 'avaliacao', { timeout: PRAZO_DA_TELA_MS })
     await expect(pausa).toContainText(titulo)
     await expect(principal(page).getByRole('alert')).toHaveCount(0)
+    // Nem o Início nem o Tutor pausado mostram o nome do colega (regra 50, item 9).
+    await expect(page.locator('body')).not.toContainText(colega.nome)
 
     // A pergunta comum é recusada pelo servidor, e a tela mostra o mesmo aviso, sem erro.
     await expect(caixa(page)).toBeEnabled()
