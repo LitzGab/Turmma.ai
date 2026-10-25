@@ -130,6 +130,9 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 
 ## Infra e operação
 
+- [ ] **(Telas do aluno, 1.0) `lock_timeout` curto na gravação do `GET /v1/eu`** (`infra-guardian`, 1ª rodada): a gravação da linha da sessão,
+      disparada por data de outra escola, espera a trava da linha sem prazo próprio; transação longa que a segure pendura o `GET`.
+      Muda comportamento: abrir só se o painel "Datas da introdução que não gravaram" mostrar falhas junto com latência alta do `/v1/eu`.
 - [ ] **Migrations 0025, 0026 e 0027 (F3, tarefas 3.0 a 5.0) antes do staging:** o check `job_registro_chave_so_com_escola`
       entrou direto e percorre `job_registro` com a trava `ACCESS EXCLUSIVE` (a fila quente, 7 dias de jobs); os índices
       `(escola_id, <data>)` de `mensagem_tutor`, `sinal_tutor` e `mensagem_agente` (0025), os cinco índices parciais de

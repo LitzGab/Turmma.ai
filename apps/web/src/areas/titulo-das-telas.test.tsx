@@ -140,7 +140,7 @@ const VINCULO = {
 const TURMA_ABERTA = { status: 200, corpo: { id: UUID_DA_TURMA, nome: '7º A', serie: SERIE } } as const
 const EU = {
   status: 200,
-  corpo: { usuarioId: PROFESSORA.usuarioId, papel: 'professor', nome: PROFESSORA.nome, escola: { id: UUID_DA_SERIE, nome: 'Escola sintética', slug: 'escola-sintetica' }, inatividadeMin: 30, acessos: [] },
+  corpo: { usuarioId: PROFESSORA.usuarioId, papel: 'professor', nome: PROFESSORA.nome, escola: { id: UUID_DA_SERIE, nome: 'Escola sintética', slug: 'escola-sintetica' }, inatividadeMin: 30, introducaoVistaEm: '2026-02-01T10:00:00.000Z', acessos: [] },
 } as const
 const CAMINHO_DA_TURMA = `/v1/turmas/${UUID_DA_TURMA}`
 

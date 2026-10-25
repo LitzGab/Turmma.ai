@@ -36,7 +36,7 @@ afterEach(cleanup)
 
 function abrir(papel: PapelDeUsuario, caminho: string): RedeFalsa {
   const rede = redeFalsa()
-  rede.responderPor('/v1/eu', { status: 200, corpo: { usuarioId: '0197a1c0-0000-7000-8000-0000000000a1', papel, nome: 'Camila Souza', escola: ESCOLA, inatividadeMin: 30, acessos: [] } })
+  rede.responderPor('/v1/eu', { status: 200, corpo: { usuarioId: '0197a1c0-0000-7000-8000-0000000000a1', papel, nome: 'Camila Souza', escola: ESCOLA, inatividadeMin: 30, introducaoVistaEm: '2026-02-01T10:00:00.000Z', acessos: [] } })
   rede.responderPor('/v1/privacidade/incidentes', { status: 200, corpo: { incidentes: [], prazoLegal: 'O prazo é da escola.' } })
   rede.responderPor('/v1/anos-letivos', { status: 200, corpo: { itens: [{ id: '0197a1c0-0000-7000-8000-000000000001', ano: 2026, inicio: '2026-02-02', fim: '2026-12-18', situacao: 'em_curso' }] } })
   // Tudo o mais que a tela do papel pede: uma página vazia. O que o teste olha é o que o sino pediria.

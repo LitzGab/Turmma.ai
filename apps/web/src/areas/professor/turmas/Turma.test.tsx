@@ -25,7 +25,7 @@ const erro = (status: number, codigo: string): RespostaFalsa => ({ status, corpo
 
 function instalar(rede: RedeFalsa, sinais?: () => RespostaFalsa): void {
   rede.responderPor(`/v1/turmas/${TURMA}`, ok({ id: TURMA, nome: '7º A', serie: SERIE }))
-  rede.responderPor('/v1/eu', ok({ usuarioId: id(1), papel: 'professor', nome: 'Professora sintética', escola: { id: id(2), nome: 'Escola sintética', slug: 'escola-sintetica' }, inatividadeMin: 30, acessos: [] }))
+  rede.responderPor('/v1/eu', ok({ usuarioId: id(1), papel: 'professor', nome: 'Professora sintética', escola: { id: id(2), nome: 'Escola sintética', slug: 'escola-sintetica' }, inatividadeMin: 30, introducaoVistaEm: '2026-02-01T10:00:00.000Z', acessos: [] }))
   rede.responderPor('/v1/sinais', sinais ?? (() => ok({ itens: [{ id: id(300), tipo: 'atencao_humana', aluno: { id: id(901), nome: 'Caio Sintético' }, criadoEm: '2026-10-05T13:40:00.000Z' }], grupos: [] })))
   rede.responderPor('/v1/tutor/uso', ok({ turmaId: TURMA, limiteDoDia: 60, trocasDaTurmaNoMes: 0, pacoteDaTurmaNoMes: 0, alunos: [] }))
   rede.responderPor(`/v1/turmas/${TURMA}/desempenho`, ok({ turmaId: TURMA, lotesAprovados: 0, porHabilidade: [], alunos: [] }))

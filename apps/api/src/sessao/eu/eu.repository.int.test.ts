@@ -22,6 +22,25 @@ describe('repositories do login com escopo: a escola vem do contexto', () => {
     expect(naOutra).toBeUndefined()
   })
 
+  it('isolamento: a marca da introdução grava só a linha do contexto; com o contexto de B, o usuário de A não é lido nem alterado', async () => {
+    const professorEmA = await bancada.escolaComSessao('professor')
+    const escolaB = await bancada.escola()
+    const colegaEmA = await bancada.sessao(professorEmA.escolaId, 'professor')
+    const repositorio = new EuRepository(bancada.banco)
+    const dataDe = async (usuarioId: string) => (await bancada.pool.query<{ d: Date | null }>('select introducao_vista_em as d from usuario where id = $1', [usuarioId])).rows[0]?.d ?? null
+
+    const deOutraEscola = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: escolaB, usuarioId: professorEmA.usuarioId }, () => repositorio.marcarIntroducaoVista())
+    expect(deOutraEscola).toBeUndefined()
+    expect(await dataDe(professorEmA.usuarioId)).toBeNull()
+
+    const naPropria = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: professorEmA.escolaId, usuarioId: professorEmA.usuarioId }, () => repositorio.marcarIntroducaoVista())
+    expect(naPropria).toBeInstanceOf(Date)
+    expect((await dataDe(professorEmA.usuarioId))?.getTime()).toBe(naPropria?.getTime())
+    expect(await dataDe(colegaEmA.usuarioId)).toBeNull()
+    const lida = await executarNoContexto({ requisicaoId: randomUUID(), escolaId: professorEmA.escolaId, usuarioId: professorEmA.usuarioId }, () => repositorio.doContexto())
+    expect(lida?.introducaoVistaEm?.getTime()).toBe(naPropria?.getTime())
+  })
+
   it('isolamento: o registro de acesso do login grava na escola do contexto, e sem escola no contexto não grava', async () => {
     const professor = await bancada.escolaComSessao('professor')
     await executarNoContexto({ requisicaoId: randomUUID(), escolaId: professor.escolaId }, () =>

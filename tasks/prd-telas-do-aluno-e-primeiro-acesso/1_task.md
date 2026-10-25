@@ -19,9 +19,9 @@ A API guarda e devolve a data em que a pessoa viu a introdução do papel dela. 
 
 ## Subtarefas
 
-- [ ] 1.1 — `introducaoVistaEm` em `usuario`, com a migration do drizzle-kit (o número que ele der; hoje, 0039); a coluna entra em
+- [x] 1.1 — `introducaoVistaEm` em `usuario`, com a migration do drizzle-kit (o número que ele der; hoje, 0039); a coluna entra em
   `LEITURAS_DO_ARQUIVO.usuario.colunas`
-- [ ] 1.2 — `esquemaRespostaEu` ganha `introducaoVistaEm`. Um método próprio do repository, ao lado de
+- [x] 1.2 — `esquemaRespostaEu` ganha `introducaoVistaEm`. Um método próprio do repository, ao lado de
   `acessosDaConta`, devolve a data só para o service, com a justificativa do `@SemEscopo` citando a data, o filtro por
   papel e que ela não sai em `acessos`, e com a entrada nova na lista de `resolucao-de-tenant.repository.test.ts`; o service responde
   a mais antiga entre a do usuário e a dos acessos **do mesmo papel** (aluno: só a da própria linha). Se a data é
@@ -29,18 +29,18 @@ A API guarda e devolve a data em que a pessoa viu a introdução do papel dela. 
   `coalesce(introducao_vista_em, now())` por `escola_id` e `id` do contexto, nunca o valor emprestado (techspec seção 3,
   "Primeira saída"). Os acessos da conta com a data vêm de método próprio (`@SemEscopo`, filtro de papel na query,
   devolve só a mais antiga), sem quebrar o `escolher` do login nem o esquema estrito do acesso; teste de que o `escolher`
-  não leva a data. Gravação do GET que falha: o GET devolve a data lida, sem gravar; o teste provoca a falha no banco de teste, e não
+  não leva a data (`troca-de-escola.int.test.ts › a etapa escolher não leva a data da introdução`, na tabela). Gravação do GET que falha: o GET devolve a data lida, sem gravar; o teste provoca a falha no banco de teste, e não
   com mock do repository, e a falha conta num contador só com ids. O `acessos` da resposta não muda
-- [ ] 1.3 — `POST /v1/eu/introducao`: corpo vazio e estrito, por `@Body(new ZodValidationPipe(esquemaPedidoSemCorpoOuAusente))`,
+- [x] 1.3 — `POST /v1/eu/introducao`: corpo vazio e estrito, por `@Body(new ZodValidationPipe(esquemaPedidoSemCorpoOuAusente))`,
   como `aprovarLote` em `apps/api/src/atividade/correcao/lote.controller.ts`; `@Permite('eu', 'concluir_introducao')` (`proprio` nos
   três papéis, `nunca` na rede, escrito na matriz e em `matriz.expectativa.ts`), `no-store`. Usa
   `identidadeDaRequisicao()`, nunca `sessaoDaRequisicao()` nem `exigirAnoEmCurso()`. Responde a mesma data que o GET.
   Sem linha achada, `NAO_AUTENTICADO`
-- [ ] 1.4 — `concluirIntroducao()` na web. Todo `insert into usuario` das fixtures e da vitrine grava a data; as
+- [x] 1.4 — `concluirIntroducao()` na web. Todo `insert into usuario` das fixtures e da vitrine grava a data; as
   fábricas de pessoa aceitam `introducao: 'por_ver'`
-- [ ] 1.5 — `docs/lgpd.md` (linha nova no mapa, base legal "execução de contrato") e `docs/modelo-de-dados.md`. Na
+- [x] 1.5 — `docs/lgpd.md` (linha nova no mapa, base legal "execução de contrato") e `docs/modelo-de-dados.md`. Na
   migration nova, a nota "só expande" da `0035`. A versão `coordenacao` do arquivo do titular não traz a data do professor (D64)
-- [ ] 1.6 — Testes
+- [x] 1.6 — Testes
 
 ## Arquivos previstos
 
@@ -70,12 +70,14 @@ A API guarda e devolve a data em que a pessoa viu a introdução do papel dela. 
 | vínculo encerrado (RF12) | integração | ordem inteira: marca em A, `/v1/eu` em B, A desativada, `/v1/eu` em B devolve a data. **Mutação:** tirar a gravação do GET deixa vermelho |
 | sem GET intermediário | integração | marca em A, A desativada, primeiro `/v1/eu` em B: devolve nulo (a introdução reabre). É o comportamento declarado (ressalva do RF12); o desativado não empresta |
 | B sem ano em curso | integração | a professora de A entra em B sem ano em curso: o GET grava e responde, sem `exigirAnoEmCurso()` |
-| corrida do GET | integração | `Promise.all` de dois GET em B (e um GET com um POST): a primeira data fica; gravação que falha devolve a data lida |
+| corrida do GET | integração | dois GET em B presos na trava da linha (`for update` do teste), soltos em ordem e reunidos depois, e um GET com um POST: a gravação do primeiro fica, comparada com a hora do banco tirada entre os dois. `introducao.int.test.ts › corrida do GET, com um valor conhecido` e `› corrida do GET: dois GET juntos em B` |
+| gravação do GET que falha | integração | a falha provocada no banco de teste: o GET devolve a data lida, a linha fica nula e o contador `eu.introducao_falha` sobe sem rótulo. `introducao.int.test.ts › gravação do GET que falha no banco` |
 | dois papéis; outra conta | integração | professora em A e coordenadora em B não herdam; outra conta com a data gravada não empresta; a eliminação agendada não empresta |
 | `coalesce` | integração | data antiga conhecida pré-gravada: o POST repetido e os dois em paralelo devolvem exatamente ela. **Mutação:** tirar o `coalesce` deixa vermelho |
-| rede | integração | a sessão de rede é recusada no POST |
+| rede | unidade (matriz) | a rede é `nunca` no POST: `packages/shared/src/permissao/matriz.test.ts › marcar a introdução como vista`; sessão de rede não existe hoje (ver Divergências) |
 | concorrência: dois POST com `Promise.all` | integração | os dois respondem 200 com a mesma data |
 | arquivo do titular | integração | a data sai no arquivo da própria pessoa, e a versão `coordenacao` não traz a do professor |
+| escolher sem a data | integração | com a data gravada nas duas linhas da conta, cada item de `acessos` traz só `escolaNome`, `papel`, `redeNome` e `usuarioId`, e o corpo não contém a data: `apps/api/test/troca-de-escola.int.test.ts › a etapa escolher não leva a data da introdução: com a data gravada nas duas linhas, cada acesso traz só os quatro campos` |
 
 ## Como testar
 
@@ -101,6 +103,8 @@ reprovações na A1). Sem nenhuma, escreva "nenhuma".
 
 | Divergência | Motivo | Onde está na spec (`techspec.md` §, id do `cenarios.md`, documento da seção 11) |
 |---|---|---|
+| A linha "rede" da tabela de testes é de unidade (a matriz), e não de integração: não existe sessão de rede para o POST receber (`PAPEIS_DE_USUARIO` exclui `rede`, e `sessao-guarda.int.test.ts` recusa `--papel rede` como papel desconhecido) | O `nunca` da rede fica provado na matriz (`matriz.test.ts › marcar a introdução como vista`); um caso de integração não teria sessão para montar. Não muda desenho nem critério | `techspec.md` §3 (a frase depois da tabela de rotas) |
+| O contador da gravação do GET que falha (`eu.introducao_falha`, sem rótulo) e o painel dele, `infra/grafana/paineis/fundacao.json`, com o nome em `tools/testes/metricas.ts`: arquivos fora de "Arquivos previstos" | A subtarefa 1.2 manda contar a falha, e `infra/test/painel.test.ts` recusa métrica sem painel e sem o nome no Prometheus. É consequência do que o documento já pedia, e não muda desenho nem critério | `techspec.md` §3 ("Primeira saída") e §7c ("Métrica, alerta, teste de carga"), que ganharam a frase do contador |
 
 ## Mutações
 
@@ -112,10 +116,235 @@ O portão da tarefa aplica cada bloco, roda o teste citado e exige vermelho. Lin
 `+` entra, com espaço é contexto. Sem cláusula nova, escreva "nenhuma".
 
 ```mutacao
-arquivo: [caminho do arquivo que tem a cláusula]
-teste: [caminho do teste] › [nome do caso]
-  [linha de contexto, que fica]
-- [a cláusula que sai]
+arquivo: apps/api/src/sessao/eu/eu.repository.ts
+teste: apps/api/src/sessao/eu/eu.repository.int.test.ts › isolamento: a marca da introdução
+  .set({ introducaoVistaEm: sql`coalesce(${usuario.introducaoVistaEm}, now())` })
+- .where(and(eq(usuario.escolaId, escolaId), eq(usuario.id, usuarioId)))
++ .where(eq(usuario.id, usuarioId))
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.repository.ts
+teste: apps/api/test/introducao.int.test.ts › só a própria linha
+  .set({ introducaoVistaEm: sql`coalesce(${usuario.introducaoVistaEm}, now())` })
+- .where(and(eq(usuario.escolaId, escolaId), eq(usuario.id, usuarioId)))
++ .where(eq(usuario.escolaId, escolaId))
+```
+
+O GET e o POST chamam este mesmo método (`marcarIntroducaoVista`), uma instrução só; o mesmo corte, pelo caminho do GET, tem o seu bloco:
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.repository.ts
+teste: apps/api/test/introducao.int.test.ts › escrita do GET, só a própria linha
+  .set({ introducaoVistaEm: sql`coalesce(${usuario.introducaoVistaEm}, now())` })
+- .where(and(eq(usuario.escolaId, escolaId), eq(usuario.id, usuarioId)))
++ .where(eq(usuario.escolaId, escolaId))
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.repository.ts
+teste: apps/api/test/introducao.int.test.ts › coalesce: com uma data antiga
+  .update(usuario)
+- .set({ introducaoVistaEm: sql`coalesce(${usuario.introducaoVistaEm}, now())` })
++ .set({ introducaoVistaEm: sql`now()` })
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.repository.ts
+teste: apps/api/test/introducao.int.test.ts › corrida do GET, com um valor conhecido
+  .update(usuario)
+- .set({ introducaoVistaEm: sql`coalesce(${usuario.introducaoVistaEm}, now())` })
++ .set({ introducaoVistaEm: sql`now()` })
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.repository.ts
+teste: apps/api/test/introducao.int.test.ts › duas escolas: marca em A
+  .update(usuario)
+- .set({ introducaoVistaEm: sql`coalesce(${usuario.introducaoVistaEm}, now())` })
++ .set({ introducaoVistaEm: sql`coalesce(${usuario.introducaoVistaEm}, (select min(o.introducao_vista_em) from usuario o where o.conta_id = usuario.conta_id))` })
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.repository.ts
+teste: apps/api/test/introducao.int.test.ts › caminho feliz
+  inatividadeEquipeMin: escola.inatividadeEquipeMin,
+- introducaoVistaEm: usuario.introducaoVistaEm,
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/test/introducao.int.test.ts › vínculo encerrado
+  let propria = linha.introducaoVistaEm
+- if (propria === null && emprestada !== null) propria = await this.#gravarSemEmprestar()
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/test/introducao.int.test.ts › caminho feliz
+  let propria = linha.introducaoVistaEm
+- if (propria === null && emprestada !== null) propria = await this.#gravarSemEmprestar()
++ if (propria === null) propria = await this.#gravarSemEmprestar()
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/test/introducao.int.test.ts › com a data de B mais antiga
+  if (b === null) return a
+- return a.getTime() <= b.getTime() ? a : b
++ return a.getTime() <= b.getTime() ? b : a
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/test/introducao.int.test.ts › gravação do GET que falha
+  } catch {
+- this.#naoGravadas.add(1)
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/test/introducao.int.test.ts › gravação do GET que falha
+  this.#naoGravadas.add(1)
+- return null
++ throw new Error('a gravação do GET derrubou a resposta')
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/src/sessao/eu/eu.service.test.ts › o aluno não tem conta
+  async #emprestada(linha: LinhaDoEu): Promise<Date | null> {
+- return linha.contaId === null ? null : this.resolucao.introducaoMaisAntigaDaConta(linha.contaId, linha.papel)
++ return this.resolucao.introducaoMaisAntigaDaConta(linha.contaId ?? '', linha.papel)
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/src/sessao/eu/eu.service.test.ts › a pessoa que saiu entre a guarda
+  async concluirIntroducao(): Promise<RespostaIntroducao> {
+  const linha = await this.eu.doContexto()
+- if (linha === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/src/sessao/eu/eu.service.test.ts › a pessoa que saiu entre a guarda
+  const gravada = await this.eu.marcarIntroducaoVista()
+- if (gravada === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/src/sessao/eu/eu.service.test.ts › o POST responde a mais antiga
+  const gravada = await this.eu.marcarIntroducaoVista()
+  if (gravada === undefined) throw new ErroDeDominio(CodigoDeErro.NAO_AUTENTICADO)
+- const vista = maisAntiga(gravada, await this.#emprestada(linha)) ?? gravada
++ const vista = gravada
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/tenant/resolucao-de-tenant.repository.ts
+teste: apps/api/test/introducao.int.test.ts › dois papéis
+- .where(and(eq(usuario.contaId, contaId), eq(usuario.papel, papel), isNull(usuario.desativadoEm), isNull(usuario.eliminacaoAgendadaEm)))
++ .where(and(eq(usuario.contaId, contaId), isNull(usuario.desativadoEm), isNull(usuario.eliminacaoAgendadaEm)))
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/tenant/resolucao-de-tenant.repository.ts
+teste: apps/api/test/introducao.int.test.ts › sem GET intermediário
+- .where(and(eq(usuario.contaId, contaId), eq(usuario.papel, papel), isNull(usuario.desativadoEm), isNull(usuario.eliminacaoAgendadaEm)))
++ .where(and(eq(usuario.contaId, contaId), eq(usuario.papel, papel), isNull(usuario.eliminacaoAgendadaEm)))
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/tenant/resolucao-de-tenant.repository.ts
+teste: apps/api/test/introducao.int.test.ts › outra conta com a data gravada
+- .where(and(eq(usuario.contaId, contaId), eq(usuario.papel, papel), isNull(usuario.desativadoEm), isNull(usuario.eliminacaoAgendadaEm)))
++ .where(and(eq(usuario.contaId, contaId), eq(usuario.papel, papel), isNull(usuario.desativadoEm)))
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/tenant/resolucao-de-tenant.repository.ts
+teste: apps/api/test/introducao.int.test.ts › outra conta com a data gravada
+- .where(and(eq(usuario.contaId, contaId), eq(usuario.papel, papel), isNull(usuario.desativadoEm), isNull(usuario.eliminacaoAgendadaEm)))
++ .where(and(eq(usuario.papel, papel), isNull(usuario.desativadoEm), isNull(usuario.eliminacaoAgendadaEm)))
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.controller.ts
+teste: apps/api/test/introducao.int.test.ts › permissão: sem sessão é 401
+- concluirIntroducao(@Body(new ZodValidationPipe(esquemaPedidoSemCorpoOuAusente)) _corpo: PedidoSemCorpo): Promise<RespostaIntroducao> {
++ concluirIntroducao(@Body() _corpo: PedidoSemCorpo): Promise<RespostaIntroducao> {
+```
+
+```mutacao
+arquivo: packages/shared/src/permissao/matriz.ts
+teste: packages/shared/src/permissao/matriz.test.ts › marcar a introdução como vista
+- eu: { ler: 'nunca', concluir_introducao: 'nunca' },
++ eu: { ler: 'nunca', concluir_introducao: 'proprio' },
+```
+
+```mutacao
+arquivo: packages/shared/src/permissao/matriz.ts
+teste: packages/shared/src/permissao/matriz.test.ts › marcar a introdução como vista
+  sistema_job_sintetico: { criar: 'nunca', ler: 'nunca' },
+- eu: { ler: 'proprio', concluir_introducao: 'proprio' },
++ eu: { ler: 'proprio', concluir_introducao: 'nunca' },
+```
+
+```mutacao
+arquivo: packages/nucleo/src/titular/leitura-do-titular.ts
+teste: apps/api/test/arquivo-do-titular.int.test.ts › a data da introdução vista
+- sql`select ${colunasDoSelect('id', 'papel', 'nome', 'desativado_em')}, ${versao === 'completa' ? sql.raw('t.introducao_vista_em') : sql.raw("case when t.papel = 'aluno' then t.introducao_vista_em end as introducao_vista_em")} from usuario t where t.escola_id = ${escolaId} and t.id = ${titularId}`,
++ sql`select ${colunasDoSelect('id', 'papel', 'nome', 'desativado_em')}, ${sql.raw('t.introducao_vista_em')} from usuario t where t.escola_id = ${escolaId} and t.id = ${titularId}`,
+```
+
+```mutacao
+arquivo: packages/nucleo/src/titular/leitura-do-titular.ts
+teste: apps/api/test/arquivo-do-titular.int.test.ts › a data da introdução vista
+- sql`select ${colunasDoSelect('id', 'papel', 'nome', 'desativado_em')}, ${versao === 'completa' ? sql.raw('t.introducao_vista_em') : sql.raw("case when t.papel = 'aluno' then t.introducao_vista_em end as introducao_vista_em")} from usuario t where t.escola_id = ${escolaId} and t.id = ${titularId}`,
++ sql`select ${colunasDoSelect('id', 'papel', 'nome', 'desativado_em')}, ${versao !== 'completa' ? sql.raw('t.introducao_vista_em') : sql.raw("case when t.papel = 'aluno' then t.introducao_vista_em end as introducao_vista_em")} from usuario t where t.escola_id = ${escolaId} and t.id = ${titularId}`,
+```
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.repository.ts
+teste: apps/api/src/sessao/eu/eu.repository.int.test.ts › isolamento: a marca da introdução
+- return linha?.introducaoVistaEm ?? undefined
++ return linha?.introducaoVistaEm ?? null
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/test/introducao.int.test.ts › gravação do GET que falha
+  const maisAntiga = (a: Date | null, b: Date | null): Date | null => {
+- if (a === null) return b
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/test/introducao.int.test.ts › caminho feliz
+- introducaoVistaEm: maisAntiga(propria, emprestada)?.toISOString() ?? null,
++ introducaoVistaEm: maisAntiga(propria, emprestada)?.toISOString() ?? undefined,
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/eu/eu.service.ts
+teste: apps/api/src/sessao/eu/eu.service.test.ts › só a emprestada, e a linha sumiu
+- return (await this.eu.marcarIntroducaoVista()) ?? null
++ return (await this.eu.marcarIntroducaoVista()) ?? undefined
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/sessao.module.ts
+teste: apps/api/test/introducao.int.test.ts › gravação do GET que falha
+- { provide: EuService, useFactory: (eu: EuRepository, resolucao: ResolucaoDeTenantRepository) => new EuService(eu, resolucao, opcoes.medidor ?? medidorGlobal()), inject: [EuRepository, ResolucaoDeTenantRepository] },
++ { provide: EuService, useFactory: (eu: EuRepository, resolucao: ResolucaoDeTenantRepository) => new EuService(eu, resolucao, medidorGlobal()), inject: [EuRepository, ResolucaoDeTenantRepository] },
+```
+
+```mutacao
+arquivo: apps/api/src/sessao/tenant/resolucao-de-tenant.repository.ts
+teste: apps/api/test/introducao.int.test.ts › dois papéis
+- return linha?.maisAntiga == null ? null : new Date(linha.maisAntiga)
++ return new Date(linha?.maisAntiga ?? 0)
 ```
 
 ## Recomendações sem aplicar
@@ -126,5 +355,40 @@ nenhuma, escreva "nenhuma".
 
 | Revisor e rodada | Recomendação | Destino ou motivo |
 |---|---|---|
+| infra-guardian (1ª) | `introducao.int.test.ts:61-67`: o trigger criado e apagado em `usuario` pode deixar instável outro arquivo de integração que rode ao mesmo tempo; "isolar esse teste […] se aparecer instabilidade" | Recusada: o próprio revisor a condiciona a aparecer instabilidade, e o `finally`/`soltar` já apaga o trigger. Se aparecer, entra por `/corrigir` |
+| infra-guardian (1ª) | `eu.service.ts`: `lock_timeout` curto só na gravação do GET, para transação longa que segura a linha | `TODO.md` (seção "Infra e operação"): muda comportamento e só vale se o painel novo mostrar falhas junto com latência alta do `/v1/eu` |
+| test-engineer (1ª) | `eu.service.test.ts:49,56`: repositories feitos à mão com `as unknown as`; uma interface mínima tipada evitaria o cast | Recusada: o revisor mesmo os chama de aceitáveis, porque a parte do banco tem integração |
+| tenancy-guardian e infra-guardian (2ª) | `packages/nucleo/dist/telemetria/metricas.{js,d.ts}` ainda tem a chave antiga `introducaoNaoGravada`; refazer o build do `nucleo` antes de rodar a API fora do Vitest | Recusada: `dist` é artefato de build, fora do git, e a esteira reconstrói o `nucleo` |
+| privacy-guardian (2ª) | O comentário em `packages/nucleo/src/titular/leitura-do-titular.ts:32` ainda diz que a versão `coordenacao` não traz só a data do professor; o código também esconde a do coordenador | `TODO.md`, ou a tarefa futura que tocar `leitura-do-titular.ts`: só de comentário, e não é de quem reprovou |
+| privacy-guardian (2ª) | Nenhum teste prova que o arquivo do titular na versão `coordenacao` omite a data quando o titular é coordenador | `TODO.md`: o próprio revisor condiciona a "se esse caminho existir na prática" |
+| conformidade-reviewer (2ª) | Quando a coordenação ganhar painel de adoção, um caso em `apps/api/src/governanca/governanca.int.test.ts` que prove que a data não entra | A tarefa futura que criar o painel de adoção (hoje não existe consumidor, e a proibição já está escrita em `docs/lgpd.md`) |
+| revisor-geral (2ª) | `opcoes.introducao` de `criarProfessoraNaEscola` e `criarCoordenadoraNaEscola` (`e2e/__fixtures__/sessao.ts:218,223`) sem chamador nesta tarefa | Recusada: a subtarefa 1.4 manda as fábricas de pessoa aceitarem `introducao: 'por_ver'`, e o próprio revisor-geral a pediu na 1ª rodada, porque a 9.0 a 11.0 vão precisar dela |
+| revisor-geral (2ª) | O campo `#naoGravadas` (`eu.service.ts:46`) com o nome antigo ao lado da chave `introducaoFalha` | `TODO.md`: nome de campo privado, e não é de quem reprovou |
+| test-engineer (3ª) | Citar o nome inteiro dos testes de `introducao.int.test.ts` na tabela, e não só o começo, para quem procura por busca de texto | Recusada: a convenção da tarefa cita o começo do nome, e o próprio revisor reconhece que as demais citações fazem assim; o nome do `escolher`, o único que a correção exigia, já está inteiro |
+| revisor-geral (3ª) | No comentário de `introducao.int.test.ts:275`, dizer que o `now()` dá a hora do início da **transação**, que num update avulso coincide com a da instrução, para quem envolver `marcarIntroducaoVista` numa transação ver que a premissa deixa de valer | A tarefa futura que envolver `marcarIntroducaoVista` em transação (hoje a escrita é avulsa, e o comentário está certo para o código de agora) |
+| revisor-geral (3ª) | Quebrar a linha da subtarefa 1.2 em `1_task.md:32`, que ficou bem mais longa que as vizinhas | Recusada: só formatação de documento |
 
 <!-- A seção "Revisões" é criada pelo hook tools/processo/revisoes.ts: não a escreva à mão nem acrescente seção depois dela. -->
+
+## Revisões
+
+Preenchida pelo hook `tools/processo/revisoes.ts` quando cada revisor termina. Não edite à mão:
+o commit fica bloqueado enquanto um revisor obrigatório não tiver rodada que valha para o código
+atual, com APROVADO quando o revisor tem veto.
+
+| Início | Fim | Revisor | Rodada | Veredito | Agente |
+|---|---|---|---|---|---|
+| 2026-10-25 00:52:37 | 2026-10-25 00:53:38 | `tenancy-guardian` | 1 | APROVADO | aa0aa8fc3faaf148e |
+| 2026-10-25 00:53:02 | 2026-10-25 00:53:57 | `conformidade-reviewer` | 1 | APROVADO | a1d179b6156d52e17 |
+| 2026-10-25 00:52:47 | 2026-10-25 00:54:02 | `infra-guardian` | 1 | APROVADO | add6cf1056a20312f |
+| 2026-10-25 00:52:42 | 2026-10-25 00:54:06 | `privacy-guardian` | 1 | APROVADO | afa5bf93fd1ece28c |
+| 2026-10-25 00:52:57 | 2026-10-25 00:55:01 | `revisor-geral` | 1 | APROVADO | aa863ad955be7f807 |
+| 2026-10-25 00:52:52 | 2026-10-25 00:56:19 | `test-engineer` | 1 | REPROVADO | adda1d68770aadb5f |
+| 2026-10-25 01:06:34 | 2026-10-25 01:07:03 | `tenancy-guardian` | 2 | APROVADO | a582e9dfc68b43b36 |
+| 2026-10-25 01:06:42 | 2026-10-25 01:07:07 | `privacy-guardian` | 2 | APROVADO | a9fa164a4813a4d89 |
+| 2026-10-25 01:06:50 | 2026-10-25 01:07:16 | `infra-guardian` | 2 | APROVADO | ac2ab1b01333256e3 |
+| 2026-10-25 01:06:25 | 2026-10-25 01:07:31 | `test-engineer` | 2 | REPROVADO | a7c813659747c6b77 |
+| 2026-10-25 01:07:07 | 2026-10-25 01:07:32 | `conformidade-reviewer` | 2 | APROVADO | a0fe591f0fd28a2e3 |
+| 2026-10-25 01:06:59 | 2026-10-25 01:07:38 | `revisor-geral` | 2 | APROVADO | a4a1d7c999e0e90cd |
+| 2026-10-25 01:16:59 | 2026-10-25 01:17:28 | `test-engineer` | 3 | APROVADO | a804a71ad1bb982e7 |
+| 2026-10-25 01:17:08 | 2026-10-25 01:17:34 | `revisor-geral` | 3 | APROVADO | a4c6627b3a0209d2f |

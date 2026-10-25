@@ -93,6 +93,12 @@ export const METRICAS = {
   /** Gravações de atividade que falharam depois de a resposta sair: a sessão só vence pela tolerância. */
   atividadeFalha: 'sessao.atividade_falha',
   /**
+   * Vezes em que a gravação da linha da própria sessão, disparada pelo `GET /v1/eu` por haver data de outra escola da mesma
+   * conta, falhou (telas do aluno, tarefa 1.0). O que se grava é `now()`, nunca a data emprestada. Sem rótulo: nem escola nem
+   * pessoa. A resposta sai do mesmo jeito, com a data lida.
+   */
+  introducaoFalha: 'eu.introducao_falha',
+  /**
    * Entradas do operador Turmma que falharam em `/v1/operacao/sessao/email` (`NAO_AUTENTICADO` ou `CONTA_SEGURADA`), sem
    * rótulo: a contagem de `entrada_falha` por minuto da Tech Spec da A0 (seção 7c). Separada de `login.falhas`, para o
    * painel das escolas não contar a nossa equipe.

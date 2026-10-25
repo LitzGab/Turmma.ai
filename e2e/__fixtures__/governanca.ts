@@ -74,7 +74,7 @@ export async function montarEscolaComEntregas(escolaId: string, coordenadoraId: 
     // A equipe tem conta (o banco exige); o aluno, não.
     const pessoa = async (papel: 'professor' | 'aluno', nome: string): Promise<string> => {
       const contaId = papel === 'aluno' ? null : await id(banco, 'insert into conta (email) values ($1) returning id', [`professor-${randomUUID()}@educa.invalid`])
-      return id(banco, 'insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, $3, $4) returning id', [escolaId, contaId, papel, nome])
+      return id(banco, 'insert into usuario (escola_id, conta_id, papel, nome, introducao_vista_em) values ($1, $2, $3, $4, now()) returning id', [escolaId, contaId, papel, nome])
     }
     const vincular = (usuarioId: string, turmaId: string, disciplinaId: string | null, papel: 'professor' | 'aluno') =>
       banco.query("insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, estado, decidido_em, criado_por) values ($1, $2, $3, $4, $5, $6, 'confirmado', now(), $7)", [
@@ -216,7 +216,7 @@ export async function acrescentarSerieDeUmProfessorSo(escolaId: string): Promise
     const disciplinaId = await id(banco, 'insert into disciplina (escola_id, nome) values ($1, $2) returning id', [escolaId, `Matemática ${marca}`])
     const turmaId = await id(banco, 'insert into turma (escola_id, ano_letivo_id, serie_id, nome) values ($1, $2, $3, $4) returning id', [escolaId, anoLetivoId, serieId, `3ºA ${marca}`])
     const contaId = await id(banco, 'insert into conta (email) values ($1) returning id', [`professor-${randomUUID()}@educa.invalid`])
-    const professoraId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'professor', $3) returning id", [escolaId, contaId, professora])
+    const professoraId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome, introducao_vista_em) values ($1, $2, 'professor', $3, now()) returning id", [escolaId, contaId, professora])
     await banco.query(
       "insert into vinculo (escola_id, ano_letivo_id, usuario_id, turma_id, disciplina_id, papel, estado, decidido_em, criado_por) values ($1, $2, $3, $4, $5, 'professor', 'confirmado', now(), $3)",
       [escolaId, anoLetivoId, professoraId, turmaId, disciplinaId],
@@ -244,7 +244,7 @@ export async function acrescentarSerieDeUmProfessorSo(escolaId: string): Promise
 export async function suspenderFuncaoPorOutraPessoa(escolaId: string, funcao: string): Promise<{ readonly usuarioId: string }> {
   return comBanco(async (banco) => {
     const contaId = await id(banco, 'insert into conta (email) values ($1) returning id', [`coordenacao-${randomUUID()}@educa.invalid`])
-    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome) values ($1, $2, 'coordenador', $3) returning id", [escolaId, contaId, `Coordenação Sintética ${randomUUID().slice(0, 8)}`])
+    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome, introducao_vista_em) values ($1, $2, 'coordenador', $3, now()) returning id", [escolaId, contaId, `Coordenação Sintética ${randomUUID().slice(0, 8)}`])
     await banco.query('insert into suspensao_de_funcao (escola_id, funcao, suspensa_por) values ($1, $2, $3)', [escolaId, funcao, usuarioId])
     return { usuarioId }
   })

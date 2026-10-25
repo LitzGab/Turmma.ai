@@ -34,7 +34,7 @@ const DUAS_TURMAS: RespostaFalsa = { status: 200, corpo: { itens: [vinculo(1, TU
 const UMA_TURMA: RespostaFalsa = { status: 200, corpo: { itens: [vinculo(1, TURMA_A, QUIMICA)] } }
 const PROFESSORA: RespostaFalsa = {
   status: 200,
-  corpo: { usuarioId: id(900), papel: 'professor', nome: 'Camila Souza', escola: { id: id(800), nome: 'Escola Sintética', slug: 'escola-sintetica' }, inatividadeMin: 30, acessos: [] },
+  corpo: { usuarioId: id(900), papel: 'professor', nome: 'Camila Souza', escola: { id: id(800), nome: 'Escola Sintética', slug: 'escola-sintetica' }, inatividadeMin: 30, introducaoVistaEm: '2026-02-01T10:00:00.000Z', acessos: [] },
 }
 const erro = (status: number, codigo: string): RespostaFalsa => ({ status, corpo: { erro: { codigo, mensagem: 'x', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } } })
 const NAO_ENCONTRADO = erro(404, 'NAO_ENCONTRADO')

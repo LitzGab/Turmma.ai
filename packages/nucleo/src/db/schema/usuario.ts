@@ -38,6 +38,12 @@ export const usuario = pgTable(
      * da escola tem a credencial apagada, e quem tem a eliminação agendada a mantém para o cancelamento devolver o acesso.
      */
     eliminacaoAgendadaEm: timestamp({ withTimezone: true }),
+    /**
+     * Quando a pessoa viu a introdução do papel dela (telas do aluno, tarefa 1.0), ou nulo se ainda não viu. É uma data, e não
+     * conteúdo. Fica no usuário porque o vínculo é por turma e ano e a introdução voltaria em janeiro, e porque o aluno não
+     * tem conta. Gravada só pela própria pessoa, com `coalesce`: a primeira data nunca muda.
+     */
+    introducaoVistaEm: timestamp({ withTimezone: true }),
   },
   (tabela) => [
     unique('usuario_escola_id_unico').on(tabela.escolaId, tabela.id),

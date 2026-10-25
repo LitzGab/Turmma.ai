@@ -1777,6 +1777,55 @@
           "range": true
         }
       ]
+    },
+    {
+      "id": 39,
+      "type": "timeseries",
+      "title": "Datas da introdução que não gravaram",
+      "description": "Vezes em que a gravação da linha da própria sessão, disparada pelo GET /v1/eu por haver data de outra escola da mesma conta, falhou (telas do aluno, tarefa 1.0). O que se grava é a hora de agora, nunca a data emprestada. A resposta sai do mesmo jeito, com a data lida; a pessoa só vê a introdução de novo se sair da outra escola antes de a gravação dar certo. Sem escola nem pessoa no rótulo. Subir junto com erro do banco é o Postgres, e o runbook de banco lento vale.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 131
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum (increase(eu_introducao_falha_total[1m]))",
+          "legendFormat": "datas não gravadas",
+          "range": true
+        }
+      ]
     }
   ]
 }

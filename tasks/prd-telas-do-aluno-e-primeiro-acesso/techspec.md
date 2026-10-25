@@ -49,7 +49,8 @@ repository, que não recebe data), no escopo da própria sessão. **Nunca grava 
 dado de A não é persistido em B. Enquanto A está ativa, o GET continua respondendo a mais antiga. Quando o vínculo de A
 termina, B já tem a sua data e a introdução não reabre (RF12). **Ressalva:** só vale para quem leu o `/v1/eu` em B
 enquanto A estava ativa; vínculo desativado ou com eliminação agendada não empresta. Se a gravação do GET falha, ele
-devolve a data lida, sem gravar. A leitura dos acessos da conta com a data é um método próprio, que filtra o papel na
+devolve a data lida, sem gravar, e a falha soma no contador `eu.introducao_falha` (sem rótulo: nem escola nem pessoa), que tem painel em
+`infra/grafana/paineis/fundacao.json`. A leitura dos acessos da conta com a data é um método próprio, que filtra o papel na
 query e devolve só a data mais antiga, sem passar pelo `escolher` do login nem pelo esquema estrito do acesso; a
 justificativa do `@SemEscopo` o registra.
 
@@ -60,7 +61,8 @@ justificativa do `@SemEscopo` o registra.
 | GET | `/v1/eu` | coordenador, professor, aluno | — | os campos de hoje e `introducaoVistaEm` (data e hora, ou nulo) |
 | POST | `/v1/eu/introducao` | os três (`eu.concluir_introducao`, `proprio`; `rede`: `nunca`) | corpo vazio, estrito | `{ introducaoVistaEm }`, a mesma data que o GET devolveria |
 
-`acessos` não ganha campo. Sem linha achada, o POST responde `NAO_AUTENTICADO`, como `EuService.obter`. O corpo vazio passa pelo
+`acessos` não ganha campo. Não existe sessão de rede hoje (`PAPEIS_DE_USUARIO` exclui `rede`, em `matriz.ts`): o `nunca` da rede no POST se prova na
+matriz, em unidade (`matriz.test.ts › marcar a introdução como vista`), e não por um caso de integração. Sem linha achada, o POST responde `NAO_AUTENTICADO`, como `EuService.obter`. O corpo vazio passa pelo
 `ZodValidationPipe` com `esquemaPedidoSemCorpoOuAusente` (D81), como `aprovarLote` em `apps/api/src/atividade/correcao/lote.controller.ts`.
 
 ## 5. Fluxo
@@ -148,7 +150,7 @@ memória **não** são mostrados (F9). A comemoração depende só de o envio te
 | Corridas de concorrência | dois POST juntos (clique duplo, duas abas): o segundo espera a trava da linha, e o `coalesce` mantém a primeira data; os dois respondem 200 com a mesma data. Cenário com `Promise.all`. O GET de B, em duas abas logo depois do login ou junto de um POST em B, também mantém a primeira data (`Promise.all` de dois GET) |
 | Índices novos, migration | nenhum índice; coluna nula, que o código anterior ignora |
 | Quando cada dependência cai | banco: o `/v1/eu` falha e a tela mostra o `EstadoErro` de hoje; o POST que falha não prende ninguém. Tutor fora: o Início não depende dele |
-| Métrica, alerta, teste de carga | `infra/k6/login-7h30.js`: o aluno, depois do login, faz também `/v1/eu` e a primeira página de `minhas-atividades`, o que o Início lê; o k6 exige 200 com página não vazia em `minhas-atividades` e 200 em `/v1/eu`, contados em `respostas_inesperadas`. As duas chamadas novas entram em `autenticada_duracao`, com a tag `name` da rota, e a fase `rajada` ganha o limite `autenticada_duracao{grupo:rajada}: p(95) < P95_MAXIMO_DO_LOGIN_MS` (1.000 ms, o mesmo que já vale para B e C na `base`) e o mesmo limite só para a rota `GET /v1/minhas-atividades`, para ela não se esconder na média das outras |
+| Métrica, alerta, teste de carga | O contador `eu.introducao_falha` (gravação do GET que falhou, sem rótulo) tem o gráfico "Datas da introdução que não gravaram" em `fundacao.json` e nenhum alerta, então nenhum parágrafo novo no runbook. `infra/k6/login-7h30.js`: o aluno, depois do login, faz também `/v1/eu` e a primeira página de `minhas-atividades`, o que o Início lê; o k6 exige 200 com página não vazia em `minhas-atividades` e 200 em `/v1/eu`, contados em `respostas_inesperadas`. As duas chamadas novas entram em `autenticada_duracao`, com a tag `name` da rota, e a fase `rajada` ganha o limite `autenticada_duracao{grupo:rajada}: p(95) < P95_MAXIMO_DO_LOGIN_MS` (1.000 ms, o mesmo que já vale para B e C na `base`) e o mesmo limite só para a rota `GET /v1/minhas-atividades`, para ela não se esconder na média das outras |
 
 ## 8. Uso de IA (quando aplicável)
 

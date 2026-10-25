@@ -41,6 +41,7 @@ describe('a raiz de quem entrou', () => {
         nome: 'Coordenação Sintética',
         escola: { id: '0197a1c0-0000-7000-8000-000000000002', nome: 'Escola Sintética', slug: 'escola-sintetica' },
         inatividadeMin: 30,
+        introducaoVistaEm: '2026-02-01T10:00:00.000Z',
         acessos: [],
       },
     })

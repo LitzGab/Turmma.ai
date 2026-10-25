@@ -219,6 +219,24 @@ describe('POST /v1/sessao/escola e /v1/eu.acessos: quem trabalha em mais de uma 
     expect(resposta.setCookie).toEqual([])
   }
 
+  it('a etapa escolher não leva a data da introdução: com a data gravada nas duas linhas, cada acesso traz só os quatro campos', async () => {
+    const dataConhecida = '2020-01-02T03:04:05.678Z'
+    const a = await escola('Colégio')
+    const b = await escola('Escola da rede')
+    const professora = await pessoa(a.id)
+    const emB = await naOutraEscola(professora, b.id)
+    await bancada.pool.query('update usuario set introducao_vista_em = $2 where id = any($1::uuid[])', [[professora.usuarioId, emB], dataConhecida])
+
+    const login = await entrar(professora.email)
+
+    expect(login.corpo['etapa']).toBe('escolher')
+    const acessos = login.corpo['acessos']
+    expect(acessos).toHaveLength(2)
+    for (const acesso of acessos as Array<Record<string, unknown>>) expect(Object.keys(acesso).sort()).toEqual(['escolaNome', 'papel', 'redeNome', 'usuarioId'])
+    expect(JSON.stringify(login.corpo)).not.toContain(dataConhecida)
+    expect(JSON.stringify(login.corpo)).not.toContain('introducao')
+  })
+
   it('caminho feliz (RF14): entra por e-mail, recebe escolher, escolhe A e troca para B; a sessão de A fica encerrada com troca_de_escola, e o login fica no registro de B', async () => {
     const a = await escola('Colégio')
     const b = await escola('Escola da rede')

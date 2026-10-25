@@ -564,6 +564,31 @@ describe('arquivo do titular (F3, tarefa 13.0): do pedido ao download', () => {
       }
     })
 
+    it('a data da introdução vista sai no arquivo do próprio titular; a versão da coordenação não traz a do professor (D64), e traz a do aluno', async () => {
+      const cenario = await novaEscola()
+      const professor = await pessoa(cenario, 'professor', 'Professor')
+      const aluno = await pessoa(cenario, 'aluno', 'Aluno')
+      const vista = '2020-01-02T03:04:05.678Z'
+      for (const titular of [professor, aluno]) {
+        await bancada.pool.query('update usuario set introducao_vista_em = $1, desativado_em = now() where id = $2', [vista, titular.id])
+      }
+      const pedidoDoProfessor = await pedidoPronto(cenario, professor)
+      const pedidoDoAluno = await pedidoPronto(cenario, aluno)
+      const dataNoArquivo = (pedidoId: string, versao: 'completa' | 'coordenacao') => {
+        const tabelas = documento(cenario.escolaId, pedidoId, versao)['tabelas'] as Record<string, Array<Record<string, unknown>>>
+        const [linha] = tabelas['usuario'] ?? []
+        if (linha === undefined) throw new Error('o arquivo não tem a linha do usuário')
+        // O JSON do banco traz o instante com o deslocamento do servidor: compara-se o instante, e não o texto.
+        const data = linha['introducao_vista_em']
+        return typeof data === 'string' ? new Date(data).toISOString() : null
+      }
+
+      expect(dataNoArquivo(pedidoDoProfessor, 'completa')).toBe(vista)
+      expect(dataNoArquivo(pedidoDoProfessor, 'coordenacao')).toBeNull()
+      expect(dataNoArquivo(pedidoDoAluno, 'completa')).toBe(vista)
+      expect(dataNoArquivo(pedidoDoAluno, 'coordenacao')).toBe(vista)
+    })
+
     it('o arquivo do aluno não leva o id da coordenação nem a leitura que ela fez do titular, nas duas versões', async () => {
       const cenario = await novaEscola()
       const aluno = await pessoa(cenario, 'aluno', 'Aluno')

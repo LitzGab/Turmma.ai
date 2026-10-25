@@ -145,7 +145,7 @@ describe('a atividade na tela: a escolha mais nova vale (51.0, RF21)', () => {
 describe('a atividade na tela: a escolha pendente sobrevive ao F5 (53.0, RF21)', () => {
   const ALUNA = '0197a1c0-0000-7000-8000-00000000a001'
   const OUTRO_ALUNO = '0197a1c0-0000-7000-8000-00000000a002'
-  const eu = (usuarioId: string) => ({ usuarioId, papel: 'aluno' as const, nome: 'Aluna Sintética', escola: { id: '0197a1c0-0000-7000-8000-00000000c001', nome: 'Escola Sintética', slug: 'escola-sintetica' }, inatividadeMin: 30, acessos: [] })
+  const eu = (usuarioId: string) => ({ usuarioId, papel: 'aluno' as const, nome: 'Aluna Sintética', escola: { id: '0197a1c0-0000-7000-8000-00000000c001', nome: 'Escola Sintética', slug: 'escola-sintetica' }, inatividadeMin: 30, introducaoVistaEm: '2026-02-01T10:00:00.000Z', acessos: [] })
   const guardar = (atividade: string, dono: string) =>
     window.sessionStorage.setItem(`educa.escolhas-pendentes.${atividade}`, JSON.stringify({ dono, atividade, pendentes: [{ questao: 1, alternativa: 2, sequencia: 3 }] }))
   /** A tela dentro do cache da aba, com o `/v1/eu` de quem está na sessão (ou sem ele, ainda). */

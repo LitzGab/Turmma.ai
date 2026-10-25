@@ -40,6 +40,7 @@ Conta            email?, senhaHash?, mfaSegredoCifrado?, mfaAtivadoEm?, mfaUltim
 CodigoRecuperacao* → conta*, hmac*, usadoEm?
 Usuario*         → escola*, conta? (nulo no aluno), papel*, nome*, desativadoEm?,
                    eliminacaoAgendadaEm? (F3: a data do registro da eliminação; o acesso fica suspenso)
+                   introducaoVistaEm? (telas do aluno, 1.0: quando a pessoa viu a introdução do papel dela; sem anoLetivoId)
 CredencialMatricula* → escola*, usuario*, matricula*, senhaHash*
 ContaExterna*    → escola*, usuario*, provedor* (google | microsoft), tenant?, sujeito*
 ProvedorEscola*  → escola*, provedor*, valor* (hd | tid), removidoEm?
@@ -54,6 +55,15 @@ RegistroAcesso*  → escola?, usuario?, evento* (login | login_falho | renovacao
 Convite          → escola*, tokenHash*, tipo (coordenador | professor), usuario*, expiraEm,
                    usadoEm?, revogadoEm?
 ```
+
+**A introdução vista** (telas do aluno e primeiro acesso, tarefa 1.0). `usuario.introducao_vista_em` é a data em que a pessoa
+viu a introdução do papel dela, ou nula. Fica no usuário, e não no vínculo, porque o vínculo é por turma e ano e a introdução
+voltaria em janeiro, e não na conta, porque o aluno não tem conta. Só a própria pessoa grava, por `POST /v1/eu/introducao`, com
+`coalesce(introducao_vista_em, now())` na linha do contexto (`escola_id` e `id`): a primeira data nunca muda. O `GET /v1/eu`
+devolve a mais antiga entre a da linha e a dos outros usuários ativos da mesma conta **com o mesmo papel**, e, quando a
+data vem de outra escola e a linha está nula, grava nela o `now()` da própria escrita, nunca a data emprestada (dado de A não é
+gravado em B); assim a introdução não reabre quando o vínculo de A termina. O usuário desativado ou com eliminação agendada não
+empresta. Migration `0039`, só expande: coluna nula, sem índice nem valor padrão.
 
 **A eliminação agendada** (F3, tarefa 14.0). O pedido de eliminação do titular nasce `agendado`, com
 `eliminar_em = now() + 7 dias` pelo relógio do banco, e o mesmo registro grava `usuario.eliminacao_agendada_em` e

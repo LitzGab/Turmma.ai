@@ -47,6 +47,11 @@ describe('MATRIZ de permissão', () => {
     for (const semAuditoria of ['unidade', 'proprio', 'turma_vinculada']) expect(Object.values(MATRIZ.coordenador.indicador_professor)).not.toContain(semAuditoria)
   })
 
+  it('marcar a introdução como vista é da própria pessoa nos três papéis, e a rede nunca alcança', () => {
+    for (const papel of ['coordenador', 'professor', 'aluno'] as const) expect(MATRIZ[papel].eu.concluir_introducao, papel).toBe('proprio')
+    expect(MATRIZ.rede.eu.concluir_introducao).toBe('nunca')
+  })
+
   it('o aluno só alcança a si: toda célula dele é proprio ou nunca', () => {
     const doAluno = Object.values(MATRIZ.aluno).flatMap((acoes) => Object.values(acoes) as Alcance[])
     expect(doAluno.length).toBeGreaterThan(0)
