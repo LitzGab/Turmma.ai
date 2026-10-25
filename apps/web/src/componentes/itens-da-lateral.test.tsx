@@ -75,6 +75,7 @@ describe('ItemDaLateral', () => {
     // A família de cada um (a divergência de `12_task.md`): por função, nunca a cor do estado (`ok`, `erro`, `pendente`).
     expect(Object.fromEntries([...porPapel].sort(([a], [b]) => a.localeCompare(b)))).toEqual({
       'aluno: Eu': 'turquesa',
+      'coordenador: Rever a introdução': 'lima',
       'professor: Meus dados': 'verde',
       'professor: Rever a introdução': 'lima',
     })

@@ -5,7 +5,7 @@ import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts
 import { entregasNoBanco, validacoesNoBanco } from './__fixtures__/a2.ts'
 import { respostasNoBanco } from './__fixtures__/a3.ts'
 import { entrarComoAlunoPelaApi, responderPelaApi } from './__fixtures__/aluno-pela-api.ts'
-import { abrirAbaAlunos, passarPelaIntroducaoDoAluno, passarPelaIntroducaoDoProfessor, esperarPainel, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirAbaAlunos, passarPelaIntroducaoDaCoordenacao, passarPelaIntroducaoDoAluno, passarPelaIntroducaoDoProfessor, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { irPelaCoordenacao, linhasDaTabela, painelDoAno } from './__fixtures__/coordenacao.ts'
 import { caixa, conversa, DISCIPLINA, gerarAtividade, PRAZO_DA_IA_MS, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
 import { auditoriasNoBanco, suspensoesNoBanco } from './__fixtures__/governanca.ts'
@@ -182,7 +182,8 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await expect(coordenacao.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await campoCodigo(coordenacao).fill(codigoDoAutenticador(segredo, 30))
       await coordenacao.getByRole('button', { name: /^Entrar$/ }).click()
-      await esperarPainel(coordenacao)
+      // Convidada pelo painel da operação, a coordenadora ainda não viu a introdução: ela é a primeira coisa que encontra (X4, 11.0).
+      await passarPelaIntroducaoDaCoordenacao(coordenacao, escolaNome, hasTouch)
       await irPelaCoordenacao(coordenacao, 'IA', hasTouch)
       await expect(principal(coordenacao)).toContainText('A IA ainda não gerou nada nesta escola', { timeout: PRAZO_DA_ENTRADA_MS })
 

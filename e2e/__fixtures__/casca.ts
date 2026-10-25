@@ -2,7 +2,7 @@ import type { Locator, Page } from '@playwright/test'
 import { mensagemDoSegundoFator } from '../../packages/shared/src/erros/mensagens.ts'
 import { expect } from './perfis.ts'
 import { campoCodigo } from './segundo-fator.ts'
-import { codigoDoAutenticador, criarEquipeComSenha, type EquipeDeTeste } from './sessao.ts'
+import { codigoDoAutenticador, criarEquipeComSenha, type ConviteDeCoordenadorDeTeste, type EquipeDeTeste } from './sessao.ts'
 
 /**
  * A casca da escola pela tela (A1, tarefa 11.0; X1, 13.0): abaixo de 768 px a lateral é uma gaveta que abre pelo botão do
@@ -128,7 +128,7 @@ async function acionar(alvo: Locator, hasTouch: boolean): Promise<void> {
 }
 
 /** Entra por e-mail e senha a partir da tela de entrada já aberta, sem recarregar a página. */
-export async function entrarPorEmail(page: Page, pessoa: EquipeDeTeste, hasTouch: boolean): Promise<void> {
+export async function entrarPorEmail(page: Page, pessoa: Pick<EquipeDeTeste, 'email' | 'senha'>, hasTouch: boolean): Promise<void> {
   await page.getByLabel('E-mail').fill(pessoa.email)
   await page.getByLabel('Senha').fill(pessoa.senha)
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
@@ -246,6 +246,39 @@ export async function entrarComoCoordenacaoNaMesmaAba(page: Page, coordenadora: 
   await campoCodigo(page).fill(codigoDoAutenticador(segredo, PASSO_SEGUINTE_SEGUNDOS))
   await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
   await expect(page).toHaveURL(/\/coordenacao\/painel$/, { timeout: PRAZO_DA_ENTRADA_MS })
+}
+
+/**
+ * A coordenadora cujo segundo fator já está configurado (pela API) entra pela tela, a partir da tela de entrada já aberta e sem recarregar
+ * a página: senha, e o código do passo seguinte ao da ativação. Termina na tela que a primeira entrada abre; quem chama confere qual é.
+ */
+export async function entrarPelaTelaComSegundoFator(page: Page, coordenadora: Pick<EquipeDeTeste, 'email' | 'senha'>, segredo: string, hasTouch: boolean): Promise<void> {
+  await entrarPorEmail(page, coordenadora, hasTouch)
+  await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await campoCodigo(page).fill(codigoDoAutenticador(segredo, PASSO_SEGUINTE_SEGUNDOS))
+  await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
+}
+
+/**
+ * A coordenadora que chega pelo link do convite (`criarConviteDeCoordenador`): aceita, define a senha, configura o segundo fator do jeito
+ * sem celular, volta à entrada e entra com o código. Termina na tela que a primeira entrada abre; quem chama confere qual é (a
+ * introdução, se a pessoa ainda não a viu, ou o Painel).
+ */
+export async function entrarComoCoordenacaoPeloConvite(page: Page, convite: ConviteDeCoordenadorDeTeste, senha: string, hasTouch: boolean): Promise<void> {
+  await page.goto(`/convite#${convite.token}`)
+  await expect(page.getByRole('main')).toContainText(convite.escolaNome, { timeout: PRAZO_DA_ENTRADA_MS })
+  await acionar(page.getByRole('button', { name: /Aceitar o convite|Aceitando/ }), hasTouch)
+  await page.getByLabel('Senha nova').fill(senha, { timeout: PRAZO_DA_ENTRADA_MS })
+  const respostaDoSegredo = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/conta/mfa/configurar')
+  await acionar(page.getByRole('button', { name: /Definir a senha e continuar|Salvando/ }), hasTouch)
+  await expect(page.getByRole('heading', { name: 'Configurar o segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  const { segredo } = (await (await respostaDoSegredo).json()) as { segredo: string }
+  await ativarOSegundoFator(page, segredo, hasTouch)
+  await acionar(page.getByRole('link', { name: 'Ir para a entrada' }), hasTouch)
+  await entrarPorEmail(page, { email: convite.email, senha }, hasTouch)
+  await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  await campoCodigo(page).fill(codigoDoAutenticador(segredo, PASSO_SEGUINTE_SEGUNDOS))
+  await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
 }
 
 /** O título da aba na tela em que o aluno abre. */
@@ -374,6 +407,48 @@ export async function passarPelaIntroducaoDoProfessor(page: Page, nome: string, 
   await esperarIntroducaoDoProfessor(page)
   await seguirAteOFimDaIntroducaoDoProfessor(page, hasTouch)
   await esperarNovaConversa(page, nome)
+}
+
+/**
+ * As falas da introdução da coordenação (telas do aluno e primeiro acesso, 11.0), na ordem dos passos. Texto de
+ * `areas/coordenacao/introducao/textos-da-introducao.ts`, copiado aqui porque `e2e/` não importa a web: a do passo 1 leva o nome da
+ * escola, e as outras três são fixas. `textos-da-introducao.test.ts` confere as duas cópias com os passos: se o texto mudar num lugar
+ * só, ele reprova.
+ */
+export const falaDoPasso1DaCoordenacao = (escolaNome: string): string => `Eu ajudo a ler os números de ${escolaNome}.`
+export const FALAS_DOS_PASSOS_2_A_4_DA_COORDENACAO = [
+  'Você vê a escola em números agregados.',
+  'Dado com nome só abre com um motivo, e isso fica registrado.',
+  'Estas coisas a IA nunca faz.',
+] as const
+export const falasDaIntroducaoDaCoordenacao = (escolaNome: string): readonly string[] => [falaDoPasso1DaCoordenacao(escolaNome), ...FALAS_DOS_PASSOS_2_A_4_DA_COORDENACAO]
+
+/** A fala do passo `n` (a partir de 1) da introdução da coordenação, o `h1` da tela de foco. */
+export const falaDoPassoDaCoordenacao = (page: Page, n: number, escolaNome: string): Locator =>
+  page.getByRole('main').getByRole('heading', { level: 1, name: falasDaIntroducaoDaCoordenacao(escolaNome)[n - 1] ?? '', exact: true })
+
+/** A primeira entrada da coordenação: o endereço é o da introdução e a fala do passo 1 está na tela, esperados juntos. */
+export async function esperarIntroducaoDaCoordenacao(page: Page, escolaNome: string, opcoes: { readonly timeout?: number } = {}): Promise<void> {
+  const timeout = opcoes.timeout ?? PRAZO_DA_ENTRADA_MS
+  await Promise.all([expect(page).toHaveURL(/\/coordenacao\/bem-vindo$/, { timeout }), expect(falaDoPassoDaCoordenacao(page, 1, escolaNome)).toBeVisible({ timeout })])
+}
+
+/** Os quatro "Continuar" da introdução da coordenação, um por passo. Quem chama já está no passo 1; depois do último ela está no Painel. */
+export async function seguirAteOFimDaIntroducaoDaCoordenacao(page: Page, escolaNome: string, hasTouch: boolean): Promise<void> {
+  for (let passo = 1; passo <= falasDaIntroducaoDaCoordenacao(escolaNome).length; passo++) {
+    await expect(falaDoPassoDaCoordenacao(page, passo, escolaNome)).toBeVisible()
+    await acionar(page.getByRole('button', { name: 'Continuar', exact: true }), hasTouch)
+  }
+}
+
+/**
+ * A coordenadora criada por convite entra pela primeira vez: passa pela introdução, e só então chega ao Painel. O fluxo dela não prova a
+ * introdução (`coordenacao-introducao.spec.ts` prova), mas ela está no caminho.
+ */
+export async function passarPelaIntroducaoDaCoordenacao(page: Page, escolaNome: string, hasTouch: boolean): Promise<void> {
+  await esperarIntroducaoDaCoordenacao(page, escolaNome)
+  await seguirAteOFimDaIntroducaoDaCoordenacao(page, escolaNome, hasTouch)
+  await esperarPainel(page)
 }
 
 /**

@@ -28,6 +28,8 @@ const Privacidade = lazy(() => import('./privacidade/Privacidade'))
 const DetalheDoPedido = lazy(() => import('./privacidade/DetalheDoPedido'))
 /** O aviso de incidente (F3, 10.0): o diálogo e a faixa, num pedaço próprio, para a fachada da área não crescer (`.size-limit.json`). */
 const AvisoDeIncidente = lazy(() => import('./privacidade/AvisoDeIncidente'))
+/** A introdução da coordenação (telas do aluno e primeiro acesso, 11.0): tela de foco, num pedaço próprio como as outras. */
+const BemVindo = lazy(() => import('./introducao/BemVindo'))
 /** O sino "Esperando você" (telas da coordenação, 1.0): a fila e a lista num pedaço próprio, desenhado na âncora da casca. */
 const SinoDaCoordenacao = lazy(() => import('./painel/SinoDaCoordenacao'))
 
@@ -56,6 +58,7 @@ export default function RotasDaCoordenacao() {
       </Suspense>
       <Switch>
         <Route path={ROTAS_DA_COORDENACAO.painel} component={Painel} />
+        <Route path={ROTAS_DA_COORDENACAO.bemVindo} component={BemVindo} />
         <Route path={ROTAS_DA_COORDENACAO.analista} component={Analista} />
         {/* Escola: as três abas. */}
         <Route path={ROTAS_DA_COORDENACAO.estrutura}>

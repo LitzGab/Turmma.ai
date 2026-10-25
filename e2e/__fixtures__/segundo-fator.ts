@@ -26,7 +26,7 @@ export async function entrarComSenha(page: Page, equipe: EquipeDeTeste): Promise
 }
 
 /**
- * A coordenadora configura o segundo fator pela tela, do jeito sem celular: copia o segredo em texto, cola no
+ * A pessoa da equipe configura o segundo fator pela tela, do jeito sem celular: copia o segredo em texto, cola no
  * aplicativo do computador (aqui, o `otpauth` do teste) e ativa.
  */
 export async function configurarSegundoFator(page: Page, equipe: EquipeDeTeste): Promise<SegundoFatorConfigurado> {
@@ -74,4 +74,24 @@ export async function gastarCodigoDeRecuperacaoPelaApi(request: APIRequestContex
   const desafio = await entrarPelaApi(request, equipe, 'mfa')
   const gasto = await request.post('/v1/sessao/mfa', { headers: { Authorization: `Bearer ${desafio}` }, data: { recuperacao: codigo } })
   expect(gasto.ok(), 'o código de recuperação gasto pela API').toBe(true)
+}
+
+/**
+ * Quem é da equipe (a coordenação ou outro papel com segundo fator) entra pela API, com o segundo fator já configurado, e abre o endereço: o cookie de renovação fica no contexto e a
+ * aplicação restaura a sessão a partir dele, como num retorno à aba. É o atalho do caso que prova outra coisa que não a entrada (a
+ * entrada pela tela tem os casos dela) e que, com o argon2 e a CPU ×4 do perfil, não cabe nos 15 s do portão pagando a configuração do
+ * segundo fator pela tela. Devolve o segredo, para o caso que precisa entrar de novo.
+ */
+export async function entrarPelaApiComSegundoFator(page: Page, request: APIRequestContext, pessoa: EquipeDeTeste, endereco: string): Promise<string> {
+  const { segredo } = await configurarSegundoFatorPelaApi(request, pessoa)
+  const pedidos = page.context().request
+  const entrada = await pedidos.post('/v1/sessao/email', { data: { email: pessoa.email, senha: pessoa.senha } })
+  const { etapa, desafio } = (await entrada.json()) as { etapa?: string; desafio?: string }
+  if (etapa !== 'mfa' || desafio === undefined) throw new Error(`a entrada pela API não pediu o segundo fator: ${String(entrada.status())} ${String(etapa)}`)
+  // A ativação gastou o passo de agora: o código que o servidor aceita é o do passo seguinte.
+  const segundo = await pedidos.post('/v1/sessao/mfa', { headers: { Authorization: `Bearer ${desafio}` }, data: { codigo: codigoDoAutenticador(segredo, 30) } })
+  const { etapa: depois } = (await segundo.json()) as { etapa?: string }
+  if (depois !== 'pronta') throw new Error(`o segundo fator pela API não abriu a sessão: ${String(segundo.status())} ${String(depois)}`)
+  await page.goto(endereco)
+  return segredo
 }

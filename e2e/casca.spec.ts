@@ -682,7 +682,8 @@ const PAPEIS_DA_CASCA: readonly { readonly papel: PapelDaCasca; readonly navegac
   { papel: 'professor', navegacoes: ['Seções', 'Sua conta'], ausentes: ['Seu time', 'Rodapé'], primeiro: 'Início' },
   // X4 (2.0): o aluno tem Início, Tarefas e Eu, e o rodapé dele é vazio (`RODAPE_DA_LATERAL.aluno`), então a casca não desenha "Rodapé".
   { papel: 'aluno', navegacoes: ['Seções'], ausentes: ['Seu time', 'Rodapé', 'Sua conta'], primeiro: 'Início' },
-  { papel: 'coordenacao', navegacoes: ['Seções'], ausentes: ['Seu time', 'Rodapé', 'Sua conta'], primeiro: 'Painel' },
+  // X4 (11.0): a coordenação tem o link "Rever a introdução" no menu da pessoa, e por isso a casca desenha "Sua conta".
+  { papel: 'coordenacao', navegacoes: ['Seções', 'Sua conta'], ausentes: ['Seu time', 'Rodapé'], primeiro: 'Painel' },
 ]
 
 async function entrarNaCasca(page: Page, papel: PapelDaCasca, hasTouch: boolean): Promise<void> {

@@ -93,9 +93,17 @@ describe('a raiz de quem entrou', () => {
     await waitFor(() => expect(localizacao.history).toEqual([ROTAS.novaConversa]))
   })
 
-  it('com a data nula, a coordenação segue para a abertura de sempre: a introdução dela é da tarefa 11.0', async () => {
+  it('a coordenação que ainda não viu a introdução (data nula) é levada a ela, e a raiz não fica no histórico', async () => {
     const rede = redeFalsa()
     rede.responder(eu('coordenador', null))
+    const localizacao = abrirARaiz()
+
+    await waitFor(() => expect(localizacao.history).toEqual([ROTAS.bemVindoDaCoordenacao]))
+  })
+
+  it('a coordenação que já viu a introdução abre no Painel (/coordenacao/painel), e a raiz não fica no histórico', async () => {
+    const rede = redeFalsa()
+    rede.responder(eu('coordenador', '2026-02-01T10:00:00.000Z'))
     const localizacao = abrirARaiz()
 
     await waitFor(() => expect(localizacao.history).toEqual([ROTAS.painel]))

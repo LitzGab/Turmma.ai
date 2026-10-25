@@ -3,7 +3,7 @@ import { useRef } from 'react'
 import { useLocation } from 'wouter'
 import { concluirIntroducao, consultaEu } from '../../api/eu'
 
-/** O `['eu']` envelhece em 60 s e não se relê ao voltar para a aba (Tech Spec, seção 9): o desvio da entrada já o leu. */
+/** O `['eu']` envelhece em 60 s e não se relê ao voltar para a aba (Tech Spec, seção 9): o desvio da entrada já o leu. Vale para as introduções do aluno, do professor e da coordenação: mudar um dos dois valores muda as três. */
 const LEITURA_DA_INTRODUCAO = { staleTime: 60_000, refetchOnWindowFocus: false } as const
 
 interface DestinosDaIntroducao {

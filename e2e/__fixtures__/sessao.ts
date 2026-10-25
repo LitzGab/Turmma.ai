@@ -153,6 +153,11 @@ export interface ConviteDeTeste extends EscolaDeTeste {
   readonly usuarioId: string
 }
 
+/** O convite de coordenador, com o e-mail da conta: é com ele que a coordenadora entra depois de definir a senha e o segundo fator. */
+export interface ConviteDeCoordenadorDeTeste extends ConviteDeTeste {
+  readonly email: string
+}
+
 /** Uma escola nova, com rede, ano letivo em curso e endereço próprio. */
 export async function criarEscolaSintetica(): Promise<EscolaDeTeste> {
   const marca = randomUUID()
@@ -290,17 +295,17 @@ export async function ligarContaExterna(escolaId: string, usuarioId: string, cha
  * - Com `conta`, o convite é para quem já trabalha em outra escola cliente: o aceite não troca a senha dela e leva ao
  *   login, com o bilhete.
  */
-export async function criarConviteDeCoordenador(opcoes: { conta?: EquipeDeTeste; expirado?: boolean; revogado?: boolean } = {}): Promise<ConviteDeTeste> {
+export async function criarConviteDeCoordenador(opcoes: { conta?: EquipeDeTeste; expirado?: boolean; revogado?: boolean; introducao?: Introducao } = {}): Promise<ConviteDeCoordenadorDeTeste> {
   const marca = randomUUID()
   const escola = await criarEscolaSintetica()
   // O token e o hash pelas mesmas peças do `ops:convite-coordenador` e do aceite; o banco guarda só o hash.
   const token = randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
   const tokenHash = hashDoToken(token)
   const expiraEm = opcoes.expirado ? new Date(Date.now() - 60_000) : new Date(Date.now() + 72 * 60 * 60 * 1_000)
+  const email = opcoes.conta?.email ?? `coordenador-${marca}@educa.invalid`
   return comBanco(async (banco) => {
-    const contaId =
-      opcoes.conta?.contaId ?? (await id(banco, 'insert into conta (email) values ($1) returning id', [`coordenador-${marca}@educa.invalid`]))
-    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome, desativado_em, introducao_vista_em) values ($1, $2, 'coordenador', $3, now(), now()) returning id", [
+    const contaId = opcoes.conta?.contaId ?? (await id(banco, 'insert into conta (email) values ($1) returning id', [email]))
+    const usuarioId = await id(banco, `insert into usuario (escola_id, conta_id, papel, nome, desativado_em, introducao_vista_em) values ($1, $2, 'coordenador', $3, now(), ${introducaoVistaEm(opcoes.introducao)}) returning id`, [
       escola.escolaId,
       contaId,
       `Coordenadora sintética ${marca.slice(0, 8)}`,
@@ -312,7 +317,7 @@ export async function criarConviteDeCoordenador(opcoes: { conta?: EquipeDeTeste;
       expiraEm,
       opcoes.revogado === true ? new Date() : null,
     ])
-    return { ...escola, token, usuarioId }
+    return { ...escola, token, usuarioId, email }
   })
 }
 

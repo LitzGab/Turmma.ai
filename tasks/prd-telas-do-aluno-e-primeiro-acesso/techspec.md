@@ -180,7 +180,7 @@ as chaves, como hoje. Aluno sem turma: `minhas-atividades` responde vazio e `tut
 moldura e a `Comemoracao`. **Eu**: cartão da turma, "Como estou indo" e as quatro linhas; "Ajustes" abre um
 `Dialogo` com `Aparencia` (X1) e `TamanhoDaLetra`.
 
-**Peças novas**, fora da entrada: `componentes/introducao/` (`Introducao`, `TelaDeFoco`, `Balao`, e, a partir da 10.0, `Linhas`, `RegiaoQueRola` (a região que rola, com a faixa "Role para ler mais", antes privada do aviso do aluno) e `useIntroducao`, que guarda o que as três introduções fazem igual: ler o `['eu']`, saber se a pessoa revê, gravar a data uma vez só e ir embora mesmo se a gravação falhar), `componentes/ui/Comemoracao`
+**Peças novas**, fora da entrada: `componentes/introducao/` (`Introducao`, `TelaDeFoco`, `Balao`, e, a partir da 10.0, `Linhas`, `RegiaoQueRola` (a região que rola, com a faixa "Role para ler mais", antes privada do aviso do aluno) e `useIntroducao`, que guarda o que as três introduções fazem igual: ler o `['eu']`, saber se a pessoa revê, gravar a data uma vez só e ir embora mesmo se a gravação falhar), `IntroducaoDoPapel` (a partir da 11.0: os quatro estados da `BemVindo`, que o aluno e o professor repetiam, e que a coordenação seria a terceira cópia; cada papel só diz quem fala, a fala do carregando, os passos e os destinos) e `OndeFicaCadaCoisa` (a lista de lugares da navegação do papel, do professor e, a partir da 11.0, da coordenação), `componentes/ui/Comemoracao`
 (os `@keyframes` num CSS ao lado, só `transform` e `opacity`, uma vez) e as três poses da onça em `componentes/ui/onca/Onca`, ao
 lado da `CabecaOnca` da X1. A cadeia fechada da onça da X1 (`componentes/ui/ia/avatar-so-nas-duas-pecas.test.ts`) passa a
 admitir os importadores desta spec, e só eles. **As três poses usam o mesmo rosto
@@ -194,6 +194,8 @@ foco a cada passo, e Enter continua. Os textos moram em `.ts` com teste.
 *Erro:* `EstadoErro` com "Tentar de novo", "Voltar para a abertura" (o primeiro lugar do papel) e "Sair". *Data
 desconhecida:* vale o modo primeira vez. *Com dado:* os passos. Sair nunca é mais difícil que entrar (D59). O desvio em
 `paginas/Inicio.tsx` espera o `['eu']`: não pisca o Início e não usa data velha depois de POST que falhou.
+
+**A introdução da coordenação** (11.0). Quem fala é o Analista de desempenho escolar. Passo 1: "Eu ajudo a ler os números de <nome da escola>." (o nome vem do `/v1/eu`; **"de", e não "da"**, porque o nome vem como a escola o escreveu, "Colégio …" ou "Escola …", e o código não conhece o artigo que concordaria; enquanto o nome não chegou, o carregando diz "da sua escola"). Passo 2: "Você vê a escola em números agregados.", com o desempenho de professores só com dois ou mais no grupo (D45). Passo 3: "Dado com nome só abre com um motivo, e isso fica registrado." (regra 20, item 10). Passo 4: "Estas coisas a IA nunca faz.", com a lista de `O_QUE_A_IA_NUNCA_FAZ` e, na mesma região que rola, "onde fica cada coisa", lida de `NAVEGACAO.coordenador`; o último "Continuar" é o "Começar" e leva ao Painel, o primeiro lugar. O aviso de incidente é da área e aparece por cima da introdução: "Ver depois" o fecha, a introdução continua, e confirmar o incidente não a marca como vista.
 
 **Nomes que não mudam:** um `<main>`; `navigation "Seções"`; os `data-*` de hoje; "Enviar a atividade", "Atividade
 enviada", "Pedir ajuda ao Tutor nesta questão". **Mudam:** `h1` e título "Atividades" para "Tarefas"; as regiões

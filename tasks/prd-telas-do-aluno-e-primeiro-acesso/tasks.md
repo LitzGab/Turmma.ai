@@ -67,7 +67,7 @@
   - [x] 10.2 "Rever a introdução" no menu da pessoa
   - [x] 10.3 Testes: primeira entrada pelo convite, pular, rever, estados da `BemVindo`, o professor de duas escolas
 
-- [ ] **11.0 — A introdução da coordenação**
+- [x] **11.0 — A introdução da coordenação**
   - [ ] 11.1 `textos-da-introducao.ts` e `BemVindo.tsx` da coordenação, com a rota
   - [ ] 11.2 "Rever a introdução" no menu da pessoa
   - [ ] 11.3 Testes: primeira entrada pelo convite e pelo segundo fator, pular, rever, estados da `BemVindo`, o aviso de incidente por cima

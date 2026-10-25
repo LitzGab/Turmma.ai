@@ -23,7 +23,8 @@ const COMEMORACAO = 'componentes/ui/Comemoracao'
 const PECAS_DA_INTRODUCAO = 'componentes/introducao/'
 /** As introduções de cada papel (9.0, 10.0 e 11.0): ainda podem não existir, e a lista é de quem **pode**. */
 const BEM_VINDO_DOS_PAPEIS = ['areas/aluno/introducao/BemVindo.tsx', 'areas/professor/introducao/BemVindo.tsx', 'areas/coordenacao/introducao/BemVindo.tsx']
-const QUEM_IMPORTA_A_ONCA_INTEIRA = ['componentes/introducao/Introducao.tsx', 'componentes/ui/Comemoracao.tsx', ...BEM_VINDO_DOS_PAPEIS]
+/** A `IntroducaoDoPapel` é a peça comum dos quatro estados das introduções (11.0): ela desenha a onça do carregando, e a `BemVindo` de cada papel só passa os passos. */
+const QUEM_IMPORTA_A_ONCA_INTEIRA = ['componentes/introducao/Introducao.tsx', 'componentes/introducao/IntroducaoDoPapel.tsx', 'componentes/ui/Comemoracao.tsx', ...BEM_VINDO_DOS_PAPEIS]
 const QUEM_IMPORTA_A_PASTA_DA_ONCA = ['componentes/ui/ia/AvatarAgente.tsx', ...QUEM_IMPORTA_A_ONCA_INTEIRA]
 /** A `Comemoracao` é da tarefa aberta; a galeria é o palco dela até lá (o e2e de movimento precisa de uma página). */
 const QUEM_IMPORTA_A_COMEMORACAO = ['areas/aluno/Atividade.tsx', 'galeria/secoes/introducao.tsx']

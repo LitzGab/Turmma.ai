@@ -28,10 +28,22 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] AIA do Assistente (D57): a saída que infere emoção ou estado do aluno ("Ela parece triste.") não é da D55 e a conferência da
       tarefa 3.0 não a pega; entra na avaliação de impacto do Assistente, antes do PRD que o expõe ao aluno
 - [ ] Rever a fala do passo 4 da introdução do professor ("Usar ou não esta ferramenta não gera número sobre você", X4, 10.0, `areas/professor/introducao/textos-da-introducao.ts`) quando o painel do próprio professor (D45) entrar: ele passa a ter número sobre si, só dele
-- [ ] Introdução do professor (X4, 10.0): quando a 11.0 ou outra tarefa tocar `areas/professor/introducao/BemVindo.tsx`, acrescentar o bloco de
-      mutação que troca `alturaMaxima="max-h-[34dvh]"` por `"max-h-none"` (mantém a região e deixa vermelha a sobra de altura de `paginaNaoRola`)
+- Recusado (11.0, decisão da Mesa): bloco de mutação que troca `alturaMaxima="max-h-[34dvh]"` por `"max-h-none"` na introdução do professor. O bloco
+      existe só para a coordenação (`areas/coordenacao/introducao/BemVindo.tsx`, `e2e/coordenacao-introducao.spec.ts`). O `BemVindo.tsx` do professor só passou a usar
+      `IntroducaoDoPapel` e `OndeFicaCadaCoisa`, sem mudar a região que rola, e `e2e/professor-introducao.spec.ts` já prova a sobra de altura (a região
+      "Leia até o fim" e `paginaNaoRola` a 1366 × 768). Reabrir se a tela do professor mudar a região
 - [ ] Conferir se `apps/api/src/tutor/tutor.int.test.ts` cobre a **leitura** dos sinais `travou` e `duvida_repetida` pelo professor, e não só o
       nascimento deles (a linha "Do Tutor você vê o uso" da introdução do professor promete isso; regra 70, item 7)
+- [ ] Introdução da coordenação (X4, 11.0): o `roteiro-da-demonstracao.spec.ts` entra por `linkDaCoordenacao` (convite da operação) e repete o convite, a senha e o
+      segundo fator que `entrarComoCoordenacaoPeloConvite` já faz; juntar as duas entradas pede a fixture da operação, na tarefa que tocar o roteiro
+- [ ] `OndeFicaCadaCoisa.tsx` usa `id="onde-fica-cada-coisa"` fixo: trocar por `useId()` se a peça aparecer duas vezes na mesma tela
+- [ ] Introdução da coordenação (11.0), **pedido ao Arquiteto, antes da validação**: o passo 3 ("Abrir um aluno ou um professor pelo nome pede um motivo") promete
+      mais do que a lista da turma e a lista de professores fazem, e o passo 2 ("sem nome de pessoa") não vale para Escola › Turmas; o texto vem do PRD (RF15) e a frase certa é dele
+- [ ] `/v1/eu` da coordenação traz só a data da própria pessoa, e a coordenadora com vínculo em duas escolas tem uma data por escola (visto na A não vale na B): caso na API da 1.0
+- [ ] Cenário de carga do login: conferir que a coordenação caindo em `/coordenacao/bem-vindo` uma vez por pessoa está coberta (poucas pessoas por escola, fora do pico), e a métrica da rota `POST /v1/eu/introducao` (contador de falha da gravação) na API da 1.0
+- [ ] Nenhum caso abre `/coordenacao/bem-vindo` como professor ou aluno: cobrir na tarefa que tocar a guarda da área
+- [ ] `textos-da-introducao.test.ts` (11.0): o caso `"dois ou mais" é o grupo mínimo que o código aplica` repete o `toContain` do caso do passo 2; juntar os dois ou apagar o segundo
+- [ ] `e2e/coordenacao-introducao.spec.ts` (11.0): no caso dos quatro passos o `expect(gravacoes).toHaveLength(1)` final não espera nada depois do `poll`, e o comentário "nenhuma tardia" promete mais do que prova (a prova é a do caso do "Pular"): ajustar o comentário
 - [ ] Guarda de arquitetura que impeça importar `e2e/__fixtures__` fora de `e2e/` (o `introducaoVistaEmDoUsuario` lê sem `escola_id`)
 - [ ] Ao rever a fala do passo 4 da introdução do professor (linha acima), manter que o número é só do professor e nunca alimenta decisão sobre ele
       (regra 20, item 10a; regra 70, item 8), e lembrar que a promessa "a conversa não aparece para a coordenação" vale por

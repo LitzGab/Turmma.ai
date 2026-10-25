@@ -92,10 +92,11 @@ export const RODAPE_DA_LATERAL: Readonly<Record<PapelDeUsuario, readonly ItemDaN
 /**
  * O que o menu da pessoa, no rodapé da lateral, leva além do "Sair" (P18; `docs/interface.md` 11.1): os links dela. O
  * "Sair" nunca entra aqui, porque é o último e está sempre à vista (D59). O professor tem "Meus dados" desde o F3 (18.0) e "Rever a introdução"
- * desde a X4 (10.0), nesta ordem, antes do "Sair". A coordenação não é titular de pedido (a API não lhe dá `meus_dados`), e o aluno acha os dados dele em Eu (a linha Privacidade).
+ * desde a X4 (10.0), nesta ordem, antes do "Sair". A coordenação tem só "Rever a introdução", desde a X4 (11.0): não é titular de pedido (a API não lhe dá `meus_dados`). O aluno acha os dados dele em Eu (a linha Privacidade).
  */
 export const MENU_DA_PESSOA: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao[]>> = {
-  coordenador: [],
+  // X4 (11.0): rever a introdução é o mesmo endereço da primeira entrada; revendo, todo passo fecha e a data não muda.
+  coordenador: [{ rotulo: 'Rever a introdução', caminho: ROTAS.bemVindoDaCoordenacao, icone: { lucide: BookOpen, familia: 'lima' } }],
   professor: [
     { rotulo: 'Meus dados', caminho: ROTAS.meusDadosDoProfessor, icone: { lucide: FolderLock, familia: 'verde' } },
     // X4 (10.0): rever a introdução é o mesmo endereço da primeira entrada; revendo, todo passo fecha e a data não muda.
