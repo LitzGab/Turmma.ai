@@ -4,7 +4,9 @@ import { ErroDaApi } from '../../api/cliente'
 import {
   alternativaMarcada,
   avisoDeEscolhasPerdidas,
+  comemoracaoNaTela,
   contarRespostas,
+  FALA_DA_ENTREGA,
   faseDaAtividade,
   impedimentoDoEnvio,
   letraDaAlternativa,
@@ -12,6 +14,7 @@ import {
   questaoValida,
   respostasSalvas,
   resultadoNaTela,
+  ROTULO_DE_VOLTAR_AS_TAREFAS,
   rotuloNoMapa,
   textoDasEmBranco,
   textoDasRespondidas,
@@ -153,5 +156,58 @@ describe('o que a tela diz de cada questão', () => {
     expect(questaoValida(9, 3)).toBe(3)
     expect(questaoValida(2, 3)).toBe(2)
     expect(questaoValida(Number.NaN, 3)).toBe(1)
+  })
+})
+
+describe('a comemoração é só da entrega (RF8; D59)', () => {
+  const ENVIADA = prova({ enviadaEm: '2026-10-05T13:30:00.000Z' })
+  const AGUARDANDO = { tipo: 'aguardando' } as const
+
+  it('aparece com o envio confirmado nesta tela e a leitura já com o envio', () => {
+    expect(comemoracaoNaTela(true, ENVIADA, AGUARDANDO)).toBe(true)
+    // O resultado que ainda carrega, ou que falhou ao carregar, não tira a comemoração: ela não depende dele.
+    expect(comemoracaoNaTela(true, ENVIADA, { tipo: 'carregando' })).toBe(true)
+    expect(comemoracaoNaTela(true, ENVIADA, { tipo: 'erro', erro: new ErroDaApi(CodigoDeErro.INDISPONIVEL_TENTE_DE_NOVO) })).toBe(true)
+  })
+
+  it('a tarefa enviada em outra hora, aberta pela lista ou recarregada, não a tem: falta o envio desta tela', () => {
+    expect(comemoracaoNaTela(false, ENVIADA, AGUARDANDO)).toBe(false)
+  })
+
+  it('sem o envio lido não há comemoração, nem a da tarefa encerrada pela professora', () => {
+    expect(comemoracaoNaTela(true, prova(), AGUARDANDO)).toBe(false)
+    expect(comemoracaoNaTela(true, prova({ estado: 'encerrada' }), AGUARDANDO)).toBe(false)
+  })
+
+  it('nunca divide a tela com o resultado: com a correção aprovada à vista, some', () => {
+    expect(comemoracaoNaTela(true, ENVIADA, { tipo: 'pronto', diagnostico: DIAGNOSTICO })).toBe(false)
+  })
+})
+
+describe('as falas da comemoração (regra 70, item 4a; D58; D59)', () => {
+  /** O que se diz ao lado da onça: a fala e o botão. */
+  const TEXTOS = [FALA_DA_ENTREGA, ROTULO_DE_VOLTAR_AS_TAREFAS]
+
+  it('diz só o fato da entrega e de quem vê a correção: sem número, acerto, nota, tempo nem festa', () => {
+    expect(FALA_DA_ENTREGA).toBe('Atividade entregue. Quem dá a aula vê a correção antes de você.')
+    for (const texto of TEXTOS) {
+      expect(texto).not.toMatch(/\d/)
+      expect(texto).not.toMatch(/acert|errou|nota|conceito|ponto|%|tempo|minuto|segundo|rápid|parab[ée]ns|incr[ií]vel|muito bem|orgulh|feliz|!/i)
+    }
+  })
+
+  it('não afirma ser pessoa, professor ou amigo, e não promete voltar, esperar ou estar sempre ali', () => {
+    // A fala é do produto, em terceira pessoa: quem dá a aula é a professora, e a onça não diz "eu".
+    expect(FALA_DA_ENTREGA).not.toMatch(/\b(?:eu|sou|estou|estarei|fico|ficarei|vou|te|lhe|meu|minha)\b/i)
+    expect(FALA_DA_ENTREGA).not.toMatch(/\b(?:sou|somos)\s+(?:um|uma)?\s*(?:pessoa|gente|humano|professor|professora|amig[oa]|colega)/i)
+    expect(FALA_DA_ENTREGA).not.toMatch(/\b(?:volto|voltarei|voltar|espero|esperarei|esperando|aguardo|estarei|sempre|aqui|ali)\b/i)
+  })
+
+  it('não tem vínculo nem saudade', () => {
+    expect(FALA_DA_ENTREGA).not.toMatch(/saudade|sinto|falta|amig|carinho|v[ií]nculo|junt[oa]s?\b|nossa?s?\b|gosto|querid|amor/i)
+  })
+
+  it('o botão leva de volta às tarefas, e não é promessa: o "voltar" é do aluno, no imperativo da tela', () => {
+    expect(ROTULO_DE_VOLTAR_AS_TAREFAS).toBe('Voltar às tarefas')
   })
 })

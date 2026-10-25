@@ -8,10 +8,12 @@ import { CHAVE_DAS_MINHAS_ATIVIDADES } from '../../api/chaves-do-aluno'
 import { ErroDaApi, mensagemDoErro } from '../../api/cliente'
 import { consultaEu } from '../../api/eu'
 import { caminhoDoTutorNaAtividade, ROTAS_DO_ALUNO } from '../../caminhos'
+import { BarraPresa } from '../../componentes/ui/BarraPresa'
 import { BarraRotulada } from '../../componentes/ui/BarraRotulada'
 import { Botao } from '../../componentes/ui/Botao'
 import { CLASSES_DO_LINK_SECUNDARIO } from '../../componentes/ui/botao-secundario'
 import { Cartao } from '../../componentes/ui/Cartao'
+import { Comemoracao } from '../../componentes/ui/Comemoracao'
 import { DialogoDeConfirmacao } from '../../componentes/ui/sobrepostos/DialogoDeConfirmacao'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../componentes/estado'
 import { Faixa } from '../../componentes/ui/Faixa'
@@ -26,7 +28,9 @@ import {
   alternativaMarcada,
   AVISO_DE_OUTRA_JANELA,
   avisoDeEscolhasPerdidas,
+  comemoracaoNaTela,
   contarRespostas,
+  FALA_DA_ENTREGA,
   faseDaAtividade,
   impedimentoDoEnvio,
   letraDaAlternativa,
@@ -34,6 +38,7 @@ import {
   questaoValida,
   respostasSalvas,
   resultadoNaTela,
+  ROTULO_DE_VOLTAR_AS_TAREFAS,
   rotuloNoMapa,
   textoDasEmBranco,
   textoDasRespondidas,
@@ -52,15 +57,15 @@ const VOLTAR = (
   // Relativo à área: o `Route` aninhado em `/aluno` resolve o `to` a partir da base dela.
   <Link to={ROTAS_DO_ALUNO.atividades} className="inline-flex min-h-11 items-center gap-2 self-start text-caramelo-texto underline">
     <ArrowLeft aria-hidden="true" size={18} />
-    Voltar para Atividades
+    Voltar para Tarefas
   </Link>
 )
 
 /** Como cada questão aparece no mapa. O estado vai também no nome do botão e no ícone: cor sozinha não diz nada. */
 const CLASSES_DO_MAPA: Readonly<Record<MarcaDaQuestao, string>> = {
   sem_resposta: 'border-borda-campo bg-superficie text-sutil',
-  salvando: 'border-borda-campo bg-realce text-tinta',
-  salva: 'border-borda-campo bg-realce text-tinta',
+  salvando: 'border-azul-borda bg-azul-claro text-azul-texto',
+  salva: 'border-azul-borda bg-azul-claro text-azul-texto',
   nao_salva: 'border-dashed border-erro bg-erro-cx text-erro',
 }
 
@@ -70,6 +75,8 @@ interface PropsDeQuemResponde {
   readonly estadoDaFila: EstadoDaFila
   /** Para onde o foco vai quando o botão de enviar some, com a atividade enviada. */
   readonly focoDepoisDeEnviar: () => void
+  /** Chamado uma vez, só quando o servidor confirmou o envio: quem guarda o estado de tela da comemoração é a tela, e não esta fase, que sai do ar com o envio. */
+  readonly aoEntregar: () => void
 }
 
 /**
@@ -81,7 +88,7 @@ interface PropsDeQuemResponde {
  * salva" só quando o servidor confirmou; quando não consegue salvar, diz, mantém a escolha marcada e tenta de novo
  * sozinha. Nada aqui observa a janela, o foco ou a aba: sair e voltar não é medido (regra 70, item 7).
  */
-function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQuemResponde) {
+function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar, aoEntregar }: PropsDeQuemResponde) {
   const cliente = useQueryClient()
   const [atual, definirAtual] = useState(1)
   const [confirmando, definirConfirmando] = useState(false)
@@ -111,6 +118,8 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
   const envio = useMutation({
     mutationFn: () => enviarAtividade(provaId),
     onSuccess: (enviada) => {
+      // Antes de a leitura da prova ganhar `enviadaEm` e esta fase sair do ar: a tela nunca passa pelo "enviada" sem saber que foi agora.
+      aoEntregar()
       cliente.setQueryData(consultaProva(provaId).queryKey, (lida) => (lida === undefined ? lida : { ...lida, enviadaEm: enviada.enviadaEm }))
       void cliente.invalidateQueries({ queryKey: CHAVE_DAS_MINHAS_ATIVIDADES })
       definirConfirmando(false)
@@ -207,17 +216,6 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
         )}
       </Cartao>
 
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-        <Botao variante="secundario" disabled={numero === 1} onClick={() => irParaQuestao(numero - 1)}>
-          <ArrowLeft aria-hidden="true" size={18} className="shrink-0" />
-          Anterior
-        </Botao>
-        <Botao variante="secundario" disabled={numero === prova.questoes.length} onClick={() => irParaQuestao(numero + 1)}>
-          Próxima
-          <ArrowRight aria-hidden="true" size={18} className="shrink-0" />
-        </Botao>
-      </div>
-
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-linha pt-4">
         {/* Em avaliação o Tutor está pausado para a turma: a tela não oferece um caminho que só levaria ao aviso. */}
         {prova.avaliativa ? (
@@ -234,6 +232,20 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar }: PropsDeQ
       </div>
       {/* O ponto de parada, dito: sair não custa nada, e voltar é do mesmo tamanho (D59). */}
       <p className="text-sm text-sutil">Pode parar quando quiser. O que você respondeu fica guardado, e dá para continuar depois.</p>
+
+      {/* Presa embaixo: no celular, "Anterior" e "Próxima" ficam à mão enquanto a questão rola. */}
+      <BarraPresa rotulo="Trocar de questão">
+        <div className="flex w-full min-w-0 items-center justify-between gap-3">
+          <Botao variante="secundario" disabled={numero === 1} onClick={() => irParaQuestao(numero - 1)}>
+            <ArrowLeft aria-hidden="true" size={18} className="shrink-0" />
+            Anterior
+          </Botao>
+          <Botao variante="secundario" disabled={numero === prova.questoes.length} onClick={() => irParaQuestao(numero + 1)}>
+            Próxima
+            <ArrowRight aria-hidden="true" size={18} className="shrink-0" />
+          </Botao>
+        </div>
+      </BarraPresa>
 
       {confirmando && (
         <DialogoDeConfirmacao
@@ -327,13 +339,15 @@ function Diagnostico({ diagnostico, prova }: { diagnostico: RespostaMeuDiagnosti
 interface PropsDoFim {
   readonly prova: RespostaProva
   readonly estadoDaFila: EstadoDaFila
+  /** O envio foi confirmado nesta tela, nesta abertura (estado de tela, `comemoracaoNaTela`). */
+  readonly entregueAgora: boolean
 }
 
 /**
  * A atividade que não recebe mais resposta: enviada pelo aluno, ou encerrada pela professora. A tela **não deixa mudar
  * nada**, e do resultado diz só o que já pode ser dito: enquanto a correção não foi aprovada, que ela vai ser revista.
  */
-function SemMaisRespostas({ prova, estadoDaFila }: PropsDoFim) {
+function SemMaisRespostas({ prova, estadoDaFila, entregueAgora }: PropsDoFim) {
   const fase = faseDaAtividade(prova)
   const diagnostico = useQuery(consultaMeuDiagnostico(prova.atividadeAplicadaId))
   const resultado = resultadoNaTela(fase, diagnostico)
@@ -342,6 +356,14 @@ function SemMaisRespostas({ prova, estadoDaFila }: PropsDoFim) {
 
   return (
     <>
+      {comemoracaoNaTela(entregueAgora, prova, resultado) && (
+        <Cartao className="flex flex-col items-center gap-4">
+          <Comemoracao agente="tutor">{FALA_DA_ENTREGA}</Comemoracao>
+          <Link to={ROTAS_DO_ALUNO.atividades} className={CLASSES_DO_LINK_SECUNDARIO}>
+            {ROTULO_DE_VOLTAR_AS_TAREFAS}
+          </Link>
+        </Cartao>
+      )}
       <Cartao titulo={prova.enviadaEm === null ? 'Quem dá a aula encerrou esta atividade' : 'Atividade enviada'} className="flex flex-col gap-2">
         <p className="break-words text-apoio">
           {prova.enviadaEm === null ? '' : `Enviada em ${formatarDiaEHora(prova.enviadaEm)}. `}
@@ -386,6 +408,8 @@ export default function Atividade({ atividadeAplicadaId }: { atividadeAplicadaId
     fila.hidratar()
   }, [alunoDaSessao, fila])
   const topo = useRef<HTMLDivElement>(null)
+  // O envio confirmado nesta tela, e só nela: estado de tela, sem `localStorage`, URL nem cache. A `key` da rota (`rotas.tsx`) a zera ao trocar de tarefa.
+  const [entregueAgora, definirEntregueAgora] = useState(false)
   useTituloDaTela(prova.data?.titulo ?? 'Atividade')
 
   // O que o servidor tem de mais novo que esta janela (uma leitura da prova, ou o que o `PUT` que perdeu devolveu) é adotado.
@@ -403,11 +427,11 @@ export default function Atividade({ atividadeAplicadaId }: { atividadeAplicadaId
   if (prova.data === undefined) {
     const naoEncontrada = prova.error instanceof ErroDaApi && prova.error.codigo === CodigoDeErro.NAO_ENCONTRADO
     return (
-      <Tela titulo="Atividade" antes={VOLTAR} largura="conversa">
+      <Tela titulo="Atividade" antes={VOLTAR} largura="leitura">
         {prova.isPending ? (
           <EstadoCarregando rotulo="Carregando a atividade…" />
         ) : naoEncontrada ? (
-          <EstadoVazio titulo="Esta atividade não está disponível" descricao="Ela pode ser de outra turma, ou o endereço está errado. As atividades da sua turma estão em Atividades." />
+          <EstadoVazio titulo="Esta atividade não está disponível" descricao="Ela pode ser de outra turma, ou o endereço está errado. As tarefas da sua turma estão em Tarefas." />
         ) : (
           <EstadoErro erro={prova.error} tentando={prova.isFetching} aoTentarDeNovo={() => void prova.refetch({ cancelRefetch: false })} />
         )}
@@ -417,13 +441,13 @@ export default function Atividade({ atividadeAplicadaId }: { atividadeAplicadaId
 
   const dados = prova.data
   return (
-    <Tela titulo={dados.titulo} objeto antes={VOLTAR} largura="conversa">
+    <Tela titulo={dados.titulo} objeto antes={VOLTAR} largura="leitura">
       {/* Quem recebe o foco quando o botão de enviar some: sem isto ele cairia no `body` (regra 50, item 11). */}
       <div ref={topo} tabIndex={-1} className="flex min-w-0 flex-col gap-4">
         {faseDaAtividade(dados) === 'respondendo' ? (
-          <Respondendo prova={dados} fila={fila} estadoDaFila={estadoDaFila} focoDepoisDeEnviar={() => topo.current?.focus()} />
+          <Respondendo prova={dados} fila={fila} estadoDaFila={estadoDaFila} focoDepoisDeEnviar={() => topo.current?.focus()} aoEntregar={() => definirEntregueAgora(true)} />
         ) : (
-          <SemMaisRespostas prova={dados} estadoDaFila={estadoDaFila} />
+          <SemMaisRespostas prova={dados} estadoDaFila={estadoDaFila} entregueAgora={entregueAgora} />
         )}
       </div>
     </Tela>

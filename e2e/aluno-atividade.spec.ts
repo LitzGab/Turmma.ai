@@ -1,5 +1,6 @@
 import type { Locator, Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
+import type { RespostaProva } from '../packages/shared/src/index.ts'
 import { diagnosticoDa, erroDaApi, minhaAtividade, portao, provaDa, QUEM_APROVA, simularAluno, type ApiDoAluno } from './__fixtures__/aluno.ts'
 import { abrirNavegacao, entrarComoAluno, esperarInicioDoAluno, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
@@ -64,6 +65,16 @@ const alternativa = (page: Page, indice: number) => principal(page).locator(`[da
 const estadoDaResposta = (page: Page) => principal(page).locator('[data-resposta]')
 /** O que o mapa das questões diz de cada uma, pelo nome de cada botão. */
 const nomesNoMapa = (page: Page) => mapa(page).getByRole('button').evaluateAll((botoes) => botoes.map((botao) => botao.getAttribute('aria-label')))
+
+const comemoracao = (page: Page) => principal(page).locator('[data-comemoracao]')
+/** O que a comemoração diz (`FALA_DA_ENTREGA`, em `areas/aluno/atividade.ts`): o fato da entrega, e nada de nota. */
+const FALA_DA_ENTREGA = 'Atividade entregue. Quem dá a aula vê a correção antes de você.'
+
+/** Abre o diálogo "Enviar a atividade?" e confirma, pelos dois botões da tela. */
+async function confirmarOEnvio(page: Page, hasTouch: boolean): Promise<void> {
+  await acionar(principal(page).getByRole('button', { name: 'Enviar a atividade' }), hasTouch)
+  await acionar(page.getByRole('alertdialog', { name: 'Enviar a atividade?' }).getByRole('button', { name: 'Enviar a atividade' }), hasTouch)
+}
 
 /** Abre uma atividade pela lista, como o aluno faz. */
 async function abrirAtividade(page: Page, titulo: string, hasTouch: boolean): Promise<void> {
@@ -299,6 +310,16 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     await expect(principal(page).getByRole('heading', { name: 'Atividade enviada' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
     expect(api.pedidosEm(/\/enviar$/)).toEqual([{ metodo: 'POST', caminho: `/v1/atividades-aplicadas/${atividade.id}/enviar`, corpo: {} }])
 
+    // A comemoração é da entrega: uma vez, a onça comemorando assinada pela função, o fato e o caminho de volta, sem número.
+    await expect(comemoracao(page)).toHaveCount(1)
+    await expect(comemoracao(page).locator('[data-onca]')).toHaveAttribute('data-pose', 'comemorando')
+    await expect(comemoracao(page).locator('figcaption')).toContainText('Tutor')
+    await expect(comemoracao(page).locator('figcaption [data-selo-ia]')).toHaveCount(1)
+    await expect(comemoracao(page)).toContainText(FALA_DA_ENTREGA)
+    await expect(principal(page).getByRole('link', { name: 'Voltar às tarefas' })).toBeVisible()
+    expect(await comemoracao(page).locator('.comemoracao-salto').evaluate((no) => getComputedStyle(no).animationName)).toBe('comemoracao-salto')
+    await expect(comemoracao(page).locator('xpath=..')).not.toContainText(/\d|acert|parab[ée]ns|nota/i)
+
     // Enviada: a tela não deixa mudar, e do resultado só diz que a professora ainda vai revisar.
     await expect(principal(page).getByRole('radio')).toHaveCount(0)
     await expect(principal(page).getByRole('button', { name: 'Enviar a atividade' })).toHaveCount(0)
@@ -307,6 +328,15 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     await expect(principal(page)).not.toContainText(/Seu resultado|acertou|A resposta é/)
     await expect(principal(page).getByRole('alert')).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
+
+    // Recarregar apaga a comemoração, e abrir a tarefa pela lista também: ela é da entrega que acabou de acontecer.
+    await recarregar(page)
+    await expect(principal(page).getByRole('heading', { name: 'Atividade enviada' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(comemoracao(page)).toHaveCount(0)
+    await irPelaNavegacao(page, 'Tarefas', hasTouch)
+    await acionar(principal(page).getByRole('region', { name: 'Entregues' }).getByRole('link', { name: /Lista de estequiometria/ }), hasTouch)
+    await expect(principal(page).getByRole('heading', { name: 'Atividade enviada' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    await expect(comemoracao(page)).toHaveCount(0)
 
     // A professora aprova a correção: o diagnóstico aparece, por habilidade, com quem aprovou e o selo de IA.
     api.diagnosticos.set(atividade.id, diagnosticoDa(atividade))
@@ -327,6 +357,7 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     await expect(page.locator('body')).not.toContainText(PROIBIDO_NA_AREA)
     await expect(principal(page)).not.toContainText('%')
     await expect(page.locator('body')).not.toContainText(colega.nome)
+    await expect(comemoracao(page)).toHaveCount(0)
     await expect(principal(page).locator('[data-resultado="aguardando"]')).toHaveCount(0)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
@@ -357,6 +388,94 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     await expect(page.locator('body')).not.toContainText(PROIBIDO_NA_AREA)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
+  })
+})
+
+/**
+ * O aluno entra e abre a tarefa pelo endereço, sem colega nem a ida pela lista: estes casos provam a comemoração, e a
+ * entrada mais curta deixa cada um bem abaixo da metade do prazo do portão (15 s).
+ */
+async function entrarNaTarefa(page: Page, hasTouch: boolean, respostas: RespostaProva['respostas']): Promise<void> {
+  const api = await simularAluno(page)
+  const atividade = minhaAtividade({ situacao: 'em_andamento', respondidas: respostas.length })
+  api.atividades = [atividade]
+  api.provas.set(atividade.id, provaDa(atividade, { respostas }))
+  const aluno = await criarAlunoComMatricula()
+  await entrarComoAluno(page, aluno, hasTouch)
+  await irPara(page, `/aluno/atividades/${atividade.id}`)
+  await expect(mapa(page)).toContainText('Questão 1 de 3', { timeout: PRAZO_DA_TELA_MS })
+}
+
+test.describe('a tarefa aberta: a comemoração, a 360 px, com movimento reduzido e no recomeço', () => {
+  test('a 360 px: sem rolagem lateral, "Próxima" com 44 px e à vista na barra presa, e a comemoração cabe', async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width: 360, height: 640 })
+    await entrarNaTarefa(page, hasTouch, [{ questao: 1, alternativa: 1, sequencia: 1 }, { questao: 2, alternativa: 0, sequencia: 1 }])
+
+    const barra = principal(page).getByRole('group', { name: 'Trocar de questão' })
+    const proxima = barra.getByRole('button', { name: 'Próxima' })
+    expect((await proxima.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+    expect((await barra.getByRole('button', { name: 'Anterior' }).boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+    // Presa embaixo: "Próxima" está à vista sem rolar, e continua à vista depois de rolar a página até o fim.
+    await expect(proxima).toBeInViewport()
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    await expect(proxima).toBeInViewport()
+
+    await confirmarOEnvio(page, hasTouch)
+    await expect(comemoracao(page)).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    const volta = principal(page).getByRole('link', { name: 'Voltar às tarefas' })
+    expect((await volta.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('com "reduzir movimento" a onça aparece parada, inteira, com a função e o selo', async ({ page, hasTouch }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await entrarNaTarefa(page, hasTouch, [{ questao: 1, alternativa: 1, sequencia: 1 }])
+    await confirmarOEnvio(page, hasTouch)
+
+    await expect(comemoracao(page)).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    const salto = comemoracao(page).locator('.comemoracao-salto')
+    expect(await salto.evaluate((no) => getComputedStyle(no).animationName)).toBe('none')
+    expect(await salto.evaluate((no) => getComputedStyle(no).opacity)).toBe('1')
+    await expect(salto.locator('[data-onca]')).toHaveAttribute('data-pose', 'comemorando')
+    await expect(salto.locator('figcaption [data-selo-ia]')).toBeVisible()
+  })
+
+  test('o aluno seguinte no mesmo computador, na mesma tarefa, não herda a comemoração nem as respostas do anterior', async ({ page, hasTouch }) => {
+    const api = await simularAluno(page)
+    const atividade = minhaAtividade({ situacao: 'em_andamento', respondidas: 1 })
+    api.atividades = [atividade]
+    api.provas.set(atividade.id, provaDa(atividade, { respostas: [{ questao: 1, alternativa: 1, sequencia: 1 }] }))
+    const primeiro = await criarAlunoComMatricula()
+    const segundo = await criarAlunoComMatricula({ escola: primeiro })
+
+    // O primeiro entrega e vê a comemoração; depois sai.
+    await entrarComoAluno(page, primeiro, hasTouch)
+    await irPara(page, `/aluno/atividades/${atividade.id}`)
+    await expect(mapa(page)).toContainText('Questão 1 de 3', { timeout: PRAZO_DA_TELA_MS })
+    await confirmarOEnvio(page, hasTouch)
+    await expect(comemoracao(page)).toHaveCount(1, { timeout: PRAZO_DA_TELA_MS })
+    await abrirNavegacao(page, hasTouch)
+    await acionar(lateral(page).getByRole('button', { name: 'Sair' }).and(page.locator(':not(main *)')), hasTouch)
+    await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
+
+    // O segundo entra na mesma aba, sem recarregar, e a mesma tarefa está por fazer e sem resposta para ele.
+    api.provas.set(atividade.id, provaDa(atividade))
+    api.atividades = [{ ...atividade, respondidas: 0 }]
+    await irPara(page, `/e/${segundo.slug}`)
+    await page.getByLabel('Matrícula').fill(segundo.matricula)
+    await page.getByLabel('Senha').fill(segundo.senha)
+    await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
+    await esperarInicioDoAluno(page, segundo.nome)
+    await irPara(page, `/aluno/atividades/${atividade.id}`)
+
+    await expect(mapa(page)).toContainText('Questão 1 de 3', { timeout: PRAZO_DA_TELA_MS })
+    await expect(principal(page).getByRole('radio', { checked: true })).toHaveCount(0)
+    expect(await nomesNoMapa(page)).toEqual(['Questão 1, sem resposta', 'Questão 2, sem resposta', 'Questão 3, sem resposta'])
+    await expect(comemoracao(page)).toHaveCount(0)
+    await expect(principal(page).getByRole('heading', { name: 'Atividade enviada' })).toHaveCount(0)
   })
 })
 

@@ -1990,6 +1990,25 @@ Ficam, de antes da retro:
 - [ ] **(X4, 4.0) O e2e de 360 px de Tarefas acha o nome da linha pelo `[title]`**, detalhe interno da `Linha`. Um `data-*` na
       `Linha` seria mais robusto, e o e2e passaria a usá-lo (`e2e/aluno-atividade.spec.ts`, "Tarefas a 360 px"). A mudança é na
       `Linha`, da X1 (dono: Arquiteto, com a X1; origem: `4_task.md`, `revisor-geral` 1ª)
+- [ ] **(X4, 6.0) A ordem do Tab na tarefa aberta: "Anterior" e "Próxima" vêm no DOM depois de "Enviar a atividade" e de "Pedir
+      ajuda ao Tutor".** A barra presa é o último bloco, e o envio fica acima dela. Reavaliar se o envio vai para dentro da barra,
+      como no mockup 2.3a (muda a estrutura da tela, e por isso não é barata). O Validador confere a forma contra o mockup 2.3a
+      (dono: Validador; origem: `6_task.md`, `frontend-reviewer` 1ª)
+- [ ] **(X4, 6.0) O dado da vitrine cheia se contradiz:** a tarefa corrigida diz "Você respondeu 0 de 4 questões" ao lado de
+      "Você acertou 3 de 4". É o semeador de `tools/vitrine/`, fora dos arquivos da 6.0: semear as respostas da atividade
+      corrigida (dono: Orquestrador; origem: `6_task.md`, `frontend-reviewer`, `conformidade-reviewer`, `revisor-geral` e
+      `privacy-guardian` 1ª)
+- [ ] **(X4, 6.0) A fala da comemoração sai assinada pelo Tutor, mas quem corrige é o "Assistente · correção de objetiva".** Mudar a
+      assinatura da `Comemoracao` muda a peça: decidir com o `frontend-reviewer` na próxima tarefa que tocar a peça (dono:
+      Arquiteto; origem: `6_task.md`, `conformidade-reviewer` 1ª)
+- [ ] **(X4, 6.0) O `\b` do teste de falas não reconhece palavra acentuada** (`atividade.test.ts`, "as falas da comemoração"): trocar
+      por `(?<![\p{L}])…(?![\p{L}])` com a flag `u` quando a lista ganhar palavra com acento. Hoje funciona (dono: quem mexer nas
+      falas; origem: `6_task.md`, `conformidade-reviewer` 1ª)
+- [ ] **(X4, 6.0) `e2e/aluno-atividade.spec.ts` copia a fala da comemoração à mão** em vez de importar `FALA_DA_ENTREGA`. Depende de
+      o e2e poder importar de `apps/web`, que não foi verificado (dono: Arquiteto; origem: `6_task.md`, `revisor-geral` 1ª)
+- [ ] **(X4, 6.0) O 503 do envio simula a queda de rede; a falha de verdade é o `fetch` rejeitado.** O caminho do cliente é o mesmo,
+      mas um caso com `fetch` rejeitado fecha a dúvida. Entra na tarefa que tocar `Atividade.test.tsx` ou a `redeFalsa` (dono:
+      Arquiteto; origem: `6_task.md`, `test-engineer` 1ª)
 
 Saíram na retro da X7, com o motivo em `tasks/prd-harness/retro.md` ("Tirar do `TODO.md`"): o resto das recomendações da
 revisão da spec (rodada 4), da 2.0, da 5.0, da 7.0, da 11.0, da 12.0 (o `catch` do `rev-list`), da 17.0, da 18.0 e da 19.0,

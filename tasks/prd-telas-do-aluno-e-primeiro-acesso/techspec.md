@@ -136,7 +136,7 @@ por um programa de IA de uma empresa contratada (D62); e que o professor da turm
 exige essas frases, recusa "nota" e tira o piso e o teto de `CATEGORIAS_DE_RETENCAO.conversa_tutor`, sem número à mão:
 o intervalo não aparece numa frase sem "Tutor". "Como estou indo" lê só o que `/v1/tutor/memoria` entrega com
 `resultado` não nulo (lote aprovado) e mostra `aReforcar` como veio: a web não calcula limiar. Os `sinais` da
-memória **não** são mostrados (F9). A comemoração depende só de o envio ter sido confirmado nesta tela. A pose
+memória **não** são mostrados (F9). A comemoração depende só de o envio ter sido confirmado nesta tela, e some se o resultado já está à vista (`comemoracaoNaTela`, em `areas/aluno/atividade.ts`): ela nunca divide a tela com acerto (RF8). A pose
 `acolhendo` não é desenhada. A pendência 12 de `docs/aia/tutor.md` fecha na tarefa do aviso.
 
 ## 7c. Carga e falha (obrigatório)
@@ -177,7 +177,7 @@ moldura e a `Comemoracao`. **Eu**: cartão da turma, "Como estou indo" e as quat
 (os `@keyframes` num CSS ao lado, só `transform` e `opacity`, uma vez) e as três poses da onça em `componentes/ui/onca/Onca`, ao
 lado da `CabecaOnca` da X1. A cadeia fechada da onça da X1 (`componentes/ui/ia/avatar-so-nas-duas-pecas.test.ts`) passa a
 admitir os importadores desta spec, e só eles. **As três poses usam o mesmo rosto
-neutro da cabeça da X1; só o corpo muda** (D80, item 3). A introdução usa acenando e apontando e termina parada. A pose
+neutro da cabeça da X1; só o corpo muda** (D80, item 3). A introdução usa acenando e apontando e termina parada. O CSS que mora ao lado da peça (`Comemoracao.css`) conta como peça em `nome-dos-chunks.ts` (`ehPecaForaDaEntrada`): sem isso, o pedaço que a galeria e a tarefa aberta dividem sairia `parte-*`, e não `pecas-*`. A pose
 `comemorando` só é desenhada pela `Comemoracao`, e a `Comemoracao` só é importada por `areas/aluno/Atividade.tsx` **e pela seção `galeria/secoes/introducao.tsx`**, o palco em que o e2e prova o salto e o "reduzir movimento" antes de a tarefa aberta existir (5.0). A `Introducao`
 recebe passos (`pose`, `fala`, `conteudo`, `obrigatorio`) e avisa "concluiu" ou "pulou"; a fala é o `h1`, recebe o
 foco a cada passo, e Enter continua. Os textos moram em `.ts` com teste.

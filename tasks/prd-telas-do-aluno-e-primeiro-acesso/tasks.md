@@ -39,10 +39,10 @@
   - [ ] 5.4 A seção da galeria, nos dois temas
   - [ ] 5.5 Testes: ordem, foco, botões iguais, passo obrigatório, movimento reduzido, rosto das poses, quem importa a onça e a `Comemoracao`, a casca em foco
 
-- [ ] **6.0 — A tarefa aberta na pele nova, com a comemoração na entrega**
-  - [ ] 6.1 A moldura da tarefa aberta com as peças da X1, sem mudar o fluxo
-  - [ ] 6.2 A `Comemoracao`, uma vez, depois do envio confirmado nesta tela
-  - [ ] 6.3 Testes: aparece no envio; não aparece ao reabrir, no resultado nem na encerrada
+- [x] **6.0 — A tarefa aberta na pele nova, com a comemoração na entrega**
+  - [x] 6.1 A moldura da tarefa aberta com as peças da X1, sem mudar o fluxo
+  - [x] 6.2 A `Comemoracao`, uma vez, depois do envio confirmado nesta tela
+  - [x] 6.3 Testes: aparece no envio; não aparece ao reabrir, no resultado nem na encerrada
 
 - [ ] **7.0 — Eu: a turma, como estou indo, Privacidade e Sair**
   - [ ] 7.1 `consultaMemoriaDoTutor` (só `trabalhos` com resultado)
