@@ -50,8 +50,8 @@ export interface PedidoDoUsuario {
  * dado do titular passa por aqui.
  *
  * As travas de concorrência moram no banco, e não em "ler e depois gravar" (regra 80, item 7): dois jobs do mesmo pedido
- * gravam a mesma linha pelo único `(escola_id, pedido_id, versao)`, com `on conflict do update`, e a passagem
- * `em_preparacao → pronto` é um `update` condicional, que só uma das duas chamadas faz.
+ * gravam a mesma linha pelo único `(escola_id, pedido_id, versao)`, com `on conflict do update` só dos bytes, e a passagem
+ * `em_preparacao → pronto` é um `update` condicional, que só uma das duas chamadas faz: o job grava a linha antes, na mesma transação.
  */
 export class ArquivoDoTitularRepository {
   constructor(private readonly banco: Banco | TransacaoBanco) {}
@@ -88,8 +88,9 @@ export class ArquivoDoTitularRepository {
   }
 
   /**
-   * Grava a versão pronta do arquivo: a linha nova, ou a mesma linha de novo quando o job roda duas vezes (`on conflict do
-   * update` no único `(escola_id, pedido_id, versao)`), com a validade contada de novo do instante em que ficou pronta.
+   * Grava a versão pronta do arquivo: a linha nova, com a validade contada do instante em que ficou pronta. Se a linha já
+   * existe (`on conflict` no único `(escola_id, pedido_id, versao)`), só os `bytes` mudam: **o `pronto_em` e o `expira_em`
+   * originais ficam**, e a reentrega do job não renova a validade de 7 dias (regra 20, item 16).
    * **O `apagado_em` não é limpo**: o que a eliminação do titular marcou fica marcado, e o job não o ressuscita.
    * A chave do objeto é a do check `arquivo_titular_chave_da_escola`: `titular/<escola>/<pedido>/<versao>.json`.
    */
@@ -100,7 +101,7 @@ export class ArquivoDoTitularRepository {
     await this.banco
       .insert(arquivoTitular)
       .values({ escolaId, pedidoId, versao, chaveObjeto, bytes, prontoEm, expiraEm })
-      .onConflictDoUpdate({ target: [arquivoTitular.escolaId, arquivoTitular.pedidoId, arquivoTitular.versao], set: { bytes, prontoEm, expiraEm } })
+      .onConflictDoUpdate({ target: [arquivoTitular.escolaId, arquivoTitular.pedidoId, arquivoTitular.versao], set: { bytes } })
     return chaveObjeto
   }
 

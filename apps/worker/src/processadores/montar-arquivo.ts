@@ -25,9 +25,13 @@ export interface DependenciasDaMontagemDoArquivo {
  * - **O job leva só o id do pedido**, e o executor o valida pela definição.
  * - **Uma versão `completa` sempre; a `coordenacao` só quando o titular não tem conta ativa nesta escola**, e nunca a
  *   conversa do professor nela (regra 70, item 8). A conta ativa é por escola.
+ * - **O arquivo já montado não se monta de novo.** A reentrega de um pedido `pronto`, ou que já tem a linha da versão completa,
+ *   termina sem efeito: não regrava a linha (a validade de 7 dias conta do primeiro `pronto_em`) nem recria o objeto que a rotina
+ *   da escola já apagou. O pedido que a coordenação concluiu antes de o job rodar ainda não tem arquivo, e é montado.
  * - **O objeto vai antes da linha.** O job grava todos os objetos e só então, numa transação, as linhas e o estado. A
- *   mesma chave sobrescreve o objeto órfão de uma tentativa que morreu entre as duas coisas, e o `on conflict do update`
- *   do único `(escola_id, pedido_id, versao)` torna dois jobs do mesmo pedido inofensivos.
+ *   mesma chave sobrescreve o objeto órfão de uma tentativa que morreu entre as duas coisas, e o `on conflict` do único
+ *   `(escola_id, pedido_id, versao)` só atualiza os bytes: dois jobs do mesmo pedido ao mesmo tempo deixam o `pronto_em` do
+ *   primeiro que gravou.
  * - **Armazém fora**: o erro sobe, o pedido continua `em_preparacao` e a fila tenta de novo. Nada do que o storage disse
  *   sai no erro (`ErroParaAFila` leva só o código), e o log leva só o id do pedido e contagens.
  * - O titular que já não existe na escola não tem o que montar: termina sem efeito. O pedido de acesso dele fica
@@ -40,6 +44,14 @@ export function criarMontagemDoArquivo({ banco, armazem, relogio, logger }: Depe
     const pedido = await arquivos.pedidoParaMontar(pedidoId)
     if (pedido === undefined || !TIPOS_DE_PEDIDO_COM_ARQUIVO.some((tipo) => tipo === pedido.tipo)) {
       logger.info({ evento: 'titular.arquivo_sem_pedido_que_monte' })
+      return
+    }
+    // A reentrega (D49) de um pedido cujo arquivo já foi montado não tem o que montar: regravar renovaria a validade de 7 dias, e
+    // recriaria o objeto que a rotina da escola ou a eliminação do titular já apagou, sem a linha de antes. O arquivo já foi montado
+    // quando o pedido está `pronto` (só este job o passa para lá) ou quando a linha da versão completa existe. O pedido que a
+    // coordenação concluiu antes de o job rodar ainda não tem nada disso, e é montado: o titular o baixa.
+    if (pedido.estado === 'pronto' || (await arquivos.doPedido(pedido.id, 'completa')) !== undefined) {
+      logger.info({ evento: 'titular.arquivo_ja_montado' })
       return
     }
     const ativa = await arquivos.contaAtiva(pedido.titularId)
