@@ -139,7 +139,13 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [ ] **(Telas do aluno, 3.0) A vitrine cheia semeia atividade aplicada** (`frontend-reviewer`, `conformidade-reviewer`,
       `privacy-guardian` e `test-engineer`, 1ª a 3ª): `tools/vitrine/` não semeia nenhuma, e a foto do Início só mostra o vazio.
       Semear uma atividade aplicada, uma delas avaliativa e uma com título sem espaço (para a foto do celular mostrar a quebra a
-      360 px), antes de o Validador fotografar a spec; a medida de 44 px do título entra junto, com `boundingBox()` no e2e
+      360 px), antes de o Validador fotografar a spec; a medida de 44 px do título entra junto, com `boundingBox()` no e2e.
+      Entra também uma atividade "Para fazer" aberta, para fotografar a questão em letra Maior a 360 px (correção
+      `2026-10-25-enunciado-nao-acompanha-a-letra`, `frontend-reviewer`, 1ª)
+- [ ] **(Telas do aluno, correção `2026-10-25-enunciado-nao-acompanha-a-letra`) Mais `text-[Npx]` na área do aluno** (`test-engineer`, 1ª):
+      o mesmo defeito do enunciado, o tamanho em `px` que não acompanha a letra Grande ou Maior, está em `Toque.tsx:39`, `Aviso.tsx:54`,
+      `ui/ia/AssinaturaIA.tsx:34`, `ui/onca/Onca.tsx:124`, `meus-dados/MeusDados.tsx:217` e `MenuDaPessoa.tsx:64`. Corrigir em
+      correção própria, medindo cada um com a letra Maior, e acrescentar a guarda que recuse `text-[Npx]` nas telas do aluno
 - [ ] **(Telas do aluno, 3.0) O recomeço do Início está duplicado** em `e2e/aluno-inicio.spec.ts` e `e2e/minha-turma.spec.ts`
       (`test-engineer`, 1ª): apagar um dos dois numa passada de e2e (dono: quem tocar `minha-turma.spec.ts`)
 

@@ -240,4 +240,35 @@ test.describe('o tamanho da letra do aluno', () => {
     await expect(principal(page)).toContainText('Questão 1 de 3', { timeout: PRAZO_DA_TELA_MS })
     await semRolagem('a tarefa aberta')
   })
+
+  test('o enunciado da tarefa aberta acompanha a letra: 17 px no Padrão e 21,25 px com Maior escolhida no diálogo, com a tarefa aberta pelo endereço', async ({ page, hasTouch }) => {
+    const atividade = minhaAtividade({ situacao: 'em_andamento', respondidas: 0 })
+    const api = await simularAluno(page)
+    api.atividades = [atividade]
+    api.provas.set(atividade.id, provaDa(atividade))
+    const aluno = await criarAlunoComMatricula()
+    await colocarAlunoNaTurma(aluno)
+    await entrarComoAluno(page, aluno, hasTouch)
+
+    const enunciado = principal(page).getByRole('heading', { level: 2 }).filter({ hasText: 'Qual é a massa molar da água' })
+    const tamanhoDoEnunciado = () => enunciado.evaluate((no) => Number.parseFloat(getComputedStyle(no).fontSize))
+    const abrirATarefa = async () => {
+      await page.evaluate((destino) => {
+        window.history.pushState(null, '', destino)
+        window.dispatchEvent(new PopStateEvent('popstate'))
+      }, `/aluno/atividades/${atividade.id}`)
+      await expect(enunciado).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    }
+
+    await abrirATarefa()
+    await expect.poll(tamanhoDoEnunciado, { message: 'Padrão' }).toBe(17)
+
+    await abrirAjustes(page, hasTouch)
+    await acionar(rotuloDe(page, 'Maior'), hasTouch)
+    await expect(opcao(page, 'Maior')).toBeChecked()
+    await page.keyboard.press('Escape')
+    await expect(dialogo(page)).toBeHidden()
+    await abrirATarefa()
+    await expect.poll(tamanhoDoEnunciado, { message: 'Maior' }).toBe(21.25)
+  })
 })
