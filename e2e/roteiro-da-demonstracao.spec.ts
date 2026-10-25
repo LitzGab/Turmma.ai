@@ -5,7 +5,7 @@ import type { RespostaAcessoGerado } from '../packages/shared/src/sala/acesso.ts
 import { entregasNoBanco, validacoesNoBanco } from './__fixtures__/a2.ts'
 import { respostasNoBanco } from './__fixtures__/a3.ts'
 import { entrarComoAlunoPelaApi, responderPelaApi } from './__fixtures__/aluno-pela-api.ts'
-import { abrirAbaAlunos, passarPelaIntroducaoDoAluno, esperarPainel, esperarNovaConversa, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirAbaAlunos, passarPelaIntroducaoDoAluno, passarPelaIntroducaoDoProfessor, esperarPainel, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { irPelaCoordenacao, linhasDaTabela, painelDoAno } from './__fixtures__/coordenacao.ts'
 import { caixa, conversa, DISCIPLINA, gerarAtividade, PRAZO_DA_IA_MS, TITULO_DO_MATERIAL } from './__fixtures__/fluxo-do-professor.ts'
 import { auditoriasNoBanco, suspensoesNoBanco } from './__fixtures__/governanca.ts'
@@ -277,7 +277,8 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       await botao(principal(professora), 'Definir a senha e continuar').click()
       await expect(professora).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
       await entrarComEmail(professora, helena.email, senha)
-      await esperarNovaConversa(professora, helena.nome)
+      // Aceito o convite, a professora ainda não viu a introdução: ela é a primeira coisa que encontra (X4, 10.0).
+      await passarPelaIntroducaoDoProfessor(professora, helena.nome, hasTouch)
       await irPelaNavegacao(professora, 'Turmas', hasTouch)
       const paraConfirmar = principal(professora).getByRole('region', { name: 'Confirme suas turmas', exact: true })
       await paraConfirmar.getByRole('listitem').filter({ hasText: turmaA }).getByRole('button', { name: 'Confirmar' }).click({ timeout: PRAZO_DA_ENTRADA_MS })

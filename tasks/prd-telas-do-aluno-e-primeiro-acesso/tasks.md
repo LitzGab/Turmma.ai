@@ -62,10 +62,10 @@
   - [x] 9.4 `docs/aia/tutor.md`, `docs/lgpd.md` (seção 9) e `docs/conformidade-mec.md`
   - [x] 9.5 Testes: primeira e segunda entrada (contexto novo), avisos sem "pular", passo 4, sair no meio, rever, estados da `BemVindo`, o texto do aviso
 
-- [ ] **10.0 — A introdução do professor**
-  - [ ] 10.1 `textos-da-introducao.ts` e `BemVindo.tsx` do professor, com a rota
-  - [ ] 10.2 "Rever a introdução" no menu da pessoa
-  - [ ] 10.3 Testes: primeira entrada pelo convite, pular, rever, estados da `BemVindo`, o professor de duas escolas
+- [x] **10.0 — A introdução do professor**
+  - [x] 10.1 `textos-da-introducao.ts` e `BemVindo.tsx` do professor, com a rota
+  - [x] 10.2 "Rever a introdução" no menu da pessoa
+  - [x] 10.3 Testes: primeira entrada pelo convite, pular, rever, estados da `BemVindo`, o professor de duas escolas
 
 - [ ] **11.0 — A introdução da coordenação**
   - [ ] 11.1 `textos-da-introducao.ts` e `BemVindo.tsx` da coordenação, com a rota

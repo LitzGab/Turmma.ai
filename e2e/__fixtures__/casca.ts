@@ -337,6 +337,46 @@ export async function passarPelaIntroducaoDoAluno(page: Page, nome: string, hasT
 }
 
 /**
+ * As quatro falas da introdução do professor (telas do aluno e primeiro acesso, 10.0), na ordem dos passos. Texto de
+ * `areas/professor/introducao/textos-da-introducao.ts`, copiado aqui porque `e2e/` não importa a web. `textos-da-introducao.test.ts`
+ * confere esta lista com os passos: se o texto mudar num lugar só, ele reprova.
+ */
+export const FALAS_DA_INTRODUCAO_DO_PROFESSOR = [
+  'Eu preparo, você revê, e só então vai à turma.',
+  'Só a resposta do Tutor chega ao aluno sem a sua aprovação, uma a uma.',
+  'Eu não corrijo redação nem discursiva: ajudo com a rubrica e com a organização do lote.',
+  'Usar ou não esta ferramenta não gera número sobre você.',
+] as const
+
+/** A fala do passo `n` (a partir de 1) da introdução do professor, o `h1` da tela de foco. */
+export const falaDoPassoDoProfessor = (page: Page, n: number): Locator =>
+  page.getByRole('main').getByRole('heading', { level: 1, name: FALAS_DA_INTRODUCAO_DO_PROFESSOR[n - 1] ?? '', exact: true })
+
+/** A primeira entrada do professor: o endereço é o da introdução e a fala do passo 1 está na tela, esperados juntos. */
+export async function esperarIntroducaoDoProfessor(page: Page, opcoes: { readonly timeout?: number } = {}): Promise<void> {
+  const timeout = opcoes.timeout ?? PRAZO_DA_ENTRADA_MS
+  await Promise.all([expect(page).toHaveURL(/\/professor\/bem-vindo$/, { timeout }), expect(falaDoPassoDoProfessor(page, 1)).toBeVisible({ timeout })])
+}
+
+/** Os quatro "Continuar" da introdução do professor, um por passo. Quem chama já está no passo 1; depois do último ele está no primeiro lugar. */
+export async function seguirAteOFimDaIntroducaoDoProfessor(page: Page, hasTouch: boolean): Promise<void> {
+  for (let passo = 1; passo <= FALAS_DA_INTRODUCAO_DO_PROFESSOR.length; passo++) {
+    await expect(falaDoPassoDoProfessor(page, passo)).toBeVisible()
+    await acionar(page.getByRole('button', { name: 'Continuar', exact: true }), hasTouch)
+  }
+}
+
+/**
+ * O professor criado pela tela (a coordenação o cadastrou, ele aceitou o convite) entra pela primeira vez: passa pela introdução, e só
+ * então chega a "Início". O fluxo dele não prova a introdução (`professor-introducao.spec.ts` prova), mas ela está no caminho.
+ */
+export async function passarPelaIntroducaoDoProfessor(page: Page, nome: string, hasTouch: boolean): Promise<void> {
+  await esperarIntroducaoDoProfessor(page)
+  await seguirAteOFimDaIntroducaoDoProfessor(page, hasTouch)
+  await esperarNovaConversa(page, nome)
+}
+
+/**
  * Entra pela API (`POST /v1/sessao/email`) no contexto da página e abre o endereço: o cookie de renovação fica no contexto, e a
  * aplicação restaura a sessão a partir dele, como num retorno à aba. É o atalho do caso que prova outra coisa que não a entrada
  * (a entrada pela tela tem os casos dela) e que, com o argon2 e a CPU ×4 do perfil, não cabe nos 15 s do portão com um login a mais.

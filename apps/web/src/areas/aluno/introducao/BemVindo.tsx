@@ -1,78 +1,42 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useId, useRef, useState, type ReactNode } from 'react'
-import { Link, useLocation } from 'wouter'
-import { concluirIntroducao, consultaEu } from '../../../api/eu'
+import { useId, type ReactNode } from 'react'
+import { Link } from 'wouter'
 import { ROTAS_DO_ALUNO } from '../../../caminhos'
 import { TamanhoDaLetra } from '../../../componentes/ajustes/TamanhoDaLetra'
 import { EstadoErro } from '../../../componentes/estado'
 import { Balao } from '../../../componentes/introducao/Balao'
 import { Introducao, type PassoDaIntroducao } from '../../../componentes/introducao/Introducao'
+import { Linhas } from '../../../componentes/introducao/Linhas'
+import { RegiaoQueRola } from '../../../componentes/introducao/RegiaoQueRola'
 import { TelaDeFoco } from '../../../componentes/introducao/TelaDeFoco'
+import { useIntroducao } from '../../../componentes/introducao/use-introducao'
 import { CLASSES_DO_LINK_SECUNDARIO } from '../../../componentes/ui/botao-secundario'
 import { Onca } from '../../../componentes/ui/onca/Onca'
 import { useTituloDaTela } from '../../../titulo'
 import { GRUPOS_DO_AVISO } from './aviso-de-privacidade'
 import { FALA_DO_TUTOR, PASSOS_DO_ALUNO, TOTAL_DE_PASSOS, type PassoDoAluno } from './textos-da-introducao'
 
-/** O `['eu']` envelhece em 60 s e não se relê ao voltar para a aba (Tech Spec, seção 9): o desvio da entrada já o leu. */
-const LEITURA_DA_INTRODUCAO = { staleTime: 60_000, refetchOnWindowFocus: false } as const
-
-/** As frases de um passo, uma por linha, em `t-corpo`: texto fixo de `textos-da-introducao.ts`. */
-function Linhas({ linhas }: { readonly linhas: readonly string[] }) {
-  return (
-    <ul className="flex w-full min-w-0 flex-col gap-2">
-      {linhas.map((linha) => (
-        <li key={linha} className="t-corpo min-w-0 break-words rounded-controle border-2 border-borda bg-superficie px-4 py-3 text-tinta">
-          {linha}
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-/** Falta menos que isto (em px) para o fim da região: já se leu tudo. */
-const FOLGA_DO_FIM = 4
-
 /**
  * O aviso de privacidade: quatro grupos, cada um com o título e as frases (`aviso-de-privacidade.ts`). São 17 frases, que não
  * cabem ao lado da onça, da fala e do botão em 1366 × 768 (RF20): **só o miolo rola**, e o "Continuar" fica à vista. A região
- * rolável tem nome e entra no Tab (`scrollable-region-focusable`), para quem usa teclado a ler inteira. **Enquanto há o que ler
- * abaixo, uma faixa com "Role para ler mais" cobre o pé da região**: sem ele o aluno veria três frases e uma cortada ao meio, e
- * acharia que o aviso acabou. Chegando ao fim, a faixa sai. (A guarda de cor da web não aceita degradê com transparência nem modificador de opacidade: a faixa é de cor cheia.)
+ * rolável (`RegiaoQueRola`, a mesma da introdução do professor) tem nome, entra no Tab e avisa "Role para ler mais" enquanto há
+ * o que ler abaixo.
  */
 function AvisoDePrivacidade() {
-  const [haMais, definirHaMais] = useState(true)
   return (
-    <div className="relative w-full min-w-0">
-      <div
-        role="region"
-        aria-label="Aviso de privacidade"
-        tabIndex={0}
-        onScroll={(evento) => {
-          const regiao = evento.currentTarget
-          definirHaMais(regiao.scrollTop + regiao.clientHeight < regiao.scrollHeight - FOLGA_DO_FIM)
-        }}
-        className="flex max-h-[28dvh] w-full min-w-0 flex-col gap-4 overflow-y-auto rounded-controle border-2 border-borda p-4 text-left"
-      >
-        {GRUPOS_DO_AVISO.map((grupo) => (
-          <section key={grupo.titulo} className="flex min-w-0 flex-col gap-2">
-            <h2 className="t-cartao min-w-0 break-words text-tinta">{grupo.titulo}</h2>
-            <ul className="flex min-w-0 flex-col gap-2">
-              {grupo.frases.map((frase) => (
-                <li key={frase} className="t-corpo min-w-0 break-words text-tinta">
-                  {frase}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
-      {haMais && (
-        <div aria-hidden="true" data-mais-abaixo="" className="pointer-events-none absolute inset-x-[2px] bottom-[2px] flex h-9 items-center justify-center rounded-b-controle border-t-2 border-borda bg-fundo">
-          <span className="t-apoio text-sutil">Role para ler mais</span>
-        </div>
-      )}
-    </div>
+    <RegiaoQueRola nome="Aviso de privacidade" alturaMaxima="max-h-[28dvh]">
+      {GRUPOS_DO_AVISO.map((grupo) => (
+        <section key={grupo.titulo} className="flex min-w-0 flex-col gap-2">
+          <h2 className="t-cartao min-w-0 break-words text-tinta">{grupo.titulo}</h2>
+          <ul className="flex min-w-0 flex-col gap-2">
+            {grupo.frases.map((frase) => (
+              <li key={frase} className="t-corpo min-w-0 break-words text-tinta">
+                {frase}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </RegiaoQueRola>
   )
 }
 
@@ -104,34 +68,14 @@ function conteudoDoPasso(passo: PassoDoAluno): ReactNode {
  * vez: só uma data **conhecida e preenchida** vira "revendo". Com dado, os passos.
  *
  * **Concluir e pular gravam a data e levam o aluno à abertura, mesmo se a gravação falhar**: a pessoa nunca fica presa, e a
- * introdução volta na entrada seguinte. A resposta da rota entra no cache `['eu']`. Dois cliques seguidos fazem um
- * POST só. "Sair" e fechar a aba não gravam. Revendo, a data já existe: todo passo fecha, nada é gravado e a pessoa volta a Eu,
- * de onde veio.
+ * introdução volta na entrada seguinte. Dois cliques seguidos fazem um POST só. "Sair" e fechar a aba não gravam. Revendo, a
+ * data já existe: todo passo fecha, nada é gravado e a pessoa volta a Eu, de onde veio. Tudo isso é de `useIntroducao`, que
+ * as introduções dos outros papéis também usam.
  */
 export default function BemVindo() {
   useTituloDaTela('Bem-vindo')
-  const eu = useQuery({ ...consultaEu, ...LEITURA_DA_INTRODUCAO })
-  const cliente = useQueryClient()
-  const [, ir] = useLocation()
   const idDoPasso = useId()
-  /** O POST já saiu: o segundo clique, no mesmo quadro, não faz outro. */
-  const jaGravou = useRef(false)
-
-  // O que o `onSuccess` guarda é a primeira data, a mesma que o `GET /v1/eu` devolveria; sem `['eu']` no cache não há o que atualizar.
-  const gravar = useMutation({
-    mutationFn: concluirIntroducao,
-    onSuccess: ({ introducaoVistaEm }) => cliente.setQueryData(consultaEu.queryKey, (antes) => (antes === undefined ? antes : { ...antes, introducaoVistaEm })),
-  })
-
-  const revendo = eu.data !== undefined && eu.data.introducaoVistaEm !== null
-
-  function terminar(): void {
-    if (!revendo && !jaGravou.current) {
-      jaGravou.current = true
-      gravar.mutate()
-    }
-    ir(revendo ? ROTAS_DO_ALUNO.eu : ROTAS_DO_ALUNO.inicio, { replace: true })
-  }
+  const { eu, revendo, terminar } = useIntroducao({ aoTerminar: ROTAS_DO_ALUNO.inicio, aoRever: ROTAS_DO_ALUNO.eu })
 
   if (eu.data === undefined && eu.isError) {
     return (

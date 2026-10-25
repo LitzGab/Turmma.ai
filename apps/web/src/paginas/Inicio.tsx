@@ -7,10 +7,10 @@ import { EstadoCarregando, EstadoErro } from '../componentes/estado'
 import { useTituloDaTela } from '../titulo'
 
 /**
- * A introdução de cada papel, que a primeira entrada abre antes da tela de abertura (telas do aluno e primeiro acesso, 9.0). Só o
- * aluno tem a dele nesta tabela: a 10.0 acrescenta a do professor e a 11.0 a da coordenação.
+ * A introdução de cada papel, que a primeira entrada abre antes da tela de abertura (telas do aluno e primeiro acesso, 9.0 e 10.0). O
+ * aluno e o professor têm a deles nesta tabela: a 11.0 acrescenta a da coordenação.
  */
-const INTRODUCAO_POR_PAPEL: Readonly<Partial<Record<PapelDeUsuario, string>>> = { aluno: ROTAS.bemVindoDoAluno }
+const INTRODUCAO_POR_PAPEL: Readonly<Partial<Record<PapelDeUsuario, string>>> = { aluno: ROTAS.bemVindoDoAluno, professor: ROTAS.bemVindoDoProfessor }
 
 /** A tela em que cada papel abre (o texto de `Inicio`, abaixo, diz por quê). */
 const ABERTURA_POR_PAPEL: Readonly<Partial<Record<PapelDeUsuario, string>>> = {

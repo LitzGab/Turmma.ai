@@ -317,6 +317,18 @@ export async function criarConviteDeCoordenador(opcoes: { conta?: EquipeDeTeste;
 }
 
 /**
+ * A data em que a pessoa viu a introdução, direto do banco: `null` enquanto ela não a viu. É como o e2e confere o que a API gravou, sem pagar
+ * outra carga de página. **Só de teste**: lê por `id` (UUID de usuário que o próprio teste criou), sem o `escola_id` que a regra 10 exige de
+ * código de produção; não se copia para fora de `e2e/`.
+ */
+export async function introducaoVistaEmDoUsuario(usuarioId: string): Promise<Date | null> {
+  return comBanco(async (banco) => {
+    const { rows } = await banco.query<{ introducao_vista_em: Date | null }>('select introducao_vista_em from usuario where id = $1', [usuarioId])
+    return rows[0]?.introducao_vista_em ?? null
+  })
+}
+
+/**
  * O usuário deixa a escola (a coordenação o desativa): a conta continua com a senha, sem usuário ativo nele. É a pessoa
  * que já trabalhou numa escola cliente e recebe o convite de outra.
  */
@@ -668,7 +680,7 @@ export interface ConviteDeProfessorDeTeste extends EscolaDeTeste {
  * - `expirado`, `revogado` e `usado` deixam o convite num dos estados em que ele não vale mais; o `usado` é o link que o
  *   professor abre de novo depois de já ter aceitado.
  */
-export async function criarConviteDeProfessor(opcoes: { conta?: EquipeDeTeste; expirado?: boolean; revogado?: boolean; usado?: boolean } = {}): Promise<ConviteDeProfessorDeTeste> {
+export async function criarConviteDeProfessor(opcoes: { conta?: EquipeDeTeste; expirado?: boolean; revogado?: boolean; usado?: boolean; introducao?: Introducao } = {}): Promise<ConviteDeProfessorDeTeste> {
   const marca = randomUUID()
   const escola = await criarEscolaSintetica()
   const token = randomBytes(BYTES_DO_TOKEN_DE_CONVITE).toString('base64url')
@@ -677,7 +689,7 @@ export async function criarConviteDeProfessor(opcoes: { conta?: EquipeDeTeste; e
   const expiraEm = opcoes.expirado ? new Date(Date.now() - 60_000) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000)
   return comBanco(async (banco) => {
     const contaId = opcoes.conta?.contaId ?? (await id(banco, 'insert into conta (email) values ($1) returning id', [email]))
-    const usuarioId = await id(banco, "insert into usuario (escola_id, conta_id, papel, nome, desativado_em, introducao_vista_em) values ($1, $2, 'professor', $3, now(), now()) returning id", [
+    const usuarioId = await id(banco, `insert into usuario (escola_id, conta_id, papel, nome, desativado_em, introducao_vista_em) values ($1, $2, 'professor', $3, now(), ${introducaoVistaEm(opcoes.introducao)}) returning id`, [
       escola.escolaId,
       contaId,
       nome,

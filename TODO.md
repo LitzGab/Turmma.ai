@@ -27,6 +27,15 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       homônimo pelo modelo. Detalhe em `docs/aia/ouro-retido/RETIDOS.json` e `onda-0.md` §2.2a
 - [ ] AIA do Assistente (D57): a saída que infere emoção ou estado do aluno ("Ela parece triste.") não é da D55 e a conferência da
       tarefa 3.0 não a pega; entra na avaliação de impacto do Assistente, antes do PRD que o expõe ao aluno
+- [ ] Rever a fala do passo 4 da introdução do professor ("Usar ou não esta ferramenta não gera número sobre você", X4, 10.0, `areas/professor/introducao/textos-da-introducao.ts`) quando o painel do próprio professor (D45) entrar: ele passa a ter número sobre si, só dele
+- [ ] Introdução do professor (X4, 10.0): quando a 11.0 ou outra tarefa tocar `areas/professor/introducao/BemVindo.tsx`, acrescentar o bloco de
+      mutação que troca `alturaMaxima="max-h-[34dvh]"` por `"max-h-none"` (mantém a região e deixa vermelha a sobra de altura de `paginaNaoRola`)
+- [ ] Conferir se `apps/api/src/tutor/tutor.int.test.ts` cobre a **leitura** dos sinais `travou` e `duvida_repetida` pelo professor, e não só o
+      nascimento deles (a linha "Do Tutor você vê o uso" da introdução do professor promete isso; regra 70, item 7)
+- [ ] Guarda de arquitetura que impeça importar `e2e/__fixtures__` fora de `e2e/` (o `introducaoVistaEmDoUsuario` lê sem `escola_id`)
+- [ ] Ao rever a fala do passo 4 da introdução do professor (linha acima), manter que o número é só do professor e nunca alimenta decisão sobre ele
+      (regra 20, item 10a; regra 70, item 8), e lembrar que a promessa "a conversa não aparece para a coordenação" vale por
+      `apps/api/src/assistente/assistente.int.test.ts`: se a camada de rede ou um painel da coordenação ganhar leitura do Assistente, a frase muda junto
 - [ ] O pedido do titular (acesso e portabilidade, F3, `ciclo-de-vida.service.ts`) cobre também a `lista_nome` e a
       `reivindicacao` da A1, para a pergunta de fechamento da regra 20 continuar respondida por código: o pedido se liga
       ao aluno por `lista_nome_id` enquanto a linha da lista existe, e depois do `set null` já não se liga a ninguém

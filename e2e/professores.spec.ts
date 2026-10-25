@@ -1,7 +1,7 @@
 import type { Browser, BrowserContextOptions, Locator, Page, Route } from '@playwright/test'
 import { AVISO_DO_CONVITE_COM_SENHA_NOVA, MENSAGENS_DE_ERRO, mensagemDoConvite } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaConviteDeProfessor } from '../packages/shared/src/professores/professores.ts'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, esperarNovaConversa, secoes } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, abrirEstrutura, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS, passarPelaIntroducaoDoProfessor, secoes } from './__fixtures__/casca.ts'
 import { abrirOQueFalta, irPelaCoordenacao, linhasDaTabela, paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import {
@@ -546,7 +546,8 @@ test.describe('cadastrar, copiar o link e o aceite do professor', () => {
     await professor.getByLabel('E-mail').fill(`prof-${marca}@educa.invalid`)
     await professor.getByLabel('Senha').fill(SENHA_NOVA)
     await acionar(professor.getByRole('button', { name: /^Entrar$/ }), hasTouch)
-    await esperarNovaConversa(professor, nome)
+    // Criado pela tela, o professor ainda não viu a introdução: ela é a primeira coisa que encontra (X4, 10.0), e depois dela ele abre em "Início".
+    await passarPelaIntroducaoDoProfessor(professor, nome, hasTouch)
     // Ele abre em "Nova conversa" (A2); Turmas, onde ele confirma o que a coordenação alocar, está na lateral.
     await irPelaNavegacao(professor, 'Turmas', hasTouch)
     await expect(professor).toHaveURL(/\/professor\/turmas$/)

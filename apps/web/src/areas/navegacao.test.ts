@@ -32,8 +32,11 @@ describe('navegação por papel', () => {
     expect(NAVEGACAO.aluno.map((item) => item.rotulo)).not.toContain('Privacidade')
   })
 
-  it('X4 (2.0): o aluno não tem rodapé fixo nem menu da pessoa com links; o professor tem "Meus dados" no menu, e a coordenação não tem nenhum dos dois', () => {
-    expect(MENU_DA_PESSOA.professor.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([{ rotulo: 'Meus dados', caminho: '/professor/meus-dados' }])
+  it('X4 (2.0 e 10.0): o aluno não tem rodapé fixo nem menu da pessoa com links; o professor tem "Meus dados" e "Rever a introdução" no menu, nesta ordem, e a coordenação não tem nenhum dos dois', () => {
+    expect(MENU_DA_PESSOA.professor.map(({ rotulo, caminho }) => ({ rotulo, caminho }))).toEqual([
+      { rotulo: 'Meus dados', caminho: '/professor/meus-dados' },
+      { rotulo: 'Rever a introdução', caminho: '/professor/bem-vindo' },
+    ])
     // "Privacidade" do aluno saiu do rodapé e virou uma linha de Eu: o rodapé de nenhum papel tem item.
     for (const papel of ['aluno', 'professor', 'coordenador'] as const) expect(RODAPE_DA_LATERAL[papel], papel).toEqual([])
     expect(MENU_DA_PESSOA.aluno).toEqual([])

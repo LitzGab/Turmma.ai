@@ -1,5 +1,5 @@
 import type { PapelDeUsuario } from '@educa/shared'
-import { FolderLock, UserRound, type LucideIcon } from 'lucide-react'
+import { BookOpen, FolderLock, UserRound, type LucideIcon } from 'lucide-react'
 import { ROTAS } from '../caminhos'
 // Só tipos, que o compilador apaga: o `Contador` e os ícones ilustrados são peças da entrada ou fora dela, e este arquivo
 // não importa nenhuma (o item 4 do guia acima). O que ele diz é qual ícone e qual família, e a casca é quem desenha.
@@ -91,12 +91,16 @@ export const RODAPE_DA_LATERAL: Readonly<Record<PapelDeUsuario, readonly ItemDaN
 
 /**
  * O que o menu da pessoa, no rodapé da lateral, leva além do "Sair" (P18; `docs/interface.md` 11.1): os links dela. O
- * "Sair" nunca entra aqui, porque é o último e está sempre à vista (D59). O professor tem "Meus dados" desde o F3 (18.0).
- * A coordenação não é titular de pedido (a API não lhe dá `meus_dados`), e o aluno acha os dados dele em Eu (a linha Privacidade).
+ * "Sair" nunca entra aqui, porque é o último e está sempre à vista (D59). O professor tem "Meus dados" desde o F3 (18.0) e "Rever a introdução"
+ * desde a X4 (10.0), nesta ordem, antes do "Sair". A coordenação não é titular de pedido (a API não lhe dá `meus_dados`), e o aluno acha os dados dele em Eu (a linha Privacidade).
  */
 export const MENU_DA_PESSOA: Readonly<Record<PapelDeUsuario, readonly ItemDaNavegacao[]>> = {
   coordenador: [],
-  professor: [{ rotulo: 'Meus dados', caminho: ROTAS.meusDadosDoProfessor, icone: { lucide: FolderLock, familia: 'verde' } }],
+  professor: [
+    { rotulo: 'Meus dados', caminho: ROTAS.meusDadosDoProfessor, icone: { lucide: FolderLock, familia: 'verde' } },
+    // X4 (10.0): rever a introdução é o mesmo endereço da primeira entrada; revendo, todo passo fecha e a data não muda.
+    { rotulo: 'Rever a introdução', caminho: ROTAS.bemVindoDoProfessor, icone: { lucide: BookOpen, familia: 'lima' } },
+  ],
   aluno: [],
 }
 

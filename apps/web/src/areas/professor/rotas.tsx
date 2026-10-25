@@ -29,13 +29,15 @@ const Turma = lazy(() => import('./turmas/Turma'))
 const MeusDados = lazy(() => import('../../componentes/meus-dados/MeusDados'))
 /** O sino "Esperando você" (telas do professor, 1.0): a fila e a lista num pedaço próprio, desenhado na âncora da casca. */
 const SinoDoProfessor = lazy(() => import('./inicio/SinoDoProfessor'))
+/** A introdução do professor (telas do aluno e primeiro acesso, 10.0): tela de foco, dentro da casca; só quem a abre baixa o pedaço. */
+const BemVindo = lazy(() => import('./introducao/BemVindo'))
 
 /**
  * A área do professor, relativa a `/professor` (o `Route` aninhado de `apps/web/src/rotas.tsx`), num chunk próprio,
  * `professor-*.js` (`apps/web/nome-dos-chunks.ts`), que só se baixa depois de a guarda conferir o papel. Na A2 (D73) ela
  * tem "Início" (a Home, onde o professor abre, e a conversa com o Assistente), "Ferramentas" (o catálogo, o
  * formulário de cada uma e o artefato aberto), "Criados" (o que ela já gerou, por turma), "Turmas", com a turma aberta dentro dela (A1), "Meus dados" (F3, 18.0, no
- * menu da pessoa) e, pelo pé do sino, "O que o Assistente fez" e "O que o Tutor viu". O item da lateral continua selecionado nas telas
+ * menu da pessoa), "Bem-vindo" (a introdução, em tela de foco, que o menu da pessoa também abre; X4, 10.0) e, pelo pé do sino, "O que o Assistente fez" e "O que o Tutor viu". O item da lateral continua selecionado nas telas
  * de dentro (`estaNoItem`).
  *
  * **Tela nova entra por `lazy(() => import('./Tela'))`**, e não por `import` direto: as cinco linhas da convenção estão
@@ -63,6 +65,7 @@ export default function RotasDoProfessor() {
         {/* A `key` pela atividade: outra correção é outra tela, sem os destaques abertos nem o diálogo da anterior. */}
         <Route path={ROTAS_DO_PROFESSOR.aprovar}>{(parametros) => <Aprovar key={parametros.atividadeAplicadaId} atividadeAplicadaId={parametros.atividadeAplicadaId} />}</Route>
         <Route path={ROTAS_DO_PROFESSOR.turmas} component={Turmas} />
+        <Route path={ROTAS_DO_PROFESSOR.bemVindo} component={BemVindo} />
         {/* No menu da pessoa, e não na lista de seções: o link dele é o que fica selecionado, e nenhuma seção. */}
         <Route path={ROTAS_DO_PROFESSOR.meusDados}>
           <MeusDados titulo="Meus dados" />

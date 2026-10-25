@@ -76,9 +76,10 @@ describe('ItemDaLateral', () => {
     expect(Object.fromEntries([...porPapel].sort(([a], [b]) => a.localeCompare(b)))).toEqual({
       'aluno: Eu': 'turquesa',
       'professor: Meus dados': 'verde',
+      'professor: Rever a introdução': 'lima',
     })
     // Cada um dos outros tem a família dele, e a do ladrilho chega ao DOM.
-    expect([...ladrilhos.keys()].sort()).toEqual(['Eu', 'Meus dados'].sort())
+    expect([...ladrilhos.keys()].sort()).toEqual(['Eu', 'Meus dados', 'Rever a introdução'].sort())
     const eu = NAVEGACAO.aluno.find((item) => item.rotulo === 'Eu')
     if (eu === undefined) throw new Error('faltou o Eu')
     render(noEndereco('/', <ul><ItemDaLateral item={eu} trilho={false} /></ul>))

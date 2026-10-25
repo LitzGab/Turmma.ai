@@ -421,6 +421,7 @@ test.describe('casca da escola', () => {
     await expect(gaveta(page).getByRole('navigation', { name: 'Sua conta', exact: true })).toHaveCount(1)
     // F3 (18.0): o "Meus dados" do professor, no menu da pessoa, é alvo de 44 px na gaveta, como o "Sair" que vem depois dele.
     await esperarAlvoDeToqueEm(gaveta(page).getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link', { name: 'Meus dados' }))
+    await esperarAlvoDeToqueEm(gaveta(page).getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link', { name: 'Rever a introdução' }))
     await esperarAlvoDeToqueEm(gaveta(page).getByRole('button', { name: 'Sair' }))
     await esperarAlvoDeToqueEm(gaveta(page).getByRole('button', { name: 'Fechar o menu' }))
     expect(await larguraExcedente(page)).toBe(0)
@@ -470,6 +471,8 @@ test.describe('casca da escola', () => {
       page.getByRole('navigation', { name: 'Seções' }).getByRole('link', { name: 'Criados' }),
       // F3 (18.0): o menu da pessoa tem "Meus dados" antes do "Sair", no pé da lateral.
       page.getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link', { name: 'Meus dados' }),
+      // X4 (10.0): "Rever a introdução" vem logo depois, também antes do "Sair".
+      page.getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link', { name: 'Rever a introdução' }),
       // X1 (2.0): a Aparência é uma parada só, a opção marcada, entre os links da conta e o "Sair", que continua o último.
       page.getByRole('radiogroup', { name: 'Aparência' }).getByRole('radio', { checked: true }),
       page.getByRole('button', { name: 'Sair' }),
@@ -494,7 +497,7 @@ test.describe('casca da escola', () => {
     await page.setViewportSize({ width: 1366, height: ALTURA_BAIXA_PX })
     // O foco ainda está no "Sair", a última parada da volta de cima, e o navegador continua dali: o percurso recomeça na
     // marca por `focus()` (a última entrada foi o teclado, e o anel aparece), e as outras quatro são Tab. São as cinco do alto
-    // que rola: a marca, o recolher e os três itens; "Meus dados", a Aparência e o "Sair" ficam no pé, fora dele.
+    // que rola: a marca, o recolher e os três itens; "Meus dados", "Rever a introdução", a Aparência e o "Sair" ficam no pé, fora dele.
     for (const [indice, parada] of paradas.slice(0, 5).entries()) {
       if (indice === 0) await parada.focus()
       else await page.keyboard.press('Tab')

@@ -163,7 +163,7 @@ async function voltarAoInicio(page: Page, hasTouch: boolean): Promise<void> {
 }
 
 test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
-  test('o professor vê os itens da fase dele, cada um leva à sua tela, e a aba diz a tela', async ({ page, hasTouch }) => {
+  test('o professor vê os itens da fase dele e o menu da pessoa, sem violação grave de acessibilidade', async ({ page, hasTouch }) => {
     const professora = await entrarComoProfessora(page, hasTouch)
     // O professor abre em "Início" (A2; D73; D80), e não numa página de passagem.
     await expect(page).toHaveTitle(TITULO_DA_NOVA_CONVERSA)
@@ -176,11 +176,14 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
     await expect(lateral(page)).toContainText(professora.nome)
     await expect(lateral(page)).toContainText('professor')
     await expect(lateral(page).getByRole('button', { name: 'Sair' })).toBeVisible()
-    // F3 (18.0): "Meus dados" é o link do menu da pessoa, e não item da lista de seções; o professor não tem rodapé.
-    await expect(lateral(page).getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link')).toHaveText(['Meus dados'])
+    // F3 (18.0) e X4 (10.0): "Meus dados" e "Rever a introdução" são links do menu da pessoa, e não itens da lista de seções; o professor não tem rodapé.
+    await expect(lateral(page).getByRole('navigation', { name: 'Sua conta', exact: true }).getByRole('link')).toHaveText(['Meus dados', 'Rever a introdução'])
     await expect(lateral(page).getByRole('navigation', { name: 'Rodapé', exact: true })).toHaveCount(0)
     expect(await violacoesGraves(page)).toEqual([])
+  })
 
+  test('o professor: cada item da navegação leva à tela dele, e nenhum à que não existe', async ({ page, hasTouch }) => {
+    await entrarComoProfessora(page, hasTouch)
     // Nenhum item da tabela leva a tela que não existe. O W2 termina em "Turmas", que a ordem da D80 deixou no meio: ela vai por último.
     for (const item of [...ITENS_DO_PROFESSOR].sort((a, b) => Number(a.rotulo === 'Turmas') - Number(b.rotulo === 'Turmas'))) {
       await irPelaNavegacao(page, item.rotulo, hasTouch)
@@ -188,12 +191,9 @@ test.describe('W2: a navegação de cada papel e a guarda de papel', () => {
       await expect(page).toHaveTitle(`${item.rotulo} · Turmma`, { timeout: PRAZO_DA_ENTRADA_MS })
       await expect(naoEncontrada(page)).toHaveCount(0)
     }
-    await expect(page).toHaveURL(/\/professor\/turmas$/)
-    await expect(page).toHaveTitle('Turmas · Turmma')
-    // Nenhum item leva a tela que não existe: a tela é a das turmas, e não a página não encontrada.
+    // O laço terminou em "Turmas" (endereço, título e "não encontrada" já conferidos): a tela é a das turmas, e não a página não encontrada.
     await expect(page.getByRole('heading', { level: 1, name: 'Turmas' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByText('A coordenação ainda não alocou você')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    await expect(naoEncontrada(page)).toHaveCount(0)
   })
 
   test('o professor: o item da tela aberta ganha as pistas do selecionado, e o apagado, nenhuma', async ({ page, hasTouch }) => {

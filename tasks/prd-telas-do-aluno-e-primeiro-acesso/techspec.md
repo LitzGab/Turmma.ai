@@ -75,7 +75,7 @@ abertura. Se a gravação falha, ela vai do mesmo jeito, e a introdução volta 
 meio não grava.
 
 **Rever.** Um link para o mesmo endereço. Com a data já gravada, todo passo tem "Fechar", e o POST repetido não
-muda nada. Revendo, nada é gravado, e "Fechar", o último "Continuar" e o Esc levam a Eu, de onde a pessoa veio.
+muda nada. Revendo, nada é gravado, e "Fechar", o último "Continuar" e o Esc levam a Eu, de onde a pessoa veio (o aluno). O professor e a coordenação não têm um lugar de onde vieram: o link está no menu da pessoa, em toda tela, e por isso eles vão ao primeiro lugar da navegação deles, o mesmo de "Começar" (10.0).
 
 **Escrita.** Uma instrução, síncrona: `update usuario set introducao_vista_em = coalesce(introducao_vista_em,
 now()) where escola_id = <contexto> and id = <contexto> returning introducao_vista_em`. A do POST e a do GET usam
@@ -180,13 +180,13 @@ as chaves, como hoje. Aluno sem turma: `minhas-atividades` responde vazio e `tut
 moldura e a `Comemoracao`. **Eu**: cartão da turma, "Como estou indo" e as quatro linhas; "Ajustes" abre um
 `Dialogo` com `Aparencia` (X1) e `TamanhoDaLetra`.
 
-**Peças novas**, fora da entrada: `componentes/introducao/` (`Introducao`, `TelaDeFoco`, `Balao`), `componentes/ui/Comemoracao`
+**Peças novas**, fora da entrada: `componentes/introducao/` (`Introducao`, `TelaDeFoco`, `Balao`, e, a partir da 10.0, `Linhas`, `RegiaoQueRola` (a região que rola, com a faixa "Role para ler mais", antes privada do aviso do aluno) e `useIntroducao`, que guarda o que as três introduções fazem igual: ler o `['eu']`, saber se a pessoa revê, gravar a data uma vez só e ir embora mesmo se a gravação falhar), `componentes/ui/Comemoracao`
 (os `@keyframes` num CSS ao lado, só `transform` e `opacity`, uma vez) e as três poses da onça em `componentes/ui/onca/Onca`, ao
 lado da `CabecaOnca` da X1. A cadeia fechada da onça da X1 (`componentes/ui/ia/avatar-so-nas-duas-pecas.test.ts`) passa a
 admitir os importadores desta spec, e só eles. **As três poses usam o mesmo rosto
 neutro da cabeça da X1; só o corpo muda** (D80, item 3). A introdução usa acenando e apontando e termina parada. O CSS que mora ao lado da peça (`Comemoracao.css`) conta como peça em `nome-dos-chunks.ts` (`ehPecaForaDaEntrada`): sem isso, o pedaço que a galeria e a tarefa aberta dividem sairia `parte-*`, e não `pecas-*`. A pose
 `comemorando` só é desenhada pela `Comemoracao`, e a `Comemoracao` só é importada por `areas/aluno/Atividade.tsx` **e pela seção `galeria/secoes/introducao.tsx`**, o palco em que o e2e prova o salto e o "reduzir movimento" antes de a tarefa aberta existir (5.0). A `Introducao`
-recebe passos (`pose`, `fala`, `conteudo`, `obrigatorio`) e avisa "concluiu" ou "pulou" (o último "Continuar" do aluno é o que a tarefa 9.0 chama de "Começar": são quatro passos, sem tela de fim); a fala é o `h1`, recebe o
+recebe passos (`pose`, `fala`, `conteudo`, `obrigatorio`) e avisa "concluiu" ou "pulou" (o último "Continuar" do aluno e do professor é o que as tarefas 9.0 e 10.0 chamam de "Começar": são quatro passos, sem tela de fim, e o rótulo do botão continua "Continuar"); a fala é o `h1`, recebe o
 foco a cada passo, e Enter continua. Os textos moram em `.ts` com teste.
 
 **Estados da `BemVindo`** (os três papéis). Ela lê `['eu']`, do cache se o desvio já o leu, para saber se está

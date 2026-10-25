@@ -330,9 +330,10 @@ test.describe('Meus dados: onde cada pessoa os acha', () => {
     await esperarNovaConversa(page, professora.nome)
     await abrirNavegacao(page, hasTouch)
 
-    // O menu da pessoa tem o link e o "Sair", nessa ordem; a lista de seções não ganha item.
+    // O menu da pessoa tem os dois links ("Meus dados" e, desde a 10.0, "Rever a introdução") e o "Sair", nessa ordem; a lista de
+    // seções não ganha item.
     const menu = lateral(page).getByRole('navigation', { name: 'Sua conta', exact: true })
-    await expect(menu.getByRole('link')).toHaveText(['Meus dados'])
+    await expect(menu.getByRole('link')).toHaveText(['Meus dados', 'Rever a introdução'])
     const link = menu.getByRole('link', { name: 'Meus dados', exact: true })
     const sairDaLateral = lateral(page).getByRole('button', { name: 'Sair' })
     const [caixaDoLink, caixaDoSair] = [await link.boundingBox(), await sairDaLateral.boundingBox()]

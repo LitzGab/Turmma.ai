@@ -77,14 +77,27 @@ describe('a raiz de quem entrou', () => {
     expect(localizacao.history).toEqual([ROTAS.inicio])
   })
 
-  it.each([
-    ['professor', ROTAS.novaConversa],
-    ['coordenador', ROTAS.painel],
-  ] as const)('com a data nula, o %s segue para a abertura de sempre: a introdução dele é da tarefa 10.0 ou 11.0', async (papel, destino) => {
+  it('o professor que ainda não viu a introdução (data nula) é levado a ela, e a raiz não fica no histórico', async () => {
     const rede = redeFalsa()
-    rede.responder(eu(papel, null))
+    rede.responder(eu('professor', null))
     const localizacao = abrirARaiz()
 
-    await waitFor(() => expect(localizacao.history).toEqual([destino]))
+    await waitFor(() => expect(localizacao.history).toEqual([ROTAS.bemVindoDoProfessor]))
+  })
+
+  it('o professor que já viu a introdução abre em "Início" (/professor/nova-conversa), e a raiz não fica no histórico', async () => {
+    const rede = redeFalsa()
+    rede.responder(eu('professor', '2026-02-01T10:00:00.000Z'))
+    const localizacao = abrirARaiz()
+
+    await waitFor(() => expect(localizacao.history).toEqual([ROTAS.novaConversa]))
+  })
+
+  it('com a data nula, a coordenação segue para a abertura de sempre: a introdução dela é da tarefa 11.0', async () => {
+    const rede = redeFalsa()
+    rede.responder(eu('coordenador', null))
+    const localizacao = abrirARaiz()
+
+    await waitFor(() => expect(localizacao.history).toEqual([ROTAS.painel]))
   })
 })
