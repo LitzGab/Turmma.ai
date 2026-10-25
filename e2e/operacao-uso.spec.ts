@@ -1,16 +1,29 @@
 import type { Page, Route } from '@playwright/test'
 import type { OrdemDoPainel, RespostaUsoDoPainel } from '../packages/shared/src/operacao/painel.ts'
 import { criarOperadorComSegundoFator as criarOperador, removerOperador, type OperadorDeTeste } from './__fixtures__/operacao.ts'
-import { criarRedeDoPainel, definirUsoDaEscolaSemeada, escolasComOEndereco, nomeQueVemPrimeiro, removerPainel, semearPainel, type PainelSemeado } from './__fixtures__/painel.ts'
+import {
+  criarRedeDoPainel,
+  definirUsoDaEscolaSemeada,
+  escolasComOEndereco,
+  nomeQueVemPrimeiro,
+  removerEscolaSemConvite,
+  removerPainel,
+  semearEscolaDoConvite,
+  semearPainel,
+  type EscolaDoConvite,
+  type PainelSemeado,
+  type UsoDoPainel,
+} from './__fixtures__/painel.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { acionar, conferirAListaQueRola, conferirQueCadaNumeroFicaEmUmaLinha, entrarNaOperacao, PRAZO_DA_ENTRADA_MS, trocarAPrimeiraDaResposta } from './__fixtures__/tela-da-operacao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * Uso (A0b, tarefa 8.0; cenários W6, W7 e a data de referência), nos projetos `chromebook` e `celular`. A lista é de todas
- * as escolas do banco de teste, que guarda as das outras suítes: cada teste confere a tela contra a resposta que ela mesma
- * recebeu, e acha as suas escolas numa página fixa — a primeira por uso, onde as do `semearPainel` têm o maior uso do banco,
- * ou a primeira por nome, com o `nomeQueVemPrimeiro`. Nenhum percorre a lista inteira (o limite do operador é por minuto).
+ * as escolas do banco de teste, que na máquina guarda as das outras suítes e na esteira começa vazio em cada fatia (o caso
+ * que só precisa de uma escola semeia a sua). Cada teste confere a tela contra a resposta que ela mesma recebeu, e acha as
+ * suas escolas numa página fixa: a primeira por uso, onde as do `semearPainel` têm o maior uso do banco, ou a primeira por
+ * nome, com o `nomeQueVemPrimeiro`. Nenhum percorre a lista inteira (o limite do operador é por minuto).
  */
 
 /** O `GET` do uso, com a página e a ordem na query string. */
@@ -20,6 +33,7 @@ const numero = new Intl.NumberFormat('pt-BR')
 
 const operadores: string[] = []
 const paineis: PainelSemeado[] = []
+const escolasAvulsas: EscolaDoConvite[] = []
 
 async function novoOperador(): Promise<OperadorDeTeste> {
   const operador = await criarOperador()
@@ -27,15 +41,27 @@ async function novoOperador(): Promise<OperadorDeTeste> {
   return operador
 }
 
-async function novoPainel(): Promise<PainelSemeado> {
-  const painel = await semearPainel()
+/** O uso das escolas do painel e a conta de quantas ficam na frente de quem as procura estão em `UsoDoPainel`. */
+async function novoPainel(uso: UsoDoPainel): Promise<PainelSemeado> {
+  const painel = await semearPainel(uso)
   paineis.push(painel)
   return painel
+}
+
+/**
+ * Uma escola no banco, para o caso que só precisa de a lista não estar vazia. Cada fatia do e2e na esteira começa com o
+ * banco vazio e roda uma parte dos casos: o que conta com a escola que outro caso deixou passa na máquina e cai na fatia
+ * em que nenhum outro semeou. Uma só, sem uso, e não as 30 do painel: não entra na frente das escolas dos W6 na ordem por
+ * uso. O `afterEach` a apaga.
+ */
+async function umaEscolaNoBanco(): Promise<void> {
+  escolasAvulsas.push(await semearEscolaDoConvite('sem_convite'))
 }
 
 test.afterEach(async () => {
   for (const operadorId of operadores.splice(0)) await removerOperador(operadorId)
   for (const painel of paineis.splice(0)) await removerPainel(painel)
+  for (const escola of escolasAvulsas.splice(0)) await removerEscolaSemConvite(escola)
 })
 
 function envelope(codigo: string) {
@@ -84,7 +110,9 @@ const comoDia = (dia: string) => dia.split('-').reverse().join('/')
 test.describe('Uso (A0b, tarefa 8.0)', () => {
   test('W6: 30 escolas, página e ordem na barra, o uso de cada escola nas colunas dela, e sem rolagem a 360 px', async ({ page, hasTouch }) => {
     test.slow()
-    const painel = await novoPainel()
+    // No topo da ordem por uso, com só as 2 escolas que o caso afirma: na frente delas ficam no máximo as 2 do W6 do outro
+    // projeto, e não os painéis que os outros casos semeiam ao mesmo tempo (a máquina roda o e2e com 6 trabalhadores).
+    const painel = await novoPainel('topo')
     // Uma das escolas com uso ganha tarefas e armazenamento: a tela mostra cada medida no formato dela.
     const comMedidas = painel.porEstado.sem_convite
     await definirUsoDaEscolaSemeada(comMedidas.id, { jobs: 1234, bytesStorage: 1_288_490_189 })
@@ -114,7 +142,8 @@ test.describe('Uso (A0b, tarefa 8.0)', () => {
 
     // As duas escolas do teste com mais uso (a de nome no limite e a com tarefas e armazenamento), cada uma com o seu uso,
     // na ordem do uso e nas colunas dela: o mês delas tem só a linha do dia de referência, e por isso soma e pico são os do
-    // dia. Só as duas: os W6 que semeiam ao mesmo tempo passam as oito deles na frente, e a primeira página tem 25.
+    // dia. Só as duas: o W6 do outro projeto semeia ao mesmo tempo, também no topo, e passa as oito dele na frente; elas
+    // seguem na primeira página, que tem 25.
     const naTela = await usoNaTela(page)
     const semeadas = painel.escolas.slice(0, 2)
     expect(semeadas.map((escola) => escola.id)).toEqual([painel.longa.id, comMedidas.id])
@@ -189,7 +218,7 @@ test.describe('Uso (A0b, tarefa 8.0)', () => {
 
   test('14.4: as medidas de uma escola com números grandes ficam inteiras na linha, a 360 e a 1366 px', async ({ page, hasTouch }) => {
     test.slow()
-    await novoPainel()
+    await novoPainel('nenhum')
     const operador = await novoOperador()
     const grande = { requisicoes: 1_234_567_890, jobs: 1_234_567, bytesStorage: 123_456_789_012 }
     await trocarAPrimeiraDaResposta(page, ROTA_DO_USO, (escola) => ({ ...escola, dia: grande, mes: grande }))
@@ -209,7 +238,7 @@ test.describe('Uso (A0b, tarefa 8.0)', () => {
 
   test('RF23: no Chromebook a página não rola e a lista rola por dentro, pelo teclado; no celular a página rola e nada rola de lado', async ({ page, hasTouch }) => {
     test.slow()
-    await novoPainel()
+    await novoPainel('nenhum')
     const operador = await novoOperador()
     await entrarNaOperacao(page, operador, hasTouch)
     await irPelaNavegacao(page, 'Uso', hasTouch)
@@ -235,6 +264,7 @@ test.describe('Uso (A0b, tarefa 8.0)', () => {
 
   test('W7: carregando, vazio com o link para Escolas, erro com "Tentar de novo" e com dado, com axe em todos', async ({ page, hasTouch }) => {
     test.slow()
+    await umaEscolaNoBanco()
     const operador = await novoOperador()
     await entrarNaOperacao(page, operador, hasTouch)
 
@@ -322,6 +352,7 @@ test.describe('Uso (A0b, tarefa 8.0)', () => {
 
   test('referência: o dia e o mês são os que a API devolveu, e não os de hoje no navegador; cada período nas suas colunas', async ({ page, hasTouch }) => {
     test.slow()
+    await umaEscolaNoBanco()
     const operador = await novoOperador()
     await entrarNaOperacao(page, operador, hasTouch)
 
@@ -365,6 +396,7 @@ test.describe('Uso (A0b, tarefa 8.0)', () => {
 
   test('a escola criada pela tela entra no Uso com zero, mesmo com o Uso aberto há pouco no cache', async ({ page, hasTouch }) => {
     test.slow()
+    await umaEscolaNoBanco()
     const rede = await criarRedeDoPainel()
     const operador = await novoOperador()
     await entrarNaOperacao(page, operador, hasTouch)

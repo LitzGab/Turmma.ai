@@ -2087,6 +2087,24 @@ Ficam, de antes da retro:
       `tools/ci/segredo.ts` monta as etapas do segredo; desde a mesma correção elas moram em `tools/ci/etapas-do-segredo.ts`.
       Uma linha de comentário; mexer no arquivo caducaria quem já aprovou (`revisor-geral`, 2ª)
 
+- [ ] **(e2e do Uso, 25/10/2026) Comentário falso em `e2e/operacao-uso.spec.ts` (W6, perto da linha 145):** diz que o W6 do outro
+      projeto "passa as oito dele na frente", mas o painel `topo` tem 2 escolas com uso. Trocar "as oito" por "as duas" na próxima
+      correção que tocar o arquivo; é uma palavra de comentário, sem efeito no teste (dono: quem mexer no spec; origem: correção
+      `2026-10-25-uso-da-operacao-sem-escola-no-e2e`, `test-engineer` 2ª)
+- [ ] **(e2e do Uso, 25/10/2026) A conta do pior caso de `UsoDoPainel` (`e2e/__fixtures__/painel.ts`) não vale com `--repeat-each`:**
+      ela conta uma instância de cada caso por projeto. Com `--repeat-each=3` e 6 trabalhadores podem ficar vivos até 6 painéis
+      `comum` (até 40 escolas na frente, mais que as 25 da página). A esteira e o portão rodam sem repetição; acrescentar a
+      ressalva ao comentário do tipo na próxima mexida no fixture (dono: quem mexer no fixture; origem: mesma correção,
+      `test-engineer` 2ª)
+- [ ] **(e2e do Uso, 25/10/2026) `removerEscolaSemConvite` aceita qualquer `EscolaDoConvite`, inclusive a `pendente`,** que tem
+      convite e conta e não seria apagada por inteiro. Estreitar o tipo ou conferir o `rowCount` do `delete`. Hoje só a
+      `sem_convite` chega lá (uso único, no `afterEach` do `operacao-uso`); entra com a correção da limpeza do banco de teste
+      (dono: Arquiteto; origem: mesma correção, `test-engineer` 2ª)
+- [ ] **(e2e do Uso, 25/10/2026) Limpeza do banco de teste:** as escolas de convite (`semearEscolaDoConvite`) e as que a tela cria
+      ficam no banco local a cada execução e empurram as de quem procura a primeira página por nome. Correção própria, que também
+      leva o item do `removerEscolaSemConvite` acima (dono: Arquiteto; origem: mesma correção, `conformidade-reviewer`,
+      `tenancy-guardian`, `privacy-guardian` e `infra-guardian` 1ª)
+
 Saíram na retro da X7, com o motivo em `tasks/prd-harness/retro.md` ("Tirar do `TODO.md`"): o resto das recomendações da
 revisão da spec (rodada 4), da 2.0, da 5.0, da 7.0, da 11.0, da 12.0 (o `catch` do `rev-list`), da 17.0, da 18.0 e da 19.0,
 e os menores m2 e m5 da validação.

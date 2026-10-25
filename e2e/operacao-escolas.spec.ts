@@ -3,7 +3,7 @@ import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaEscolasDoPainel } from '../packages/shared/src/operacao/painel.ts'
 import { TEXTO_DO_ESTADO } from '../apps/web/src/operacao/estados-da-escola.ts'
 import { codigoDoOperador, criarOperadorComSegundoFator as criarOperador, encerrarSessoesDoOperador, removerOperador, type OperadorDeTeste } from './__fixtures__/operacao.ts'
-import { criarRedeDoPainel, escolasComOEndereco, nomeDeRedeQueVemPrimeiro, redesComONome, removerPainel, semearPainel, type PainelSemeado } from './__fixtures__/painel.ts'
+import { criarRedeDoPainel, escolasComOEndereco, nomeDeRedeQueVemPrimeiro, redesComONome, removerPainel, semearPainel, type PainelSemeado, type UsoDoPainel } from './__fixtures__/painel.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { acionar, conferirAListaQueRola, conferirQueCadaNumeroFicaEmUmaLinha, entrarNaOperacao, PRAZO_DA_ENTRADA_MS, trocarAPrimeiraDaResposta } from './__fixtures__/tela-da-operacao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -33,8 +33,9 @@ async function novoOperador(): Promise<OperadorDeTeste> {
   return operador
 }
 
-async function novoPainel(): Promise<PainelSemeado> {
-  const painel = await semearPainel()
+/** O uso das escolas do painel e a conta de quantas ficam na frente de quem as procura estão em `UsoDoPainel`. */
+async function novoPainel(uso: UsoDoPainel): Promise<PainelSemeado> {
+  const painel = await semearPainel(uso)
   paineis.push(painel)
   return painel
 }
@@ -88,7 +89,7 @@ const corpoDe = (pedido: Request) => pedido.postDataJSON() as { id: string; nome
 test.describe('Escolas, Nova rede e Nova escola (A0b, tarefa 6.0)', () => {
   test('W6 e W10: 30 escolas, página e ordem na barra, o texto de cada estado, e sem rolagem a 360 px', async ({ page, hasTouch }) => {
     test.slow()
-    const painel = await novoPainel()
+    const painel = await novoPainel('comum')
     const operador = await novoOperador()
     const primeira = respostaDaLista(page, 1, 'nome')
     await entrarNaOperacao(page, operador, hasTouch)
@@ -194,7 +195,7 @@ test.describe('Escolas, Nova rede e Nova escola (A0b, tarefa 6.0)', () => {
 
   test('RF23: no Chromebook a página não rola e a lista rola por dentro, pelo teclado; no celular a página rola e nada rola de lado', async ({ page, hasTouch }) => {
     test.slow()
-    await novoPainel()
+    await novoPainel('nenhum')
     const operador = await novoOperador()
     await entrarNaOperacao(page, operador, hasTouch)
     await expect.poll(() => nomesNaTela(page), { timeout: PRAZO_DA_ENTRADA_MS }).not.toEqual([])
@@ -207,7 +208,7 @@ test.describe('Escolas, Nova rede e Nova escola (A0b, tarefa 6.0)', () => {
 
   test('14.4: o uso de uma escola com números grandes fica inteiro na linha, a 360 e a 1366 px', async ({ page, hasTouch }) => {
     test.slow()
-    await novoPainel()
+    await novoPainel('nenhum')
     const operador = await novoOperador()
     await trocarAPrimeiraDaResposta(page, ROTA_DAS_ESCOLAS, (escola) => ({ ...escola, turmas: 1234, professores: 12_345, alunos: 1_234_567 }))
     await entrarNaOperacao(page, operador, hasTouch)
