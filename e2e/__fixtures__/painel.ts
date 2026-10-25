@@ -13,7 +13,11 @@ import { urlDoBancoDeTeste } from '../../tools/ci/compose.ts'
  * O banco do compose de teste guarda as escolas das outras suítes, e a lista do painel é de todas. Por isso as escolas
  * que o teste precisa ver na primeira página ganham uso no dia de referência, maior que o de qualquer outra: na ordem
  * `uso` elas vêm primeiro. O valor sobe com o relógio, e o que sobrar de uma execução interrompida fica atrás do de
- * agora. No fim, o teste as apaga (`removerPainel`).
+ * agora, salvo o painel `topo`, que fica na frente por `MARGEM_DO_TOPO_MS` e depois desse tempo passa a ficar atrás
+ * também. No fim, o teste as apaga (`removerPainel`).
+ *
+ * Quem afirma a posição das suas escolas na ordem por uso conta com poucas escolas na frente (a página tem 25). A conta
+ * do pior caso, com os 6 trabalhadores da máquina e `fullyParallel`, está em `UsoDoPainel`.
  */
 
 async function comBanco<T>(tarefa: (banco: Client) => Promise<T>): Promise<T> {
@@ -32,6 +36,32 @@ async function id(banco: Client, instrucao: string, parametros: unknown[]): Prom
   if (criado === undefined) throw new Error(`o seed do painel não criou a linha: ${instrucao}`)
   return criado
 }
+
+/**
+ * Quanto o relógio do painel `topo` anda à frente: mais que o teste mais longo dura (o prazo do `test.slow()` é de 90 s),
+ * e por isso um painel `topo` vivo está na frente de qualquer painel comum semeado depois dele. Passado esse tempo, a sobra
+ * de uma execução interrompida volta a ficar atrás do painel de agora.
+ */
+const MARGEM_DO_TOPO_MS = 180_000
+
+/**
+ * O uso que o painel dá às escolas, e quem usa cada um. O que decide é quantas escolas com uso podem estar vivas ao mesmo
+ * tempo e na frente de quem procura as suas na primeira página (25), nos dois specs que semeiam painel (`operacao-uso` e
+ * `operacao-escolas`), que a máquina mistura (6 trabalhadores) e a esteira também (2):
+ *
+ * - `comum`: as 8 primeiras escolas, com o uso de agora. O W6 e o W10 de Escolas, que afirmam as 7 do `porEstado` na
+ *   primeira página e nenhuma na segunda. Vivos ao mesmo tempo: o dele e o do outro projeto (o Chromebook e o celular).
+ * - `topo`: só as 2 primeiras, com o uso de agora mais a margem. O W6 do Uso, que afirma essas 2. Vivos ao mesmo tempo:
+ *   o dele e o do outro projeto, 2 + 2 escolas.
+ * - `nenhum`: nenhuma linha de uso. Os casos que só precisam da lista cheia (o RF23 e o 14.4 dos dois specs).
+ *
+ * Pior caso do W6 do Uso: a outra `topo`, 2 escolas na frente; a dele é a posição 3 no máximo.
+ * Pior caso do W6 e W10 de Escolas: as 4 de `topo` e as 8 do outro `comum` na frente, e a mais baixa do `porEstado` é a
+ * 8ª do painel (posição 7): posição 19 no máximo, de 25, com folga de 5 escolas para a sobra de uma execução interrompida
+ * (a `topo` dura `MARGEM_DO_TOPO_MS`, e as comuns ficam atrás do painel de agora).
+ * Quem passar a semear painel `comum` ou `topo` em outro caso refaz esta conta.
+ */
+export type UsoDoPainel = 'comum' | 'topo' | 'nenhum'
 
 export interface EscolaSemeada {
   readonly id: string
@@ -93,16 +123,23 @@ async function coordenacaoNoEstado(banco: Client, escolaId: string, estado: Esta
 
 /**
  * 30 escolas numa rede de nome longo: a primeira com nome de 200 caracteres e endereço de 63, as sete seguintes uma em
- * cada estado da coordenação, e o resto sem nada. As oito primeiras levam uso no último dia fechado, em ordem decrescente.
+ * cada estado da coordenação, e o resto sem nada. As primeiras levam uso no último dia fechado, em ordem decrescente: 8, 2
+ * ou nenhuma, conforme o `UsoDoPainel`.
+ *
+ * O uso fica acima do de qualquer escola do banco semeada até agora, e o relógio o faz subir: o painel `comum` que chega
+ * depois passa na frente do anterior na ordem por uso. O `topo` fica acima também dos que chegarem nos 3 minutos seguintes.
+ * Quantas escolas, e de quem, ver `UsoDoPainel`.
  */
-export async function semearPainel(): Promise<PainelSemeado> {
+export async function semearPainel(uso: UsoDoPainel = 'comum'): Promise<PainelSemeado> {
   const marca = randomUUID().replaceAll('-', '')
   return comBanco(async (banco) => {
     const { rows } = await banco.query<{ dia: string }>("select ((now() at time zone 'America/Sao_Paulo')::date - 1)::text as dia")
     const dia = rows[0]?.dia
     if (dia === undefined) throw new Error('o seed do painel não leu o dia de referência')
-    // Maior que o uso de qualquer outra escola do banco, e crescente com o relógio (cabe com folga em 2^53).
-    const usoDaVez = Date.now() * 100
+    // Maior que o uso de qualquer outra escola do banco, e crescente com o relógio (cabe com folga em 2^53). O `topo` tem os
+    // mesmos 15 dígitos: o número mais largo cabe na linha e no cartão a 360 px como o das outras.
+    const usoDaVez = (Date.now() + (uso === 'topo' ? MARGEM_DO_TOPO_MS : 0)) * 100
+    const comUso = uso === 'comum' ? 8 : uso === 'topo' ? 2 : 0
 
     // Na frente das outras redes do banco, para o seletor do Nova escola (que corta em 200) mostrá-la.
     const redeNome = esticar(nomeDeRedeQueVemPrimeiro('Rede sintética do painel'), TAMANHO_MAXIMO_NOME_DIGITADO)
@@ -125,7 +162,7 @@ export async function semearPainel(): Promise<PainelSemeado> {
         const contaId = await coordenacaoNoEstado(banco, escolaId, estado, `${marca}-${String(posicao)}`)
         if (contaId !== undefined) contas.push(contaId)
       }
-      if (posicao < 8) {
+      if (posicao < comUso) {
         await banco.query('insert into uso_infra_diario (escola_id, dia, requisicoes, jobs, bytes_storage) values ($1, $2, $3, 0, 0)', [escolaId, dia, usoDaVez - posicao])
       }
     }
@@ -201,8 +238,9 @@ export interface EscolaDoConvite extends EscolaSemeada {
 
 /**
  * Uma escola numa rede própria, com o nome que abre a lista por nome, e a coordenação `sem_convite` ou `pendente` (A0b,
- * tarefa 7.0). Sintética como as do `semearPainel`. Não é apagada no fim: o convite que o teste gera pela tela deixa
- * auditoria nela, como as escolas que a tela cria (a limpeza do banco de teste é correção à parte).
+ * tarefa 7.0). Sintética como as do `semearPainel`. O teste do convite não a apaga: o convite que ele gera pela tela deixa
+ * auditoria nela, como nas escolas que a tela cria (a limpeza do banco de teste é correção à parte). A `sem_convite` que
+ * ninguém tocou se apaga com `removerEscolaSemConvite`.
  */
 export async function semearEscolaDoConvite(estado: 'sem_convite' | 'pendente'): Promise<EscolaDoConvite> {
   const marca = randomUUID().replaceAll('-', '')
@@ -213,6 +251,14 @@ export async function semearEscolaDoConvite(estado: 'sem_convite' | 'pendente'):
     const escolaId = await id(banco, 'insert into escola (rede_id, nome, slug) values ($1, $2, $3) returning id', [redeId, nome, slug])
     await coordenacaoNoEstado(banco, escolaId, estado, marca)
     return { id: escolaId, nome, slug, redeId, conviteId: await ultimoConvite(banco, escolaId) }
+  })
+}
+
+/** Apaga a escola `sem_convite` que o teste só precisava ter no banco, e a rede dela: sem conta, usuário nem convite. */
+export async function removerEscolaSemConvite(escola: EscolaDoConvite): Promise<void> {
+  await comBanco(async (banco) => {
+    await banco.query('delete from escola where id = $1', [escola.id])
+    await banco.query('delete from rede where id = $1', [escola.redeId])
   })
 }
 
