@@ -168,8 +168,8 @@ atividade e o cartão da turma), para as tarefas seguintes não tocarem em arqui
 do dia e função suspensa seguem avisados na tela do Tutor. **Leituras** (`staleTime`, `refetchOnWindowFocus`): `['eu']`
 e `minhas-atividades`, 60 s e `false`; `tutor/memoria` em Eu, 5 min e `false`; o envio da tarefa e a sessão esvaziam
 as chaves, como hoje. Aluno sem turma: `minhas-atividades` responde vazio e `tutor/memoria` responde
-`NAO_ENCONTRADO`, que Eu trata como "sem resultado", não como erro. **Tarefas**: `separarAtividades` passa a três grupos; `Linha` com `Ladrilho` na cor da matéria
-(`materia.ts`: do nome da disciplina para família e ícone `lucide`, com reserva neutra). **Tarefa aberta**: só a
+`NAO_ENCONTRADO`, que Eu trata como "sem resultado", não como erro. **Tarefas**: `separarAtividades` passa a três grupos, sem o número do mockup no título (a lista é paginada, e o número seria o das já carregadas); `Linha` com `Ladrilho` na cor da matéria
+(`materia.ts`: do nome da disciplina para família e ícone `lucide`; a reserva, para o nome desconhecido, é `anil` com um livro aberto, porque o `Ladrilho` só tem as dez famílias de cor e nenhuma é neutra). **Tarefa aberta**: só a
 moldura e a `Comemoracao`. **Eu**: cartão da turma, "Como estou indo" e as quatro linhas; "Ajustes" abre um
 `Dialogo` com `Aparencia` (X1) e `TamanhoDaLetra`.
 

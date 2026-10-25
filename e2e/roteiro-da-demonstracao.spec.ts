@@ -441,7 +441,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
 
       // A aluna abriu no Início (X4, 2.0); a lista do que responder é a de Tarefas, relida do servidor.
       await aluna.goto('/aluno/atividades')
-      const naLista = principal(aluna).getByRole('region', { name: 'Para responder' }).getByRole('link', { name: new RegExp(PRIMEIRA) })
+      const naLista = principal(aluna).getByRole('region', { name: 'Para fazer' }).getByRole('link', { name: new RegExp(PRIMEIRA) })
       // Avaliação: o Tutor fica pausado, e a lista avisa antes de abrir.
       await expect(naLista).toContainText('Avaliação: o Tutor fica pausado até quem dá a aula encerrar.', { timeout: PRAZO_DA_ENTRADA_MS })
       await expect(naLista).toContainText(`${DISCIPLINA} · 5 questões`)
@@ -566,7 +566,7 @@ test.describe('o roteiro da demonstração, de ponta a ponta', () => {
       expect(alternativaCerta).not.toBe('')
 
       await irPelaNavegacao(aluna, 'Tarefas', hasTouch)
-      await principal(aluna).getByRole('region', { name: 'Para responder' }).getByRole('link', { name: new RegExp(SEGUNDA) }).click({ timeout: PRAZO_DA_ENTRADA_MS })
+      await principal(aluna).getByRole('region', { name: 'Para fazer' }).getByRole('link', { name: new RegExp(SEGUNDA) }).click({ timeout: PRAZO_DA_ENTRADA_MS })
       await expect(principal(aluna).getByRole('heading', { level: 1, name: SEGUNDA })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
       await principal(aluna).getByRole('link', { name: 'Pedir ajuda ao Tutor nesta questão' }).click()
       await expect(principal(aluna).locator('[data-faixa-de-supervisao]')).toContainText('Quem dá a aula acompanha como você usa o Tutor.', { timeout: PRAZO_DA_ENTRADA_MS })

@@ -8,19 +8,19 @@ import { formatarQuantidade } from '../../formatar'
  * pressão (D59).
  */
 
-/** O estado da atividade, como o aluno o lê. Começar e continuar são a mesma coisa para ele: é para responder. */
+/** O estado da atividade, como o aluno o lê. Começar e continuar são a mesma coisa para ele: é para fazer. */
 export const TEXTO_DA_SITUACAO: Readonly<Record<SituacaoDaMinhaAtividade, string>> = {
-  para_fazer: 'Para responder',
-  em_andamento: 'Para responder',
-  enviada: 'Enviada',
+  para_fazer: 'Para fazer',
+  em_andamento: 'Para fazer',
+  enviada: 'Entregue',
   encerrada: 'Encerrada',
-  com_diagnostico: 'Com resultado',
+  com_diagnostico: 'Corrigida',
 }
 
 /** O aviso da atividade avaliativa, dito **antes** de o aluno abrir: enquanto ela está aberta, o Tutor da turma para. */
 export const AVISO_DA_AVALIACAO = 'Avaliação: o Tutor fica pausado até quem dá a aula encerrar.'
 
-/** O que se diz enquanto a correção espera a professora: é o que separa "enviada" de "com resultado" (regra 70, item 3). */
+/** O que se diz enquanto a correção espera a professora: é o que separa "entregue" de "corrigida" (regra 70, item 3). */
 export const TEXTO_DA_ESPERA_PELA_CORRECAO = 'Quem dá a aula ainda vai revisar a correção.'
 
 /** A atividade ainda recebe resposta do aluno? */
@@ -45,14 +45,27 @@ export function detalheDaSituacao(atividade: Pick<MinhaAtividade, 'situacao' | '
   return 'A correção foi aprovada. Abra para ver os seus acertos por habilidade.'
 }
 
+/** O que a lista diz quando um grupo está vazio: um convite ou um fato, nunca uma cobrança (D59). */
+export const VAZIO_DE_CADA_GRUPO = {
+  paraFazer: 'Nada para fazer agora.',
+  entregues: 'Nada esperando quem dá a aula.',
+  corrigidas: 'Nenhuma corrigida ainda.',
+} as const
+
 export interface AtividadesSeparadas<Atividade> {
   /** O que ainda espera resposta do aluno: vem primeiro, porque é o que há para fazer agora. */
-  readonly paraResponder: readonly Atividade[]
-  /** Enviadas, encerradas e com resultado. */
-  readonly feitas: readonly Atividade[]
+  readonly paraFazer: readonly Atividade[]
+  /** Enviadas e encerradas: a correção ainda não foi aprovada por quem dá a aula. */
+  readonly entregues: readonly Atividade[]
+  /** **Só** as de correção aprovada (`com_diagnostico`): "Corrigida" nunca é dita antes da aprovação (regra 70, item 3). */
+  readonly corrigidas: readonly Atividade[]
 }
 
-/** Separa o que há para responder do que já foi, **na ordem em que a API entregou**: a tela não reordena nem pontua. */
+/** Separa a lista em três grupos, **na ordem em que a API entregou**: a tela não reordena nem pontua. */
 export function separarAtividades<Atividade extends Pick<MinhaAtividade, 'situacao'>>(atividades: readonly Atividade[]): AtividadesSeparadas<Atividade> {
-  return { paraResponder: atividades.filter(estaParaResponder), feitas: atividades.filter((atividade) => !estaParaResponder(atividade)) }
+  return {
+    paraFazer: atividades.filter(estaParaResponder),
+    entregues: atividades.filter((atividade) => atividade.situacao === 'enviada' || atividade.situacao === 'encerrada'),
+    corrigidas: atividades.filter((atividade) => atividade.situacao === 'com_diagnostico'),
+  }
 }

@@ -77,7 +77,7 @@ test.describe('o fluxo do aluno contra a API real', () => {
 
     // Tarefas: o que a professora aplicou, para responder. O aluno abre no Início, e a lista é o segundo lugar dele.
     await irPelaNavegacao(page, 'Tarefas', hasTouch)
-    const naLista = principal(page).getByRole('region', { name: 'Para responder' }).getByRole('link', { name: new RegExp(titulo) })
+    const naLista = principal(page).getByRole('region', { name: 'Para fazer' }).getByRole('link', { name: new RegExp(titulo) })
     await expect(naLista).toContainText('Química · 3 questões', { timeout: PRAZO_DA_TELA_MS })
     await acionar(naLista, hasTouch)
     await expect(principal(page).getByRole('heading', { level: 1, name: titulo })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
@@ -159,9 +159,9 @@ test.describe('o fluxo do aluno contra a API real', () => {
     await expect(page.locator('body')).not.toContainText(colega.nome)
     expect(await violacoesGraves(page)).toEqual([])
 
-    // E a lista passa a dizer "Com resultado".
+    // E a lista passa a dizer "Corrigida", no grupo das corrigidas.
     await irPelaNavegacao(page, 'Tarefas', hasTouch)
-    await expect(principal(page).getByRole('region', { name: 'Já feitas' }).getByRole('link', { name: new RegExp(titulo) })).toContainText('Com resultado', { timeout: PRAZO_DA_TELA_MS })
+    await expect(principal(page).getByRole('region', { name: 'Corrigidas' }).getByRole('link', { name: new RegExp(titulo) })).toContainText('Corrigida', { timeout: PRAZO_DA_TELA_MS })
   })
 
   test('com a avaliação aberta o Tutor aparece pausado, a pergunta comum é recusada, e a mensagem de assunto delicado ainda recebe o 188', async ({ page, hasTouch }) => {

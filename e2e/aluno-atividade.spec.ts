@@ -1,10 +1,10 @@
-import type { Locator, Page } from '@playwright/test'
+import type { Locator, Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import { diagnosticoDa, erroDaApi, minhaAtividade, portao, provaDa, QUEM_APROVA, simularAluno, type ApiDoAluno } from './__fixtures__/aluno.ts'
-import { entrarComoAluno, irPelaNavegacao, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarComoAluno, esperarInicioDoAluno, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, type AlunoDeTeste } from './__fixtures__/sessao.ts'
-import { codigoCru, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
+import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
 /**
  * As telas da atividade do aluno (MVP, A3, pacote X): "Atividades" e a atividade aberta. **Os estados de cada tela**, com
@@ -109,19 +109,22 @@ test.describe('Tarefas: os quatro estados', () => {
     ]
     api.trocar('atividades')
     await acionar(principal(page).getByRole('button', { name: 'Tentar de novo' }), hasTouch)
-    const paraResponder = principal(page).getByRole('region', { name: 'Para responder' })
-    await expect(paraResponder.getByRole('link')).toHaveCount(2, { timeout: PRAZO_DA_TELA_MS })
-    await expect(paraResponder.getByRole('link', { name: /Lista de estequiometria/ })).toContainText('Para responder')
-    const prova = paraResponder.getByRole('link', { name: /Prova de reagente limitante/ })
+    const paraFazer = principal(page).getByRole('region', { name: 'Para fazer' })
+    await expect(paraFazer.getByRole('link')).toHaveCount(2, { timeout: PRAZO_DA_TELA_MS })
+    await expect(paraFazer.getByRole('link', { name: /Lista de estequiometria/ })).toContainText('Para fazer')
+    const prova = paraFazer.getByRole('link', { name: /Prova de reagente limitante/ })
     await expect(prova).toContainText('Você respondeu 1 de 3.')
     await expect(prova).toContainText(AVISO_DA_AVALIACAO)
-    const feitas = principal(page).getByRole('region', { name: 'Já feitas' })
-    await expect(feitas.getByRole('link', { name: /Lista de mol/ })).toContainText('Enviada')
-    await expect(feitas.getByRole('link', { name: /Lista de mol/ })).toContainText(ESPERA_PELA_CORRECAO)
-    await expect(feitas.getByRole('link', { name: /Lista de balanceamento/ })).toContainText('Encerrada')
-    await expect(feitas.getByRole('link', { name: /Lista de massa molar/ })).toContainText('Com resultado')
-    // Só a atividade com a correção aprovada fala de resultado.
-    await expect(feitas.getByRole('link', { name: /Lista de mol/ })).not.toContainText(/resultado|acert/i)
+    const entregues = principal(page).getByRole('region', { name: 'Entregues' })
+    await expect(entregues.getByRole('link')).toHaveCount(2)
+    await expect(entregues.getByRole('link', { name: /Lista de mol/ })).toContainText('Entregue')
+    await expect(entregues.getByRole('link', { name: /Lista de mol/ })).toContainText(ESPERA_PELA_CORRECAO)
+    await expect(entregues.getByRole('link', { name: /Lista de balanceamento/ })).toContainText('Encerrada')
+    const corrigidas = principal(page).getByRole('region', { name: 'Corrigidas' })
+    await expect(corrigidas.getByRole('link')).toHaveCount(1)
+    await expect(corrigidas.getByRole('link', { name: /Lista de massa molar/ })).toContainText('Corrigida')
+    // Só a atividade com a correção aprovada fala de resultado, e só ela é "Corrigida".
+    await expect(entregues).not.toContainText(/resultado|acert|corrigida/i)
 
     // Nada de colega, de nota nem de comparação, e nada que se mexa sozinho ou cobre (regra 50, item 9; D46; D59).
     await expect(page.locator('body')).not.toContainText(colega.nome)
@@ -354,5 +357,75 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     await expect(page.locator('body')).not.toContainText(PROIBIDO_NA_AREA)
     expect(await larguraExcedente(page)).toBe(0)
     expect(await violacoesGraves(page)).toEqual([])
+  })
+})
+
+test.describe('Tarefas a 360 px', () => {
+  test('sem rolagem lateral, com a linha de pelo menos 44 px e o selo do estado abaixo do nome', async ({ page, hasTouch }) => {
+    await page.setViewportSize({ width: 360, height: 800 })
+    await entrar(page, hasTouch, (simulada) => {
+      simulada.atividades = [
+        minhaAtividade({ titulo: 'Lista de estequiometria com um título bem comprido para provar o corte' }),
+        minhaAtividade({ titulo: 'Lista de mol', situacao: 'enviada', respondidas: 3 }),
+        minhaAtividade({ titulo: 'Lista de massa molar', situacao: 'com_diagnostico', respondidas: 3 }),
+      ]
+    })
+
+    await expect(principal(page).getByRole('link')).toHaveCount(3, { timeout: PRAZO_DA_TELA_MS })
+    for (const link of await principal(page).getByRole('link').all()) {
+      const [linha, nome, selo] = [await link.boundingBox(), await link.locator('[title]').boundingBox(), await link.locator('[data-estado]').boundingBox()]
+      expect(linha?.height ?? 0).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
+      // O selo desce para baixo do nome: nenhum dos dois toma a largura do outro.
+      expect(selo?.y ?? 0).toBeGreaterThanOrEqual((nome?.y ?? 0) + (nome?.height ?? 0) - 1)
+    }
+    expect(await larguraExcedente(page)).toBe(0)
+    expect(await violacoesGraves(page)).toEqual([])
+  })
+})
+
+test.describe('recomeço de Tarefas', () => {
+  test('o aluno seguinte vê as tarefas dele, e a resposta atrasada do anterior não aparece', async ({ page, hasTouch }) => {
+    const primeiro = await criarAlunoComMatricula()
+    const segundo = await criarAlunoComMatricula({ escola: primeiro })
+    const doPrimeiro = minhaAtividade({ titulo: 'Lista só do primeiro aluno' })
+    const doSegundo = minhaAtividade({ titulo: 'Lista só do segundo aluno' })
+    let vez: 'primeiro' | 'segundo' = 'primeiro'
+    const segurada = portao()
+    let entregue: () => void = () => undefined
+    const entregaDoPrimeiro = new Promise<void>((resolver) => (entregue = resolver))
+    await page.route('**/v1/minhas-atividades', async (rota: Route) => {
+      if (vez === 'segundo') {
+        await rota.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [doSegundo] }) })
+        return
+      }
+      // A do primeiro fica no ar, e só chega depois de o segundo estar na tela.
+      await segurada.aberta
+      await rota.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [doPrimeiro] }) }).catch(() => undefined)
+      entregue()
+    })
+
+    await entrarComoAluno(page, primeiro, hasTouch)
+    await irPara(page, '/aluno/atividades')
+    await expect(principal(page).getByRole('status')).toHaveText('Carregando as suas atividades…', { timeout: PRAZO_DA_ENTRADA_MS })
+
+    // O primeiro sai com a leitura no ar; o segundo entra na mesma aba, sem recarregar.
+    await abrirNavegacao(page, hasTouch)
+    await acionar(lateral(page).getByRole('button', { name: 'Sair' }).and(page.locator(':not(main *)')), hasTouch)
+    await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
+    vez = 'segundo'
+    await irPara(page, `/e/${segundo.slug}`)
+    await page.getByLabel('Matrícula').fill(segundo.matricula)
+    await page.getByLabel('Senha').fill(segundo.senha)
+    await acionar(page.getByRole('button', { name: /^Entrar$/ }), hasTouch)
+    await esperarInicioDoAluno(page, segundo.nome)
+    await irPara(page, '/aluno/atividades')
+    await expect(principal(page).getByRole('region', { name: 'Para fazer' }).getByRole('link', { name: /Lista só do segundo aluno/ })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+
+    // Agora a resposta do primeiro chega. Duas voltas de quadro depois dela, a tela continua sendo a do segundo.
+    segurada.abrir()
+    await entregaDoPrimeiro
+    await page.evaluate(() => new Promise<void>((pronto) => requestAnimationFrame(() => requestAnimationFrame(() => pronto()))))
+    await expect(page.locator('body')).not.toContainText(doPrimeiro.titulo)
+    await expect(principal(page)).toContainText(doSegundo.titulo)
   })
 })
