@@ -15,8 +15,8 @@ gravar nada que ele não escolheu.
 - `techspec.md` seções 5 ("Tamanho da letra"), 7 (última linha) e 9 ("Eu"); `prd.md` RF11 e RF20; `mockup.md` seção 2.5 ("Ajustes") e
   fecho (b), passo 3
 - Regras 20 (item 1) e 50 (itens 2a e 11)
-- Código: `apps/web/index.html` e o script em linha do tema, que a X1 acrescenta (confira); `estilos.css`; `main.tsx`;
-  `areas/aluno/rotas.tsx`; `areas/aluno/Eu.tsx` (da 7.0); `Aparencia` e `Opcao`, da X1
+- Código: o script em linha do tema em `apps/web/index.html`; `estilos.css`; `main.tsx`; `areas/aluno/rotas.tsx`;
+  `areas/aluno/Eu.tsx` (da 7.0); `componentes/Aparencia.tsx` e `componentes/ui/campos/Opcao.tsx`, da X1
 - Corre junto da 3.0, 4.0, 5.0 e 6.0: **só edita** `Eu.tsx`, `rotas.tsx`, `index.html`, `estilos.css`, `main.tsx` e arquivos novos
 
 ## Subtarefas
@@ -25,7 +25,7 @@ gravar nada que ele não escolheu.
   escrita em `try/catch` (armazenamento recusado: vale na sessão, sem erro). O script em linha lê a chave e, se o caminho começa por
   `/aluno`, escreve `data-letra` no `<html>`. `useTamanhoDaLetra()`, montado em `areas/aluno/rotas.tsx`, mantém o atributo e o tira ao
   sair da área. No CSS, `font-size` de 112,5% e de 125% no `<html>`
-- [ ] 8.2 — `componentes/TamanhoDaLetra.tsx`: três `Opcao` em grupo de rádio (setas, uma parada de Tab), "Padrão", "Grande" e "Maior", e a
+- [ ] 8.2 — `componentes/TamanhoDaLetra.tsx`, ao lado da `Aparencia` (é o 25º arquivo de produção da pasta, o teto): três `Opcao` em grupo de rádio (setas, uma parada de Tab), "Padrão", "Grande" e "Maior", e a
   prévia "Assim fica a minha letra." Em Eu, a linha "Ajustes" abre um `Dialogo` com a `Aparencia` e o `TamanhoDaLetra`. **Grava só ao
   escolher**: montar, abrir o diálogo ou entrar na área não escreve nada
 - [ ] 8.3 — `docs/interface.md`: a chave e a regra "só por escolha". A lista fechada de chaves do navegador (11.1 do
@@ -39,7 +39,7 @@ gravar nada que ele não escolheu.
 | Arquivo | Novo ou alterado |
 |---|---|
 | `apps/web/src/letra.ts`, `apps/web/src/letra.test.ts`, `apps/web/src/componentes/TamanhoDaLetra.tsx`, `apps/web/src/componentes/TamanhoDaLetra.test.tsx` | novo |
-| `apps/web/src/galeria/secoes/TamanhoDaLetra.tsx`, `e2e/tamanho-da-letra.spec.ts` | novo |
+| `apps/web/src/galeria/secoes/tamanho-da-letra.tsx`, `e2e/tamanho-da-letra.spec.ts` | novo |
 | `apps/web/index.html`, `apps/web/src/estilos.css`, `apps/web/src/main.tsx`, `apps/web/src/areas/aluno/rotas.tsx`, `apps/web/src/areas/aluno/Eu.tsx`, `docs/interface.md` | alterado |
 
 ## Testes que provam a regra

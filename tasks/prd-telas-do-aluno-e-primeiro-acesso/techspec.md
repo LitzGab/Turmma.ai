@@ -1,7 +1,7 @@
 # Tech Spec — Telas do aluno e primeiro acesso
 
 **PRD:** `tasks/prd-telas-do-aluno-e-primeiro-acesso/prd.md`
-**Status:** revisada pelos guardiões em 13/10/2026 (rodada 4, `revisao-spec.md`) e aprovada por delegação do Joaquim; ele revê ao ler, a começar pela seção 12b
+**Status:** revisada pelos guardiões em 13/10/2026 (rodada 4, `revisao-spec.md`) e aprovada por delegação do Joaquim; ele revê ao ler, a começar pela seção 12b. Conferida contra o código em 24/10/2026, depois da X5, da X7 e da D81: caminhos, nomes e arquivos corrigidos, sem mudar desenho nem critério (seção 12c)
 **Tamanho:** acima do teto de 2.000 palavras, com aceite por delegação do Joaquim (13/10/2026). Motivo: a revisão dos guardiões exigiu por escrito a data que sobrevive ao fim de um vínculo, a escrita sem ano letivo, o texto do aviso, os estados da `BemVindo`, o custo do Início e as regras da onça. O detalhe de cada teste fica nas tarefas.
 
 ## 1. Resumo da abordagem
@@ -17,12 +17,12 @@ páginas públicas não mudam.
 
 | Módulo | Novo ou alterado | O quê |
 |---|---|---|
-| `packages/nucleo` (`db/schema/usuario.ts`, `drizzle/0037_*`, `titular/leitura-do-titular.ts`) | alterado | a coluna, a migration e o arquivo do titular |
+| `packages/nucleo` (`db/schema/usuario.ts`, `drizzle/<n>_introducao_vista.sql`, `titular/leitura-do-titular.ts`) | alterado | a coluna, a migration (o número é o que o drizzle-kit der; hoje, 0039) e o arquivo do titular |
 | `packages/shared` (`sessao/eu.ts`, `permissao/matriz.ts`) | alterado | o campo do `/v1/eu` e a ação `eu.concluir_introducao` |
-| `apps/api/src/sessao` (`eu.*`, `resolucao-de-tenant.repository.ts`) | alterado | leitura e escrita da data |
-| `apps/web/src/areas/aluno/` | novo e alterado | `Inicio`, `Eu`, `BemVindo`; `Atividades`, `Atividade`, `rotas` |
-| `apps/web/src/areas/professor/`, `coordenacao/` | novo | `BemVindo` e a rota dele |
-| `apps/web/src/componentes/` | novo | `introducao/`, `TelaDeFoco`, `Balao`, `Comemoracao`, `TamanhoDaLetra`, poses em `onca/` |
+| `apps/api/src/sessao` (`eu/eu.*`, `tenant/resolucao-de-tenant.repository.ts`) | alterado | leitura e escrita da data |
+| `apps/web/src/areas/aluno/` | novo e alterado | `Inicio`, `Eu`, `introducao/BemVindo`; `Atividades`, `Atividade`, `rotas` |
+| `apps/web/src/areas/professor/introducao/`, `areas/coordenacao/introducao/` | novo | `BemVindo` e os textos; a rota em `rotas.tsx` da área |
+| `apps/web/src/componentes/` | novo | `introducao/` (`Introducao`, `TelaDeFoco`, `Balao`), `TamanhoDaLetra`; no kit, `ui/Comemoracao` e as poses em `ui/onca/Onca` |
 | `CascaDaEscola.tsx`, `caminhos.ts`, `areas/navegacao.ts`, `paginas/Inicio.tsx` | alterado | foco, endereços, lugares, desvio |
 | `apps/web/src/letra.ts`, `index.html`, `estilos.css` | novo e alterado | o tamanho da letra |
 | `e2e/`, `tools/vitrine/`, `docs/` | alterado | fixtures, specs, documentos |
@@ -60,7 +60,8 @@ justificativa do `@SemEscopo` o registra.
 | GET | `/v1/eu` | coordenador, professor, aluno | — | os campos de hoje e `introducaoVistaEm` (data e hora, ou nulo) |
 | POST | `/v1/eu/introducao` | os três (`eu.concluir_introducao`, `proprio`; `rede`: `nunca`) | corpo vazio, estrito | `{ introducaoVistaEm }`, a mesma data que o GET devolveria |
 
-`acessos` não ganha campo. Sem linha achada, o POST responde `NAO_AUTENTICADO`, como `EuService.obter`.
+`acessos` não ganha campo. Sem linha achada, o POST responde `NAO_AUTENTICADO`, como `EuService.obter`. O corpo vazio passa pelo
+`ZodValidationPipe` com `esquemaPedidoSemCorpoOuAusente` (D81), como `aprovarLote` em `apps/api/src/atividade/correcao/lote.controller.ts`.
 
 ## 5. Fluxo
 
@@ -170,8 +171,10 @@ as chaves, como hoje. Aluno sem turma: `minhas-atividades` responde vazio e `tut
 moldura e a `Comemoracao`. **Eu**: cartão da turma, "Como estou indo" e as quatro linhas; "Ajustes" abre um
 `Dialogo` com `Aparencia` (X1) e `TamanhoDaLetra`.
 
-**Peças novas**, em `componentes/`, fora da entrada: `TelaDeFoco`, `Balao`, `Comemoracao` (os `@keyframes` num CSS
-ao lado, só `transform` e `opacity`, uma vez), `introducao/Introducao` e as três poses da onça. **As três poses usam o mesmo rosto
+**Peças novas**, fora da entrada: `componentes/introducao/` (`Introducao`, `TelaDeFoco`, `Balao`), `componentes/ui/Comemoracao`
+(os `@keyframes` num CSS ao lado, só `transform` e `opacity`, uma vez) e as três poses da onça em `componentes/ui/onca/Onca`, ao
+lado da `CabecaOnca` da X1. A cadeia fechada da onça da X1 (`componentes/ui/ia/avatar-so-nas-duas-pecas.test.ts`) passa a
+admitir os importadores desta spec, e só eles. **As três poses usam o mesmo rosto
 neutro da cabeça da X1; só o corpo muda** (D80, item 3). A introdução usa acenando e apontando e termina parada. A pose
 `comemorando` só é desenhada pela `Comemoracao`, e a `Comemoracao` só é importada por `areas/aluno/Atividade.tsx`. A `Introducao`
 recebe passos (`pose`, `fala`, `conteudo`, `obrigatorio`) e avisa "concluiu" ou "pulou"; a fala é o `h1`, recebe o
@@ -217,10 +220,10 @@ contrário, e pessoa criada pela tela passa por ela no teste.
 
 ## 12. Premissas não verificadas
 
-- `⚠️ NÃO VERIFICADO` — os nomes de arquivo das peças da X1 (`Linha`, `Ladrilho`, `Aparencia`, `componentes/onca/`,
-  `tema.ts`): a X1 ainda não tem tarefas. Cada tarefa confere antes de importar
-- `⚠️ NÃO VERIFICADO` — se a X2 ou a X3 já pousaram quando a introdução for escrita. Por isso "onde fica cada
-  coisa" sai de `NAVEGACAO[papel]`, e não de texto fixo
+- Verificado em 24/10/2026: as peças da X1 são `componentes/ui/Linha.tsx`, `componentes/ui/Ladrilho.tsx`,
+  `componentes/Aparencia.tsx`, `componentes/ui/onca/CabecaOnca.tsx` e `src/tema.ts`
+- Verificado em 24/10/2026: a X2 e a X3 pousaram. "Onde fica cada coisa" continua saindo de `NAVEGACAO[papel]`; o primeiro
+  lugar da coordenação é hoje "Painel", e o do professor, "Início"
 - `⚠️ NÃO VERIFICADO` — o passo "quem dá a aula acompanha" contra o que o professor vê de fato: a tarefa confere
   com `packages/shared/src/tutor/uso.ts` e `sinal.ts`
 
@@ -237,6 +240,16 @@ Delegação de 12/10/2026 e de 13/10/2026 ("você vai revisar e aprovar as specs
    `comemorando` só na `Comemoracao` da entrega; falas fixas e sem promessa de volta nem vínculo.
 4. **RF4 e RF5, o Início sem `tutor/conversa`:** o "Hoje: N de 60" fica só no Tutor; o Início avisa só a avaliação
    aberta, e limite do dia e função suspensa são avisados na tela do Tutor, com o caminho até ela sempre aberto.
+
+## 12c. Conferência contra o código de 24/10/2026
+
+A X5 (D81) mudou caminhos, não o desenho: a API do `/v1/eu` mora em `apps/api/src/sessao/eu/` e a resolução da escola em
+`sessao/tenant/`; a entrada HTTP é validada pelo `ZodValidationPipe`; a 0037 e a 0038 foram usadas pela X5, e a migration
+desta spec leva o número seguinte; o kit visual está em `componentes/ui/`; e `tools/guardas/tamanho-das-pastas.test.ts`
+reprova pasta com mais de 25 arquivos de produção. Por isso as peças da introdução vão para `componentes/introducao/`, a
+`Comemoracao` e as poses para o kit, e o `BemVindo` de cada papel para `areas/<papel>/introducao/`. Os nomes das peças novas
+seguem o idioma do código em volta (`Balao`, `TelaDeFoco`, `TamanhoDaLetra`): o rename para o nome de mercado é da X8, de uma
+vez, pelo inventário que o Joaquim aprova (D81 revista).
 
 ## 13. Riscos técnicos
 

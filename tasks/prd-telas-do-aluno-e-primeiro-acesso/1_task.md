@@ -13,12 +13,13 @@ A API guarda e devolve a data em que a pessoa viu a introdução do papel dela. 
 
 - `techspec.md` seções 3 a 7 e 7c; `prd.md` RF12, RF16, RF18 e seção 8
 - Regras 10 (itens 3, 5 e 9), 20 (item 1) e 80 (itens 7 e 9)
-- Código: `eu.repository.ts`, `eu.service.ts` e `acessosDaConta`, em `apps/api/src/sessao/`;
+- Código: `eu.repository.ts` e `eu.service.ts`, em `apps/api/src/sessao/eu/`; `acessosDaConta`, em
+  `apps/api/src/sessao/tenant/resolucao-de-tenant.repository.ts`;
   `LEITURAS_DO_ARQUIVO.usuario`; em `docs/lgpd.md`, a linha da eliminação agendada
 
 ## Subtarefas
 
-- [ ] 1.1 — `introducaoVistaEm` em `usuario`, com a migration do drizzle-kit; a coluna entra em
+- [ ] 1.1 — `introducaoVistaEm` em `usuario`, com a migration do drizzle-kit (o número que ele der; hoje, 0039); a coluna entra em
   `LEITURAS_DO_ARQUIVO.usuario.colunas`
 - [ ] 1.2 — `esquemaRespostaEu` ganha `introducaoVistaEm`. Um método próprio do repository, ao lado de
   `acessosDaConta`, devolve a data só para o service, com a justificativa do `@SemEscopo` citando a data, o filtro por
@@ -30,24 +31,27 @@ A API guarda e devolve a data em que a pessoa viu a introdução do papel dela. 
   devolve só a mais antiga), sem quebrar o `escolher` do login nem o esquema estrito do acesso; teste de que o `escolher`
   não leva a data. Gravação do GET que falha: o GET devolve a data lida, sem gravar; o teste provoca a falha no banco de teste, e não
   com mock do repository, e a falha conta num contador só com ids. O `acessos` da resposta não muda
-- [ ] 1.3 — `POST /v1/eu/introducao`: corpo vazio e estrito, `@Permite('eu', 'concluir_introducao')` (`proprio` nos
+- [ ] 1.3 — `POST /v1/eu/introducao`: corpo vazio e estrito, por `@Body(new ZodValidationPipe(esquemaPedidoSemCorpoOuAusente))`,
+  como `aprovarLote` em `apps/api/src/atividade/correcao/lote.controller.ts`; `@Permite('eu', 'concluir_introducao')` (`proprio` nos
   três papéis, `nunca` na rede, escrito na matriz e em `matriz.expectativa.ts`), `no-store`. Usa
   `identidadeDaRequisicao()`, nunca `sessaoDaRequisicao()` nem `exigirAnoEmCurso()`. Responde a mesma data que o GET.
   Sem linha achada, `NAO_AUTENTICADO`
 - [ ] 1.4 — `concluirIntroducao()` na web. Todo `insert into usuario` das fixtures e da vitrine grava a data; as
   fábricas de pessoa aceitam `introducao: 'por_ver'`
 - [ ] 1.5 — `docs/lgpd.md` (linha nova no mapa, base legal "execução de contrato") e `docs/modelo-de-dados.md`. Na
-  `0037`, a nota "só expande" da `0035`. A versão `coordenacao` do arquivo do titular não traz a data do professor (D64)
+  migration nova, a nota "só expande" da `0035`. A versão `coordenacao` do arquivo do titular não traz a data do professor (D64)
 - [ ] 1.6 — Testes
 
 ## Arquivos previstos
 
 | Arquivo | Novo ou alterado |
 |---|---|
-| `packages/nucleo/src/db/schema/usuario.ts`, `packages/nucleo/src/titular/leitura-do-titular.ts` | alterado |
-| `packages/nucleo/drizzle/0037_introducao_vista.sql`, `packages/nucleo/drizzle/meta/`, `apps/api/test/introducao.int.test.ts` | novo |
+| `packages/nucleo/src/db/schema/usuario.ts`, `packages/nucleo/src/titular/leitura-do-titular.ts`, `packages/nucleo/src/telemetria/metricas.ts` | alterado |
+| `packages/nucleo/drizzle/meta/` | alterado |
+| `packages/nucleo/drizzle/0039_introducao_vista.sql`, `apps/api/test/introducao.int.test.ts`, `apps/api/src/sessao/eu/eu.service.test.ts` | novo |
 | `packages/shared/src/sessao/eu.ts`, `packages/shared/src/permissao/matriz.ts`, `packages/shared/src/permissao/matriz.expectativa.ts` | alterado |
-| `apps/api/src/sessao/eu.controller.ts`, `apps/api/src/sessao/eu.service.ts`, `apps/api/src/sessao/eu.repository.ts`, `apps/api/src/sessao/eu.repository.int.test.ts`, `apps/api/src/sessao/resolucao-de-tenant.repository.ts` | alterado |
+| `apps/api/src/sessao/eu/eu.controller.ts`, `apps/api/src/sessao/eu/eu.service.ts`, `apps/api/src/sessao/eu/eu.repository.ts`, `apps/api/src/sessao/eu/eu.repository.int.test.ts` | alterado |
+| `apps/api/src/sessao/tenant/resolucao-de-tenant.repository.ts`, `apps/api/src/sessao/tenant/resolucao-de-tenant.repository.test.ts` | alterado |
 | `apps/api/test/arquivo-do-titular.int.test.ts`, `apps/web/src/api/eu.ts`, `tools/vitrine/escola.ts` | alterado |
 | `e2e/__fixtures__/sessao.ts`, `e2e/__fixtures__/governanca.ts`, `e2e/__fixtures__/painel.ts`, `docs/lgpd.md`, `docs/modelo-de-dados.md` | alterado |
 
@@ -75,12 +79,14 @@ A API guarda e devolve a data em que a pessoa viu a introdução do papel dela. 
 
 ## Como testar
 
-- Isolamento: `apps/api/src/sessao/eu.repository.int.test.ts › isolamento: o /v1/eu lê o usuário…`, com a escrita
+- Isolamento: `apps/api/src/sessao/eu/eu.repository.int.test.ts › isolamento: o /v1/eu lê o usuário…`, com a escrita
 - Rota: `apps/api/test/escola-sessao.int.test.ts › borda: fora de 5 a 480 minutos…` e `› concorrência: duas
   alterações…` (`subirApi`, `chamar`, `BancadaDeSessoes`)
 - Duas escolas: `apps/api/test/troca-de-escola.int.test.ts`
 - Rodar: `npx vitest run --project integracao apps/api/test/introducao.int.test.ts`
 - Armadilha: teste que monta o corpo do `/v1/eu` ganha o campo
+- Consulta: a 1.0 de antes da X5, `git show 14778505` (branch local `spec/telas-do-aluno-e-primeiro-acesso--congelada`), com os
+  caminhos velhos (`sessao/eu.*`, `0037`). Serve de leitura, não de cópia: o número e as pastas mudaram
 
 ## Fora do escopo desta tarefa
 

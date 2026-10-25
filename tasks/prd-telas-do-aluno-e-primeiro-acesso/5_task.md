@@ -14,13 +14,14 @@ em três poses.
 
 - `techspec.md` seções 5 ("Tela de foco"), 7b e 9 ("Peças novas"); `prd.md` RF3, RF8, RF13, RF16 e RF19; `mockup.md` seção 2.8 e fecho
   (b); `docs/interface.md` 9.7
-- Regras 50 (item 11) e 70 (itens 4a e 4b); D58 e D59. X1, `tasks/prd-pele-e-casca/techspec.md` 7b: a cabeça da onça e o teste de
-  arquitetura são dela (confira o arquivo; o teste passa a aceitar só os importadores daqui)
-- Código: `componentes/CascaDaEscola.tsx` (`encerrar`, `aoSair`); `componentes/ia/AssinaturaIA.tsx`; `ehTelaDeFoco` em `caminhos.ts`
+- Regras 50 (item 11) e 70 (itens 4a e 4b); D58 e D59. X1, `tasks/prd-pele-e-casca/techspec.md` 7b: a cabeça da onça
+  (`componentes/ui/onca/CabecaOnca.tsx`) e a cadeia fechada (`componentes/ui/ia/avatar-so-nas-duas-pecas.test.ts`) são dela; a
+  cadeia passa a aceitar só os importadores daqui
+- Código: `componentes/CascaDaEscola.tsx` (`encerrar`, `aoSair`); `componentes/ui/ia/AssinaturaIA.tsx`; `ehTelaDeFoco` em `caminhos.ts`
 
 ## Subtarefas
 
-- [ ] 5.1 — `componentes/onca/Onca.tsx`: props `pose` (`acenando`, `apontando` ou `comemorando`; **sem "acolhendo"**), `agente` e `tamanho`.
+- [ ] 5.1 — `componentes/ui/onca/Onca.tsx`, ao lado da `CabecaOnca`: props `pose` (`acenando`, `apontando` ou `comemorando`; **sem "acolhendo"**), `agente` e `tamanho`.
   As três poses usam **o mesmo rosto neutro da cabeça da X1** (olhos e boca); só o corpo muda. SVG parado e igual em qualquer
   render, sempre com o nome da função e o selo "IA" no mesmo bloco, `data-pose`, sem temporizador. A `comemorando` só é desenhada
   pela `Comemoracao`; a introdução usa acenando e apontando e termina parada, sem `Comemoracao`
@@ -30,20 +31,22 @@ em três poses.
   "Continuar" e "Pular" iguais, sem "Pular" no passo obrigatório, "Fechar" em todo passo quando revendo, e `aoConcluir` ou `aoPular`
   para quem chama.
 - [ ] 5.3 — `CascaDaEscola` nos endereços de `ehTelaDeFoco`: sem lateral nem barras; mantém `<main>`, `useInatividade` e `lembrarQuemEsta`
-- [ ] 5.4 — Seção `galeria/secoes/Introducao.tsx`, nos dois temas, só com nomes inventados
+- [ ] 5.4 — Seção `galeria/secoes/introducao.tsx` (o `import.meta.glob` da galeria a registra), nos dois temas, só com nomes inventados
 - [ ] 5.5 — Testes
 
 ## Arquivos previstos
 
 | Arquivo | Novo ou alterado |
 |---|---|
-| `apps/web/src/componentes/onca/Onca.tsx`, `apps/web/src/componentes/onca/Onca.test.tsx` | novo |
-| `apps/web/src/componentes/TelaDeFoco.tsx`, `Balao.tsx`, `Comemoracao.tsx`, `Comemoracao.css`, `Comemoracao.test.tsx` | novo |
+| `apps/web/src/componentes/ui/onca/Onca.tsx`, `apps/web/src/componentes/ui/onca/Onca.test.tsx` | novo |
+| `apps/web/src/componentes/ui/Comemoracao.tsx`, `apps/web/src/componentes/ui/Comemoracao.css`, `apps/web/src/componentes/ui/Comemoracao.test.tsx` | novo |
 | `apps/web/src/componentes/introducao/Introducao.tsx`, `apps/web/src/componentes/introducao/Introducao.test.tsx` | novo |
-| `apps/web/src/galeria/secoes/Introducao.tsx`, `e2e/introducao-pecas.spec.ts`, `apps/web/src/componentes/CascaEmFoco.test.tsx` | novo |
-| `apps/web/src/componentes/CascaDaEscola.tsx`, `apps/web/nome-dos-chunks.ts` | alterado |
+| `apps/web/src/componentes/introducao/TelaDeFoco.tsx`, `apps/web/src/componentes/introducao/Balao.tsx` | novo |
+| `apps/web/src/galeria/secoes/introducao.tsx`, `e2e/introducao-pecas.spec.ts`, `apps/web/src/componentes/CascaEmFoco.test.tsx` | novo |
+| `apps/web/src/componentes/CascaDaEscola.tsx`, `apps/web/nome-dos-chunks.ts`, `apps/web/src/componentes/ui/ia/avatar-so-nas-duas-pecas.test.ts` | alterado |
 
-`nome-dos-chunks.ts` é só desta tarefa: as peças novas entram em `PECAS_FORA_DA_ENTRADA`.
+`nome-dos-chunks.ts` é só desta tarefa: as peças novas entram em `PECAS_FORA_DA_ENTRADA`. Nada novo entra direto em
+`componentes/`: ela tem 24 arquivos de produção, e a 8.0 leva o 25º, o teto de `tools/guardas/tamanho-das-pastas.test.ts`.
 
 ## Testes que provam a regra
 
@@ -63,6 +66,7 @@ Quatro estados, concorrência e log não se aplicam: peças sem dado e sem chama
 ## Como testar
 
 - Copie `ListaDePedidos.test.tsx` (em `componentes/pedidos/`); a casca em foco usa o `memoryLocation` do wouter
+- Arquitetura: estenda `avatar-so-nas-duas-pecas.test.ts` (`QUEM_IMPORTA_A_PASTA_DA_ONCA`), com a varredura `importadoresDe`
 - Rodar: `npx vitest run --project unidade apps/web/src/componentes/introducao` e
   `node tools/ci/e2e.ts --manter-ambiente e2e/introducao-pecas.spec.ts`
 - Telas: nenhuma de produto; galeria `/galeria` (`VITE_COM_GALERIA=1`), seção "Introdução"; mockup `/aluno/bem-vindo?rever=1`

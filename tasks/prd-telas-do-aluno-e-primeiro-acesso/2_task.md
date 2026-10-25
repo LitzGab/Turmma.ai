@@ -18,8 +18,9 @@ O aluno passa a ter três lugares, cada um abrindo uma tela que já existe, e en
 
 ## Subtarefas
 
-- [ ] 2.1 — `caminhos.ts`: `inicio` e `eu` do aluno, `bemVindo` nas três áreas e `ehTelaDeFoco(caminho)`: os
-  endereços da spec nascem todos aqui
+- [ ] 2.1 — `caminhos.ts`: `inicio` e `eu` em `ROTAS_DO_ALUNO`, `bemVindo` nas três áreas, e as chaves achatadas em `ROTAS`
+  com o nome da área (`inicioDoAluno`, `euDoAluno`…: `ROTAS.inicio` já é `/`); e `ehTelaDeFoco(caminho)`: os endereços da
+  spec nascem todos aqui
 - [ ] 2.2 — `NAVEGACAO.aluno`: Início (também em `/aluno/tutor`), Tarefas e Eu (também em `/aluno/privacidade`);
   o rodapé do aluno fica vazio
 - [ ] 2.3 — `Inicio.tsx`: a faixa de supervisão e a escolha da atividade, extraídas de `Tutor.tsx` sem mudar texto

@@ -18,7 +18,7 @@ pode rever em Eu.
 
 ## Subtarefas
 
-- [ ] 9.1 — `aviso-de-privacidade.ts` e `textos-da-introducao.ts`, em `areas/aluno/`. O aviso: "Veja o que a escola
+- [ ] 9.1 — `aviso-de-privacidade.ts` e `textos-da-introducao.ts`, em `areas/aluno/introducao/`. O aviso: "Veja o que a escola
   guarda de você." "Guardamos seu nome, sua turma e sua matrícula." "Guardamos suas tarefas e o resultado delas." "Guardamos o que
   você escreve para o Tutor e o que ele responde." "A conversa com o Tutor fica de 6 a 24 meses; a escola escolhe." "Suas tarefas ficam pelo tempo que a escola escolhe." "Não temos seu
   e-mail, telefone, CPF, foto, endereço nem data de nascimento." "O professor da turma vê suas tarefas e o resultado." "Quem dá a aula
@@ -27,7 +27,7 @@ pode rever em Eu.
   "Seus dados não treinam IA." "Para ver seus dados, abra Eu e depois Privacidade." "Para pedir mais, fale com quem dá a aula ou com a
   coordenação." Frases de até 15 palavras. O passo 1 diz que o Tutor é um programa e pode errar. Falas fixas, sem variar com
   presença, ausência, acerto ou tempo de uso
-- [ ] 9.2 — `BemVindo.tsx` (`lazy()`, `tela-aluno-BemVindo`) e a rota de 2.1. Passos 1 a 3: sem "Pular", sem X, Esc não sai; o 4 tem "Pular"
+- [ ] 9.2 — `areas/aluno/introducao/BemVindo.tsx` (`lazy()`, `tela-aluno-BemVindo`) e a rota de 2.1. Passos 1 a 3: sem "Pular", sem X, Esc não sai; o 4 tem "Pular"
   igual ao "Continuar". "Começar" e "Pular" chamam `concluirIntroducao()` e vão a `/aluno/inicio`, mesmo se a gravação falhar.
   "Sair" não grava. Revendo, todo passo fecha. O desvio em `paginas/Inicio.tsx` é uma tabela por papel só com o aluno: a 10.0 e a 11.0
   acrescentam o delas
@@ -39,8 +39,9 @@ pode rever em Eu.
 
 | Arquivo | Novo ou alterado |
 |---|---|
-| `areas/aluno/aviso-de-privacidade.ts`, `textos-da-introducao.ts`, `BemVindo.tsx` e os dois testes, `e2e/aluno-introducao.spec.ts` | novo |
-| `areas/aluno/rotas.tsx`, `Eu.tsx`, `paginas/Inicio.tsx`, `e2e/__fixtures__/casca.ts`, `e2e/escola-montada.spec.ts`, `e2e/roteiro-da-demonstracao.spec.ts`, os três documentos | alterado |
+| `apps/web/src/areas/aluno/introducao/aviso-de-privacidade.ts`, `apps/web/src/areas/aluno/introducao/textos-da-introducao.ts`, `apps/web/src/areas/aluno/introducao/textos-da-introducao.test.ts`, `apps/web/src/areas/aluno/introducao/BemVindo.tsx`, `apps/web/src/areas/aluno/introducao/BemVindo.test.tsx`, `e2e/aluno-introducao.spec.ts` | novo |
+| `apps/web/src/areas/aluno/rotas.tsx`, `apps/web/src/areas/aluno/Eu.tsx`, `apps/web/src/paginas/Inicio.tsx`, `e2e/__fixtures__/casca.ts`, `e2e/escola-montada.spec.ts`, `e2e/roteiro-da-demonstracao.spec.ts` | alterado |
+| `docs/aia/tutor.md`, `docs/lgpd.md`, `docs/conformidade-mec.md` | alterado |
 
 ## Testes que provam a regra
 
@@ -64,7 +65,7 @@ Isolamento e concorrência da data são da 1.0; carregando e erro do desvio em `
 
 - Copie `ListaDePedidos.test.tsx` (`componentes/pedidos/`); no e2e, `entrarComoAluno` com `introducao: 'por_ver'`
 - `escola-montada` e `roteiro-da-demonstracao`: a aluna criada pela tela passa pela introdução (helper em `casca.ts`)
-- Rodar: `npx vitest run --project unidade apps/web/src/areas/aluno/textos-da-introducao.test.ts` e
+- Rodar: `npx vitest run --project unidade apps/web/src/areas/aluno/introducao/textos-da-introducao.test.ts` e
   `node tools/ci/e2e.ts --manter-ambiente e2e/aluno-introducao.spec.ts`
 - Telas: `aluno`, `/aluno/bem-vindo` (login com matrícula, primeira vez; ou Eu › "Rever a introdução"); mockup `/aluno/bem-vindo`
 

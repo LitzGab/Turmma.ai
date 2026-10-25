@@ -14,7 +14,7 @@ A tarefa aberta usa as peças da X1 sem mudar o fluxo, e a `Comemoracao` aparece
 - `techspec.md` seções 7b e 9 ("Tarefa aberta"); `prd.md` RF7, RF8 e RF20; `mockup.md` seção 2.3 (moldura, forma "Entregue agora")
 - Regras 50 (itens 5 e 11), 70 (item 3) e 80 (item 6); D59: a comemoração é da entrega, nunca da nota
 - Código: `areas/aluno/Atividade.tsx` (`Respondendo`, `envio.onSuccess`, `SemMaisRespostas`, `VOLTAR`); `atividade.ts`;
-  `fila-de-respostas.ts`, que não muda. `Comemoracao` e onça são da 5.0; `Tela` e `Botao`, da X1
+  `fila-de-respostas.ts`, que não muda. `Comemoracao` e onça são da 5.0; `Tela` e `Botao`, da X1, em `componentes/ui/`
 
 ## Subtarefas
 
@@ -31,8 +31,7 @@ A tarefa aberta usa as peças da X1 sem mudar o fluxo, e a `Comemoracao` aparece
 
 | Arquivo | Novo ou alterado |
 |---|---|
-| `apps/web/src/areas/aluno/Atividade.tsx` | alterado |
-| `apps/web/src/areas/aluno/Atividade.test.tsx` | novo |
+| `apps/web/src/areas/aluno/Atividade.tsx`, `apps/web/src/areas/aluno/Atividade.test.tsx` | alterado |
 | `e2e/aluno-atividade.spec.ts` | alterado |
 
 Não edita `roteiro-da-demonstracao.spec.ts` nem `aluno-fluxo.spec.ts`: "Atividade enviada" continua.

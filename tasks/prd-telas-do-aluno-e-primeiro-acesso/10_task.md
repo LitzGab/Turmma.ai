@@ -15,12 +15,12 @@ O professor vê, na primeira entrada, quatro passos sobre o que a IA faz e não 
   seção 14 e fechamento (d)
 - Regras 70 (itens 3, 4a, 8 e 9) e 20 (item 10a); D55, D58, D64 e D47
 - Código: `paginas/Inicio.tsx` (a tabela por papel da 9.0); `areas/navegacao.ts` (`NAVEGACAO.professor`, `MENU_DA_PESSOA`);
-  `areas/professor/rotas.tsx`; `Introducao` (5.0); `BemVindo.tsx` do aluno, como modelo
+  `areas/professor/rotas.tsx`; `Introducao` (5.0); `areas/aluno/introducao/BemVindo.tsx`, como modelo
 - Depois da 9.0: as três editam `paginas/Inicio.tsx`, `casca.ts`, `escola-montada.spec.ts` e o roteiro
 
 ## Subtarefas
 
-- [ ] 10.1 — `areas/professor/textos-da-introducao.ts` e `BemVindo.tsx` (`lazy()`, `tela-professor-BemVindo`), a rota (2.1) e a entrada
+- [ ] 10.1 — `areas/professor/introducao/textos-da-introducao.ts` e `BemVindo.tsx` (`lazy()`, `tela-professor-BemVindo`), a rota (2.1) e a entrada
   `professor` na tabela de `paginas/Inicio.tsx`. Os passos, com a onça e o nome "Assistente de ensino" e o selo "IA": (1) "Eu preparo,
   você revê, e só então vai à turma." (2) "Só a resposta do Tutor chega ao aluno sem a sua aprovação, uma a uma." (3) "Eu não corrijo
   redação nem discursiva: ajudo com a rubrica e com a organização do lote." (4) "Usar ou não esta ferramenta não gera número sobre
@@ -33,10 +33,9 @@ O professor vê, na primeira entrada, quatro passos sobre o que a IA faz e não 
 
 | Arquivo | Novo ou alterado |
 |---|---|
-| `areas/professor/textos-da-introducao.ts`, `BemVindo.tsx` e os dois testes, `e2e/professor-introducao.spec.ts` | novo |
-| `areas/professor/rotas.tsx`, `areas/navegacao.ts`, `areas/navegacao.test.ts`, `paginas/Inicio.tsx`, `e2e/__fixtures__/casca.ts`, `e2e/escola-montada.spec.ts`, `e2e/roteiro-da-demonstracao.spec.ts` | alterado |
-
-Caminhos em `apps/web/src/`, salvo `e2e/`.
+| `apps/web/src/areas/professor/introducao/textos-da-introducao.ts`, `apps/web/src/areas/professor/introducao/textos-da-introducao.test.ts`, `apps/web/src/areas/professor/introducao/BemVindo.tsx`, `apps/web/src/areas/professor/introducao/BemVindo.test.tsx`, `e2e/professor-introducao.spec.ts` | novo |
+| `apps/web/src/areas/professor/rotas.tsx`, `apps/web/src/areas/navegacao.ts`, `apps/web/src/areas/navegacao.test.ts`, `apps/web/src/paginas/Inicio.tsx` | alterado |
+| `e2e/__fixtures__/casca.ts`, `e2e/escola-montada.spec.ts`, `e2e/roteiro-da-demonstracao.spec.ts` | alterado |
 
 ## Testes que provam a regra
 
@@ -63,7 +62,7 @@ Isolamento e concorrência da data são da 1.0; carregando e erro do desvio em `
   (`criarConviteDeProfessor`); a troca de escola como em `e2e/troca-de-escola.spec.ts`
 - `escola-montada` e o roteiro: a professora criada por convite passa pela introdução (helper em `casca.ts`); `navegacao.test.ts`
   ganha o item do menu
-- Rodar: `npx vitest run --project unidade apps/web/src/areas/professor/textos-da-introducao.test.ts` e
+- Rodar: `npx vitest run --project unidade apps/web/src/areas/professor/introducao/textos-da-introducao.test.ts` e
   `node tools/ci/e2e.ts --manter-ambiente e2e/professor-introducao.spec.ts`
 - Telas: `professor`, `/professor/bem-vindo` (convite, senha, entrada; ou o menu da pessoa › "Rever a introdução"); mockup
   `/professor/bem-vindo`

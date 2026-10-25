@@ -33,7 +33,7 @@
   - [ ] 4.4 Testes: a separação, os quatro estados, "Corrigida" só com correção aprovada
 
 - [ ] **5.0 — As peças da introdução: tela de foco, balão, comemoração e a onça em três poses**
-  - [ ] 5.1 As poses acenando, apontando e comemorando em `componentes/onca/`, com o mesmo rosto neutro
+  - [ ] 5.1 As poses acenando, apontando e comemorando em `componentes/ui/onca/`, com o mesmo rosto neutro
   - [ ] 5.2 `TelaDeFoco`, `Balao`, `Comemoracao` e `introducao/Introducao`
   - [ ] 5.3 A casca em modo de foco nos endereços de `ehTelaDeFoco`
   - [ ] 5.4 A seção da galeria, nos dois temas
@@ -56,7 +56,7 @@
   - [ ] 8.4 Testes: antes do primeiro quadro, só grava ao escolher, armazenamento recusando, 360 px com Maior
 
 - [ ] **9.0 — A introdução do aluno, com o aviso de privacidade em linguagem de 11 anos**
-  - [ ] 9.1 `aviso-de-privacidade.ts` e `textos-da-introducao.ts`, com teste
+  - [ ] 9.1 `aviso-de-privacidade.ts` e `textos-da-introducao.ts`, em `areas/aluno/introducao/`, com teste
   - [ ] 9.2 `BemVindo.tsx` do aluno, a rota e o desvio da primeira entrada em `paginas/Inicio.tsx`
   - [ ] 9.3 "Rever a introdução" em Eu
   - [ ] 9.4 `docs/aia/tutor.md`, `docs/lgpd.md` (seção 9) e `docs/conformidade-mec.md`

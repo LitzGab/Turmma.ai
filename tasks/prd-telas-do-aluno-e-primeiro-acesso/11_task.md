@@ -15,18 +15,18 @@ nunca faz; pode pular e rever.
 - `techspec.md` seções 5 e 9; `prd.md` RF12, RF15 a RF18 e o caso do aviso de incidente (seção 7); `tasks/prd-telas-da-coordenacao/mockup.md`
   seção 7 e fechamento (d)
 - Regras 20 (itens 10 e 10a) e 70 (itens 2, 8 e 9); D45, D55, D57 e D64
-- Código: `paginas/Inicio.tsx` (a tabela da 9.0 e da 10.0); `areas/coordenacao/rotas.tsx`; `areas/coordenacao/nunca-faz.ts`
-  (`O_QUE_A_IA_NUNCA_FAZ`); `areas/coordenacao/privacidade/AvisoDeIncidente`; `BemVindo.tsx` do professor, como modelo
+- Código: `paginas/Inicio.tsx` (a tabela da 9.0 e da 10.0); `areas/coordenacao/rotas.tsx`; `areas/coordenacao/governanca/nunca-faz.ts`
+  (`O_QUE_A_IA_NUNCA_FAZ`); `areas/coordenacao/privacidade/AvisoDeIncidente.tsx`; `areas/professor/introducao/BemVindo.tsx`, como modelo
 - Depois da 10.0: as três editam `paginas/Inicio.tsx`, `casca.ts`, `escola-montada.spec.ts` e o roteiro
 
 ## Subtarefas
 
-- [ ] 11.1 — `areas/coordenacao/textos-da-introducao.ts` e `BemVindo.tsx` (`lazy()`, `tela-coordenacao-BemVindo`), a rota e a entrada
+- [ ] 11.1 — `areas/coordenacao/introducao/textos-da-introducao.ts` e `BemVindo.tsx` (`lazy()`, `tela-coordenacao-BemVindo`), a rota e a entrada
   `coordenador` na tabela de `paginas/Inicio.tsx`. Os passos, com a onça e "Analista de desempenho escolar" e o selo "IA":
   (1) "Eu ajudo a ler os números da <escola>." (2) "Você vê a escola em números agregados." e "O desempenho de professores só aparece
   com dois ou mais no grupo." (3) "Dado com nome só abre com um motivo, e isso fica registrado." (4) "Estas coisas a IA nunca faz.",
   com a lista de `O_QUE_A_IA_NUNCA_FAZ`. "Pular" e "Continuar" iguais. O fim lista "onde fica cada coisa" **lendo
-  `NAVEGACAO.coordenador`**, e "Começar" leva a Governança
+  `NAVEGACAO.coordenador`**, e "Começar" leva ao primeiro lugar dela (desde a X3, "Painel")
 - [ ] 11.2 — "Rever a introdução" no menu da pessoa da coordenação (`MENU_DA_PESSOA.coordenador`), antes do "Sair"
 - [ ] 11.3 — Testes
 
@@ -34,10 +34,9 @@ nunca faz; pode pular e rever.
 
 | Arquivo | Novo ou alterado |
 |---|---|
-| `areas/coordenacao/textos-da-introducao.ts`, `BemVindo.tsx` e os dois testes, `e2e/coordenacao-introducao.spec.ts` | novo |
-| `areas/coordenacao/rotas.tsx`, `areas/navegacao.ts`, `areas/navegacao.test.ts`, `paginas/Inicio.tsx`, `e2e/__fixtures__/casca.ts`, `e2e/escola-montada.spec.ts`, `e2e/roteiro-da-demonstracao.spec.ts` | alterado |
-
-Caminhos em `apps/web/src/`, salvo `e2e/`.
+| `apps/web/src/areas/coordenacao/introducao/textos-da-introducao.ts`, `apps/web/src/areas/coordenacao/introducao/textos-da-introducao.test.ts`, `apps/web/src/areas/coordenacao/introducao/BemVindo.tsx`, `apps/web/src/areas/coordenacao/introducao/BemVindo.test.tsx`, `e2e/coordenacao-introducao.spec.ts` | novo |
+| `apps/web/src/areas/coordenacao/rotas.tsx`, `apps/web/src/areas/navegacao.ts`, `apps/web/src/areas/navegacao.test.ts`, `apps/web/src/paginas/Inicio.tsx` | alterado |
+| `e2e/__fixtures__/casca.ts`, `e2e/escola-montada.spec.ts`, `e2e/roteiro-da-demonstracao.spec.ts` | alterado |
 
 ## Testes que provam a regra
 
@@ -46,7 +45,7 @@ Caminhos em `apps/web/src/`, salvo `e2e/`.
 | os textos (RF15) | unidade | agregado, nominal com motivo e o que a IA nunca faz; sem "ranking", "meta de uso" nem fala de sentimento |
 | onde fica cada coisa | componente | a lista sai de `NAVEGACAO.coordenador` |
 | primeira entrada: convite e segundo fator | e2e | convite, senha, segundo fator e login caem em `/coordenacao/bem-vindo` (`criarConviteDeCoordenador`, `entrarComoCoordenacaoNaMesmaAba`) |
-| pular | componente + e2e | "Pular" grava a data, vai a Governança, e a entrada seguinte não volta |
+| pular | componente + e2e | "Pular" grava a data, vai ao primeiro lugar ("Painel"), e a entrada seguinte não volta |
 | botões iguais | componente | "Pular" e "Continuar" com a mesma classe |
 | falas (regra 70, item 4a; D58) | unidade | texto fixo em `.ts`; reprova afirmar ser pessoa, professor ou amigo, prometer voltar, esperar ou estar sempre ali, e termos de vínculo ou saudade |
 | quatro estados da `BemVindo` | componente | carregando (a fala do passo 1, "Sair" à vista, sem "Fechar" nem "Pular"); erro com `EstadoErro`, "Tentar de novo", "Voltar para a abertura" e "Sair"; data desconhecida vale o modo primeira vez; com dado, os passos |
@@ -62,7 +61,7 @@ Isolamento e concorrência são da 1.0; carregando e erro do desvio em `/`, os d
 
 - Copie `ListaDePedidos.test.tsx` (`componentes/pedidos/`); o incidente como em `e2e/incidentes.spec.ts`
 - `escola-montada` e o roteiro: a coordenadora criada por convite passa pela introdução (helper em `casca.ts`)
-- Rodar: `npx vitest run --project unidade apps/web/src/areas/coordenacao/textos-da-introducao.test.ts` e
+- Rodar: `npx vitest run --project unidade apps/web/src/areas/coordenacao/introducao/textos-da-introducao.test.ts` e
   `node tools/ci/e2e.ts --manter-ambiente e2e/coordenacao-introducao.spec.ts`
 - Telas: `coordenacao`, `/coordenacao/bem-vindo` (convite, senha, segundo fator; ou o menu da pessoa › "Rever a introdução"); mockup
   `/coordenacao/bem-vindo`

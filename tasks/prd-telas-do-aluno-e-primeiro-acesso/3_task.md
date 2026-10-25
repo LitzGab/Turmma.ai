@@ -18,7 +18,7 @@ sem tirar o caminho até o Tutor. **Não lê `tutor/conversa` nem mostra o uso d
 - Código: `areas/aluno/Tutor.tsx` (`FaixaDeSupervisao`, `EscolhaDaAtividade`); `areas/aluno/tutor.ts` (`TEXTO_DA_SUPERVISAO`);
   `areas/aluno/atividades.ts` (`AVISO_DA_AVALIACAO`); `infra/k6/login-7h30.js`
 - Esta tarefa corre junto da 4.0 e da 5.0: **não importa** `separarAtividades` (use `estaParaResponder`, que a 4.0 mantém) nem as
-  poses da onça (a saudação usa `AssinaturaIA agente="tutor"`, da X1)
+  poses da onça (a saudação usa `AssinaturaIA agente="tutor"`, de `componentes/ui/ia/AssinaturaIA.tsx`)
 
 ## Subtarefas
 

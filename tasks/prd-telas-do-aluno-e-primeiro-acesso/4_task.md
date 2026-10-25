@@ -16,7 +16,7 @@ com a correção aprovada.
 - Regras 50 (itens 5 e 9) e 70 (item 3); D59 e D80 (item 7c)
 - Código: `areas/aluno/Atividades.tsx` e `atividades.ts` (`TEXTO_DA_SITUACAO`, `separarAtividades`); `atividades.test.ts`
 - A 3.0 corre junto: esta tarefa **mantém exportados** `estaParaResponder`, `resumoDaAtividade` e `AVISO_DA_AVALIACAO`
-- `Linha` e `Ladrilho` são da X1: confira o nome e as props antes de importar
+- `Linha` e `Ladrilho`, da X1: `componentes/ui/Linha.tsx` e `componentes/ui/Ladrilho.tsx`; confira as props antes de importar
 
 ## Subtarefas
 
@@ -57,7 +57,7 @@ Concorrência e log não se aplicam: só leitura.
 
 - Copie `apps/web/src/componentes/pedidos/ListaDePedidos.test.tsx` e use `redeFalsa().segurar()` para o carregando
 - O que muda nos e2e (rótulo, nunca a regra): as regiões "Para responder" e "Já feitas" viram "Para fazer", "Entregues" e
-  "Corrigidas" (`aluno-atividade.spec.ts` ~110 e ~116, `aluno-fluxo.spec.ts` 79 e 163, `roteiro-da-demonstracao.spec.ts` 430 e 550);
+  "Corrigidas" (`aluno-atividade.spec.ts` ~110 e ~116, `aluno-fluxo.spec.ts` 79 e 163, `roteiro-da-demonstracao.spec.ts` 443 e 568);
   o selo "Com resultado" vira "Corrigida" e o "Para responder", "Para fazer". "Atividade enviada" não muda
 - Rodar: `npx vitest run --project unidade apps/web/src/areas/aluno/atividades.test.ts` e
   `node tools/ci/e2e.ts --manter-ambiente e2e/aluno-atividade.spec.ts`
