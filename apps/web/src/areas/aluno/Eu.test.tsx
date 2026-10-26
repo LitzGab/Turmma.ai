@@ -66,6 +66,11 @@ function montar(saida?: ComponentProps<typeof ContextoDaSaida>['value']) {
   return renderizarTela(saida === undefined ? eu : <ContextoDaSaida value={saida}>{eu}</ContextoDaSaida>)
 }
 
+/** A linha de apoio do título de Eu: a turma, a série por extenso e a escola, sem cartão próprio (RF20; mockup 2.5). */
+const TURMA_NO_CABECALHO = '7º A · 7º ano do Ensino Fundamental · Escola sintética'
+const turmaNoCabecalho = () => screen.getByText(TURMA_NO_CABECALHO)
+const esperarATurma = () => screen.findByText(TURMA_NO_CABECALHO)
+
 /** As linhas Privacidade, Ajustes e Sair, que têm de estar em qualquer estado. */
 function conferirAsLinhas(): { sair: HTMLElement; privacidade: HTMLElement; ajustes: HTMLElement } {
   const linhas = screen.getByRole('list', { name: 'Conta' })
@@ -95,22 +100,22 @@ describe('Eu', () => {
     conferirAsLinhas()
   })
 
-  it('com dado: a turma, a série por extenso e a escola, "Como estou indo" depois do cartão e antes das linhas', async () => {
+  it('com dado: a turma, a série por extenso e a escola na linha de apoio do título, "Como estou indo" antes das linhas', async () => {
     const rede = redeFalsa()
     rede.responderPor('/v1/minha-turma', COM_TURMA)
     rede.responderPor('/v1/tutor/memoria', MEMORIA_VAZIA)
     montar()
 
-    expect(await screen.findByRole('heading', { level: 2, name: '7º A' })).toBeTruthy()
+    expect(await esperarATurma()).toBeTruthy()
     const principal = document.body
     expect(principal.textContent).toContain('Escola sintética')
     expect(principal.textContent).toContain('7º ano do Ensino Fundamental')
     expect(screen.queryByRole('button', { name: 'Tentar de novo' })).toBeNull()
     const { sair } = conferirAsLinhas()
     const titulos = screen.getAllByRole('heading', { level: 2 }).map((titulo) => titulo.textContent)
-    expect(titulos).toEqual(['7º A', 'Como estou indo'])
-    // A ordem na página: cartão da turma, "Como estou indo", linhas.
-    const turma = screen.getByRole('heading', { level: 2, name: '7º A' })
+    expect(titulos).toEqual(['Como estou indo'])
+    // A ordem na página: o título com a turma, "Como estou indo", linhas.
+    const turma = turmaNoCabecalho()
     expect(turma.compareDocumentPosition(comoEstouIndo()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(comoEstouIndo().compareDocumentPosition(sair) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
@@ -120,7 +125,7 @@ describe('Eu', () => {
     rede.responderPor('/v1/minha-turma', COM_TURMA)
     rede.responderPor('/v1/tutor/memoria', MEMORIA_VAZIA)
     montar()
-    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    await esperarATurma()
     const linhas = screen.getByRole('list', { name: 'Conta' })
 
     const rever = within(linhas).getByText('Rever a introdução').className
@@ -162,7 +167,7 @@ describe('Eu', () => {
     rede.responderPor('/v1/tutor/memoria', MEMORIA_VAZIA)
     const sair = vi.fn()
     montar({ sair, saindo: false })
-    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    await esperarATurma()
     await within(comoEstouIndo()).findByText(TITULO_DO_VAZIO)
     const chamadasAntes = rede.chamadas.length
 
@@ -177,7 +182,7 @@ describe('Eu', () => {
     rede.responderPor('/v1/minha-turma', COM_TURMA)
     rede.responderPor('/v1/tutor/memoria', MEMORIA_VAZIA)
     montar({ sair: () => undefined, saindo: true })
-    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    await esperarATurma()
 
     expect(screen.getByRole('button', { name: 'Saindo…' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Sair' })).toBeNull()
@@ -264,7 +269,7 @@ describe('Eu: "Como estou indo"', () => {
     rede.responderPor('/v1/minha-turma', COM_TURMA)
     rede.responderPor('/v1/tutor/memoria', { status: 200, corpo: memoriaDoAluno([trabalhoNaMemoria({ resultado: resultadoAprovado({ aReforcar: [LIMITANTE] }) })]) })
     montar()
-    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    await esperarATurma()
     await within(comoEstouIndo()).findByText('7 de 8 certas')
 
     expect(document.body.textContent ?? '').not.toMatch(/colega|média|posição|ranking|sequência|pontos|meta\b|prêmio/i)
@@ -315,7 +320,7 @@ describe('Eu: "Como estou indo"', () => {
     rede.responderPor('/v1/tutor/memoria', NUNCA)
     montar()
 
-    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    await esperarATurma()
     expect(within(comoEstouIndo()).getByRole('status').textContent).toBe(ROTULO_DO_CARREGANDO)
     expect(screen.queryByText(TITULO_DO_VAZIO)).toBeNull()
     conferirAsLinhas()
@@ -330,7 +335,7 @@ describe('Eu: "Como estou indo"', () => {
 
     const secao = comoEstouIndo()
     expect(await within(secao).findByRole('alert')).toBeTruthy()
-    expect(screen.getByRole('heading', { level: 2, name: '7º A' })).toBeTruthy()
+    expect(turmaNoCabecalho()).toBeTruthy()
     expect(screen.queryByText(TITULO_DO_VAZIO)).toBeNull()
     conferirAsLinhas()
 
@@ -374,7 +379,7 @@ describe('Eu: Ajustes', () => {
     const apagar = vi.spyOn(Storage.prototype, 'removeItem')
     const usuario = userEvent.setup()
     montarComDado()
-    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    await esperarATurma()
     const { ajustes } = conferirAsLinhas()
     expect(screen.queryByRole('dialog')).toBeNull()
 
@@ -396,7 +401,7 @@ describe('Eu: Ajustes', () => {
   it('abrir de novo mostra a escolha que ficou, e o foco volta à linha ao fechar', async () => {
     const usuario = userEvent.setup()
     montarComDado()
-    await screen.findByRole('heading', { level: 2, name: '7º A' })
+    await esperarATurma()
     const { ajustes } = conferirAsLinhas()
 
     await usuario.click(ajustes)

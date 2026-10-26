@@ -177,8 +177,10 @@ e `minhas-atividades`, 60 s e `false`; `tutor/memoria` em Eu, 5 min e `false`; o
 as chaves, como hoje. Aluno sem turma: `minhas-atividades` responde vazio e `tutor/memoria` responde
 `NAO_ENCONTRADO`, que Eu trata como "sem resultado", não como erro. **Tarefas**: `separarAtividades` passa a três grupos, sem o número do mockup no título (a lista é paginada, e o número seria o das já carregadas); `Linha` com `Ladrilho` na cor da matéria
 (`materia.ts`: do nome da disciplina para família e ícone `lucide`; a reserva, para o nome desconhecido, é `anil` com um livro aberto, porque o `Ladrilho` só tem as dez famílias de cor e nenhuma é neutra). **Tarefa aberta**: só a
-moldura e a `Comemoracao`. **Eu**: cartão da turma, "Como estou indo" e as quatro linhas; "Ajustes" abre um
-`Dialogo` com `Aparencia` (X1) e `TamanhoDaLetra`.
+moldura e a `Comemoracao`. **Eu**: a turma, a série e a escola ficam na linha de apoio do título, como no mockup 2.5 (sem cartão próprio); os avisos de
+carregando, erro e "sem turma" ficam logo abaixo do título; "Como estou indo" fica em duas colunas a partir de 1024 px; as quatro linhas
+da conta ficam em grade 2 × 2 a partir de 1024 px e numa coluna abaixo disso; a página cabe em 1366 × 768 com duas tarefas corrigidas
+(RF20, no tamanho Padrão; com a letra Maior vale o RF11, nada rola de lado a 360 px; correção `2026-10-25-eu-cabe-em-1366`). "Ajustes" abre um `Dialogo` com `Aparencia` (X1) e `TamanhoDaLetra`.
 
 **Peças novas**, fora da entrada: `componentes/introducao/` (`Introducao`, `TelaDeFoco`, `Balao`, e, a partir da 10.0, `Linhas`, `RegiaoQueRola` (a região que rola, com a faixa "Role para ler mais", antes privada do aviso do aluno) e `useIntroducao`, que guarda o que as três introduções fazem igual: ler o `['eu']`, saber se a pessoa revê, gravar a data uma vez só e ir embora mesmo se a gravação falhar), `IntroducaoDoPapel` (a partir da 11.0: os quatro estados da `BemVindo`, que o aluno e o professor repetiam, e que a coordenação seria a terceira cópia; cada papel só diz quem fala, a fala do carregando, os passos e os destinos) e `OndeFicaCadaCoisa` (a lista de lugares da navegação do papel, do professor e, a partir da 11.0, da coordenação), `componentes/ui/Comemoracao`
 (os `@keyframes` num CSS ao lado, só `transform` e `opacity`, uma vez) e as três poses da onça em `componentes/ui/onca/Onca`, ao

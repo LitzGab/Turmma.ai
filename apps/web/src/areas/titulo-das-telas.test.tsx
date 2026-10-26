@@ -190,7 +190,7 @@ describe('o título das seis telas que passaram à Tela', () => {
     vazio: { rotas: { '/v1/minha-turma': NAO_ACHADA }, aparece: () => screen.findByText(/não está em uma turma neste ano letivo/) },
     comDado: {
       rotas: { '/v1/minha-turma': { status: 200, corpo: { escola: { nome: 'Escola sintética' }, turma: { id: UUID_DA_TURMA, nome: '7º A' }, serie: SERIE } } },
-      aparece: () => screen.findByRole('heading', { name: '7º A' }),
+      aparece: () => screen.findByText(/^7º A · /),
       regiao: 'Eu',
     },
   })

@@ -1,4 +1,4 @@
-import type { Page, Route } from '@playwright/test'
+import type { Locator, Page, Route } from '@playwright/test'
 import { abrirNavegacao, entrarComoAluno, esperarInicioDoAluno, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { memoriaDoAluno, resultadoAprovado, trabalhoNaMemoria } from './__fixtures__/memoria-do-aluno.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
@@ -14,6 +14,7 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, violacoesGraves } from '.
 
 const ROTA_MEMORIA = '**/v1/tutor/memoria'
 const HABILIDADE = { codigo: 'EF09CI01', descricao: 'Reconhecer o reagente limitante' }
+const OUTRA_HABILIDADE = { codigo: 'EF09CI02', descricao: 'Calcular a massa de reagentes e produtos numa reação' }
 
 function json(corpo: unknown): { status: number; contentType: string; body: string } {
   return { status: 200, contentType: 'application/json', body: JSON.stringify(corpo) }
@@ -52,8 +53,9 @@ test.describe('"Como estou indo": o que a memória do Tutor mostra', () => {
     await expect(secao).toContainText('Achou algo errado? Fale com quem dá a aula.')
     await expect(page.locator('body')).not.toContainText('Lista que espera quem dá a aula')
     await expect(page.locator('body')).not.toContainText(/resposta_pronta|resposta pronta|travou/i)
-    // A ordem na página: o cartão da turma, "Como estou indo", as linhas.
-    await expect(principal.getByRole('heading', { level: 2 })).toHaveText([turma.turmaNome, 'Como estou indo'])
+    // A ordem na página: o título com a turma, "Como estou indo", as linhas.
+    await expect(principal.getByRole('heading', { level: 2 })).toHaveText(['Como estou indo'])
+    await expect(principal.locator('header')).toContainText(turma.turmaNome)
     expect(await violacoesGraves(page)).toEqual([])
 
     // O que o aluno vê não vai ao navegador: nem `localStorage`, nem `sessionStorage`, nem IndexedDB, nem Cache Storage.
@@ -180,5 +182,71 @@ test.describe('"Como estou indo" a 360 px', () => {
       expect(caixa?.height ?? 0, nome).toBeGreaterThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX)
     }
     expect(await violacoesGraves(page)).toEqual([])
+  })
+})
+
+/** A caixa do elemento na tela; sem ela o caso falha dizendo qual era. */
+async function caixaDe(alvo: Locator, nome: string): Promise<{ x: number; y: number; width: number }> {
+  const caixa = await alvo.boundingBox()
+  if (caixa === null) throw new Error(`${nome} não tem caixa na tela`)
+  return caixa
+}
+
+/** O Chromebook, 1366 × 768: a conta em grade 2 × 2, as duas tarefas lado a lado, e a página inteira na janela, com o "Sair" à vista. */
+async function conferirAJanelaDoChromebook(page: Page): Promise<void> {
+  expect(page.viewportSize()).toEqual({ width: 1366, height: 768 })
+  const principal = page.getByRole('main')
+  const conta = principal.getByRole('list', { name: 'Conta' })
+  const privacidade = await caixaDe(conta.getByRole('link', { name: 'Privacidade' }), 'Privacidade')
+  const ajustes = await caixaDe(conta.getByRole('button', { name: 'Ajustes' }), 'Ajustes')
+  const rever = await caixaDe(conta.getByRole('link', { name: 'Rever a introdução' }), 'Rever a introdução')
+  const sair = await caixaDe(conta.getByRole('button', { name: 'Sair' }), 'Sair')
+  expect(Math.abs(privacidade.y - ajustes.y), 'Privacidade e Ajustes na mesma linha').toBeLessThan(2)
+  expect(ajustes.x, 'Ajustes à direita de Privacidade').toBeGreaterThan(privacidade.x + privacidade.width - 1)
+  expect(Math.abs(rever.y - sair.y), 'Rever a introdução e Sair na mesma linha').toBeLessThan(2)
+  const tarefas = principal.getByRole('region', { name: 'Como estou indo' }).getByRole('listitem').filter({ hasText: 'de 4 certas' })
+  const primeira = await caixaDe(tarefas.nth(0), 'a primeira tarefa')
+  const segunda = await caixaDe(tarefas.nth(1), 'a segunda tarefa')
+  expect(Math.abs(primeira.y - segunda.y), 'as duas tarefas lado a lado').toBeLessThan(2)
+  expect(await larguraExcedente(page), 'a página rola para o lado').toBe(0)
+  expect(await page.evaluate(() => document.documentElement.scrollHeight), 'a página rola').toBeLessThanOrEqual(768)
+  await expect(conta.getByRole('button', { name: 'Sair' })).toBeInViewport()
+}
+
+/** O celular, 360 px: a conta e as duas tarefas em uma coluna só, e a página rola, mas nunca para o lado. */
+async function conferirAJanelaDoCelular(page: Page): Promise<void> {
+  const principal = page.getByRole('main')
+  const conta = principal.getByRole('list', { name: 'Conta' })
+  const privacidade = await caixaDe(conta.getByRole('link', { name: 'Privacidade' }), 'Privacidade')
+  const ajustes = await caixaDe(conta.getByRole('button', { name: 'Ajustes' }), 'Ajustes')
+  expect(ajustes.y, 'Ajustes abaixo de Privacidade').toBeGreaterThan(privacidade.y + 1)
+  const tarefas = principal.getByRole('region', { name: 'Como estou indo' }).getByRole('listitem').filter({ hasText: 'de 4 certas' })
+  const primeira = await caixaDe(tarefas.nth(0), 'a primeira tarefa')
+  const segunda = await caixaDe(tarefas.nth(1), 'a segunda tarefa')
+  expect(segunda.y, 'a segunda tarefa abaixo da primeira').toBeGreaterThan(primeira.y + 1)
+  expect(await larguraExcedente(page), 'a página rola para o lado').toBe(0)
+}
+
+test.describe('"Eu" na janela do aluno', () => {
+  test('a página com duas tarefas corrigidas e três habilidades a rever cabe em 1366 × 768 sem rolar', async ({ page, hasTouch }) => {
+    const aluno = await criarAlunoComMatricula()
+    const turma = await colocarAlunoNaTurma(aluno)
+    const trabalhos = [
+      trabalhoNaMemoria({ titulo: 'Lista corrigida de reações', resultado: resultadoAprovado({ acertos: 1, total: 4, aReforcar: [HABILIDADE, OUTRA_HABILIDADE] }) }),
+      trabalhoNaMemoria({ titulo: 'Lista corrigida de estequiometria', resultado: resultadoAprovado({ acertos: 3, total: 4, aReforcar: [HABILIDADE] }) }),
+    ]
+    await page.route(ROTA_MEMORIA, (rota: Route) => rota.fulfill(json(memoriaDoAluno(trabalhos))))
+    await entrarComoAluno(page, aluno, hasTouch)
+
+    await irPelaNavegacao(page, 'Eu', hasTouch)
+    const principal = page.getByRole('main')
+    await expect(principal).toContainText('1 de 4 certas', { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal).toContainText('3 de 4 certas')
+    // A turma também carregou: com ela a página é a de verdade, e não a do "Carregando a sua turma…", que tem outra altura.
+    await expect(principal.locator('header')).toContainText(turma.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal.getByText(/^Carregando/)).toHaveCount(0)
+    // A medida de altura vale na janela larga; o celular rola a página, mas nunca para o lado.
+    if ((page.viewportSize()?.width ?? 0) >= 1024) await conferirAJanelaDoChromebook(page)
+    else await conferirAJanelaDoCelular(page)
   })
 })

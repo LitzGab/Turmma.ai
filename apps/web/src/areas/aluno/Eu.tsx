@@ -25,8 +25,8 @@ const SEM_TURMA_NO_ANO = 'Você ainda não está em uma turma neste ano letivo. 
 function LinhasDaConta({ aoAbrirAjustes }: { readonly aoAbrirAjustes: () => void }) {
   const { sair, saindo } = useContext(ContextoDaSaida)
   return (
-    <ul aria-label="Conta" className="divide-y-2 divide-borda overflow-hidden rounded-cartao border-2 border-borda bg-superficie">
-      <li>
+    <ul aria-label="Conta" className="grid grid-cols-1 gap-0.5 overflow-hidden rounded-cartao border-2 border-borda bg-borda lg:grid-cols-2">
+      <li className="bg-superficie">
         <Linha
           titulo="Privacidade"
           inicio={
@@ -37,7 +37,7 @@ function LinhasDaConta({ aoAbrirAjustes }: { readonly aoAbrirAjustes: () => void
           para={ROTAS_DO_ALUNO.privacidade}
         />
       </li>
-      <li>
+      <li className="bg-superficie">
         <Linha
           titulo="Ajustes"
           inicio={
@@ -48,7 +48,7 @@ function LinhasDaConta({ aoAbrirAjustes }: { readonly aoAbrirAjustes: () => void
           aoAcionar={aoAbrirAjustes}
         />
       </li>
-      <li>
+      <li className="bg-superficie">
         <Linha
           titulo="Rever a introdução"
           tituloEmDuasLinhas
@@ -60,7 +60,7 @@ function LinhasDaConta({ aoAbrirAjustes }: { readonly aoAbrirAjustes: () => void
           para={ROTAS_DO_ALUNO.bemVindo}
         />
       </li>
-      <li>
+      <li className="bg-superficie">
         <Linha
           titulo={saindo ? 'Saindo…' : 'Sair'}
           inicio={
@@ -76,11 +76,12 @@ function LinhasDaConta({ aoAbrirAjustes }: { readonly aoAbrirAjustes: () => void
 }
 
 /**
- * "Eu" do aluno (telas do aluno e primeiro acesso, 2.0, 7.0 e 8.0; RF9): o cartão da turma, que era "Minha turma" (A1, 12.0; RF13),
- * "Como estou indo" (`ComoEstouIndo`, com os quatro estados dele) e as linhas **Privacidade**, **Ajustes** (o diálogo com a aparência e o tamanho da letra, que só grava ao escolher), **Rever a introdução** (9.0; RF9, RF17: o mesmo endereço da primeira entrada, e revendo todo passo fecha) e **Sair**. Sem colegas, sem professor, sem matrícula (regra 50, item 9): o contrato de
+ * "Eu" do aluno (telas do aluno e primeiro acesso, 2.0, 7.0 e 8.0; RF9, RF20): a turma, a série e a escola na linha de apoio do título,
+ * como no mockup 2.5, "Como estou indo" (`ComoEstouIndo`, com os quatro estados dele) e as linhas **Privacidade**, **Ajustes** (o diálogo com a aparência e o tamanho da letra, que só grava ao escolher), **Rever a introdução** (9.0; RF9, RF17: o mesmo endereço da primeira entrada, e revendo todo passo fecha) e **Sair**. Sem colegas, sem professor, sem matrícula (regra 50, item 9): o contrato de
  * `GET /v1/minha-turma` não traz nada disso, e a tela não tem de onde tirar.
  *
- * Os estados do cartão são carregando, com dado, o erro com "Tentar de novo" (queda de rede não é logout, regra 80, item 6)
+ * **A página cabe em 1366 × 768** com duas tarefas corrigidas (RF20): as quatro linhas da conta ficam em grade 2 × 2 a partir de 1024 px
+ * e em uma coluna abaixo disso. Os estados da turma são carregando, com dado, o erro com "Tentar de novo" (queda de rede não é logout, regra 80, item 6)
  * e, à parte, o aluno sem turma no ano, que não é erro de ninguém e diz o que fazer. **As linhas existem em todos os
  * estados**: o "Sair" nunca depende de a leitura da turma ter dado certo (D59).
  *
@@ -91,7 +92,7 @@ export default function Eu() {
   const minhaTurma = useQuery(consultaMinhaTurma)
   const [ajustesAbertos, definirAjustesAbertos] = useState(false)
 
-  function cartaoDaTurma() {
+  function avisoDaTurma() {
     if (minhaTurma.isPending) return <EstadoCarregando rotulo="Carregando a sua turma…" />
     if (minhaTurma.isError) {
       if (minhaTurma.error instanceof ErroDaApi && minhaTurma.error.codigo === CodigoDeErro.NAO_ENCONTRADO)
@@ -102,29 +103,24 @@ export default function Eu() {
         )
       return <EstadoErro erro={minhaTurma.error} tentando={minhaTurma.isFetching} aoTentarDeNovo={() => void minhaTurma.refetch({ cancelRefetch: false })} />
     }
+    return null
+  }
+
+  /** A turma, a série e a escola, na linha de apoio do título (mockup 2.5): sem cartão próprio, que tomava 165 px da janela. */
+  function descricaoDaTurma(): string | undefined {
+    if (!minhaTurma.isSuccess) return undefined
     const { escola, turma, serie } = minhaTurma.data
-    return (
-      <div className="rounded-cartao border border-linha bg-superficie p-4">
-        <p className="text-sm text-apoio">Sua turma</p>
-        {/* Título de verdade, e não só letra grande: é o ponto de navegação por títulos de quem usa leitor de tela. */}
-        <h2 className="mt-1 text-2xl font-semibold break-words text-tinta">{turma.nome}</h2>
-        <dl className="mt-4 grid gap-3 sm:grid-cols-[auto_1fr] sm:gap-x-6">
-          <dt className="text-sm text-apoio">Série</dt>
-          <dd className="-mt-2 break-words sm:mt-0">{nomeDaSerie(serie)}</dd>
-          <dt className="text-sm text-apoio">Escola</dt>
-          <dd className="-mt-2 break-words sm:mt-0">{escola.nome}</dd>
-        </dl>
-      </div>
-    )
+    return `${turma.nome} · ${nomeDaSerie(serie)} · ${escola.nome}`
   }
 
   return (
-    <Tela titulo="Eu" idDoTitulo="titulo-eu" largura="conversa">
-      <section className="flex min-w-0 flex-col gap-6" aria-labelledby="titulo-eu">
-        {cartaoDaTurma()}
+    <Tela titulo="Eu" idDoTitulo="titulo-eu" largura="conversa" descricao={descricaoDaTurma()}>
+      {/* A região da tela, com o nome do título: o conteúdo todo, com os 16 px entre blocos que a `Tela` dá. */}
+      <section className="flex min-w-0 flex-col gap-4" aria-labelledby="titulo-eu">
+        {avisoDaTurma()}
+        <ComoEstouIndo />
+        <LinhasDaConta aoAbrirAjustes={() => definirAjustesAbertos(true)} />
       </section>
-      <ComoEstouIndo />
-      <LinhasDaConta aoAbrirAjustes={() => definirAjustesAbertos(true)} />
       {ajustesAbertos && <DialogoDeAjustes aoFechar={() => definirAjustesAbertos(false)} />}
     </Tela>
   )

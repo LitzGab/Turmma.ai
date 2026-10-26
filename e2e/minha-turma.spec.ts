@@ -71,7 +71,7 @@ test.describe('W4: os estados de "Eu"', () => {
     // Com dado: a turma, a série por extenso e a escola; o colega, não.
     segurado.abrir()
     const principal = page.getByRole('main')
-    await expect(principal.getByRole('heading', { level: 2, name: turma.turmaNome })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+    await expect(principal.locator('header').getByText(turma.turmaNome)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(principal).toContainText(turma.serieNome)
     await expect(principal).toContainText(aluno.escolaNome)
     await expect(page.locator('body')).not.toContainText(colega.nome)

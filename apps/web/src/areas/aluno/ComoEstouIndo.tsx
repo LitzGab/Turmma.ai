@@ -15,8 +15,9 @@ import {
 
 /**
  * "Como estou indo" em Eu (telas do aluno e primeiro acesso, 7.0; RF9, RF10, RF20): uma linha por tarefa de **correção
- * aprovada**, com "N de M certas" e as habilidades a rever, na ordem em que a API as mandou. Nos quatro estados — carregando,
- * vazio, erro com "Tentar de novo" e com dado — e **sem derrubar o resto de Eu**: o cartão da turma e as linhas não dependem
+ * aprovada**, com "N de M certas" e as habilidades a rever, na ordem em que a API as mandou, em duas colunas a partir de 1024 px (RF20: duas
+ * tarefas corrigidas cabem na janela de 1366 × 768 de Eu). Nos quatro estados — carregando,
+ * vazio, erro com "Tentar de novo" e com dado — e **sem derrubar o resto de Eu**: a turma no cabeçalho e as linhas não dependem
  * desta leitura. Só o aluno da sessão, sem colega, média, posição nem sinal do Tutor (D66).
  */
 export function ComoEstouIndo() {
@@ -28,7 +29,7 @@ export function ComoEstouIndo() {
     if (memoria.data.length === 0) return <EstadoVazio titulo={TITULO_DO_VAZIO} descricao={DESCRICAO_DO_VAZIO} />
     return (
       <>
-        <ul className="flex flex-col gap-3">
+        <ul className="grid gap-3 lg:grid-cols-2">
           {memoria.data.map(({ atividadeAplicadaId, titulo, resultado }) => (
             <li key={atividadeAplicadaId} className="rounded-cartao border border-linha bg-superficie p-4">
               <BarraRotulada rotulo={titulo} valor={resultado.acertos} maximo={resultado.total} texto={textoDasCertas(resultado.acertos, resultado.total)} />

@@ -197,6 +197,14 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       correção própria, medindo cada um com a letra Maior, e acrescentar a guarda que recuse `text-[Npx]` nas telas do aluno
 - [ ] **(Telas do aluno, 3.0) O recomeço do Início está duplicado** em `e2e/aluno-inicio.spec.ts` e `e2e/minha-turma.spec.ts`
       (`test-engineer`, 1ª): apagar um dos dois numa passada de e2e (dono: quem tocar `minha-turma.spec.ts`)
+- [ ] **(Telas do aluno, correção `2026-10-25-eu-cabe-em-1366`) Foto do Eu a 1024 px** (lateral aberta, cartões de "Como estou indo" com ~360 px):
+      o Validador fotografa a 1024 px no fim da spec (dono: Validador; origem: a correção, `frontend-reviewer` 1ª)
+- [ ] **(Telas do aluno, correção `2026-10-25-eu-cabe-em-1366`) Caso de e2e com nome de escola ou de turma de 60 ou mais caracteres**, que quebra a linha
+      de apoio do título do Eu em duas: medir se a página ainda cabe a 1366 × 768 (dono: quem tocar `e2e/aluno-eu.spec.ts`; origem: a correção, `test-engineer` 1ª)
+- [ ] **(Telas do aluno, correção `2026-10-25-eu-cabe-em-1366`) A vitrine reaproveita a sessão e o que ela guardou no navegador**: `tools/vitrine` deve limpar
+      `.processo/vitrine/sessao-aluno.json` e o `localStorage` entre as fotos, porque a foto de "Ajustes › Maior" deixa `educa.letra=maior` e a seguinte sai em
+      outro tamanho (a sessão guarda também token de aluno sintético). Correção própria em `tools/vitrine/` (dono: Orquestrador; origem: a correção,
+      `test-engineer` e `privacy-guardian` 1ª)
 
 - [ ] **(Telas do aluno, 1.0) `lock_timeout` curto na gravação do `GET /v1/eu`** (`infra-guardian`, 1ª rodada): a gravação da linha da sessão,
       disparada por data de outra escola, espera a trava da linha sem prazo próprio; transação longa que a segure pendura o `GET`.
