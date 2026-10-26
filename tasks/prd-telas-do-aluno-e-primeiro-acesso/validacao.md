@@ -1,5 +1,170 @@
 # Validação — telas-do-aluno-e-primeiro-acesso (X4)
 
+## Rodada 4 — 26/10/2026
+
+**Escopo:** funcionalidade completa. É uma revalidação depois de três correções: a do roteiro da demonstração (MA1 da rodada 3), a da
+mensagem fixa do Tutor (M4, decisão A do Joaquim) e a dos três casos do censo do e2e.
+**Commit validado:** `d6b82ea8` (o último que mudou código é `e2b35eb1`)
+**Veredito: APROVADA**
+
+O MA1 da rodada 3 está resolvido. O roteiro passa pelas três introduções, chama o lugar do aluno de **Tarefas** e mostra a
+comemoração "Atividade entregue." antes da espera pela correção. Cada frase nova bate com o código e com o
+`e2e/roteiro-da-demonstracao.spec.ts`, que rodei: verde nos dois projetos. A mensagem fixa do assunto delicado e o aviso de privacidade
+dizem agora a mesma frase, que vem de uma constante só, `FRASE_DO_AVISO_AO_PROFESSOR`. A promessa da frase é verdadeira no código:
+nenhuma rota entrega ao professor o texto da conversa. As três mutações que rodei ficaram vermelhas, e a foto mostra a frase nova
+no passo 3. Os três casos do censo caíram de 27 a 29 s para 7,7 a 9,5 s. As asserções continuam as mesmas, e o C2 e o W1 continuam
+verdes. Os 21 RF estão ATENDIDOS. Não há crítico nem maior. Ficam menores, entre eles o MN1: o roteiro ainda manda a coordenação a
+"Estrutura" e a "IA", nomes que não estão na navegação dela desde a X2.
+
+**O que esta rodada conferiu de novo.** Entre `3c60f99a` e `d6b82ea8` o código de produção mudou só em três arquivos:
+`packages/shared/src/tutor/sinal.ts` (a constante nova, exportada no `index.ts`), `packages/nucleo/src/ia/tarefas/turno-do-tutor.ts`
+(as duas mensagens fixas terminam nela) e `apps/web/src/areas/aluno/introducao/aviso-de-privacidade.ts` (o aviso usa a mesma constante).
+Todos vêm da correção `2026-10-26-mensagem-fixa-avisa-o-professor` (`e2b35eb1`). Os testes mudaram em `turno-do-tutor.test.ts` e
+`textos-da-introducao.test.ts`, que são dessa correção, e em `e2e/convite.spec.ts` e `e2e/material.spec.ts`, que são da correção
+`2026-10-26-tres-casos-do-e2e-perto-do-prazo` (`5f2feed6`). Os documentos mudaram em `docs/roteiro-da-demonstracao.md` (`8fb31b9b`),
+em `docs/aia/tutor.md`, no `TODO.md` e na Tech Spec §7. Li por completo os três arquivos de produção e os dois de teste de unidade.
+Li também os dois diffs de e2e, o roteiro inteiro contra o spec dele e as fixtures das introduções (`e2e/__fixtures__/casca.ts`
+e `coordenacao.ts`). Para os RF cujo código não mudou, valem a evidência e as oito mutações das rodadas 1 a 3.
+
+### 1. RF a RF
+
+Fotos desta rodada:
+- `.processo/vitrine/aluno--aluno-bem-vindo--Continuar-Continuar--{computador,celular}.png`: o passo 3, o aviso de privacidade, tirado
+  da vitrine depois de a web ser reconstruída com o código de `d6b82ea8`.
+- `/tmp/claude-1000/-home-joaquimdp-Documentos-git--maestri-floors-educaia--spectelas-do-aluno-e-primeiro-acesso/c0c87f38-10cc-4616-9a3a-b3fcae1b9b2a/scratchpad/fotos/aviso-frase-nova--1366.png`:
+  o mesmo passo com a região do aviso rolada até a frase nova. Ela aparece entre "Quem dá a aula acompanha como você usa o Tutor." e
+  "A coordenação vê os números da turma toda.", e a frase antiga não aparece na página (contagem 0).
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF1 a RF12 | ATENDIDO | sem mudança desde a rodada 3 | idem. Desta rodada: W1 (`e2e/escola-montada.spec.ts:63`) e `e2e/roteiro-da-demonstracao.spec.ts:110`, que passa pelas três introduções e por Tarefas, verdes nos dois projetos | O roteiro corrigido descreve RF2 (o aluno cai na introdução e depois no Início), RF6 (Tarefas, "Para fazer") e RF8 (a comemoração, `FALA_DA_ENTREGA`, `atividade.ts:54`) como o código faz |
+| RF13 | ATENDIDO | sem mudança | idem | O roteiro diz "os três primeiros não se pulam", como `textos-da-introducao.ts` (`obrigatorio: true`) |
+| RF14 | ATENDIDO | `aviso-de-privacidade.ts:39` (`FRASE_DO_AVISO_DE_ATENCAO = FRASE_DO_AVISO_AO_PROFESSOR`), `packages/shared/src/tutor/sinal.ts:38` | `textos-da-introducao.test.ts`: a frase exata (`:56`), "uma só, a do shared" (`:73`), "sem tempo hipotético" (`:77`) e o teto de 15 palavras, que já existia. A frase tem 15 palavras. Rodados: 535 verdes nos dois arquivos. Mutação 3 | Fotos acima. A frase diz o que o código faz: o professor recebe o sinal `atencao_humana` sem conteúdo (`supervisao.service.ts:10-15`), e `supervisao.repository.ts:83` não lê `mensagem_tutor.texto`. Em `tutor.controller.ts` as rotas `conversa` e `memoria` são `próprio`. Nenhuma rota entrega a conversa de um aluno ao professor, então "não vê o que você escreveu" é verdade hoje. O comentário da constante lista os dois gatilhos que a obrigam a mudar |
+| RF15 a RF18 | ATENDIDO | sem mudança | idem | O roteiro diz "quatro passos" e "Pular" para a professora e para a coordenação, como `FALAS_DA_INTRODUCAO_DO_PROFESSOR` e `falasDaIntroducaoDaCoordenacao` (quatro falas cada uma). A coordenação termina no Painel, como `passarPelaIntroducaoDaCoordenacao` (`esperarPainel`) |
+| RF19 | ATENDIDO | sem mudança | idem | A mensagem fixa continua dizendo que é uma IA e não se passa por pessoa (`turno-do-tutor.test.ts:340-345`, rodado) |
+| RF20 | ATENDIDO | sem mudança desde a rodada 3 | `e2e/aluno-atividade.spec.ts:575` e `:622` (C2), rodados nos dois projetos: verdes | O `vitrine.ts foto` do passo 3 diz "Nenhuma tela rola a 1366 × 768" |
+| RF21 | ATENDIDO | — | Diff dos testes de `3c60f99a` a `d6b82ea8`: nenhum `.skip`, `.only` nem `fixme`. O caso das três voltas do convite virou três casos, um por volta, com o corpo e as asserções iguais. O `unroute` do fim saiu, mas cada caso tem a própria página. Os dois casos do material entram pela API com o segundo fator e mantêm as asserções. O precondicional "a linha aparece antes do `goto`" saiu do `:499`, porque o `goto` agora é a primeira carga. O título "o id que a escola não tem" virou "o id que não existe", e com isso o título não promete mais isolamento: quem o prova é o `:527`, que não mudou e rodou verde. A asserção da mensagem fixa trocou "sem o que você escreveu" por "não vê o que você escreveu", com a mesma força, e ganhou dois casos. Nenhum arquivo de `paginas/` mudou | A esteira é conferida no fechamento |
+
+Provas de mutação desta rodada (unidade, sem reconstruir a web; a árvore terminou limpa, com
+`git checkout -- <arquivo>`, e os dois arquivos voltaram a 535 verdes depois de restaurar):
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF14 e regra 70, 4a (mensagem fixa do assunto delicado) | `FRASE_DO_AVISO_AO_PROFESSOR` trocada pela redação antiga em `MENSAGEM_DE_ASSUNTO_DELICADO` (`turno-do-tutor.ts:87`) | `turno-do-tutor.test.ts`: "as duas mensagens dizem que é uma IA…", "as duas mensagens fixas terminam na frase do aviso ao professor…" e "a última linha das mensagens fixas não é condicional…" (3 vermelhos) |
+| RF14 (mensagem fixa de risco à vida) | a linha `FRASE_DO_AVISO_AO_PROFESSOR` tirada de `MENSAGEM_DE_RISCO_A_VIDA` (`turno-do-tutor.ts:94`) | os mesmos 3 casos de `turno-do-tutor.test.ts` |
+| RF14 (aviso da introdução) | `FRASE_DO_AVISO_DE_ATENCAO` de volta ao texto literal antigo (`aviso-de-privacidade.ts:39`) | `textos-da-introducao.test.ts`: "diz quem vê: em assunto pessoal difícil…" e "o aviso de atenção é a frase do aviso ao professor do shared…" (2 vermelhos) |
+
+A 2 e a 3 rodaram juntas, porque estão em arquivos e testes diferentes: foram 5 vermelhos no total, 3 do nucleo e 2 da web. As oito
+mutações das rodadas 1 a 3 valem, porque o código delas não mudou.
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regras de negócio, os 14 pontos e as cinco "valem ainda" | cumpridas | Rodadas 1 a 3. "Uma formulação só" vale agora também para o aviso ao professor: uma constante, nos dois lugares (mutações desta rodada) |
+| Regra: o agente não se passa por pessoa (D58); D36 | cumprida | A mensagem fixa mantém "eu sou uma inteligência artificial", o 188 vem primeiro no risco à vida e não há conselho (`turno-do-tutor.test.ts:337-348`, rodado) |
+| Bordas do PRD §7 | cobertas | Rodadas 1 a 3. O código delas não mudou |
+| Pronto: o aluno faz tudo pelos lugares novos, com "Sair" à vista e a faixa presa | cumprido | Rodadas 1 a 3. Nesta rodada: o roteiro e o W1, verdes |
+| Pronto: nada de colega, sequência, pontos ou ranking | cumprido | RF10, sem mudança |
+| Pronto: introdução uma vez, pulável onde não é aviso, revisível; aviso em linguagem de 11 anos | cumprido | Rodada 1. A frase nova tem 15 palavras e nenhum termo jurídico (teste do teto, rodado). Ver MN3 sobre "Em assunto pessoal difícil" para 11 anos |
+| Pronto: e2e do aluno e das páginas públicas nos dois projetos | cumprido no que rodei | 84 casos nos dois projetos. A suíte inteira é da esteira |
+| Pronto: os 21 RF com evidência | cumprido | Seção 1 |
+| Pronto: 150 kB de entrada e 30 kB por tela | cumprido | O `size-limit` passou nas duas execuções do e2e desta rodada |
+| Pronto: os seis documentos atualizados e as pendências do aviso fechadas nos três | cumprido | `docs/aia/tutor.md` (pendência 12, com a frase nova e os dois gatilhos) e a Tech Spec §7 foram atualizados. `docs/lgpd.md` e `docs/conformidade-mec.md` não citavam a frase. Fora dos seis: o roteiro, ver MA1 (resolvido) e MN1 |
+| Pronto: esteira verde no último commit que alterou código | esteira: conferida no fechamento | — |
+| MA1 da rodada 3: o roteiro da demonstração | resolvido | `docs/roteiro-da-demonstracao.md`: 2.2 (`:112-114`), 2.8 (`:137-139`), 2.12 (`:148-150`), 5.2 (`:196-197`), 5.3 (`:200-202`) e 7.2 (`:223`). `grep -c introdu` dá 3. Cada passo bate com o spec: `passarPelaIntroducaoDaCoordenacao` (`:186`) seguido de "IA" (`:187`), `passarPelaIntroducaoDoProfessor` (`:282`) antes de "Confirme suas turmas", `passarPelaIntroducaoDoAluno` (`:336`), a região "Para fazer" (`:447`) e "Atividade enviada" com a espera (`:468-470`). O spec rodou verde nos dois projetos (1,4 min) |
+| Os três casos do censo | resolvidos | Rodados nos dois projetos. `convite.spec.ts:416`, as três voltas: 7,7 a 8,3 s no `chromebook` e 8,7 a 9,5 s no `celular` (antes, 27,1 a 28,9 s no `celular`). `material.spec.ts:499` e `:514`: 7,6 a 8,5 s (antes, 27,1 a 27,8 s). Todos abaixo de um terço do prazo de 30 s. No mesmo arquivo, o `:527` (`test.slow()`, isolamento) levou 35,1 s de 90 s |
+| C2 (rodadas 2 e 3) e W1 | seguem resolvidos | `aluno-atividade.spec.ts:575` e `:622`: 11,7 a 12,6 s, verdes. W1: 43,5 s e 45,9 s, verde nos dois projetos |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint` | não rodados: escopo da funcionalidade completa (esteira) |
+| Unidade da mensagem fixa e do aviso | ✅ `npx vitest run --project unidade` em `turno-do-tutor.test.ts` e `textos-da-introducao.test.ts`: 535 passaram (antes e depois das mutações) |
+| E2E dos casos do censo, do C2 e do W1 (`chromebook` e `celular`) | ✅ `convite`, `material`, `aluno-atividade` e `escola-montada`: 82 passaram (3,8 min) |
+| E2E do roteiro da demonstração (`chromebook` e `celular`) | ✅ 2 passaram (1,4 min) |
+| Mutações | ❌ como esperado com a mutação (3 vermelhos, e depois 5). ✅ depois de restaurar |
+| Esteira do GitHub | esteira: conferida no fechamento. Não entra no veredito |
+| Revisões com veto registradas e aprovadas | ✅ `2026-10-26-roteiro-da-demonstracao-depois-da-x4`: `frontend-reviewer`, `test-engineer` e `revisor-geral` aprovaram na 1ª, com `**Sem mutação:**` e o motivo (só texto de `docs/`). `2026-10-26-mensagem-fixa-avisa-o-professor`: os 8 obrigatórios com duas rodadas. O `pedagogia-reviewer` pediu ajustes na 1ª, e na 2ª os oito aprovaram. `2026-10-26-tres-casos-do-e2e-perto-do-prazo`: os seis aprovaram na 1ª, e o `test-engineer` e o `revisor-geral` também na 2ª. Os três commits de código levam `(correção …)`. Os commits "Registra o estado…" e os merges mexem só em `tasks/` e no `TODO.md`. `git log origin/develop..HEAD --grep='^Fora do processo:'` não traz nada. A Tech Spec §7 registra a mudança da frase, com a correção que a substitui |
+
+Dependências: o `node_modules` não era anterior ao `package-lock.json`, então não precisei rodar `npm ci`. A web do ambiente foi
+reconstruída pelo `tools/ci/e2e.ts` com o código de `d6b82ea8`, antes das fotos. As mutações foram feitas depois dos dois e2e
+terminarem, para nenhum build pegar o arquivo mutado.
+
+### 4. Achados
+
+**Críticos**
+
+- Nenhum.
+
+**Maiores**
+
+- Nenhum. O MA1 da rodada 3 está resolvido (seção 2).
+
+**Menores** (não mudam o veredito; o Orquestrador os leva ao `TODO.md`)
+
+- M1 a M12 das rodadas 1 a 3 seguem como estavam. A M4 (a mensagem fixa) **fecha nesta rodada**, com a decisão A do Joaquim.
+- MN1. `docs/roteiro-da-demonstracao.md:115` (2.3) manda a coordenação a **Estrutura**, mas desde a X2 o lugar se chama **Escola**,
+  que abre na aba Turmas (`navegacao.ts`, `Escola.tsx:10`). E o `:113` (2.2) e o `:257` (9.1) dizem "**IA**" como se fosse um lugar,
+  quando o lugar é **Registros**, que abre na aba IA (`Registros.tsx:11`). O "IA" do 2.2 e do 9.1 foi escrito por esta correção, porque
+  o spec diz `irPelaCoordenacao(…, 'IA')`, que vai a Registros (`e2e/__fixtures__/coordenacao.ts:50`). Quem apresentar pelo texto
+  não acha "Estrutura" nem "IA" na lateral, mas acha o caminho em um clique: Escola já abre em "Comece pelo ano letivo", e
+  Registros já abre na Governança. Classifiquei como menor por dois motivos. O "Estrutura" é desenho da X2, fora do escopo desta
+  funcionalidade. E nos dois casos a pessoa chega à tela pelo lugar seguinte sem errar nada. O `revisor-geral` (correção do roteiro,
+  rec. 3) apontou o 2.3, o 2.5 e o 2.7, com destino "correção própria do roteiro, a pedir ao Orquestrador". Esse destino não está no
+  `estado.md` nem no `TODO.md`. **Correção sugerida:** uma correção de texto que confira cada passo da coordenação contra o spec. "Escola" (aba
+  Turmas) no 2.3 a 2.7, "Registros" (aba IA) no 2.2 e no 9.1, e o "Alocação" do 2.7 trocado por "Acrescentar turma"
+  (`spec.ts:254-259`). Dono: Orquestrador, que a abre ou a leva ao `TODO.md`, antes da próxima demonstração.
+- MN2. A fixture `MENSAGEM_FIXA` (`e2e/__fixtures__/aluno.ts:250-254`) não termina na frase do aviso ao professor, e nenhum e2e
+  confere essa frase no cartão do Tutor. O `TODO.md` já registra isso, na entrada do aviso de privacidade, com "Falta". Só lembro
+  que, até lá, a frase que o aluno lê na hora só tem prova na unidade. Dono: quem tocar `e2e/aluno-tutor.spec.ts`.
+- MN3. Recomendações da correção da mensagem fixa que foram para a pendência 12 de `docs/aia/tutor.md`. "Em assunto pessoal difícil" é
+  abstrato para 11 anos (`pedagogia-reviewer`). "Seu professor" aparece logo abaixo de "Quem dá a aula acompanha…", e a foto
+  `aviso-frase-nova--1366.png` mostra as duas lado a lado. E "não vê o que você escreveu" talvez precise ressalvar o acesso auditado
+  da coordenação ao atender pedido do titular (`privacy-guardian`). Todas têm destino. Registro que a foto confirma a primeira
+  e a segunda. Dono: Joaquim e Gabriel, na revisão de texto.
+- MN4. A recomendação do `revisor-geral` (correção da mensagem fixa, 2ª) de gerar de novo o `apps/web/dist` antes de qualquer
+  demonstração foi deixada como "aviso ao Orquestrador", e esse aviso não está no `estado.md`. Dono: Orquestrador.
+- MN5. `docs/mvp-rapido.md:245-246` ainda diz que a mensagem fixa diz "seu professor" e que "é rascunho da D36, esperando o
+  Joaquim". A decisão foi tomada, e a mesma expressão agora também aparece no aviso da introdução. É documento histórico do MVP. Uma
+  nota apontando a correção basta. Dono: quem tocar `docs/mvp-rapido.md`.
+- MN6. Recomendações das três correções com destino "retro": a do `forEach` por causa da contagem de `tools/ci/duracao-do-e2e.ts`
+  (correção do censo, `revisor-geral`) e a do roteiro no critério de pronto das specs de tela (correção do roteiro,
+  `frontend-reviewer`). Dono: Arquiteto, na retro da X4.
+
+**Positivos**
+
+- A frase do aviso ao professor vem do `@educa/shared`, o único ponto comum entre a web e a camada de IA. O comentário dela lista os
+  dois gatilhos que a obrigam a mudar: uma rota que abra a conversa ao professor, e o F9 com acesso auditado ao conteúdo. A promessa
+  ao aluno fica presa ao que o código faz.
+- A correção do censo mediu antes de escolher: envolver só o `goto` em `carregarSemRedeLenta` não bastava, e o tempo estava na entrada
+  pela tela. O documento registra o passo intermediário que não funcionou.
+- O caso do material deixou de prometer, no título, o isolamento que ele não prova, e o documento aponta o caso que prova (`:527`).
+
+### 5. Conclusão
+
+APROVADA. Os 21 RF estão atendidos, com código, teste efetivo (três mutações vermelhas nesta rodada e oito nas anteriores) e foto
+lida. O critério de pronto está cumprido, menos a esteira, que é do fechamento. O MA1 da rodada 3 foi resolvido. A mensagem fixa e o
+aviso dizem a mesma frase, e ela é verdadeira no código. Os três casos do censo ganharam folga de dois terços do prazo, com a mesma
+cobertura. Todos os testes que rodei passaram, e o processo está em ordem. Os menores vão ao `TODO.md`, e o primeiro deles, o MN1, é
+o que vale fazer antes da próxima demonstração.
+
+### 6. Pendências herdadas
+
+| Pendência | Dono | Arquivo | Destino |
+|---|---|---|---|
+| M1 a M3, M5 a M12 das rodadas 1 a 3 | os das rodadas 1 a 3 | os das rodadas 1 a 3 | `TODO.md` (já no `estado.md`) |
+| M4 da rodada 1 (a mensagem fixa) | — | `packages/nucleo/src/ia/tarefas/turno-do-tutor.ts` | fechada nesta rodada |
+| MN1: "Estrutura" e "IA" no roteiro da coordenação | Orquestrador | `docs/roteiro-da-demonstracao.md:113`, `:115`, `:257` e o 2.5 a 2.7 | correção de texto ou `TODO.md` |
+| MN2: a fixture `MENSAGEM_FIXA` sem a frase | quem tocar o e2e do Tutor | `e2e/__fixtures__/aluno.ts`, `e2e/aluno-tutor.spec.ts`, `e2e/aluno-fluxo.spec.ts` | já no `TODO.md` |
+| MN3: a redação da frase para 11 anos, "seu professor" e "quem dá a aula", e a ressalva da coordenação | Joaquim e Gabriel | `packages/shared/src/tutor/sinal.ts` | `docs/aia/tutor.md`, pendência 12 (já registrada) |
+| MN4: gerar de novo o `apps/web/dist` antes da demonstração | Orquestrador | — | `TODO.md` ou o roteiro |
+| MN5: o item 34 do `docs/mvp-rapido.md` | quem tocar o documento | `docs/mvp-rapido.md:245-246` | `TODO.md` |
+| MN6: o `forEach` da duração do e2e e o roteiro no critério de pronto | Arquiteto | `tools/ci/duracao-do-e2e.ts`, template de tarefas | retro da X4 |
+| `9_task.md:90` e `validacao.md:452` com a redação antiga da frase | — | — | registro histórico, sem ação (o `estado.md` já anota) |
+| Commits `Fora do processo:` com código da spec | — | — | nenhum |
+
 ## Rodada 3 — 26/10/2026
 
 **Escopo:** funcionalidade completa (revalidação depois da correção do C2 e da correção do W1)
