@@ -21,7 +21,7 @@ import {
   esperarInicioDoAluno,
 } from './__fixtures__/casca.ts'
 import { cliquesAte, irPelaCoordenacao, paginaNaoRola, type TelaDaCoordenacao } from './__fixtures__/coordenacao.ts'
-import { expect, test } from './__fixtures__/perfis.ts'
+import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlocacaoDoProfessor, criarAlunoComMatricula, criarEquipeComSenha, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -619,7 +619,10 @@ test.describe('recomeço da tela', () => {
   test('troca de escola pelo seletor, de "Início" para "Início": a gaveta não fica aberta por cima', async ({ page, hasTouch }) => {
     const emA = await criarEquipeComSenha()
     const emB = await criarUsuarioEmOutraEscola(emA.contaId)
-    await page.goto('/entrar')
+    // A primeira carga não afirma nada sobre o tempo de baixar `/entrar`: o caso é sobre a gaveta na troca de escola. Na rede do
+    // perfil ela travou na esteira, com o documento 200 e 14 pedidos que nunca saíram do navegador (execução 40332902053; a mesma
+    // trava de `2026-10-17-casca-carregando-estoura-o-goto`, em outro caso). A entrada e a troca seguem na rede do perfil.
+    await carregarSemRedeLenta(page, () => page.goto('/entrar'))
     await entrarPorEmail(page, emA, hasTouch)
     const escolherA = page.getByRole('button', { name: `${emA.escolaNome} · professor` })
     if (hasTouch) await escolherA.tap({ timeout: PRAZO_DA_ENTRADA_MS })
