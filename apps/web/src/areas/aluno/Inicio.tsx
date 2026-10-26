@@ -23,7 +23,7 @@ const LEITURA_DO_INICIO = { staleTime: 60_000, refetchOnWindowFocus: false } as 
  */
 function TarefaParaFazer({ atividade }: { atividade: MinhaAtividade }) {
   return (
-    <li className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4">
+    <li className="flex min-w-0 flex-col gap-3 rounded-cartao border border-linha bg-superficie p-4 md:flex-row md:items-start md:justify-between">
       <div className="flex min-w-0 flex-col gap-1">
         <Link to={caminhoDaAtividadeDoAluno(atividade.id)} className="flex min-h-11 min-w-0 items-center text-base font-semibold text-tinta hover:underline">
           <span className="min-w-0 break-words">{atividade.titulo}</span>
@@ -31,7 +31,7 @@ function TarefaParaFazer({ atividade }: { atividade: MinhaAtividade }) {
         <p className="min-w-0 text-sm break-words text-sutil">{resumoDaAtividade(atividade)}</p>
         {atividade.avaliativa && <p className="min-w-0 text-sm break-words text-apoio">{AVISO_DA_AVALIACAO}</p>}
       </div>
-      <Link to={caminhoDoTutorNaAtividade(atividade.id)} className={`${CLASSES_DO_LINK_SECUNDARIO} self-start`}>
+      <Link to={caminhoDoTutorNaAtividade(atividade.id)} className={`${CLASSES_DO_LINK_SECUNDARIO} self-start md:shrink-0`}>
         Pedir ajuda ao Tutor
       </Link>
     </li>

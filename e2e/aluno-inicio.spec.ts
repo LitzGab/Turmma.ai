@@ -66,6 +66,61 @@ test.describe('o Início do aluno', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
+  test('com três tarefas "Para fazer", o Início cabe em 1366 × 768 (RF20), com "Pedir ajuda ao Tutor" na linha do título; abaixo de 768 px o link desce para baixo do título', async ({ page, hasTouch }) => {
+    test.slow()
+    const api = await simularAluno(page)
+    // As três avaliativas: cada cartão leva a linha de aviso a mais, que é o pior caso de altura do Início.
+    api.atividades = [1, 2, 3].map((numero) => minhaAtividade({ titulo: `Lista sintética ${String(numero)}`, avaliativa: true }))
+    const aluno = await criarAlunoComMatricula()
+    await colocarAlunoNaTurma(aluno)
+    await entrarComoAluno(page, aluno, hasTouch)
+
+    const ajudas = principal(page).getByRole('link', { name: 'Pedir ajuda ao Tutor' })
+    await expect(ajudas).toHaveCount(3, { timeout: PRAZO_DA_TELA_MS })
+    await expect(principal(page).getByRole('link', { name: 'Ver todas as tarefas' })).toBeVisible()
+    const largura = page.viewportSize()?.width ?? 0
+    const altura = page.viewportSize()?.height ?? 0
+
+    const titulo = await principal(page).getByRole('link', { name: 'Lista sintética 1' }).boundingBox()
+    const ajuda = await ajudas.first().boundingBox()
+    if (titulo === null || ajuda === null) throw new Error('o título e o "Pedir ajuda ao Tutor" da primeira tarefa precisam estar na tela')
+    if (largura >= 768) {
+      // Na linha do título: o link fica ao lado dele, não abaixo.
+      expect(ajuda.x).toBeGreaterThanOrEqual(titulo.x + titulo.width - 1)
+      expect(ajuda.y).toBeLessThan(titulo.y + titulo.height)
+      // A página não rola: a altura medida cabe na janela (1366 × 768 no Chromebook).
+      expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(altura)
+    } else {
+      // No celular a página rola, e o link desce para baixo do título, na largura do cartão.
+      expect(ajuda.y).toBeGreaterThanOrEqual(titulo.y + titulo.height - 1)
+    }
+    expect(await larguraExcedente(page)).toBe(0)
+  })
+
+  test('com título longo de várias palavras, a 1366 px, "Pedir ajuda ao Tutor" fica numa linha só, à direita do título, e a página não rola de lado', async ({ page, hasTouch }) => {
+    test.slow()
+    // A largura é a da janela de teste do computador, nos dois projetos: o ramo em linha só existe a partir de 768 px.
+    await page.setViewportSize({ width: 1366, height: 768 })
+    const api = await simularAluno(page)
+    const tituloLongo = 'Exercícios de estequiometria e balanceamento de equações químicas do capítulo três, parte dois, para entregar até a sexta-feira da semana que vem'
+    api.atividades = [minhaAtividade({ titulo: tituloLongo })]
+    const aluno = await criarAlunoComMatricula()
+    await colocarAlunoNaTurma(aluno)
+    await entrarComoAluno(page, aluno, hasTouch)
+
+    const ajuda = principal(page).getByRole('link', { name: 'Pedir ajuda ao Tutor' })
+    await expect(ajuda).toHaveCount(1, { timeout: PRAZO_DA_TELA_MS })
+    const titulo = await principal(page).getByRole('link', { name: tituloLongo }).boundingBox()
+    const caixa = await ajuda.boundingBox()
+    if (titulo === null || caixa === null) throw new Error('o título e o "Pedir ajuda ao Tutor" precisam estar na tela')
+    // O título ocupa mais de uma linha, para o caso valer: sem isso o link nunca seria apertado.
+    expect(titulo.height).toBeGreaterThan(ALVO_DE_TOQUE_PRINCIPAL_PX + 1)
+    // O link continua numa linha só (44 px de alto) e ao lado do título, não abaixo.
+    expect(caixa.height).toBeLessThanOrEqual(ALVO_DE_TOQUE_PRINCIPAL_PX + 1)
+    expect(caixa.x).toBeGreaterThanOrEqual(titulo.x + titulo.width - 1)
+    expect(await larguraExcedente(page)).toBe(0)
+  })
+
   test('"Sair" está à vista no Início e tem o tamanho de toque dos vizinhos, a 360 px e no computador', async ({ page, hasTouch }) => {
     test.slow()
     const aluno = await criarAlunoComMatricula()
