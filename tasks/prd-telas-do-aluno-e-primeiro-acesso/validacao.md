@@ -1,5 +1,128 @@
 # Validação — telas-do-aluno-e-primeiro-acesso (X4)
 
+## Rodada 5 — 26/10/2026
+
+**Escopo:** funcionalidade completa. É uma revalidação depois de uma correção só, a `2026-10-26-areas-entrar-estoura-o-prazo` (`19d2f306`),
+que veio da esteira de `d6b82ea8` (execução 40332902053, `e2e/areas.spec.ts:619` [celular]).
+**Commit validado:** `39896f89` (o último que mudou um arquivo fora de `tasks/` é `19d2f306`, e mudou só um teste)
+**Veredito: APROVADA**
+
+Desde a rodada 4 (`d6b82ea8`), nada mudou em `apps/`, `packages/`, `infra/`, `tools/` nem `docs/`
+(`git diff --stat d6b82ea8 39896f89 -- apps packages infra tools docs` volta vazio). A única mudança fora de `tasks/` está em
+`e2e/areas.spec.ts`: o import de `carregarSemRedeLenta` (`:24`) e a primeira carga do caso "troca de escola pelo seletor" (`:625`), que
+passou de `page.goto('/entrar')` a `carregarSemRedeLenta(page, () => page.goto('/entrar'))`, com um comentário (`:622-624`) que cita a
+execução e a correção de 17/10. A entrada por e-mail, a escolha de escola, a troca pelo seletor e as quatro asserções (`:633-638`)
+continuam na rede do perfil e não mudaram. Li `carregarSemRedeLenta` (`e2e/__fixtures__/perfis.ts:93-102`). Ele tira só a rede, a CPU
+continua limitada, e a rede do perfil volta num `finally`. Numa página sem perfil, ele falha alto, e `e2e/pecas-galeria.spec.ts:174` e
+`:178` provam isso. O espaço que os seis revisores viram faltando em `:627` na 1ª rodada não está no commit: `escolherA = page…` está
+igual a antes, e o `revisor-geral` aprovou na 2ª, depois do ajuste. Os 21 RF continuam ATENDIDOS, com a evidência e as onze mutações das
+rodadas 1 a 4, porque o código delas não mudou. O `areas.spec.ts` inteiro rodou verde nos dois projetos, e as fotos desta rodada mostram
+as telas do aluno como na rodada 4. Não há crítico nem maior.
+
+### 1. RF a RF
+
+Fotos desta rodada, tiradas da vitrine com a web construída a partir de `39896f89` pelo `tools/ci/e2e.ts`. Estão em `.processo/vitrine/`:
+`aluno--aluno-{inicio,atividades,eu}--{computador,celular}.png` (escola cheia) e `vazia--aluno--aluno-{inicio,eu}--{computador,celular}.png`.
+O comando terminou em "Nenhuma tela rola a 1366 × 768" nas duas escolas. Li como imagem o Início (computador; vazia, celular), Tarefas
+(computador) e Eu (computador e celular).
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF1 | ATENDIDO | sem mudança desde a rodada 1 (`areas/navegacao.ts`) | `e2e/areas.spec.ts:294` ("o aluno vê Início, Tarefas e Eu…"), rodado nesta rodada: verde nos dois projetos (11,4 s e 12,4 s) | Fotos: a lateral (computador) e a barra de baixo (celular) com Início, Tarefas e Eu, sem "Avisar um adulto". Privacidade é uma linha de Eu |
+| RF2 | ATENDIDO | sem mudança | `e2e/areas.spec.ts:361` ("os endereços de hoje do aluno abrem as telas de hoje…"), rodado: verde nos dois projetos | — |
+| RF3 | ATENDIDO | sem mudança | idem às rodadas 1 a 3. `e2e/areas.spec.ts:619` mantém a asserção do "Sair" (`:638`) | Fotos: "SAIR" à vista na lateral e no topo do celular |
+| RF4, RF5 | ATENDIDO | sem mudança | idem | Foto do Início: a onça com "Tutor" e o selo "IA", "Oi, Aluno.", a faixa "Quem dá a aula acompanha como você usa o Tutor." e o vazio de "Para fazer" (escola vazia e cheia sem tarefa aberta) |
+| RF6 | ATENDIDO | sem mudança | idem | Foto de Tarefas: Para fazer, Entregues e Corrigidas, com ladrilho da matéria, estado em texto e linha inteira clicável |
+| RF7, RF8 | ATENDIDO | sem mudança desde a rodada 3 | idem (rodadas 3 e 4) | — |
+| RF9, RF10 | ATENDIDO | sem mudança | idem | Fotos de Eu: a turma, a série e a escola na linha de apoio, "Como estou indo" com "N de 4 certas" e "Para rever", e as quatro linhas. Não aparece colega, média, posição, sequência, pontos nem prêmio |
+| RF11 a RF19 | ATENDIDO | sem mudança desde a rodada 4 | idem | — |
+| RF20 | ATENDIDO | sem mudança | idem | "Nenhuma tela rola a 1366 × 768", nas duas escolas. `size-limit` desta execução: a entrada tem 92,12 kB de 150 kB |
+| RF21 | ATENDIDO | — | Diff dos testes de `d6b82ea8` a `39896f89`: um arquivo, `e2e/areas.spec.ts`, com +5 e −2 linhas. Nenhum `.skip`, `.only` nem `fixme`, nenhuma asserção mudou e nenhum caso foi removido. Nenhum arquivo de `paginas/` mudou | Só a primeira carga do caso saiu da rede do perfil, e o caso não afirmava nada sobre ela. A esteira é conferida no fechamento |
+
+Provas de mutação desta rodada: **nenhuma**. Esta rodada não mudou código de produção, e a mudança de teste só tira uma causa de
+ambiente. O documento da correção diz isso (seção "Mutações"), e o `test-engineer` concorda: tirar o `carregarSemRedeLenta` não deixa
+nenhum teste vermelho. As onze mutações das rodadas 1 a 4 valem, porque o código delas é o mesmo.
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regras de negócio, os 14 pontos e as cinco "valem ainda" | cumpridas | Rodadas 1 a 4. O código delas não mudou |
+| Bordas do PRD §7 | cobertas | Rodadas 1 a 4. O código delas não mudou |
+| Pronto: o aluno faz tudo pelos lugares novos, com "Sair" à vista e a faixa presa | cumprido | Rodadas 1 a 4. Nesta rodada, as fotos e o `areas.spec.ts` |
+| Pronto: nada de colega, sequência, pontos ou ranking | cumprido | RF10, sem mudança. As fotos desta rodada não mostram nada disso |
+| Pronto: introdução uma vez, pulável onde não é aviso, revisível; aviso em linguagem de 11 anos | cumprido | Rodadas 1 e 4 |
+| Pronto: e2e do aluno e das páginas públicas nos dois projetos | cumprido no que rodei | `e2e/areas.spec.ts`: 52 casos verdes (26 por projeto, 1,9 min). A suíte inteira roda na esteira |
+| Pronto: os 21 RF com evidência | cumprido | Seção 1 |
+| Pronto: 150 kB de entrada e 30 kB por tela | cumprido | O `size-limit` passou nesta execução: entrada com 92,12 kB, aluno com 1,87 kB e peças com 30,01 kB de 40 kB |
+| Pronto: os seis documentos atualizados e as pendências do aviso fechadas | cumprido | Rodada 4. Nenhum documento mudou depois dela |
+| Pronto: esteira verde no último commit que alterou código | esteira: conferida no fechamento | — |
+| A correção do `areas.spec.ts:619` | resolvida no que se pode provar | O caso rodou verde nos dois projetos: 10,2 s no `chromebook` e 10,8 s no `celular`, abaixo da metade do prazo de 30 s. Antes, nas execuções verdes da esteira, levava 15,0 s. A trava não se reproduz: a correção rodou o caso 15 vezes sem ela e 40 vezes com ela, sem vermelho. O documento diz o que a correção **não** prova. A causa, a rede emulada na primeira carga, não foi demonstrada, e os outros 104 `page.goto('/entrar')` continuam expostos. Isso tem destino: a retro, com o gatilho "terceira ocorrência, investigar no harness `perfis.ts`" escrito no documento e no `estado.md` |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint` | não rodados: o escopo é a funcionalidade completa, e eles rodam na esteira |
+| E2E do arquivo que mudou, que também é a evidência do RF1 e do RF2 (`chromebook` e `celular`) | ✅ `node tools/ci/e2e.ts --manter-ambiente e2e/areas.spec.ts`: 52 passaram (1,9 min), com o build da web, o `size-limit` e o compose de `39896f89` |
+| Mutações | nenhuma nesta rodada (seção 1) |
+| Esteira do GitHub | esteira: conferida no fechamento. Não entra no veredito |
+| Revisões com veto registradas e aprovadas | ✅ `2026-10-26-areas-entrar-estoura-o-prazo`: os seis obrigatórios do pedido (`test-engineer`, `revisor-geral`, `infra-guardian`, `tenancy-guardian`, `privacy-guardian` e `conformidade-reviewer`) aprovaram na 1ª. O `revisor-geral` também aprovou na 2ª, depois de o espaço da `:627` voltar. O commit leva `(correção 2026-10-26-areas-entrar-estoura-o-prazo)` e a linha de revisões. O `39896f89` só mexe no `estado.md`. `git log origin/develop..HEAD -i --grep='^Fora do processo:'` não traz nada. A Tech Spec não precisa de registro: a correção não muda desenho |
+
+Dependências: o `node_modules` não era anterior ao `package-lock.json`, então não precisei rodar `npm ci`. Terminei com a árvore limpa:
+`git status --short` volta vazio antes desta escrita.
+
+### 4. Achados
+
+**Críticos**
+
+- Nenhum.
+
+**Maiores**
+
+- Nenhum.
+
+**Menores** (não mudam o veredito; o Orquestrador os leva ao `TODO.md`)
+
+- M1 a M12 e MN1 a MN6 das rodadas 1 a 4 seguem como estavam.
+- MN7. Na auditoria da correção, o `tenancy-guardian` rodou `npx biome format`. Como o projeto não tem o biome, o `npx` baixou do npm um
+  pacote de terceiros sem relação com o projeto (`biome` 0.3.3) e o executou no checkout da linha 1. Quem registra isso é o próprio
+  revisor (`tasks/correcoes/achados/2026-10-26-areas-entrar-estoura-o-prazo.md`, fim da seção do `tenancy-guardian`). O pacote não
+  formatou nada e a árvore não mudou, mas um revisor rodou código desconhecido baixado da rede na máquina que tem o repositório público
+  e as credenciais do GitHub. Não é achado da funcionalidade. É de processo e de segurança do ambiente. **Correção sugerida:** os
+  agentes revisores (`.claude/agents/*.md`, que têm `Bash`) só usam `npx` em pacote do `package-lock.json`, e com `--no-install`. Dono:
+  Arquiteto, na retro da X4.
+- MN8. Três casos de `e2e/areas.spec.ts` passaram de dois terços do prazo de 30 s na máquina, no `celular`: `:699` ("a guarda sem o
+  /v1/eu", 23,1 s), `:275` (22,1 s) e `:572` ("segunda pessoa", 21,6 s). Nenhum deles é da X4 nem tem `test.slow()`. O `:396` leva 27,1 s,
+  mas tem `test.slow()` e prazo de 90 s. Todos passaram. Registro para o censo do fechamento conferir se já estão entre os 71 acima de
+  2/3. Dono: Orquestrador, no `--censo`.
+- MN9. O bloco da X4 em `ROADMAP.md:434-437` ainda diz "Congelada em 20/10/2026…" e "Espera a X7". O `estado.md` registra que o
+  fechamento já está preparado, com o `[x]`. Só lembro de trocar também essas duas linhas. Dono: Orquestrador, no fechamento.
+
+**Positivos**
+
+- A correção foi ao traço da esteira antes de mudar o teste, e o traço tirou o servidor estático da lista de causas: os 14 pedidos nem
+  saíram do navegador. Ela registrou o que não prova e deixou um gatilho para a terceira ocorrência, em vez de espalhar
+  `carregarSemRedeLenta` pelos 104 outros casos.
+
+### 5. Conclusão
+
+APROVADA. O código de produção é o mesmo da rodada 4, que aprovou os 21 RF com código, teste efetivo e foto. A única mudança tira a
+primeira carga de um caso de e2e da rede emulada e não mexe em nenhuma asserção. Esse arquivo rodou verde inteiro nos dois projetos, e as
+fotos desta rodada confirmam as telas do aluno. O processo da correção está em ordem. A esteira é do fechamento. Os menores novos, MN7 a
+MN9, vão ao `TODO.md` ou à retro.
+
+### 6. Pendências herdadas
+
+| Pendência | Dono | Arquivo | Destino |
+|---|---|---|---|
+| M1 a M3, M5 a M12 e MN1 a MN6 das rodadas 1 a 4 | os das rodadas 1 a 4 | os das rodadas 1 a 4 | `TODO.md` ou retro, como na rodada 4 |
+| A trava da primeira carga em `/entrar`: os outros 104 `page.goto('/entrar')` continuam expostos | Arquiteto | `e2e/__fixtures__/perfis.ts` | retro da X4 (já no `estado.md` e no documento da correção) |
+| MN7: um revisor rodou `npx` de pacote fora do `package-lock.json` | Arquiteto | `.claude/agents/*.md` | retro da X4 |
+| MN8: três casos de `areas.spec.ts` acima de 2/3 do prazo | Orquestrador | `e2e/areas.spec.ts:275`, `:572`, `:699` | censo do fechamento, ou `TODO.md` |
+| MN9: o texto de "congelada" da X4 no roadmap | Orquestrador | `ROADMAP.md:434-437` | fechamento |
+| Commits `Fora do processo:` com código da spec | — | — | nenhum |
+
 ## Rodada 4 — 26/10/2026
 
 **Escopo:** funcionalidade completa. É uma revalidação depois de três correções: a do roteiro da demonstração (MA1 da rodada 3), a da
