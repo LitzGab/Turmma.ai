@@ -2190,7 +2190,7 @@ repetem aqui.
 - [ ] **(X4, Implementador 2) O `-t` do Vitest lê parênteses do nome do teste como regex**: a mutação que filtra por nome com
       parênteses fica "verde" sem rodar caso nenhum. Escapar o nome em `tools/processo/` onde a mutação monta o `-t`, ou exigir
       ao menos um caso rodado (dono: Arquiteto)
-- [ ] **(X4, validação, MN7) Revisor que roda `npx` de pacote fora do projeto baixa e executa código de terceiros**: na correção
+- [x] **(X4, validação, MN7) Revisor que roda `npx` de pacote fora do projeto baixa e executa código de terceiros** (feito em 26/10/2026, correção `2026-10-26-npx-sem-instalar`, `e79db867`): na correção
       `2026-10-26-areas-entrar-estoura-o-prazo`, o `tenancy-guardian` rodou `npx biome format`, e o `npx` baixou do npm o pacote
       `biome` 0.3.3, sem relação com o projeto, e o executou no checkout da linha 1 (a árvore não mudou). Os agentes revisores
       (`.claude/agents/*.md`, com `Bash`) só usam `npx` em pacote do `package-lock.json`, e com `--no-install` (dono: Arquiteto, na
