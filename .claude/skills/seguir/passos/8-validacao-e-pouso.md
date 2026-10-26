@@ -19,7 +19,9 @@ mesmo ponto: a validação aprovada sobre o último commit que alterou código, 
 Ainda rodando: espere com o `gh run watch` que a resposta traz, em segundo plano. Vermelha: correção
 (`corrigir`) na branch, e o documento dela diz de qual tarefa foi. **Correção depois da validação muda
 código que o Validador não viu: valide de novo** (o `Validador` reiniciado, rodada nova no topo do
-`validacao.md`), em paralelo com a esteira do commit da correção. Sem GitHub (a resposta diz que não
+`validacao.md`), em paralelo com a esteira do commit da correção. A exceção é a correção que só muda `e2e/`, `tasks/` e
+o `TODO.md`, sem tirar nem mudar asserção: ela passa pela Mesa e pela esteira, e a próxima rodada do Validador, se houver,
+a lê (na X4, as rodadas 5 e 6 validaram de novo um código de produção que não tinha mudado). Sem GitHub (a resposta diz que não
 conseguiu ler), o portão completo local vale no lugar: peça ao `Implementador`, reiniciado no andar
 da spec, `node tools/processo/portao-local.ts --e2e --infra`, em segundo plano e sem alterar arquivo,
 e siga com `node tools/processo/portao-local.ts conferir --completo` respondendo que vale. O merge
@@ -34,8 +36,10 @@ o caso a mais de dois terços do prazo (20 s de 30 s) é a esteira vermelha de u
 ```
 
 Sai **0**: nenhum caso passa de dois terços do prazo; siga. Sai **1**: a lista (arquivo, linha, projeto,
-segundos e prazo); abra uma correção (`corrigir`, passo 10) que encurte ou divida cada caso, com a lista no
-`PEDIDO`, e valide de novo como acima. Sai **2**: não há o que ler (sem execução verde, ou fatia sem
+segundos e prazo). Separe os casos dos arquivos que a spec alterou (`git -C <andar> diff --name-only develop... -- e2e/`):
+para esses, abra uma correção (`corrigir`, passo 10) que encurte ou divida cada caso, com a lista no `PEDIDO`, e valide de
+novo como acima. Os outros são dívida da `develop`: uma linha no grupo dela no `TODO.md`, com o número da execução, sem
+parada; o que passa de 90% do prazo vai ao topo do grupo (na X4, o Joaquim respondeu isso duas vezes). Sai **2**: não há o que ler (sem execução verde, ou fatia sem
 relatório ou com artefato expirado; a saída diz qual e o `gh workflow run` que gera outro): rode de
 novo com a esteira nova, e, sem GitHub, registre em "O que falhou" e siga com o portão local.
 

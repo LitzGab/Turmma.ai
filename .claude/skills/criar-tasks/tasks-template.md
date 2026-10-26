@@ -32,3 +32,6 @@
 
 O que precisa ser verdade para considerar a funcionalidade inteira concluída. Copie do
 `ROADMAP.md` e detalhe.
+
+Spec que muda tela que o `docs/roteiro-da-demonstracao.md` percorre: o roteiro conferido passo a passo contra
+`e2e/roteiro-da-demonstracao.spec.ts`, na tarefa que muda a tela (na X4 e na X2, ficou para a validação).

@@ -193,7 +193,10 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       Semear uma atividade aplicada, uma delas avaliativa e uma com título sem espaço (para a foto do celular mostrar a quebra a
       360 px), antes de o Validador fotografar a spec; a medida de 44 px do título entra junto, com `boundingBox()` no e2e.
       Entra também uma atividade "Para fazer" aberta, para fotografar a questão em letra Maior a 360 px (correção
-      `2026-10-25-enunciado-nao-acompanha-a-letra`, `frontend-reviewer`, 1ª)
+      `2026-10-25-enunciado-nao-acompanha-a-letra`, `frontend-reviewer`, 1ª). **Retro da X4 (M7, aceita em 26/10/2026):** sobe a
+      correção própria antes da próxima spec de tela, com uma tarefa a entregar, o seed "respondeu 0 de 4" com "acertou 3 de 4" (C2)
+      e a lista de Física com habilidade de Química (MN10) juntos: foi a falta da "Para fazer" nas fotos que escondeu o C1 e o C2 da
+      validação da X4 (dono: Orquestrador)
 - [ ] **(Telas do aluno, correção `2026-10-25-enunciado-nao-acompanha-a-letra`) Mais `text-[Npx]` na área do aluno** (`test-engineer`, 1ª):
       o mesmo defeito do enunciado, o tamanho em `px` que não acompanha a letra Grande ou Maior, está em `Toque.tsx:39`, `Aviso.tsx:54`,
       `ui/ia/AssinaturaIA.tsx:34`, `ui/onca/Onca.tsx:124`, `meus-dados/MeusDados.tsx:217` e `MenuDaPessoa.tsx:64`. Corrigir em
@@ -2191,17 +2194,36 @@ repetem aqui.
       `2026-10-26-areas-entrar-estoura-o-prazo`, o `tenancy-guardian` rodou `npx biome format`, e o `npx` baixou do npm o pacote
       `biome` 0.3.3, sem relação com o projeto, e o executou no checkout da linha 1 (a árvore não mudou). Os agentes revisores
       (`.claude/agents/*.md`, com `Bash`) só usam `npx` em pacote do `package-lock.json`, e com `--no-install` (dono: Arquiteto, na
-      retro da X4; origem: validação, rodada 5)
+      retro da X4; origem: validação, rodada 5). **Retro da X4 (M3, aceita em 26/10/2026), correção própria, a primeira a abrir:**
+      `.claude/settings.json` com `"env": { "npm_config_yes": "false" }` (o hook recusa o arquivo fora de tarefa ou correção);
+      testado na retro: `npx cowsay` sai com "npx canceled due to missing packages and no YES option" sem baixar nada, e `npx
+      playwright` e `npx vitest`, do `package-lock.json`, rodam. O `npx skills update -p` pelo Claude passa a pedir `--yes` (dono:
+      Orquestrador; guardiões: `infra-guardian`, `revisor-geral`)
 - [ ] **(X4, correção `2026-10-26-areas-entrar-estoura-o-prazo`) Os outros 104 `page.goto('/entrar')` do e2e seguem expostos à trava
       da primeira carga sob a rede emulada** (2ª ocorrência; a 1ª foi `2026-10-17-casca-carregando-estoura-o-goto`). Na 3ª, o
-      conserto sobe ao harness (`perfis.ts`), em vez de caso a caso (dono: Orquestrador, que vigia a esteira; Arquiteto, na retro)
+      conserto sobe ao harness (`perfis.ts`), em vez de caso a caso (dono: Orquestrador, que vigia a esteira; Arquiteto, na retro).
+      **Retro da X4 (M4):** sem esperar a 3ª; entra na correção em lote "primeira carga do e2e", parte (a), no item do censo abaixo
 - [ ] **(X4, validação, MN10) A vitrine cheia mostra uma lista de Física com habilidades de Química** no Eu do aluno ("Cinemática:
       lista sintética" com QUI.EM.05 e QUI.EM.06): `e2e/__fixtures__/governanca.ts:179-182` semeia o lote de `fisica` com
       `HABILIDADE_MASSA` e `HABILIDADE_LIMITANTE`. Pôr uma habilidade de Física no lote de Cinemática (dono: quem tocar a fixture da
       governança)
-- [ ] **(X4, validação, MN11) Revisores de correção só de teste registraram de 13 a 38 s cada um** nas duas últimas correções da X4,
+- [x] **(X4, validação, MN11) Revisores de correção só de teste registraram de 13 a 38 s cada um** nas duas últimas correções da X4,
       com achados que mostram leitura do diff: ver na retro se a revisão está na medida certa ou só rápida (dono: Arquiteto, na
-      retro da X4)
+      retro da X4). **Retro da X4:** sem mudança; o diff vai no prompt, a correção de um arquivo só de teste não pede abrir nada,
+      e os achados citam linha e nome (mediana de 26 s por rodada nas correções de 25 e 26/10, 47 s nas tarefas)
+- [ ] **(X4, retro, M2) O portão puxa os specs de jornada** (aceita em 26/10/2026; código de processo, correção própria):
+      `tools/processo/portao.ts` (`alvosDoPortao`), diff em `apps/web/src/areas/<papel>/` ou `apps/web/src/componentes/` põe nos
+      alvos `e2e/casca.spec.ts`, `e2e/escola-montada.spec.ts` e o de jornada do papel (`aluno-fluxo.spec.ts` para o aluno), com a linha
+      `▶ e2e/<arquivo> entra nos alvos: jornada`, sem cobrança de duração; teste e bloco de mutação. Na X4, o W12, o Tutor pausado e
+      o W1 caíram só na esteira; até lá vale o parágrafo novo do `executar-task` (P4). Custo: 3 a 5 min de portão por tarefa de tela
+      (dono: Orquestrador, numa linha ociosa antes da próxima spec de tela)
+- [ ] **(X4, retro) `casosAlterados` conta como do caso tudo até o `test(` seguinte** (`tools/ci/duracao-do-e2e.ts`): um `for` solto
+      entre dois casos puxa o vizinho para a medida, e a correção `2026-10-26-tres-casos-do-e2e-perto-do-prazo` teve de usar
+      `voltas.forEach((volta) => test(…))` em vez do `for (const … of …)` do projeto. O caso termina na linha que fecha o `test(` dele, na
+      indentação dele (MN6; `revisor-geral`, 1ª; dono: quem tocar o portão da duração)
+- [ ] **(X4, retro) O push da branch da spec no pouso roda a esteira no mesmo commit que a da `develop`**: `40365404286` vermelha
+      (seis casos do celular a 30–32 s) e `40365440626` verde, as duas em `83f1c6d8`, e ninguém lê a primeira. Se voltar a confundir,
+      o pouso não empurra a spec (dono: Orquestrador)
 - [ ] **(X4, censo do e2e) 36 casos entre 2/3 e 90% do prazo, de antes da X4** (dívida da develop, decisão A do Joaquim em
       26/10/2026; detalhe em `.processo/ordens/diagnostico-censo.md` do andar da X4, §3), em três correções sem arquivo em duas:
       (1) **material**: `e2e/material.spec.ts`, 10 casos; (2) **entrada e sessão**: `convite`, `entrar`, `inatividade`, `areas`,
@@ -2211,4 +2233,12 @@ repetem aqui.
       (dono: Orquestrador, uma correção por linha ociosa, antes da próxima spec que pese no e2e). Os três de `areas.spec.ts` que a
       validação mediu na máquina (`:696`, `:275`, `:572`, MN8 da rodada 5) já estão entre eles. **Primeiro a corrigir:** `e2e/privacidade.spec.ts:253` [celular] ("a segunda pessoa na mesma aba não vê a
       retenção da anterior", grupo 3), que oscila de 24,5 a 27,5 s de 30 e passou de 90% no censo do fechamento da X4
-      (`40356513591`); o Joaquim escolheu pousar e levá-lo para cá (26/10/2026, opção A)
+      (`40356513591`); o Joaquim escolheu pousar e levá-lo para cá (26/10/2026, opção A).
+      **Retro da X4 (M4, aceita em 26/10/2026): uma correção só, "primeira carga do e2e", antes da X8** (que toca muitos e2e no
+      rename), em três partes: (a) a investigação da trava do `goto('/entrar')` (item acima): laço de contextos novos que só fazem
+      `goto` sob o perfil, com e sem `Network.emulateNetworkConditions`, em `e2e/__fixtures__/perfis.ts`; (b) a receita das três
+      correções da X4 (`tres-casos`, `areas-entrar`, `material-sem-licenca`: entrada pela API e a primeira tela esperada dentro de
+      `carregarSemRedeLenta`) num ajudante de `e2e/__fixtures__/`, com o nome dizendo o que ele não mede; (c) os casos deste item, por
+      grupo, o `privacidade:253` primeiro, mais os seis do `celular` que passaram de 30 s no push do pouso da X4 (`40365404286`, no
+      mesmo `83f1c6d8` que ficou verde na `develop`): `pecas-sobrepor:180`, `pecas-galeria:16`, `pecas-ia:173`, `pecas-ia:443` (claro
+      e escuro) e `coordenacao-introducao:201`, este da X4 (dono: Orquestrador)

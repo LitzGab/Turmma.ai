@@ -158,6 +158,15 @@ infere o porte pela contagem de guardiões e avisa que inferiu.
   sozinha. Duas tarefas com migration, schema ou `packages/shared` não correm juntas: ponha o tronco
   cedo, em poucas tarefas, e deixe as telas e os endpoints de folha para o paralelo
 
+## Tarefas geradas antes
+
+Spec retomada, congelada ou com o `tasks.md` mais velho que o último `tasks/prd-*/retro.md`: a conferência do
+Arquiteto, além de caminhos e nomes, passa por `git log -p --since=<data do tasks.md> -- .claude/skills/criar-tasks/` e
+aplica a cada `N_task.md` pendente cada diretriz e cada seção do modelo que entrou depois (a linha do RF de toda tela, a
+Autoconferência, a coluna "Caso"), sem mudar objetivo, subtarefa de comportamento nem critério de conclusão. Na X4, a 3.0,
+a 6.0 e a 7.0 nasceram em 13/10 sem a linha "cabe em 1366" que a retro da X3 pôs em 20/10; a conferência de 24/10 só
+alinhou caminhos, e a validação reprovou duas vezes pelo RF20.
+
 ## Saída
 
 - `tasks/prd-$ARGUMENTS/tasks.md`, seguindo `.claude/skills/criar-tasks/tasks-template.md`

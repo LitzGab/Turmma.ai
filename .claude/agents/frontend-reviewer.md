@@ -40,7 +40,9 @@ computador (1366 px) e no celular (360 px), na escola **cheia** (com dado) e na 
 nenhum, como a escola nova no primeiro dia). **Leia todas, como imagem, antes de abrir o código.**
 Página comprida vem em pedaços numerados, e você lê todos. A linha `Rolam a 1366 × 768` lista as telas
 cuja página passa da janela, com a altura medida: tela que o PRD ou o mockup diz que só o miolo rola
-e que está nela é bloqueante (X2: C1 e C2, que só se viu pela altura das fotos).
+e que está nela é bloqueante (X2: C1 e C2, que só se viu pela altura das fotos). Antes das fotos, procure `1366` no
+`prd.md` da spec: se um RF diz que a tela cabe, a tela dele na lista `Rolam` é bloqueante, com o número do RF. Na X4, a 7.0
+viu o Eu a 822 px e deixou como recomendação, e a validação reprovou duas vezes pelo mesmo RF20.
 
 Faltou uma aba, um diálogo, um passo do fluxo ou um papel? Fotografe você:
 

@@ -77,7 +77,8 @@ node tools/processo/portao-local.ts --tarefa tasks/correcoes/<AAAA-MM-DD>-<slug>
 ```
 
 Cláusula que a correção acrescenta ganha o seu bloco `mutacao` no documento, numa seção "Mutações"
-(`executar-task`, passo 2): o portão a prova. Correção de **teste intermitente** leva também a prova
+(`executar-task`, passo 2): o portão a prova, e `node tools/processo/mutacoes.ts --faltando <documento>`, antes dos
+revisores, lista a que ficou sem bloco. Correção de **teste intermitente** leva também a prova
 da estabilidade: o teste rodado sozinho dez vezes seguidas, e o número no documento. Correção que
 nasce da esteira se confere na esteira do push dela, que o Orquestrador lê, não você.
 

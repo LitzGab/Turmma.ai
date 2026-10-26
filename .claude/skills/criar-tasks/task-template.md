@@ -38,16 +38,19 @@ Spec e do PRD ele lê só o que estiver apontado aqui, pelo número:
 
 Definidos com o `test-engineer`. Não improvise aqui.
 
-| Cenário | Tipo | O que prova |
-|---|---|---|
-| caminho feliz | integração | |
-| borda: [caso do domínio] | integração | |
-| permissão: quem não pode | integração | |
-| isolamento entre escolas | integração | |
-| concorrência: [as duas chamadas ao mesmo tempo, com `Promise.all`] | integração | |
-| estados da tela: [carregando, erro, vazio, com dado; o vazio e o "falta" só com a leitura terminada e sem erro; o foco depois de cada ação que troca o que aparece] | e2e | |
-| recomeço da tela: [a segunda pessoa na mesma aba, sem reload; a mesma entrada de novo — mesmo link, mesmo token; a resposta atrasada da entrada anterior, com a resposta segurada no teste (`page.route` ou `page.clock.pauseAt`); a lista recarregada ou a falha com o diálogo aberto] | e2e | |
-| log novo: [a linha capturada] | integração | não leva nome, e-mail, matrícula, token, senha nem código (regra 20, item 9) |
+| Cenário | Tipo | O que prova | Caso |
+|---|---|---|---|
+| caminho feliz | integração | | |
+| borda: [caso do domínio] | integração | | |
+| permissão: quem não pode | integração | | |
+| isolamento entre escolas | integração | | |
+| concorrência: [as duas chamadas ao mesmo tempo, com `Promise.all`] | integração | | |
+| estados da tela: [carregando, erro, vazio, com dado; o vazio e o "falta" só com a leitura terminada e sem erro; o foco depois de cada ação que troca o que aparece] | e2e | | |
+| recomeço da tela: [a segunda pessoa na mesma aba, sem reload; a mesma entrada de novo — mesmo link, mesmo token; a resposta atrasada da entrada anterior, com a resposta segurada no teste (`page.route` ou `page.clock.pauseAt`); a lista recarregada ou a falha com o diálogo aberto] | e2e | | |
+| log novo: [a linha capturada] | integração | não leva nome, e-mail, matrícula, token, senha nem código (regra 20, item 9) | |
+
+A coluna "Caso" é de quem implementa, preenchida antes da Mesa: `arquivo › nome do caso`, um por comportamento
+da linha. Na X4, 7 das 14 reprovações foram linha sem caso, ou com caso para metade dela.
 
 A linha de concorrência diz **em paralelo**, com as transações abertas juntas, e não "clique duplo".
 Foram três reprovações no F1 por prova sequencial: a segunda chamada era recusada por uma leitura
@@ -122,8 +125,10 @@ rodada nova; o caso que originou cada pergunta está em `docs/processo-licoes.md
     `GatilhoDeParada` e `esperarNaTrava` (`apps/api/test/gatilho-de-parada.ts`); na tela, a resposta segurada com
     `page.route` ou o relógio parado com `page.clock.pauseAt`, como a correção `2026-10-03-decididos-continuam-marcados`.
     `Promise.all` solto prova a ordem que sair, e vira intermitente no banco carregado da esteira.
-11. **O teste de isolamento quebraria sem a cláusula de escopo do repository, e cada caso de borda do documento tem o seu
-    teste?** Remova mentalmente a cláusula e pergunte se algo ficaria vermelho.
+11. **O teste de isolamento quebraria sem a cláusula de escopo do repository, e cada linha da tabela de testes tem o caso na
+    coluna "Caso", um para cada coisa que a linha diz?** Remova mentalmente a cláusula e pergunte se algo ficaria vermelho.
+    "Fecha e volta", "em endereço, cabeçalho ou corpo" são dois ou três casos, ou asserções que o nome do caso diz: na X4, a
+    1.0, a 2.0, a 5.0, a 8.0, a 9.0 e a 10.0 reprovaram por linha sem caso ou com metade.
 12. **Onde o plano atende cada item de "O que verificar" dos guardiões marcados (`.claude/agents/<nome>.md`), e o que o
     `achados/indice.md` já diz?** Se `tasks/prd-<funcionalidade>/achados/indice.md` existe, leia: é uma linha por rodada com
     o que os revisores já exigiram. Abra o bloco inteiro (`achados/<N>_task.md`) só das linhas que tocam o que você vai

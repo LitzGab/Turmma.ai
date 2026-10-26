@@ -162,7 +162,9 @@ Depois junte, de **todos** os revisores da rodada:
     muda comportamento nem contrato. "Anularia as aprovações" não é motivo para não aplicar: na A0b
     nove ficaram para trás assim;
   - *não aplicar, com destino*: `TODO.md`, a tarefa futura que toca o arquivo, ou recusada, com o
-    motivo.
+    motivo. Recusa por "o PRD não pede" ou "a Tech Spec não pede" cita o RF ou a seção lida; se um RF trata
+    do assunto, não é recusa: aplique, ou é DIVERGÊNCIA. Na X4, a 7.0 recusou o Eu a 822 px assim, e o RF20
+    pedia que coubesse.
 
 ### Há o que corrigir ou aplicar
 

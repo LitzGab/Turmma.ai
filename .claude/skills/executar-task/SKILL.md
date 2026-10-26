@@ -76,6 +76,10 @@ alcançada. O portão da tarefa aplica cada bloco, roda o teste citado, exige ve
 (`tools/processo/mutacoes.ts`). O vermelho tem de vir de um caso que falhou: trecho que deixa o arquivo com erro de sintaxe, ou
 o módulo sem carregar, é recusado como erro de carga. Troque-o por código válido.
 
+Antes de pedir a rodada, rode `node tools/processo/mutacoes.ts --faltando <documento>`: cada linha que ele lista ganha bloco
+em "Mutações", ou a meia linha do motivo. Na X4, a 4.0 e a 6.0 reprovaram por linha que ele já apontava. E cada linha da
+tabela de testes ganha o caso na coluna "Caso" (pergunta 11); documento sem a coluna leva a lista "linha → caso" no plano.
+
 ## 3. Implementar
 
 - Uma subtarefa por vez, marcando `[ ]` → `[x]` conforme avança
@@ -128,6 +132,12 @@ template que atravessa linhas, e (iii) o texto citado só num ajudante de `e2e/_
 contrário, o texto só conta como tirado quando **nenhum** `apps/web/src/**/*.{ts,tsx}` (menos os `.test`) ainda o tem: o que sai de um arquivo e
 continua em outro não puxa spec; o
 spec que o procurava justamente na tela trocada cai na esteira. Troca de texto da tela: procure você mesmo, com `grep -rn` em `e2e/`, o pedaço que o e2e usa.
+
+**Mudou a estrutura de uma tela** (tirou um título, um cartão, um item da navegação, ou levou um texto para outro elemento)? Rode
+isolados, antes do portão, os specs de jornada que passam por ela: `e2e/casca.spec.ts`, `e2e/escola-montada.spec.ts`,
+`e2e/aluno-fluxo.spec.ts` (aluno) e `e2e/roteiro-da-demonstracao.spec.ts`. Eles procuram por papel e lugar
+(`getByRole('heading', { name })`, a lista de navegações), não por texto removido, e o portão não os puxa: na X4, os três
+caíram só na esteira (o W12 pela 2.0, o Tutor pausado pela 3.0, o W1 pela correção do Eu).
 
 Mudou código da web ou da API depois de subir o ambiente do e2e: repita o comando do
 `tools/ci/e2e.ts`, que reconstrói. Comando que passa de dois minutos roda em segundo plano
