@@ -225,7 +225,8 @@ test('W1: da escola vazia à aluna aprovada, só pela tela — a coordenação m
   // Aprovada pela tela, a aluna ainda não viu a introdução: ela é a primeira coisa que encontra (X4, 9.0).
   await passarPelaIntroducaoDoAluno(alunaNaTela, aluna.nome, hasTouch)
   await irPelaNavegacao(alunaNaTela, 'Eu', hasTouch)
-  await expect(principal(alunaNaTela).getByRole('heading', { level: 2, name: turma })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  // Em Eu, a turma fica na linha de apoio do título, junto da série e da escola, e não em um título próprio.
+  await expect(principal(alunaNaTela).locator('header').getByText(turma)).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
   await expect(principal(alunaNaTela)).toContainText(coordenadora.escolaNome)
   await expect(alunaNaTela.locator('body')).not.toContainText(colega.nome)
   await expect(alunaNaTela.locator('body')).not.toContainText(colega.matricula)
