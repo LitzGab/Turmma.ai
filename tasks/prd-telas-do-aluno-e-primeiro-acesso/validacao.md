@@ -1,5 +1,166 @@
 # Validação — telas-do-aluno-e-primeiro-acesso (X4)
 
+## Rodada 3 — 26/10/2026
+
+**Escopo:** funcionalidade completa (revalidação depois da correção do C2 e da correção do W1)
+**Commit validado:** `3c60f99a`
+**Veredito: APROVADA COM RESSALVAS**
+
+O C2 da rodada 2 está resolvido. A tarefa aberta "Para fazer" mede 768 px a 1366 × 768, na questão de enunciado mais longo das
+sintéticas. "Enviar a atividade", o ponto de parada, "Anterior" e "Próxima" ficam numa linha só, e nada fica por cima de nenhum deles. A
+forma corrigida, com quatro questões, também cabe: o resultado vai em duas colunas, e a lista "Questão por questão" rola por dentro, com
+foco pelo teclado. No celular a barra continua presa embaixo, como a 6.1 pedia. Os dois casos novos do e2e no `chromebook` são
+efetivos: as três mutações que rodei ficaram vermelhas. Com isso os 21 RF estão ATENDIDOS. Fica um achado **maior**, o MA1, que as
+rodadas 1 e 2 não viram: `docs/roteiro-da-demonstracao.md` ainda descreve o aluno antes da X4 ("cai em **Atividades**", sem nenhuma
+das três introduções), enquanto o `e2e/roteiro-da-demonstracao.spec.ts`, que o documento diz que é "o mesmo roteiro", já passa pelas
+introduções e por Tarefas. É texto de documento e não bloqueia a próxima funcionalidade.
+
+**O que esta rodada conferiu de novo.** Entre `fb8f28a2` e `3c60f99a` o código de produção mudou só em `Atividade.tsx`,
+`BarraPresa.tsx` e `midia.ts` (correção `2026-10-25-tarefa-aberta-cabe-em-1366`, `f772feee`). Os testes mudaram em
+`Atividade.test.tsx` e `e2e/aluno-atividade.spec.ts`, e o `e2e/escola-montada.spec.ts:229` mudou na correção
+`2026-10-26-w1-aluna-nao-ve-a-turma` (`dd5462e1`), que só mexeu no e2e. Para os RF cujo código não mudou, valem a evidência e as cinco
+mutações das rodadas 1 e 2, abaixo. Li por completo `Atividade.tsx`, `BarraPresa.tsx`, os dois casos novos do e2e e os dois de
+componente.
+
+### 1. RF a RF
+
+Fotos desta rodada. As da vitrine estão em `.processo/vitrine/`: `aluno--aluno-{inicio,atividades,eu}--*` e
+`aluno--aluno-atividades--Cinemática-lista-sintética--{computador,celular}.png`, a corrigida real da vitrine com 4 questões. As da
+tarefa "Para fazer" saíram de um script descartável, porque a vitrine não semeia tarefa "Para fazer" (M5). O script entra como o aluno
+da vitrine e simula `minhas-atividades`, a `prova` e o `meu-diagnostico`. Elas ficam em
+`/tmp/claude-1000/-home-joaquimdp-Documentos-git--maestri-floors-educaia--spectelas-do-aluno-e-primeiro-acesso/a59399b8-932f-4618-aa7d-6d8076cd48b2/scratchpad/fotos/`:
+`fazer-q{1,2}--{1366,1024,800,360}--{janela,inteira}.png`, `corrigida-4--{1366,1024,800,360}--{janela,inteira}.png`,
+`fazer-q2--360--fim-janela.png` e `fazer-q2--1366--maior-inteira.png`. O script mede a página e faz o `elementFromPoint` no centro e na
+borda de baixo de "Enviar" e do ponto de parada.
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF1 a RF6 | ATENDIDO | sem mudança desde a rodada 2 | idem | Fotos novas `aluno--aluno-{inicio,atividades,eu}--*`. "Nenhuma tela rola a 1366 × 768" no `vitrine.ts foto` |
+| RF7 | ATENDIDO | `apps/web/src/areas/aluno/Atividade.tsx`: a ajuda no cartão da questão (`:206-227`), a linha única (`:239-261`); o fluxo (fila, envio com confirmação, resultado só depois de aprovado) não mudou | `e2e/aluno-atividade.spec.ts`, os 24 casos nos dois projetos (o fluxo de `:149`, `:235`, `:275`, `:366` e os dois novos, `:575` e `:622`): rodados, verdes | `fazer-q2--1366--janela.png`: "Enviar a atividade", o ponto de parada e "Anterior"/"Próxima" numa linha, y 672 a 720, sem nada por cima (`elementFromPoint` nos dois pontos, verdadeiro). "Pedir ajuda ao Tutor nesta questão" fica no pé do cartão. Em avaliação o link continua não existindo (`:219`, `e2e/aluno-fluxo.spec.ts` da rodada 1) |
+| RF8 | ATENDIDO | sem mudança | `e2e/aluno-atividade.spec.ts:409-446` (rodados, verdes) | Ainda vista só pelo e2e (M5) |
+| RF9 a RF19 | ATENDIDO | sem mudança desde a rodada 2 | idem; W1 (`e2e/escola-montada.spec.ts:63`, que passou a procurar a turma no cabeçalho de Eu): rodado, verde nos dois projetos | Fotos novas de Eu: a turma no cabeçalho |
+| RF20 | ATENDIDO | `Atividade.tsx:239` (`md:flex md:flex-wrap`), `:249` (a barra `md:static`), `:246` (o ponto de parada `md:flex-1`), `:308` (duas colunas a partir de 1024 px), `:70` (a lista com altura máxima e `overflow-y-auto`), `:304` (o nome e o `tabIndex` só quando rola); `componentes/ui/BarraPresa.tsx` (prop `className`) | `e2e/aluno-atividade.spec.ts:575` e `:622` [chromebook]: `scrollHeight <= 768`, a barra `static`, "Próxima" na linha de "Enviar", os cinco controles `toBeInViewport({ ratio: 1 })` e sem nada por cima, a lista que rola por dentro com `tabindex="0"`. [celular]: a barra `sticky` abaixo de "Enviar" e do ponto de parada, a lista sem segunda rolagem. `Atividade.test.tsx:376` e `:555`. Mutações 6, 7 e 8 | "Para fazer": 768 px a 1366 × 768, na questão 1 e na 2 (`fazer-q{1,2}--1366--janela.png`). Corrigida simulada: 768 px (`corrigida-4--1366--janela.png`). Corrigida real da vitrine: o `vitrine.ts foto aluno /aluno/atividades --clicar 'text=Cinemática: lista sintética'` diz "Nenhuma tela rola a 1366 × 768" (na rodada 2 tinha 1194 px). A 360 px nada rola de lado (`scrollWidth` 360), e no fim da página a barra presa fica abaixo de "Enviar" e do ponto de parada, sem cobrir nenhum dos dois (`fazer-q2--360--fim-janela.png`). A 1024 e a 800 px a página rola de 36 a 71 px, mas nada fica coberto, porque a barra já está solta (M9) |
+| RF21 | ATENDIDO | — | diff dos testes de `fb8f28a2` a `3c60f99a`: nenhum `.skip`, `.only` nem `fixme`, e nenhum caso removido. Os 2 casos de componente e os 2 de e2e são novos. O W1 trocou o `h2` da turma pelo cabeçalho, onde a tela a mostra hoje, e continua exigindo a turma, a escola e a ausência da colega. Nenhum arquivo de `paginas/` mudou | A esteira é conferida no fechamento |
+
+Provas de mutação desta rodada. Para cada uma reconstruí a web com `tools/ci/e2e.ts --manter-ambiente`, e a árvore terminou limpa, com
+`git checkout -- apps/web/src/areas/aluno/Atividade.tsx`. A 6 e a 7 rodaram juntas: uma está em `Respondendo` e a outra em
+`Diagnostico`, e cada caso só desenha uma das duas fases. Depois de restaurar, reconstruí a web de novo e os quatro casos do RF20
+voltaram a verde nos dois projetos, antes das fotos:
+
+| RF | Cláusula removida | Teste que ficou vermelho |
+|---|---|---|
+| RF20 e RF7 ("Para fazer") | `md:static` da barra (`Atividade.tsx:249`) | `e2e/aluno-atividade.spec.ts:575` [chromebook]: "a barra presa cobriria a ação", Expected "static", Received "sticky" |
+| RF20 (corrigida) | `lg:max-h-[clamp(…)]` da lista (`Atividade.tsx:70`) | `e2e/aluno-atividade.spec.ts:622` [chromebook]: "a página rola", Expected <= 768, Received 1048 |
+| RF20 (linha única) | `md:flex md:flex-wrap` do invólucro (`Atividade.tsx:239`) | `e2e/aluno-atividade.spec.ts:575` [chromebook]: "Próxima na linha de Enviar", Expected < 44, Received 100 |
+
+As três da rodada 1 (RF12/RF18 isolamento, RF12 dois papéis, RF6 regra 70 item 3) e as duas da rodada 2 (Eu e Início, RF20) valem,
+porque o código delas não mudou.
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regras de negócio, os 14 pontos e as cinco "valem ainda" | cumpridas | Rodadas 1 e 2. A correção não toca nenhuma delas. A caixa do Tutor e a faixa não estão nesta tela. Em avaliação o caminho ao Tutor continua fora da tarefa aberta (`Atividade.tsx:219`), e o Início segue com o caminho aberto (RF5) |
+| Regra: nada induz uso; sair nunca é mais difícil (D59, ponto de parada) | cumprida | A 1366 o ponto de parada fica à vista, ao lado de "Enviar", sem nada por cima (e2e `:575`, mutação 6). A 360 px ele fica no fim da página, logo abaixo de "Enviar", e a barra presa não o cobre (`fazer-q2--360--fim-janela.png`). É a forma da 6.1. O mockup (`mockup.md` 2.3a) nem mostra a frase no celular. A recomendação do `conformidade-reviewer` que a correção deixou "para a validação" fecha aqui sem achado |
+| Bordas do PRD §7 | cobertas | Rodadas 1 e 2. O código delas não mudou |
+| Letra Maior a 1366 × 768 (recomendação do `test-engineer` deixada para a validação) | justificada | Com `educa.letra=maior`, a página tem 1045 px e rola. A barra está solta, então nada cobre "Enviar" nem o ponto de parada (`fazer-q2--1366--maior-inteira.png`). A Tech Spec §9 diz que o RF20 vale "no tamanho Padrão; com a letra Maior vale o RF11" |
+| Foto a 800 px (recomendação do `frontend-reviewer` deixada para a validação) | feita | `fazer-q{1,2}--800--*`: a linha quebra, "Anterior" e "Próxima" vão para a linha de baixo, soltas, e a página rola de 36 a 63 px. Nada fica coberto (M9) |
+| Pronto: o aluno faz tudo pelos lugares novos, com "Sair" à vista e a faixa presa | cumprido | Rodadas 1 e 2. Os 24 e2e da tarefa aberta e o W1 rodaram nesta rodada |
+| Pronto: nada de colega, sequência, pontos ou ranking | cumprido | RF10. Nada disso nas fotos novas |
+| Pronto: introdução uma vez, pulável onde não é aviso, revisível; aviso em linguagem de 11 anos | cumprido | Rodada 1 |
+| Pronto: e2e do aluno nos dois projetos | cumprido no que rodei | 26 casos nos dois projetos. A suíte inteira e as páginas públicas são da esteira |
+| Pronto: os 21 RF com evidência | cumprido | Seção 1 |
+| Pronto: 150 kB de entrada e 30 kB por tela | cumprido | O `size-limit` passou nas quatro execuções do e2e desta rodada (entrada 92,15 kB) |
+| Pronto: os seis documentos atualizados | cumprido | Rodada 1. Os seis da lista não descrevem a disposição da tarefa aberta. Fora da lista, ver MA1 |
+| Pronto: esteira verde no último commit que alterou código | esteira: conferida no fechamento | — |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint` | não rodados: escopo da funcionalidade completa (esteira) |
+| Unidade e componente da tela que mudou | ✅ `npx vitest run --project unidade` em `Atividade.test.tsx`, `atividade.test.ts` e `componentes/ui/`: 441 passaram. Uma primeira chamada de dentro de `apps/web`, fora do projeto `unidade`, não resolveu `@educa/shared` em 4 arquivos. Era o lugar errado de rodar e não falha de teste: pela raiz, os mesmos arquivos passaram |
+| E2E da tela que mudou e do W1 (`chromebook` e `celular`) | ✅ `aluno-atividade` e `escola-montada`: 26 passaram (1,9 min) |
+| E2E das mutações | ❌ como esperado com a mutação (3 vermelhos, acima). ✅ depois de restaurar (4 passaram) |
+| Esteira do GitHub | esteira: conferida no fechamento. Não entra no veredito |
+| Revisões com veto registradas e aprovadas | ✅ `2026-10-25-tarefa-aberta-cabe-em-1366`: os seis obrigatórios com duas rodadas, e a última de cada um é APROVADO. Ela muda cinco arquivos fora de `tasks/`, no limite do passo 5 de `corrigir`, por isso sem `revisor-geral`. `2026-10-26-w1-aluna-nao-ve-a-turma`: os seis obrigatórios aprovados na 1ª, com `**Sem mutação:**` e o motivo, porque só o e2e mudou. Os dois commits levam `(correção …)`, e `git log origin/develop..HEAD --grep='^Fora do processo:'` não traz nada |
+
+Dependências: o `node_modules` não era anterior ao `package-lock.json`, então não precisei rodar `npm ci`. As sessões da vitrine não
+guardavam `educa.letra`, então as fotos estão no tamanho Padrão. A da letra Maior pôs a chave só no contexto dela.
+
+### 4. Achados
+
+**Críticos**
+
+- Nenhum. O C2 da rodada 2 está resolvido, com código, dois casos de e2e efetivos e fotos a 1366, 1024, 800 e 360 px.
+
+**Maiores**
+
+- **MA1. `docs/roteiro-da-demonstracao.md` descreve o aluno, a professora e a coordenação de antes da X4.** `:147`: "Cada aluno
+  entra […] e cai em **Atividades**, vazia". Hoje ele cai na introdução de quatro passos e depois no Início (RF2, RF12). `:193`
+  e `:219`: "Ana → **Atividades**", mas o item se chama Tarefas desde a 2.0. O roteiro não fala de nenhuma das três introduções
+  (`grep -c introdu` dá 0), e a coordenadora, a professora e a aluna passam cada uma pela sua na primeira entrada. `:196-198`: depois de
+  enviar, "Aparece: Quem dá a aula ainda vai revisar a correção". Agora aparece antes a comemoração "Atividade entregue." (RF8).
+  O documento diz, na `:7`, que "o mesmo roteiro roda sozinho, de ponta a ponta, em `e2e/roteiro-da-demonstracao.spec.ts`". O spec
+  foi atualizado nas tarefas 2.0, 4.0, 9.0, 10.0 e 11.0 (`:186`, `:282`, `:336`, `:446`, `:571`), o documento não. Quem apresentar
+  pelo texto vai encontrar telas que ele não descreve. Não é um dos seis documentos do critério de pronto, mas é doc em `docs/`
+  contradizendo o código, e a regra o classifica como maior.
+  **Correção sugerida:** uma correção de texto só no roteiro. O passo 2.x da coordenação e o 4 da professora ganham a linha da
+  introdução ("passe pela introdução: Continuar até Começar", ou "Pular"). O 2.12 passa a "cai na introdução e depois no Início". Os
+  `:193` e `:219` trocam Atividades por Tarefas, e o 5.3 diz a comemoração antes da espera pela correção. Dono: quem pegar a correção,
+  com o `revisor-geral`. Não bloqueia a X8 nem o F2.
+
+**Menores** (não mudam o veredito; o Orquestrador os leva ao `TODO.md`)
+
+- M1 a M8 das rodadas 1 e 2 seguem como estavam. O código delas não mudou. A M5 (a vitrine sem tarefa "Para fazer") obrigou de novo a
+  fotografar por script.
+- M9. `apps/web/src/areas/aluno/Atividade.tsx:239`: de 768 a 1365 px a linha única quebra. "Anterior" e "Próxima" vão para uma
+  segunda linha, e a página rola de 36 a 71 px a 1024 × 768 e a 800 × 768 (`fazer-q2--1024--janela.png`: a navegação fica logo abaixo
+  da janela). Nada fica coberto, e o RF20 só pede 1366. Mas o Eu e o Início cabem a 1024 px (rodada 2), e esta tela, não. Se valer,
+  pôr "Anterior" e "Próxima" em `compacto` a partir de 1024, ou o ponto de parada numa linha abaixo de "Enviar". Dono: frontend.
+- M10. `Atividade.tsx:208-227`, a 360 px: a região de status vazia (`min-h-6`) ocupa uma linha própria acima de "Pedir ajuda ao Tutor
+  nesta questão". Isso deixa um vão de ~50 px entre a alternativa D e o link (`fazer-q2--360--fim-janela.png`). É só visual. Dono:
+  frontend.
+- M11. O documento da correção (`tasks/correcoes/2026-10-25-tarefa-aberta-cabe-em-1366.md`, "O que o 'cabe' prova") escreve uma
+  leitura do RF20: enunciado de uma a duas linhas, quatro questões e duas habilidades, no tamanho Padrão. Ele diz que "a Tech Spec
+  §12b não muda". A leitura do Eu ficou na §9, e esta não ficou em lugar nenhum da Tech Spec. Levar as duas à §12b, junto da M7.
+  Dono: Arquiteto.
+- M12. Recomendações da correção do C2 com destino `TODO.md`: o degradê no pé da lista que rola, a quebra da linha do comentário em
+  `Atividade.tsx:303` e o localizador de `e2e/aluno-atividade.spec.ts:656` preso à seção. A do seed "respondeu 0 de 4" com "acertou 1 de
+  4" e tudo "em branco" se repete na foto da corrigida real (`aluno--aluno-atividades--Cinemática-lista-sintética--computador.png`), e
+  já está no `estado.md` (C2). Dono: Orquestrador, no fechamento.
+
+**Positivos**
+
+- O caso "cabe" da tarefa aberta não mede só a altura. Ele confere a disposição ("Próxima" na linha de "Enviar"), `toBeInViewport({
+  ratio: 1 })` e `elementFromPoint` no centro e na borda de baixo de cada controle. Foi essa combinação que fez a mutação 8 ficar
+  vermelha mesmo com a página ainda dentro dos 768 px.
+- A correção achou e escreveu a armadilha do `sr-only` absoluto, que escapa da rolagem sem um ancestral posicionado. Vale para toda
+  lista que rola por dentro.
+- O nome e o `tabIndex` da lista só existem quando ela rola. No celular não aparece uma parada de Tab que não faz nada.
+
+### 5. Conclusão
+
+APROVADA COM RESSALVAS. Os 21 RF estão atendidos, com código, teste efetivo (três mutações vermelhas nesta rodada, cinco nas
+anteriores) e foto lida. O critério de pronto está cumprido, menos a esteira, que é do fechamento. Todos os testes que rodei passaram, e
+o processo está em ordem. A ressalva é o MA1: o roteiro da demonstração descreve o produto de antes da X4. Ela vira uma correção de
+texto, que não segura a próxima funcionalidade.
+
+### 6. Pendências herdadas
+
+| Pendência | Dono | Arquivo | Destino |
+|---|---|---|---|
+| MA1: o roteiro da demonstração de antes da X4 | quem pegar a correção | `docs/roteiro-da-demonstracao.md` | correção de texto (ou `TODO.md`, se o Orquestrador a deixar para depois do pouso) |
+| M1 a M8 das rodadas 1 e 2 | os das rodadas 1 e 2 | os das rodadas 1 e 2 | `TODO.md` (já no `estado.md`) |
+| M9: a tarefa aberta rola a 1024 e a 800 px | frontend | `apps/web/src/areas/aluno/Atividade.tsx` | `TODO.md` |
+| M10: o vão acima de "Pedir ajuda ao Tutor" a 360 px | frontend | `apps/web/src/areas/aluno/Atividade.tsx` | `TODO.md` |
+| M11: a leitura do "cabe" da tarefa aberta fora da Tech Spec | Arquiteto | `techspec.md` §12b | `TODO.md`, junto da M7 |
+| M12: as recomendações da correção do C2 com destino `TODO.md` | Orquestrador | `tasks/correcoes/2026-10-25-tarefa-aberta-cabe-em-1366.md` | `TODO.md` |
+| As recomendações da correção do C2 com destino "Validação" (foto a 800 px, ponto de parada no celular, letra Maior a 1366, fotos da tarefa aberta e da corrigida) | Validador | idem | fechadas nesta rodada (seção 2) |
+| As da correção do W1 | Orquestrador | `tasks/correcoes/2026-10-26-w1-aluna-nao-ve-a-turma.md` | a do `getByRole('heading'` no portão vai à `retro`. A outra foi recusada com motivo |
+| Commits `Fora do processo:` com código da spec | — | — | nenhum |
+
+
 ## Rodada 2 — 25/10/2026
 
 **Escopo:** funcionalidade completa (revalidação depois das correções do C1)
