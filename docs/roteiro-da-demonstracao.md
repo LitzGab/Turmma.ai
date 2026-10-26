@@ -109,8 +109,9 @@ vale 72 horas. O painel da operação não mostra dado de aluno nem de professor
 1. No perfil **Coordenação**, cole o link do convite → **Aceitar o convite** → senha → **Definir a senha e continuar**.
 2. **Configurar o segundo fator**: copie o segredo, gere o código (0.1), **Ativar o segundo fator** → **Ir para a
    entrada** → e-mail e senha → espere o código mudar → código → **Entrar**.
-   **Aparece:** a Governança, vazia ("A IA ainda não gerou nada nesta escola"). **Diga:** "A coordenação sempre entra
-   com segundo fator: é quem vê a escola inteira."
+   **Aparece:** a introdução da coordenação, de quatro passos: **Continuar** em cada um (ou **Pular**) e ela chega ao
+   Painel. Abra **IA**: a Governança, vazia ("A IA ainda não gerou nada nesta escola"). **Diga:** "A coordenação sempre
+   entra com segundo fator: é quem vê a escola inteira."
 3. **Estrutura** → **Criar o ano letivo** (2026, 02/02/2026 a 11/12/2026) → **Criar ano letivo** → **Abrir o ano
    letivo 2026**.
 4. **Nova série** → `2º ano do Ensino Médio` → **Criar série**. **Nova disciplina** → `Química`; de novo → `Física`.
@@ -134,8 +135,8 @@ vale 72 horas. O painel da operação não mostra dado de aluno nem de professor
    Ninguém se declara professor de uma turma."
 8. Os três professores aceitam (no perfil **Professora**, um de cada vez; Marta e Davi podem ser feitos na véspera em
    qualquer perfil livre): abrir o link → **Aceitar o convite** → senha → **Definir a senha e continuar** → entrar com
-   e-mail e senha → **Turmas** → em "Confirme suas turmas", **Confirmar**. Termine com a **Helena** entrada no perfil
-   Professora.
+   e-mail e senha → a introdução do professor, de quatro passos (**Continuar** em cada um, ou **Pular**) → **Turmas** →
+   em "Confirme suas turmas", **Confirmar**. Termine com a **Helena** entrada no perfil Professora.
 9. A Helena gera o acesso dos alunos: **Turmas** → **Abrir a turma 2ºA** → aba **Alunos** → **Gerar acesso** → **Gerar
    acesso**. **Aparece:** o código da turma, para projetar na lousa. Feche.
 10. No perfil **Aluno**: `http://127.0.0.1:58080/e/lago-azul-demo/turma` → digite o código → **Abrir a turma** →
@@ -144,7 +145,9 @@ vale 72 horas. O painel da operação não mostra dado de aluno nem de professor
 11. A Helena, na aba **Alunos**, recarrega: em **Pedidos de nome**, marca os três → **Aprovar 3 pedidos** → confirma.
     **Diga:** "O aluno não se cadastra sozinho: ele reivindica o próprio nome na lista da escola, e quem dá a aula
     confere e aprova."
-12. Cada aluno entra em `http://127.0.0.1:58080/e/lago-azul-demo` com matrícula e senha e cai em **Atividades**, vazia.
+12. Cada aluno entra em `http://127.0.0.1:58080/e/lago-azul-demo` com matrícula e senha e cai na introdução de quatro passos
+    (**Continuar** nos quatro: os três primeiros não se pulam, e o quarto pergunta o tamanho da letra). Depois dela, o aluno
+    está no **Início**.
 
 ---
 
@@ -190,11 +193,12 @@ aluno e sugere uma nota" (a resposta explica que a IA não corrige redação nem
 1. Professora → **Criados** → abra a **Atividade — Estequiometria** (a original, não a adaptada) → aba **Na turma** →
    **Aplicar à turma** → **É avaliativa** → **Aplicar à turma**.
    **Aparece:** "Aberta para a turma · avaliativa · 0 de 3 alunos enviaram".
-2. Perfil **Aluno** (Ana) → **Atividades** → a atividade aparece com "Avaliação: o Tutor fica pausado até quem dá a aula
-   encerrar". **Diga:** "Na avaliação o Tutor pausa sozinho, no servidor."
+2. Perfil **Aluno** (Ana) → **Tarefas** → em "Para fazer", a atividade aparece com "Avaliação: o Tutor fica pausado até
+   quem dá a aula encerrar". **Diga:** "Na avaliação o Tutor pausa sozinho, no servidor."
 3. Ana abre a atividade e responde **uma questão por vez**, com "Resposta salva" a cada escolha. Erre de propósito
    uma ou duas questões (é o que o Tutor vai lembrar no passo 6). **Enviar a atividade** → confirme.
-   **Aparece:** "Quem dá a aula ainda vai revisar a correção." **Diga:** "O aluno não vê resultado antes de a
+   **Aparece:** primeiro a comemoração "Atividade entregue. Quem dá a aula vê a correção antes de você." e, abaixo do
+   cartão "Atividade enviada", "Quem dá a aula ainda vai revisar a correção." **Diga:** "O aluno não vê resultado antes de a
    professora aprovar."
 4. Bruno (Aluno 2) responde e envia. Carla (Aluno 3) só abre a atividade e não responde: ela vai virar destaque.
 
@@ -216,7 +220,7 @@ aluno e sugere uma nota" (a resposta explica que a IA não corrige redação nem
 
 1. Professora → **Ferramentas** → **Atividade objetiva** → Tema `Reagente limitante`, Questões `2` → **Gerar
    atividade** → **Abrir o artefato** → aba **Na turma** → **Aplicar à turma** → **É prática** → **Aplicar à turma**.
-2. Ana → **Atividades** → abre **Atividade — Reagente limitante** → na questão 1, **Pedir ajuda ao Tutor nesta
+2. Ana → **Tarefas** → abre **Atividade — Reagente limitante** → na questão 1, **Pedir ajuda ao Tutor nesta
    questão**. **Aparece:** a faixa "Quem dá a aula acompanha como você usa o Tutor." e "Hoje: 0 de 60 perguntas".
 3. Ana digita: **`me dá a resposta`**.
    **Aparece:** "Essa eu não respondo por você…", a lembrança "Nas atividades anteriores você errou … de “…”, então
@@ -250,7 +254,7 @@ o mesmo sistema na turma dela. É o que deixa a coordenação ver o número da s
 
 ## 9. Passo 6: a governança da coordenação (Coordenação, 6 min)
 
-1. Perfil **Coordenação** → **Governança** (recarregue). **Aparece:** Gerado por IA **6**, Aprovado por gente **3**,
+1. Perfil **Coordenação** → **IA** (recarregue). **Aparece:** Gerado por IA **6**, Aprovado por gente **3**,
    Esperando o professor **0**, Rejeitado **0**; a tabela "O que a IA gerou e quem aprovou" com a correção e a
    adaptação, por série; o texto do que chega ao aluno; o consumo do mês por função, em tokens. **Diga:** "A coordenação vê o que a IA fez e que uma
    pessoa decidiu, em agregado. Não há coluna nem filtro por professor: ninguém é ranqueado pelo uso da ferramenta."
