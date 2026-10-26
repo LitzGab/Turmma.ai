@@ -86,22 +86,29 @@ async function abrirMaterial(page: Page, hasTouch: boolean, antes?: (cenario: Ce
 }
 
 /**
- * Uma escola com uma disciplina, e a coordenadora dela abrindo o endereço dado (o que o link do sino faz). Os casos do endereço provam
- * o que o painel faz com o `?material=`, e não a entrada: ela é pela API, com o segundo fator já configurado (`entrarPelaApiComSegundoFator`),
- * e a carga do endereço não afirma nada sobre o tempo de baixar (`carregarSemRedeLenta`). Pela tela, a entrada e a tela Material duas
- * vezes na rede móvel lenta ocupavam quase todo o prazo do caso. `antes` roda com a sessão ainda fechada.
+ * Entrada pela API: uma escola com uma disciplina, e a coordenadora dela abrindo o endereço dado. Não é só dos casos do `?material=` (o que o
+ * link do sino faz): serve também ao caso cujo assunto vem depois de a tela Material estar aberta. A entrada é pela API, com o segundo fator
+ * já configurado (`entrarPelaApiComSegundoFator`), e a carga do endereço não afirma nada sobre o tempo de baixar (`carregarSemRedeLenta`).
+ * Pela tela, a entrada e a tela Material duas vezes na rede móvel lenta ocupavam quase todo o prazo do caso. `antes` roda com a sessão ainda
+ * fechada. `aguardar`, quando vem, roda ainda sem a rede lenta: é a espera da tela carregar (o pedaço da tela Material e a lista, que a carga
+ * do endereço só começa), e só serve ao caso cujo assunto vem depois do carregamento. Caso cujo assunto é o tempo de baixar na rede lenta não
+ * usa este ajudante.
  */
 async function abrirMaterialPeloEndereco(
   page: Page,
   request: APIRequestContext,
-  antes: (cenario: Cenario) => Promise<void>,
+  antes: ((cenario: Cenario) => Promise<void>) | undefined,
   endereco: (cenario: Cenario) => string,
+  aguardar?: () => Promise<void>,
 ): Promise<Cenario> {
   const coordenadora = await criarEquipeComSenha('coordenador')
   const estrutura = await montarEstruturaNoBanco(coordenadora.escolaId)
   const cenario = { coordenadora, estrutura }
-  await antes(cenario)
-  await carregarSemRedeLenta(page, () => entrarPelaApiComSegundoFator(page, request, coordenadora, endereco(cenario)))
+  await antes?.(cenario)
+  await carregarSemRedeLenta(page, async () => {
+    await entrarPelaApiComSegundoFator(page, request, coordenadora, endereco(cenario))
+    await aguardar?.()
+  })
   return cenario
 }
 
@@ -244,9 +251,18 @@ test.describe('Material da coordenação', () => {
     expect(leituras).toBe(depoisDePronto)
   })
 
-  test('sem licença, o diálogo diz "Envio recusado" e por quê; o arquivo não sai do computador, nada vira material e a recusa fica na tabela e na auditoria', async ({ page, hasTouch }) => {
-    const cenario = await abrirMaterial(page, hasTouch)
-    await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+  test('sem licença, o diálogo diz "Envio recusado" e por quê; o arquivo não sai do computador, nada vira material e a recusa fica na tabela e na auditoria', async ({ page, hasTouch, request }) => {
+    // A lista vazia se espera na carga sem a rede lenta: o que o caso prova é a recusa, e ela vem depois, com a rede do perfil.
+    const cenario = await abrirMaterialPeloEndereco(
+      page,
+      request,
+      undefined,
+      () => '/coordenacao/material',
+      async () => {
+        await expect(page).toHaveURL(/\/coordenacao\/material$/)
+        await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
+      },
+    )
     await abrirEnvio(page, hasTouch)
     await preencher(page, cenario, { licenca: 'Não tenho a licença, ou não sei' })
     // Antes de enviar, a tela já diz o que vai acontecer.

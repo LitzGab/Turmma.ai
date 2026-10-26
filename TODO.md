@@ -209,6 +209,10 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
       outro tamanho (a sessão guarda também token de aluno sintético). Correção própria em `tools/vitrine/` (dono: Orquestrador; origem: a correção,
       `test-engineer` e `privacy-guardian` 1ª)
 
+- [ ] **(Telas do aluno, correção `2026-10-26-material-sem-licenca-perto-do-prazo`) Casos de `e2e/material.spec.ts` entre 16 e 24 s** (`infra-guardian` e
+      `test-engineer`, 1ª): `a coordenação sobe o PDF…`, `enquanto o material está sendo lido…`, `depois da recusa o diálogo continua aberto…` (a mesma forma do
+      caso corrigido: `abrirMaterial` mais a espera da lista sob a rede lenta, o próximo candidato no censo) e `os estados sem dado…`, mais a `segunda pessoa…`
+      (`test.slow()` desde antes, 33 a 35 s de 90). Se o censo os apontar, `abrirMaterialPeloEndereco` com `aguardar` é o caminho (dono: quem tocar o spec)
 - [ ] **(Telas do aluno, 1.0) `lock_timeout` curto na gravação do `GET /v1/eu`** (`infra-guardian`, 1ª rodada): a gravação da linha da sessão,
       disparada por data de outra escola, espera a trava da linha sem prazo próprio; transação longa que a segure pendura o `GET`.
       Muda comportamento: abrir só se o painel "Datas da introdução que não gravaram" mostrar falhas junto com latência alta do `/v1/eu`.
