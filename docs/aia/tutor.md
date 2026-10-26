@@ -395,10 +395,10 @@ Tutor.
     (`apps/web/src/areas/aluno/introducao/aviso-de-privacidade.ts`). Frases de até 15 palavras, sem termo jurídico e sem
     "nota"; diz o que a escola guarda (nome, turma, matrícula, tarefas e resultado, o que o aluno escreve ao Tutor e o que ele
     responde), o prazo da conversa com o Tutor, lido do catálogo de retenção (hoje de 6 a 24 meses; a escola escolhe), o das
-    tarefas, o que não temos, quem vê (professor da turma, que é avisado se o aluno contar algo pessoal difícil; coordenação com registro; colegas não), que o texto e as habilidades
+    tarefas, o que não temos, quem vê (professor da turma, que é avisado, sem ver o que o aluno escreveu, se ele contar algo pessoal difícil; coordenação com registro; colegas não), que o texto e as habilidades
     a rever vão a um programa de IA de uma empresa contratada (D62), que os dados não treinam IA e como pedir os dados. O teste
     (`textos-da-introducao.test.ts`) exige cada frase. **O que falta** é a revisão do texto por orientação educacional e por
-    advogado antes do primeiro aluno real, a mesma do item 9; ela não bloqueia o MVP. O aviso não diz que o professor abre a conversa, porque nada na tela a abre; e a mensagem fixa que o aluno recebe na hora, ao contar algo pessoal difícil, ainda não diz que o professor é avisado (`TODO.md`, decisão do Joaquim). No dia em que existir a tela que abre a conversa de um aluno (regra 50, item 10), o aviso e a frase do sinal mudam juntos.
+    advogado antes do primeiro aluno real, a mesma do item 9; ela não bloqueia o MVP. O aviso não diz que o professor abre a conversa, porque nada na tela a abre; e a mensagem fixa que o aluno recebe na hora, ao contar algo pessoal difícil, termina na mesma frase do aviso, `FRASE_DO_AVISO_AO_PROFESSOR` (`packages/shared/src/tutor/sinal.ts`; correção `2026-10-26-mensagem-fixa-avisa-o-professor`, decisão do Joaquim de 26/10/2026): o professor é avisado, sem ver o que o aluno escreveu. No dia em que existir a tela ou a rota que abre a conversa de um aluno ao professor (regra 50, item 10), ou em que o F9 der à orientação ou à direção acesso auditado ao conteúdo (Lei 13.819/2019), o aviso e a frase do sinal mudam juntos.
 13. **Explicação em linguagem comum e caminho de contestação** do que o Tutor sabe. Exigidos pela
     D60 e pela D66; o desenho fecha nas etapas 4 e 6.
 14. **Responsabilidade por resposta errada do Tutor**, no contrato com a escola. Depende de

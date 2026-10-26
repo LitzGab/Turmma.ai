@@ -707,6 +707,7 @@ export {
   esquemaGrupoDeSinais,
   esquemaRespostaSinais,
   esquemaSinal,
+  FRASE_DO_AVISO_AO_PROFESSOR,
   MAXIMO_DE_GRUPOS_DE_SINAL,
   NOME_DO_SINAL,
   TIPOS_DE_SINAL,

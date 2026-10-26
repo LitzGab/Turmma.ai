@@ -78,16 +78,19 @@ O que trava o projeto e não se resolve programando. Vários têm prazo externo.
 - [x] **Aviso de privacidade em linguagem de faixa etária**, para aluno de 11 anos (exigido
       pelo art. 16 do ECA Digital e pelas cláusulas sugeridas pelo MEC). Feito na X4, tarefa 9.0
       (`apps/web/src/areas/aluno/introducao/`). **Falta** a revisão do texto por orientação
-      educacional e por advogado (`docs/aia/tutor.md`, pendência 12), e a decisão do Joaquim sobre
-      se a mensagem fixa que o aluno recebe ao contar algo pessoal difícil deve dizer que o
-      professor é avisado (`packages/nucleo/src/ia/tarefas/turno-do-tutor.ts`); quando decidir, a
-      mensagem fixa e a frase do aviso ("Se você contar algo pessoal difícil, quem dá a aula é avisado.")
-      devem dizer a mesma coisa, de preferência por uma constante só. Entram na mesma revisão de
+      educacional e por advogado (`docs/aia/tutor.md`, pendência 12). A decisão do Joaquim (26/10/2026, opção A)
+      está feita na correção `2026-10-26-mensagem-fixa-avisa-o-professor`: a mensagem fixa que o aluno recebe ao
+      contar algo pessoal difícil (`packages/nucleo/src/ia/tarefas/turno-do-tutor.ts`) e o aviso de privacidade dizem a
+      mesma frase, `FRASE_DO_AVISO_AO_PROFESSOR` (`packages/shared/src/tutor/sinal.ts`), uma constante só; mudar o texto
+      na revisão é mudar ela. **Falta** a fixture de e2e `MENSAGEM_FIXA` (`e2e/__fixtures__/aluno.ts`, ~250-255) terminar
+      nessa frase, e `e2e/aluno-tutor.spec.ts` e `e2e/aluno-fluxo.spec.ts` conferirem a frase no cartão (só roda na
+      esteira; fora da correção `2026-10-26-mensagem-fixa-avisa-o-professor`). Entram na mesma revisão de
       texto: o registro de acesso (Marco Civil), que o aviso não cobre, e `FRASE_DO_QUE_NAO_TEMOS`
       ("Não temos seu e-mail…"), que ficou na primeira pessoa enquanto o grupo diz "A escola guarda".
-      **Gatilho do aviso do professor abrir a conversa:** no dia em que existir a tela que abre a
-      conversa de um aluno (regra 50, item 10), o aviso e a frase do sinal mudam juntos (pendência 12
-      de `docs/aia/tutor.md`)
+      **Gatilhos para mudar a frase do aviso ao professor:** (a) no dia em que existir a tela ou a rota que abre a
+      conversa de um aluno ao professor (regra 50, item 10), e (b) quando o F9 der à orientação ou à direção acesso
+      auditado ao conteúdo, para notificar o Conselho Tutelar (Lei 13.819/2019; `docs/agentes.md`, `docs/regulacao.md`
+      seção 7). Em qualquer dos dois, a frase e o aviso mudam juntos (pendência 12 de `docs/aia/tutor.md`)
 - [ ] Aviso de privacidade rolável (`BemVindo.tsx`, `AvisoDePrivacidade`): `haMais` começa `true`, e
       se o aviso coubesse inteiro numa tela alta a faixa "Role para ler mais" ficaria para sempre.
       Hoje não acontece (17 frases passam de `28dvh` em qualquer tela real); medir

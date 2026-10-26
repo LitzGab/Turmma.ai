@@ -1,4 +1,4 @@
-import { CATEGORIAS_DE_RETENCAO } from '@educa/shared'
+import { CATEGORIAS_DE_RETENCAO, FRASE_DO_AVISO_AO_PROFESSOR } from '@educa/shared'
 import { TEXTO_DA_SUPERVISAO } from '../tutor'
 
 /**
@@ -33,9 +33,10 @@ export const FRASE_DOS_COLEGAS = 'Seus colegas não veem nada seu.'
  * O sinal "precisa de atenção humana": quando o aluno escreve ao Tutor sobre algo pessoal difícil, o servidor o grava e o professor
  * da turma o recebe com o nome do aluno (`supervisao.service.ts`). O aluno tem de saber disso antes de escrever (LGPD, art. 6º, VI, e
  * art. 14, § 6º; ECA Digital, art. 16). O professor **não abre a conversa** hoje (`docs/interface.md`, "O que o Tutor viu": nada na tela abre a conversa de um
- * aluno), e por isso o aviso não diz que abre.
+ * aluno), e por isso o aviso não diz que abre. A frase é a do `@educa/shared` e é a mesma que fecha as mensagens fixas do Tutor
+ * (D36): uma formulação só.
  */
-export const FRASE_DO_AVISO_DE_ATENCAO = 'Se você contar algo pessoal difícil, quem dá a aula é avisado.'
+export const FRASE_DO_AVISO_DE_ATENCAO = FRASE_DO_AVISO_AO_PROFESSOR
 
 /**
  * A subtarefa 9.1 punha o que vai à IA numa frase só, de 22 palavras: mais que o limite de 15. Ficam duas, e a segunda diz de

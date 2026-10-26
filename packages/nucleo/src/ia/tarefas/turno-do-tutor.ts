@@ -1,4 +1,4 @@
-import { esquemaCitacao, esquemaHabilidade, type Citacao } from '@educa/shared'
+import { esquemaCitacao, esquemaHabilidade, FRASE_DO_AVISO_AO_PROFESSOR, type Citacao } from '@educa/shared'
 import { z } from 'zod'
 import {
   dadoEmJson,
@@ -74,7 +74,8 @@ export type SaidaDoTutor = z.infer<typeof esquemaSaidaDoTutor>
 
 /**
  * As duas mensagens fixas do assunto delicado (D36). O Tutor não aconselha e não continua o assunto: acolhe em uma
- * frase, diz que é uma IA e aponta para um adulto da escola. Com menção a risco à vida, o 188 do CVV vem primeiro.
+ * frase, diz que é uma IA e aponta para um adulto da escola. Com menção a risco à vida, o 188 do CVV vem primeiro. A última
+ * linha é `FRASE_DO_AVISO_AO_PROFESSOR`, a mesma do aviso de privacidade do aluno (uma formulação só).
  *
  * Rascunho da fatia de apresentação: o texto e a lista de gatilhos passam pelo `conformidade-reviewer` e pelo
  * `pedagogia-reviewer`, e a escola revisa o texto, antes de aluno real (`docs/agentes.md`).
@@ -83,14 +84,14 @@ export const MENSAGEM_DE_ASSUNTO_DELICADO = [
   'Obrigado por me contar. Isso é importante, e eu sou uma inteligência artificial: não sou quem pode ajudar você nisso.',
   'Procure hoje seu professor ou a orientação educacional da escola. Eles podem ajudar de verdade.',
   'Se você estiver em perigo ou pensando em se machucar, ligue 188 (CVV). A ligação é gratuita e funciona a qualquer hora.',
-  'Seu professor vai receber um aviso de que você precisa de atenção, sem o que você escreveu.',
+  FRASE_DO_AVISO_AO_PROFESSOR,
 ].join('\n\n')
 
 export const MENSAGEM_DE_RISCO_A_VIDA = [
   'Obrigado por me contar. O que você escreveu é sério.',
   'Ligue agora para o 188 (CVV). A ligação é gratuita, funciona a qualquer hora, e quem atende é uma pessoa.',
   'Eu sou uma inteligência artificial e não sou quem pode ajudar você nisso. Procure hoje um adulto da escola: seu professor ou a orientação educacional.',
-  'Seu professor vai receber um aviso de que você precisa de atenção, sem o que você escreveu.',
+  FRASE_DO_AVISO_AO_PROFESSOR,
 ].join('\n\n')
 
 /**

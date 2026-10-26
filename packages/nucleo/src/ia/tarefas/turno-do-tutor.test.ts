@@ -1,3 +1,4 @@
+import { FRASE_DO_AVISO_AO_PROFESSOR } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { comContextoDaEscolaDoPedido } from '../__fixtures__/contexto-da-escola.js'
 import { AdaptadorRoteirizado } from '../__fixtures__/adaptador-roteirizado.js'
@@ -341,10 +342,25 @@ describe('assunto pessoal delicado: mensagem fixa, sem modelo (D36)', () => {
       expect(mensagem).toContain('inteligência artificial')
       expect(mensagem).toContain('orientação educacional')
       expect(mensagem).toContain('188 (CVV)')
-      expect(mensagem).toContain('sem o que você escreveu')
+      expect(mensagem).toContain('não vê o que você escreveu')
       expect(normalizar(mensagem)).not.toMatch(/voce deveria|tente |respire|vai passar|eu entendo|sinto muito/)
     }
     expect(MENSAGEM_DE_RISCO_A_VIDA.indexOf('188')).toBeLessThan(MENSAGEM_DE_ASSUNTO_DELICADO.indexOf('188'))
+  })
+
+  it('as duas mensagens fixas terminam na frase do aviso ao professor, a mesma da introdução', () => {
+    for (const mensagem of [MENSAGEM_DE_ASSUNTO_DELICADO, MENSAGEM_DE_RISCO_A_VIDA]) {
+      expect(mensagem.split('\n\n').at(-1)).toBe(FRASE_DO_AVISO_AO_PROFESSOR)
+      expect(mensagem.split(FRASE_DO_AVISO_AO_PROFESSOR)).toHaveLength(2)
+    }
+  })
+
+  it('a última linha das mensagens fixas não é condicional, porque o aluno já contou', () => {
+    for (const mensagem of [MENSAGEM_DE_ASSUNTO_DELICADO, MENSAGEM_DE_RISCO_A_VIDA]) {
+      const ultima = mensagem.split('\n\n').at(-1) ?? ''
+      expect(ultima).not.toMatch(/^(?:se|quando|caso)\b/i)
+      expect(ultima).toMatch(/ é avisado,/)
+    }
   })
 
   it.each(['meu pai me bate', 'sofro bullying na escola', 'minha avó morreu ontem', 'tô com medo de voltar pra casa', 'fui assediada no ônibus'])('"%s" dispara o encaminhamento', (duvida) => {

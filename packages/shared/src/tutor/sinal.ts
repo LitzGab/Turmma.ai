@@ -22,6 +22,21 @@ export const NOME_DO_SINAL: Readonly<Record<TipoDeSinal, string>> = {
   atencao_humana: 'Precisa de atenção humana',
 }
 
+/**
+ * O que o aluno ouve sobre o sinal `atencao_humana` (D36), **uma formulação só**: é a frase do aviso de privacidade da
+ * introdução (`apps/web`, em linguagem de 11 anos: até 15 palavras) e a última linha das duas mensagens fixas do Tutor
+ * (`packages/nucleo`, `MENSAGEM_DE_ASSUNTO_DELICADO` e `MENSAGEM_DE_RISCO_A_VIDA`). Diz as duas coisas que o sinal faz: o
+ * professor da turma é avisado, e não vê o que o aluno escreveu (o sinal é estrito, sem conteúdo). Sem tempo hipotético ("Se
+ * você contar…"), porque vale antes de o aluno escrever (introdução) e depois de ele ter escrito (mensagem fixa).
+ *
+ * A promessa é verdadeira **hoje**. Ela tem de mudar junto, nos dois lugares, no dia em que (a) existir tela ou rota que abra a
+ * conversa de um aluno para o professor (regra 50, item 10), ou (b) o F9 der a orientação ou à direção acesso auditado ao
+ * conteúdo, para notificar o Conselho Tutelar (Lei 13.819/2019; `docs/agentes.md`, "Assunto pessoal delicado";
+ * `docs/regulacao.md`, seção 7). O texto segue em revisão pela orientação educacional e por advogado (`docs/aia/tutor.md`,
+ * pendência 12).
+ */
+export const FRASE_DO_AVISO_AO_PROFESSOR = 'Em assunto pessoal difícil, seu professor é avisado, mas não vê o que você escreveu.'
+
 /** O aluno do sinal, nomeado só para o professor da turma (D34). */
 const aluno = z.strictObject({ id: z.uuid(), nome: z.string().min(1) })
 

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { CATEGORIAS_DE_RETENCAO } from '@educa/shared'
+import { CATEGORIAS_DE_RETENCAO, FRASE_DO_AVISO_AO_PROFESSOR } from '@educa/shared'
 import { describe, expect, it } from 'vitest'
 import { TEXTO_DA_SUPERVISAO } from '../tutor'
 import { FALA_DO_AVISO, FRASES_DO_AVISO, GRUPOS_DO_AVISO } from './aviso-de-privacidade'
@@ -53,7 +53,7 @@ describe('o aviso de privacidade: conteúdo, uma asserção por elemento (RF14)'
     ['o prazo das tarefas, sem número', /^Suas tarefas ficam pelo tempo que a escola escolhe\.$/],
     ['quem vê: o professor da turma vê as tarefas e o resultado', /^O professor da turma vê suas tarefas e o resultado\.$/],
     ['quem vê: a coordenação vê os números da turma toda', /^A coordenação vê os números da turma toda\.$/],
-    ['quem vê: se o aluno conta algo pessoal difícil, quem dá a aula é avisado (o sinal de atenção)', /^Se você contar algo pessoal difícil, quem dá a aula é avisado\.$/],
+    ['quem vê: em assunto pessoal difícil, o professor é avisado, mas não vê o que o aluno escreveu', /^Em assunto pessoal difícil, seu professor é avisado, mas não vê o que você escreveu\.$/],
     ['quem vê: ver algo do aluno fica registrado', /^Ver algo seu fica registrado\.$/],
     ['quem vê: os colegas não veem nada', /^Seus colegas não veem nada seu\.$/],
     ['para onde vai: o que escreve e as habilidades a rever vão a um programa de IA', /escreve e as habilidades a rever vão a um programa de IA/],
@@ -68,6 +68,16 @@ describe('o aviso de privacidade: conteúdo, uma asserção por elemento (RF14)'
   it.each(['e-mail', 'telefone', 'CPF', 'foto', 'endereço', 'data de nascimento'])('o que não temos: "%s"', (dado) => {
     const frases = frasesCom(new RegExp(`^Não temos .*\\b${dado}\\b`))
     expect(frases).toHaveLength(1)
+  })
+
+  it('o aviso de atenção é a frase do aviso ao professor do shared, uma só, a mesma da mensagem fixa do Tutor', () => {
+    expect(FRASES_DO_AVISO.filter((frase) => frase === FRASE_DO_AVISO_AO_PROFESSOR)).toHaveLength(1)
+  })
+
+  it('a frase do aviso ao professor vale antes e depois do relato, sem tempo hipotético', () => {
+    expect(FRASE_DO_AVISO_AO_PROFESSOR).not.toMatch(/^(?:se|quando|caso)\b/i)
+    expect(FRASE_DO_AVISO_AO_PROFESSOR).not.toMatch(/\b(?:contar|contou)\b/i)
+    expect(FRASE_DO_AVISO_AO_PROFESSOR).toMatch(/\bnão vê o que você escreveu\.$/)
   })
 
   it('a supervisão é a frase da faixa do Início, a mesma e uma só (D8)', () => {
