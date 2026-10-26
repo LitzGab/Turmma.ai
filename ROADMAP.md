@@ -432,9 +432,8 @@ que estava em "Seu time" some, e o lote continua sem liberar com destaque fechad
 do professor não ganha ranking, tempo ocioso nem texto livre sobre aluno; cada tela cabe em 1366 ×
 768 e funciona a 360 px; e o e2e da A1 à A4 continua provando as mesmas regras.
 
-## X4 — `telas-do-aluno-e-primeiro-acesso` [~]
-Congelada em 20/10/2026 pela X5; a 1.0 está em `1477850`, na branch local `spec/telas-do-aluno-e-primeiro-acesso`, e é refeita depois.
-Espera a X7 (`harness`), que o Joaquim pôs antes dela em 23/10/2026.
+## X4 — `telas-do-aluno-e-primeiro-acesso` [x]
+Concluída em 26/10/2026, validada em tasks/prd-telas-do-aluno-e-primeiro-acesso/validacao.md.
 **Depende de:** X1 · **pode correr em paralelo com X2 e X3**
 
 As telas do aluno, e a primeira vez de cada papel. **Início**: o Tutor com a onça, a faixa de que o

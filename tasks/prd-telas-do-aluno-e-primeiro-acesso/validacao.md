@@ -1,5 +1,139 @@
 # Validação — telas-do-aluno-e-primeiro-acesso (X4)
 
+## Rodada 6 — 26/10/2026
+
+**Escopo:** funcionalidade completa. É uma revalidação depois de uma correção só, a `2026-10-26-material-sem-licenca-perto-do-prazo`
+(`b507c078`). Ela veio do censo da esteira 40343804451: `e2e/material.spec.ts` › "sem licença…" levou 27,2 s de 30 no `chromebook`.
+**Commit validado:** `67eb1921`. O último commit que mudou um arquivo fora de `tasks/` é o `b507c078`, que mudou um teste e o `TODO.md`.
+**Veredito: APROVADA**
+
+Desde a rodada 5 (`39896f89`), nada mudou em `apps/`, `packages/`, `infra/`, `tools/` nem `docs/`:
+`git diff --stat 39896f89 67eb1921 -- apps packages infra tools docs` volta vazio. Fora de `tasks/`, mudaram só dois arquivos:
+
+- `e2e/material.spec.ts`. O ajudante `abrirMaterialPeloEndereco` (`:97-114`) agora aceita `antes` como `undefined` e ganhou o parâmetro
+  opcional `aguardar`. Esse parâmetro roda **dentro** de `carregarSemRedeLenta`, depois de `entrarPelaApiComSegundoFator`. O caso
+  "sem licença…" (`:254`) deixou de usar `abrirMaterial` (entrada pela tela e menu) e passou a usar esse ajudante, com o endereço
+  `/coordenacao/material`. A espera da lista vazia foi para o `aguardar`: o `toHaveURL` e o `Nenhum material ainda`, com o mesmo
+  `PRAZO_DA_ENTRADA_MS`.
+- `TODO.md`, com uma linha: os outros casos do arquivo entre 16 e 24 s.
+
+Li o caso inteiro (`:254-300`). Nenhuma asserção mudou nem saiu. Continuam no caso:
+
+- o aviso antes do envio;
+- o corpo do pedido sem `%PDF-` e com `sem_licenca`;
+- o alerta com foco e o texto digitado mantido;
+- a linha "Envio recusado · sem licença", que não abre painel;
+- `materiaisNoBanco` vazio;
+- a recusa na auditoria;
+- o segundo envio, sem declaração.
+
+A recusa e o que vem depois continuam na rede e na CPU do perfil, porque o `finally` de `carregarSemRedeLenta`
+(`e2e/__fixtures__/perfis.ts:93-102`) devolve a rede antes de `abrirEnvio`. A entrada pela tela e pelo menu da tela Material continua
+coberta por `abrirMaterial`, que doze chamadas do arquivo ainda usam. O caso não é de RF da X4: o PRD não fala de Material, e o caso é da 8.0 da
+A2. Os 21 RF continuam ATENDIDOS, com a evidência e as onze mutações das rodadas 1 a 4, porque o código delas não mudou. As fotos desta
+rodada mostram as telas do aluno como na rodada 5. Não há crítico nem maior.
+
+### 1. RF a RF
+
+Fotos desta rodada, tiradas da vitrine com a web construída a partir de `67eb1921` pelo `tools/ci/e2e.ts`. Estão em `.processo/vitrine/`:
+
+- escola cheia: `aluno--aluno-{inicio,atividades,eu}--{computador,celular}.png`;
+- escola vazia: `vazia--aluno--aluno-{inicio,eu}--{computador,celular}.png`.
+
+O comando terminou em "Nenhuma tela rola a 1366 × 768" nas duas escolas. Li como imagem o Início (cheia, computador; vazia, celular),
+Tarefas (computador) e Eu (celular).
+
+| RF | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| RF1 a RF3 | ATENDIDO | sem mudança desde as rodadas 1 a 4 | idem às rodadas 1 a 5 | Fotos: a lateral com Início, Tarefas e Eu e o "SAIR" no pé (computador). No celular, a barra de baixo com os três e o "SAIR" no topo. Privacidade é uma linha de Eu |
+| RF4, RF5 | ATENDIDO | sem mudança | idem | Foto do Início, nas duas escolas: a onça com "Tutor" e o selo "IA", "Oi, Aluno.", a faixa "Quem dá a aula acompanha como você usa o Tutor." e o vazio de "Para fazer" com "Ver todas as tarefas" |
+| RF6 | ATENDIDO | sem mudança | idem | Foto de Tarefas: Para fazer, Entregues e Corrigidas, com o vazio em texto, o ladrilho da matéria, o estado "Corrigida" em texto e a linha inteira clicável |
+| RF7, RF8 | ATENDIDO | sem mudança desde a rodada 3 | idem | — |
+| RF9, RF10 | ATENDIDO | sem mudança | idem | Foto de Eu (celular): a turma, a série e a escola na linha de apoio, "Como estou indo" com "N de 4 certas" e "Para rever", "Achou algo errado? Fale com quem dá a aula." e as linhas. Não aparece colega, média, posição, sequência, pontos nem prêmio |
+| RF11 a RF19 | ATENDIDO | sem mudança desde a rodada 4 | idem | — |
+| RF20 | ATENDIDO | sem mudança | idem | "Nenhuma tela rola a 1366 × 768", nas duas escolas. `size-limit` desta execução: entrada com 92,12 kB de 150 kB, aluno com 1,87 kB de 5 kB, peças com 30,01 kB de 40 kB |
+| RF21 | ATENDIDO | — | Diff dos testes de `39896f89` a `67eb1921`: um arquivo, `e2e/material.spec.ts`, com +26 e −10 linhas. Nenhum `.skip`, `.only` nem `fixme`. Nenhuma asserção mudou e nenhum caso foi removido. Nenhum arquivo de `paginas/` mudou | A espera do primeiro carregamento saiu da rede do perfil. O caso não afirmava nada sobre ela. A esteira é conferida no fechamento |
+
+Provas de mutação desta rodada: **nenhuma**. A rodada não mudou código de produção. O documento da correção traz três mutações do
+próprio teste: o endereço, o `toHaveURL` e o `%PDF-`. O `test-engineer` registra que elas provam que a espera nova está viva, e não a
+regra da recusa. Concordo: a regra continua provada pelas asserções que não mudaram, e elas já tinham sido provadas na A2. As onze
+mutações das rodadas 1 a 4 valem, porque o código delas é o mesmo.
+
+### 2. Regras de negócio, casos de borda e critério de pronto
+
+| Item | Situação | Evidência |
+|---|---|---|
+| Regras de negócio, os 14 pontos e as cinco "valem ainda" | cumpridas | Rodadas 1 a 4. O código delas não mudou |
+| Bordas do PRD §7 | cobertas | Rodadas 1 a 4. O código delas não mudou |
+| Pronto: o aluno faz tudo pelos lugares novos, com "Sair" à vista e a faixa presa | cumprido | Rodadas 1 a 5. Nesta rodada, as fotos |
+| Pronto: nada de colega, sequência, pontos ou ranking | cumprido | RF10, sem mudança. As fotos desta rodada não mostram nada disso |
+| Pronto: introdução uma vez, pulável onde não é aviso, revisível; aviso em linguagem de 11 anos | cumprido | Rodadas 1 e 4 |
+| Pronto: e2e do aluno e das páginas públicas nos dois projetos | cumprido no que rodei | Rodada 5 (`areas.spec.ts`, 52 verdes). Nesta, `material.spec.ts`: 30 verdes. A suíte inteira roda na esteira |
+| Pronto: os 21 RF com evidência | cumprido | Seção 1 |
+| Pronto: 150 kB de entrada e 30 kB por tela | cumprido | O `size-limit` passou nesta execução (seção 1, RF20) |
+| Pronto: os seis documentos atualizados e as pendências do aviso fechadas | cumprido | Rodada 4. Nenhum documento de `docs/` mudou depois dela |
+| Pronto: esteira verde no último commit que alterou código | esteira: conferida no fechamento | — |
+| A correção do `material.spec.ts` › "sem licença…" | resolvida no que se pode provar | O caso rodou em 7,5 s no `chromebook` e 7,2 s no `celular`, com 6 trabalhadores. A correção mediu 22,0 s e 23,1 s antes, e 7,4 s e 7,3 s depois. O documento registra 40 de 40 verdes com `--repeat-each 5 --workers 2`. Tempo de runner alheio não é determinístico, e o documento diz isso. Os outros casos do arquivo seguem entre 16 e 24 s, e a "segunda pessoa…" leva 32,7 a 35,1 s, com `test.slow()`. Isso já está no `TODO.md`, com dono |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| `npm run typecheck`, `npm run lint` | não rodados: o escopo é a funcionalidade completa, e eles rodam na esteira |
+| E2E do arquivo que mudou (`chromebook` e `celular`) | ✅ `node tools/ci/e2e.ts --manter-ambiente e2e/material.spec.ts`: 30 passaram (1,8 min), com o build da web, o `size-limit` e o compose de `67eb1921`. "esteira: etapa verde" |
+| Fotos das telas do aluno (`vitrine.ts foto aluno`, cheia e vazia) | ✅ "Nenhuma tela rola a 1366 × 768" nas duas |
+| Mutações | nenhuma nesta rodada (seção 1) |
+| Esteira do GitHub | esteira: conferida no fechamento. Não entra no veredito |
+| Revisões com veto registradas e aprovadas | ✅ O pedido de `2026-10-26-material-sem-licenca-perto-do-prazo` tinha seis obrigatórios: `test-engineer`, `revisor-geral`, `infra-guardian`, `tenancy-guardian`, `privacy-guardian` e `conformidade-reviewer`. Os seis aprovaram na 1ª. O `test-engineer` e o `revisor-geral` também aprovaram na 2ª, depois do ajuste do comentário do ajudante e do documento. O commit leva `(correção 2026-10-26-material-sem-licenca-perto-do-prazo)` e a linha de revisões. As recomendações têm destino na tabela "Recomendações sem aplicar" (`TODO.md` ou recusa com motivo). O `67eb1921` só mexe no `estado.md`. `git log origin/develop..HEAD -i --grep='^Fora do processo:'` não traz nada. A Tech Spec não precisa de registro: a correção não muda desenho |
+
+Dependências: o `node_modules` não era anterior ao `package-lock.json`, então não precisei rodar `npm ci`. Terminei com a árvore limpa:
+`git status --short` volta vazio antes desta escrita.
+
+### 4. Achados
+
+**Críticos**
+
+- Nenhum.
+
+**Maiores**
+
+- Nenhum.
+
+**Menores** (não mudam o veredito; o Orquestrador os leva ao `TODO.md`)
+
+- M1 a M12 e MN1 a MN9 das rodadas 1 a 5 seguem como estavam.
+- MN10. A vitrine cheia mostra, no Eu do aluno, "Cinemática: lista sintética" com "Para rever QUI.EM.06 · Identificar o reagente
+  limitante" e "QUI.EM.05". É uma lista de Física com habilidades de Química (`aluno--aluno-eu--celular.png`). A causa é o dado sintético,
+  não o produto: `e2e/__fixtures__/governanca.ts:179-182` semeia o lote de `fisica` com `HABILIDADE_MASSA` e `HABILIDADE_LIMITANTE`. A
+  tela mostra fielmente o que o banco tem. Mas a vitrine é o que a IA e quem revisa olham, e quem vê a foto sem saber disso estranha.
+  **Correção sugerida:** uma habilidade de Física no lote de Cinemática (ou uma habilidade nova na fixture). Dono: quem tocar a fixture
+  da governança.
+- MN11. Os revisores da correção registraram de 13 a 38 s cada um na tabela de revisões, e os da correção anterior, tempos parecidos.
+  Os achados mostram que eles leram o diff: falam de linha, de nome e de comentário do ajudante. Só registro para a retro olhar se a
+  revisão de correção só de teste está na medida certa ou só rápida. Dono: Arquiteto, na retro da X4.
+
+**Positivos**
+
+- A correção mediu antes de mudar e achou que 7,5 s de 13 vinham de uma linha só. Ela registrou o passo intermediário que não bastava
+  (14 s de 15 do portão) em vez de parar nele.
+
+### 5. Conclusão
+
+APROVADA. O código de produção é o mesmo das rodadas 4 e 5, que aprovaram os 21 RF com código, teste efetivo e foto. A única mudança tira
+o primeiro carregamento de um caso de e2e da A2 da rede emulada e não mexe em nenhuma asserção. Esse arquivo rodou verde inteiro nos dois
+projetos, e as fotos desta rodada confirmam as telas do aluno. O processo da correção está em ordem. A esteira é do fechamento. Os
+menores novos, MN10 e MN11, vão ao `TODO.md` ou à retro.
+
+### 6. Pendências herdadas
+
+| Pendência | Dono | Arquivo | Destino |
+|---|---|---|---|
+| M1 a M3, M5 a M12 e MN1 a MN9 das rodadas 1 a 5 | os das rodadas 1 a 5 | os das rodadas 1 a 5 | `TODO.md`, retro ou fechamento, como na rodada 5 |
+| Os casos de `material.spec.ts` entre 16 e 24 s e a "segunda pessoa…" | quem tocar o spec | `e2e/material.spec.ts` | já no `TODO.md` (`b507c078`) |
+| MN10: a lista de Física com habilidades de Química na vitrine | quem tocar a fixture | `e2e/__fixtures__/governanca.ts:179-182` | `TODO.md` |
+| MN11: duração das revisões de correção só de teste | Arquiteto | `tasks/correcoes/2026-10-26-material-sem-licenca-perto-do-prazo.md` (seção "Revisões") | retro da X4 |
+| Commits `Fora do processo:` com código da spec | — | — | nenhum |
+
 ## Rodada 5 — 26/10/2026
 
 **Escopo:** funcionalidade completa. É uma revalidação depois de uma correção só, a `2026-10-26-areas-entrar-estoura-o-prazo` (`19d2f306`),

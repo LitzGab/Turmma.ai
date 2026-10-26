@@ -1,7 +1,7 @@
 # Tech Spec — Telas do aluno e primeiro acesso
 
 **PRD:** `tasks/prd-telas-do-aluno-e-primeiro-acesso/prd.md`
-**Status:** revisada pelos guardiões em 13/10/2026 (rodada 4, `revisao-spec.md`) e aprovada por delegação do Joaquim; ele revê ao ler, a começar pela seção 12b. Conferida contra o código em 24/10/2026, depois da X5, da X7 e da D81: caminhos, nomes e arquivos corrigidos, sem mudar desenho nem critério (seção 12c)
+**Status:** implementada em 26/10/2026 (revisada pelos guardiões em 13/10/2026, rodada 4, `revisao-spec.md`, e aprovada por delegação do Joaquim; ele revê ao ler, a começar pela seção 12b. Conferida contra o código em 24/10/2026, depois da X5, da X7 e da D81: caminhos, nomes e arquivos corrigidos, sem mudar desenho nem critério (seção 12c))
 **Tamanho:** acima do teto de 2.000 palavras, com aceite por delegação do Joaquim (13/10/2026). Motivo: a revisão dos guardiões exigiu por escrito a data que sobrevive ao fim de um vínculo, a escrita sem ano letivo, o texto do aviso, os estados da `BemVindo`, o custo do Início e as regras da onça. O detalhe de cada teste fica nas tarefas.
 
 ## 1. Resumo da abordagem
