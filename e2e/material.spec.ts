@@ -1,9 +1,10 @@
-import type { Locator, Page, Request, Route } from '@playwright/test'
+import type { APIRequestContext, Locator, Page, Request, Route } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, esperarPainel, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { irPelaCoordenacao, linhasDaTabela } from './__fixtures__/coordenacao.ts'
 import { CAMINHO_DO_PDF_DE_DEMONSTRACAO, criarMaterialNoBanco, materiaisNoBanco, recusasNaAuditoria } from './__fixtures__/material.ts'
-import { expect, test } from './__fixtures__/perfis.ts'
+import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
+import { entrarPelaApiComSegundoFator } from './__fixtures__/segundo-fator.ts'
 import { criarEquipeComSenha, montarEstruturaNoBanco, type EquipeDeTeste, type EstruturaDeTeste } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -81,6 +82,26 @@ async function abrirMaterial(page: Page, hasTouch: boolean, antes?: (cenario: Ce
   await esperarPainel(page)
   await irPelaCoordenacao(page, 'Material', hasTouch)
   await expect(page).toHaveURL(/\/coordenacao\/material$/)
+  return cenario
+}
+
+/**
+ * Uma escola com uma disciplina, e a coordenadora dela abrindo o endereço dado (o que o link do sino faz). Os casos do endereço provam
+ * o que o painel faz com o `?material=`, e não a entrada: ela é pela API, com o segundo fator já configurado (`entrarPelaApiComSegundoFator`),
+ * e a carga do endereço não afirma nada sobre o tempo de baixar (`carregarSemRedeLenta`). Pela tela, a entrada e a tela Material duas
+ * vezes na rede móvel lenta ocupavam quase todo o prazo do caso. `antes` roda com a sessão ainda fechada.
+ */
+async function abrirMaterialPeloEndereco(
+  page: Page,
+  request: APIRequestContext,
+  antes: (cenario: Cenario) => Promise<void>,
+  endereco: (cenario: Cenario) => string,
+): Promise<Cenario> {
+  const coordenadora = await criarEquipeComSenha('coordenador')
+  const estrutura = await montarEstruturaNoBanco(coordenadora.escolaId)
+  const cenario = { coordenadora, estrutura }
+  await antes(cenario)
+  await carregarSemRedeLenta(page, () => entrarPelaApiComSegundoFator(page, request, coordenadora, endereco(cenario)))
   return cenario
 }
 
@@ -475,26 +496,30 @@ test.describe('Material da coordenação', () => {
     await expect(painelDe(page, 'Capítulo pronto').locator('button:not([aria-label="Fechar"])')).toHaveText(['Excluir material'])
   })
 
-  test('o painel abre pelo endereço, como o link do sino, e o Esc tira o id do endereço', async ({ page, hasTouch }) => {
+  test('o painel abre pelo endereço, como o link do sino, e o Esc tira o id do endereço', async ({ page, request }) => {
     let semTextoId = ''
-    await abrirMaterial(page, hasTouch, async ({ coordenadora, estrutura }) => {
-      semTextoId = await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo sem texto', estado: 'falhou', falha: 'sem_texto' })
-    })
-    await expect(linhaDe(page, 'Capítulo sem texto')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-
-    await page.goto(`/coordenacao/material?material=${semTextoId}`)
+    await abrirMaterialPeloEndereco(
+      page,
+      request,
+      async ({ coordenadora, estrutura }) => {
+        semTextoId = await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo sem texto', estado: 'falhou', falha: 'sem_texto' })
+      },
+      () => `/coordenacao/material?material=${semTextoId}`,
+    )
     await expect(painelDe(page, 'Capítulo sem texto')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await page.keyboard.press('Escape')
     await expect(page).toHaveURL(/\/coordenacao\/material$/)
   })
 
-  test('o id que a escola não tem, no endereço, não abre nada', async ({ page, hasTouch }) => {
-    await abrirMaterial(page, hasTouch, async ({ coordenadora, estrutura }) => {
-      await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo sem texto', estado: 'falhou', falha: 'sem_texto' })
-    })
-    await expect(linhaDe(page, 'Capítulo sem texto')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-
-    await page.goto('/coordenacao/material?material=0190f5a0-0000-7000-8000-0000000000ff')
+  test('o id que não existe, no endereço, não abre nada', async ({ page, request }) => {
+    await abrirMaterialPeloEndereco(
+      page,
+      request,
+      async ({ coordenadora, estrutura }) => {
+        await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo sem texto', estado: 'falhou', falha: 'sem_texto' })
+      },
+      () => '/coordenacao/material?material=0190f5a0-0000-7000-8000-0000000000ff',
+    )
     await expect(linhaDe(page, 'Capítulo sem texto')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.getByRole('dialog')).toHaveCount(0)
   })

@@ -11,6 +11,13 @@ const INDISPONIVEL = JSON.stringify({ erro: { codigo: 'INDISPONIVEL_TENTE_DE_NOV
 /** O que a tela diz quando o `#` do endereço não é um token: vazio, longo demais ou com `%` quebrado. */
 const TEXTO_DO_ENDERECO_INCOMPLETO = 'O endereço do convite está incompleto. Abra o link inteiro que a escola enviou, ou peça um convite novo.'
 const PRAZO_DA_TELA_MS = 20_000
+/**
+ * O que a consulta do link anterior responde quando enfim volta: o convite dele, que vale; a recusa de verdade da API (o convite
+ * revogado); e a queda do servidor. Cada volta é um caso, com os 30 s dela: as três juntas num caso só levavam 27 s no celular da esteira.
+ */
+const voltas = ['vale', 'nao_vale', 'cai'] as const
+const tituloDaConsultaAtrasada = (volta: (typeof voltas)[number]): string =>
+  `recomeço, consulta atrasada (${volta}): a consulta do link anterior que responde depois de outro link chegar à aba não troca a tela do link novo`
 /** Senha nova de coordenador: o mínimo do contrato é 12 caracteres. */
 const SENHA_NOVA = 'frase-sintetica-do-convite'
 
@@ -406,56 +413,47 @@ test.describe('aceite do convite, do coordenador e do professor', () => {
     await esperarNovaConversa(page, novo.nome, { timeout: PRAZO_DA_TELA_MS, escolaNome: novo.escolaNome })
   })
 
-  test('recomeço, consulta atrasada: a consulta do link anterior que responde depois de outro link chegar à aba não troca a tela do link novo, dê certo ou não', async ({
-    page,
-    hasTouch,
-  }) => {
-    // O que a consulta do link anterior responde quando enfim volta: o convite dele, que vale; a recusa de verdade da API
-    // (o convite revogado); e a queda do servidor.
-    const voltas = ['vale', 'nao_vale', 'cai'] as const
-    for (const volta of voltas) {
-      const anterior = await criarConviteDeProfessor({ revogado: volta === 'nao_vale' })
-      const novo = await criarConviteDeProfessor()
-      // Só a consulta do link anterior fica segurada: é a que ainda está no ar quando o link novo chega.
-      let liberar: () => void = () => undefined
-      const segurada = new Promise<void>((resolver) => (liberar = resolver))
-      const segurar = async (rota: Route) => {
-        if ((rota.request().postDataJSON() as { token: string }).token !== anterior.token) return rota.continue()
-        await segurada
-        if (volta === 'cai') return rota.fulfill({ status: 503, contentType: 'application/json', body: INDISPONIVEL })
-        return rota.continue()
-      }
-      await page.route(ROTA_CONSULTAR, segurar)
-      // Uma carga nova da página a cada volta: o link anterior é o que a página leu ao abrir.
-      await page.goto('/sistema')
-      await page.goto(`/convite#${anterior.token}`)
-      await expect(page.getByRole('status').filter({ hasText: 'Conferindo o convite…' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
-
-      // O link novo muda só o `#`: a consulta dele responde, com a do anterior ainda no ar.
-      await page.goto(`/convite#${novo.token}`)
-      await expect(page.getByRole('main')).toContainText(novo.escolaNome, { timeout: PRAZO_DA_TELA_MS })
-      const respostaDoAnterior = page.waitForResponse(
-        (resposta) => new URL(resposta.url()).pathname === '/v1/convites/consultar' && (resposta.request().postDataJSON() as { token: string }).token === anterior.token,
-      )
-      liberar()
-      await (await respostaDoAnterior).finished()
-      // A resposta chegou, e a página teve tempo de fazer o que fosse fazer com ela. Se esta espera um dia ficar curta,
-      // o teste ainda pega a guarda que saiu pelo token do aceite, mais abaixo, ou pelo botão que some.
-      await page.evaluate(() => new Promise<void>((pronto) => requestAnimationFrame(() => requestAnimationFrame(() => pronto()))))
-
-      // A tela continua a do link novo: a escola dele, sem a do anterior, sem "não vale" nem erro.
-      await expect(page.getByRole('main'), volta).toContainText(novo.escolaNome)
-      await expect(page.locator('body'), volta).not.toContainText(anterior.escolaNome)
-      await expect(page.getByRole('alert'), volta).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Aceitar o convite' }), volta).toBeEnabled()
-      // E o aceite seguinte leva o token do link novo, e não o do anterior.
-      const aceite = page.waitForRequest((pedido) => new URL(pedido.url()).pathname === '/v1/convites/aceitar')
-      await acionar(page, 'Aceitar o convite', hasTouch)
-      expect((await aceite).postDataJSON(), volta).toEqual({ token: novo.token })
-      await expect(page.getByLabel('Senha nova')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
-      await page.unroute(ROTA_CONSULTAR, segurar)
+  voltas.forEach((volta) => test(tituloDaConsultaAtrasada(volta), async ({ page, hasTouch }) => {
+    const anterior = await criarConviteDeProfessor({ revogado: volta === 'nao_vale' })
+    const novo = await criarConviteDeProfessor()
+    // Só a consulta do link anterior fica segurada: é a que ainda está no ar quando o link novo chega.
+    let liberar: () => void = () => undefined
+    const segurada = new Promise<void>((resolver) => (liberar = resolver))
+    const segurar = async (rota: Route) => {
+      if ((rota.request().postDataJSON() as { token: string }).token !== anterior.token) return rota.continue()
+      await segurada
+      if (volta === 'cai') return rota.fulfill({ status: 503, contentType: 'application/json', body: INDISPONIVEL })
+      return rota.continue()
     }
-  })
+    await page.route(ROTA_CONSULTAR, segurar)
+    // Uma carga nova da página: o link anterior é o que a página leu ao abrir.
+    await page.goto('/sistema')
+    await page.goto(`/convite#${anterior.token}`)
+    await expect(page.getByRole('status').filter({ hasText: 'Conferindo o convite…' })).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+
+    // O link novo muda só o `#`: a consulta dele responde, com a do anterior ainda no ar.
+    await page.goto(`/convite#${novo.token}`)
+    await expect(page.getByRole('main')).toContainText(novo.escolaNome, { timeout: PRAZO_DA_TELA_MS })
+    const respostaDoAnterior = page.waitForResponse(
+      (resposta) => new URL(resposta.url()).pathname === '/v1/convites/consultar' && (resposta.request().postDataJSON() as { token: string }).token === anterior.token,
+    )
+    liberar()
+    await (await respostaDoAnterior).finished()
+    // A resposta chegou, e a página teve tempo de fazer o que fosse fazer com ela. Se esta espera um dia ficar curta,
+    // o teste ainda pega a guarda que saiu pelo token do aceite, mais abaixo, ou pelo botão que some.
+    await page.evaluate(() => new Promise<void>((pronto) => requestAnimationFrame(() => requestAnimationFrame(() => pronto()))))
+
+    // A tela continua a do link novo: a escola dele, sem a do anterior, sem "não vale" nem erro.
+    await expect(page.getByRole('main'), volta).toContainText(novo.escolaNome)
+    await expect(page.locator('body'), volta).not.toContainText(anterior.escolaNome)
+    await expect(page.getByRole('alert'), volta).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Aceitar o convite' }), volta).toBeEnabled()
+    // E o aceite seguinte leva o token do link novo, e não o do anterior.
+    const aceite = page.waitForRequest((pedido) => new URL(pedido.url()).pathname === '/v1/convites/aceitar')
+    await acionar(page, 'Aceitar o convite', hasTouch)
+    expect((await aceite).postDataJSON(), volta).toEqual({ token: novo.token })
+    await expect(page.getByLabel('Senha nova')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+  }))
 
   test('o convite usado entre a consulta e o aceite mostra a tela do convite que não vale, sem o nome da escola', async ({ page, hasTouch }) => {
     const convite = await criarConviteDeProfessor()
