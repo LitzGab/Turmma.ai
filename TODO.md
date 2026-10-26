@@ -2199,6 +2199,20 @@ repetem aqui.
       testado na retro: `npx cowsay` sai com "npx canceled due to missing packages and no YES option" sem baixar nada, e `npx
       playwright` e `npx vitest`, do `package-lock.json`, rodam. O `npx skills update -p` pelo Claude passa a pedir `--yes` (dono:
       Orquestrador; guardiões: `infra-guardian`, `revisor-geral`)
+- [ ] **(X4, MN7, correção `2026-10-26-npx-sem-instalar`) O `npm_config_yes=false` vale só para a sessão do Claude Code**: o `env` do
+      `.claude/settings.json` não chega à esteira nem à VM de produção. Hoje nada quebra (a esteira roda `npx vitest`, que está no
+      `package-lock.json`); se a esteira ou um script passar a rodar `npx` de pacote de fora, decidir se ele leva a mesma barreira
+      (dono: Arquiteto; origem: `infra-guardian`, 1ª rodada)
+- [ ] **(X4, MN7, correção `2026-10-26-npx-sem-instalar`) Dois textos ainda mandam rodar `npx skills update -p` sem `--yes`**:
+      `.claude/skills/seguir/time.md:35` e `docs/skills-de-terceiros.md`; com a barreira, o comando cancela sem o `--yes` (dono:
+      Orquestrador; origem: `revisor-geral`, 1ª rodada)
+- [ ] **(X4, MN7, correção `2026-10-26-npx-sem-instalar`) Conferir a cada atualização do Claude Code que o `env` do `settings.json` chega
+      ao Bash da sessão e dos subagentes**: rodar `npx cowsay oi` numa sessão de verdade e ver "npx canceled due to missing packages and
+      no YES option"; o teste novo prova o `npx` com o `env` do arquivo, não a entrega dele (dono: Arquiteto; origem: `test-engineer` e
+      `privacy-guardian`, 1ª rodada)
+- [ ] **(X4, MN7, correção `2026-10-26-npx-sem-instalar`) Os agentes revisores ainda pedem `--no-install` no texto**:
+      `.claude/agents/*.md` dizem para usar `npx` só com `--no-install`; alinhar com a barreira nova, que já cancela o que não está no
+      `package-lock.json` (dono: Arquiteto; origem: `privacy-guardian`, 1ª rodada)
 - [ ] **(X4, correção `2026-10-26-areas-entrar-estoura-o-prazo`) Os outros 104 `page.goto('/entrar')` do e2e seguem expostos à trava
       da primeira carga sob a rede emulada** (2ª ocorrência; a 1ª foi `2026-10-17-casca-carregando-estoura-o-goto`). Na 3ª, o
       conserto sobe ao harness (`perfis.ts`), em vez de caso a caso (dono: Orquestrador, que vigia a esteira; Arquiteto, na retro).
