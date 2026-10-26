@@ -20,6 +20,7 @@ import { Faixa } from '../../componentes/ui/Faixa'
 import { AssinaturaIA } from '../../componentes/ui/ia/AssinaturaIA'
 import { ChipFonte } from '../../componentes/ui/ia/ChipFonte'
 import { LinhaAprovacao } from '../../componentes/ui/ia/LinhaAprovacao'
+import { A_PARTIR_DE_1024, useMidia } from '../../componentes/ui/midia'
 import { Estado } from '../../componentes/ui/SeloDeEstado'
 import { Tela } from '../../componentes/ui/Tela'
 import { formatarDiaEHora } from '../../formatar'
@@ -60,6 +61,13 @@ const VOLTAR = (
     Voltar para Tarefas
   </Link>
 )
+
+/**
+ * Quanto cabe da lista "Questão por questão" antes de ela rolar por dentro, a partir de 1024 px: o resto do resultado fica à vista na janela.
+ * `relative`: o que é absoluto dentro da lista (o texto só para leitor de tela do chip de fonte) só é recortado por um ancestral posicionado;
+ * sem ele, esse texto escapa da rolagem e estica a página (1174 px a 1366 × 768, com a lista limitada a 192).
+ */
+const LISTA_QUE_ROLA = 'relative lg:max-h-[clamp(9rem,calc(100dvh_-_30rem),24rem)] lg:overflow-y-auto'
 
 /** Como cada questão aparece no mapa. O estado vai também no nome do botão e no ícone: cor sozinha não diz nada. */
 const CLASSES_DO_MAPA: Readonly<Record<MarcaDaQuestao, string>> = {
@@ -196,18 +204,27 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar, aoEntregar
           })}
         </fieldset>
 
-        {/* Sempre na tela, mesmo vazia: é uma região de status, e o leitor de tela anuncia o que entra nela. */}
-        <div role="status" data-resposta={marca} className="flex min-h-6 min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-base">
-          {marca === 'salva' && (
-            <span className="inline-flex min-w-0 items-center gap-1.5 text-ok">
-              <Check aria-hidden="true" size={18} strokeWidth={2.4} className="shrink-0" />
-              {TEXTO_DA_MARCA.salva}
-            </span>
+        {/* A ajuda é desta questão: fica no cartão dela, na linha do estado da resposta. Em avaliação o Tutor está pausado para a turma, e a tela não oferece um caminho que só levaria ao aviso. */}
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          {/* Sempre na tela, mesmo vazia: é uma região de status, e o leitor de tela anuncia o que entra nela. */}
+          <div role="status" data-resposta={marca} className="flex min-h-6 min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-base">
+            {marca === 'salva' && (
+              <span className="inline-flex min-w-0 items-center gap-1.5 text-ok">
+                <Check aria-hidden="true" size={18} strokeWidth={2.4} className="shrink-0" />
+                {TEXTO_DA_MARCA.salva}
+              </span>
+            )}
+            {marca === 'salvando' && <span className="text-sutil">{TEXTO_DA_MARCA.salvando}</span>}
+            {marca === 'nao_salva' && estadoDaFila.falha === 'passageira' && <span className="min-w-0 break-words text-erro">{TEXTO_DA_MARCA.nao_salva}</span>}
+            {marca === 'nao_salva' && estadoDaFila.falha === 'recusada' && <span className="min-w-0 break-words text-erro">Não foi possível salvar esta resposta. Chame quem dá a aula.</span>}
+            {alteradaEmOutraJanela(estadoDaFila, numero) && <span className="min-w-0 break-words text-apoio">{AVISO_DE_OUTRA_JANELA}</span>}
+          </div>
+          {!prova.avaliativa && (
+            <Link to={caminhoDoTutorNaAtividade(provaId, numero)} className={`${CLASSES_DO_LINK_SECUNDARIO} gap-2`}>
+              <MessageCircleQuestion aria-hidden="true" size={18} className="shrink-0" />
+              Pedir ajuda ao Tutor nesta questão
+            </Link>
           )}
-          {marca === 'salvando' && <span className="text-sutil">{TEXTO_DA_MARCA.salvando}</span>}
-          {marca === 'nao_salva' && estadoDaFila.falha === 'passageira' && <span className="min-w-0 break-words text-erro">{TEXTO_DA_MARCA.nao_salva}</span>}
-          {marca === 'nao_salva' && estadoDaFila.falha === 'recusada' && <span className="min-w-0 break-words text-erro">Não foi possível salvar esta resposta. Chame quem dá a aula.</span>}
-          {alteradaEmOutraJanela(estadoDaFila, numero) && <span className="min-w-0 break-words text-apoio">{AVISO_DE_OUTRA_JANELA}</span>}
         </div>
         {marca === 'nao_salva' && estadoDaFila.falha === 'passageira' && (
           <Botao variante="secundario" onClick={fila.tentarAgora} className="self-start">
@@ -216,36 +233,32 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar, aoEntregar
         )}
       </Cartao>
 
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-linha pt-4">
-        {/* Em avaliação o Tutor está pausado para a turma: a tela não oferece um caminho que só levaria ao aviso. */}
-        {prova.avaliativa ? (
-          <span />
-        ) : (
-          <Link to={caminhoDoTutorNaAtividade(provaId, numero)} className={`${CLASSES_DO_LINK_SECUNDARIO} gap-2`}>
-            <MessageCircleQuestion aria-hidden="true" size={18} className="shrink-0" />
-            Pedir ajuda ao Tutor nesta questão
-          </Link>
-        )}
-        <Botao variante="oficial" onClick={() => definirConfirmando(true)}>
-          Enviar a atividade
-        </Botao>
-      </div>
-      {/* O ponto de parada, dito: sair não custa nada, e voltar é do mesmo tamanho (D59). */}
-      <p className="text-sm text-sutil">Pode parar quando quiser. O que você respondeu fica guardado, e dá para continuar depois.</p>
-
-      {/* Presa embaixo: no celular, "Anterior" e "Próxima" ficam à mão enquanto a questão rola. */}
-      <BarraPresa rotulo="Trocar de questão">
-        <div className="flex w-full min-w-0 items-center justify-between gap-3">
-          <Botao variante="secundario" disabled={numero === 1} onClick={() => irParaQuestao(numero - 1)}>
-            <ArrowLeft aria-hidden="true" size={18} className="shrink-0" />
-            Anterior
-          </Botao>
-          <Botao variante="secundario" disabled={numero === prova.questoes.length} onClick={() => irParaQuestao(numero + 1)}>
-            Próxima
-            <ArrowRight aria-hidden="true" size={18} className="shrink-0" />
+      {/* No celular (`contents`) os três blocos são filhos da coluna: as ações, o ponto de parada e a barra presa embaixo, como na 6.1.
+          A partir de 768 px é uma linha só: "Enviar a atividade", o ponto de parada e "Anterior" e "Próxima", que deixam de ser presas: presa,
+          a barra cobria "Enviar a atividade" e o ponto de parada na janela do Chromebook (RF20), e a tela de trabalho tem de caber nela. */}
+      <div className="contents md:flex md:flex-wrap md:items-center md:gap-x-4 md:gap-y-3">
+        <div className="flex min-w-0 justify-end border-t border-linha pt-4 md:justify-start md:border-t-0 md:pt-0">
+          <Botao variante="oficial" onClick={() => definirConfirmando(true)}>
+            Enviar a atividade
           </Botao>
         </div>
-      </BarraPresa>
+        {/* O ponto de parada, dito: sair não custa nada, e voltar é do mesmo tamanho (D59). Sempre à vista: em janela larga, no vão entre "Enviar" e a navegação. */}
+        <p className="text-sm text-sutil md:min-w-56 md:flex-1">Pode parar quando quiser. O que você respondeu fica guardado, e dá para continuar depois.</p>
+
+        {/* Presa embaixo no celular: "Anterior" e "Próxima" ficam à mão enquanto a questão rola. */}
+        <BarraPresa rotulo="Trocar de questão" className="md:static md:border-t-0 md:py-0">
+          <div className="flex w-full min-w-0 items-center justify-between gap-3">
+            <Botao variante="secundario" disabled={numero === 1} onClick={() => irParaQuestao(numero - 1)}>
+              <ArrowLeft aria-hidden="true" size={18} className="shrink-0" />
+              Anterior
+            </Botao>
+            <Botao variante="secundario" disabled={numero === prova.questoes.length} onClick={() => irParaQuestao(numero + 1)}>
+              Próxima
+              <ArrowRight aria-hidden="true" size={18} className="shrink-0" />
+            </Botao>
+          </div>
+        </BarraPresa>
+      </div>
 
       {confirmando && (
         <DialogoDeConfirmacao
@@ -286,52 +299,62 @@ function Respondendo({ prova, fila, estadoDaFila, focoDepoisDeEnviar, aoEntregar
  * com ninguém** (D46; regra 50, item 9). Leva a assinatura da função que corrigiu, com o selo "IA", e quem aprovou.
  */
 function Diagnostico({ diagnostico, prova }: { diagnostico: RespostaMeuDiagnostico; prova: RespostaProva }) {
+  // A lista questão por questão é o que cresce com a atividade: a partir de 1024 px, na segunda coluna, ela rola por dentro, para o
+  // resultado caber na janela do Chromebook (RF20), e ganha nome e foco para rolar pelo teclado (um nome só dele: o da seção é o do título). Abaixo disso rola a página, e não há o que focar nem o que nomear.
+  const listaRola = useMidia(A_PARTIR_DE_1024)
   return (
     <Cartao titulo="Seu resultado" className="flex flex-col gap-4">
-      <div className="flex min-w-0 flex-col items-start gap-2">
-        <AssinaturaIA funcao="correcao_de_objetiva" />
-        <LinhaAprovacao aprovacao={{ estado: 'aprovada', por: diagnostico.aprovadoPor?.nome ?? 'quem dava aula para a turma', quando: diagnostico.aprovadoEm }} verbo="Correção aprovada por" />
-      </div>
-      <p className="text-base text-tinta">Você acertou {textoDoAcerto(diagnostico.acertos, diagnostico.total)}.</p>
+      {/* Em janela larga (1024 px), duas colunas: o resumo à esquerda e, à direita, a lista que rola por dentro. */}
+      <div className="flex min-w-0 flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-6">
+        <div className="flex min-w-0 flex-col gap-4">
+          <div className="flex min-w-0 flex-col items-start gap-2">
+            <AssinaturaIA funcao="correcao_de_objetiva" />
+            <LinhaAprovacao aprovacao={{ estado: 'aprovada', por: diagnostico.aprovadoPor?.nome ?? 'quem dava aula para a turma', quando: diagnostico.aprovadoEm }} verbo="Correção aprovada por" />
+          </div>
+          <p className="text-base text-tinta">Você acertou {textoDoAcerto(diagnostico.acertos, diagnostico.total)}.</p>
 
-      {diagnostico.porHabilidade.length > 0 && (
-        <section aria-labelledby="titulo-por-habilidade" className="flex min-w-0 flex-col gap-3">
-          <h3 id="titulo-por-habilidade" className="text-base font-semibold text-tinta">
-            Acertos por habilidade
+          {diagnostico.porHabilidade.length > 0 && (
+            <section aria-labelledby="titulo-por-habilidade" className="flex min-w-0 flex-col gap-3">
+              <h3 id="titulo-por-habilidade" className="text-base font-semibold text-tinta">
+                Acertos por habilidade
+              </h3>
+              {diagnostico.porHabilidade.map((item) => (
+                <BarraRotulada key={item.habilidade.codigo} rotulo={item.habilidade.descricao} valor={item.acertos} maximo={item.total} texto={textoDoAcerto(item.acertos, item.total)} />
+              ))}
+            </section>
+          )}
+        </div>
+
+        <section aria-labelledby="titulo-por-questao" className="flex min-w-0 flex-col gap-3">
+          <h3 id="titulo-por-questao" className="text-base font-semibold text-tinta">
+            Questão por questão
           </h3>
-          {diagnostico.porHabilidade.map((item) => (
-            <BarraRotulada key={item.habilidade.codigo} rotulo={item.habilidade.descricao} valor={item.acertos} maximo={item.total} texto={textoDoAcerto(item.acertos, item.total)} />
-          ))}
+          <div {...(listaRola ? { role: 'group', 'aria-label': 'Questões corrigidas', tabIndex: 0 } : {})} className={`min-w-0 ${LISTA_QUE_ROLA}`}>
+            <ol className="flex min-w-0 flex-col gap-3">
+              {diagnostico.questoes.map((questao) => {
+                const alternativas = prova.questoes.find((item) => item.numero === questao.numero)?.alternativas ?? []
+                const comTexto = (indice: number): string => {
+                  const texto = alternativas[indice]
+                  return texto === undefined ? letraDaAlternativa(indice) : `${letraDaAlternativa(indice)}. ${texto}`
+                }
+                return (
+                  <li key={questao.numero} data-questao-corrigida={questao.correta ? 'certa' : 'outra'} className="flex min-w-0 flex-col items-start gap-1.5 rounded-controle border border-linha p-3">
+                    <p className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="font-semibold text-tinta">Questão {questao.numero}</span>
+                      {questao.correta ? <Estado familia="ok">Você acertou</Estado> : <Estado familia="info">{questao.alternativa === null ? 'Ficou em branco' : 'Para rever'}</Estado>}
+                    </p>
+                    {questao.alternativa !== null && <p className="min-w-0 break-words text-apoio">Você marcou: {comTexto(questao.alternativa)}</p>}
+                    {!questao.correta && <p className="min-w-0 break-words text-apoio">A resposta é: {comTexto(questao.gabarito)}</p>}
+                    <p className="min-w-0 break-words text-tinta">
+                      {questao.explicacao} <ChipFonte citacao={questao.citacao} materiais={SEM_TITULOS} />
+                    </p>
+                  </li>
+                )
+              })}
+            </ol>
+          </div>
         </section>
-      )}
-
-      <section aria-labelledby="titulo-por-questao" className="flex min-w-0 flex-col gap-3">
-        <h3 id="titulo-por-questao" className="text-base font-semibold text-tinta">
-          Questão por questão
-        </h3>
-        <ol className="flex min-w-0 flex-col gap-3">
-          {diagnostico.questoes.map((questao) => {
-            const alternativas = prova.questoes.find((item) => item.numero === questao.numero)?.alternativas ?? []
-            const comTexto = (indice: number): string => {
-              const texto = alternativas[indice]
-              return texto === undefined ? letraDaAlternativa(indice) : `${letraDaAlternativa(indice)}. ${texto}`
-            }
-            return (
-              <li key={questao.numero} data-questao-corrigida={questao.correta ? 'certa' : 'outra'} className="flex min-w-0 flex-col items-start gap-1.5 rounded-controle border border-linha p-3">
-                <p className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className="font-semibold text-tinta">Questão {questao.numero}</span>
-                  {questao.correta ? <Estado familia="ok">Você acertou</Estado> : <Estado familia="info">{questao.alternativa === null ? 'Ficou em branco' : 'Para rever'}</Estado>}
-                </p>
-                {questao.alternativa !== null && <p className="min-w-0 break-words text-apoio">Você marcou: {comTexto(questao.alternativa)}</p>}
-                {!questao.correta && <p className="min-w-0 break-words text-apoio">A resposta é: {comTexto(questao.gabarito)}</p>}
-                <p className="min-w-0 break-words text-tinta">
-                  {questao.explicacao} <ChipFonte citacao={questao.citacao} materiais={SEM_TITULOS} />
-                </p>
-              </li>
-            )
-          })}
-        </ol>
-      </section>
+      </div>
     </Cartao>
   )
 }

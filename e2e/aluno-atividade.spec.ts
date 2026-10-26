@@ -1,7 +1,7 @@
 import type { Locator, Page, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO } from '../packages/shared/src/erros/mensagens.ts'
 import type { RespostaProva } from '../packages/shared/src/index.ts'
-import { diagnosticoDa, erroDaApi, minhaAtividade, portao, provaDa, QUEM_APROVA, simularAluno, type ApiDoAluno } from './__fixtures__/aluno.ts'
+import { diagnosticoDa, erroDaApi, minhaAtividade, portao, provaDa, QUEM_APROVA, QUESTOES_SINTETICAS, simularAluno, type ApiDoAluno } from './__fixtures__/aluno.ts'
 import { abrirNavegacao, entrarComoAluno, esperarInicioDoAluno, irPelaNavegacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { colocarAlunoNaTurma, criarAlunoComMatricula, type AlunoDeTeste } from './__fixtures__/sessao.ts'
@@ -546,5 +546,117 @@ test.describe('recomeço de Tarefas', () => {
     await page.evaluate(() => new Promise<void>((pronto) => requestAnimationFrame(() => requestAnimationFrame(() => pronto()))))
     await expect(page.locator('body')).not.toContainText(doPrimeiro.titulo)
     await expect(principal(page)).toContainText(doSegundo.titulo)
+  })
+})
+
+/** A caixa do elemento na tela; sem ela o caso falha dizendo qual era. */
+async function caixaDe(alvo: Locator, nome: string): Promise<{ x: number; y: number; width: number; height: number }> {
+  const caixa = await alvo.boundingBox()
+  if (caixa === null) throw new Error(`${nome} não tem caixa na tela`)
+  return caixa
+}
+
+/** Nada por cima: no centro e junto da borda de baixo do elemento, quem aparece naquele ponto é ele mesmo (ou algo dentro dele). */
+async function semNadaPorCima(alvo: Locator, nome: string): Promise<void> {
+  const pontos = await alvo.evaluate((no) => {
+    const caixa = no.getBoundingClientRect()
+    const x = caixa.left + caixa.width / 2
+    return [caixa.top + caixa.height / 2, caixa.bottom - 2].map((y) => {
+      const topo = document.elementFromPoint(x, y)
+      return topo !== null && no.contains(topo)
+    })
+  })
+  expect(pontos, `${nome}: algo cobre o centro ou a borda de baixo`).toEqual([true, true])
+}
+
+const ALTURA_DO_CHROMEBOOK = 768
+
+test.describe('a tarefa aberta na janela do aluno (RF20)', () => {
+  test('"Para fazer", na questão de enunciado mais longo, cabe em 1366 × 768: "Enviar a atividade" e o ponto de parada à vista, sem nada por cima', async ({ page, hasTouch }) => {
+    const api = await simularAluno(page)
+    const atividade = minhaAtividade({ situacao: 'para_fazer', respondidas: 0 })
+    api.atividades = [atividade]
+    api.provas.set(atividade.id, provaDa(atividade))
+    const aluno = await criarAlunoComMatricula()
+    await entrarComoAluno(page, aluno, hasTouch)
+    await irPara(page, `/aluno/atividades/${atividade.id}`)
+    await expect(mapa(page)).toContainText('Questão 1 de 3', { timeout: PRAZO_DA_TELA_MS })
+    // A questão 2 é a de enunciado mais longo das sintéticas (`QUESTOES_SINTETICAS`), com quatro alternativas.
+    await acionar(mapa(page).getByRole('button', { name: /^Questão 2/ }), hasTouch)
+    await expect(mapa(page)).toContainText('Questão 2 de 3')
+    await expect(principal(page).getByRole('radio')).toHaveCount(4)
+
+    const barra = principal(page).getByRole('group', { name: 'Trocar de questão' })
+    const enviar = principal(page).getByRole('button', { name: 'Enviar a atividade' })
+    const parada = principal(page).getByText('Pode parar quando quiser.')
+    expect(await larguraExcedente(page), 'a página rola para o lado').toBe(0)
+
+    if ((page.viewportSize()?.width ?? 0) >= 1024) {
+      // O Chromebook: "Anterior" e "Próxima" na mesma linha de "Enviar a atividade", a barra solta (não presa), e a página inteira na janela.
+      expect(page.viewportSize()).toEqual({ width: 1366, height: ALTURA_DO_CHROMEBOOK })
+      expect(await barra.evaluate((no) => getComputedStyle(no).position), 'a barra presa cobriria a ação').toBe('static')
+      const linhaDoEnvio = await caixaDe(enviar, 'Enviar a atividade')
+      const proxima = await caixaDe(barra.getByRole('button', { name: 'Próxima' }), 'Próxima')
+      expect(Math.abs(proxima.y - linhaDoEnvio.y), 'Próxima na linha de Enviar').toBeLessThan(linhaDoEnvio.height)
+      expect(await page.evaluate(() => document.documentElement.scrollHeight), 'a página rola').toBeLessThanOrEqual(ALTURA_DO_CHROMEBOOK)
+      for (const [nome, alvo] of [
+        ['Enviar a atividade', enviar],
+        ['Pedir ajuda ao Tutor', principal(page).getByRole('link', { name: 'Pedir ajuda ao Tutor nesta questão' })],
+        ['Anterior', barra.getByRole('button', { name: 'Anterior' })],
+        ['Próxima', barra.getByRole('button', { name: 'Próxima' })],
+        ['o ponto de parada', parada],
+      ] as const) {
+        await expect(alvo, nome).toBeInViewport({ ratio: 1 })
+        await semNadaPorCima(alvo, nome)
+      }
+    } else {
+      // O celular: a barra continua presa embaixo, abaixo de "Enviar a atividade" e do ponto de parada (a 6.1). No fim da página ela está no lugar dela.
+      expect(await barra.evaluate((no) => getComputedStyle(no).position)).toBe('sticky')
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+      expect((await caixaDe(barra, 'a barra')).y, 'a barra abaixo de Enviar').toBeGreaterThan((await caixaDe(enviar, 'Enviar a atividade')).y)
+      expect((await caixaDe(barra, 'a barra')).y, 'a barra abaixo do ponto de parada').toBeGreaterThan((await caixaDe(parada, 'o ponto de parada')).y)
+    }
+    expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('corrigida, com quatro questões, cabe em 1366 × 768: o resumo e a lista em duas colunas, a lista rola por dentro, com foco, e o resto fica à vista', async ({ page, hasTouch }) => {
+    const api = await simularAluno(page)
+    const atividade = minhaAtividade({ situacao: 'com_diagnostico', respondidas: 4, questoes: 4, enviadaEm: '2026-10-05T13:30:00.000Z' })
+    const base = diagnosticoDa(atividade)
+    const segunda = base.questoes.find((item) => item.numero === 2)
+    if (segunda === undefined) throw new Error('o diagnóstico sintético não tem a questão 2')
+    const quarta = { ...segunda, numero: 4, explicacao: 'A proporção é de 3 para 2, e o hidrogênio acaba primeiro.' }
+    const questoes: RespostaProva['questoes'] = [...QUESTOES_SINTETICAS, { numero: 4, enunciado: 'Quantos mols de N₂ reagem com 9 mol de H₂?', alternativas: ['1 mol', '2 mol', '3 mol', '9 mol'] }]
+    api.atividades = [atividade]
+    api.provas.set(atividade.id, provaDa(atividade, { questoes, enviadaEm: atividade.enviadaEm, respostas: questoes.map((q) => ({ questao: q.numero, alternativa: 0, sequencia: 1 })) }))
+    api.diagnosticos.set(atividade.id, { ...base, total: 4, questoes: [...base.questoes, quarta] })
+    const aluno = await criarAlunoComMatricula()
+    await entrarComoAluno(page, aluno, hasTouch)
+    await irPara(page, `/aluno/atividades/${atividade.id}`)
+    const resultado = principal(page).getByRole('region', { name: 'Seu resultado' })
+    await expect(resultado).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    const lista = resultado.getByRole('group', { name: 'Questões corrigidas' })
+    await expect(resultado.locator('[data-questao-corrigida]')).toHaveCount(4)
+    expect(await larguraExcedente(page), 'a página rola para o lado').toBe(0)
+
+    if ((page.viewportSize()?.width ?? 0) >= 1024) {
+      expect(page.viewportSize()).toEqual({ width: 1366, height: ALTURA_DO_CHROMEBOOK })
+      expect(await page.evaluate(() => document.documentElement.scrollHeight), 'a página rola').toBeLessThanOrEqual(ALTURA_DO_CHROMEBOOK)
+      // Duas colunas: o resumo à esquerda e a lista à direita. A lista é que rola, por dentro, e se alcança pelo teclado.
+      const resumo = await caixaDe(resultado.getByRole('region', { name: 'Acertos por habilidade' }), 'Acertos por habilidade')
+      const questoesCaixa = await caixaDe(lista, 'a lista')
+      expect(questoesCaixa.x, 'a lista à direita do resumo').toBeGreaterThan(resumo.x + resumo.width - 1)
+      expect(await lista.evaluate((no) => no.scrollHeight > no.clientHeight), 'a lista não rola por dentro').toBe(true)
+      await expect(lista).toHaveAttribute('tabindex', '0')
+      await expect(resultado.getByRole('region', { name: 'Acertos por habilidade' })).toBeInViewport({ ratio: 1 })
+      await expect(resultado.locator('[data-questao-corrigida]').first()).toBeInViewport()
+    } else {
+      // O celular: a página rola, e a lista não é uma segunda rolagem dentro dela: sem o grupo, sem o foco, e a lista do tamanho que tem.
+      await expect(lista).toHaveCount(0)
+      const caixaDaLista = resultado.locator('ol').locator('xpath=..')
+      expect(await caixaDaLista.evaluate((no) => no.scrollHeight <= no.clientHeight), 'a lista rola por dentro no celular').toBe(true)
+      await expect(caixaDaLista).not.toHaveAttribute('tabindex', /.*/)
+    }
+    expect(await violacoesGraves(page)).toEqual([])
   })
 })

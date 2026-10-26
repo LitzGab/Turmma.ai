@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Router } from 'wouter'
 import { memoryLocation } from 'wouter/memory-location'
+import { classesDo } from '../../__fixtures__/cor-das-classes'
 import { prepararTela, redeFalsa, renderizarTela, type RedeFalsa, type RespostaFalsa } from '../../__fixtures__/tela'
 import { criarClienteDeConsultas } from '../../api/cliente-de-consultas'
 import { consultaEu } from '../../api/eu'
@@ -26,7 +27,18 @@ import Atividade from './Atividade'
  */
 prepararTela()
 
+/** O `jsdom` não tem `matchMedia`: a janela que o caso diz que tem (o Chromebook, 1366 px, por padrão) responde às consultas `min-width`. */
+function janelaDe(largura: number): void {
+  vi.stubGlobal('matchMedia', (consulta: string) => ({
+    matches: Number(/min-width:\s*(\d+)px/.exec(consulta)?.[1] ?? Number.POSITIVE_INFINITY) <= largura,
+    media: consulta,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+  }))
+}
+
 beforeEach(() => {
+  janelaDe(1366)
   vi.stubGlobal(
     'ResizeObserver',
     class {
@@ -361,6 +373,30 @@ describe('a comemoração do envio (X4, 6.0; RF8; D59)', () => {
     expect(comemoracoes()).toHaveLength(0)
   })
 
+  it('a lista "Questão por questão" rola por dentro e ganha foco só a partir de 1024 px; abaixo disso a página é que rola', async () => {
+    const id = idDaAtividade(14)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id, DUAS_RESPONDIDAS, { enviadaEm: ENVIADA_EM }))
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/meu-diagnostico`, diagnosticoDe(id))
+    montar(id)
+    const resultado = await screen.findByRole('region', { name: 'Seu resultado' })
+    const lista = within(resultado).getByRole('group', { name: 'Questões corrigidas' })
+    expect(lista.getAttribute('tabindex')).toBe('0')
+    for (const classe of ['relative', 'lg:overflow-y-auto']) expect(classesDo(lista).has(classe), classe).toBe(true)
+    expect(lista.querySelectorAll('[data-questao-corrigida]').length).toBeGreaterThan(0)
+    cleanup()
+
+    // O celular: a lista não é uma segunda rolagem dentro da página, e não é mais uma parada do Tab.
+    janelaDe(360)
+    const outra = idDaAtividade(15)
+    rede.responderPor(`/v1/atividades-aplicadas/${outra}/prova`, prova(outra, DUAS_RESPONDIDAS, { enviadaEm: ENVIADA_EM }))
+    rede.responderPor(`/v1/atividades-aplicadas/${outra}/meu-diagnostico`, diagnosticoDe(outra))
+    montar(outra)
+    const noCelular = within(await screen.findByRole('region', { name: 'Seu resultado' }))
+    expect(noCelular.queryByRole('group', { name: 'Questões corrigidas' })).toBeNull()
+    expect(noCelular.getByRole('region', { name: 'Questão por questão' }).querySelector('[tabindex]')).toBeNull()
+  })
+
   it('a tarefa que a professora encerrou abre sem comemoração', async () => {
     const id = idDaAtividade(14)
     const rede = redeFalsa()
@@ -514,6 +550,31 @@ describe('a tarefa aberta: a moldura (X4, 6.1; RF7)', () => {
     expect(screen.getByText('Questão 3 de 3')).toBeTruthy()
     await usuario.click(anterior)
     expect(screen.getByText('Questão 2 de 3')).toBeTruthy()
+  })
+
+  it('"Enviar a atividade", o ponto de parada e a navegação são uma linha só em janela larga; a barra presa embaixo é do celular', async () => {
+    const id = idDaAtividade(23)
+    const rede = redeFalsa()
+    rede.responderPor(`/v1/atividades-aplicadas/${id}/prova`, prova(id))
+    montar(id)
+    await screen.findByRole('radio', { name: /^A\./ })
+
+    const barra = screen.getByRole('group', { name: 'Trocar de questão' })
+    const enviar = screen.getByRole('button', { name: 'Enviar a atividade' })
+    const parada = screen.getByText(/Pode parar quando quiser/)
+    // A mesma linha: os três blocos têm o mesmo pai, que é uma linha a partir de 768 px.
+    const linha = barra.parentElement
+    expect(parada.parentElement).toBe(linha)
+    expect(enviar.closest('div')?.parentElement).toBe(linha)
+    expect(classesDo(linha as HTMLElement).has('md:flex')).toBe(true)
+    // O invólucro de "Enviar": à esquerda e sem o fio nem o respiro de cima que ele tem no celular, para a linha única alinhar.
+    const envio = classesDo(enviar.closest('div') as HTMLElement)
+    for (const classe of ['md:justify-start', 'md:border-t-0', 'md:pt-0']) expect(envio.has(classe), classe).toBe(true)
+    // Presa no celular; solta, sem fio, a partir de 768 px: presa, cobriria "Enviar" e o ponto de parada.
+    const classes = classesDo(barra)
+    for (const classe of ['sticky', 'md:static', 'md:border-t-0', 'md:py-0']) expect(classes.has(classe), classe).toBe(true)
+    // O ponto de parada fica no vão da linha, e não numa fileira só dele.
+    expect(classesDo(parada).has('md:flex-1')).toBe(true)
   })
 
   it('o mapa distingue a questão aberta e a respondida da que está em branco, sem depender só da cor', async () => {

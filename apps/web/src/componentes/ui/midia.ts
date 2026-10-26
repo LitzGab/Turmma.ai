@@ -10,6 +10,9 @@ export const PONTEIRO_GROSSO = '(pointer: coarse)'
 /** A largura em que a casca deixa de ser a do celular (`docs/interface.md` 11.1): a tabela é tabela daqui para cima. */
 export const A_PARTIR_DE_768 = '(min-width: 768px)'
 
+/** A largura em que a tela do aluno põe o resultado em duas colunas (a janela do Chromebook e acima). */
+export const A_PARTIR_DE_1024 = '(min-width: 1024px)'
+
 /**
  * Se a consulta de mídia vale agora, acompanhando a mudança (girar o aparelho, encolher a janela). Para o que o CSS não
  * resolve sozinho: trocar o comportamento de uma tecla, ou desenhar uma estrutura no lugar de outra sem pôr as duas no
