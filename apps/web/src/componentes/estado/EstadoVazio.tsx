@@ -21,7 +21,9 @@ interface Props {
   icone?: LucideIcon
   /**
    * A onça do mockup no lugar do vazio (D80, item 3), já assinada pela função: quem passa é a tela, que importa a `Onca`. Esta peça
-   * não a importa, para a entrada não carregá-la. Parada e sem balão; no `tracejado` fica centralizada, e no padrão à esquerda.
+   * não a importa, para a entrada não carregá-la. Parada e sem balão. A `Onca` se centraliza sozinha na largura inteira, então ela só
+   * combina com o `tracejado`, que centraliza também o título, o texto e a ação, como o mockup; no padrão, de texto à esquerda, a
+   * onça ficaria centralizada sobre texto à esquerda. Por isso quem passa `ilustracao` passa também `variante="tracejado"`.
    */
   ilustracao?: ReactNode
 }
@@ -49,7 +51,9 @@ export function EstadoVazio({ titulo, descricao, acao, variante = 'padrao', icon
       <p className="t-secao text-tinta">{titulo}</p>
       <p className={`t-apoio mt-1 text-apoio ${tracejado ? 'max-w-prose' : ''}`}>{descricao}</p>
       {acao && (
-        <div className={`mt-3 flex flex-wrap items-center gap-3 ${tracejado ? 'justify-center' : ''}`}>
+        // O espaço entre o botão e o "Verificando…" só existe quando há o que ler: com a região vazia ele empurrava o botão do tracejado
+        // 6 px para fora do eixo do título e da ilustração.
+        <div className={`mt-3 flex flex-wrap items-center ${acao.emAndamento ? 'gap-3' : ''} ${tracejado ? 'justify-center' : ''}`}>
           <Botao onClick={acao.aoAcionar} disabled={acao.desligada === true}>
             {acao.rotulo}
           </Botao>

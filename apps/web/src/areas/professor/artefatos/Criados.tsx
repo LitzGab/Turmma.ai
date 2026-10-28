@@ -182,6 +182,7 @@ export default function Criados() {
 
         {lido && visiveis.length === 0 && lidos.length === 0 && !artefatos.hasNextPage && ligados === 0 && (
           <EstadoVazio
+            variante="tracejado"
             ilustracao={<Onca pose="apontando" agente="assistente_de_ensino" tamanho={120} animada={false} />}
             titulo="Nada gerado ainda"
             descricao="Escolha uma ferramenta, ou peça ao Assistente no Início. O que for gerado fica guardado aqui, ligado à turma."

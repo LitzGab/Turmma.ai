@@ -98,6 +98,14 @@ describe('EstadoVazio', () => {
     expect(screen.getByRole('status').textContent).toBe('Verificando…')
   })
 
+  it('o espaço entre o botão e o "Verificando…" só existe quando há o que ler: a região vazia não desloca o botão', () => {
+    const { rerender } = render(<EstadoVazio titulo="Vazio" descricao="Nada aqui." acao={{ rotulo: 'Verificar de novo', aoAcionar: () => undefined }} />)
+    const linha = (): Element => screen.getByRole('status').parentElement as Element
+    expect(classesDo(linha()).has('gap-3')).toBe(false)
+    rerender(<EstadoVazio titulo="Vazio" descricao="Nada aqui." acao={{ rotulo: 'Verificar de novo', aoAcionar: () => undefined, emAndamento: true }} />)
+    expect(classesDo(linha()).has('gap-3')).toBe(true)
+  })
+
   it('com a ação desligada o botão não aciona: o pedido que ele fez ainda está no ar', async () => {
     const usuario = userEvent.setup()
     const aoAcionar = vi.fn()
@@ -125,7 +133,8 @@ describe('EstadoVazio', () => {
     const ilustracao = container.querySelector('[data-ilustracao-de-teste]') as Element
     const titulo = screen.getByText('Vazio')
     expect(ilustracao.compareDocumentPosition(titulo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    // O padrão fica à esquerda; o tracejado centraliza, e o ícone cede o lugar à ilustração.
+    // A peça não alinha a ilustração no padrão: o texto fica à esquerda e a ilustração segue o fluxo. Quem quer o vazio centralizado
+    // (a onça de Criados) usa o tracejado, e o alinhamento na tela é medido em `e2e/professor-criados.spec.ts`. O ícone cede o lugar à ilustração.
     expect(classesDo(ilustracao.parentElement as Element).has('justify-center')).toBe(false)
     rerender(<EstadoVazio variante="tracejado" titulo="Vazio" descricao="Nada." icone={Inbox} ilustracao={desenho} />)
     expect(classesDo(container.querySelector('[data-ilustracao-de-teste]')?.parentElement as Element).has('justify-center')).toBe(true)

@@ -79,6 +79,29 @@ test.describe('Criados (D74, D80): o que a professora já gerou', () => {
     await expect(page).toHaveURL(/\/professor\/ferramentas$/, { timeout: PRAZO_DA_TELA_MS })
   })
 
+  test('vazio: a onça, o título e a ação ficam no mesmo eixo, como no mockup', async ({ page }) => {
+    await entrarEmCriados(page)
+    await expect(page.getByText('Nada gerado ainda')).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
+    // Mede o que se vê. A caixa do `<p>` do título ocupa a largura inteira mesmo com o texto à esquerda, e enganaria a conta: por isso o
+    // centro do título é o do **texto** (um `Range`), e o do botão é o da caixa dele.
+    const centros = await page.evaluate(() => {
+      const meio = (r: DOMRect): number => r.left + r.width / 2
+      // O desenho (o `svg`) é o que se mede, e a sua falta reprova: a `figure` da onça ocupa a largura toda e se centraliza de qualquer jeito,
+      // e foi esse o erro que deixou o vazio descentralizado passar. A busca é dentro do `main`, para não medir uma onça de fora da tela.
+      const desenho = document.querySelector('main [data-onca] svg')
+      const titulo = Array.from(document.querySelectorAll('main p')).find((p) => p.textContent === 'Nada gerado ainda')
+      const botao = Array.from(document.querySelectorAll('main button')).find((b) => b.textContent?.trim() === 'Ir para Ferramentas')
+      if (desenho === null || titulo === undefined || botao === undefined) return null
+      const texto = document.createRange()
+      texto.selectNodeContents(titulo)
+      return { onca: meio(desenho.getBoundingClientRect()), titulo: meio(texto.getBoundingClientRect()), botao: meio(botao.getBoundingClientRect()) }
+    })
+    expect(centros, 'o desenho da onça, o título e o botão do vazio estão na tela').not.toBeNull()
+    const { onca, titulo, botao } = centros as { onca: number; titulo: number; botao: number }
+    expect(Math.abs(onca - titulo), `onça em ${onca.toFixed(1)}, texto do título em ${titulo.toFixed(1)}`).toBeLessThanOrEqual(3)
+    expect(Math.abs(onca - botao), `onça em ${onca.toFixed(1)}, botão em ${botao.toFixed(1)}`).toBeLessThanOrEqual(3)
+  })
+
   test('com dado: a lista em páginas, "Ver mais" traz a seguinte, o grupo leva o nome da turma, e só a versão adaptada tem a situação dela', async ({ page, hasTouch }) => {
     const { turmaNome } = await entrarEmCriados(page, {
       antes: ({ api, turmaId, disciplinaId }) => {
