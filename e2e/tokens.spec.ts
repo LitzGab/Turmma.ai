@@ -35,7 +35,7 @@ type Tema = 'claro' | 'escuro'
 type Paleta = Map<string, string>
 
 /** Quantas cores cada bloco da 9.10 declara, `white` e `black` incluídas: o mesmo número do teste de unidade. */
-const CORES_POR_BLOCO = 97
+const CORES_POR_BLOCO = 98
 
 const DECLARACAO_DE_COR = /--color-([a-z]+(?:-[a-z0-9]+)*)\s*:\s*([^;}]+)/g
 

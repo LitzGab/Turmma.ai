@@ -95,6 +95,19 @@ describe('AvatarAgente', () => {
     expect((container.firstElementChild as HTMLElement).className.split(' ')).toContain('size-6')
   })
 
+  it('a cabeça recua do anel e desce 6% do tamanho, como no avatar do mockup: 2,44 · 3,92 · 4,4 · 4,88 px do topo do miolo', () => {
+    // A conta: o miolo já descontou o anel de 2 px, e o topo é o recuo do mockup (3 px em 24, 4 px a partir de 32) menos 2, mais 6% do
+    // tamanho. Os quatro números abaixo saem dela; quem protege o componente é a classe lida do `span`.
+    for (const [tamanho, topo] of [[24, 2.44], [32, 3.92], [40, 4.4], [48, 4.88]] as const) {
+      const { container } = render(<AvatarAgente agente="tutor" tamanho={tamanho} />)
+      const cabeca = container.querySelector('[data-agente] > span')
+      const classeDoTopo = [...(cabeca?.classList ?? [])].filter((classe) => classe.startsWith('top-'))
+      expect(classeDoTopo, `${String(tamanho)} px: uma classe de topo só`).toHaveLength(1)
+      expect(classeDoTopo[0], `${String(tamanho)} px`).toBe(`top-[${String(topo)}px]`)
+      cleanup()
+    }
+  })
+
   it('um desenho por agente, igual em qualquer render, sem temporizador e sem estado', () => {
     vi.useFakeTimers()
     for (const agente of AGENTES) {

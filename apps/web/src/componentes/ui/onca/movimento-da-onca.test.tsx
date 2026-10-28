@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Onca, POSES, type Pose } from './Onca'
-import { useAcenarNaPrimeiraVez } from './movimento-da-onca'
+import { esquecerQueAcenou, useAcenarNaPrimeiraVez } from './movimento-da-onca'
 
 /**
  * O movimento da onça de corpo inteiro (`Onca.css`, do mockup; `docs/interface.md` 9.7; D59; D80, item 3): entrar,
@@ -20,7 +20,7 @@ function reduzirMovimento(reduz: boolean) {
 
 beforeEach(() => {
   vi.useFakeTimers()
-  sessionStorage.clear()
+  esquecerQueAcenou()
   reduzirMovimento(false)
 })
 afterEach(() => {
@@ -80,15 +80,14 @@ describe('Onca: o acenar, e nenhum outro temporizador', () => {
     cleanup()
     expect(desenhar('acenando').querySelectorAll('.onca-acena')).toHaveLength(0)
     cleanup()
-    sessionStorage.clear()
+    esquecerQueAcenou()
     expect(desenhar('apontando').querySelectorAll('.onca-acena'), 'só a pose acenando acena').toHaveLength(0)
   })
 
   it('o gancho só liga o aceno para quem pede: `acenando` falso não acena nem gasta o aceno da sessão', () => {
     expect(renderHook(() => useAcenarNaPrimeiraVez(false)).result.current).toBe(false)
-    expect(sessionStorage.getItem('turmma-onca-acenou')).toBeNull()
-    expect(renderHook(() => useAcenarNaPrimeiraVez(true)).result.current).toBe(true)
-    expect(sessionStorage.getItem('turmma-onca-acenou')).not.toBeNull()
+    expect(renderHook(() => useAcenarNaPrimeiraVez(true)).result.current, '`acenando` falso não gastou o aceno').toBe(true)
+    expect(renderHook(() => useAcenarNaPrimeiraVez(true)).result.current, 'o aceno da sessão já foi gasto').toBe(false)
   })
 
   it('o aceno acaba com a pose: da acenando para a apontando, a pata não fica girando', () => {
@@ -98,30 +97,25 @@ describe('Onca: o acenar, e nenhum outro temporizador', () => {
     expect(container.querySelectorAll('.onca-acena')).toHaveLength(0)
   })
 
-  it('o armazenamento negado não derruba a onça: ela acena e segue', () => {
-    vi.stubGlobal('sessionStorage', {
-      getItem: () => {
-        throw new Error('negado')
-      },
-      setItem: () => {
-        throw new Error('negado')
-      },
-    })
+  it('a marca de já acenou não vai para o navegador, e o sessionStorage e o localStorage ficam vazios depois de acenar', () => {
     const onca = desenhar('acenando')
     expect(onca.querySelectorAll('.onca-acena')).toHaveLength(1)
+    expect(JSON.stringify(Object.entries(sessionStorage)), 'sessionStorage').toBe('[]')
+    expect(JSON.stringify(Object.entries(localStorage)), 'localStorage').toBe('[]')
   })
 })
 
 describe('Onca: com "reduzir movimento" nada liga (D59)', () => {
-  it('a onça não acena, e a marca de "já acenou" não é gravada', () => {
+  it('a onça não acena, e o aceno não é gasto: sem "reduzir movimento" a próxima ainda acena', () => {
     reduzirMovimento(true)
     for (const pose of POSES) {
       const onca = desenhar(pose)
       expect(vi.getTimerCount(), pose).toBe(0)
       expect(onca.querySelectorAll('.onca-acena'), pose).toHaveLength(0)
-      expect(sessionStorage.getItem('turmma-onca-acenou'), pose).toBeNull()
       cleanup()
     }
+    reduzirMovimento(false)
+    expect(desenhar('acenando').querySelectorAll('.onca-acena'), 'o aceno não foi gasto com "reduzir movimento"').toHaveLength(1)
   })
 
   it('o CSS desliga todo movimento sob a regra do navegador', () => {

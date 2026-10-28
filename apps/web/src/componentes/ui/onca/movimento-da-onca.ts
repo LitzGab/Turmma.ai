@@ -6,7 +6,19 @@ import { useEffect, useState } from 'react'
  * com efeito e estado (`Onca.test.tsx` reprova os outros), e nada aqui liga com "reduzir movimento": o navegador diz.
  */
 
-const CHAVE_DE_JA_ACENOU = 'turmma-onca-acenou'
+/**
+ * "Já acenou" mora na **memória da página**, e não no `sessionStorage`: a introdução e a aparência não deixam nada no navegador
+ * além da aparência, da lateral recolhida e da letra do aluno (RF24 da X1; `e2e/aparencia.spec.ts` e os `*-introducao.spec.ts`
+ * conferem), e quem entra depois no mesmo computador não herda uma marca, mesmo sem pessoa. A página recarregada é uma sessão
+ * nova, e a onça acena de novo uma vez. Sair da conta sem recarregar não zera a marca: quem entra depois na mesma aba não vê o
+ * aceno, o que não é dado pessoal e é o que o `sessionStorage` antigo também fazia.
+ */
+let jaAcenou = false
+
+/** Só para os testes: volta ao começo de uma página recém-aberta. */
+export function esquecerQueAcenou(): void {
+  jaAcenou = false
+}
 
 export function reduzMovimento(): boolean {
   try {
@@ -16,30 +28,14 @@ export function reduzMovimento(): boolean {
   }
 }
 
-function acenouNestaSessao(): boolean {
-  try {
-    return sessionStorage.getItem(CHAVE_DE_JA_ACENOU) !== null
-  } catch {
-    return false
-  }
-}
-
-function marcarQueAcenou(): void {
-  try {
-    sessionStorage.setItem(CHAVE_DE_JA_ACENOU, '1')
-  } catch {
-    // Armazenamento negado (modo privado): a onça acena e segue, e a próxima também pode acenar.
-  }
-}
-
 /**
- * `acenando` acena uma vez só por sessão: a primeira onça que aparece. As seguintes ficam paradas. A leitura é na montagem, e a
- * marca de "já acenou" é gravada logo depois, num efeito: sem estado mudado dentro do efeito.
+ * `acenando` acena uma vez só por sessão da página: a primeira onça que aparece. As seguintes ficam paradas. A leitura é na montagem, e a
+ * marca de "já acenou" é guardada na memória da página logo depois, num efeito: sem estado mudado dentro do efeito.
  */
 export function useAcenarNaPrimeiraVez(acenando: boolean): boolean {
-  const [acena] = useState(() => acenando && !reduzMovimento() && !acenouNestaSessao())
+  const [acena] = useState(() => acenando && !reduzMovimento() && !jaAcenou)
   useEffect(() => {
-    if (acena) marcarQueAcenou()
+    if (acena) jaAcenou = true
   }, [acena])
   return acena
 }

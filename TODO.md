@@ -2261,13 +2261,14 @@ repetem aqui.
 
 - [ ] Medir no Chromebook de referência (D51), na validação, se a rolagem da conversa do Tutor segue fluida com o avatar novo
       (infra-guardian, rodada 1); o avatar do mockup só se mede com tela real
-- [ ] Quando a regra 20 listar o que o produto grava no navegador, incluir a chave `turmma-onca-acenou` (`sessionStorage`,
-      "a onça já acenou nesta sessão"); não é dado pessoal (privacy-guardian, rodada 1)
 - [ ] O "colégio sintético da vitrine" aparece com id nas fotos da coordenação (`tools/vitrine/`): conferir que o seed não vaza
       id (frontend-reviewer, rodada 1)
-- [ ] Ampliar `fidelidade-ao-mockup.test.tsx` com a impressão congelada das transformações de cada pose (`figura`, patas, pés e
-      rabos); são poucas linhas por pose, e hoje só o corpo, o rosto e os ombros estão congelados (test-engineer, rodada 1)
-- [ ] e2e que prove a descida de 6% da cabeça no `AvatarAgente`; o recuo de 3 e 4 px já tem prova (test-engineer, rodada 1)
+- [ ] Da correção `2026-10-28-onca-do-mockup-v2`: se aparecer um segundo export "só para os testes" no código de produção, criar a guarda
+      que reprove o uso fora de `*.test.*` (hoje só `esquecerQueAcenou`, em `movimento-da-onca.ts`)
+- [ ] Da correção `2026-10-28-onca-do-mockup-v2`: `tasks/prd-pele-e-casca/mockup.md:1369` e `docs/interface.md:1154` ainda descrevem o aceno
+      pela chave do `sessionStorage` ou sem dizer que "sessão" é a página aberta; o Arquiteto ajusta na próxima passagem por `docs/interface.md`
+- [ ] Da correção `2026-10-28-onca-do-mockup-v2`: congelar a mão de cada pose (`maoD`, punho ou creme, e o `cy` 212 em acenando e apontando) em
+      `fidelidade-ao-mockup.test.tsx`, junto da fidelidade da onça
 - [ ] e2e com "reduzir movimento" no passo `pensando` da introdução do aluno (test-engineer, rodada 1); o da árvore da
       comemoração entrou na correção
 - [ ] Da rodada 2 da onça: `docs/interface.md` (tabela da 9.5) ainda diz que a comemoração usa o `t-salto` (600 ms, `curva-quique`), e o

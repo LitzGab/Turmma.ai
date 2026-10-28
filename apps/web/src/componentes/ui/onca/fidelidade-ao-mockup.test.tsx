@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { CabecaOnca } from './CabecaOnca'
-import { Onca, type Pose } from './Onca'
+import { Onca, POSES, type Pose } from './Onca'
 
 /**
  * A onça do produto é a do mockup de outubro (pasta `duo/onca` do protótipo, commit `a95568d`; D80, item 3). O protótipo **não é
@@ -135,6 +135,109 @@ describe('a onça é a do mockup: o corpo de cada pose', () => {
     const pensando = desenhoDoCorpo('pensando')
     expect(circulo(pensando, 165, 202, 14), 'mão creme').not.toBeNull()
     expect(circulo(pensando, 165, 202, 16), 'sem punho').toBeNull()
+  })
+})
+
+/**
+ * O que cada pose gira e desloca, **congelado** a partir do `POSES` do mockup (texto literal): o `transform` da figura, da sombra
+ * do chão, do rosto, das duas orelhas, das duas patas e dos dois pés, e o `d` do rabo. `null` é "sem transformação". O texto
+ * escrito aqui é o do original, não o do `Onca.tsx`: a pata que muda de lugar na pose acenando deixa este teste vermelho.
+ */
+interface TransformacoesDaPose {
+  readonly figura: string | null
+  readonly sombra: string | null
+  readonly rosto: string | null
+  readonly orelhaE: string | null
+  readonly orelhaD: string | null
+  readonly pataE: string | null
+  readonly pataD: string | null
+  readonly peE: string | null
+  readonly peD: string | null
+  readonly rabo: string
+}
+
+const SEM_TRANSFORMACAO = { figura: null, sombra: null, rosto: null, orelhaE: null, orelhaD: null, pataE: null, pataD: null, peE: null, peD: null } as const
+
+const TRANSFORMACOES_DO_MOCKUP: Readonly<Record<Pose, TransformacoesDaPose>> = {
+  acenando: {
+    ...SEM_TRANSFORMACAO,
+    figura: 'rotate(-4 120 220)',
+    pataD: 'translate(30 -16) rotate(-150 165 173)',
+    peE: 'rotate(-15 98 213)',
+    rabo: 'M196 196 C230 190 234 140 214 124 C202 114 190 126 198 136',
+  },
+  comemorando: {
+    ...SEM_TRANSFORMACAO,
+    figura: 'translate(0 -10) scale(1 1.06)',
+    sombra: 'translate(120 228) scale(.8 1) translate(-120 -228)',
+    pataE: 'translate(-30 -16) rotate(150 75 173)',
+    pataD: 'translate(30 -16) rotate(-150 165 173)',
+    peE: 'translate(-4 4) rotate(-12 78 213)',
+    peD: 'translate(4 4) rotate(12 162 213)',
+    rabo: 'M196 198 C232 196 204 160 226 138',
+  },
+  apontando: {
+    ...SEM_TRANSFORMACAO,
+    rosto: 'translate(9 0)',
+    orelhaE: 'translate(12 8)',
+    orelhaD: 'translate(4 0)',
+    pataD: 'translate(14 -6) rotate(-90 165 173)',
+    rabo: 'M196 196 C224 196 226 170 216 152',
+  },
+  pensando: {
+    ...SEM_TRANSFORMACAO,
+    rosto: 'rotate(8 120 120)',
+    orelhaE: 'rotate(8 120 120) translate(0 -2)',
+    orelhaD: 'rotate(8 120 120) translate(0 4)',
+    pataD: 'rotate(116 165 173)',
+    rabo: 'M196 196 C226 192 230 160 214 140',
+  },
+}
+
+/** O que o desenho de uma pose gira e desloca, lido do HTML: as mesmas dez coisas de `TRANSFORMACOES_DO_MOCKUP`. */
+function transformacoesDesenhadas(raiz: ParentNode): TransformacoesDaPose {
+  const transformacao = (seletor: string): string | null => {
+    const no = raiz.querySelector(seletor)
+    expect(no, `${seletor} não está desenhado`).not.toBeNull()
+    return no?.getAttribute('transform') ?? null
+  }
+  // As orelhas giram num grupo sem nome em volta de `orelha-e` e `orelha-d`.
+  const grupoDaOrelha = (lado: 'e' | 'd'): string | null => {
+    const orelha = raiz.querySelector(`[data-parte="orelha-${lado}"]`)
+    expect(orelha, `orelha ${lado} não está desenhada`).not.toBeNull()
+    return orelha?.parentElement?.getAttribute('transform') ?? null
+  }
+  const rabo = raiz.querySelector('[data-parte="rabo"] path')?.getAttribute('d')
+  expect(rabo, 'o rabo não está desenhado').toBeTruthy()
+  return {
+    figura: transformacao('[data-parte="corpo"]'),
+    sombra: transformacao('[data-parte="sombra"]'),
+    rosto: transformacao('[data-parte="rosto"]'),
+    orelhaE: grupoDaOrelha('e'),
+    orelhaD: grupoDaOrelha('d'),
+    pataE: transformacao('[data-parte="pata-e"]'),
+    pataD: transformacao('[data-parte="pata-d"]'),
+    peE: transformacao('[data-parte="pe-e"]'),
+    peD: transformacao('[data-parte="pe-d"]'),
+    rabo: rabo ?? '',
+  }
+}
+
+describe('a onça é a do mockup: o giro e o deslocamento de cada pose', () => {
+  it.each(Object.keys(TRANSFORMACOES_DO_MOCKUP) as Pose[])('%s gira a figura, as orelhas, o rosto, as patas, os pés, a sombra e o rabo como o mockup', (pose) => {
+    expect(transformacoesDesenhadas(desenhoDoCorpo(pose))).toEqual(TRANSFORMACOES_DO_MOCKUP[pose])
+  })
+
+  it.each(Object.keys(TRANSFORMACOES_DO_MOCKUP) as Pose[])('%s põe a ponta escura do rabo nos dois últimos números do caminho dele, como o mockup', (pose) => {
+    // No mockup a ponta sai do próprio `d` (`Cauda`); no produto o `fim` é escrito à parte, e este caso o prende ao caminho congelado.
+    const [x, y] = TRANSFORMACOES_DO_MOCKUP[pose].rabo.trim().split(/[\s,CML]+/).filter(Boolean).slice(-2).map(Number)
+    const pontas = desenhoDoCorpo(pose).querySelectorAll('[data-parte="rabo"] circle[r="8"]')
+    expect(pontas, `${pose}: uma ponta só`).toHaveLength(1)
+    expect({ cx: Number(pontas[0]?.getAttribute('cx')), cy: Number(pontas[0]?.getAttribute('cy')) }).toEqual({ cx: x, cy: y })
+  })
+
+  it('as quatro poses estão congeladas, e nenhuma pose nova passa sem o mockup dizer como ela gira', () => {
+    expect(Object.keys(TRANSFORMACOES_DO_MOCKUP).sort()).toEqual([...POSES].sort())
   })
 })
 
