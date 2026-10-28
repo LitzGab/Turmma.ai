@@ -10,8 +10,10 @@ import { especificadoresDe, importadoresDe, semComentarios, type ArquivoDaWeb } 
  * `componentes/ui/onca/` — a cabeça, e a onça de corpo inteiro — só é importada pelo `AvatarAgente`, por arquivo da
  * própria pasta e, desde a tarefa 5.0 da X4, pelas peças que desenham o corpo inteiro: a `Introducao`, a `Comemoracao` e a
  * introdução de cada papel (`BemVindo`). A `Onca` traz junto o nome da função e o selo "IA" (`figcaption`), e a pose
- * `comemorando` só a `Comemoracao` pede. O `AvatarAgente`, só a `AssinaturaIA` e a `MensagemIA`. Tela, galeria e peça
- * nova que queiram a onça passam pela `AssinaturaIA`, que traz junto o nome e o selo.
+ * `comemorando` só a `Comemoracao` pede. Desde a correção `2026-10-28-onca-do-mockup-v3` uma tela que já existia a desenha também, o vazio de
+ * Criados (`TELAS_COM_A_ONCA`), assinada pelo Assistente de ensino. O `AvatarAgente`, só a `AssinaturaIA` e a `MensagemIA`. Tela, galeria e peça
+ * nova que queiram o **avatar** passam pela `AssinaturaIA`, que traz junto o nome e o selo; a **onça de corpo inteiro** só entra numa tela da
+ * lista fechada, com parecer, e só onde a região guarda produção do agente que assina.
  */
 const RAIZ_DA_WEB = join(import.meta.dirname, '..', '..', '..')
 
@@ -24,7 +26,13 @@ const PECAS_DA_INTRODUCAO = 'componentes/introducao/'
 /** As introduções de cada papel (9.0, 10.0 e 11.0): ainda podem não existir, e a lista é de quem **pode**. */
 const BEM_VINDO_DOS_PAPEIS = ['areas/aluno/introducao/BemVindo.tsx', 'areas/professor/introducao/BemVindo.tsx', 'areas/coordenacao/introducao/BemVindo.tsx']
 /** A `IntroducaoDoPapel` é a peça comum dos quatro estados das introduções (11.0): ela desenha a onça do carregando, e a `BemVindo` de cada papel só passa os passos. */
-const QUEM_IMPORTA_A_ONCA_INTEIRA = ['componentes/introducao/Introducao.tsx', 'componentes/introducao/IntroducaoDoPapel.tsx', 'componentes/ui/Comemoracao.tsx', ...BEM_VINDO_DOS_PAPEIS]
+/**
+ * As telas que já existiam e que ganharam a onça do mockup, uma lista fechada (D73: só em tela que existe; D80, item 3: com parecer do
+ * `conformidade-reviewer`). Hoje é uma: o vazio "Nada gerado ainda" de Criados, assinado pelo Assistente de ensino, que é quem gera o que
+ * a lista guarda. Tela nova que queira a onça entra aqui, com parecer.
+ */
+const TELAS_COM_A_ONCA = ['areas/professor/artefatos/Criados.tsx']
+const QUEM_IMPORTA_A_ONCA_INTEIRA = ['componentes/introducao/Introducao.tsx', 'componentes/introducao/IntroducaoDoPapel.tsx', 'componentes/ui/Comemoracao.tsx', ...BEM_VINDO_DOS_PAPEIS, ...TELAS_COM_A_ONCA]
 const QUEM_IMPORTA_A_PASTA_DA_ONCA = ['componentes/ui/ia/AvatarAgente.tsx', ...QUEM_IMPORTA_A_ONCA_INTEIRA]
 /** A `Comemoracao` é da tarefa aberta; a galeria é o palco dela até lá (o e2e de movimento precisa de uma página). */
 const QUEM_IMPORTA_A_COMEMORACAO = ['areas/aluno/Atividade.tsx', 'galeria/secoes/introducao.tsx']
@@ -60,17 +68,18 @@ describe('a onça só chega à tela pela assinatura', () => {
     const daAssinatura = importadoresDe(arquivos, ASSINATURA)
     for (const tela of ['areas/coordenacao/governanca/Agentes.tsx', 'areas/coordenacao/governanca/Analista.tsx', 'galeria/secoes/marca-onca.tsx']) expect(daAssinatura, tela).toContain(tela)
     const doAvatarOuDaOnca = [...importadoresDe(arquivos, AVATAR), ...importadoresDe(arquivos, PASTA_DA_ONCA)]
-    // A única exceção em `areas/` é a introdução de cada papel, que desenha o corpo inteiro; a galeria e a operação, nenhuma.
-    expect(doAvatarOuDaOnca.filter((nome) => (nome.startsWith('areas/') && !BEM_VINDO_DOS_PAPEIS.includes(nome)) || nome.startsWith('galeria/') || nome.startsWith('operacao/'))).toEqual([])
+    // As únicas exceções em `areas/` são a introdução de cada papel e as telas da lista fechada, que desenham o corpo inteiro; a galeria e a operação, nenhuma.
+    expect(doAvatarOuDaOnca.filter((nome) => (nome.startsWith('areas/') && !BEM_VINDO_DOS_PAPEIS.includes(nome) && !TELAS_COM_A_ONCA.includes(nome)) || nome.startsWith('galeria/') || nome.startsWith('operacao/'))).toEqual([])
   })
 })
 
 describe('a onça de corpo inteiro e a comemoração', () => {
-  it('só a `Introducao`, a `Comemoracao` e a introdução de cada papel importam a `Onca`; a entrada e a casca não', () => {
+  it('só a `Introducao`, a `Comemoracao`, a introdução de cada papel e o vazio de Criados importam a `Onca`; a entrada e a casca não', () => {
     const arquivos = arquivosDaWeb()
     const importadores = importadoresDe(arquivos, ONCA_INTEIRA)
     expect(importadores, 'a `Introducao` desenha a onça: a varredura não a achou').toContain('componentes/introducao/Introducao.tsx')
     expect(importadores, 'a `Comemoracao` desenha a onça: a varredura não a achou').toContain('componentes/ui/Comemoracao.tsx')
+    for (const tela of TELAS_COM_A_ONCA) expect(importadores, `${tela} desenha a onça: a varredura não a achou`).toContain(tela)
     expect(foraDaLista(importadores, QUEM_IMPORTA_A_ONCA_INTEIRA)).toEqual([])
     // A entrada baixa a casca e a página de entrada: nenhuma delas leva a onça nem as peças da introdução para o primeiro carregamento.
     for (const entrada of ['componentes/CascaDaEscola.tsx', 'componentes/CascaPublica.tsx', 'paginas/Inicio.tsx', 'main.tsx']) {

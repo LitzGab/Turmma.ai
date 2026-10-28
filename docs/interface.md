@@ -1154,8 +1154,9 @@ regra 70, item 4b). Vem do `Onca.css`, copiado do mockup, e são três, cada um 
 (a pata, na primeira vez da sessão, e só enquanto a pose é `acenando`) e o **salto da comemoração** (500 ms; é o único salto da
 `Comemoracao`, que não põe outro por cima). Os três **param com `prefers-reduced-motion`**, e o avatar nunca se mexe. **Não
 entram**, por veto: a onça piscando por temporizador, e o laço dos três pontos do `pensando`, que ficam **parados**. A sombra do
-chão sob a onça de corpo inteiro é do cenário, o token `onca-chao` (9.10), e não uma das cores dela. O mockup tem ainda `acolhendo`
-e `dormindo`, a cabeça feliz do avatar, as linhas de movimento e as pintas que voam: nada disso entra (D80, item 3).
+chão sob a onça de corpo inteiro é do cenário, o token `onca-chao` (9.10), e não uma das cores dela. As **duas linhas curtas ao lado
+da pata que acena** são traço parado, na cor da sombra (correção `2026-10-28-onca-do-mockup-v3`). O mockup tem ainda `acolhendo` e
+`dormindo`, a cabeça feliz do avatar e as pintas que voam: nada disso entra (D80, item 3).
 
 **O avatar** (`AvatarAgente`) é a cabeça da onça num círculo `fundo`, com anel de 2 px na cor do
 agente: **Tutor `laranja`, Assistente de ensino `azul`, Analista de desempenho escolar `anil`**. O
@@ -1174,12 +1175,20 @@ O avatar é **um desenho só por agente, com uma expressão neutra, parado**. As
 o tamanho. Não tem pose, "pensando", temporizador nem animação, e não muda com quem usa: nem com a
 presença, nem com a ausência, nem com acerto, erro, tempo de uso ou assunto da conversa.
 
-**A onça de corpo inteiro não aparece na X1.** Cada pose entra na spec que a usa, com parecer
-próprio do `conformidade-reviewer`, e nenhuma pisca, acena em laço ou reage a quem usa:
+**A onça de corpo inteiro não aparece na X1.** Cada pose e cada lugar entram na spec ou na correção que os usa, com parecer
+próprio do `conformidade-reviewer`, e nenhuma pisca, acena em laço ou reage a quem usa.
+
+**O critério da assinatura (correção `2026-10-28-onca-do-mockup-v3`).** A onça de corpo inteiro vai sempre assinada pela função e com o
+selo "IA", e por isso **só entra numa região que guarda produção daquele agente**: o vazio da lista do que o Assistente gera, por exemplo.
+Não entra onde a IA não produziu o que a tela mostra (um roteiro fixo da escola, a resposta de acesso "não está disponível", a região das
+correções aprovadas pelo professor), nem para dar estado a um agente: a pose `pensando` não simula processamento onde nada processa, e a
+`dormindo` (cansaço, sono) não reage ao teto de uso de ninguém (D58, D59; regra 70, itens 4a e 4b). Lugar novo entra na lista fechada de
+`avatar-so-nas-duas-pecas.test.ts`, com parecer.
 
 | Pose | Onde | Nasce |
 |---|---|---|
-| Dormindo | O vazio "Tudo em dia" do sino | X2, com parecer |
+| Apontando | O vazio "Nada gerado ainda" de Criados, assinado pelo Assistente de ensino, parado e de 120 px | correção `2026-10-28-onca-do-mockup-v3`, com parecer |
+| Dormindo | — | não entra: o vazio "Tudo em dia" do sino segue sem mascote, e a pausa do Tutor segue com ícone (D80, item 3) |
 | Acenando · apontando · pensando | Os passos da introdução (pensando: o passo da letra, com os três pontos parados) | X4, tarefa 5.0, com parecer dado; `pensando` e o movimento (entrar e acenar, uma vez), na correção `2026-10-28-onca-do-mockup`, com parecer |
 | Comemorando | A entrega de uma tarefa (9.5, regra 7) | X4, tarefa 5.0, com parecer dado, nas condições da Parte B, item "A comemoração na entrega e a onça acolhendo" |
 | Acolhendo (expressão de preocupação) | — | não entra (D80, item 3) |
@@ -1560,7 +1569,7 @@ prova isso (RF6 da X1).
 | `Tabela` (R) | Moldura de canto 16. Cabeçalho de 44 px em `t-selo`; linha de 64 px, 15 px em 500. Abaixo de 768 px cada linha vira um cartão | Linha ativa em `azul-claro`. Linha que abre: inteira, por Enter e espaço. Não ordena |
 | `Abas` (R) | Linha de 44 px (produto: as abas de página do mockup, que levam o número; a de 48 px é a do mockup solta) sobre um fio de 2 px. Rótulo em `t-rotulo`, `sutil`; a ativa em `azul-texto`, com sublinhado de 3 px em `azul`. **Até três** | Teclado de `teclado-das-abas.ts`; `aria-selected` e `aria-controls` |
 | `Tela` (R) | A moldura de toda tela, com o título e as larguras (11.2) | — |
-| Os três de `estado/` (R) | Caixa de 2 px, título em `t-secao` e uma ação. O vazio tracejado (`borda-campo`) centraliza; o vazio de lista continua à esquerda (produto: ele mora dentro de lista e de cartão, e a tela é que recompõe). Sem onça na X1: a dormindo é da X2, com parecer (9.7) | Carregando é texto parado em `status`, sem pulso; o erro tem `alert` só na mensagem, e o botão e o "Tentando de novo…" ficam fora dele |
+| Os três de `estado/` (R) | Caixa de 2 px, título em `t-secao` e uma ação. O vazio tracejado (`borda-campo`) centraliza; o vazio de lista continua à esquerda (produto: ele mora dentro de lista e de cartão, e a tela é que recompõe). A onça só entra quando a tela a passa em `ilustracao` (9.7); a peça não a importa | Carregando é texto parado em `status`, sem pulso; o erro tem `alert` só na mensagem, e o botão e o "Tentando de novo…" ficam fora dele |
 
 **Marcar e informar**
 

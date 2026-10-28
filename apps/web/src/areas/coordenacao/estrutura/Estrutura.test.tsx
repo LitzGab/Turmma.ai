@@ -339,7 +339,7 @@ describe('"Para terminar a escola"', () => {
     // A lista de nomes não tem marca, e a onça não entra.
     expect(roteiro.textContent).toContain('Lista de nomes')
     expect(roteiro.textContent).not.toMatch(/Lista de nomes · (falta|feito)/)
-    expect(painel.querySelector('img, svg[data-onca]')).toBeNull()
+    expect(painel.querySelector('img, [data-onca]')).toBeNull()
   })
 
   it('com a escola montada, o aviso não existe', async () => {

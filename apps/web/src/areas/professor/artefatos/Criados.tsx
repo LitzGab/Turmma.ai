@@ -10,6 +10,7 @@ import { Dialogo } from '../../../componentes/ui/sobrepostos/Dialogo'
 import { EstadoCarregando, EstadoErro, EstadoVazio } from '../../../componentes/estado/index'
 import { Linha } from '../../../componentes/ui/Linha'
 import { Menu } from '../../../componentes/ui/sobrepostos/Menu'
+import { Onca } from '../../../componentes/ui/onca/Onca'
 import { A_PARTIR_DE_768, useMidia } from '../../../componentes/ui/midia'
 import { Estado } from '../../../componentes/ui/SeloDeEstado'
 import { CabecalhoDeSecao, Tela } from '../../../componentes/ui/Tela'
@@ -181,6 +182,7 @@ export default function Criados() {
 
         {lido && visiveis.length === 0 && lidos.length === 0 && !artefatos.hasNextPage && ligados === 0 && (
           <EstadoVazio
+            ilustracao={<Onca pose="apontando" agente="assistente_de_ensino" tamanho={120} animada={false} />}
             titulo="Nada gerado ainda"
             descricao="Escolha uma ferramenta, ou peça ao Assistente no Início. O que for gerado fica guardado aqui, ligado à turma."
             acao={{ rotulo: 'Ir para Ferramentas', aoAcionar: () => navegar(ROTAS_DO_PROFESSOR.ferramentas) }}

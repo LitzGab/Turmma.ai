@@ -2280,3 +2280,12 @@ repetem aqui.
       pose agenda temporizador" são arbitrários (basta a contagem antes de avançar o relógio); `Comemoracao.test.tsx` deve dizer
       que um invólucro novo com outra animação só o e2e da árvore pega; `rostoConfere` (`Onca.test.tsx`) lê o rosto num `div`, e
       embrulhar num `<svg>` evita falhar pelo motivo errado
+- [ ] Da correção `2026-10-28-onca-do-mockup-v3`: `EstadoVazio.tsx` (comentário da prop `ilustracao`) e `estados.test.tsx` dizem que no vazio padrão a
+      onça fica "à esquerda", e a tela a mostra centralizada sobre texto à esquerda (a `figure` da `Onca` é `items-center`): alinhar a onça à
+      esquerda (muda o que se vê) ou corrigir o comentário e o teste. É a mesma decisão do ramo `tracejado` de `TopoDoVazio`, que nenhuma tela chama
+      com ilustração e que só `estados.test.tsx` prova (frontend-reviewer, revisor-geral e conformidade-reviewer, rodadas 1 e 2)
+- [ ] Da correção `2026-10-28-onca-do-mockup-v3`: o comentário de `Onca.tsx` (cabeçalho do tipo `Pose`) e o de `Onca.test.tsx` dizem que a `dormindo`
+      "ainda não tem lugar no produto"; a 9.7 diz "não entra". Escrever igual, para ninguém ler "ainda" como convite (privacy-guardian e
+      conformidade-reviewer, rodada 2)
+- [ ] Da correção `2026-10-28-onca-do-mockup-v3`: em `Onca.test.tsx`, conferir que o `<g data-parte="movimento">` das linhas do aceno não tem classe
+      (`getAttribute('class')` nulo), e em `Criados.test.tsx` que a onça do vazio mede 120 (test-engineer, rodada 2)

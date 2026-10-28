@@ -148,6 +148,12 @@ describe('Criados: os quatro estados', () => {
     instalar(rede, { artefatos: [] })
     const localizacao = montar()
     expect(await screen.findByText('Nada gerado ainda')).toBeTruthy()
+    // A onça do mockup aponta para o convite, parada e assinada pela função de quem gera (D58; D80, item 3).
+    const onca = document.querySelector('[data-onca]')
+    expect(onca?.getAttribute('data-pose')).toBe('apontando')
+    expect(onca?.querySelector('figcaption')?.textContent).toMatch(/^Assistente de ensino/)
+    expect(onca?.querySelector('[data-selo-ia]')).not.toBeNull()
+    expect(onca?.querySelector('svg')?.getAttribute('class')).not.toContain('onca-animada')
     expect(screen.queryByText(/Nada com estes filtros/)).toBeNull()
     expect(screen.queryByRole('button', { name: 'Limpar filtros' })).toBeNull()
     await usuario.click(screen.getByRole('button', { name: 'Ir para Ferramentas' }))
@@ -397,6 +403,8 @@ describe('Criados: filtro sem resultado', () => {
     expect(await screen.findByText('Nada com estes filtros')).toBeTruthy()
     expect(screen.queryByText(/até aqui/)).toBeNull()
     expect(screen.queryByText('Nada gerado ainda')).toBeNull()
+    // Só o vazio de verdade leva a onça: o vazio de um filtro que não achou nada não.
+    expect(document.querySelector('[data-onca]')).toBeNull()
 
     await usuario.click(screen.getByRole('button', { name: 'Limpar filtros' }))
     expect(localizacao.history?.at(-1)).toBe('/criados')

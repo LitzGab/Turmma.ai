@@ -65,6 +65,8 @@ interface ConfigDaPose {
   readonly boca: BocaDaOnca
   /** O balão de três pontos da pose `pensando`. */
   readonly balao?: boolean
+  /** As duas linhas curtas ao lado da pata que acena: traço parado, que só ajuda a ler o gesto. */
+  readonly linhasDoAceno?: boolean
 }
 
 const giro = (angulo: number, ombro: { readonly x: number; readonly y: number }) => `rotate(${String(angulo)} ${String(ombro.x)} ${String(ombro.y)})`
@@ -86,6 +88,7 @@ const POSES_DO_CORPO: Readonly<Record<Pose, ConfigDaPose>> = {
     rabo: { d: 'M196 196 C230 190 234 140 214 124 C202 114 190 126 198 136', fim: [198, 136] },
     olhar: 'frente',
     boca: 'aberta',
+    linhasDoAceno: true,
   },
   comemorando: {
     figura: 'translate(0 -10) scale(1 1.06)',
@@ -155,6 +158,16 @@ function movimentoDoCorpoNa(pose: Pose, animada: boolean): string | undefined {
   return pose === 'comemorando' ? 'onca-comemora' : 'onca-entra'
 }
 
+/** As duas linhas curtas ao lado da pata que acena (o `extra` do `acenando` no mockup): traço parado, sem animação. */
+function DesenhoDasLinhasDoAceno() {
+  return (
+    <g data-parte="movimento" fill="none" stroke={ONCA.sombra} strokeWidth={5} strokeLinecap="round">
+      <path d="M212 88 Q222 96 223 108" />
+      <path d="M220 72 Q236 86 235 106" />
+    </g>
+  )
+}
+
 /** O balão da pose `pensando`: três pontos **parados** (nada em laço, D59). Sem texto. */
 function DesenhoDoBalao() {
   return (
@@ -196,8 +209,9 @@ function DesenhoDaPata({ lado, transform, longa, mao, classe }: { readonly lado:
  * - **Quatro poses, e o rosto é o da pose.** Nenhum rosto depende de quem usa: nem do acerto, do erro, do tempo de uso ou do
  *   assunto. Dois renders da mesma pose dão o mesmo desenho.
  * - **Sempre assinada.** O desenho vem na mesma `figure` do nome da função e do selo "IA", e o nome acessível é a
- *   função: "onça" não é o nome de agente nenhum (D17, D58). Por isso só a `Introducao`, a `Comemoracao` e as
- *   introduções de cada papel a importam (`ia/avatar-so-nas-duas-pecas.test.ts`).
+ *   função: "onça" não é o nome de agente nenhum (D17, D58). Por isso só a `Introducao`, a `Comemoracao`, as
+ *   introduções de cada papel e o vazio de Criados (`TELAS_COM_A_ONCA`) a importam (`ia/avatar-so-nas-duas-pecas.test.ts`). Em tela, ela só
+ *   entra onde a região guarda produção daquele agente (9.7).
  * - **O movimento é do `Onca.css` e de `movimento-da-onca.ts`**, só quando `animada`: entrar (240 ms, uma vez), acenar (uma
  *   vez por sessão, e só enquanto a pose é `acenando`) e saltar na comemoração (uma vez). Nada disso roda com "reduzir
  *   movimento" (D59), nada fica em laço (os três pontos do `pensando` são parados), e o desenho em si não tem `animate`,
@@ -263,6 +277,7 @@ export function Onca({ pose, agente, tamanho, animada = true }: PropsDaOnca) {
               <rect x={142} y={204} width={40} height={18} rx={9} fill={ONCA.creme} />
             </g>
             {c.balao === true && <DesenhoDoBalao />}
+            {c.linhasDoAceno === true && <DesenhoDasLinhasDoAceno />}
           </g>
         </g>
       </svg>

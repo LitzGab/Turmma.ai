@@ -224,8 +224,9 @@ describe('Onca: o desenho', () => {
       expect(container.querySelectorAll('linearGradient, radialGradient, filter, mask, pattern'), pose).toHaveLength(0)
       // Traço só no rabo (o corpo do rabo e os anéis), na boca fechada e nos olhos fechados em alegria: todos são linhas sem preenchimento.
       const comTraco = [...container.querySelectorAll('[stroke]')]
-      const esperadas = { acenando: 2, comemorando: 4, apontando: 3, pensando: 3 }[pose]
-      expect(comTraco.map((elemento) => elemento.tagName.toLowerCase()), pose).toEqual(Array.from({ length: esperadas }, () => 'path'))
+      // Em acenando as duas linhas ao lado da pata têm o traço no grupo (`g`), e não em cada uma.
+      const esperadas = { acenando: ['path', 'path', 'g'], comemorando: ['path', 'path', 'path', 'path'], apontando: ['path', 'path', 'path'], pensando: ['path', 'path', 'path'] }[pose]
+      expect(comTraco.map((elemento) => elemento.tagName.toLowerCase()), pose).toEqual(esperadas)
       for (const linha of comTraco) expect(linha.getAttribute('fill'), pose).toBe('none')
       // A sombra do chão é do cenário (o token `onca-chao`), e não uma das cores da onça.
       expect(container.querySelector('[data-parte="sombra"] rect')?.getAttribute('class'), pose).toBe('fill-onca-chao')
@@ -255,5 +256,17 @@ describe('a pasta da onça com o corpo inteiro', () => {
     expect(daPasta).toContain('componentes/ui/onca/Onca.tsx')
     const codigo = codigoSemComentarioNemTexto(readFileSync(join(RAIZ_DA_WEB, 'componentes/ui/onca/Onca.tsx'), 'utf8'))
     expect(codigo).not.toMatch(/\b(?:setTimeout|setInterval|requestAnimationFrame|useEffect|useLayoutEffect|useState|useReducer|useRef)\b/)
+  })
+})
+
+describe('Onca: as linhas do aceno', () => {
+  it('só a acenando leva as duas linhas ao lado da pata, e elas são traço parado', () => {
+    for (const pose of POSES) {
+      const { container, unmount } = desenhar(pose)
+      const linhas = container.querySelectorAll('[data-parte="movimento"] path')
+      expect(linhas, pose).toHaveLength(pose === 'acenando' ? 2 : 0)
+      for (const linha of linhas) expect(linha.getAttribute('class'), pose).toBeNull()
+      unmount()
+    }
   })
 })

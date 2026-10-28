@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Botao } from '../ui/Botao'
 
 interface Props {
@@ -18,21 +19,33 @@ interface Props {
   variante?: 'padrao' | 'tracejado'
   /** Só no `tracejado`. É enfeite: o título já diz o que falta. */
   icone?: LucideIcon
+  /**
+   * A onça do mockup no lugar do vazio (D80, item 3), já assinada pela função: quem passa é a tela, que importa a `Onca`. Esta peça
+   * não a importa, para a entrada não carregá-la. Parada e sem balão; no `tracejado` fica centralizada, e no padrão à esquerda.
+   */
+  ilustracao?: ReactNode
+}
+
+/** O que vai em cima do título: a ilustração da tela, ou, só no tracejado, o ícone. A ilustração toma o lugar do ícone. */
+function TopoDoVazio({ tracejado, icone: Icone, ilustracao }: { tracejado: boolean; icone: LucideIcon | undefined; ilustracao: ReactNode }) {
+  if (ilustracao !== undefined) return <div className={`mb-3 ${tracejado ? 'flex justify-center' : ''}`}>{ilustracao}</div>
+  if (tracejado && Icone !== undefined) return <Icone aria-hidden="true" size={24} strokeWidth={1.75} className="mb-3 text-sutil" />
+  return null
 }
 
 /**
  * O estado vazio (`docs/interface.md` 10.2): o título em `t-secao`, o que vai aparecer ali e o que a pessoa pode fazer, e
  * uma ação. É convite para agir, e não pedido de desculpas (regra 50, item 5). A borda é de 2 px, **tracejada em
  * `borda-campo`** (3:1 contra o chão): o tracejado é o que diz "aqui falta algo", e a cor clara da `borda` o apagaria.
- * Sem onça nesta spec: a que dorme é da X2, com parecer (9.7).
+ * A onça só entra quando a tela a passa em `ilustracao` (9.7).
  *
  * Esta peça mora na entrada (Tech Spec da X1, seção 7c): só importa o `Botao`, e nenhuma das peças que ficam fora dela.
  */
-export function EstadoVazio({ titulo, descricao, acao, variante = 'padrao', icone: Icone }: Props) {
+export function EstadoVazio({ titulo, descricao, acao, variante = 'padrao', icone: Icone, ilustracao }: Props) {
   const tracejado = variante === 'tracejado'
   return (
     <div className={`rounded-cartao border-2 border-dashed border-borda-campo bg-superficie ${tracejado ? 'flex flex-col items-center px-4 py-10 text-center' : 'p-4'}`}>
-      {tracejado && Icone !== undefined && <Icone aria-hidden="true" size={24} strokeWidth={1.75} className="mb-3 text-sutil" />}
+      <TopoDoVazio tracejado={tracejado} icone={Icone} ilustracao={ilustracao} />
       <p className="t-secao text-tinta">{titulo}</p>
       <p className={`t-apoio mt-1 text-apoio ${tracejado ? 'max-w-prose' : ''}`}>{descricao}</p>
       {acao && (

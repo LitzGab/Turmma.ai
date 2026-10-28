@@ -241,6 +241,17 @@ describe('a onça é a do mockup: o giro e o deslocamento de cada pose', () => {
   })
 })
 
+describe('a onça é a do mockup: as linhas do aceno', () => {
+  it('as duas linhas ao lado da pata que acena são as do mockup: traço de 5 na cor da sombra, parado', () => {
+    const linhas = [...desenhoDoCorpo('acenando').querySelectorAll('[data-parte="movimento"] path')]
+    expect(linhas.map((no) => no.getAttribute('d'))).toEqual(['M212 88 Q222 96 223 108', 'M220 72 Q236 86 235 106'])
+    const grupo = linhas[0]?.parentElement
+    expect(grupo?.getAttribute('stroke')?.toUpperCase()).toBe(CORES_DO_MOCKUP.sombra)
+    expect(grupo?.getAttribute('stroke-width')).toBe('5')
+    expect(grupo?.getAttribute('fill')).toBe('none')
+  })
+})
+
 describe('a onça é a do mockup: o rosto', () => {
   it('a máscara são dois círculos de r 38, e as orelhas têm o miolo de r 11', () => {
     for (const raiz of [desenhoDaCabeca(), desenhoDoCorpo()]) {

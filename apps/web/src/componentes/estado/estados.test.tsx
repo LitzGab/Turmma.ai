@@ -117,6 +117,21 @@ describe('EstadoVazio', () => {
     expect(classesDo(screen.getByText('Nenhuma atividade ainda')).has('t-secao')).toBe(true)
   })
 
+  it('a ilustração, quando a tela a passa, vem antes do título, e no tracejado ela toma o lugar do ícone; sem ela, nada muda', () => {
+    const { container, rerender } = render(<EstadoVazio titulo="Vazio" descricao="Nada." />)
+    expect(container.querySelector('[data-ilustracao-de-teste]')).toBeNull()
+    const desenho = <svg data-ilustracao-de-teste="" />
+    rerender(<EstadoVazio titulo="Vazio" descricao="Nada." ilustracao={desenho} />)
+    const ilustracao = container.querySelector('[data-ilustracao-de-teste]') as Element
+    const titulo = screen.getByText('Vazio')
+    expect(ilustracao.compareDocumentPosition(titulo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // O padrão fica à esquerda; o tracejado centraliza, e o ícone cede o lugar à ilustração.
+    expect(classesDo(ilustracao.parentElement as Element).has('justify-center')).toBe(false)
+    rerender(<EstadoVazio variante="tracejado" titulo="Vazio" descricao="Nada." icone={Inbox} ilustracao={desenho} />)
+    expect(classesDo(container.querySelector('[data-ilustracao-de-teste]')?.parentElement as Element).has('justify-center')).toBe(true)
+    expect(container.querySelectorAll('svg')).toHaveLength(1)
+  })
+
   it('o tracejado é de 2 px em `borda-campo`, nas duas variantes, e o ícone só aparece no tracejado', () => {
     const { container, rerender } = render(<EstadoVazio titulo="Vazio" descricao="Nada." icone={Inbox} />)
     let classes = classesDo(container.firstElementChild as Element)
