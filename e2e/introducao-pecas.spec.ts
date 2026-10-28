@@ -1,5 +1,5 @@
 import { AxeBuilder } from '@axe-core/playwright'
-import type { Page } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { abrirGaleria, caixa, secao } from './__fixtures__/galeria.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, IMPACTOS_QUE_REPROVAM, larguraExcedente, TAGS_WCAG } from './__fixtures__/verificacoes.ts'
@@ -29,7 +29,7 @@ const botao = (page: Page, nome: string) => introducao(page).getByRole('button',
 
 for (const tema of TEMAS) {
   test.describe(`a introdução e a comemoração, no tema ${tema}`, () => {
-    test('a fala é o `h1`, a onça acena e depois aponta, sempre com a função e o selo "IA", e o rosto é o mesmo', async ({ page }) => {
+    test('a fala é o `h1`, a onça acena e depois aponta, sempre com a função e o selo "IA", e o rosto é o da pose', async ({ page }) => {
       await irParaOTema(page, tema)
       await expect(fala(page)).toHaveText('Oi, Lia! Eu sou o Tutor, um programa da escola.')
       const onca = introducao(page).locator('[data-onca]')
@@ -40,12 +40,14 @@ for (const tema of TEMAS) {
       await expect(introducao(page).getByRole('figure', { name: /on[çc]a/i })).toHaveCount(0)
       await expect(onca.locator('figcaption [data-selo-ia]')).toBeVisible()
       const rostoDoPasso1 = await onca.locator('[data-rosto]').evaluate((no) => no.innerHTML)
-      const pelagem = await onca.locator('svg rect[y="59"]').evaluate((no) => getComputedStyle(no).fill)
+      // O corpo e a cabeça são uma forma só, de pelagem.
+      const pelagem = await onca.locator('svg [data-parte="corpo"] > g > path').evaluate((no) => getComputedStyle(no).fill)
       expect(pelagem, 'a onça é a mesma no claro e no escuro').toBe(PELAGEM)
 
       await botao(page, 'Continuar').click()
       await expect(onca).toHaveAttribute('data-pose', 'apontando')
-      expect(await onca.locator('[data-rosto]').evaluate((no) => no.innerHTML), 'só o corpo muda').toBe(rostoDoPasso1)
+      // O rosto é o do mockup para cada pose: acenando de boca aberta, apontando de lado e sorrindo.
+      expect(await onca.locator('[data-rosto]').evaluate((no) => no.innerHTML.replace(/\bonca[a-zA-Z0-9]+(?=-)/g, 'id')), 'cada pose tem o seu rosto').not.toBe(rostoDoPasso1.replace(/\bonca[a-zA-Z0-9]+(?=-)/g, 'id'))
       // A onça de corpo inteiro cabe na coluna e tem a largura do desenho de 120 px.
       expect((await caixa(onca.locator('svg'))).width).toBe(120)
     })
@@ -108,58 +110,91 @@ for (const tema of TEMAS) {
 }
 
 test.describe('o movimento da comemoração', () => {
-  const salto = (page: Page) => secao(page, 'introducao').locator('[data-comemoracao-da-galeria] .comemoracao-salto')
+  const comemoracao = (page: Page) => secao(page, 'introducao').locator('[data-comemoracao]')
+  const salto = (page: Page) => comemoracao(page).locator('.onca-comemora')
 
-  test('um salto, uma iteração, nunca em laço: só `transform` e `opacity` mudam', async ({ page }) => {
+  /** Os elementos da subárvore (a raiz inclusa) com alguma animação: o que o navegador resolve, não o que o CSS diz. */
+  const animados = (page: Page) =>
+    comemoracao(page).evaluate((raiz) =>
+      [raiz, ...raiz.querySelectorAll('*')].flatMap((no) => {
+        const estilo = getComputedStyle(no)
+        return estilo.animationName === 'none' ? [] : [{ nome: estilo.animationName, iteracoes: estilo.animationIterationCount, duracao: estilo.animationDuration }]
+      }),
+    )
+
+  test('um salto só: na árvore da comemoração uma única animação, `onca-comemorar`, uma iteração, nunca em laço', async ({ page }) => {
     await abrirGaleria(page)
+    await expect(comemoracao(page)).toHaveCount(1)
     await expect(salto(page)).toHaveCount(1)
-    const resolvido = await salto(page).evaluate((no) => {
-      const estilo = getComputedStyle(no)
-      return { nome: estilo.animationName, iteracoes: estilo.animationIterationCount, duracao: estilo.animationDuration }
-    })
-    expect(resolvido.nome).toBe('comemoracao-salto')
-    expect(resolvido.iteracoes).toBe('1')
-    expect(resolvido.iteracoes).not.toBe('infinite')
-    expect(Number.parseFloat(resolvido.duracao)).toBeLessThan(1)
+    const todas = await animados(page)
+    expect(todas, 'exatamente uma animação na árvore da comemoração').toHaveLength(1)
+    const [resolvido] = todas
+    expect(resolvido?.nome).toBe('onca-comemorar')
+    expect(resolvido?.iteracoes).toBe('1')
+    expect(Number.parseFloat(resolvido?.duracao ?? '9')).toBeLessThan(1)
+    await expect(comemoracao(page).locator('.comemoracao-salto')).toHaveCount(0)
 
     const propriedades = await page.evaluate(() => {
       const nomes = new Set<string>()
       for (const folha of document.styleSheets) {
         for (const regra of folha.cssRules) {
-          if (!(regra instanceof CSSKeyframesRule) || regra.name !== 'comemoracao-salto') continue
+          if (!(regra instanceof CSSKeyframesRule) || regra.name !== 'onca-comemorar') continue
           for (const quadro of regra.cssRules) for (const propriedade of (quadro as CSSKeyframeRule).style) nomes.add(propriedade)
         }
       }
       return [...nomes].sort()
     })
-    expect(propriedades).toEqual(['opacity', 'transform'])
+    expect(propriedades).toEqual(['transform'])
   })
 
-  test('com "reduzir movimento" a animação é `none`: a onça aparece parada, inteira, com função e selo', async ({ page }) => {
+  test('com "reduzir movimento" nenhuma animação na árvore: a onça aparece parada, inteira, com função e selo', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await abrirGaleria(page)
     await expect(salto(page)).toHaveCount(1)
+    expect(await animados(page)).toEqual([])
     expect(await salto(page).evaluate((no) => getComputedStyle(no).animationName)).toBe('none')
-    expect(await salto(page).evaluate((no) => getComputedStyle(no).opacity)).toBe('1')
-    await expect(salto(page).locator('[data-onca]')).toHaveAttribute('data-pose', 'comemorando')
-    await expect(salto(page).locator('figcaption [data-selo-ia]')).toBeVisible()
+    await expect(comemoracao(page).locator('[data-onca]')).toHaveAttribute('data-pose', 'comemorando')
+    await expect(comemoracao(page).locator('figcaption [data-selo-ia]')).toBeVisible()
   })
 
   test('sem "reduzir movimento" o salto roda e termina: a onça acaba no lugar, visível', async ({ page }) => {
     await abrirGaleria(page)
     await expect.poll(() => salto(page).evaluate((no) => no.getAnimations().every((animacao) => animacao.playState === 'finished'))).toBe(true)
-    expect(await salto(page).evaluate((no) => getComputedStyle(no).opacity)).toBe('1')
     expect(await salto(page).evaluate((no) => getComputedStyle(no).transform)).toMatch(/^(?:none|matrix\(1, 0, 0, 1, 0, 0\))$/)
+    await expect(comemoracao(page).locator('[data-onca]')).toBeVisible()
   })
 
-  test('a introdução não tem animação, e a onça dela não tem nem transição', async ({ page }) => {
+  test('com "reduzir movimento" a introdução não tem animação nenhuma, e a onça não acena', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     await abrirGaleria(page)
     const animadas = await introducao(page).evaluate((raiz) => [raiz, ...raiz.querySelectorAll('*')].filter((no) => getComputedStyle(no).animationName !== 'none').length)
     expect(animadas).toBe(0)
-    // Os botões do sistema têm a transição do degrau ao apertar (`estilos.css`); a onça, nenhuma.
-    const comTransicao = await introducao(page)
+    // O acenar não é ligado; a onça também não pisca nem agenda temporizador (teste de unidade).
+    await expect(introducao(page).locator('.onca-acena')).toHaveCount(0)
+    // A transição não se confere aqui: sob "reduzir movimento" a regra global do `estilos.css` põe duração mínima em todo elemento.
+  })
+
+  test('sem "reduzir movimento" a onça da introdução só faz os movimentos do `Onca.css`: entrar uma vez, nada em laço, nenhuma transição', async ({ page }) => {
+    await abrirGaleria(page)
+    const animacoes = await introducao(page)
       .locator('[data-onca]')
-      .evaluate((onca) => [onca, ...onca.querySelectorAll('*')].filter((no) => getComputedStyle(no).transitionDuration.split(',').some((duracao) => Number.parseFloat(duracao) > 0)).length)
-    expect(comTransicao).toBe(0)
+      .evaluate((onca) =>
+        [onca, ...onca.querySelectorAll('*')].flatMap((no) => {
+          const estilo = getComputedStyle(no)
+          return estilo.animationName === 'none' ? [] : [{ nome: estilo.animationName, iteracoes: estilo.animationIterationCount }]
+        }),
+      )
+    // Entrar (e acenar, na primeira onça da sessão): finitos e do `Onca.css`. Nada no produto fica em laço.
+    for (const { nome, iteracoes } of animacoes) {
+      expect(nome).toMatch(/^onca-/)
+      expect(iteracoes).not.toBe('infinite')
+    }
+    await expectSemTransicao(introducao(page).locator('[data-onca]'))
   })
 })
+
+/** Os botões do sistema têm a transição do degrau ao apertar (`estilos.css`); a onça, nenhuma. */
+async function expectSemTransicao(onca: Locator): Promise<void> {
+  const comTransicao = await onca.evaluate((raiz) => [raiz, ...raiz.querySelectorAll('*')].filter((no) => getComputedStyle(no).transitionDuration.split(',').some((duracao) => Number.parseFloat(duracao) > 0)).length)
+  expect(comTransicao).toBe(0)
+}

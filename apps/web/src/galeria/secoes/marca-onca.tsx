@@ -9,7 +9,7 @@ const AGENTES = ['assistente_de_ensino', 'tutor', 'analista_de_desempenho_escola
 /**
  * A onça, vista como o produto a mostra (`docs/interface.md` 9.7; D80, item 3): a cabeça no círculo com o anel do agente,
  * **sempre com o nome da função e o selo "IA" ao lado**. A seção só usa a `AssinaturaIA` e a `MensagemIA`, que são as duas
- * peças que desenham o avatar: o avatar sozinho não existe, nem aqui. A onça de corpo inteiro não entra na X1.
+ * peças que desenham o avatar: o avatar sozinho não existe, nem aqui. A onça de corpo inteiro é da introdução e da comemoração.
  */
 export default function SecoesDaMarcaOnca() {
   return (

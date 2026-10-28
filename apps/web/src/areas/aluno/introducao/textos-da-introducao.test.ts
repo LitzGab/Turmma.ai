@@ -109,7 +109,10 @@ describe('os passos da introdução do aluno', () => {
     const [primeiro] = PASSOS_DO_ALUNO
     expect(primeiro?.fala).toMatch(/Tutor, um programa da escola/)
     expect(primeiro?.linhas.join(' ')).toMatch(/posso errar/i)
-    for (const passo of PASSOS_DO_ALUNO) expect(['acenando', 'apontando']).toContain(passo.pose)
+    for (const passo of PASSOS_DO_ALUNO) expect(['acenando', 'apontando', 'pensando']).toContain(passo.pose)
+    // A pose de cada passo, na ordem: só o passo da letra pensa (a pose `pensando` foi aprovada para ele pelo parecer da correção
+    // `2026-10-28-onca-do-mockup`); voltar a `acenando` ou espalhar o `pensando` por outro passo reprova.
+    expect(PASSOS_DO_ALUNO.map((passo) => `${passo.id}:${passo.pose}`)).toEqual(['tutor:acenando', 'supervisao:apontando', 'privacidade:apontando', 'letra:pensando'])
   })
 
   it('os três primeiros passos são obrigatórios (RF13) e o da letra não', () => {

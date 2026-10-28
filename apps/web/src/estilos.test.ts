@@ -23,10 +23,10 @@ const raizDaWeb = dirname(fileURLToPath(import.meta.url))
 const raizDoRepositorio = join(raizDaWeb, '..', '..', '..')
 
 /** Quantas cores cada bloco declara, `white` e `black` incluídas. Outro número é bloco lido pela metade, ou cor nova sem o par. */
-const CORES_POR_BLOCO = 97
+const CORES_POR_BLOCO = 98
 
-/** Os únicos tokens que não são hex de seis dígitos: o véu é hex de oito, com a transparência nos dois últimos. */
-const CORES_COM_TRANSPARENCIA = ['veu']
+/** Os únicos tokens que não são hex de seis dígitos: o véu e a sombra do chão da onça são hex de oito, com a transparência nos dois últimos. */
+const CORES_COM_TRANSPARENCIA = ['veu', 'onca-chao']
 
 type Tema = 'claro' | 'escuro'
 type Paleta = Map<string, string>
@@ -820,5 +820,13 @@ describe('o degrau, o foco e o movimento do estilos.css (RF5, RF7 e RF8)', () =>
     expect(propriedadesAnimadas.length).toBeGreaterThan(0)
     expect(propriedadesAnimadas.filter((propriedade) => !['transform', 'opacity'].includes(propriedade))).toEqual([])
     expect(css).not.toContain('infinite')
+  })
+
+  it('nenhum CSS de `apps/web/src`, o `Onca.css` incluído, tem laço (`infinite`): o `estilos.css` não é o único', () => {
+    const arquivos = (pasta: string): string[] =>
+      readdirSync(pasta, { withFileTypes: true }).flatMap((entrada) => (entrada.isDirectory() ? arquivos(join(pasta, entrada.name)) : entrada.name.endsWith('.css') ? [join(pasta, entrada.name)] : []))
+    const todos = arquivos(join(raizDaWeb))
+    expect(todos.some((arquivo) => arquivo.endsWith('Onca.css')), 'o css da onça está na lista').toBe(true)
+    for (const arquivo of todos) expect(readFileSync(arquivo, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ''), arquivo).not.toContain('infinite')
   })
 })

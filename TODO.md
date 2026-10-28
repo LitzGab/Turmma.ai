@@ -2256,3 +2256,17 @@ repetem aqui.
       grupo, o `privacidade:253` primeiro, mais os seis do `celular` que passaram de 30 s no push do pouso da X4 (`40365404286`, no
       mesmo `83f1c6d8` que ficou verde na `develop`): `pecas-sobrepor:180`, `pecas-galeria:16`, `pecas-ia:173`, `pecas-ia:443` (claro
       e escuro) e `coordenacao-introducao:201`, este da X4 (dono: Orquestrador)
+
+## Da correção 2026-10-28-onca-do-mockup (a onça do mockup), fora dela
+
+- [ ] Medir no Chromebook de referência (D51), na validação, se a rolagem da conversa do Tutor segue fluida com o avatar novo
+      (infra-guardian, rodada 1); o avatar do mockup só se mede com tela real
+- [ ] Quando a regra 20 listar o que o produto grava no navegador, incluir a chave `turmma-onca-acenou` (`sessionStorage`,
+      "a onça já acenou nesta sessão"); não é dado pessoal (privacy-guardian, rodada 1)
+- [ ] O "colégio sintético da vitrine" aparece com id nas fotos da coordenação (`tools/vitrine/`): conferir que o seed não vaza
+      id (frontend-reviewer, rodada 1)
+- [ ] Ampliar `fidelidade-ao-mockup.test.tsx` com a impressão congelada das transformações de cada pose (`figura`, patas, pés e
+      rabos); são poucas linhas por pose, e hoje só o corpo, o rosto e os ombros estão congelados (test-engineer, rodada 1)
+- [ ] e2e que prove a descida de 6% da cabeça no `AvatarAgente`; o recuo de 3 e 4 px já tem prova (test-engineer, rodada 1)
+- [ ] e2e com "reduzir movimento" no passo `pensando` da introdução do aluno (test-engineer, rodada 1); o da árvore da
+      comemoração entrou na correção

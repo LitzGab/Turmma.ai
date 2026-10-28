@@ -7,9 +7,10 @@ import { codigoSemComentarioNemTexto } from '../../__fixtures__/perigo-cheio'
 import { Comemoracao } from './Comemoracao'
 
 /**
- * A comemoração (tarefa 5.0 da X4; RF8, RF19; D59): um salto da onça `comemorando`, em CSS, uma iteração, parado com "reduzir
- * movimento", sem som e sem número. O `jsdom` não calcula `animation-name`: o CSS é lido como texto aqui (`Comemoracao.css`), e
- * o que o navegador resolve — `animationName` com e sem "reduzir movimento" — está em `e2e/introducao-pecas.spec.ts`.
+ * A comemoração (tarefa 5.0 da X4; RF8, RF19; D59): **um** salto, o da onça `comemorando` (`onca-comemora`, em CSS, uma
+ * iteração), parado com "reduzir movimento", sem som e sem número. O `jsdom` não calcula `animation-name`: o CSS é lido como
+ * texto aqui (`onca/Onca.css`), e o que o navegador resolve — `animationName` com e sem "reduzir movimento", exatamente uma
+ * animação na árvore — está em `e2e/introducao-pecas.spec.ts`.
  */
 afterEach(() => {
   cleanup()
@@ -17,7 +18,7 @@ afterEach(() => {
 })
 
 const RAIZ = join(import.meta.dirname, '..', '..')
-const CSS = readFileSync(join(RAIZ, 'componentes/ui/Comemoracao.css'), 'utf8')
+const CSS = readFileSync(join(RAIZ, 'componentes/ui/onca/Onca.css'), 'utf8')
 const FONTE = readFileSync(join(RAIZ, 'componentes/ui/Comemoracao.tsx'), 'utf8')
 
 /** O miolo do bloco que abre na primeira `{` depois de `inicio`, até a `}` que o fecha. */
@@ -45,12 +46,13 @@ describe('Comemoracao: o que aparece', () => {
     expect(container.querySelectorAll('p')).toHaveLength(0)
   })
 
-  it('o salto está num bloco só, em volta da onça, e o texto fica parado', () => {
+  it('o salto é um só, o do corpo da onça, e o texto fica parado: a peça não põe outro movimento por cima', () => {
     const { container } = render(<Comemoracao agente="tutor">Atividade enviada.</Comemoracao>)
-    const saltos = container.querySelectorAll('.comemoracao-salto')
+    const saltos = container.querySelectorAll('.onca-comemora')
     expect(saltos).toHaveLength(1)
-    expect(saltos[0]?.querySelector('[data-onca]')).not.toBeNull()
+    expect(saltos[0]?.closest('[data-onca]'), 'o salto é do corpo da onça').not.toBeNull()
     expect(saltos[0]?.textContent).not.toContain('Atividade enviada.')
+    expect(container.querySelectorAll('.comemoracao-salto, .onca-entra, .onca-acena'), 'nenhum outro movimento na árvore').toHaveLength(0)
   })
 
   it('não tem número, som nem temporizador', () => {
@@ -64,30 +66,31 @@ describe('Comemoracao: o que aparece', () => {
   })
 })
 
-describe('Comemoracao.css: o movimento', () => {
-  const inicioDosFrames = CSS.indexOf('@keyframes comemoracao-salto')
+describe('Onca.css: o salto da comemoração', () => {
+  const inicioDosFrames = CSS.indexOf('@keyframes onca-comemorar')
   const quadros = bloco(CSS, inicioDosFrames)
 
-  it('o salto muda só `transform` e `opacity`', () => {
+  it('o salto muda só `transform`', () => {
     expect(inicioDosFrames, 'os @keyframes sumiram').toBeGreaterThan(-1)
     const propriedades = new Set([...quadros.matchAll(/([a-z-]+)\s*:/g)].map(([, nome]) => nome))
-    expect([...propriedades].sort()).toEqual(['opacity', 'transform'])
+    expect([...propriedades].sort()).toEqual(['transform'])
   })
 
-  it('roda uma vez: `animation-iteration-count: 1`, e `infinite` não aparece em lugar nenhum', () => {
-    expect(CSS).toMatch(/\.comemoracao-salto\s*\{[^}]*animation-iteration-count:\s*1\s*;/)
+  it('roda uma vez, em 500 ms: a regra do `onca-comemora` não repete, e `infinite` não aparece em lugar nenhum', () => {
+    expect(CSS).toMatch(/\.onca-comemora\s*\{[^}]*animation:\s*onca-comemorar 500ms ease-out both;/)
     expect(CSS).not.toMatch(/infinite/)
+    expect(CSS).not.toMatch(/animation-iteration-count:\s*(?!1\b)/)
     expect(CSS).not.toMatch(/animation-direction:\s*(?:alternate|reverse)/)
   })
 
-  it('com "reduzir movimento", a animação é `none`', () => {
+  it('com "reduzir movimento", a animação é `none` para a onça e tudo dentro dela', () => {
     const inicio = CSS.indexOf('@media (prefers-reduced-motion: reduce)')
     expect(inicio, 'o bloco de "reduzir movimento" sumiu').toBeGreaterThan(-1)
-    expect(bloco(CSS, inicio)).toMatch(/\.comemoracao-salto\s*\{\s*animation:\s*none;\s*\}/)
+    expect(bloco(CSS, inicio)).toMatch(/\.onca \*, \.onca \{ animation: none !important; \}/)
   })
 
-  it('a peça carrega o CSS, e o salto não depende de estilo em linha', () => {
-    expect(FONTE).toMatch(/import '\.\/Comemoracao\.css'/)
+  it('a peça não carrega CSS próprio, e o salto não depende de estilo em linha', () => {
+    expect(FONTE).not.toMatch(/import '[^']*\.css'/)
     const { container } = render(<Comemoracao agente="tutor" />)
     for (const elemento of container.querySelectorAll('*')) expect(elemento.hasAttribute('style'), elemento.outerHTML).toBe(false)
   })

@@ -2,6 +2,7 @@
 import type { Agente } from '@educa/shared'
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { semIdsDoDesenho } from '../../../__fixtures__/ids-do-desenho'
 import { AssinaturaIA, SeloIA } from './AssinaturaIA'
 import { AvatarAgente } from './AvatarAgente'
 import { nomeDaAssinatura } from './assinatura'
@@ -101,7 +102,7 @@ describe('AvatarAgente', () => {
       const html = primeiro.container.innerHTML
       primeiro.unmount()
       const segundo = render(<AvatarAgente agente={agente} tamanho={48} />)
-      expect(segundo.container.innerHTML, agente).toBe(html)
+      expect(semIdsDoDesenho(segundo.container.innerHTML), agente).toBe(semIdsDoDesenho(html))
       segundo.unmount()
     }
     expect(vi.getTimerCount()).toBe(0)
@@ -110,7 +111,7 @@ describe('AvatarAgente', () => {
       const { container, unmount } = render(<AvatarAgente agente={agente} />)
       const svg = container.querySelector('svg')?.outerHTML
       unmount()
-      return svg
+      return svg === undefined ? svg : semIdsDoDesenho(svg)
     })
     expect(new Set(dentro).size).toBe(1)
   })

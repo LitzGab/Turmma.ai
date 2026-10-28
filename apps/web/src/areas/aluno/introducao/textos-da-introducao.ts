@@ -14,8 +14,8 @@ export type IdDoPasso = 'tutor' | 'supervisao' | 'privacidade' | 'letra'
 
 export interface PassoDoAluno {
   readonly id: IdDoPasso
-  /** A onça só acena e aponta aqui; a `BemVindo` passa a pose à `Introducao`. Quem importa a `Onca` é uma lista fechada (D58), e este arquivo não está nela. */
-  readonly pose: 'acenando' | 'apontando'
+  /** A onça acena, aponta e, no passo em que o aluno escolhe (a letra), pensa; a `BemVindo` passa a pose à `Introducao`. Quem importa a `Onca` é uma lista fechada (D58), e este arquivo não está nela. */
+  readonly pose: 'acenando' | 'apontando' | 'pensando'
   /** A fala da onça, que é o `h1` do passo. */
   readonly fala: string
   /** O que o passo diz embaixo da fala, uma frase por linha. O passo do aviso e o da letra têm o conteúdo próprio. */
@@ -37,7 +37,7 @@ export const PASSOS_DO_ALUNO: readonly PassoDoAluno[] = [
   { id: 'tutor', pose: 'acenando', fala: FALA_DO_TUTOR, linhas: [FRASE_QUE_PODE_ERRAR, FRASE_QUE_NAO_E_PESSOA], obrigatorio: true },
   { id: 'supervisao', pose: 'apontando', fala: FALA_DA_SUPERVISAO, linhas: LINHAS_DA_SUPERVISAO, obrigatorio: true },
   { id: 'privacidade', pose: 'apontando', fala: FALA_DO_AVISO, linhas: [], obrigatorio: true },
-  { id: 'letra', pose: 'acenando', fala: FALA_DA_LETRA, linhas: [], obrigatorio: false },
+  { id: 'letra', pose: 'pensando', fala: FALA_DA_LETRA, linhas: [], obrigatorio: false },
 ]
 
 /** Quantos passos há: o carregando e o erro da `BemVindo` mostram "Passo 1 de N" sem ainda saber qual é o modo. */

@@ -120,6 +120,8 @@ export const PECAS_FORA_DA_ENTRADA = [
   'ui/midia',
   'ui/NumeroPainel',
   'ui/onca/CabecaOnca',
+  'ui/onca/geometria',
+  'ui/onca/movimento-da-onca',
   'ui/onca/Onca',
   'ui/SeloDeEstado',
   'ui/sobrepostos/DialogoDeConfirmacao',
@@ -139,7 +141,7 @@ export function ehPecaForaDaEntrada(idDoModulo: string): boolean {
   if (id.includes(PASTA_DAS_PECAS_DE_IA)) return true
   const posicao = id.indexOf(PASTA_DOS_COMPONENTES)
   if (posicao === -1) return false
-  // O estilo que mora ao lado da peça (`Comemoracao.css`) é da peça: sem ele, o pedaço que a galeria e a tarefa aberta dividem
+  // O estilo que mora ao lado da peça (`onca/Onca.css`) é da peça: sem ele, o pedaço que a galeria e a tarefa aberta dividem
   // deixaria de ser `pecas-*` e cairia em `parte-*`, que o teto do primeiro carregamento mediria sem ela estar nele.
   const arquivo = id.slice(posicao + PASTA_DOS_COMPONENTES.length).replace(/\.(?:tsx?|css)$/, '')
   return (PECAS_FORA_DA_ENTRADA as readonly string[]).includes(arquivo)

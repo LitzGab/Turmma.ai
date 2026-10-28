@@ -4,13 +4,14 @@ import { cleanup, render } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { semIdsDoDesenho } from '../../../__fixtures__/ids-do-desenho'
 import { arquivosDeCodigoDaWeb, codigoSemComentarioNemTexto } from '../../../__fixtures__/perigo-cheio'
-import { CabecaOnca } from './CabecaOnca'
 import { Onca, POSES, type Pose, type TamanhoDaOnca } from './Onca'
 
 /**
- * A onça de corpo inteiro (tarefa 5.0 da X4; RF19; `docs/interface.md` 9.7; D58, D59; regra 70, itens 4a e 4b): três poses,
- * o mesmo rosto neutro da cabeça da X1 em todas, sempre com a função e o selo "IA", parada. O que o navegador pinta é do
+ * A onça de corpo inteiro (tarefa 5.0 da X4; RF19; `docs/interface.md` 9.7; D58, D59; regra 70, itens 4a e 4b): quatro poses,
+ * cada uma com o rosto do mockup, sempre com a função e o selo "IA". Aqui o desenho é conferido parado (`animada={false}`); o
+ * movimento está em `movimento-da-onca.test.tsx`. O que o navegador pinta é do
  * e2e (`introducao-pecas.spec.ts`); aqui está o que o `jsdom` sabe: o SVG como ele é, e o que ele não tem.
  */
 afterEach(() => {
@@ -32,62 +33,99 @@ function coresDaOnca(): Set<string> {
 }
 
 function desenhar(pose: Pose, agente: (typeof AGENTES)[number] = 'tutor', tamanho: TamanhoDaOnca = 120) {
-  return render(<Onca pose={pose} agente={agente} tamanho={tamanho} />)
-}
-
-/** O rosto da cabeça neutra da X1, como ela o desenha: o miolo do `svg`. */
-function rostoDaCabeca(): string {
-  const { container, unmount } = render(<CabecaOnca tamanho={48} />)
-  const miolo = container.querySelector('svg')?.innerHTML ?? ''
-  unmount()
-  return miolo
+  return render(<Onca pose={pose} agente={agente} tamanho={tamanho} animada={false} />)
 }
 
 describe('Onca: as poses', () => {
-  it('são três: acenando, apontando e comemorando. Não existe "acolhendo"', () => {
-    expect([...POSES]).toEqual(['acenando', 'apontando', 'comemorando'])
+  it('são quatro: acenando, apontando, comemorando e pensando. Não existem "acolhendo" nem "dormindo"', () => {
+    expect([...POSES]).toEqual(['acenando', 'apontando', 'comemorando', 'pensando'])
     for (const pose of POSES) {
       const { container, unmount } = desenhar(pose)
       expect(container.querySelector('[data-onca]')?.getAttribute('data-pose')).toBe(pose)
       unmount()
     }
-    // Só o compilador a recusa: a função não roda, porque a pose não tem braços a desenhar.
+    // Só o compilador as recusa: a função não roda, porque a pose não tem braços a desenhar.
     void (() =>
       // @ts-expect-error a expressão de preocupação não entra no produto (D80, item 3)
       render(<Onca pose="acolhendo" agente="tutor" tamanho={120} />))
+    void (() =>
+      // @ts-expect-error o vazio com a onça dormindo ainda não tem lugar no produto
+      render(<Onca pose="dormindo" agente="tutor" tamanho={120} />))
   })
 
-  it('só o corpo muda: as três poses dão três desenhos de corpo diferentes', () => {
-    const corpos = new Set<string>()
+  it('as quatro poses dão quatro desenhos diferentes', () => {
+    const desenhos = new Set<string>()
     for (const pose of POSES) {
       const { container, unmount } = desenhar(pose)
-      const rosto = container.querySelector('[data-rosto]')
-      rosto?.remove()
-      corpos.add(container.querySelector('svg')?.innerHTML ?? '')
+      desenhos.add(semIdsDoDesenho(container.querySelector('svg')?.innerHTML ?? ''))
       unmount()
     }
-    expect(corpos.size).toBe(POSES.length)
+    expect(desenhos.size).toBe(POSES.length)
   })
 
-  it('o rosto de cada pose é o da cabeça neutra da X1: os mesmos olhos, focinho e boca', () => {
-    const neutro = rostoDaCabeca()
+  // O rosto de cada pose é o do mockup (os valores estão congelados em `fidelidade-ao-mockup.test.tsx`). Só a cabeça do avatar é
+  // sempre neutra. [pose, trecho que só o rosto dela tem, trecho que o rosto dela não pode ter, x e y da pupila esquerda
+  // (vazio: olhos fechados em arco, sem pupila), se leva a pálpebra baixa].
+  const BOCA_W = 'M110 147 Q115 152 120 146 Q125 152 130 147'
+  const ROSTO_DA_POSE: readonly (readonly [Pose, string, string, string, boolean])[] = [
+    ['acenando', 'M109 146 Q121 150 133 145 Q133 158 122 160 Q110 160 109 146 Z', BOCA_W, '82,99', false],
+    ['apontando', 'M111 147 Q122 155 133 145', BOCA_W, '85,97', false],
+    ['comemorando', 'M76 116 Q90 96 104 116', BOCA_W, '', false],
+    ['pensando', 'M121 150 Q127 152 131 147', 'M111 147 Q122 155 133 145', '84,86', true],
+  ]
+
+  /** O rosto confere com o que o mockup dá à pose? Boca, olhar e pálpebra, lidos do HTML do rosto. */
+  function rostoConfere(pose: Pose, rosto: string): boolean {
+    const linha = ROSTO_DA_POSE.find(([nome]) => nome === pose)
+    if (linha === undefined) throw new Error(`pose sem linha: ${pose}`)
+    const [, proprio, alheio, pupila, palpebra] = linha
+    const no = document.createElement('div')
+    no.innerHTML = rosto
+    const medidas = no.querySelector('rect[data-parte="pupila"]')?.outerHTML.match(/x="(\d+)" y="(\d+)"/)?.slice(1, 3).join(',') ?? ''
+    return rosto.includes(proprio) && !rosto.includes(alheio) && medidas === pupila && (no.querySelector('g[clip-path$="-abre)"]') !== null) === palpebra
+  }
+  const rostoDa = (pose: Pose): string => {
+    const { container, unmount } = desenhar(pose)
+    const rosto = container.querySelectorAll('[data-rosto]')
+    expect(rosto, pose).toHaveLength(1)
+    const html = rosto[0]?.innerHTML ?? ''
+    unmount()
+    return html
+  }
+
+  it('o rosto de cada pose é o do mockup para ela: boca, olhar e pálpebra, e nenhum rosto vem de quem usa', () => {
+    for (const [pose] of ROSTO_DA_POSE) expect(rostoConfere(pose, rostoDa(pose)), pose).toBe(true)
+  })
+
+  it('a conferência do rosto é de verdade: o rosto de outra pose, ou um rosto adulterado, não passa', () => {
+    for (const [pose] of ROSTO_DA_POSE) {
+      for (const [outra] of ROSTO_DA_POSE) {
+        if (outra !== pose) expect(rostoConfere(pose, rostoDa(outra)), `${pose} com o rosto de ${outra}`).toBe(false)
+      }
+    }
+    const apontando = rostoDa('apontando')
+    expect(rostoConfere('apontando', apontando.replace('M111 147 Q122 155 133 145', BOCA_W)), 'boca trocada').toBe(false)
+    expect(rostoConfere('apontando', apontando.replace('x="85" y="97"', 'x="82" y="99"')), 'olhar trocado').toBe(false)
+  })
+
+  it('no `pensando` só o olho direito leva a pálpebra baixa: o esquerdo fica aberto', () => {
+    const { container } = desenhar('pensando')
+    expect(container.querySelectorAll('g[clip-path$="-abre)"]')).toHaveLength(1)
+    expect(container.querySelectorAll('g[clip-path$="-abre)"] > [data-parte="olho-d"]')).toHaveLength(1)
+    expect(container.querySelectorAll('g[clip-path$="-abre)"] [data-parte="olho-e"]')).toHaveLength(0)
+    expect(container.querySelectorAll('[data-parte="olho-e"]')).toHaveLength(1)
+  })
+
+  it('toda referência do desenho, de `url` e de `href`, aponta para um `id` que existe nele, em cada pose', () => {
     for (const pose of POSES) {
       const { container, unmount } = desenhar(pose)
-      const rosto = container.querySelectorAll('[data-rosto]')
-      expect(rosto, pose).toHaveLength(1)
-      expect(rosto[0]?.innerHTML, pose).toBe(neutro)
+      const ids = new Set([...container.querySelectorAll('[id]')].map((no) => no.id))
+      const html = container.innerHTML
+      const alvos = [...html.matchAll(/url\(#([^)]+)\)|href="#([^"]+)"/g)].map(([, a, b]) => a ?? b ?? '')
+      expect(alvos.length, pose).toBeGreaterThan(5)
+      expect(alvos.filter((alvo) => !ids.has(alvo)), pose).toEqual([])
       unmount()
     }
-  })
-
-  it('o rosto é conferido de verdade: uma boca trocada deixa a comparação vermelha', () => {
-    const neutro = rostoDaCabeca()
-    const { container } = desenhar('acenando')
-    const rosto = container.querySelector('[data-rosto]')?.innerHTML ?? ''
-    // A boca aberta e a boca de preocupação são o que a comparação precisa pegar.
-    expect(rosto.replace('q1.8 2.2 3.6.2', 'q1.8 -2.2 3.6.2')).not.toBe(neutro)
-    expect(rosto.replace('<path d="M24 33.8V36', '<path d="M24 33.8V30')).not.toBe(neutro)
-    expect(rosto.replace(/<circle cx="17.5" cy="26" r="1.9"/, '<circle cx="17.5" cy="25" r="1.9"')).not.toBe(neutro)
   })
 })
 
@@ -126,24 +164,26 @@ describe('Onca: sempre assinada, nunca pessoa', () => {
   it('só aceita pose, agente e um dos três tamanhos', () => {
     // @ts-expect-error sem agente não há quem assine
     render(<Onca pose="acenando" tamanho={120} />)
-    // @ts-expect-error nenhum humor nem expressão que mude com quem usa
+    // @ts-expect-error nenhum humor nem expressão que mude com quem usa: o rosto é o da pose
     render(<Onca pose="acenando" agente="tutor" tamanho={120} humor="feliz" />)
+    // @ts-expect-error a boca também é da pose
+    render(<Onca pose="acenando" agente="tutor" tamanho={120} boca="sorriso" />)
     // @ts-expect-error o tamanho é um dos três do desenho
     render(<Onca pose="acenando" agente="tutor" tamanho={100} />)
   })
 })
 
 describe('Onca: o desenho', () => {
-  it('é um SVG só por onça, na proporção do quadro, e o tamanho é só o tamanho', () => {
+  it('é um SVG só por onça, quadrado como o do mockup, e o tamanho é só o tamanho', () => {
     const formas = new Set<string>()
     for (const tamanho of TAMANHOS) {
       const { container, unmount } = desenhar('apontando', 'tutor', tamanho)
       const svg = container.querySelector('svg') as SVGElement
       expect(container.querySelectorAll('svg')).toHaveLength(1)
       expect(svg.getAttribute('width')).toBe(String(tamanho))
-      expect(svg.getAttribute('height')).toBe(String(Math.round((tamanho * 132) / 120)))
-      expect(svg.getAttribute('viewBox')).toBe('0 0 120 132')
-      formas.add(svg.innerHTML)
+      expect(svg.getAttribute('height')).toBe(String(tamanho))
+      expect(svg.getAttribute('viewBox')).toBe('0 0 240 240')
+      formas.add(semIdsDoDesenho(svg.innerHTML))
       unmount()
     }
     expect(formas.size).toBe(1)
@@ -162,12 +202,12 @@ describe('Onca: o desenho', () => {
       }
       primeiro.unmount()
       const segundo = desenhar(pose)
-      expect(segundo.container.innerHTML, pose).toBe(html)
+      expect(semIdsDoDesenho(segundo.container.innerHTML), pose).toBe(semIdsDoDesenho(html))
       segundo.unmount()
     }
   })
 
-  it('usa só as nove cores da 9.7, sem degradê nem contorno em forma alguma além da boca da cabeça', () => {
+  it('usa só as cores da 9.7, sem degradê, e os únicos traços são o rabo, a boca fechada e os olhos em alegria: nenhuma forma tem contorno', () => {
     const permitidas = coresDaOnca()
     expect(permitidas.size, 'a 9.7 declara nove cores fixas').toBe(9)
     for (const pose of POSES) {
@@ -178,31 +218,42 @@ describe('Onca: o desenho', () => {
           if (valor !== null && valor !== 'none') expect(permitidas.has(valor.toUpperCase()), `${pose} ${valor}`).toBe(true)
         }
       }
-      expect(container.querySelectorAll('linearGradient, radialGradient, filter, mask, clipPath, defs, use, pattern'), pose).toHaveLength(0)
-      expect([...container.querySelectorAll('[stroke]')].map((elemento) => elemento.tagName.toLowerCase()), pose).toEqual(['path'])
+      // A língua é da boca aberta, e só: acenando e comemorando.
+      expect(container.innerHTML.toUpperCase().includes('#FF9FB0'), `${pose}: a língua é da boca aberta`).toBe(pose === 'acenando' || pose === 'comemorando')
+      // A pinta e os recortes são `defs`, `use` e `clipPath`; degradê, filtro, máscara e padrão, nenhum.
+      expect(container.querySelectorAll('linearGradient, radialGradient, filter, mask, pattern'), pose).toHaveLength(0)
+      // Traço só no rabo (o corpo do rabo e os anéis), na boca fechada e nos olhos fechados em alegria: todos são linhas sem preenchimento.
+      const comTraco = [...container.querySelectorAll('[stroke]')]
+      const esperadas = { acenando: 2, comemorando: 4, apontando: 3, pensando: 3 }[pose]
+      expect(comTraco.map((elemento) => elemento.tagName.toLowerCase()), pose).toEqual(Array.from({ length: esperadas }, () => 'path'))
+      for (const linha of comTraco) expect(linha.getAttribute('fill'), pose).toBe('none')
+      // A sombra do chão é do cenário (o token `onca-chao`), e não uma das cores da onça.
+      expect(container.querySelector('[data-parte="sombra"] rect')?.getAttribute('class'), pose).toBe('fill-onca-chao')
       unmount()
     }
   })
 
-  it('o corpo é o mesmo nas três poses: o que muda são os braços', () => {
-    const semBracos = new Set<string>()
+  it('o corpo é o mesmo nas três poses: o que muda são os braços, o rabo, os pés e a inclinação', () => {
+    const comuns = new Set<string>()
     for (const pose of POSES) {
       const { container, unmount } = desenhar(pose)
-      for (const braco of container.querySelectorAll('g[transform^="rotate"]')) braco.remove()
-      container.querySelector('[data-rosto]')?.remove()
-      semBracos.add(container.querySelector('svg')?.innerHTML ?? '')
+      // O que não muda: a forma do corpo e da cabeça, as rosetas e a barriga.
+      const parte = (seletor: string) => semIdsDoDesenho(container.querySelector(seletor)?.outerHTML ?? '')
+      comuns.add([parte('[data-parte="corpo"] > g > path'), parte('[data-parte="barriga"]'), semIdsDoDesenho(container.querySelectorAll('g[clip-path] use')[0]?.parentElement?.innerHTML ?? '')].join('|'))
+      // O que muda é desenhado em grupos próprios, para o corpo não ser redesenhado.
+      for (const nome of ['pata-e', 'pata-d', 'rabo', 'pe-e', 'pe-d', 'orelha-e', 'orelha-d']) expect(container.querySelectorAll(`[data-parte="${nome}"]`), `${pose} ${nome}`).toHaveLength(1)
       unmount()
     }
-    expect(semBracos.size).toBe(1)
+    expect(comuns.size).toBe(1)
   })
 })
 
 describe('a pasta da onça com o corpo inteiro', () => {
   const daPasta = arquivosDeCodigoDaWeb(RAIZ_DA_WEB).filter((nome) => nome.startsWith('componentes/ui/onca/'))
 
-  it('a `Onca` está na pasta e não tem temporizador, efeito nem estado', () => {
+  it('a `Onca` está na pasta e não tem temporizador, efeito nem estado: o que se mexe está em `movimento-da-onca.ts`', () => {
     expect(daPasta).toContain('componentes/ui/onca/Onca.tsx')
     const codigo = codigoSemComentarioNemTexto(readFileSync(join(RAIZ_DA_WEB, 'componentes/ui/onca/Onca.tsx'), 'utf8'))
-    expect(codigo).not.toMatch(/\b(?:setTimeout|setInterval|requestAnimationFrame|useEffect|useLayoutEffect|useState|useReducer|useRef|useId)\b/)
+    expect(codigo).not.toMatch(/\b(?:setTimeout|setInterval|requestAnimationFrame|useEffect|useLayoutEffect|useState|useReducer|useRef)\b/)
   })
 })

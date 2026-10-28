@@ -55,9 +55,10 @@ for (const tema of TEMAS) {
           expect(medida, `${agente}: quadrado de ${String(tamanho)} px`).toMatchObject({ width: tamanho, height: tamanho })
           expect(await desenho(avatar), agente).toMatchObject({ fundo, borda: `2px solid ${anel[agente] ?? ''}` })
           expect(Number.parseFloat((await desenho(avatar)).canto), `${agente}: redondo`).toBeGreaterThanOrEqual(tamanho / 2)
-          // A cabeça preenche o miolo, dentro do anel: o círculo é de `tamanho`, e o desenho, de `tamanho − 4`.
+          // A cabeça recua do anel como no mockup: o círculo é de `tamanho`, e o desenho, de `tamanho − 2 × folga` (3 px em 24, 4 px a partir de 32).
           await expect(avatar.locator('svg'), agente).toHaveCount(1)
-          expect(await caixa(avatar.locator('svg')), `${agente}: a cabeça dentro do anel`).toMatchObject({ width: tamanho - 4, height: tamanho - 4 })
+          const dentro = tamanho - 2 * (tamanho < 32 ? 3 : 4)
+          expect(await caixa(avatar.locator('svg')), `${agente}: a cabeça dentro do anel`).toMatchObject({ width: dentro, height: dentro })
           await expect(avatar.locator('img, image, picture'), agente).toHaveCount(0)
           conferidos += 1
         }
@@ -69,14 +70,14 @@ for (const tema of TEMAS) {
 
     test('as cores da onça são fixas: a pelagem, o olho e a pupila são os mesmos no claro e no escuro, e a cabeça é a mesma nos três agentes', async ({ page }) => {
       await irParaOTema(page, tema)
-      const cabecas = await secao(page, 'marca-onca').locator('[data-tamanho="48"] [data-agente] svg').evaluateAll((svgs) => svgs.map((svg) => svg.innerHTML))
+      const cabecas = await secao(page, 'marca-onca').locator('[data-tamanho="48"] [data-agente] svg').evaluateAll((svgs) => svgs.map((svg) => svg.innerHTML.replace(/\bcab[a-zA-Z0-9]+(?=-(?:pinta|corpo|olho-[ed])\b)/g, 'id')))
       expect(cabecas).toHaveLength(AGENTES.length)
       expect(new Set(cabecas).size, 'um desenho só: a cabeça não muda de um agente para outro').toBe(1)
       const cores = await secao(page, 'marca-onca')
         .locator('[data-tamanho="48"] [data-agente="tutor"] svg')
         .evaluate((svg) => {
           const fill = (seletor: string) => getComputedStyle(svg.querySelector(seletor) as Element).fill
-          return { pelagem: fill('circle[cx="13"]'), olho: fill('circle[cx="17.5"][r="3.4"]'), pupila: fill('circle[cx="17.5"][r="1.9"]') }
+          return { pelagem: fill('circle[r="22"]'), olho: fill('g > rect[width="38"]'), pupila: fill('rect[data-parte="pupila"]') }
         })
       expect(cores).toEqual({ pelagem: PELAGEM, olho: OLHO, pupila: PUPILA })
     })

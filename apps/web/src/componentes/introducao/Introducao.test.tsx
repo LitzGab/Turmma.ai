@@ -293,9 +293,9 @@ describe('Introducao: a onça de cada passo (RF19)', () => {
     expect(poses).not.toContain('comemorando')
   })
 
-  it('o passo só aceita acenando ou apontando', () => {
+  it('o passo só aceita acenando, apontando ou pensando', () => {
     const passo: PassoDaIntroducao = {
-      // @ts-expect-error a pose de festa é da `Comemoracao`: a introdução termina com a onça parada
+      // @ts-expect-error a pose de festa é da `Comemoracao`: a introdução nunca comemora
       pose: 'comemorando',
       fala: 'x',
       obrigatorio: false,

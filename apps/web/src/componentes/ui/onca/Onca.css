@@ -1,0 +1,42 @@
+/*
+ * O movimento da onça de corpo inteiro (`docs/interface.md` 9.7; D59; D80, item 3): o `onca.css` do mockup de outubro, copiado,
+ * **menos o que o parecer do `conformidade-reviewer` vetou**: o piscar por temporizador e o laço dos três pontos do `pensando`
+ * (que ficam parados). Só `transform` e `opacity`, e **nenhum laço**: entrar, acenar e comemorar rodam uma vez.
+ * Cada movimento roda quando a onça é `animada` (`Onca.tsx`) e some com "reduzir movimento": a regra no fim deste arquivo
+ * desliga todos, e o acenar, que o JavaScript decide, nem é ligado (`movimento-da-onca.ts`).
+ */
+.onca { overflow: visible; }
+
+/* Só os grupos que animam usam fill-box. Os grupos das poses (data-parte) giram por atributo, com o centro
+   escrito no próprio rotate(a cx cy): com fill-box, o navegador deslocaria esse centro. */
+.onca .onca-acena, .onca .onca-comemora, .onca .onca-entra {
+  transform-box: fill-box;
+}
+
+/* entrar: 240 ms, uma vez */
+.onca-animada .onca-entra { animation: onca-entrar 240ms ease-out both; }
+@keyframes onca-entrar {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* acenar: a pata gira 25° duas vezes em 800 ms, a partir do ombro (o centro da ponta de cima) */
+.onca .onca-acena { transform-origin: 50% 13px; animation: onca-acenar 800ms ease-in-out 240ms both; }
+@keyframes onca-acenar {
+  0%, 50%, 100% { transform: rotate(0deg); }
+  25%, 75% { transform: rotate(25deg); }
+}
+
+/* comemorar: encolhe (80 ms), salta −12 px (220 ms) e cai com um quique (180 ms) */
+.onca .onca-comemora { transform-origin: 50% 100%; animation: onca-comemorar 500ms ease-out both; }
+@keyframes onca-comemorar {
+  0% { transform: scale(1, 1); }
+  16% { transform: translateY(0) scale(1.02, .94); }
+  60% { transform: translateY(-12px) scale(.99, 1.03); }
+  84% { transform: translateY(0) scale(1.02, .97); }
+  100% { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onca *, .onca { animation: none !important; }
+}

@@ -181,13 +181,13 @@ describe('nome dos chunks', () => {
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/onca/OncaInteira.tsx')).toBe(false)
   })
 
-  it('a comemoração e o estilo dela (X4, 6.0) estão fora da entrada, e o CSS de outro arquivo não é peça só por ser CSS', () => {
+  it('a comemoração e o estilo da onça dela (X4, 6.0) estão fora da entrada, e o CSS de outro arquivo não é peça só por ser CSS', () => {
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Comemoracao.tsx')).toBe(true)
     // O estilo ao lado da peça é da peça: sem isto, o pedaço dividido entre a galeria e a tarefa aberta cai em `parte-*`.
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Comemoracao.css')).toBe(true)
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Comemoracao.css?used')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/onca/Onca.css')).toBe(true)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/onca/Onca.css?used')).toBe(true)
     expect(ehPecaForaDaEntrada('/repo/apps/web/src/componentes/ui/Botao.css')).toBe(false)
-    expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/aluno/Comemoracao.css')).toBe(false)
+    expect(ehPecaForaDaEntrada('/repo/apps/web/src/areas/aluno/Onca.css')).toBe(false)
   })
 
   it('o tamanho da letra (X4, 8.0) está fora da entrada, com a pasta dela, e o `letra.ts`, que a entrada importa, não é peça', () => {

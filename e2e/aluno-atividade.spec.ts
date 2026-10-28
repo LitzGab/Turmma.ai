@@ -67,6 +67,15 @@ const estadoDaResposta = (page: Page) => principal(page).locator('[data-resposta
 const nomesNoMapa = (page: Page) => mapa(page).getByRole('button').evaluateAll((botoes) => botoes.map((botao) => botao.getAttribute('aria-label')))
 
 const comemoracao = (page: Page) => principal(page).locator('[data-comemoracao]')
+
+/** Os elementos da árvore da comemoração (a raiz inclusa) com alguma animação resolvida pelo navegador. */
+const animacoesDaComemoracao = (page: Page) =>
+  comemoracao(page).evaluate((raiz) =>
+    [raiz, ...raiz.querySelectorAll('*')].flatMap((no) => {
+      const nome = getComputedStyle(no).animationName
+      return nome === 'none' ? [] : [{ nome }]
+    }),
+  )
 /** O que a comemoração diz (`FALA_DA_ENTREGA`, em `areas/aluno/atividade.ts`): o fato da entrega, e nada de nota. */
 const FALA_DA_ENTREGA = 'Atividade entregue. Quem dá a aula vê a correção antes de você.'
 
@@ -317,7 +326,9 @@ test.describe('a atividade aberta: uma questão por vez, e a resposta salva no s
     await expect(comemoracao(page).locator('figcaption [data-selo-ia]')).toHaveCount(1)
     await expect(comemoracao(page)).toContainText(FALA_DA_ENTREGA)
     await expect(principal(page).getByRole('link', { name: 'Voltar às tarefas' })).toBeVisible()
-    expect(await comemoracao(page).locator('.comemoracao-salto').evaluate((no) => getComputedStyle(no).animationName)).toBe('comemoracao-salto')
+    // Um salto só: na árvore da comemoração uma única animação resolvida pelo navegador, a do corpo da onça.
+    expect(await comemoracao(page).locator('.onca-comemora').evaluate((no) => getComputedStyle(no).animationName)).toBe('onca-comemorar')
+    expect((await animacoesDaComemoracao(page)).map((animacao) => animacao.nome)).toEqual(['onca-comemorar'])
     await expect(comemoracao(page).locator('xpath=..')).not.toContainText(/\d|acert|parab[ée]ns|nota/i)
 
     // Enviada: a tela não deixa mudar, e do resultado só diz que a professora ainda vai revisar.
@@ -436,11 +447,10 @@ test.describe('a tarefa aberta: a comemoração, a 360 px, com movimento reduzid
     await confirmarOEnvio(page, hasTouch)
 
     await expect(comemoracao(page)).toBeVisible({ timeout: PRAZO_DA_TELA_MS })
-    const salto = comemoracao(page).locator('.comemoracao-salto')
-    expect(await salto.evaluate((no) => getComputedStyle(no).animationName)).toBe('none')
-    expect(await salto.evaluate((no) => getComputedStyle(no).opacity)).toBe('1')
-    await expect(salto.locator('[data-onca]')).toHaveAttribute('data-pose', 'comemorando')
-    await expect(salto.locator('figcaption [data-selo-ia]')).toBeVisible()
+    expect(await comemoracao(page).locator('.onca-comemora').evaluate((no) => getComputedStyle(no).animationName)).toBe('none')
+    expect(await animacoesDaComemoracao(page), 'nenhuma animação na árvore da comemoração').toEqual([])
+    await expect(comemoracao(page).locator('[data-onca]')).toHaveAttribute('data-pose', 'comemorando')
+    await expect(comemoracao(page).locator('figcaption [data-selo-ia]')).toBeVisible()
   })
 
   test('o aluno seguinte no mesmo computador, na mesma tarefa, não herda a comemoração nem as respostas do anterior', async ({ page, hasTouch }) => {

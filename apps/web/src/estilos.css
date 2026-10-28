@@ -132,6 +132,7 @@
   --color-icone-linha: #d7d7d7;
   --color-foco: #146eaa;
   --color-veu: #00000059;
+  --color-onca-chao: #afafaf4d;
 
   --font-corpo: ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
   --font-titulo: ui-sans-serif, -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
@@ -271,6 +272,7 @@
   --color-icone-linha: #52656d;
   --color-foco: #60b9f4;
   --color-veu: #00000099;
+  --color-onca-chao: #00000059;
 }
 
 /*

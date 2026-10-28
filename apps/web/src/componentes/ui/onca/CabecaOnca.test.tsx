@@ -3,6 +3,7 @@ import { cleanup, render } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { semIdsDoDesenho } from '../../../__fixtures__/ids-do-desenho'
 import { arquivosDeCodigoDaWeb, codigoSemComentarioNemTexto } from '../../../__fixtures__/perigo-cheio'
 import { CabecaOnca, type TamanhoDaCabeca } from './CabecaOnca'
 
@@ -50,28 +51,49 @@ describe('CabecaOnca', () => {
     }
   })
 
-  it('o tamanho é só o tamanho: a mesma cabeça, na caixa de 24, 32, 40 ou 48 px', () => {
-    const formas = new Set<string>()
+  it('o tamanho é só o tamanho: a mesma cabeça nos quatro, e só a roseta da testa sai abaixo de 40 px', () => {
+    const formas = new Map<TamanhoDaCabeca, string>()
     for (const tamanho of TAMANHOS) {
       const { container, unmount } = desenhar(tamanho)
       const svg = container.querySelector('svg') as SVGElement
       expect(svg.getAttribute('width')).toBe(String(tamanho))
       expect(svg.getAttribute('height')).toBe(String(tamanho))
-      expect(svg.getAttribute('viewBox')).toBe('0 0 48 48')
-      formas.add(svg.innerHTML)
+      // O recorte do mockup: as orelhas inteiras, e a máscara a 9 unidades das bordas.
+      expect(svg.getAttribute('viewBox')).toBe('44 32 152 152')
+      formas.set(tamanho, semIdsDoDesenho(svg.innerHTML))
       unmount()
     }
-    // Um desenho só: nenhum tamanho tira ou põe um detalhe.
-    expect(formas.size).toBe(1)
+    expect(formas.get(24)).toBe(formas.get(32))
+    expect(formas.get(40)).toBe(formas.get(48))
+    expect(formas.get(40)).not.toBe(formas.get(24))
+    // A única diferença é a roseta da testa: a pinta da marca, girada, a partir de 40 px.
+    const rosetas = (tamanho: TamanhoDaCabeca) => {
+      const { container, unmount } = desenhar(tamanho)
+      const quantas = container.querySelectorAll('use').length
+      unmount()
+      return quantas
+    }
+    expect(TAMANHOS.map(rosetas)).toEqual([0, 0, 1, 1])
+  })
+
+  it('toda referência do desenho (`url(#…)` e `href="#…"`) aponta para um `id` que existe nele', () => {
+    for (const tamanho of TAMANHOS) {
+      const { container, unmount } = desenhar(tamanho)
+      const ids = new Set([...container.querySelectorAll('[id]')].map((no) => no.id))
+      const alvos = [...container.innerHTML.matchAll(/url\(#([^)]+)\)|href="#([^"]+)"/g)].map(([, a, b]) => a ?? b ?? '')
+      expect(alvos.length, String(tamanho)).toBeGreaterThanOrEqual(2)
+      expect(alvos.filter((alvo) => !ids.has(alvo)), String(tamanho)).toEqual([])
+      unmount()
+    }
   })
 
   it('dois renders do mesmo tamanho dão o mesmo HTML: nada muda com o tempo, com a ordem nem com quem usa', () => {
     for (const tamanho of TAMANHOS) {
       const primeiro = desenhar(tamanho)
-      const html = primeiro.container.innerHTML
+      const html = semIdsDoDesenho(primeiro.container.innerHTML)
       primeiro.unmount()
       const segundo = desenhar(tamanho)
-      expect(segundo.container.innerHTML, String(tamanho)).toBe(html)
+      expect(semIdsDoDesenho(segundo.container.innerHTML), String(tamanho)).toBe(html)
       segundo.unmount()
     }
   })
@@ -88,7 +110,7 @@ describe('CabecaOnca', () => {
     }
   })
 
-  it('são as nove cores da 9.7, sem degradê, e a única linha é o "w" da boca: sem contorno', () => {
+  it('são as cores da 9.7, sem degradê, e a única linha é o "w" da boca: sem contorno', () => {
     const permitidas = coresDaOnca()
     expect(permitidas.size, 'a 9.7 declara nove cores fixas').toBe(9)
     const { container } = desenhar(48)
@@ -100,41 +122,43 @@ describe('CabecaOnca', () => {
       }
     }
     expect([...usadas].filter((cor) => !permitidas.has(cor))).toEqual([])
-    // As cores do corpo, as do rosto e a do traço da boca: o desenho não é só uma cor.
-    expect(usadas.size).toBeGreaterThanOrEqual(7)
-    expect(container.querySelectorAll('linearGradient, radialGradient, filter, mask, clipPath, defs, use, pattern')).toHaveLength(0)
-    expect(container.innerHTML).not.toMatch(/url\(/)
+    // As sete que a cabeça desenha: a sombra é das patas e do rabo, e a língua é da boca aberta, que não existe aqui.
+    expect(usadas.size).toBe(7)
+    expect(usadas.has('#D75F18')).toBe(false)
+    expect(usadas.has('#FF9FB0')).toBe(false)
+    // A pinta e os recortes são `defs` e `use`: a roseta e o olho. Degradê, filtro, máscara e padrão, nenhum; e o único `url(#…)` é o do recorte.
+    expect(container.querySelectorAll('linearGradient, radialGradient, filter, mask, pattern')).toHaveLength(0)
+    expect([...container.innerHTML.matchAll(/url\(([^)]*)\)/g)].every(([, alvo = '']) => alvo.startsWith('#'))).toBe(true)
+    for (const elemento of container.querySelectorAll('[style], [filter], [mask]')) expect(elemento.outerHTML).toBe('')
     // Contorno em forma nenhuma: a única que tem `stroke` é a boca, que é uma linha e não tem preenchimento.
     const comTraco = [...container.querySelectorAll('[stroke]')]
     expect(comTraco.map((elemento) => elemento.tagName.toLowerCase())).toEqual(['path'])
     expect(comTraco[0]?.getAttribute('fill')).toBe('none')
   })
 
-  it('cada cor está na parte dela: a sombra no rosto de trás, o realce no topo, o creme dentro da orelha e no focinho, e o resto', () => {
+  it('cada cor está na parte dela: o realce no miolo da orelha e na máscara, o creme no focinho, o branco no olho, e o resto', () => {
     const { container } = desenhar(48)
-    // [seletor da parte, quantas são, a cor dela na 9.7]. Trocar a sombra pelo realce, ou o creme pela pelagem, deixa vermelho.
+    // [seletor da parte, quantas são, a cor dela na 9.7]. Trocar o realce pela pelagem, ou o creme pelo nariz, deixa vermelho.
     const partes: readonly (readonly [string, number, string])[] = [
-      ['circle[cy="13.5"][r="6.5"]', 2, '#E8732E'], // as orelhas, de pelagem
-      ['circle[cy="11.5"][r="2.6"]', 2, '#FDEBDD'], // o creme por dentro da orelha
-      ['rect[y="14"][width="36"]', 1, '#D75F18'], // o rosto de trás: a sombra, que só aparece embaixo
-      ['rect[y="11.5"][width="36"]', 1, '#E8732E'], // o rosto, de pelagem
-      ['rect[width="10"]', 1, '#ED935D'], // o realce do topo
-      ['circle[r="1.5"], circle[r="1.2"]', 5, '#7A3412'], // as cinco rosetas
-      ['rect[width="17"]', 1, '#FDEBDD'], // o focinho, em creme
-      ['rect[width="6"]', 1, '#E5838C'], // o nariz
-      ['circle[r="3.4"]', 2, '#FFFFFF'], // o branco do olho
-      ['circle[r="1.9"]', 2, '#16233E'], // a pupila
+      ['circle[r="22"]', 2, '#E8732E'], // as orelhas, de pelagem
+      ['circle[r="11"]', 2, '#ED935D'], // o miolo da orelha, de realce
+      ['circle[r="38"]', 2, '#ED935D'], // a máscara clara
+      ['rect[x="98"][width="44"]', 1, '#FDEBDD'], // o focinho, em creme
+      ['g > rect[width="38"], g > rect[width="40"]', 2, '#FFFFFF'], // o branco do olho
+      ['rect[data-parte="pupila"]', 2, '#16233E'], // a pupila
+      ['circle[r="5"]', 2, '#FFFFFF'], // o brilho
     ]
-    let cobertas = 0
     for (const [seletor, quantas, cor] of partes) {
       const achadas = [...container.querySelectorAll(seletor)]
       expect(achadas, seletor).toHaveLength(quantas)
       for (const parte of achadas) expect(parte.getAttribute('fill')?.toUpperCase(), seletor).toBe(cor)
-      cobertas += achadas.length
     }
-    // A boca é o traço, na cor da pupila; e nenhuma forma fica sem dono: o desenho não ganha parte que o teste não nomeia.
-    expect(container.querySelector('path')?.getAttribute('stroke')?.toUpperCase()).toBe('#16233E')
-    expect(container.querySelectorAll('circle, rect, path')).toHaveLength(cobertas + 1)
+    // O topo do corpo é de pelagem; o nariz, de `nariz`; a roseta (a pinta girada) é de `roseta`; a boca é o traço, na cor da pupila.
+    const topo = [...container.querySelectorAll('path[fill]')].map((no) => no.getAttribute('fill')?.toUpperCase())
+    expect(topo.filter((cor) => cor === '#E8732E')).toHaveLength(1)
+    expect(topo.filter((cor) => cor === '#E5838C')).toHaveLength(1)
+    expect(container.querySelector('use')?.parentElement?.getAttribute('fill')?.toUpperCase()).toBe('#7A3412')
+    expect(container.querySelector('path[stroke]')?.getAttribute('stroke')?.toUpperCase()).toBe('#16233E')
   })
 
   it('só tem a prop `tamanho`, e `tamanho` só aceita os quatro valores do avatar', () => {
@@ -154,12 +178,16 @@ describe('CabecaOnca', () => {
 describe('a pasta da onça', () => {
   const daPasta = arquivosDeCodigoDaWeb(RAIZ_DA_WEB).filter((nome) => nome.startsWith('componentes/ui/onca/'))
 
-  it('não tem temporizador, efeito nem estado: `setTimeout`, `setInterval`, `useEffect` e `useState` não aparecem', () => {
+  // O `useId` fica de fora de propósito: ele só dá um `id` único a cada desenho (a pinta, o recorte), e não guarda estado. Quem
+  // pode ter temporizador, efeito e estado é um arquivo só, `movimento-da-onca.ts`, que o acenar da onça de corpo
+  // inteiro usa (`movimento-da-onca.test.tsx`): a cabeça do avatar e todo o resto da pasta ficam parados.
+  it('não tem temporizador, efeito nem estado fora de `movimento-da-onca.ts`: `setTimeout`, `setInterval`, `useEffect` e `useState` não aparecem', () => {
     // Sem esta âncora o caso passaria vazio no dia em que a pasta mudasse de nome.
     expect(daPasta).toContain('componentes/ui/onca/CabecaOnca.tsx')
-    for (const nome of daPasta) {
+    expect(daPasta).toContain('componentes/ui/onca/movimento-da-onca.ts')
+    for (const nome of daPasta.filter((arquivo) => arquivo !== 'componentes/ui/onca/movimento-da-onca.ts')) {
       const codigo = codigoSemComentarioNemTexto(readFileSync(join(RAIZ_DA_WEB, nome), 'utf8'))
-      expect(codigo, nome).not.toMatch(/\b(?:setTimeout|setInterval|requestAnimationFrame|useEffect|useLayoutEffect|useState|useReducer|useRef|useId)\b/)
+      expect(codigo, nome).not.toMatch(/\b(?:setTimeout|setInterval|requestAnimationFrame|useEffect|useLayoutEffect|useState|useReducer|useRef)\b/)
     }
   })
 

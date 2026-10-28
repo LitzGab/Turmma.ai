@@ -634,7 +634,10 @@ para ninguém confundir com a tela de uma escola. As medidas estão na seção 1
   cor principal; ainda assim o parecer entra junto do registro no INPI (D80; `TODO.md`)
 - **O mockup de outubro está em `mockups/`** desde 16/10/2026 (cópia de `Prototipo_Turmma` em
   `a95568d`, D80). A fonte de valores continua sendo esta Parte B e o inventário em
-  `tasks/prd-pele-e-casca/mockup.md`; o mockup é para ver. Nada de lá é copiado para o `apps/web`
+  `tasks/prd-pele-e-casca/mockup.md`; o mockup é para ver. Nada de lá é copiado para o `apps/web`, **com uma exceção**: a onça
+  (o traço, as poses e o movimento que ficaram, 9.7), que o Joaquim mandou trazer fiel ao mockup (correção
+  `2026-10-28-onca-do-mockup`). O desenho foi copiado para `componentes/ui/onca/`, o mockup continua sem ser importado, e um teste
+  guarda os valores do original
 - **A comemoração na entrega e a onça "acolhendo"** dependiam do parecer do `conformidade-reviewer`,
   na X4: a primeira por encostar em recompensa (D59), a segunda por pôr expressão de preocupação no
   lugar onde o Tutor encaminha um assunto delicado (D58; regra 70, item 4a). **Parecer dado na tarefa
@@ -784,6 +787,7 @@ este documento sobre estes valores, e o teste da X1 refaz a conta pela tabela de
 | `sobre-grafite` | `#FFFFFF` | `#131F24` | Texto em cima do oficial (12,6:1 e 15,6:1) |
 | `icone-papel` · `icone-linha` | `#EFEFEF` · `#D7D7D7` | `#37464F` · `#52656D` | O papel dos ícones ilustrados e as linhas dele |
 | `veu` | `#00000059` | `#00000099` | O véu atrás do diálogo e do painel ao lado: preto a 35% e a 60%, em hex de oito dígitos. No `::backdrop` o valor vai escrito por extenso, porque antes do Chrome 122 ele não herda variável |
+| `onca-chao` | `#AFAFAF4D` | `#00000059` | A sombra do chão sob a onça de corpo inteiro (9.7): cinza a 30% no claro e preto a 35% no escuro, em hex de oito dígitos. É do cenário, não da onça: as nove cores dela são fixas |
 | `foco` | `#146EAA` | `#60B9F4` | O anel de foco, de 3 px (5,5:1 no chão claro; 7,8:1 no escuro) |
 | `white` · `black` | `#FFFFFF` · `#000000` | os mesmos | Não mudam com o tema. Não servem de face nem de texto de peça |
 
@@ -1134,6 +1138,25 @@ um **animal desenhado**, em três formas, sem contorno e sem degradê. As cores 
 dois temas: pelagem `#E8732E`, sombra `#D75F18`, realce `#ED935D`, creme `#FDEBDD`, roseta
 `#7A3412`, pupila `#16233E`, olho `#FFFFFF`, nariz `#E5838C` e língua `#FF9FB0`.
 
+**O traço é o do mockup de outubro, copiado e não importado** (correção `2026-10-28-onca-do-mockup`): o corpo e a
+cabeça numa forma só, as orelhas com miolo, a máscara clara de dois círculos, os olhos com pupila recortada e brilho, o
+focinho com o nariz arredondado, as cinco rosetas (a pinta da marca girada, declarada uma vez por desenho), o rabo com anéis e a
+pata com o punho. Um teste guarda as impressões do original e reprova a cópia que se afastar dele
+(`componentes/ui/onca/fidelidade-ao-mockup.test.tsx`).
+
+**O rosto da onça de corpo inteiro muda com a pose, e só com ela**: acenando (olhos de frente, boca aberta), apontando (olhar de
+lado, sorriso), comemorando (olhos felizes, boca bem aberta) e pensando (olhar para cima e de lado, boca de lado). O rosto da
+**cabeça do avatar** é um só, o neutro — olhos de frente e a boca em "w" —, em todos os tamanhos. A expressão nasce da pose
+que a tela escolhe, nunca de quem usa.
+
+**O movimento é pouco, e nada fica em laço** (parecer do `conformidade-reviewer` na correção `2026-10-28-onca-do-mockup`; D59;
+regra 70, item 4b). Vem do `Onca.css`, copiado do mockup, e são três, cada um **uma vez**: **entrar** na tela (240 ms), **acenar**
+(a pata, na primeira vez da sessão, e só enquanto a pose é `acenando`) e o **salto da comemoração** (500 ms; é o único salto da
+`Comemoracao`, que não põe outro por cima). Os três **param com `prefers-reduced-motion`**, e o avatar nunca se mexe. **Não
+entram**, por veto: a onça piscando por temporizador, e o laço dos três pontos do `pensando`, que ficam **parados**. A sombra do
+chão sob a onça de corpo inteiro é do cenário, o token `onca-chao` (9.10), e não uma das cores dela. O mockup tem ainda `acolhendo`
+e `dormindo`, a cabeça feliz do avatar, as linhas de movimento e as pintas que voam: nada disso entra (D80, item 3).
+
 **O avatar** (`AvatarAgente`) é a cabeça da onça num círculo `fundo`, com anel de 2 px na cor do
 agente: **Tutor `laranja`, Assistente de ensino `azul`, Analista de desempenho escolar `anil`**. O
 círculo com o ícone da função sai das telas. O avatar é `aria-hidden` e **só aparece com o nome da
@@ -1157,7 +1180,7 @@ próprio do `conformidade-reviewer`, e nenhuma pisca, acena em laço ou reage a 
 | Pose | Onde | Nasce |
 |---|---|---|
 | Dormindo | O vazio "Tudo em dia" do sino | X2, com parecer |
-| Acenando · apontando | Os passos da introdução | X4, tarefa 5.0, com parecer dado |
+| Acenando · apontando · pensando | Os passos da introdução (pensando: o passo da letra, com os três pontos parados) | X4, tarefa 5.0, com parecer dado; `pensando` e o movimento (entrar e acenar, uma vez), na correção `2026-10-28-onca-do-mockup`, com parecer |
 | Comemorando | A entrega de uma tarefa (9.5, regra 7) | X4, tarefa 5.0, com parecer dado, nas condições da Parte B, item "A comemoração na entrega e a onça acolhendo" |
 | Acolhendo (expressão de preocupação) | — | não entra (D80, item 3) |
 
@@ -1214,7 +1237,7 @@ documento e o CSS reprova.
 O primeiro é o tema claro: os 33 nomes de hoje, com valor novo onde a D80 mudou (`lateral`,
 `linha`, `radius-caixa` e as duas sombras), mais os nomes novos. `static` faz o Tailwind emitir
 todas as variáveis, e não só as que alguma classe usa: as peças leem a cor da família por
-variável. `veu` é a única cor fora do hex de seis dígitos: é hex de oito, com a transparência no fim.
+variável. `veu` e `onca-chao` são as únicas cores fora do hex de seis dígitos: são hex de oito, com a transparência no fim.
 
 ```css
 @theme static {
@@ -1235,6 +1258,7 @@ variável. `veu` é a única cor fora do hex de seis dígitos: é hex de oito, c
   --color-icone-linha: #d7d7d7;
   --color-foco: #146eaa;
   --color-veu: #00000059;
+  --color-onca-chao: #afafaf4d;
   /* texto */
   --color-tinta: #0d0d0d;
   --color-apoio: #424242;
@@ -1373,6 +1397,7 @@ continua sem uso: nenhuma tela escreve cor por tema.
   --color-icone-linha: #52656d;
   --color-foco: #60b9f4;
   --color-veu: #00000099;
+  --color-onca-chao: #00000059;
   /* texto */
   --color-tinta: #f1f7fb;
   --color-apoio: #dce6ec;
