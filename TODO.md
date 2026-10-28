@@ -2270,3 +2270,12 @@ repetem aqui.
 - [ ] e2e que prove a descida de 6% da cabeça no `AvatarAgente`; o recuo de 3 e 4 px já tem prova (test-engineer, rodada 1)
 - [ ] e2e com "reduzir movimento" no passo `pensando` da introdução do aluno (test-engineer, rodada 1); o da árvore da
       comemoração entrou na correção
+- [ ] Da rodada 2 da onça: `docs/interface.md` (tabela da 9.5) ainda diz que a comemoração usa o `t-salto` (600 ms, `curva-quique`), e o
+      salto que ficou é o `onca-comemorar` (500 ms, `ease-out`); nenhum CSS de `apps/web/src` usa o token: alinhar a linha ou tirar
+      `--t-salto` do `estilos.css`. E a linha da 9.7 que ainda fala em "movimento próprio do conformidade-reviewer" na `Comemoracao`
+- [ ] Da rodada 2 da onça, só de arrumação: `estilos.test.ts` (caso "nenhum CSS de `apps/web/src`… tem laço") faz uma segunda busca
+      recursiva de pasta, e o arquivo já tem uma; `Introducao.test.tsx` ("a onça não se mexe: nenhum temporizador entre um passo e
+      outro") pede nome revisto; o comentário da prop `animada` em `Onca.tsx` virou uma linha só, longa; os 30 s do caso "nenhuma
+      pose agenda temporizador" são arbitrários (basta a contagem antes de avançar o relógio); `Comemoracao.test.tsx` deve dizer
+      que um invólucro novo com outra animação só o e2e da árvore pega; `rostoConfere` (`Onca.test.tsx`) lê o rosto num `div`, e
+      embrulhar num `<svg>` evita falhar pelo motivo errado
