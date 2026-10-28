@@ -16,7 +16,8 @@ sem servidor, todo dado é sintético.
   `docs/decisoes.md` (D80)
 - **Não copiar código daqui para o `apps/web`** nem para os `packages/`. Aqui valem atalhos que o produto não aceita
   (sem teste, sem orçamento de JS, peças do 21st.dev coladas sem revisão de licença, regras do `docs/interface.md`
-  quebradas de propósito para ver como fica).
+  quebradas de propósito para ver como fica). A única exceção é o traço da onça (`src/components/duo/onca/`), copiado
+  para `apps/web/src/componentes/ui/onca/` e guardado por teste contra o original (D80, revista em 28/10/2026).
 - **Não é workspace** do monorepo: não entra no `npm run build`, no lint nem nos testes da raiz (o ESLint da raiz
   ignora `mockups/**`).
 - O que vale é o **desenho**. O que for aprovado volta para o `docs/interface.md`, vira decisão em

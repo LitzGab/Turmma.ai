@@ -365,7 +365,8 @@ guardas, a unidade, a integração e o e2e rodam verdes antes e depois, com o di
 > 07/10/2026, e o Joaquim pediu o produto igual a ele, com foco no visual e sem perder o que já foi
 > construído. São quatro specs fora da sequência, que vêm **antes do F2**, cada uma com o processo
 > completo e pouso próprio. O mockup de referência é o de `Prototipo_Turmma` (branch
-> `mockups/interface`, commit `a95568d`); nada de lá é copiado para o `apps/web`.
+> `mockups/interface`, commit `a95568d`); nada de lá é copiado para o `apps/web`, menos o traço da onça
+> (D80, revista em 28/10/2026).
 
 **O que as quatro têm em comum.** Nenhuma muda regra de negócio, permissão nem contrato da API, fora
 o que a X4 declara. Toda tela continua com os quatro estados, com o e2e que já prova a regra dela e

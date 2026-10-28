@@ -1443,11 +1443,12 @@ do `docs/interface.md`, que o teste da web lê.
 tela escreve cor por tema: quem usa token muda sozinho.
 (3) **A onça é a mascote e o avatar dos três agentes** (o anel do Assistente em azul, o do Tutor em
 laranja, o do Analista em anil), sempre com o nome da função e o selo "IA" à vista no mesmo bloco. É
-um animal desenhado, com uma expressão neutra só: não tem nome próprio nem traço de pessoa, não fala
-por conta própria, não diz que sente, não reage à presença, à ausência, ao acerto nem ao tempo de uso
-de ninguém, e não simula vínculo (D58; Decreto 12.880, arts. 10 e 11). O círculo com o ícone da
-função sai. Pose, expressão e movimento da onça só entram com parecer do `conformidade-reviewer`, na
-spec que os trouxer.
+um animal desenhado, com o traço do mockup de outubro: o avatar tem uma expressão neutra só, e a onça
+de corpo inteiro tem o rosto da pose, o do mockup, que só a pose escolhe, nunca quem usa. Não tem nome
+próprio nem traço de pessoa, não fala por conta própria, não diz que sente, não reage à presença, à
+ausência, ao acerto nem ao tempo de uso de ninguém, e não simula vínculo (D58; Decreto 12.880, arts. 10
+e 11). O círculo com o ícone da função sai. Pose, lugar e movimento novos da onça só entram com
+parecer do `conformidade-reviewer`, na spec ou na correção que os trouxer.
 (4) **Ícone ilustrado** nos lugares da navegação, nas matérias, nos tipos da fila e nas ferramentas,
 desenhado por nós; o resto continua `lucide-react`.
 (5) **Até quatro lugares por papel**, iguais na lateral e na barra de baixo do celular. Aluno: Início
@@ -1495,6 +1496,18 @@ da raiz, não é workspace, e nada dela entra no `apps/web` nem nos `packages/`)
 (`mockups/README.md`). A licença do 21st.dev (P20) não trava a cópia: o mockup de outubro não cola peça
 nova do catálogo (as que ele usa já estão na pasta pública desde 23/09/2026, e o botão com degrau só cita
 as referências), e a conferência continua valendo antes de qualquer peça entrar no código (`TODO.md`).
+*Revista em 28/10/2026* pela palavra do Joaquim, que subiu o sistema e pediu a onça igual à do mockup
+("pegue exatamente o que tem no mockup e utilize ele", "tem que ser pra todos"; e, às escolhas que lhe
+foram propostas, "faça o melhor e você escolhe"), na correção `2026-10-28-onca-do-mockup`. Mudaram duas
+coisas. O item 3 dizia "uma expressão neutra só" para a onça inteira: o avatar continua neutro, e a onça
+de corpo inteiro passa a ter o rosto da pose, o do mockup (acenando, apontando, comemorando e pensando),
+com o parecer do `conformidade-reviewer` dado na correção; o piscar e o laço dos três pontos, que ele
+vetou, e as poses `acolhendo` e `dormindo` continuam fora. E o traço da onça é **copiado** do mockup para
+`apps/web/src/componentes/ui/onca/`: é a única exceção à cerca de que nada do mockup entra no `apps/web`
+nem nos `packages/`. O mockup continua sem ser importado, e um teste guarda os valores do original
+(`fidelidade-ao-mockup.test.tsx`). Motivo: redesenhada à mão na X1 e na X4, a onça saiu outra, e quem
+abria o produto não via a mascote que o Gabriel escolheu; só a cópia fiel, presa por teste ao original,
+garante o desenho dele em todo lugar e nos três papéis.
 
 **D81 — Padrão de mercado antes de mecanismo próprio: a peça técnica tem o nome do framework, o
 conceito do domínio fica em português, e a X5 é recortada para pousar.** *(decidida em 22/10/2026 pelo
