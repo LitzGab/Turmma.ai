@@ -2300,3 +2300,16 @@ repetem aqui.
       Joaquim quiser
 - [ ] Da correção da onça: o push de um commit só de documento na branch cancela a esteira do commit de código anterior (cancelou três vezes em
       28/10). Fazer o commit de documento depois da esteira, ou a esteira não cancelar quando o commit novo não muda código (dono: Orquestrador)
+
+## Da correção 2026-10-29-contorno-do-campo-de-conversa (o anel de foco da caixa de pedido), fora dela
+
+- [ ] Da correção `2026-10-29-contorno-do-campo-de-conversa`: uma asserção em `apps/web/src/estilos.test.ts` (ou o `outline-style` calculado do
+      `textarea` focado, no e2e) de que o `:focus-visible` global fica em `@layer base`; se sair da camada, o `outline-none` da `CaixaPedido` perde e o
+      anel duplo volta com o teste de classes verde (test-engineer, rodada 1)
+- [ ] Da correção `2026-10-29-contorno-do-campo-de-conversa`: ajustar o comentário de `apps/web/src/estilos.css:337-338` ("nenhuma peça apaga o contorno")
+      para "nenhuma peça apaga o contorno sem dar o anel a quem a contém"; e acrescentar a `CaixaPedido` às peças com anel por `focus-within` em
+      `docs/interface.md` (test-engineer e frontend-reviewer, rodada 1)
+- [ ] Da correção `2026-10-29-contorno-do-campo-de-conversa`: na variante `completa`, ao focar por Tab o seletor de turma ou o enviar, aparecem dois
+      anéis (o da moldura e o do controle). Se o Joaquim achar feio na validação, é correção própria, com foto do foco por Tab (test-engineer)
+- [ ] Da correção `2026-10-29-contorno-do-campo-de-conversa`: no tema escuro, o anel da `CaixaPedido` fica sempre em `foco`; sobre `.bg-noite` ele daria
+      1,99:1. Hoje a caixa só aparece sobre `bg-fundo` e `bg-superficie`; entra na tarefa que puser a caixa sobre `bg-noite` (frontend-reviewer)

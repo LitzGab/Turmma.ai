@@ -188,6 +188,25 @@ describe('CaixaPedido, o desenho', () => {
     expect(tokenDe(campo, 'text', 'disabled:')).toBe('apoio')
   })
 
+  it('o anel de foco é da caixa, por focus-within, e o campo de dentro não desenha contorno', () => {
+    medirComo(conta)
+    for (const variante of ['completa', 'so-texto'] as const) {
+      const { container } = render(<CaixaPedido {...props} variante={variante} exemplo={EXEMPLO} valor="" />)
+      const caixa = container.querySelector('[data-caixa-pedido]') as HTMLElement
+      // O mesmo anel do produto (foco, 3 px, sólido), colado à borda da caixa, e não afastado dentro dela (`Opcao`, 10.1).
+      expect([...classesDo(caixa)].filter((classe) => classe.startsWith('focus-within:outline')).sort(), variante).toEqual([
+        'focus-within:outline-3',
+        'focus-within:outline-foco',
+        'focus-within:outline-offset-0',
+        'focus-within:outline-solid',
+      ])
+      // O contorno global (`:focus-visible` do `estilos.css`) cairia no `textarea`, dentro da moldura: ele não desenha o seu.
+      const campo = screen.getByLabelText('Pedido ao Assistente de ensino')
+      expect(classesDo(campo).has('outline-none'), variante).toBe(true)
+      cleanup()
+    }
+  })
+
   it('o enviar é o primário redondo de 44 px; enquanto a resposta chega, o "Parar" é o secundário e não o oficial', () => {
     medirComo(conta)
     const { rerender } = render(<CaixaPedido {...props} exemplo={EXEMPLO} valor="oi" />)

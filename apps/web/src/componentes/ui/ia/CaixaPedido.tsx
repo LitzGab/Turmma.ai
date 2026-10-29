@@ -56,6 +56,9 @@ function ajustarAltura(campo: HTMLTextAreaElement, espelho: HTMLTextAreaElement 
  * A caixa de pedido (`docs/interface.md` 11.2, 11.3 e 11.6): o campo de texto que cresce com o que se escreve, e a barra
  * com o enviar. Canto de 16 px e borda de 2 px, sem sombra (9.3); a borda é a `borda-campo`, e não a linha clara do
  * desenho: campo de formulário de escola precisa de 3:1 de contraste na borda (9.1).
+ * - **O anel de foco é da caixa**, por `focus-within`, colado à borda (como o da `Opcao`, 10.1), e o `textarea` de dentro não
+ *   desenha o seu: o contorno global cairia nele, dentro da moldura, e não acompanharia a caixa que cresce com o texto. É
+ *   o que o mockup faz (`input-bar.tsx`: a moldura reage ao foco, o campo não).
  * - **O exemplo do campo vazio cabe inteiro**: o campo mede o exemplo num espelho, e não cresce só com o que se digita
  *   (`ajustarAltura`).
  *
@@ -151,7 +154,7 @@ export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar
       enterKeyHint={ponteiroGrosso ? 'enter' : 'send'}
       onChange={(evento) => aoMudar(evento.target.value)}
       onKeyDown={aoTeclar}
-      className="t-corpo block max-h-48 min-h-11 w-full min-w-0 resize-none rounded-controle bg-campo px-3 py-2.5 text-tinta disabled:bg-fundo-suave disabled:text-apoio"
+      className="t-corpo block max-h-48 min-h-11 w-full min-w-0 resize-none rounded-controle bg-campo px-3 py-2.5 text-tinta outline-none disabled:bg-fundo-suave disabled:text-apoio"
     />
   )
 
@@ -175,7 +178,7 @@ export function CaixaPedido({ rotulo, exemplo, valor, aoMudar, aoEnviar, aoParar
   )
 
   return (
-    <form onSubmit={aoSubmeter} data-caixa-pedido={variante} className="flex min-w-0 flex-col gap-1 rounded-caixa border-2 border-borda-campo bg-campo p-2">
+    <form onSubmit={aoSubmeter} data-caixa-pedido={variante} className="flex min-w-0 flex-col gap-1 rounded-caixa border-2 border-borda-campo bg-campo p-2 focus-within:outline-3 focus-within:outline-offset-0 focus-within:outline-solid focus-within:outline-foco">
       <label htmlFor={idDoCampo} className="sr-only">
         {rotulo}
       </label>
