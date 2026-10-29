@@ -1,5 +1,120 @@
 # Validação — correção 2026-10-28-onca-do-mockup (a onça do mockup)
 
+## Rodada 3 — 28/10/2026 (revalidação)
+
+**Escopo:** as correções `2026-10-28-onca-do-mockup`, `-v2`, `-v3` e `-v4` (`tasks/correcoes/`) e o registro `d12a9ba0`. Os requisitos
+são os da rodada 2 (R1 a R11). O que mudou desde ela é só a v4 (`befdc575`): `Criados.tsx` (+1 linha), `EstadoVazio.tsx`,
+`estados.test.tsx` e `e2e/professor-criados.spec.ts`. Nenhum arquivo de `componentes/ui/onca/` nem do avatar foi tocado
+(`git diff --stat 26c94763 befdc575`).
+**Commit validado:** `befdc575`
+**Veredito: APROVADA**
+
+**O C1 da rodada 2 fechou.** O vazio de Criados agora é o do mockup: a onça, a assinatura, o título, o texto e "Ir para Ferramentas"
+ficam no mesmo eixo, no computador e no celular. Medi isso na tela: o centro do desenho, o do texto do título, o das duas linhas do
+texto e o do botão estão todos em x = 811,0, que é o centro da caixa. O teste novo mede a tela, e não a classe. A mutação que tira o
+`tracejado` o deixa vermelho, com a mensagem "onça em 811.0, texto do título em 400.9". Nada do que estava atendido regrediu. Restam
+só menores (seção 4).
+
+### 1. Requisito a requisito
+
+A web de teste foi reconstruída em `befdc575` (`node tools/ci/e2e.ts --manter-ambiente`, seção 3) e a vitrine foi montada de novo.
+As fotos estão em `.processo/vitrine/` e foram lidas como imagem: `vazia--professora--professor-criados--{computador,celular}.png`,
+`professora--professor-criados--computador.png` (cheia, sem onça), e `{aluno--aluno,professora--professor,coordenacao--coordenacao}-bem-vindo--*.png`.
+A vitrine diz "Nenhuma tela rola a 1366 × 768" em todas, cheia e vazia.
+
+| Requisito | Situação | Código | Teste | Observação |
+|---|---|---|---|---|
+| R1. O traço é o do mockup | ATENDIDO | sem mudança desde a rodada 2 | `fidelidade-ao-mockup.test.tsx`, `Onca.test.tsx`, verdes (seção 3) | Fotos das três introduções: o mesmo desenho |
+| R2. As poses do mockup | ATENDIDO | sem mudança (`Onca.tsx`, `POSES_DO_CORPO`) | `fidelidade-ao-mockup.test.tsx`, verde | A mutação da pata, da rodada 2, segue valendo: o código e o teste não mudaram |
+| R3. O rosto da pose; a cabeça neutra no avatar | ATENDIDO | sem mudança | os mesmos, verdes | — |
+| R4. O avatar: recuo, descida de 6% e roseta | ATENDIDO | sem mudança | `avatar-com-funcao-e-selo.test.tsx`, verde; `e2e/pecas-marca-onca.spec.ts`, verde nos dois projetos | — |
+| R5. O movimento, nada em laço, nada com "reduzir movimento" | ATENDIDO | sem mudança | `movimento-da-onca.test.tsx`; `e2e/introducao-pecas.spec.ts` ("um salto só…", "com 'reduzir movimento' nenhuma animação…"), verdes | — |
+| R6. A `Comemoracao` com um salto só | ATENDIDO | sem mudança | `e2e/introducao-pecas.spec.ts`, verde | — |
+| R7. Assinada pela função, com o selo "IA" | ATENDIDO | sem mudança | `Onca.test.tsx`, `Criados.test.tsx`, verdes | Fotos: "Tutor", "Assistente de ensino" e "Analista de desempenho escolar" com o selo; em Criados, "Assistente de ensino · IA" |
+| R8. `pensando` no passo da letra | ATENDIDO | sem mudança | os mesmos da rodada 1, verdes | — |
+| R9. A onça nos três papéis, no computador e no celular | ATENDIDO | sem mudança | `e2e/professor-introducao.spec.ts` e `introducao-pecas.spec.ts`, verdes nos dois projetos; os de aluno e coordenação, verdes na rodada 2 sobre o mesmo código | Fotos de hoje: aluno (celular), professora e coordenação (computador). Iguais às da rodada 2 |
+| R10. A onça no vazio de Criados, como no mockup | **ATENDIDO** (era PARCIAL) | `Criados.tsx:184-186` (`variante="tracejado"`, `Onca` apontando, 120 px, parada); `EstadoVazio.tsx:49-56` | `e2e/professor-criados.spec.ts:82` ("vazio: a onça, o título e a ação ficam no mesmo eixo, como no mockup"), verde em `chromebook` (9,9 s) e `celular` (10,9 s), abaixo da metade do prazo de 30 s; `Criados.test.tsx` (pose, assinatura, selo, parada; sem onça no vazio do filtro); `estados.test.tsx` | O teste mede o `svg` dentro do `main` (e reprova sem ele), o texto do título por `Range` e a caixa do botão, com tolerância de 3 px. **Minha mutação A** (tirar o `tracejado`) deixou o teste vermelho pelo motivo certo. A medição que fiz sobre a web limpa: caixa com centro em 811,0; desenho de 120 px em 751 a 871; botão e as duas linhas do texto também com centro em 811,0. É o desenho do mockup (`mockups/src/components/duo/vazio.tsx:14`, tudo centralizado). O parágrafo a mais que o nosso vazio tem foi mantido com motivo (10.2 e regra 50, item 5) |
+| R11. As duas linhas ao lado da pata que acena | ATENDIDO | sem mudança | `fidelidade-ao-mockup.test.tsx`, `Onca.test.tsx`, verdes | Fotos: as linhas aparecem nas três introduções, no computador e no celular |
+
+**Placar:** 11 requisitos atendidos, nenhum parcial, nenhum não atendido e nenhum não verificável.
+
+Provas de mutação (minhas, três, uma a uma, cada uma com a web reconstruída e só o caso do alinhamento, em `chromebook`; todas
+restauradas com `git checkout --`. Depois delas, rodei um controle na árvore limpa, que ficou verde e deixou a web de teste de novo em `befdc575`. A
+árvore terminou limpa):
+
+| | Cláusula alterada | Resultado |
+|---|---|---|
+| A | `Criados.tsx`: sem a linha `variante="tracejado"` | **Vermelho**: "onça em 811.0, texto do título em 400.9" |
+| B | `EstadoVazio.tsx`, `TopoDoVazio`: `'flex justify-center'` → `'flex justify-start'` | Verde, e é o certo: mutante equivalente. Na caixa `flex-col items-center` do tracejado, o invólucro encolhe à largura da figura (193 px medidos, iguais aos da `figure`), então o `justify-*` de dentro não move nada. A tela não muda (m1) |
+| C | `EstadoVazio.tsx`, linha do botão: sem o `justify-center` do tracejado | Verde pelo mesmo motivo: a linha encolhe à largura do botão (214 px medidos, iguais aos do botão). A tela não muda (m1) |
+
+### 2. Decisões, regras e o que as correções prometeram
+
+| Item | Situação | Evidência |
+|---|---|---|
+| C1 da rodada 2 (o vazio de Criados não era o do mockup, e o teste conferia a classe) | **fechado** | R10, a mutação A e as fotos `vazia--professora--professor-criados--*.png` |
+| Comentário de `EstadoVazio.tsx` e o caso de `estados.test.tsx` dizendo o que a peça faz (item 3 do caminho da rodada 2) | fechado | `EstadoVazio.tsx:22-27` e `estados.test.tsx:136-137` agora dizem que o padrão não alinha a ilustração e que o vazio centralizado é o `tracejado`, medido no e2e |
+| O `gap-3` só com `emAndamento` (efeito fora de Criados) | conferido | Toca todo `EstadoVazio` com ação. No padrão, a região vazia fica no fim da linha e nada se move. No tracejado do Analista (`coordenacao/governanca/Analista.tsx:105-110`), o botão também deixa de ficar 6 px fora do eixo. O caso novo de `estados.test.tsx` ("o espaço entre o botão e o 'Verificando…'…") cobre os dois ramos, e a mutação que a v4 declarou sobre ele passou no portão |
+| D80, item 3, D58, D59, regra 70 (4a, 4b), regra 20 | cumpridas, sem mudança | A v4 não tocou a onça, o movimento nem o navegador. O `conformidade-reviewer` e o `privacy-guardian` aprovaram a 1ª rodada |
+| Regra 50: item 2a (360 px sem rolagem lateral, ação principal de 44 px) e item 5 (o vazio convida para agir) | cumpridas | Foto do celular; `professor-criados.spec.ts` ("vazio: 'Nada gerado ainda' leva a Ferramentas, sem rolagem para o lado e sem violação de acessibilidade"), verde nos dois projetos |
+| Regra 40, item 1 (apagar a regra derruba o teste) | cumprida | Mutação A. O teste mede o que se vê, e não a classe, que era o defeito da rodada 2 |
+| Regras 10, 30 e 80 | não se aplicam | Não há API, banco, IA nem fila. Os guardiões disseram isso na v4 |
+
+### 3. Portão
+
+| Portão | Resultado |
+|---|---|
+| Unidade, isolada: `vitest run --project unidade` em `componentes/ui/onca/`, `avatar-com-funcao-e-selo`, `estados`, `Criados` e `avatar-so-nas-duas-pecas` | ✅ 9 arquivos, 131 casos |
+| e2e com `node tools/ci/e2e.ts --manter-ambiente`, que reconstruiu a web de teste em `befdc575`: `professor-criados`, `pecas-marca-onca`, `introducao-pecas`, `professor-introducao` (`chromebook` e `celular`) | ✅ 112 casos, nenhum vermelho nem intermitente |
+| As três mutações e o controle (seção 1) | A vermelha; B e C equivalentes; o controle verde |
+| `npm run typecheck`, `lint`, a unidade inteira e `test:infra` | não rodados: só os testes de evidência, como pede o validador. O hook só aceitou `befdc575` com o carimbo do portão da v4, que aplica as cinco mutações declaradas |
+| Esteira do GitHub | conferida no fechamento |
+| Revisões com veto registradas e aprovadas | ✅ v4: os seis obrigatórios com a última rodada APROVADO (`test-engineer` na 2ª, os outros na 1ª). O `revisor-geral` não entra, porque são 4 arquivos fora de `tasks/` e nada em `.github/`, `tools/ci/` ou `tools/processo/` (`.claude/skills/corrigir/SKILL.md:87-88`) |
+| `npm ci` | não foi preciso: o `node_modules` é mais novo que o `package-lock.json` |
+| Commits `Fora do processo:` em `origin/develop..HEAD` | nenhum |
+
+### 4. Achados
+
+**Críticos**
+- Nenhum.
+
+**Maiores**
+- Nenhum.
+
+**Menores** (o dono é o Orquestrador, que os leva ao `TODO.md` no fechamento)
+- m1. `apps/web/src/componentes/estado/EstadoVazio.tsx:33` (`'flex justify-center'` do `TopoDoVazio`) e `:56` (o `justify-center` da linha do botão)
+  não fazem nada no tracejado: o `items-center` da caixa (`:49`) já encolhe e centraliza os dois (mutações B e C, e as larguras medidas).
+  Não é defeito, e o e2e mede a tela, que é o que importa. Fica anotado para ninguém ler essas classes como o que segura o alinhamento.
+  Arrumação opcional, para quem tocar a peça.
+- m2. `e2e/professor-criados.spec.ts:82` mede a onça, o título e o botão, mas não o texto da descrição. Tirar o `text-center` da caixa
+  deixaria as duas linhas do texto alinhadas à esquerda dentro do bloco centralizado, e o teste não ficaria vermelho. Hoje elas estão centradas
+  (medido: centro 811,0 nas duas). A sugestão é medir também o centro de cada linha do `Range` da descrição.
+- m3. O `-v4.md` manda para o `TODO.md` a recomendação de exigir no tipo que quem passa `ilustracao` passe também `variante="tracejado"`
+  (test-engineer e conformidade-reviewer, 1ª rodada). O `befdc575` não tocou o `TODO.md`, e o item não está lá: é recomendação sem destino.
+- m4. `TODO.md:2283-2286` (o alinhamento da onça no vazio padrão) caiu com a v4. Marcar como feito no fechamento.
+- m5. O m2 da rodada 2 (o mockup usa `pensando` em dois passos da introdução do professor e `acolhendo` no da coordenação) segue sem
+  destino no `TODO.md`.
+- m6. Seguem no `TODO.md`, sem mudança: o m1 da rodada 2 (Criados "parado" e o mockup animado, só anotação), a mão de cada pose
+  (`TODO.md:2270`), o seed no texto da introdução da coordenação (`TODO.md:2264`) e o "FERRAMEN…" da barra de baixo a 360 px
+  (`TODO.md:1656`, item a; aparece na foto `vazia--professora--professor-criados--celular.png`).
+
+**Positivos**
+- O e2e novo mede o **desenho** (o `svg`, dentro do `main`) e o **texto** (por `Range`), e não as caixas que ocupam a largura toda. Foi
+  esse o engano que deixou o defeito da rodada 2 passar, e o jeito vale para todo teste de alinhamento.
+
+### 5. Conclusão
+
+**APROVADA.** Os onze requisitos estão atendidos, com código, teste e foto. O C1 da rodada 2 fechou na tela e no teste, e a mutação
+que o desfaz fica vermelha. A v4 não tocou a onça, e os testes e fotos de R1 a R9 e R11 seguem como na rodada 2. Os menores não mudam o veredito.
+
+### 6. Pendências herdadas
+
+- Medir no Chromebook de referência a rolagem da conversa do Tutor com o avatar novo: `TODO.md:2262` (infra-guardian).
+- m2, m3 e m5 vão para o `TODO.md`; m4 é marcar como feito; m1 e m6 são anotação ou já estão lá.
+- O que dizer ao Joaquim sobre "em tudo" continua na linha do m1 da rodada 1, na seção 2 da rodada 2.
+
+---
+
 ## Rodada 2 — 28/10/2026 (revalidação)
 
 **Escopo:** as correções `2026-10-28-onca-do-mockup`, `-v2` e `-v3` (`tasks/correcoes/`) e o registro `d12a9ba0` (D80, item 3 revista;

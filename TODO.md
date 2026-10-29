@@ -2280,7 +2280,8 @@ repetem aqui.
       pose agenda temporizador" são arbitrários (basta a contagem antes de avançar o relógio); `Comemoracao.test.tsx` deve dizer
       que um invólucro novo com outra animação só o e2e da árvore pega; `rostoConfere` (`Onca.test.tsx`) lê o rosto num `div`, e
       embrulhar num `<svg>` evita falhar pelo motivo errado
-- [ ] Da correção `2026-10-28-onca-do-mockup-v3`: `EstadoVazio.tsx` (comentário da prop `ilustracao`) e `estados.test.tsx` dizem que no vazio padrão a
+- [x] *(feito na correção `2026-10-28-onca-do-mockup-v4`, `befdc575`: o vazio com a onça usa o `tracejado` e fica centralizado, como no mockup)*
+      Da correção `2026-10-28-onca-do-mockup-v3`: `EstadoVazio.tsx` (comentário da prop `ilustracao`) e `estados.test.tsx` dizem que no vazio padrão a
       onça fica "à esquerda", e a tela a mostra centralizada sobre texto à esquerda (a `figure` da `Onca` é `items-center`): alinhar a onça à
       esquerda (muda o que se vê) ou corrigir o comentário e o teste. É a mesma decisão do ramo `tracejado` de `TopoDoVazio`, que nenhuma tela chama
       com ilustração e que só `estados.test.tsx` prova (frontend-reviewer, revisor-geral e conformidade-reviewer, rodadas 1 e 2)
@@ -2289,3 +2290,13 @@ repetem aqui.
       conformidade-reviewer, rodada 2)
 - [ ] Da correção `2026-10-28-onca-do-mockup-v3`: em `Onca.test.tsx`, conferir que o `<g data-parte="movimento">` das linhas do aceno não tem classe
       (`getAttribute('class')` nulo), e em `Criados.test.tsx` que a onça do vazio mede 120 (test-engineer, rodada 2)
+- [ ] Da correção `2026-10-28-onca-do-mockup-v4`: exigir no tipo de `EstadoVazio` que quem passa `ilustracao` passe também
+      `variante="tracejado"` (test-engineer e conformidade-reviewer, rodada 1 da v4)
+- [ ] Da validação da onça, rodada 3 (m1 e m2): em `EstadoVazio.tsx`, o `justify-center` do `TopoDoVazio` (`:33`) e o da linha do botão (`:56`)
+      não fazem nada no `tracejado` (quem centraliza é o `items-center` da caixa); e `e2e/professor-criados.spec.ts:82` mede a onça, o título e o
+      botão, mas não o centro de cada linha da descrição (por `Range`)
+- [ ] Da validação da onça, rodadas 2 e 3 (m5): o mockup usa `pensando` em dois passos da introdução do professor e `acolhendo` na da
+      coordenação. A `acolhendo` não entra (D80, item 3); o `pensando` na introdução do professor pede parecer do conformidade-reviewer, se o
+      Joaquim quiser
+- [ ] Da correção da onça: o push de um commit só de documento na branch cancela a esteira do commit de código anterior (cancelou três vezes em
+      28/10). Fazer o commit de documento depois da esteira, ou a esteira não cancelar quando o commit novo não muda código (dono: Orquestrador)
