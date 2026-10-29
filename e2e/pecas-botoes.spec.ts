@@ -100,20 +100,32 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     // 5 principais, 5 desligados, 5 compactos, 5 compactos desligados, 5 com glifo, 5 só de ícone, 5 de ícone desligados,
     // e o perigo cheio, ligado e desligado: o sexto desenho tem a mesma medida dos outros.
     await expect(todos).toHaveCount(37)
-    for (const botao of await todos.all()) {
-      const fileira = (await botao.locator('xpath=..').getAttribute('data-tamanho')) ?? ''
-      const variante = (await botao.getAttribute('data-variante')) ?? ''
-      const medida = await caixa(botao)
+    // Uma ida só ao navegador para os 37 botões: com a CPU ×4 eram cinco idas por botão (a fileira, a variante, a caixa, o desenho), e o caso
+    // passava de 22 s dos 30 no runner da esteira (40880199949). O que se afirma de cada botão é o mesmo.
+    const medidas = await todos.evaluateAll((elementos) =>
+      elementos.map((elemento) => {
+        const caixaDoBotao = elemento.getBoundingClientRect()
+        return {
+          fileira: elemento.parentElement?.getAttribute('data-tamanho') ?? '',
+          variante: elemento.getAttribute('data-variante') ?? '',
+          width: caixaDoBotao.width,
+          height: caixaDoBotao.height,
+          canto: getComputedStyle(elemento).borderTopLeftRadius,
+        }
+      }),
+    )
+    expect(medidas).toHaveLength(37)
+    for (const { fileira, variante, width, height, canto } of medidas) {
       const piso = fileira.startsWith('compacto') && !estreito ? 36 : ALVO_DE_TOQUE_PRINCIPAL_PX
-      expect(medida.height, `${fileira} · ${variante}`).toBeGreaterThanOrEqual(piso)
-      expect(medida.width, `${fileira} · ${variante}`).toBeGreaterThanOrEqual(piso)
+      expect(height, `${fileira} · ${variante}`).toBeGreaterThanOrEqual(piso)
+      expect(width, `${fileira} · ${variante}`).toBeGreaterThanOrEqual(piso)
       // Em toda peça com texto o canto é de 12 px, e o botão só de ícone é o círculo de 44 px.
       if (fileira.startsWith('icone')) {
-        expect(medida.width, `${fileira} · ${variante}`).toBe(44)
-        expect(medida.height, `${fileira} · ${variante}`).toBe(44)
-        expect(Number.parseFloat((await desenho(botao)).canto), `${fileira} · ${variante}`).toBeGreaterThanOrEqual(22)
+        expect(width, `${fileira} · ${variante}`).toBe(44)
+        expect(height, `${fileira} · ${variante}`).toBe(44)
+        expect(Number.parseFloat(canto), `${fileira} · ${variante}`).toBeGreaterThanOrEqual(22)
       } else {
-        expect((await desenho(botao)).canto, `${fileira} · ${variante}`).toBe('12px')
+        expect(canto, `${fileira} · ${variante}`).toBe('12px')
       }
     }
   })

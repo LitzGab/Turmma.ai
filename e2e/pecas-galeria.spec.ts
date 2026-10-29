@@ -13,7 +13,10 @@ import { larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.t
  */
 
 test.describe('peças do MVP de apresentação, na galeria', () => {
-  test('nenhuma peça passa da largura da janela, com o menu aberto também, e o axe não acha violação na galeria', async ({ page, hasTouch }) => {
+  // Este caso era um só, de 9,9 s na máquina e 31,9 s no runner do celular (execução 40880199949, 1ª tentativa); são três, que
+  // abrem a galeria cada um e dividem o que ele afirmava, sem tirar asserção. O runner leva uns três vezes o tempo da máquina
+  // nos casos que são só CPU ×4 (a galeria não chama a API).
+  test('nenhuma peça passa da largura da janela, e o axe não acha violação na galeria', async ({ page }) => {
     await abrirGaleria(page)
     expect(await larguraExcedente(page)).toBe(0)
     // Cada bloco da galeria cabe na janela e não rola por dentro: uma peça que estourasse dentro de um contêiner com rolagem
@@ -23,7 +26,10 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     expect(blocos.passamDaJanela, 'blocos que passam da janela').toEqual([])
     expect(blocos.comRolagemPropria, 'blocos com rolagem horizontal própria').toEqual([])
     expect(await violacoesGraves(page)).toEqual([])
+  })
 
+  test('o menu de ferramenta da caixa de pedido abre, cabe na janela, não tem violação e escolhe um item só', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
     // O menu de ferramenta da caixa de pedido: abre, cabe na janela a 360 px, e continua sem violação.
     const ferramenta = secao(page, 'caixa-pedido').getByRole('button', { name: 'Ferramenta: Só conversar' })
     await acionar(ferramenta, hasTouch)
@@ -39,7 +45,10 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await acionar(menu.getByRole('menuitemradio', { name: /Atividade objetiva/ }), hasTouch)
     await expect(menu).toHaveCount(0)
     await expect(secao(page, 'caixa-pedido').getByRole('button', { name: 'Ferramenta: Atividade objetiva' })).toBeFocused()
+  })
 
+  test('os selos de estado dizem o estado em texto, a faixa do aluno não fecha e o número de painel vem no formato local', async ({ page }) => {
+    await abrirGaleria(page)
     // Os selos de estado dizem o estado em texto, e não só na cor.
     const estado = secao(page, 'estado')
     for (const texto of ['Esperando você', 'Aprovado', 'Rejeitado', 'Faz e avisa']) await expect(estado.getByText(texto, { exact: true })).toBeVisible()

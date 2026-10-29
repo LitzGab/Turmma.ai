@@ -2256,6 +2256,17 @@ repetem aqui.
       grupo, o `privacidade:253` primeiro, mais os seis do `celular` que passaram de 30 s no push do pouso da X4 (`40365404286`, no
       mesmo `83f1c6d8` que ficou verde na `develop`): `pecas-sobrepor:180`, `pecas-galeria:16`, `pecas-ia:173`, `pecas-ia:443` (claro
       e escuro) e `coordenacao-introducao:201`, este da X4 (dono: Orquestrador)
+      **Feito em 29/10/2026** (correção `2026-10-29-primeira-carga-do-e2e`): (a) a trava do `goto('/entrar')` **não se reproduz**: 1.200
+      cargas novas, 0 travadas, e a rede emulada custa 2,8 a 3,5 s fixos por primeira carga; não entra nova tentativa no `perfis.ts`
+      (esconderia a trava); (b) `abrirPelaApiSemMedirAPrimeiraCarga` (`segundo-fator.ts`) e `entrarPelaApiSemMedirAPrimeiraCarga`
+      (`casca.ts`), usados por `material`, `privacidade`, `coordenacao-introducao`, `analista`, `governanca` e cinco casos do professor;
+      (c) `privacidade:253` e `:430`, os seis da galeria (`pecas-galeria:16`, `pecas-sobrepor:180`, `:39`, `pecas-ia:173`, `:443`,
+      `pecas-botoes:95`, `pecas-superficies:26`, divididos ou medidos numa ida só ao navegador) e o `coordenacao-introducao:201`. **Sobra, do
+      censo da esteira `40880199949`** (a lista está na correção, "Recomendações sem aplicar"): o grupo "entrada e sessão" em que a própria entrada
+      é o assunto (`convite:154`, `mfa:14` e `:151`, `escola-e-vinculos:211` e `:271`, `troca-de-escola:211`, `casca:386`,
+      `pedidos-do-titular:338`, `tokens:215`, `operacao:45`, `areas:275` e `:479`), os seis de 90 s (`alocacao:85`, `professores:249`, `operacao:125`, `estrutura:314`,
+      `lista-da-turma:214` e `:519`) `pecas-sobrepor:504` e `pecas-ia:261`. O ajudante `entrarPelaApiComSegundoFator` de dentro de `privacidade.spec.ts` é cópia do de `segundo-fator.ts` e serve ao caso que prova só o endereço (dono: quem tocar `privacidade.spec.ts`). O runner leva uns **três** vezes a máquina nos casos de CPU ×4 (galeria), e não o
+      dobro que `tools/ci/duracao-do-e2e.ts` supõe (dono: Orquestrador, uma correção por linha ociosa)
 
 ## Da correção 2026-10-28-onca-do-mockup (a onça do mockup), fora dela
 

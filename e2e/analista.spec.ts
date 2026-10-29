@@ -1,5 +1,6 @@
-import type { Locator, Page } from '@playwright/test'
-import { entrarComoCoordenacaoNaMesmaAba, esperarPainel, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import type { APIRequestContext, Locator, Page } from '@playwright/test'
+import { entrarPelaTelaComSegundoFator, esperarPainel, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirPelaApiSemMedirAPrimeiraCarga, configurarSegundoFatorPelaApi } from './__fixtures__/segundo-fator.ts'
 import { irPelaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { conferirAssinaturas, conferirTamanhoDoAvatar } from './__fixtures__/avatar.ts'
 import { auditoriasNoBanco, montarEscolaComEntregas, type EscolaComEntregas } from './__fixtures__/governanca.ts'
@@ -28,18 +29,16 @@ interface Cenario {
 }
 
 /** A coordenadora entra e abre no Painel. Com `comEntregas`, a escola já tem o que o roteiro deixa até o passo 4. */
-async function entrar(page: Page, hasTouch: boolean, comEntregas = true): Promise<Cenario> {
+async function entrar(page: Page, request: APIRequestContext, comEntregas = true): Promise<Cenario> {
   const coordenadora = await criarEquipeComSenha('coordenador')
   const escola = comEntregas ? await montarEscolaComEntregas(coordenadora.escolaId, coordenadora.usuarioId) : undefined
-  await page.goto('/entrar')
-  await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-  await esperarPainel(page)
+  await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/coordenacao/painel', () => esperarPainel(page))
   return { coordenadora, escola }
 }
 
 test.describe('O pedido de dado nominal, no fim do Analista', () => {
-  test('o pedido de dado nominal avisa da auditoria antes, pede turma e finalidade, e grava uma auditoria por leitura', async ({ page, hasTouch }) => {
-    const { coordenadora, escola } = await entrar(page, hasTouch)
+  test('o pedido de dado nominal avisa da auditoria antes, pede turma e finalidade, e grava uma auditoria por leitura', async ({ page, hasTouch, request }) => {
+    const { coordenadora, escola } = await entrar(page, request)
     if (escola === undefined) throw new Error('escola sem entregas')
     await irPelaCoordenacao(page, 'Analista', hasTouch)
     await expect(principal(page).getByRole('button', { name: 'Abrir dado nominal de uma turma' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -75,9 +74,9 @@ test.describe('O pedido de dado nominal, no fim do Analista', () => {
     await expect(principal(page).getByRole('button', { name: 'Abrir dado nominal de uma turma' })).toBeFocused()
   })
 
-  test('abrir duas vezes grava duas auditorias: a confirmação nasce vazia, e sair da página não guarda a leitura', async ({ page, hasTouch }) => {
+  test('abrir duas vezes grava duas auditorias: a confirmação nasce vazia, e sair da página não guarda a leitura', async ({ page, hasTouch, request }) => {
     test.slow()
-    const { coordenadora, escola } = await entrar(page, hasTouch)
+    const { coordenadora, escola } = await entrar(page, request)
     if (escola === undefined) throw new Error('escola sem entregas')
     await irPelaCoordenacao(page, 'Analista', hasTouch)
     const abrir = principal(page).getByRole('button', { name: 'Abrir dado nominal de uma turma' })
@@ -103,9 +102,9 @@ test.describe('O pedido de dado nominal, no fim do Analista', () => {
     expect(await auditoriasNoBanco(coordenadora.escolaId, 'analista.nominal_lido')).toHaveLength(2)
   })
 
-  test('a falha da leitura fica no diálogo, não grava auditoria, e o aviso da tentativa anterior sai ao reabrir', async ({ page, hasTouch }) => {
+  test('a falha da leitura fica no diálogo, não grava auditoria, e o aviso da tentativa anterior sai ao reabrir', async ({ page, hasTouch, request }) => {
     test.slow()
-    const { coordenadora, escola } = await entrar(page, hasTouch)
+    const { coordenadora, escola } = await entrar(page, request)
     if (escola === undefined) throw new Error('escola sem entregas')
     await irPelaCoordenacao(page, 'Analista', hasTouch)
     // A turma some da escola entre o pedido e a leitura: o servidor responde "não encontrado".
@@ -128,8 +127,8 @@ test.describe('O pedido de dado nominal, no fim do Analista', () => {
 })
 
 test.describe('Analista', () => {
-  test('gera o resumo: o alerta é hipótese com contexto, e o recorte de um professor só aparece sem número', async ({ page, hasTouch }) => {
-    const { escola } = await entrar(page, hasTouch)
+  test('gera o resumo: o alerta é hipótese com contexto, e o recorte de um professor só aparece sem número', async ({ page, hasTouch, request }) => {
+    const { escola } = await entrar(page, request)
     if (escola === undefined) throw new Error('escola sem entregas')
     await irPelaCoordenacao(page, 'Analista', hasTouch)
     await expect(page).toHaveURL(/\/coordenacao\/analista$/)
@@ -186,15 +185,13 @@ async function gerarResumo(page: Page, hasTouch: boolean): Promise<void> {
 const sair = (page: Page) => page.getByRole('button', { name: 'Sair' }).first()
 
 test.describe('recomeço: a pessoa seguinte na mesma aba', () => {
-  test('o resumo e o dado nominal da escola anterior não aparecem para a coordenação que entra depois, sem recarregar a página', async ({ page, hasTouch }) => {
+  test('o resumo e o dado nominal da escola anterior não aparecem para a coordenação que entra depois, sem recarregar a página', async ({ page, hasTouch, request }) => {
     test.slow()
     const primeira = await criarEquipeComSenha('coordenador')
     const escola = await montarEscolaComEntregas(primeira.escolaId, primeira.usuarioId)
     const segunda = await criarEquipeComSenha('coordenador')
 
-    await page.goto('/entrar')
-    await entrarComoCoordenacaoNaMesmaAba(page, primeira, hasTouch)
-    await esperarPainel(page)
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, primeira, '/coordenacao/painel', () => esperarPainel(page))
     await irPelaCoordenacao(page, 'Analista', hasTouch)
     await gerarResumo(page, hasTouch)
     await acionar(principal(page).getByRole('button', { name: 'Abrir dado nominal de uma turma' }), hasTouch)
@@ -216,7 +213,9 @@ test.describe('recomeço: a pessoa seguinte na mesma aba', () => {
       new MutationObserver(ler).observe(document.body, { subtree: true, childList: true, characterData: true })
     }, escola.professoras.quimicaDoB)
 
-    await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
+    // O segundo fator é configurado pela API: o caso é sobre o que a aba mostra da pessoa anterior, e o login pela tela continua.
+    const { segredo } = await configurarSegundoFatorPelaApi(request, segunda)
+    await entrarPelaTelaComSegundoFator(page, segunda, segredo, hasTouch)
     await esperarPainel(page)
     await irPelaCoordenacao(page, 'Analista', hasTouch)
     // O que a segunda pessoa vê é só da escola dela: sem resumo, sem leitura nominal, e o botão de gerar disponível.
@@ -230,9 +229,9 @@ test.describe('recomeço: a pessoa seguinte na mesma aba', () => {
 })
 
 test.describe('recomeço: o pedido de "Gerar resumo"', () => {
-  test('com o pedido no ar, outro toque não manda um segundo: um pedido por vez, do vazio e depois do resumo', async ({ page, hasTouch }) => {
+  test('com o pedido no ar, outro toque não manda um segundo: um pedido por vez, do vazio e depois do resumo', async ({ page, hasTouch, request }) => {
     test.slow()
-    const { escola } = await entrar(page, hasTouch)
+    const { escola } = await entrar(page, request)
     if (escola === undefined) throw new Error('escola sem entregas')
     await irPelaCoordenacao(page, 'Analista', hasTouch)
     let pedidos = 0
@@ -263,15 +262,13 @@ test.describe('recomeço: o pedido de "Gerar resumo"', () => {
     expect(pedidos).toBe(2)
   })
 
-  test('a resposta que chega depois de a coordenação sair não mexe na tela da pessoa seguinte', async ({ page, hasTouch }) => {
+  test('a resposta que chega depois de a coordenação sair não mexe na tela da pessoa seguinte', async ({ page, hasTouch, request }) => {
     test.slow()
     const primeira = await criarEquipeComSenha('coordenador')
     await montarEscolaComEntregas(primeira.escolaId, primeira.usuarioId)
     const segunda = await criarEquipeComSenha('coordenador')
 
-    await page.goto('/entrar')
-    await entrarComoCoordenacaoNaMesmaAba(page, primeira, hasTouch)
-    await esperarPainel(page)
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, primeira, '/coordenacao/painel', () => esperarPainel(page))
     await irPelaCoordenacao(page, 'Analista', hasTouch)
     await expect(principal(page)).toContainText('Nenhum resumo gerado ainda', { timeout: PRAZO_DA_ENTRADA_MS })
 
@@ -295,7 +292,9 @@ test.describe('recomeço: o pedido de "Gerar resumo"', () => {
 
     await acionar(sair(page), hasTouch)
     await expect(page).toHaveURL(/\/entrar$/, { timeout: PRAZO_DA_ENTRADA_MS })
-    await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
+    // O segundo fator é configurado pela API: o caso é sobre o que a aba mostra da pessoa anterior, e o login pela tela continua.
+    const { segredo } = await configurarSegundoFatorPelaApi(request, segunda)
+    await entrarPelaTelaComSegundoFator(page, segunda, segredo, hasTouch)
     await esperarPainel(page)
     await irPelaCoordenacao(page, 'Analista', hasTouch)
     await expect(principal(page)).toContainText('Nenhum resumo gerado ainda', { timeout: PRAZO_DA_ENTRADA_MS })

@@ -14,6 +14,11 @@ import { ALVO_DE_TOQUE_PRINCIPAL_PX, corDoToken, focoVisivel, IMPACTOS_QUE_REPRO
  * asserção, e só mudou de arquivo. Os auxiliares comuns estão em `__fixtures__/galeria.ts`.
  */
 
+/** As seções da conversa que o axe e a medida do alvo percorrem. */
+const SECOES_DA_CONVERSA = ['selo-de-ia', 'conversa', 'escolha-estados', 'caixa-pedido', 'caixa-do-aluno', 'caixa-desligada', 'pagina-mini', 'motor', 'motor-com-falha', 'motor-da-adaptacao'] as const
+/** As peças de ação: o chip, que corre dentro da linha, fica de fora e é medido à parte. */
+const ALVOS_DE_ACAO = 'button:not([data-texto-da-ia] button), summary, label:has(input), select, textarea, input:not([type="checkbox"])'
+
 /** Os hex da 9.1 do `docs/interface.md`, como o navegador os devolve no estilo calculado: só os que este arquivo afirma. */
 const RGB = {
   laranja: 'rgb(232, 115, 46)',
@@ -170,7 +175,9 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     expect(await desenho(feita)).toMatchObject({ borda: `2px solid ${borda}` })
   })
 
-  test('o texto da IA entra como texto, com os chips no fim; o ChipFonte abre pelo teclado e pelo toque e fecha quando o foco sai', async ({ page, hasTouch }) => {
+  // Este caso era um só, de 9,8 s na máquina e 24,5 s no runner do celular (execução 40880199949, 1ª tentativa; mais de 30 s na
+  // esteira anterior); são quatro, que abrem a galeria cada um e dividem o que ele afirmava, na mesma ordem e sem tirar asserção.
+  test('o texto da IA entra como texto, com os chips no fim, um por fonte, na pílula de 28 px', async ({ page }) => {
     await abrirGaleria(page)
     const texto = secao(page, 'conversa').locator('[data-texto-da-ia]')
 
@@ -193,7 +200,10 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     // A pílula de 28 px, com a borda de 2 px e o canto inteiro: o alvo de 24 px do piso (WCAG 2.5.8) com folga.
     expect(await desenho(chips.first())).toMatchObject({ borda: `2px solid ${await corDoToken(page, 'borda')}`, peso: '700', fonte: '15px' })
     expect((await caixa(chips.first())).height).toBe(28)
+  })
 
+  test('o ChipFonte abre pelo teclado e mostra o trecho, que cabe na janela e não tem violação', async ({ page }) => {
+    await abrirGaleria(page)
     const chip = page.getByRole('button', { name: 'Fonte: Química 2, cap. 7, p. 142' })
     await expect(chip).toHaveAttribute('aria-expanded', 'false')
     expect((await caixa(chip)).height).toBeGreaterThanOrEqual(24)
@@ -208,6 +218,15 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(cartao).toContainText('A proporção entre as quantidades de matéria de reagentes e produtos é dada pelos coeficientes da equação balanceada.')
     await conferirQueCabeNaJanela(page, cartao)
     expect(await violacoesGraves(page)).toEqual([])
+  })
+
+  test('o Esc fecha o cartão e devolve o foco ao chip, com o anel à vista, e o Tab não deixa o cartão aberto para trás', async ({ page }) => {
+    await abrirGaleria(page)
+    const chip = page.getByRole('button', { name: 'Fonte: Química 2, cap. 7, p. 142' })
+    const cartao = page.getByRole('group', { name: 'Fonte: Química 2, cap. 7, p. 142' })
+    await chip.focus()
+    await page.keyboard.press('Enter')
+    await expect(cartao).toBeVisible()
 
     // O Esc fecha e devolve o foco ao chip, com o anel à vista.
     await page.keyboard.press('Escape')
@@ -221,6 +240,12 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await page.keyboard.press('Tab')
     await expect(cartao).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Fonte: Química 2, cap. 7, p. 145' })).toBeFocused()
+  })
+
+  test('o ChipFonte abre pelo toque, tocar no trecho não fecha, o toque fora fecha, e a lista de fontes diz as páginas sem repetir', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const chip = page.getByRole('button', { name: 'Fonte: Química 2, cap. 7, p. 142' })
+    const cartao = page.getByRole('group', { name: 'Fonte: Química 2, cap. 7, p. 142' })
 
     // Pelo toque (ou pelo clique) abre do mesmo jeito; tocar no trecho não fecha, e o toque fora fecha.
     await acionar(chip, hasTouch)
@@ -440,11 +465,12 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
   })
 
   for (const tema of ['claro', 'escuro'] as const) {
-    test(`as peças da conversa, no tema ${tema}: sem violação grave e com o alvo de toque do projeto`, async ({ page, hasTouch }) => {
+    // Este caso era um só, de 10,5 s na máquina e 27 s no runner do celular (execução 40880199949, 1ª tentativa); são dois por tema:
+    // o axe, e o alvo de toque, que agora mede todas as peças numa ida só ao navegador, em vez de uma ida por peça.
+    test(`as peças da conversa, no tema ${tema}: sem violação grave`, async ({ page }) => {
       await abrirGaleria(page)
       await page.evaluate((valor) => document.documentElement.setAttribute('data-tema', valor), tema)
-      const secoes = ['selo-de-ia', 'conversa', 'escolha-estados', 'caixa-pedido', 'caixa-do-aluno', 'caixa-desligada', 'pagina-mini', 'motor', 'motor-com-falha', 'motor-da-adaptacao']
-      expect(await violacoesDasSecoes(page, secoes)).toEqual([])
+      expect(await violacoesDasSecoes(page, SECOES_DA_CONVERSA)).toEqual([])
 
       // Abre o chip e a lista de fontes: o cartão e a lista também passam no axe, nos dois temas.
       const conversa = secao(page, 'conversa')
@@ -452,18 +478,29 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
       await conversa.locator('summary').click()
       expect(await violacoesDasSecoes(page, ['conversa'])).toEqual([])
       await page.keyboard.press('Escape')
+    })
 
+    test(`as peças da conversa, no tema ${tema}: o alvo de toque do projeto`, async ({ page, hasTouch }) => {
+      await abrirGaleria(page)
+      await page.evaluate((valor) => document.documentElement.setAttribute('data-tema', valor), tema)
       // O alvo: 44 px no celular em toda peça de ação das seções, **inclusive os gatilhos de menu** (o chip, que corre
       // dentro da linha, tem os 28 px da pílula e é medido à parte); no computador, o piso de 24 px (WCAG 2.5.8).
       const minimo = hasTouch ? ALVO_DE_TOQUE_PRINCIPAL_PX : 24
-      for (const nome of secoes) {
-        const alvos = secao(page, nome).locator('button:not([data-texto-da-ia] button), summary, label:has(input), select, textarea, input:not([type="checkbox"])')
-        for (const alvo of await alvos.all()) {
-          const medida = await caixa(alvo)
-          const quem = `${nome}: ${(await alvo.textContent())?.slice(0, 30) ?? (await alvo.getAttribute('aria-label')) ?? ''}`
-          expect(medida.height, quem).toBeGreaterThanOrEqual(minimo)
-          expect(medida.width, quem).toBeGreaterThanOrEqual(minimo)
-        }
+      // Uma ida só ao navegador para todas as peças: com a CPU ×4 cada `boundingBox` era uma ida, e eram dezenas.
+      const medidas = await page.evaluate(
+        ({ nomes, seletor }) =>
+          nomes.flatMap((nome) =>
+            [...(document.querySelector(`[data-galeria="${nome}"]`)?.querySelectorAll(seletor) ?? [])].map((alvo) => {
+              const medida = alvo.getBoundingClientRect()
+              return { quem: `${nome}: ${alvo.textContent?.slice(0, 30) ?? alvo.getAttribute('aria-label') ?? ''}`, height: medida.height, width: medida.width }
+            }),
+          ),
+        { nomes: [...SECOES_DA_CONVERSA], seletor: ALVOS_DE_ACAO },
+      )
+      expect(medidas.length, 'alvos medidos').toBeGreaterThan(0)
+      for (const medida of medidas) {
+        expect(medida.height, medida.quem).toBeGreaterThanOrEqual(minimo)
+        expect(medida.width, medida.quem).toBeGreaterThanOrEqual(minimo)
       }
       for (const chip of await secao(page, 'conversa').locator('[data-texto-da-ia] button[aria-expanded]').all()) expect((await caixa(chip)).height).toBeGreaterThanOrEqual(28)
     })

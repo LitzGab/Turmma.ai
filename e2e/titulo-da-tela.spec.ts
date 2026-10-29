@@ -4,6 +4,7 @@ import {
   entrarComoAluno,
   entrarComoCoordenacaoNaMesmaAba,
   entrarComoProfessora,
+  entrarComoProfessoraPelaApi,
   esperarPainel,
   irPelaNavegacao,
   PRAZO_DA_ENTRADA_MS,
@@ -162,7 +163,7 @@ test.describe('o título nos estados da tela', () => {
         body: JSON.stringify({ erro: { codigo: 'INDISPONIVEL_TENTE_DE_NOVO', mensagem: 'texto que a tela não usa', requisicaoId: '0190f5a0-0000-7000-8000-000000000001' } }),
       })
     })
-    await entrarComoProfessora(page, hasTouch)
+    await entrarComoProfessoraPelaApi(page)
 
     // Vazio: o título e, embaixo dele, o que a tela diz para quem ainda não foi alocado.
     await irPelaNavegacao(page, 'Turmas', hasTouch)

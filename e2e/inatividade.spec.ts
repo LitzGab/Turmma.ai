@@ -9,7 +9,7 @@ import {
   encerrarSessoesDoUsuario,
   type EquipeDeTeste,
 } from './__fixtures__/sessao.ts'
-import { irPelaNavegacao, esperarNovaConversa, esperarInicioDoAluno } from './__fixtures__/casca.ts'
+import { irPelaNavegacao, esperarNovaConversa, esperarInicioDoAluno, entrarPelaApiSemMedirAPrimeiraCarga } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { desenho } from './__fixtures__/galeria.ts'
 import { corDoToken, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
@@ -244,9 +244,7 @@ test.describe('inatividade e login por cima da tela', () => {
 
   test('falha da API não desloga: 5xx e rede cortada mantêm a tela, sem login por cima', async ({ page, hasTouch }) => {
     const professora = await criarEquipeComSenha()
-    await page.goto('/entrar')
-    await entrarPorEmail(page, professora, hasTouch)
-    await esperarAreaAutenticada(page, professora.nome)
+    await entrarPelaApiSemMedirAPrimeiraCarga(page, professora, '/professor/nova-conversa', () => esperarAreaAutenticada(page, professora.nome))
 
     let falha: 'servidor' | 'rede' | 'nenhuma' = 'servidor'
     let cortes = 0

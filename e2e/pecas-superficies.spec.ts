@@ -23,7 +23,9 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     expect(await tela.evaluate((elemento) => [getComputedStyle(elemento).paddingLeft, getComputedStyle(elemento).paddingRight])).toEqual([esperada, esperada])
   })
 
-  test('a barra presa não cobre o último item, a tabela vira lista no celular, o menu não é cortado dentro dela, e "preparando a resposta" não se mexe', async ({ page, hasTouch }) => {
+  // Este caso era um só, de 22 s no `celular` da esteira (execução 40880199949) e o do campo de várias linhas vinha junto; são quatro, que
+  // abrem a galeria cada um e dividem o que ele afirmava, na mesma ordem e sem tirar asserção.
+  test('a barra presa não cobre o último item, e os botões dela cabem na caixa com o alvo de toque', async ({ page }) => {
     await abrirGaleria(page)
 
     // A barra presa: gruda no pé da caixa que rola, com a lista por trás, e no fim da rolagem o último item fica inteiro
@@ -66,6 +68,10 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
       expect(medida.x + medida.width).toBeLessThanOrEqual(daRolagem.x + daRolagem.width)
     }
 
+  })
+
+  test('a tabela é de verdade a partir de 768 px e lista abaixo disso, e o menu de uma linha abre inteiro, por cima, sem ser cortado', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
     // A tabela: de verdade a partir de 768 px, com cabeçalho de coluna e de linha; lista abaixo disso, com o rótulo de
     // cada valor escrito. Uma estrutura só no documento.
     const tabela = secao(page, 'tabela')
@@ -117,6 +123,10 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await page.keyboard.press('Escape')
     await expect(acoes).toBeFocused()
 
+  })
+
+  test('"preparando a resposta" é um texto anunciado com calma, sem nada animado, e a demora troca o texto, uma vez', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
     // "Preparando a resposta": um texto, anunciado com calma, sem nada animado; a demora troca o texto, uma vez.
     const conversa = secao(page, 'conversa')
     const registro = conversa.getByRole('log', { name: 'Conversa com o Assistente de ensino' })
@@ -129,7 +139,10 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(pensando.locator('[aria-live="polite"]')).toHaveText('Ainda preparando a resposta. Você não precisa pedir de novo.')
     // Enquanto a resposta chega, a conversa está ocupada: o leitor de tela espera para ler o que entrou.
     await expect(registro).toHaveAttribute('aria-busy', 'true')
+  })
 
+  test('o campo de várias linhas tem rótulo, contador em texto e o limite no próprio campo, e a seleção obrigatória diz que é', async ({ page }) => {
+    await abrirGaleria(page)
     // O campo de várias linhas: rótulo, contador em texto e o limite no próprio campo.
     const observacao = secao(page, 'selecao-e-menu').getByLabel('Observação')
     await observacao.fill('linha um\nlinha dois')

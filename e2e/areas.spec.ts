@@ -9,6 +9,9 @@ import {
   esperarPainel,
   nomeNoSeletor,
   entrarComoProfessora,
+  entrarComoProfessoraPelaApi,
+  entrarPelaApiSemMedirAPrimeiraCarga,
+  entrarPelaTelaComSegundoFator,
   entrarPorEmail,
   gaveta,
   irPelaNavegacao,
@@ -22,6 +25,7 @@ import {
 } from './__fixtures__/casca.ts'
 import { cliquesAte, irPelaCoordenacao, paginaNaoRola, type TelaDaCoordenacao } from './__fixtures__/coordenacao.ts'
 import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
+import { configurarSegundoFatorPelaApi } from './__fixtures__/segundo-fator.ts'
 import { colocarAlunoNaTurma, criarAlocacaoDoProfessor, criarAlunoComMatricula, criarEquipeComSenha, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { codigoCru, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -569,15 +573,13 @@ test.describe('W4: os estados de "Turmas"', () => {
 })
 
 test.describe('recomeço da tela', () => {
-  test('segunda pessoa: a coordenação entra na aba do professor sem o item nem o dado dele', async ({ page, hasTouch }) => {
+  test('segunda pessoa: a coordenação entra na aba do professor sem o item nem o dado dele', async ({ page, hasTouch, request }) => {
     // A alocação existe antes da entrada: o Início já lê os vínculos ao abrir, e a lista que ela leu fica fresca
     // no cache por 30 s. Criada depois, a alocação perdia a corrida para essa leitura, e "Turmas" mostrava o vazio do
     // cache (esteiras 37324214757 e 37330163372; correção 2026-10-05-segunda-pessoa-cache-dos-vinculos).
     const professora = await criarEquipeComSenha()
     const alocacao = await criarAlocacaoDoProfessor(professora.escolaId, professora.usuarioId)
-    await page.goto('/entrar')
-    await entrarPorEmail(page, professora, hasTouch)
-    await esperarNovaConversa(page, professora.nome)
+    await entrarPelaApiSemMedirAPrimeiraCarga(page, professora, '/professor/nova-conversa', () => esperarNovaConversa(page, professora.nome))
     await irPelaNavegacao(page, 'Turmas', hasTouch)
     await expect(page.getByRole('main')).toContainText(alocacao.turmaNome, { timeout: PRAZO_DA_ENTRADA_MS })
 
@@ -592,7 +594,9 @@ test.describe('recomeço da tela', () => {
       await rota.continue()
     })
     const coordenadora = await criarEquipeComSenha('coordenador')
-    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
+    // O segundo fator é configurado pela API: o caso é sobre o que a aba mostra da professora, e o login da coordenadora, pela tela, continua.
+    const { segredo } = await configurarSegundoFatorPelaApi(request, coordenadora)
+    await entrarPelaTelaComSegundoFator(page, coordenadora, segredo, hasTouch)
     // A coordenação abre no Painel (X2), que também não aponta para Turmas, tela do professor.
     await esperarPainel(page)
     await expect(page.getByRole('main').getByRole('link', { name: 'Turmas' })).toHaveCount(0)
@@ -698,7 +702,7 @@ test.describe('recomeço da tela', () => {
 
   test('a guarda sem o /v1/eu: carrega enquanto ele não chega, e na falha mostra o erro com nova tentativa, nunca "não encontrada"', async ({ page, hasTouch }) => {
     const pedidos = registrarChunks(page)
-    await entrarComoProfessora(page, hasTouch)
+    await entrarComoProfessoraPelaApi(page)
 
     let estado: 'segurado' | 'falha' | 'normal' = 'segurado'
     const segurado = portao()

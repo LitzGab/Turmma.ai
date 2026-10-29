@@ -1,7 +1,7 @@
 import type { Page, Request, Route } from '@playwright/test'
 import { MENSAGENS_DE_ERRO, mensagemDaEntrada } from '../packages/shared/src/erros/mensagens.ts'
 import { criarEquipeComSenha, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
-import { esperarNovaConversa } from './__fixtures__/casca.ts'
+import { entrarPelaApiSemMedirAPrimeiraCarga, esperarNovaConversa } from './__fixtures__/casca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, codigoCru, focoVisivel, larguraExcedente, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -247,9 +247,7 @@ test.describe('entrada da equipe por e-mail e senha', () => {
 
   test('falha: 503 numa consulta da área autenticada mantém a tela e o "Sair", sem mandar ninguém para a entrada', async ({ page, hasTouch }) => {
     const equipe = await criarEquipeComSenha()
-    await page.goto('/entrar')
-    await entrar(page, equipe, hasTouch)
-    await esperarAreaAutenticada(page, equipe)
+    await entrarPelaApiSemMedirAPrimeiraCarga(page, equipe, '/professor/nova-conversa', () => esperarAreaAutenticada(page, equipe))
 
     let fora = true
     await page.route(ROTA_EU, (rota) => (fora ? falharCom(503, 'INDISPONIVEL_TENTE_DE_NOVO')(rota) : rota.continue()))
@@ -365,9 +363,7 @@ test.describe('entrada da equipe por e-mail e senha', () => {
 
   test('"Sair" que a API não confirma avisa na entrada, porque a sessão continua viva no servidor', async ({ page, hasTouch }) => {
     const equipe = await criarEquipeComSenha()
-    await page.goto('/entrar')
-    await entrar(page, equipe, hasTouch)
-    await esperarAreaAutenticada(page, equipe)
+    await entrarPelaApiSemMedirAPrimeiraCarga(page, equipe, '/professor/nova-conversa', () => esperarAreaAutenticada(page, equipe))
 
     let encerramentos = 0
     await page.route(ROTA_SESSAO, (rota) => {

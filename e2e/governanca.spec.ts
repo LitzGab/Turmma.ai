@@ -1,5 +1,6 @@
-import type { Locator, Page, Request, Route } from '@playwright/test'
-import { entrarComoCoordenacaoNaMesmaAba, esperarPainel, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import type { APIRequestContext, Locator, Page, Request, Route } from '@playwright/test'
+import { entrarPelaTelaComSegundoFator, esperarPainel, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirPelaApiSemMedirAPrimeiraCarga, configurarSegundoFatorPelaApi } from './__fixtures__/segundo-fator.ts'
 import { irPelaCoordenacao, linhasDaTabela, paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { acrescentarSerieDeUmProfessorSo, montarEscolaComEntregas, type EscolaComEntregas } from './__fixtures__/governanca.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
@@ -50,19 +51,17 @@ interface Cenario {
  * A coordenadora entra, abre no Painel e vai à aba IA de Registros, que é a Governança. Com `comEntregas`, a escola já tem o que
  * o roteiro deixa até o passo 4.
  */
-async function entrar(page: Page, hasTouch: boolean, comEntregas = true): Promise<Cenario> {
+async function entrar(page: Page, request: APIRequestContext, hasTouch: boolean, comEntregas = true): Promise<Cenario> {
   const coordenadora = await criarEquipeComSenha('coordenador')
   const escola = comEntregas ? await montarEscolaComEntregas(coordenadora.escolaId, coordenadora.usuarioId) : undefined
-  await page.goto('/entrar')
-  await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-  await esperarPainel(page)
+  await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/coordenacao/painel', () => esperarPainel(page))
   await irPelaCoordenacao(page, 'IA', hasTouch)
   return { coordenadora, escola }
 }
 
 test.describe('Governança de IA', () => {
-  test('a coordenação vai à aba IA de Registros e vê o que a IA gerou e se uma pessoa aprovou, sem professor, e o consumo em tokens', async ({ page, hasTouch }) => {
-    const { escola } = await entrar(page, hasTouch)
+  test('a coordenação vai à aba IA de Registros e vê o que a IA gerou e se uma pessoa aprovou, sem professor, e o consumo em tokens', async ({ page, hasTouch, request }) => {
+    const { escola } = await entrar(page, request, hasTouch)
     if (escola === undefined) throw new Error('escola sem entregas')
     await expect(page).toHaveTitle('Registros: IA · Turmma')
     // Quatro artefatos (três listas e uma versão adaptada) e três lotes; três aprovados, um esperando.
@@ -100,7 +99,7 @@ test.describe('Governança de IA', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
-  test('os quatro estados: carregando, erro com "Tentar de novo", com dado, e a escola sem nada gerado explica o que vai aparecer', async ({ page, hasTouch }) => {
+  test('os quatro estados: carregando, erro com "Tentar de novo", com dado, e a escola sem nada gerado explica o que vai aparecer', async ({ page, hasTouch, request }) => {
     const segurada = portao()
     let falhar = true
     await page.route(
@@ -112,9 +111,7 @@ test.describe('Governança de IA', () => {
       },
     )
     const coordenadora = await criarEquipeComSenha('coordenador')
-    await page.goto('/entrar')
-    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarPainel(page)
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/coordenacao/painel', () => esperarPainel(page))
     await irPelaCoordenacao(page, 'IA', hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando a governança…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     segurada.abrir()
@@ -132,9 +129,9 @@ test.describe('Governança de IA', () => {
 })
 
 test.describe('Registros › IA: o filtro por estado', () => {
-  test('o servidor filtra a lista pelo estado, o endereço o guarda, e os quatro números continuam os da escola inteira', async ({ page, hasTouch }) => {
+  test('o servidor filtra a lista pelo estado, o endereço o guarda, e os quatro números continuam os da escola inteira', async ({ page, hasTouch, request }) => {
     test.slow()
-    const { escola } = await entrar(page, hasTouch)
+    const { escola } = await entrar(page, request, hasTouch)
     if (escola === undefined) throw new Error('escola sem entregas')
     await expect(numero(page, 'Gerado por IA')).toContainText('7', { timeout: PRAZO_DA_ENTRADA_MS })
     // A escola tem três correções aprovadas e uma versão adaptada esperando. Sem filtro, as quatro; "Todos" é a opção marcada.
@@ -176,9 +173,9 @@ test.describe('Registros › IA: o filtro por estado', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
-  test('o filtro pelo endereço: abre já filtrado, o recarregar o mantém, e valor desconhecido abre sem filtro', async ({ page, hasTouch }) => {
+  test('o filtro pelo endereço: abre já filtrado, o recarregar o mantém, e valor desconhecido abre sem filtro', async ({ page, hasTouch, request }) => {
     test.slow()
-    const { escola } = await entrar(page, hasTouch)
+    const { escola } = await entrar(page, request, hasTouch)
     if (escola === undefined) throw new Error('escola sem entregas')
     await expect(estadosDaLista(page)).toHaveCount(4, { timeout: PRAZO_DA_ENTRADA_MS })
 
@@ -203,9 +200,9 @@ test.describe('Registros › IA: o filtro por estado', () => {
     for (const consulta of pedidos) expect(consulta).not.toContain('estado')
   })
 
-  test('a resposta do filtro antigo, que chega depois, não cai na lista do filtro novo', async ({ page, hasTouch }) => {
+  test('a resposta do filtro antigo, que chega depois, não cai na lista do filtro novo', async ({ page, hasTouch, request }) => {
     test.slow()
-    const { escola } = await entrar(page, hasTouch)
+    const { escola } = await entrar(page, request, hasTouch)
     if (escola === undefined) throw new Error('escola sem entregas')
     await expect(estadosDaLista(page)).toHaveCount(4, { timeout: PRAZO_DA_ENTRADA_MS })
     const segurada = portao()
@@ -243,14 +240,12 @@ test.describe('Registros › IA: o filtro por estado', () => {
 })
 
 test.describe('Registros › IA: a série com um professor só', () => {
-  test('a entrega dela conta nos números e não entra na lista, nem no filtro', async ({ page, hasTouch }) => {
+  test('a entrega dela conta nos números e não entra na lista, nem no filtro', async ({ page, hasTouch, request }) => {
     test.slow()
     const coordenadora = await criarEquipeComSenha('coordenador')
     const escola = await montarEscolaComEntregas(coordenadora.escolaId, coordenadora.usuarioId)
     const umSo = await acrescentarSerieDeUmProfessorSo(coordenadora.escolaId)
-    await page.goto('/entrar')
-    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarPainel(page)
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/coordenacao/painel', () => esperarPainel(page))
     await irPelaCoordenacao(page, 'IA', hasTouch)
     // Os sete de antes, mais o artefato original e a versão adaptada; as duas esperando agora.
     await expect(numero(page, 'Gerado por IA')).toContainText('9', { timeout: PRAZO_DA_ENTRADA_MS })
@@ -267,15 +262,13 @@ test.describe('Registros › IA: a série com um professor só', () => {
 })
 
 test.describe('Registros › IA: o recomeço pela pessoa seguinte', () => {
-  test('o filtro e a lista da escola anterior não aparecem para a coordenação que entra depois, na mesma aba', async ({ page, hasTouch }) => {
+  test('o filtro e a lista da escola anterior não aparecem para a coordenação que entra depois, na mesma aba', async ({ page, hasTouch, request }) => {
     test.slow()
     const primeira = await criarEquipeComSenha('coordenador')
     const escola = await montarEscolaComEntregas(primeira.escolaId, primeira.usuarioId)
     const segunda = await criarEquipeComSenha('coordenador')
 
-    await page.goto('/entrar')
-    await entrarComoCoordenacaoNaMesmaAba(page, primeira, hasTouch)
-    await esperarPainel(page)
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, primeira, '/coordenacao/painel', () => esperarPainel(page))
     await irPelaCoordenacao(page, 'IA', hasTouch)
     await expect(estadosDaLista(page)).toHaveCount(4, { timeout: PRAZO_DA_ENTRADA_MS })
     await acionar(opcaoDoEstado(page, 'Aprovados'), hasTouch)
@@ -294,7 +287,9 @@ test.describe('Registros › IA: o recomeço pela pessoa seguinte', () => {
       new MutationObserver(ler).observe(document.body, { subtree: true, childList: true, characterData: true })
     })
 
-    await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
+    // O segundo fator é configurado pela API: o caso é sobre o que a aba mostra da pessoa anterior, e o login pela tela continua.
+    const { segredo } = await configurarSegundoFatorPelaApi(request, segunda)
+    await entrarPelaTelaComSegundoFator(page, segunda, segredo, hasTouch)
     await esperarPainel(page)
     await irPelaCoordenacao(page, 'IA', hasTouch)
     // A escola da segunda pessoa não gerou nada: o vazio dela, sem filtro herdado, e os números dela.
@@ -309,9 +304,9 @@ test.describe('Registros › IA: o recomeço pela pessoa seguinte', () => {
 })
 
 test.describe('Registros › IA: o tamanho nas duas larguras', () => {
-  test('a página não rola, a tabela vira lista no celular, e o consumo fica ao lado da tabela no computador e embaixo dela no celular', async ({ page, hasTouch }) => {
+  test('a página não rola, a tabela vira lista no celular, e o consumo fica ao lado da tabela no computador e embaixo dela no celular', async ({ page, hasTouch, request }) => {
     test.slow()
-    const { escola } = await entrar(page, hasTouch)
+    const { escola } = await entrar(page, request, hasTouch)
     if (escola === undefined) throw new Error('escola sem entregas')
     await expect(estadosDaLista(page)).toHaveCount(4, { timeout: PRAZO_DA_ENTRADA_MS })
     const consumo = principal(page).getByRole('region', { name: 'Consumo do mês por função' })

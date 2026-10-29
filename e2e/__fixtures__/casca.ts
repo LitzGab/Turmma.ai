@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
 import { mensagemDoSegundoFator } from '../../packages/shared/src/erros/mensagens.ts'
-import { expect } from './perfis.ts'
+import { carregarSemRedeLenta, expect } from './perfis.ts'
 import { campoCodigo } from './segundo-fator.ts'
 import { codigoDoAutenticador, criarEquipeComSenha, type ConviteDeCoordenadorDeTeste, type EquipeDeTeste } from './sessao.ts'
 
@@ -176,6 +176,38 @@ export async function entrarComoProfessora(page: Page, hasTouch: boolean): Promi
   await page.goto('/entrar')
   await entrarPorEmail(page, professora, hasTouch)
   await esperarNovaConversa(page, professora.nome)
+  return professora
+}
+
+/**
+ * A mesma entrada pela API, com a **primeira carga** (o endereço e a primeira tela, que `aguardar` espera) sem a rede do perfil
+ * (`carregarSemRedeLenta`): a receita de `abrirPelaApiSemMedirAPrimeiraCarga` (`segundo-fator.ts`) para quem não tem segundo
+ * fator. A CPU do perfil continua, e a rede do perfil volta quando a função devolve.
+ *
+ * **O que ele não mede:** quanto a aplicação leva para baixar e abrir na rede lenta, nem a entrada pela tela (senha, escolha de
+ * escola), que tem os casos dela em `entrar.spec.ts`. Caso cujo assunto é um desses dois não usa este ajudante.
+ *
+ * **Segunda pessoa na mesma aba:** o caso sobre isolamento (a aba não mostra dado da pessoa anterior) continua com o login da segunda
+ * pessoa **pela tela**; só a primeira pode entrar por aqui. Trocar esse login pela API num ajuste de prazo esvazia a prova da regra 10
+ * (item 5) e da regra 20 (item 5): ele é o que faz a aba ter o cache da primeira.
+ */
+export async function entrarPelaApiSemMedirAPrimeiraCarga(
+  page: Page,
+  pessoa: Pick<EquipeDeTeste, 'email' | 'senha'>,
+  endereco: string,
+  aguardar?: () => Promise<void>,
+  usuarioId?: string,
+): Promise<void> {
+  await carregarSemRedeLenta(page, async () => {
+    await entrarPelaApi(page, pessoa, endereco, usuarioId)
+    await aguardar?.()
+  })
+}
+
+/** `entrarComoProfessora` sem pagar a entrada pela tela nem a rede lenta na primeira carga: para o caso cujo assunto vem depois da entrada. */
+export async function entrarComoProfessoraPelaApi(page: Page): Promise<EquipeDeTeste> {
+  const professora = await criarEquipeComSenha()
+  await entrarPelaApiSemMedirAPrimeiraCarga(page, professora, '/professor/nova-conversa', () => esperarNovaConversa(page, professora.nome))
   return professora
 }
 

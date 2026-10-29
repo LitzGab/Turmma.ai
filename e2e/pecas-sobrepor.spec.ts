@@ -36,7 +36,8 @@ function estaDentro(alvo: Locator): Promise<boolean> {
 }
 
 test.describe('peças do MVP de apresentação, na galeria', () => {
-  test('abas e menu pelo teclado: uma parada só no Tab, setas, item desligado pulado, e o Esc devolve o foco', async ({ page, hasTouch }) => {
+  // Este caso era um só, de 8,3 s na máquina e 20,7 s no `celular` da esteira (execução 40880199949); são dois, que abrem a galeria cada um.
+  test('abas pelo teclado: uma parada só no Tab, as setas trocam de aba e levam o foco junto', async ({ page }) => {
     await abrirGaleria(page)
     const abas = secao(page, 'abas')
     const lista = abas.getByRole('tablist', { name: 'Seções da turma' })
@@ -79,6 +80,10 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
       [-1, 'false'],
     ])
 
+  })
+
+  test('menu pelo teclado: a seta abre, as setas pulam o item desligado, a letra busca, o Esc devolve o foco, e o toque fora só fecha', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
     // O menu: a seta para baixo abre com o foco no primeiro item, e as setas pulam o desligado.
     const bloco = secao(page, 'selecao-e-menu')
     const botao = bloco.getByRole('button', { name: 'Ações da atividade' })
@@ -177,6 +182,9 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(botao).toBeFocused()
   })
 
+  // Este caso era um só, de 11,2 s na máquina e mais de 30 s no runner do celular (execução 40880199949, 1ª tentativa); são três, que
+  // abrem a galeria cada um e dividem o que ele afirmava, na mesma ordem e sem tirar asserção: o runner leva uns três vezes o
+  // tempo da máquina nos casos que são só CPU ×4 (a galeria não chama a API).
   test('o diálogo de confirmação: o que vai acontecer e o aviso são lidos ao abrir, o foco não começa em confirmar e volta para onde dá', async ({ page, hasTouch }) => {
     await abrirGaleria(page)
     const bloco = secao(page, 'confirmacao')
@@ -221,6 +229,12 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     await expect(oficial.getByRole('alert')).toHaveText('Não foi possível aprovar. Tente de novo em instantes.')
     await expect(oficial.getByRole('button', { name: 'Aprovar 32 correções' })).toBeEnabled()
     await page.keyboard.press('Escape')
+  })
+
+  test('rejeitar o lote pede o motivo: de 8 a 500 caracteres, contados sem o espaço das pontas, e o botão que confirma é o vermelho', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const bloco = secao(page, 'confirmacao')
+    const decisao = bloco.locator('[data-decisao]')
 
     // Rejeitar pede o motivo: sem ele, de 8 a 500 caracteres, o botão que confirma fica desligado.
     await acionar(bloco.getByRole('button', { name: 'Rejeitar o lote' }), hasTouch)
@@ -246,6 +260,15 @@ test.describe('peças do MVP de apresentação, na galeria', () => {
     expect(await violacoesGraves(page)).toEqual([])
     await acionar(rejeitar, hasTouch)
     await expect(decisao).toHaveText('Rejeitado')
+  })
+
+  test('a ação de perigo com aviso suspende a função, e aprovar pelo teclado leva o foco ao resultado', async ({ page, hasTouch }) => {
+    await abrirGaleria(page)
+    const bloco = secao(page, 'confirmacao')
+    const gatilho = bloco.getByRole('button', { name: 'Aprovar 32 correções' })
+    const decisao = bloco.locator('[data-decisao]')
+    const oficial = page.getByRole('alertdialog', { name: 'Aprovar 32 correções' })
+    const aprovar = oficial.getByRole('button', { name: 'Aprovar 32 correções' })
 
     // A ação de perigo com aviso: o cheio em vermelho só existe aqui dentro, e o aviso da auditoria faz parte do que o
     // leitor de tela ouve ao abrir (a descrição do diálogo), e não só do que se vê.

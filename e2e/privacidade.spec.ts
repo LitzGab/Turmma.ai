@@ -1,8 +1,8 @@
 import type { APIRequestContext, Locator, Page, Route } from '@playwright/test'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, escolherNoSeletor, esperarPainel, lateral, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarPelaTelaComSegundoFator, escolherNoSeletor, esperarPainel, lateral, nomeNoSeletor, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { irPelaCoordenacao, paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
-import { configurarSegundoFatorPelaApi } from './__fixtures__/segundo-fator.ts'
+import { abrirPelaApiSemMedirAPrimeiraCarga, configurarSegundoFatorPelaApi } from './__fixtures__/segundo-fator.ts'
 import { ajustarRetencaoDaEscola, cadastrarSuboperadorDeTeste, codigoDoAutenticador, criarEquipeComSenha, criarEscolaSintetica, criarUsuarioEmOutraEscola, type EquipeDeTeste } from './__fixtures__/sessao.ts'
 import { violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -56,11 +56,14 @@ async function abrirARetencao(page: Page, hasTouch: boolean): Promise<void> {
   await expect(page).toHaveURL(ENDERECO_DA_RETENCAO, { timeout: PRAZO_DA_ENTRADA_MS })
 }
 
-/** A coordenadora entra e abre a Privacidade pela navegação e, nela, a aba de retenção. */
-async function entrarNaPrivacidade(page: Page, hasTouch: boolean, pessoa: EquipeDeTeste): Promise<void> {
-  await page.goto('/entrar')
-  await entrarComoCoordenacaoNaMesmaAba(page, pessoa, hasTouch)
-  await esperarPainel(page)
+/**
+ * A coordenadora entra pela API, com o segundo fator já configurado, abre o Painel sem a rede lenta na primeira carga
+ * (`abrirPelaApiSemMedirAPrimeiraCarga`) e abre a Privacidade pela navegação e, nela, a aba de retenção. A navegação continua na
+ * rede do perfil e pelo menu: é o que o caso "abre Privacidade pela navegação" afirma. Pela tela, a entrada e a configuração do segundo
+ * fator ocupavam de dois terços a nove décimos dos 30 s do caso no `celular` da esteira (40880199949).
+ */
+async function entrarNaPrivacidade(page: Page, request: APIRequestContext, hasTouch: boolean, pessoa: EquipeDeTeste): Promise<void> {
+  await abrirPelaApiSemMedirAPrimeiraCarga(page, request, pessoa, '/coordenacao/painel', () => esperarPainel(page))
   await abrirARetencao(page, hasTouch)
 }
 
@@ -82,11 +85,11 @@ async function entrarPelaApiComSegundoFator(page: Page, request: APIRequestConte
 }
 
 test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
-  test('a coordenação abre Privacidade pela navegação, na aba de retenção, com o prazo que vale, de onde ele vem e os prazos fixos', async ({ page, hasTouch }) => {
+  test('a coordenação abre Privacidade pela navegação, na aba de retenção, com o prazo que vale, de onde ele vem e os prazos fixos', async ({ page, hasTouch, request }) => {
     const coordenadora = await criarEquipeComSenha('coordenador')
     await ajustarRetencaoDaEscola(coordenadora.escolaId, 'conversa_tutor', 6)
     await ajustarRetencaoDaEscola(coordenadora.escolaId, 'conversa_professor', 3)
-    await entrarNaPrivacidade(page, hasTouch, coordenadora)
+    await entrarNaPrivacidade(page, request, hasTouch, coordenadora)
 
     await expect(page).toHaveTitle('Registros: privacidade · Turmma')
     await expect(page.getByRole('heading', { level: 1, name: 'Registros' })).toBeVisible()
@@ -120,10 +123,10 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
-  test('o seletor da Privacidade: uma parada no Tab, as setas trocam de tela e de endereço, e o alvo tem o tamanho do toque', async ({ page, hasTouch }) => {
+  test('o seletor da Privacidade: uma parada no Tab, as setas trocam de tela e de endereço, e o alvo tem o tamanho do toque', async ({ page, hasTouch, request }) => {
     test.setTimeout(60_000)
     const coordenadora = await criarEquipeComSenha('coordenador')
-    await entrarNaPrivacidade(page, hasTouch, coordenadora)
+    await entrarNaPrivacidade(page, request, hasTouch, coordenadora)
     const prazos = page.getByRole('radio', { name: 'Prazos de guarda' })
     const empresas = page.getByRole('radio', { name: 'Empresas' })
     const incidentes = page.getByRole('radio', { name: 'Incidentes' })
@@ -173,7 +176,7 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await expect(page.getByRole('tab', { name: NOME_DA_ABA_DOS_PEDIDOS, exact: true })).toHaveAttribute('aria-selected', 'true')
   })
 
-  test('os estados: carregando, erro com "Tentar de novo", e com dado', async ({ page, hasTouch }) => {
+  test('os estados: carregando, erro com "Tentar de novo", e com dado', async ({ page, hasTouch, request }) => {
     const segurada = portao()
     let falhar = true
     await page.route(
@@ -186,9 +189,7 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     )
     const coordenadora = await criarEquipeComSenha('coordenador')
     await ajustarRetencaoDaEscola(coordenadora.escolaId, 'conversa_tutor', 6)
-    await page.goto('/entrar')
-    await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-    await esperarPainel(page)
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/coordenacao/painel', () => esperarPainel(page))
     await irPelaCoordenacao(page, 'Pedidos', hasTouch)
     await abrirARetencao(page, hasTouch)
 
@@ -203,17 +204,16 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await expect(principal(page).getByRole('alert')).toHaveCount(0)
   })
 
-  test('a troca de escola não mostra a retenção da escola anterior, nem enquanto a da nova ainda não chegou', async ({ page, hasTouch }) => {
-    // A virada de 30 s do segundo fator pode levar quase um minuto de relógio, além do que o teste tem por padrão.
+  test('a troca de escola não mostra a retenção da escola anterior, nem enquanto a da nova ainda não chegou', async ({ page, hasTouch, request }) => {
+    // Duas cargas de página (a entrada e a recarga) e a troca de escola, com o segundo fator pedido de novo, sob o perfil do celular.
     test.setTimeout(90_000)
     const emA = await criarEquipeComSenha('coordenador')
     await ajustarRetencaoDaEscola(emA.escolaId, 'conversa_tutor', 6)
-    // O segredo do segundo fator sai da resposta do primeiro acesso: a troca de escola pede um código de novo.
-    const respostaDoSegredo = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/conta/mfa/configurar')
-    await entrarNaPrivacidade(page, hasTouch, emA)
-    const fimDoLogin = Date.now()
+    // O segredo do segundo fator vem da configuração pela API: a troca de escola pede um código de novo. A ativação usa o passo anterior e a
+    // entrada, o de agora, e a troca, o seguinte (`deixarOPassoSeguinteLivre`): sem esperar a virada de 30 s do relógio, que levava até meio minuto.
+    const segredo = await abrirPelaApiSemMedirAPrimeiraCarga(page, request, emA, '/coordenacao/painel', () => esperarPainel(page), { deixarOPassoSeguinteLivre: true })
+    await abrirARetencao(page, hasTouch)
     await expect(categorias(page)).toContainText(AJUSTADO, { timeout: PRAZO_DA_ENTRADA_MS })
-    const { segredo } = (await (await respostaDoSegredo).json()) as { segredo: string }
     // A segunda escola entra depois do primeiro acesso: com duas escolas, o login pede a escola e o segundo fator, e o
     // helper de entrada só cobre uma. A lista de escolas da sessão vê a nova ao recarregar a aba.
     const emB = await criarUsuarioEmOutraEscola(emA.contaId, 'coordenador')
@@ -231,13 +231,8 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     )
     await escolherNoSeletor(page, nomeNoSeletor(emB, 'coordenação'), hasTouch)
     await expect(page.getByRole('heading', { name: 'Segundo fator' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
-    // O login usou o código do passo seguinte ao instante em que ele foi montado, e o segundo fator não aceita um passo que
-    // já passou da janela. O código que vale é o do passo seguinte ao fim do login, e só depois da próxima virada de 30 s
-    // do relógio: antes disso ele ainda é o do login, e o servidor o recusa.
-    const PASSO_MS = 30_000
-    const proximaVirada = (Math.floor(fimDoLogin / PASSO_MS) + 1) * PASSO_MS
-    await new Promise((resolver) => setTimeout(resolver, Math.max(0, proximaVirada + 1_000 - Date.now())))
-    await page.getByLabel('Código do aplicativo').fill(codigoDoAutenticador(segredo, PASSO_MS / 1_000))
+    // A entrada usou o passo de agora e a ativação, o anterior: o código desta troca é o do passo seguinte, que a janela da API aceita.
+    await page.getByLabel('Código do aplicativo').fill(codigoDoAutenticador(segredo, 30))
     await acionar(page.getByRole('button', { name: /^Entrar$|Entrando/ }), hasTouch)
     await esperarPainel(page)
     await irPelaCoordenacao(page, 'Pedidos', hasTouch)
@@ -250,10 +245,10 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
     await expect(principal(page)).not.toContainText(AJUSTADO)
   })
 
-  test('a segunda pessoa na mesma aba não vê a retenção da anterior', async ({ page, hasTouch }) => {
+  test('a segunda pessoa na mesma aba não vê a retenção da anterior', async ({ page, hasTouch, request }) => {
     const primeira = await criarEquipeComSenha('coordenador')
     await ajustarRetencaoDaEscola(primeira.escolaId, 'conversa_tutor', 6)
-    await entrarNaPrivacidade(page, hasTouch, primeira)
+    await entrarNaPrivacidade(page, request, hasTouch, primeira)
     await expect(categorias(page)).toContainText(AJUSTADO, { timeout: PRAZO_DA_ENTRADA_MS })
 
     await abrirNavegacao(page, hasTouch)
@@ -270,7 +265,10 @@ test.describe('Privacidade: por quanto tempo a escola guarda cada dado', () => {
         return rota.continue()
       },
     )
-    await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
+    // O segundo fator da segunda pessoa é configurado pela API: o caso é sobre o que a aba mostra da primeira, e o login dela, pela tela, continua.
+    const { segredo } = await configurarSegundoFatorPelaApi(request, segunda)
+    await entrarPelaTelaComSegundoFator(page, segunda, segredo, hasTouch)
+    await expect(page).toHaveURL(/\/coordenacao\/painel$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await esperarPainel(page)
     await irPelaCoordenacao(page, 'Pedidos', hasTouch)
     await abrirARetencao(page, hasTouch)
@@ -300,18 +298,16 @@ const secao = (page: Page, nome: string) => principal(page).getByRole('region', 
 const linhaDaEmpresa = (page: Page, nome: string) => principal(page).locator('tr, li').filter({ hasText: nome })
 const marca = () => Math.random().toString(36).slice(2, 10)
 
-/** A coordenadora entra e abre a aba das empresas pelo endereço da aba, depois de entrar na Privacidade pela navegação. */
-async function abrirAsEmpresas(page: Page, hasTouch: boolean, pessoa: EquipeDeTeste): Promise<void> {
+/** A coordenadora entra pela API (a primeira carga, sem a rede lenta) e abre a aba das empresas pela navegação, a partir do Painel. */
+async function abrirAsEmpresas(page: Page, request: APIRequestContext, hasTouch: boolean, pessoa: EquipeDeTeste): Promise<void> {
   // Direto da aba dos pedidos, que é a que a Privacidade abre: passar antes pela retenção leria a retenção à toa.
-  await page.goto('/entrar')
-  await entrarComoCoordenacaoNaMesmaAba(page, pessoa, hasTouch)
-  await esperarPainel(page)
+  await abrirPelaApiSemMedirAPrimeiraCarga(page, request, pessoa, '/coordenacao/painel', () => esperarPainel(page))
   await irPelaCoordenacao(page, 'Empresas', hasTouch)
   await expect(page).toHaveURL(ENDERECO_DAS_EMPRESAS, { timeout: PRAZO_DA_ENTRADA_MS })
 }
 
 test.describe('Privacidade: as empresas que recebem dados da escola', () => {
-  test('a coordenação lê as empresas vigentes e as passadas da escola dela, com o que cada uma faz, recebe e processa, e não lê as de outra escola', async ({ page, hasTouch }) => {
+  test('a coordenação lê as empresas vigentes e as passadas da escola dela, com o que cada uma faz, recebe e processa, e não lê as de outra escola', async ({ page, hasTouch, request }) => {
     const coordenadora = await criarEquipeComSenha('coordenador')
     const outra = await criarEscolaSintetica()
     const m = marca()
@@ -323,7 +319,7 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
     await cadastrarSuboperadorDeTeste({ nome: provedor, escolas: [coordenadora.escolaId], pais: 'US', categorias: ['conversa_do_aluno'], vedaTreinamento: false })
     await cadastrarSuboperadorDeTeste({ nome: antiga, escolas: [coordenadora.escolaId], encerrado: true })
     await cadastrarSuboperadorDeTeste({ nome: deOutraEscola, escolas: [outra.escolaId] })
-    await abrirAsEmpresas(page, hasTouch, coordenadora)
+    await abrirAsEmpresas(page, request, hasTouch, coordenadora)
 
     await expect(page.getByRole('radio', { name: NOME_DA_ABA_DAS_EMPRESAS })).toHaveAttribute('aria-checked', 'true')
     await expect(principal(page).getByRole('heading', { level: 2, name: 'Empresas que recebem dados' })).toBeVisible()
@@ -358,13 +354,13 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
-  test('as duas abas se alternam pelo clique ou toque, e o endereço guarda a aba', async ({ page, hasTouch }) => {
+  test('as duas abas se alternam pelo clique ou toque, e o endereço guarda a aba', async ({ page, hasTouch, request }) => {
     // Duas cargas de página (a entrada e a recarga) sob o perfil do celular, mais a troca de aba: passam dos 30 s que o teste tem por padrão.
     test.setTimeout(90_000)
     const coordenadora = await criarEquipeComSenha('coordenador')
     const nome = `Hospedagem ${marca()}`
     await cadastrarSuboperadorDeTeste({ nome, escolas: [coordenadora.escolaId] })
-    await abrirAsEmpresas(page, hasTouch, coordenadora)
+    await abrirAsEmpresas(page, request, hasTouch, coordenadora)
     await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(nome, { timeout: PRAZO_DA_ENTRADA_MS })
 
     await page.reload()
@@ -379,7 +375,7 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
     await expect(principal(page)).not.toContainText(nome)
   })
 
-  test('os estados: carregando, erro com "Tentar de novo", vazio, só passadas e com dado', async ({ page, hasTouch }) => {
+  test('os estados: carregando, erro com "Tentar de novo", vazio, só passadas e com dado', async ({ page, hasTouch, request }) => {
     // Quatro cargas de página sob o perfil do celular: a entrada abre na aba dos pedidos (F3, 16.0), que lê a lista antes de a coordenação trocar de aba.
     test.setTimeout(90_000)
     const segurada = portao()
@@ -398,7 +394,7 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
     const coordenadora = await criarEquipeComSenha('coordenador')
     const real = `Hospedagem real ${marca()}`
     await cadastrarSuboperadorDeTeste({ nome: real, escolas: [coordenadora.escolaId] })
-    await abrirAsEmpresas(page, hasTouch, coordenadora)
+    await abrirAsEmpresas(page, request, hasTouch, coordenadora)
 
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO_AS_EMPRESAS })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     segurada.abrir()
@@ -427,11 +423,11 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
     await expect(principal(page).getByText(VAZIO_DAS_EMPRESAS)).toHaveCount(0)
   })
 
-  test('a segunda pessoa na mesma aba não vê as empresas da anterior, nem enquanto as dela não chegaram', async ({ page, hasTouch }) => {
+  test('a segunda pessoa na mesma aba não vê as empresas da anterior, nem enquanto as dela não chegaram', async ({ page, hasTouch, request }) => {
     const primeira = await criarEquipeComSenha('coordenador')
     const daPrimeira = `Só da primeira escola ${marca()}`
     await cadastrarSuboperadorDeTeste({ nome: daPrimeira, escolas: [primeira.escolaId] })
-    await abrirAsEmpresas(page, hasTouch, primeira)
+    await abrirAsEmpresas(page, request, hasTouch, primeira)
     await expect(secao(page, SECAO_DAS_VIGENTES)).toContainText(daPrimeira, { timeout: PRAZO_DA_ENTRADA_MS })
 
     await abrirNavegacao(page, hasTouch)
@@ -448,7 +444,10 @@ test.describe('Privacidade: as empresas que recebem dados da escola', () => {
         return rota.continue()
       },
     )
-    await entrarComoCoordenacaoNaMesmaAba(page, segunda, hasTouch)
+    // O segundo fator da segunda pessoa é configurado pela API: o caso é sobre o que a aba mostra da primeira, e o login dela, pela tela, continua.
+    const { segredo } = await configurarSegundoFatorPelaApi(request, segunda)
+    await entrarPelaTelaComSegundoFator(page, segunda, segredo, hasTouch)
+    await expect(page).toHaveURL(/\/coordenacao\/painel$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await esperarPainel(page)
     await irPelaCoordenacao(page, 'Empresas', hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: CARREGANDO_AS_EMPRESAS })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })

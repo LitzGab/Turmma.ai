@@ -3,7 +3,7 @@ import type { Locator, Page, Request } from '@playwright/test'
 import { abrirNavegacao, entrarComoCoordenacaoPeloConvite, entrarPelaTelaComSegundoFator, esperarIntroducaoDaCoordenacao, esperarPainel, falaDoPassoDaCoordenacao, falasDaIntroducaoDaCoordenacao, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { paginaNaoRola } from './__fixtures__/coordenacao.ts'
 import { expect, test } from './__fixtures__/perfis.ts'
-import { configurarSegundoFatorPelaApi, entrarPelaApiComSegundoFator } from './__fixtures__/segundo-fator.ts'
+import { abrirPelaApiSemMedirAPrimeiraCarga, configurarSegundoFatorPelaApi } from './__fixtures__/segundo-fator.ts'
 import {
   confirmacaoDoIncidenteNoBanco,
   criarConviteDeCoordenador,
@@ -67,7 +67,7 @@ test.describe('a introdução da coordenação', () => {
 
   test('os quatro passos levam ao Painel, e "Continuar" no último é o "Começar": uma gravação só, e nada fica no navegador', async ({ page, hasTouch, request }) => {
     const coordenadora = await criarEquipeComSenha('coordenador', { introducao: 'por_ver' })
-    await entrarPelaApiComSegundoFator(page, request, coordenadora, '/')
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/')
     await esperarIntroducaoDaCoordenacao(page, coordenadora.escolaNome)
     const gravacoes = contarGravacoes(page)
 
@@ -102,7 +102,7 @@ test.describe('a introdução da coordenação', () => {
   test('"Pular" no passo 1 grava a data, uma vez, e leva ao Painel; a entrada seguinte não volta', async ({ page, hasTouch, request }) => {
     const coordenadora = await criarEquipeComSenha('coordenador', { introducao: 'por_ver' })
     expect(await introducaoVistaEmDoUsuario(coordenadora.usuarioId)).toBeNull()
-    await entrarPelaApiComSegundoFator(page, request, coordenadora, '/')
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/')
     await esperarIntroducaoDaCoordenacao(page, coordenadora.escolaNome)
     const gravacoes = contarGravacoes(page)
 
@@ -126,7 +126,7 @@ test.describe('a introdução da coordenação', () => {
     const jaViu = await criarProfessoraNaEscola(coordenadora)
     // A lista de professores é lida ao abrir a tela, e a tela se abre pelo endereço: a resposta é a que o navegador recebeu.
     const lista = page.waitForResponse((resposta) => new URL(resposta.url()).pathname === '/v1/professores' && resposta.request().method() === 'GET')
-    await entrarPelaApiComSegundoFator(page, request, coordenadora, '/coordenacao/professores')
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/coordenacao/professores')
     const corpo = await (await lista).text()
     expect(corpo).toContain(semVer.nome)
     expect(corpo).toContain(jaViu.nome)
@@ -138,7 +138,7 @@ test.describe('a introdução da coordenação', () => {
     const antes = await introducaoVistaEmDoUsuario(coordenadora.usuarioId)
     expect(antes).not.toBeNull()
     const gravacoes = contarGravacoes(page)
-    await entrarPelaApiComSegundoFator(page, request, coordenadora, '/coordenacao/painel')
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/coordenacao/painel')
     await esperarPainel(page)
 
     await reverPeloMenuDaPessoa(page, hasTouch)
@@ -168,7 +168,7 @@ test.describe('a introdução da coordenação', () => {
     const secoes = await criarIncidenteNoBanco({ escolas: [coordenadora.escolaId], circunstancias: `${marca}. Circunstâncias do incidente de teste.` })
     const secao = secoes[coordenadora.escolaId]
     if (secao === undefined) throw new Error('o incidente de teste não criou a seção da escola')
-    await entrarPelaApiComSegundoFator(page, request, coordenadora, '/')
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/')
     await esperarIntroducaoDaCoordenacao(page, coordenadora.escolaNome)
     const gravacoes = contarGravacoes(page)
 
@@ -203,7 +203,7 @@ test.describe('a introdução da coordenação', () => {
     const segunda = await criarEquipeComSenha('coordenador', { introducao: 'por_ver' })
     const { segredo } = await configurarSegundoFatorPelaApi(request, segunda)
     // A primeira já viu a introdução (o `/v1/eu` dela, com a data, fica no cache da aba); a segunda ainda não.
-    await entrarPelaApiComSegundoFator(page, request, primeira, '/coordenacao/agentes')
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, primeira, '/coordenacao/agentes')
     await expect(page).toHaveURL(/\/coordenacao\/agentes$/, { timeout: PRAZO_DA_ENTRADA_MS })
 
     await abrirNavegacao(page, hasTouch)
@@ -218,7 +218,7 @@ test.describe('a introdução da coordenação', () => {
   test('a 360 px, em cada passo, a página não rola de lado, os botões têm 44 px, "Pular" e "Continuar" são iguais e não há violação grave', async ({ page, hasTouch, request }) => {
     await page.setViewportSize({ width: 360, height: 640 })
     const coordenadora = await criarEquipeComSenha('coordenador', { introducao: 'por_ver' })
-    await entrarPelaApiComSegundoFator(page, request, coordenadora, '/')
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/')
     await esperarIntroducaoDaCoordenacao(page, coordenadora.escolaNome)
 
     const total = falasDaIntroducaoDaCoordenacao(coordenadora.escolaNome).length
@@ -244,7 +244,7 @@ test.describe('a introdução da coordenação', () => {
 
   test('"Sair" no meio não grava: a pessoa vai à entrada e nenhuma gravação sai', async ({ page, hasTouch, request }) => {
     const coordenadora = await criarEquipeComSenha('coordenador', { introducao: 'por_ver' })
-    await entrarPelaApiComSegundoFator(page, request, coordenadora, '/')
+    await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/')
     await esperarIntroducaoDaCoordenacao(page, coordenadora.escolaNome)
     const gravacoes = contarGravacoes(page)
     await acionar(continuar(page), hasTouch)

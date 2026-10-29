@@ -1,10 +1,10 @@
 import type { APIRequestContext, Locator, Page, Request, Route } from '@playwright/test'
 import { readFileSync } from 'node:fs'
-import { abrirNavegacao, entrarComoCoordenacaoNaMesmaAba, esperarPainel, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
+import { abrirNavegacao, entrarPelaTelaComSegundoFator, lateral, PRAZO_DA_ENTRADA_MS } from './__fixtures__/casca.ts'
 import { irPelaCoordenacao, linhasDaTabela } from './__fixtures__/coordenacao.ts'
 import { CAMINHO_DO_PDF_DE_DEMONSTRACAO, criarMaterialNoBanco, materiaisNoBanco, recusasNaAuditoria } from './__fixtures__/material.ts'
-import { carregarSemRedeLenta, expect, test } from './__fixtures__/perfis.ts'
-import { entrarPelaApiComSegundoFator } from './__fixtures__/segundo-fator.ts'
+import { expect, test } from './__fixtures__/perfis.ts'
+import { abrirPelaApiSemMedirAPrimeiraCarga, configurarSegundoFatorPelaApi } from './__fixtures__/segundo-fator.ts'
 import { criarEquipeComSenha, montarEstruturaNoBanco, type EquipeDeTeste, type EstruturaDeTeste } from './__fixtures__/sessao.ts'
 import { ALVO_DE_TOQUE_PRINCIPAL_PX, larguraExcedente, larguraExcedenteDoDialogo, violacoesGraves } from './__fixtures__/verificacoes.ts'
 
@@ -71,24 +71,31 @@ interface Cenario {
   readonly estrutura: EstruturaDeTeste
 }
 
-/** Uma escola com uma disciplina, e a coordenadora dela na tela Material. `antes` roda com a sessão ainda fechada. */
-async function abrirMaterial(page: Page, hasTouch: boolean, antes?: (cenario: Cenario) => Promise<void>): Promise<Cenario> {
+/**
+ * Uma escola com uma disciplina, e a coordenadora dela na tela Material. `antes` roda com a sessão ainda fechada. A entrada é pela API,
+ * com o segundo fator já configurado, e a primeira carga da tela Material não afirma nada sobre o tempo de baixar
+ * (`abrirPelaApiSemMedirAPrimeiraCarga`): pela tela, o login e a configuração do segundo fator sob a rede móvel lenta ocupavam de dois
+ * terços a nove décimos dos 30 s do caso (esteira 40880199949, `celular`). A entrada pela tela tem os casos dela (`entrar.spec.ts`,
+ * `mfa.spec.ts`); o que sobra aqui é o que o caso afirma da tela Material.
+ */
+async function abrirMaterial(page: Page, request: APIRequestContext, antes?: (cenario: Cenario) => Promise<void>): Promise<Cenario> {
   const coordenadora = await criarEquipeComSenha('coordenador')
   const estrutura = await montarEstruturaNoBanco(coordenadora.escolaId)
   const cenario = { coordenadora, estrutura }
   await antes?.(cenario)
-  await page.goto('/entrar')
-  await entrarComoCoordenacaoNaMesmaAba(page, coordenadora, hasTouch)
-  await esperarPainel(page)
-  await irPelaCoordenacao(page, 'Material', hasTouch)
-  await expect(page).toHaveURL(/\/coordenacao\/material$/)
+  await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, '/coordenacao/material', async () => {
+    await expect(page).toHaveURL(/\/coordenacao\/material$/, { timeout: PRAZO_DA_ENTRADA_MS })
+    // A tela monta quando o pedaço dela chega (`import()`): sem esperá-lo aqui, ele baixaria com a rede do perfil de volta, e o título e
+    // o resto da tela só apareceriam depois dos 5 s do `expect` de quem chama.
+    await expect(principal(page).getByRole('heading', { level: 1, name: 'Escola' })).toBeAttached({ timeout: PRAZO_DA_ENTRADA_MS })
+  })
   return cenario
 }
 
 /**
  * Entrada pela API: uma escola com uma disciplina, e a coordenadora dela abrindo o endereço dado. Não é só dos casos do `?material=` (o que o
  * link do sino faz): serve também ao caso cujo assunto vem depois de a tela Material estar aberta. A entrada é pela API, com o segundo fator
- * já configurado (`entrarPelaApiComSegundoFator`), e a carga do endereço não afirma nada sobre o tempo de baixar (`carregarSemRedeLenta`).
+ * já configurado, e a carga do endereço não afirma nada sobre o tempo de baixar (`abrirPelaApiSemMedirAPrimeiraCarga`).
  * Pela tela, a entrada e a tela Material duas vezes na rede móvel lenta ocupavam quase todo o prazo do caso. `antes` roda com a sessão ainda
  * fechada. `aguardar`, quando vem, roda ainda sem a rede lenta: é a espera da tela carregar (o pedaço da tela Material e a lista, que a carga
  * do endereço só começa), e só serve ao caso cujo assunto vem depois do carregamento. Caso cujo assunto é o tempo de baixar na rede lenta não
@@ -105,10 +112,7 @@ async function abrirMaterialPeloEndereco(
   const estrutura = await montarEstruturaNoBanco(coordenadora.escolaId)
   const cenario = { coordenadora, estrutura }
   await antes?.(cenario)
-  await carregarSemRedeLenta(page, async () => {
-    await entrarPelaApiComSegundoFator(page, request, coordenadora, endereco(cenario))
-    await aguardar?.()
-  })
+  await abrirPelaApiSemMedirAPrimeiraCarga(page, request, coordenadora, endereco(cenario), aguardar)
   return cenario
 }
 
@@ -141,8 +145,8 @@ const botoesCheios = (page: Page) =>
   principal(page).getByRole('button').evaluateAll((botoes) => botoes.filter((botao) => getComputedStyle(botao).backgroundColor === 'rgb(232, 115, 46)').map((botao) => botao.textContent))
 
 test.describe('Material da coordenação', () => {
-  test('a coordenação sobe o PDF de demonstração com licença e vê "Pronto · 6 páginas", sem recarregar a página', async ({ page, hasTouch }) => {
-    const cenario = await abrirMaterial(page, hasTouch)
+  test('a coordenação sobe o PDF de demonstração com licença e vê "Pronto · 6 páginas", sem recarregar a página', async ({ page, hasTouch, request }) => {
+    const cenario = await abrirMaterial(page, request)
     await expect(page).toHaveTitle('Escola: material · Turmma')
     // O vazio convida a enviar o primeiro material.
     await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -205,7 +209,7 @@ test.describe('Material da coordenação', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
-  test('enquanto o material está sendo lido a tela consulta sozinha, e troca "Processando" por "Pronto" sem recarregar', async ({ page, hasTouch }) => {
+  test('enquanto o material está sendo lido a tela consulta sozinha, e troca "Processando" por "Pronto" sem recarregar', async ({ page, request }) => {
     // O preparo (equipe, entrada, menu) leva ~21 s no runner, a troca mais ~5 s e a espera final mais 4 s: soma ~31 s contra os
     // 30 s do relógio do Playwright (esteira 39054499168). O relógio é triplicado, e nenhuma asserção muda.
     test.slow()
@@ -232,7 +236,7 @@ test.describe('Material da coordenação', () => {
         await rota.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [material(leituras <= 2 ? 'processando' : 'pronto')] }) })
       },
     )
-    await abrirMaterial(page, hasTouch)
+    await abrirMaterial(page, request)
 
     const linha = linhaDe(page, TITULO)
     await expect(linha.getByText('Processando')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -319,8 +323,8 @@ test.describe('Material da coordenação', () => {
     await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible()
   })
 
-  test('depois da recusa o diálogo continua aberto: corrigir a licença e enviar de novo entra o material, e a recusa continua na tabela', async ({ page, hasTouch }) => {
-    const cenario = await abrirMaterial(page, hasTouch)
+  test('depois da recusa o diálogo continua aberto: corrigir a licença e enviar de novo entra o material, e a recusa continua na tabela', async ({ page, hasTouch, request }) => {
+    const cenario = await abrirMaterial(page, request)
     await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await abrirEnvio(page, hasTouch)
     await preencher(page, cenario, { licenca: 'Não tenho a licença, ou não sei' })
@@ -337,8 +341,8 @@ test.describe('Material da coordenação', () => {
     expect(await materiaisNoBanco(cenario.coordenadora.escolaId)).toEqual([expect.objectContaining({ titulo: TITULO, estado: 'pronto', paginas: 6 })])
   })
 
-  test('o texto do campo "De quem é o material" cabe inteiro, também na opção mais longa: a coordenação lê a titularidade que declarou', async ({ page, hasTouch }) => {
-    await abrirMaterial(page, hasTouch)
+  test('o texto do campo "De quem é o material" cabe inteiro, também na opção mais longa: a coordenação lê a titularidade que declarou', async ({ page, hasTouch, request }) => {
+    await abrirMaterial(page, request)
     await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await abrirEnvio(page, hasTouch)
     const campo = caixaDeEnvio(page).getByLabel('De quem é o material')
@@ -363,8 +367,8 @@ test.describe('Material da coordenação', () => {
     expect(sobra).toBeGreaterThanOrEqual(0)
   })
 
-  test('o formulário incompleto diz o que falta em cada campo, e o arquivo que não é PDF é recusado na tela, sem pedido à API', async ({ page, hasTouch }) => {
-    await abrirMaterial(page, hasTouch)
+  test('o formulário incompleto diz o que falta em cada campo, e o arquivo que não é PDF é recusado na tela, sem pedido à API', async ({ page, hasTouch, request }) => {
+    await abrirMaterial(page, request)
     await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     let envios = 0
     page.on('request', (pedido) => {
@@ -396,8 +400,8 @@ test.describe('Material da coordenação', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
-  test('o arquivo entra arrastado e também pelo botão, com o teclado, dentro do diálogo: nada só funciona arrastando', async ({ page, hasTouch }) => {
-    await abrirMaterial(page, hasTouch)
+  test('o arquivo entra arrastado e também pelo botão, com o teclado, dentro do diálogo: nada só funciona arrastando', async ({ page, hasTouch, request }) => {
+    await abrirMaterial(page, request)
     await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await abrirEnvio(page, hasTouch)
     const botao = caixaDeEnvio(page).getByRole('button', { name: 'Escolher arquivo' })
@@ -438,7 +442,7 @@ test.describe('Material da coordenação', () => {
 
   // Os quatro estados, em três casos: juntos, com a entrada da coordenação, três varreduras de acessibilidade e a leitura
   // de um PDF de verdade, passavam dos 30 s no celular (CPU ×4). Cada caso começa da escola montada no banco.
-  test('os estados sem dado: carregando, erro com "Tentar de novo", e o vazio que convida a enviar', async ({ page, hasTouch }) => {
+  test('os estados sem dado: carregando, erro com "Tentar de novo", e o vazio que convida a enviar', async ({ page, hasTouch, request }) => {
     const segurada = portao()
     let falhar = true
     await page.route(
@@ -450,7 +454,7 @@ test.describe('Material da coordenação', () => {
         return rota.continue()
       },
     )
-    await abrirMaterial(page, hasTouch)
+    await abrirMaterial(page, request)
 
     // Carregando: a lista ainda não chegou.
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando os materiais…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -471,9 +475,9 @@ test.describe('Material da coordenação', () => {
     expect(await violacoesGraves(page)).toEqual([])
   })
 
-  test('com dado, em cada situação: o que não carregou primeiro, depois o mais novo; a linha abre o painel no endereço, com o que foi declarado', async ({ page, hasTouch }) => {
+  test('com dado, em cada situação: o que não carregou primeiro, depois o mais novo; a linha abre o painel no endereço, com o que foi declarado', async ({ page, hasTouch, request }) => {
     let semTextoId = ''
-    await abrirMaterial(page, hasTouch, async ({ coordenadora, estrutura }) => {
+    await abrirMaterial(page, request, async ({ coordenadora, estrutura }) => {
       await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo pronto', estado: 'pronto', paginas: 12 })
       semTextoId = await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo sem texto', estado: 'falhou', falha: 'sem_texto' })
       await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo em leitura', estado: 'processando' })
@@ -540,10 +544,10 @@ test.describe('Material da coordenação', () => {
     await expect(page.getByRole('dialog')).toHaveCount(0)
   })
 
-  test('segunda pessoa: a coordenação de B entra na aba da de A, e o painel de A pelo endereço não abre nada nem diz que o material existe', async ({ page, hasTouch }) => {
+  test('segunda pessoa: a coordenação de B entra na aba da de A, e o painel de A pelo endereço não abre nada nem diz que o material existe', async ({ page, hasTouch, request }) => {
     test.slow()
     let materialDeA = ''
-    await abrirMaterial(page, hasTouch, async ({ coordenadora, estrutura }) => {
+    await abrirMaterial(page, request, async ({ coordenadora, estrutura }) => {
       materialDeA = await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo da escola A', estado: 'pronto', paginas: 4 })
     })
     await acionar(botaoDaLinha(page, 'Capítulo da escola A'), hasTouch)
@@ -564,7 +568,10 @@ test.describe('Material da coordenação', () => {
         return rota.fallback()
       },
     )
-    await entrarComoCoordenacaoNaMesmaAba(page, deB, hasTouch)
+    // O segundo fator da de B é configurado pela API: o caso é sobre o que a aba mostra da de A, e não sobre configurar o segundo fator.
+    const { segredo } = await configurarSegundoFatorPelaApi(request, deB)
+    await entrarPelaTelaComSegundoFator(page, deB, segredo, hasTouch)
+    await expect(page).toHaveURL(/\/coordenacao\/painel$/, { timeout: PRAZO_DA_ENTRADA_MS })
     await irPelaCoordenacao(page, 'Material', hasTouch)
     await expect(principal(page).getByRole('status').filter({ hasText: 'Carregando os materiais…' })).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await expect(page.locator('body')).not.toContainText('Capítulo da escola A')
@@ -579,7 +586,7 @@ test.describe('Material da coordenação', () => {
     await expect(page.locator('body')).not.toContainText('Capítulo da escola A')
   })
 
-  test('a falha do envio fica no diálogo, com o que foi digitado; fechar e reabrir começa de um formulário novo', async ({ page, hasTouch }) => {
+  test('a falha do envio fica no diálogo, com o que foi digitado; fechar e reabrir começa de um formulário novo', async ({ page, hasTouch, request }) => {
     let derrubar = true
     await page.route(
       (url) => ehALista(url),
@@ -588,7 +595,7 @@ test.describe('Material da coordenação', () => {
         return rota.fallback()
       },
     )
-    const cenario = await abrirMaterial(page, hasTouch)
+    const cenario = await abrirMaterial(page, request)
     await expect(lista(page).getByText('Nenhum material ainda')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
     await abrirEnvio(page, hasTouch)
     await preencher(page, cenario)
@@ -612,8 +619,8 @@ test.describe('Material da coordenação', () => {
     await expect(caixaDeEnvio(page).getByRole('button', { name: 'Escolher arquivo' })).toBeVisible()
   })
 
-  test('o material que não carregou: "Tentar de novo" abre o envio com o que ele declarava, e o arquivo de verdade entra no lugar dele', async ({ page, hasTouch }) => {
-    await abrirMaterial(page, hasTouch, async ({ coordenadora, estrutura }) => {
+  test('o material que não carregou: "Tentar de novo" abre o envio com o que ele declarava, e o arquivo de verdade entra no lugar dele', async ({ page, hasTouch, request }) => {
+    await abrirMaterial(page, request, async ({ coordenadora, estrutura }) => {
       await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo sem texto', estado: 'falhou', falha: 'sem_texto' })
     })
     await expect(linhaDe(page, 'Capítulo sem texto').getByText('Não carregou')).toBeVisible({ timeout: PRAZO_DA_ENTRADA_MS })
@@ -640,9 +647,9 @@ test.describe('Material da coordenação', () => {
     await expect(page).toHaveURL(/\/coordenacao\/material$/)
   })
 
-  test('excluir é ação de perigo, pelo painel: a confirmação diz o que acontece, cancelar não exclui, e confirmar tira o material e os trechos', async ({ page, hasTouch }) => {
+  test('excluir é ação de perigo, pelo painel: a confirmação diz o que acontece, cancelar não exclui, e confirmar tira o material e os trechos', async ({ page, hasTouch, request }) => {
     let materialId = ''
-    const cenario = await abrirMaterial(page, hasTouch, async ({ coordenadora, estrutura }) => {
+    const cenario = await abrirMaterial(page, request, async ({ coordenadora, estrutura }) => {
       materialId = await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: TITULO, estado: 'pronto', paginas: 6 })
       await criarMaterialNoBanco(coordenadora.escolaId, estrutura.disciplina.id, { titulo: 'Capítulo que fica', estado: 'pronto', paginas: 2 })
     })
